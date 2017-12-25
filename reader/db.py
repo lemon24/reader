@@ -50,5 +50,7 @@ def open_db(path):
     elif not feeds_exists or not entries_exists:
         raise RuntimeError("some tables missing")
 
+    db.row_factory = sqlite3.Row
+
     return db
 

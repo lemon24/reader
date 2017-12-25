@@ -103,6 +103,14 @@ def update(db):
                     ))
 
 
+@cli.command()
+@click.pass_obj
+def serve(db):
+    from werkzeug.serving import run_simple
+    from .app import app
+    app.db = db
+    run_simple('localhost', 8080, app)
+
 
 
 
