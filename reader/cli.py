@@ -1,4 +1,7 @@
 import os.path
+import time
+import datetime
+import json
 
 import click
 import feedparser
@@ -14,6 +17,10 @@ def get_default_db_path():
 
 def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
+
+
+def datetime_from_timetuple(tt):
+    return datetime.datetime.fromtimestamp(time.mktime(tt)) if tt else None
 
 
 @click.group()
@@ -44,6 +51,9 @@ def update(db):
     for url, etag, modified_original in cursor:
         feed = feedparser.parse(url, etag=etag, modified=modified_original)
 
+        if feed.get('status') == 304:
+            continue
+
         with db:
             etag = feed.get('etag')
             modified_original = feed.get('modified')
@@ -56,8 +66,41 @@ def update(db):
                 WHERE url = :url;
             """, locals())
 
+            for entry in feed.entries:
+                updated = datetime_from_timetuple(entry.get('updated_parsed'))
+                assert updated
+                published = datetime_from_timetuple(entry.get('published_parsed'))
 
+                assert entry.id
+                db_tuple = db.execute("""
+                    SELECT updated FROM entries
+                    WHERE feed = ? AND id = ?;
+                """, (url, entry.id)).fetchone()
+                db_updated = db_tuple[0] if db_tuple else None
 
+                if not db_updated:
+                    db.execute("""
+                        INSERT INTO entries (
+                            id, feed, title, link, content, published, updated
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?);
+                    """, (
+                        entry.id, url,
+                        entry.get('title'), entry.get('link'),
+                        json.dumps(entry.get('content')),
+                        published, updated,
+                    ))
+
+                elif updated > db_updated:
+                    db.execute("""
+                        UPDATE entries
+                        SET title = ?, link = ?, content = ?, published = ?, updated = ?
+                        WHERE feed = ? AND id = ?;
+                    """, (
+                        entry.get('title'), entry.get('link'),
+                        json.dumps(entry.get('content')),
+                        published, updated,
+                        url, entry.id,
+                    ))
 
 
 
