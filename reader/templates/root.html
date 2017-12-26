@@ -7,7 +7,15 @@
 <tr>
 <td>{{ entry.published or entry.updated }}</td>
 <td><a href="{{ entry.feed_link }}">{{ entry.feed_title }}</a></td>
-<td><a href="{{ entry.link }}">{{ entry.title }}</a></td>
+<td>
+
+<a href="{{ entry.link }}">{{ entry.title }}</a>
+
+{% if entry.enclosures %}
+<tt>{{ entry.enclosures }}</tt>
+{% endif %}
+
+</td>
 </tr>
 {% endfor %}
 </table>

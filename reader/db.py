@@ -19,6 +19,7 @@ def create_db(db):
                 title TEXT,
                 link TEXT,
                 content TEXT,
+                enclosures TEXT,
                 published TIMESTAMP,
                 updated TIMESTAMP,
                 PRIMARY KEY (id, feed),

@@ -10,7 +10,8 @@ def root():
             entries.title as title,
             entries.link as link,
             entries.published as published,
-            entries.updated as updated
+            entries.updated as updated,
+            entries.enclosures as enclosures
         FROM entries, feeds
         WHERE feeds.url = entries.feed
         ORDER BY entries.published DESC, entries.updated DESC;

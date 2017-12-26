@@ -81,23 +81,25 @@ def update(db):
                 if not db_updated:
                     db.execute("""
                         INSERT INTO entries (
-                            id, feed, title, link, content, published, updated
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?);
+                            id, feed, title, link, content, enclosures, published, updated
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
                     """, (
                         entry.id, url,
                         entry.get('title'), entry.get('link'),
                         json.dumps(entry.get('content')),
+                        json.dumps(entry.get('enclosures')),
                         published, updated,
                     ))
 
                 elif updated > db_updated:
                     db.execute("""
                         UPDATE entries
-                        SET title = ?, link = ?, content = ?, published = ?, updated = ?
+                        SET title = ?, link = ?, content = ?, enclosures = ?, published = ?, updated = ?
                         WHERE feed = ? AND id = ?;
                     """, (
                         entry.get('title'), entry.get('link'),
                         json.dumps(entry.get('content')),
+                        json.dumps(entry.get('enclosures')),
                         published, updated,
                         url, entry.id,
                     ))
