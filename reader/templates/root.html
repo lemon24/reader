@@ -3,10 +3,10 @@
 <title>Feeds</title>
 
 <table>
-{% for entry in entries %}
+{% for feed, entry in entries %}
 <tr>
 <td>{{ entry.published or entry.updated }}</td>
-<td><a href="{{ entry.feed_link }}">{{ entry.feed_title }}</a></td>
+<td><a href="{{ entry.feed_link }}">{{ feed.title }}</a></td>
 <td>
 
 <a href="{{ entry.link }}">{{ entry.title }}</a>

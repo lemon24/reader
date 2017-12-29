@@ -3,19 +3,6 @@ app = Flask(__name__)
 
 @app.route('/')
 def root():
-    entries = current_app.db.execute("""
-        SELECT
-            feeds.title as feed_title,
-            feeds.link as feed_link,
-            entries.title as title,
-            entries.link as link,
-            entries.published as published,
-            entries.updated as updated,
-            entries.enclosures as enclosures
-        FROM entries, feeds
-        WHERE feeds.url = entries.feed
-        ORDER BY entries.published DESC, entries.updated DESC;
-    """)
+    entries = current_app.reader.get_entries()
     return render_template('root.html', entries=entries)
-
 
