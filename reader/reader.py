@@ -78,7 +78,16 @@ class Reader:
 
         assert entry.id
         db_updated = self._get_entry_updated(url, entry.id)
-        updated = _datetime_from_timetuple(entry.get('updated_parsed'))
+
+        updated = None
+        published = None
+        # entry.get doesn't work because feedparser does some magic for us
+        if 'updated_parsed' in entry:
+            updated = _datetime_from_timetuple(entry['updated_parsed'])
+        if 'published_parsed' in entry:
+            published = _datetime_from_timetuple(entry['published_parsed'])
+        if not updated:
+            updated = published
         assert updated
 
         enclosures = entry.get('enclosures')
@@ -89,7 +98,7 @@ class Reader:
             'title': entry.get('title'),
             'link': entry.get('link'),
             'updated': updated,
-            'published': _datetime_from_timetuple(entry.get('published_parsed')),
+            'published': published,
             'enclosures': json.dumps(enclosures) if enclosures else None,
         }
 
