@@ -86,8 +86,11 @@ class Reader:
             updated = _datetime_from_timetuple(entry['updated_parsed'])
         if 'published_parsed' in entry:
             published = _datetime_from_timetuple(entry['published_parsed'])
-        if not updated:
+        # This is true for RSS.
+        # TODO: Only do this for RSS.
+        if published and not updated:
             updated = published
+            published = None
         assert updated
 
         enclosures = entry.get('enclosures')
