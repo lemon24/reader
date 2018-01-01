@@ -34,13 +34,24 @@ class Reader:
         for url, etag, modified_original in cursor:
             self._update_feed(url, etag, modified_original)
 
+    def _get_feed_updated(self, url):
+        rv = self.db.execute("""
+            SELECT updated
+            FROM feeds
+            WHERE url = :url;
+        """, locals()).fetchone()
+        return rv[0] if rv else None
+
     def _update_feed(self, url, etag, modified_original):
         feed = feedparser.parse(url, etag=etag, modified=modified_original)
 
         if feed.get('status') == 304:
             return
 
-        # TODO: also check feed.updated
+        db_updated = self._get_feed_updated(url)
+        updated = _datetime_from_timetuple(feed.feed.get('updated_parsed'))
+        if updated and db_updated and updated <= db_updated:
+            return
 
         with self.db:
             title = feed.feed.get('title')
@@ -53,6 +64,7 @@ class Reader:
                 SET
                     title = :title,
                     link = :link,
+                    updated = :updated,
                     etag = :etag,
                     modified_original = :modified_original
                 WHERE url = :url;
@@ -117,6 +129,7 @@ class Reader:
                 feeds.url,
                 feeds.title,
                 feeds.link,
+                feeds.updated,
                 entries.id,
                 entries.title,
                 entries.link,
@@ -129,9 +142,9 @@ class Reader:
         """)
 
         for t in cursor:
-            feed = t[0:3] + (None, )
+            feed = t[0:4]
             feed = Feed._make(feed)
-            entry = t[3:8] + (json.loads(t[8]) if t[8] else None, )
+            entry = t[4:9] + (json.loads(t[9]) if t[9] else None, )
             entry = Entry._make(entry)
             yield feed, entry
 

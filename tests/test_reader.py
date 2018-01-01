@@ -67,7 +67,6 @@ def write_feed(type, feed, entries):
         fg.rss_file(feed.url, pretty=True)
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_roundtrip(tmpdir, monkeypatch, reader, feed_type):
     monkeypatch.chdir(tmpdir)
