@@ -120,3 +120,31 @@ def test_update_feed_updated(reader, feed_type):
     reader.update_feeds()
     assert set(reader.get_entries()) == {(new_feed, entry_one), (new_feed, entry_two)}
 
+
+@pytest.mark.xfail
+@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
+def test_update_entry_updated(reader, feed_type):
+    """An entry should be updated only if it is newer than the stored one."""
+
+    feed = make_feed(1, datetime(2010, 1, 1))
+    old_entry = make_entry(1, datetime(2010, 1, 1))
+
+    reader.add_feed(feed.url)
+
+    write_feed(feed_type, feed, [old_entry])
+    reader.update_feeds()
+    assert set(reader.get_entries()) == {(feed, old_entry)}
+
+    feed = feed._replace(updated=datetime(2010, 1, 2))
+    new_entry = old_entry._replace(title='New Entry')
+    write_feed(feed_type, feed, [new_entry])
+    reader.update_feeds()
+    assert set(reader.get_entries()) == {(feed, old_entry)}
+
+    feed = feed._replace(updated=datetime(2010, 1, 3))
+    new_entry = new_entry._replace(updated=datetime(2010, 1, 2))
+    write_feed(feed_type, feed, [new_entry])
+    reader.update_feeds()
+
+    assert set(reader.get_entries()) == {(feed, new_entry)}
+
