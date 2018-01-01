@@ -25,7 +25,8 @@ ENTRY = Entry(
 
 
 @pytest.fixture
-def reader():
+def reader(monkeypatch, tmpdir):
+    monkeypatch.chdir(tmpdir)
     return Reader(open_db(':memory:'))
 
 
@@ -68,13 +69,54 @@ def write_feed(type, feed, entries):
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_roundtrip(tmpdir, monkeypatch, reader, feed_type):
-    monkeypatch.chdir(tmpdir)
-
+def test_roundtrip(reader, feed_type):
     write_feed(feed_type, FEED, [ENTRY])
 
     reader.add_feed(FEED.url)
     reader.update_feeds()
 
     assert list(reader.get_entries()) == [(FEED, ENTRY)]
+
+
+def make_feed(number, updated):
+    return Feed(
+        'feed-{}.xml'.format(number),
+        'Feed #{}'.format(number),
+        'http://www.example.com/{}'.format(number),
+        updated,
+    )
+
+def make_entry(number, updated, **kwargs):
+    return Entry(
+        'http://www.example.com/entries/{}'.format(number),
+        'Entry #{}'.format(number),
+        'http://www.example.com/entries/{}'.format(number),
+        updated,
+        kwargs.get('published', updated),
+        None,
+    )
+
+
+@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
+def test_update_feed_updated(reader, feed_type):
+    """A feed should be processed only if it is newer than the stored one."""
+
+    old_feed = make_feed(1, datetime(2010, 1, 1))
+    new_feed = old_feed._replace(updated=datetime(2010, 1, 2))
+    entry_one = make_entry(1, datetime(2010, 1, 1))
+    entry_two = make_entry(2, datetime(2010, 2, 1))
+
+    reader.add_feed(old_feed.url)
+
+    write_feed(feed_type, old_feed, [entry_one])
+    reader.update_feeds()
+    assert set(reader.get_entries()) == {(old_feed, entry_one)}
+
+    write_feed(feed_type, old_feed, [entry_one, entry_two])
+    reader.update_feeds()
+    assert set(reader.get_entries()) == {(old_feed, entry_one)}
+
+    write_feed(feed_type, new_feed, [entry_one, entry_two])
+    reader.update_feeds()
+    assert set(reader.get_entries()) == {(new_feed, entry_one), (new_feed, entry_two)}
 
