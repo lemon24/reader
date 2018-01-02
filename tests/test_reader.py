@@ -7,23 +7,6 @@ from reader.db import open_db
 from reader.reader import Reader, Feed, Entry
 
 
-FEED = Feed(
-    'feed.xml',
-    'Feed',
-    'http://www.example.com/',
-    datetime(2010, 1, 1),
-)
-
-ENTRY = Entry(
-    'http://www.example.com/1',
-    'Entry',
-    'http://www.example.com/1',
-    datetime(2010, 1, 1),
-    datetime(2010, 1, 1),
-    None,
-)
-
-
 @pytest.fixture
 def reader(monkeypatch, tmpdir):
     monkeypatch.chdir(tmpdir)
@@ -59,8 +42,11 @@ def write_feed(type, feed, entries):
                 fe.updated(utc(entry.updated))
             elif type == 'rss':
                 fe.published(utc(entry.updated))
-        if type == 'atom' and entry.published:
-            fe.published(utc(entry.published))
+        if entry.published:
+            if type == 'atom':
+                fe.published(utc(entry.published))
+            elif type == 'rss':
+                assert False, "RSS doesn't support published"
 
         for enclosure in entry.enclosures or ():
             fe.enclosure(enclosure['href'], enclosure['length'], enclosure['type'])
@@ -69,17 +55,6 @@ def write_feed(type, feed, entries):
         fg.atom_file(feed.url, pretty=True)
     elif type == 'rss':
         fg.rss_file(feed.url, pretty=True)
-
-
-@pytest.mark.xfail
-@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_roundtrip(reader, feed_type):
-    write_feed(feed_type, FEED, [ENTRY])
-
-    reader.add_feed(FEED.url)
-    reader.update_feeds()
-
-    assert list(reader.get_entries()) == [(FEED, ENTRY)]
 
 
 def make_feed(number, updated):
