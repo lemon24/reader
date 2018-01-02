@@ -48,28 +48,18 @@ class Reader:
 
     def update_feeds(self):
         cursor =  self.db.execute("""
-            SELECT url, etag, modified_original FROM feeds
+            SELECT url, updated, etag, modified_original FROM feeds
         """)
-        for url, etag, modified_original in cursor:
-            self._update_feed(url, etag, modified_original)
+        for row in cursor:
+            self._update_feed(*row)
 
-    def _get_feed_updated(self, url):
-        rv = self.db.execute("""
-            SELECT updated
-            FROM feeds
-            WHERE url = :url;
-        """, locals()).fetchone()
-        return rv[0] if rv else None
-
-    def _update_feed(self, url, etag, modified_original):
+    def _update_feed(self, url, db_updated, etag, modified_original):
         feed = feedparser.parse(url, etag=etag, modified=modified_original)
 
         if feed.get('status') == 304:
             return
 
         is_rss = feed.version.startswith('rss')
-
-        db_updated = self._get_feed_updated(url)
         updated, _ = _get_updated_published(feed.feed, is_rss)
         if updated and db_updated and updated <= db_updated:
             return
