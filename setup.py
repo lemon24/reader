@@ -18,6 +18,7 @@ setup(
     install_requires=[
         'feedparser>=5',
         'click>=5',
+        'flask>=0.10',
     ],
     description="",
     classifiers=[
