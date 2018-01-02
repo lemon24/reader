@@ -1,28 +1,34 @@
 import os.path
+import os
 
 import click
-import feedparser
 
 from .db import open_db
 from .reader import Reader
 
+
 APP_NAME = 'reader'
 
-
-def get_default_db_path():
-    return os.path.join(click.get_app_dir(APP_NAME), 'db')
 
 def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
 
-
-
 @click.group()
-@click.option('--db', default=get_default_db_path, type=click.Path(dir_okay=False))
+@click.option('--db', type=click.Path(dir_okay=False))
 @click.pass_context
 def cli(ctx, db):
-    ctx.obj = open_db(db)
+    if db is None:
+        app_dir = click.get_app_dir(APP_NAME)
+        db = os.path.join(app_dir, 'db.sqlite')
+        try:
+            os.makedirs(app_dir, exist_ok=True)
+        except Exception as e:
+            abort("{}", e)
+    try:
+        ctx.obj = open_db(db)
+    except Exception as e:
+        abort("{}: {}", db, e)
 
 
 @cli.command()
