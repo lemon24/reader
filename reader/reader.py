@@ -6,13 +6,32 @@ import datetime
 import json
 
 
-def _datetime_from_timetuple(tt):
-    return datetime.datetime.fromtimestamp(time.mktime(tt)) if tt else None
-
-
 Feed = namedtuple('Feed', 'url title link updated')
 
 Entry = namedtuple('Entry', 'id title link updated published enclosures')
+
+
+def _datetime_from_timetuple(tt):
+    return datetime.datetime.fromtimestamp(time.mktime(tt)) if tt else None
+
+def _get_updated_published(thing, is_rss):
+    # feed.get and entry.get don't work for updated due historical reasons;
+    # from the docs: "As of version 5.1.1, if this key [.updated] doesn't
+    # exist but [thing].published does, the value of [thing].published
+    # will be returned. [...] This mapping is temporary and will be
+    # removed in a future version of feedparser."
+
+    updated = None
+    published = None
+    if 'updated_parsed' in thing:
+        updated = _datetime_from_timetuple(thing.updated_parsed)
+    if 'published_parsed' in thing:
+        published = _datetime_from_timetuple(thing.published_parsed)
+
+    if published and not updated and is_rss:
+            updated, published = published, None
+
+    return updated, published
 
 
 class Reader:
@@ -48,8 +67,10 @@ class Reader:
         if feed.get('status') == 304:
             return
 
+        is_rss = feed.version.startswith('rss')
+
         db_updated = self._get_feed_updated(url)
-        updated = _datetime_from_timetuple(feed.feed.get('updated_parsed'))
+        updated, _ = _get_updated_published(feed.feed, is_rss)
         if updated and db_updated and updated <= db_updated:
             return
 
@@ -71,26 +92,14 @@ class Reader:
             """, locals())
 
             for entry in feed.entries:
-                self._update_entry(url, entry)
+                self._update_entry(url, entry, is_rss)
 
-    def _update_entry(self, url, entry):
+    def _update_entry(self, url, entry, is_rss):
         assert self.db.in_transaction
 
         assert entry.id
         db_updated = self._get_entry_updated(url, entry.id)
-
-        updated = None
-        published = None
-        # entry.get doesn't work because feedparser does some magic for us
-        if 'updated_parsed' in entry:
-            updated = _datetime_from_timetuple(entry['updated_parsed'])
-        if 'published_parsed' in entry:
-            published = _datetime_from_timetuple(entry['published_parsed'])
-        # This is true for RSS.
-        # TODO: Only do this for RSS.
-        if published and not updated:
-            updated = published
-            published = None
+        updated, published = _get_updated_published(entry, is_rss)
         assert updated
 
         enclosures = entry.get('enclosures')
