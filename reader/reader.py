@@ -84,36 +84,32 @@ class Reader:
             for entry in feed.entries:
                 self._update_entry(url, entry, is_rss)
 
-    def _update_entry(self, url, entry, is_rss):
+    def _update_entry(self, feed_url, entry, is_rss):
         assert self.db.in_transaction
 
         assert entry.id
-        db_updated = self._get_entry_updated(url, entry.id)
+        db_updated = self._get_entry_updated(feed_url, entry.id)
         updated, published = _get_updated_published(entry, is_rss)
         assert updated
+        if db_updated and updated <= db_updated:
+            return
 
+        id = entry.id
+        title = entry.get('title')
+        link = entry.get('link')
         enclosures = entry.get('enclosures')
-
-        params = {
-            'id': entry.id,
-            'feed': url,
-            'title': entry.get('title'),
-            'link': entry.get('link'),
-            'updated': updated,
-            'published': published,
-            'enclosures': json.dumps(enclosures) if enclosures else None,
-        }
+        enclosures = json.dumps(enclosures) if enclosures else None
 
         if not db_updated:
             self.db.execute("""
                 INSERT INTO entries (
                     id, feed, title, link, updated, published, enclosures
                 ) VALUES (
-                    :id, :feed, :title, :link, :updated, :published, :enclosures
+                    :id, :feed_url, :title, :link, :updated, :published, :enclosures
                 );
-            """, params)
+            """, locals())
 
-        elif updated > db_updated:
+        else:
             self.db.execute("""
                 UPDATE entries
                 SET
@@ -122,14 +118,14 @@ class Reader:
                     updated = :updated,
                     published = :published,
                     enclosures = :enclosures
-                WHERE feed = :feed AND id = :id;
-            """, params)
+                WHERE feed = :feed_url AND id = :id;
+            """, locals())
 
-    def _get_entry_updated(self, url, id):
+    def _get_entry_updated(self, feed_url, id):
         rv = self.db.execute("""
             SELECT updated
             FROM entries
-            WHERE feed = :url
+            WHERE feed = :feed_url
                 AND id = :id;
         """, locals()).fetchone()
         return rv[0] if rv else None
