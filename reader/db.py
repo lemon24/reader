@@ -70,8 +70,8 @@ def create_db(db):
                 title TEXT,
                 link TEXT,
                 updated TIMESTAMP,
-                etag TEXT,
-                modified_original TEXT
+                http_etag TEXT,
+                http_last_modified TEXT
             );
         """)
         db.execute("""

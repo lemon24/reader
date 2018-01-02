@@ -48,13 +48,13 @@ class Reader:
 
     def update_feeds(self):
         cursor =  self.db.execute("""
-            SELECT url, updated, etag, modified_original FROM feeds
+            SELECT url, updated, http_etag, http_last_modified FROM feeds
         """)
         for row in cursor:
             self._update_feed(*row)
 
-    def _update_feed(self, url, db_updated, etag, modified_original):
-        feed = feedparser.parse(url, etag=etag, modified=modified_original)
+    def _update_feed(self, url, db_updated, http_etag, http_last_modified):
+        feed = feedparser.parse(url, etag=http_etag, modified=http_last_modified)
 
         if feed.get('status') == 304:
             return
@@ -67,8 +67,8 @@ class Reader:
         with self.db:
             title = feed.feed.get('title')
             link = feed.feed.get('link')
-            etag = feed.get('etag')
-            modified_original = feed.get('modified')
+            http_etag = feed.get('etag')
+            http_last_modified = feed.get('modified')
 
             self.db.execute("""
                 UPDATE feeds
@@ -76,8 +76,8 @@ class Reader:
                     title = :title,
                     link = :link,
                     updated = :updated,
-                    etag = :etag,
-                    modified_original = :modified_original
+                    http_etag = :http_etag,
+                    http_last_modified = :http_last_modified
                 WHERE url = :url;
             """, locals())
 
