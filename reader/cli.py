@@ -8,6 +8,15 @@ from .reader import Reader
 
 
 APP_NAME = 'reader'
+DB_ENVVAR = '{}_DB'.format(APP_NAME.upper())
+
+
+def get_default_db_path(create_dir=False):
+    app_dir = click.get_app_dir(APP_NAME)
+    db_path = os.path.join(app_dir, 'db.sqlite')
+    if create_dir:
+        os.makedirs(app_dir, exist_ok=True)
+    return db_path
 
 
 def abort(message, *args, **kwargs):
@@ -15,14 +24,12 @@ def abort(message, *args, **kwargs):
 
 
 @click.group()
-@click.option('--db', type=click.Path(dir_okay=False))
+@click.option('--db', type=click.Path(dir_okay=False), envvar=DB_ENVVAR)
 @click.pass_context
 def cli(ctx, db):
     if db is None:
-        app_dir = click.get_app_dir(APP_NAME)
-        db = os.path.join(app_dir, 'db.sqlite')
         try:
-            os.makedirs(app_dir, exist_ok=True)
+            db = get_default_db_path(create_dir=True)
         except Exception as e:
             abort("{}", e)
     try:
@@ -60,4 +67,4 @@ def serve(db):
 
 
 if __name__ == '__main__':
-    cli(auto_envvar_prefix=APP_NAME.upper())
+    cli()
