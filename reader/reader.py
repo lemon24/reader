@@ -145,7 +145,7 @@ class Reader:
                 entries.enclosures
             FROM entries, feeds
             WHERE feeds.url = entries.feed
-            ORDER BY entries.published DESC, entries.updated DESC;
+            ORDER BY entries.updated DESC;
         """)
 
         for t in cursor:
