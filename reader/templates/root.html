@@ -1,21 +1,29 @@
 <!doctype html>
 
+
 <title>Feeds</title>
 
-<table>
-{% for feed, entry in entries %}
-<tr>
-<td>{{ entry.updated }}</td>
-<td><a href="{{ entry.feed_link }}">{{ feed.title }}</a></td>
-<td>
 
-<a href="{{ entry.link }}">{{ entry.title }}</a>
+{% for feed, entry in entries %}
+
+<p><b><a href="{{ entry.link }}">{{ entry.title }}</a></b> <br>
+<small><a href="{{ entry.feed_link }}">{{ feed.title }}</a>
+{{ entry.updated | humanize }}</small> </p>
 
 {% if entry.enclosures %}
-<tt>{{ entry.enclosures }}</tt>
+<ul>
+
+{% for enclosure in entry.enclosures %}
+
+<li>
+<a href="{{ enclosure.href }}">{{ enclosure.href.split('/')[-1].split('?')[0] }}</a>
+<small>{{ enclosure.type }}</small>
+</li>
+
+{% endfor %}
+</ul>
 {% endif %}
 
-</td>
-</tr>
+<br>
+
 {% endfor %}
-</table>

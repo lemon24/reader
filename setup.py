@@ -19,6 +19,7 @@ setup(
         'feedparser>=5',
         'click>=5',
         'flask>=0.10',
+        'Flask-Humanize',
     ],
     description="",
     classifiers=[

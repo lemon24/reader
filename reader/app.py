@@ -1,5 +1,10 @@
-from flask import Flask, render_template, current_app
+from flask import Flask, render_template, current_app, send_from_directory
+from flask_humanize import Humanize
+
+
 app = Flask(__name__)
+humanize = Humanize(app)
+
 
 @app.route('/')
 def root():
