@@ -3,14 +3,13 @@ from datetime import datetime
 import pytest
 import feedgen.feed
 
-from reader.db import open_db
 from reader.reader import Reader, Feed, Entry
 
 
 @pytest.fixture
 def reader(monkeypatch, tmpdir):
     monkeypatch.chdir(tmpdir)
-    return Reader(open_db(':memory:'))
+    return Reader(':memory:')
 
 
 def write_feed(type, feed, entries):

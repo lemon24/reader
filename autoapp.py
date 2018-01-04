@@ -4,8 +4,6 @@
 import os
 
 from reader.app import app
-from reader.db import open_db
-from reader.reader import Reader
-from reader.cli import get_default_db_path, DB_ENVVAR
+from reader.cli import get_default_db_path
 
-app.reader = Reader(open_db(os.environ.get(DB_ENVVAR, get_default_db_path())))
+app.config['READER_DB'] = os.environ.get('READER_DB', get_default_db_path())

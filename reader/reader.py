@@ -5,6 +5,8 @@ import time
 import datetime
 import json
 
+from .db import open_db
+
 
 Feed = namedtuple('Feed', 'url title link updated')
 
@@ -36,8 +38,8 @@ def _get_updated_published(thing, is_rss):
 
 class Reader:
 
-    def __init__(self, db):
-        self.db = db
+    def __init__(self, path=None, db=None):
+        self.db = db if db else open_db(path)
 
     def add_feed(self, url):
         with self.db:
