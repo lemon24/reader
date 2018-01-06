@@ -58,36 +58,35 @@ def get_version(db):
 
 
 def create_db(db):
-    with ddl_transaction(db):
-        db.execute("""
-            CREATE TABLE version (
-                version INTEGER NOT NULL
-            );
-        """)
-        db.execute("""
-            CREATE TABLE feeds (
-                url TEXT PRIMARY KEY NOT NULL,
-                title TEXT,
-                link TEXT,
-                updated TIMESTAMP,
-                http_etag TEXT,
-                http_last_modified TEXT
-            );
-        """)
-        db.execute("""
-            CREATE TABLE entries (
-                id TEXT NOT NULL,
-                feed TEXT NOT NULL,
-                title TEXT,
-                link TEXT,
-                updated TIMESTAMP,
-                published TIMESTAMP,
-                enclosures TEXT,
-                PRIMARY KEY (id, feed),
-                FOREIGN KEY (feed) REFERENCES feeds(url)
-            );
-        """)
-        db.execute("INSERT INTO version VALUES (?);", (VERSION, ))
+    db.execute("""
+        CREATE TABLE version (
+            version INTEGER NOT NULL
+        );
+    """)
+    db.execute("""
+        CREATE TABLE feeds (
+            url TEXT PRIMARY KEY NOT NULL,
+            title TEXT,
+            link TEXT,
+            updated TIMESTAMP,
+            http_etag TEXT,
+            http_last_modified TEXT
+        );
+    """)
+    db.execute("""
+        CREATE TABLE entries (
+            id TEXT NOT NULL,
+            feed TEXT NOT NULL,
+            title TEXT,
+            link TEXT,
+            updated TIMESTAMP,
+            published TIMESTAMP,
+            enclosures TEXT,
+            PRIMARY KEY (id, feed),
+            FOREIGN KEY (feed) REFERENCES feeds(url)
+        );
+    """)
+    db.execute("INSERT INTO version VALUES (?);", (VERSION, ))
 
 
 def open_db(path):
@@ -95,10 +94,11 @@ def open_db(path):
     db.execute("""
             PRAGMA foreign_keys = ON;
     """)
-    version = get_version(db)
-    if version is None:
-        create_db(db)
-    elif version != VERSION:
-        raise InvalidVersion("invalid version: {}".format(version))
+    with ddl_transaction(db):
+        version = get_version(db)
+        if version is None:
+            create_db(db)
+        elif version != VERSION:
+            raise InvalidVersion("invalid version: {}".format(version))
     return db
 
