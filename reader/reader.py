@@ -125,15 +125,18 @@ class Reader:
         id = entry.id
         title = entry.get('title')
         link = entry.get('link')
+        summary = entry.get('summary')
+        content = entry.get('content')
+        content = json.dumps(content) if content else None
         enclosures = entry.get('enclosures')
         enclosures = json.dumps(enclosures) if enclosures else None
 
         if not db_updated:
             self.db.execute("""
                 INSERT INTO entries (
-                    id, feed, title, link, updated, published, enclosures
+                    id, feed, title, link, updated, published, summary, content, enclosures
                 ) VALUES (
-                    :id, :feed_url, :title, :link, :updated, :published, :enclosures
+                    :id, :feed_url, :title, :link, :updated, :published, :summary, :content, :enclosures
                 );
             """, locals())
             log.debug("update entry %r of feed %r: entry added", entry.id, feed_url)
@@ -147,6 +150,8 @@ class Reader:
                     link = :link,
                     updated = :updated,
                     published = :published,
+                    summary = :summary,
+                    content = :content,
                     enclosures = :enclosures
                 WHERE feed = :feed_url AND id = :id;
             """, locals())

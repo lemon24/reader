@@ -38,7 +38,7 @@ def ddl_transaction(db):
         db.isolation_level = isolation_level
 
 
-VERSION = 2
+VERSION = 3
 
 
 class InvalidVersion(Exception):
@@ -82,6 +82,8 @@ def create_db(db):
             link TEXT,
             updated TIMESTAMP,
             published TIMESTAMP,
+            summary TEXT,
+            content TEXT,
             enclosures TEXT,
             PRIMARY KEY (id, feed),
             FOREIGN KEY (feed) REFERENCES feeds(url)
@@ -101,6 +103,25 @@ def update_from_1_to_2(db):
     """)
 
 
+def update_from_2_to_3(db):
+    db.execute("""
+        UPDATE version
+        SET version = 3;
+    """)
+    db.execute("""
+        ALTER TABLE entries
+        ADD COLUMN summary TEXT;
+    """)
+    db.execute("""
+        ALTER TABLE entries
+        ADD COLUMN content TEXT;
+    """)
+    db.execute("""
+        UPDATE feeds
+        SET stale = 1;
+    """)
+
+
 def open_db(path):
     db = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
     db.execute("""
@@ -112,6 +133,9 @@ def open_db(path):
             create_db(db)
         elif version == 1:
             update_from_1_to_2(db)
+            update_from_2_to_3(db)
+        elif version == 2:
+            update_from_2_to_3(db)
         elif version != VERSION:
             raise InvalidVersion("invalid version: {}".format(version))
     return db
