@@ -62,6 +62,10 @@ class Reader:
     def _update_feed(self, url, db_updated, http_etag, http_last_modified):
         feed = feedparser.parse(url, etag=http_etag, modified=http_last_modified)
 
+        if feed.bozo:
+            log.warning("update feed %r: bozo feed, skipping; bozo exception: %r", url, feed.get('bozo_exception'))
+            return
+
         if feed.get('status') == 304:
             log.info("update feed %r: got 304, skipping", url)
             return
