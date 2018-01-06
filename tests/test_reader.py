@@ -72,6 +72,8 @@ def make_entry(number, updated, published=None):
         updated,
         published,
         None,
+        None,
+        None,
     )
 
 

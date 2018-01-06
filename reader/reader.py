@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 Feed = namedtuple('Feed', 'url title link updated')
 
-Entry = namedtuple('Entry', 'id title link updated published enclosures')
+Entry = namedtuple('Entry', 'id title link updated published summary content enclosures')
 
 
 def _datetime_from_timetuple(tt):
@@ -179,6 +179,8 @@ class Reader:
                 entries.link,
                 entries.updated,
                 entries.published,
+                entries.summary,
+                entries.content,
                 entries.enclosures
             FROM entries, feeds
             WHERE feeds.url = entries.feed
@@ -188,7 +190,10 @@ class Reader:
         for t in cursor:
             feed = t[0:4]
             feed = Feed._make(feed)
-            entry = t[4:9] + (json.loads(t[9]) if t[9] else None, )
+            entry = t[4:10] + (
+                json.loads(t[10]) if t[10] else None,
+                json.loads(t[11]) if t[11] else None,
+            )
             entry = Entry._make(entry)
             yield feed, entry
 
