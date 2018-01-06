@@ -7,7 +7,7 @@
 {% for feed, entry in entries %}
 
 <p><b><a href="{{ entry.link }}">{{ entry.title }}</a></b> <br>
-<small><a href="{{ entry.feed_link }}">{{ feed.title }}</a>
+<small><a href="{{ feed.link }}">{{ feed.title }}</a>
 {{ entry.updated | humanize_naturaltime }}</small> </p>
 
 {% if entry.enclosures %}
