@@ -54,12 +54,17 @@ class Reader:
 
     def update_feeds(self):
         cursor =  self.db.execute("""
-            SELECT url, updated, http_etag, http_last_modified FROM feeds
+            SELECT url, updated, http_etag, http_last_modified, stale FROM feeds
         """)
         for row in cursor:
             self._update_feed(*row)
 
-    def _update_feed(self, url, db_updated, http_etag, http_last_modified):
+    def _update_feed(self, url, db_updated, http_etag, http_last_modified, stale):
+        if stale:
+            db_updated = None
+            http_etag = None
+            http_last_modified = None
+            log.info("update feed %r: feed marked as stale, ignoring updated, http_etag or http_last_modified", url)
         feed = feedparser.parse(url, etag=http_etag, modified=http_last_modified)
 
         if feed.bozo:
@@ -72,7 +77,7 @@ class Reader:
 
         is_rss = feed.version.startswith('rss')
         updated, _ = _get_updated_published(feed.feed, is_rss)
-        if updated and db_updated and updated <= db_updated:
+        if not stale and updated and db_updated and updated <= db_updated:
             log.info("update feed %r: feed not updated, skipping", url)
             log.debug("update feed %r: old updated %s, new updated %s", url, db_updated, updated)
             return
@@ -96,20 +101,23 @@ class Reader:
 
             entries_updated, entries_new = 0, 0
             for entry in feed.entries:
-                entry_updated, entry_new = self._update_entry(url, entry, is_rss)
+                entry_updated, entry_new = self._update_entry(url, entry, is_rss, stale)
                 entries_updated += entry_updated
                 entries_new += entry_new
 
             log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
-    def _update_entry(self, feed_url, entry, is_rss):
+    def _update_entry(self, feed_url, entry, is_rss, stale):
         assert self.db.in_transaction
 
         assert entry.id
         db_updated = self._get_entry_updated(feed_url, entry.id)
         updated, published = _get_updated_published(entry, is_rss)
         assert updated
-        if db_updated and updated <= db_updated:
+
+        if stale:
+            log.debug("update entry %r of feed %r: feed marked as stale, updating anyway", entry.id, feed_url)
+        elif db_updated and updated <= db_updated:
             log.debug("update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)", entry.id, feed_url, db_updated, updated)
             return 0, 0
 
