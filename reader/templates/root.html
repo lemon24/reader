@@ -10,6 +10,23 @@
 <small><a href="{{ feed.link }}">{{ feed.title }}</a>
 {{ entry.updated | humanize_naturaltime }}</small> </p>
 
+
+{% if entry.summary %}
+<p>{{ entry.summary | striptags | truncate }}</p>
+{% elif entry.content %}
+    {% set content = (
+        ( entry.content | selectattr('type', 'equalto', 'text/html') | first )
+        or
+        ( entry.content | selectattr('type', 'equalto', 'text/xhtml') | first )
+        or
+        ( entry.content | selectattr('type', 'equalto', 'text/plain') | first )
+    ) %}
+    {% if content %}
+    <p>{{ content.value | striptags | truncate }}</p>
+    {% endif %}
+{% endif %}
+
+
 {% if entry.enclosures %}
 <ul>
 
