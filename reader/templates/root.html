@@ -8,7 +8,7 @@
 
 <p><b><a href="{{ entry.link }}">{{ entry.title }}</a></b> <br>
 <small><a href="{{ feed.link }}">{{ feed.title }}</a>
-{{ entry.updated | humanize_naturaltime }}</small> </p>
+<span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}<span></small></p>
 
 
 {% if entry.summary %}
