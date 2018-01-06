@@ -1,11 +1,12 @@
 from flask import Flask, render_template, current_app, g
-from flask_humanize import Humanize
+import humanize
 
 from .reader import Reader
 
 
 app = Flask(__name__)
-humanize = Humanize(app)
+
+app.template_filter('humanize_naturaltime')(humanize.naturaltime)
 
 
 def get_reader():
