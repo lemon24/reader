@@ -1,11 +1,15 @@
-import feedparser
-
 from collections import namedtuple
 import time
 import datetime
 import json
+import logging
+
+import feedparser
 
 from .db import open_db
+
+
+log = logging.getLogger(__name__)
 
 
 Feed = namedtuple('Feed', 'url title link updated')
@@ -59,11 +63,14 @@ class Reader:
         feed = feedparser.parse(url, etag=http_etag, modified=http_last_modified)
 
         if feed.get('status') == 304:
+            log.info("update feed %r: got 304, skipping", url)
             return
 
         is_rss = feed.version.startswith('rss')
         updated, _ = _get_updated_published(feed.feed, is_rss)
         if updated and db_updated and updated <= db_updated:
+            log.info("update feed %r: feed not updated, skipping", url)
+            log.debug("update feed %r: old updated %s, new updated %s", url, db_updated, updated)
             return
 
         with self.db:
@@ -83,8 +90,13 @@ class Reader:
                 WHERE url = :url;
             """, locals())
 
+            entries_updated, entries_new = 0, 0
             for entry in feed.entries:
-                self._update_entry(url, entry, is_rss)
+                entry_updated, entry_new = self._update_entry(url, entry, is_rss)
+                entries_updated += entry_updated
+                entries_new += entry_new
+
+            log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
     def _update_entry(self, feed_url, entry, is_rss):
         assert self.db.in_transaction
@@ -94,7 +106,8 @@ class Reader:
         updated, published = _get_updated_published(entry, is_rss)
         assert updated
         if db_updated and updated <= db_updated:
-            return
+            log.debug("update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)", entry.id, feed_url, db_updated, updated)
+            return 0, 0
 
         id = entry.id
         title = entry.get('title')
@@ -110,6 +123,8 @@ class Reader:
                     :id, :feed_url, :title, :link, :updated, :published, :enclosures
                 );
             """, locals())
+            log.debug("update entry %r of feed %r: entry added", entry.id, feed_url)
+            return 0, 1
 
         else:
             self.db.execute("""
@@ -122,6 +137,8 @@ class Reader:
                     enclosures = :enclosures
                 WHERE feed = :feed_url AND id = :id;
             """, locals())
+            log.debug("update entry %r of feed %r: entry updated", entry.id, feed_url)
+            return 1, 0
 
     def _get_entry_updated(self, feed_url, id):
         rv = self.db.execute("""

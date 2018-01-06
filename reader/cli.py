@@ -1,9 +1,11 @@
 import os.path
 import os
+import logging
 
 import click
 
 from .reader import Reader
+import reader.reader
 
 
 APP_NAME = 'reader'
@@ -22,6 +24,16 @@ def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
 
+def setup_logging(verbose):
+    if verbose == 0:
+        level = logging.WARNING
+    elif verbose == 1:
+        level = logging.INFO
+    else:
+        level = logging.DEBUG
+    reader.reader.log.setLevel(level)
+    logging.basicConfig()
+
 
 @click.group()
 @click.option('--db', type=click.Path(dir_okay=False), envvar=DB_ENVVAR)
@@ -39,6 +51,7 @@ def cli(ctx, db):
 @click.argument('url')
 @click.pass_obj
 def add(db_path, url):
+    setup_logging(verbose)
     try:
         reader = Reader(db_path)
     except Exception as e:
@@ -47,8 +60,10 @@ def add(db_path, url):
 
 
 @cli.command()
+@click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def update(db_path):
+def update(db_path, verbose):
+    setup_logging(verbose)
     try:
         reader = Reader(db_path)
     except Exception as e:
