@@ -95,7 +95,8 @@ class Reader:
                     link = :link,
                     updated = :updated,
                     http_etag = :http_etag,
-                    http_last_modified = :http_last_modified
+                    http_last_modified = :http_last_modified,
+                    stale = NULL
                 WHERE url = :url;
             """, locals())
 
