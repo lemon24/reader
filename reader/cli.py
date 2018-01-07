@@ -51,7 +51,6 @@ def cli(ctx, db):
 @click.argument('url')
 @click.pass_obj
 def add(db_path, url):
-    setup_logging(verbose)
     try:
         reader = Reader(db_path)
     except Exception as e:
