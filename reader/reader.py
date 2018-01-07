@@ -169,17 +169,18 @@ class Reader:
         return rv[0] if rv else None
 
     def get_entries(self, _unread_only=False):
-        unread_only_snippet = ''
+        where_extra_snippet = ''
         if _unread_only:
-            unread_only_snippet = """
-                AND 'read' NOT IN (
-                    SELECT tag
-                    FROM entry_tags
-                    WHERE entry_tags.entry = entries.id
-                        AND entry_tags.feed = entries.feed
-                    )
-                """
+            where_extra_snippet = """
+                AND 'read' NOT IN tags_of_this_entry
+            """
         cursor = self.db.execute("""
+            WITH tags_of_this_entry AS (
+                SELECT tag
+                FROM entry_tags
+                WHERE entry_tags.entry = entries.id
+                AND entry_tags.feed = entries.feed
+            )
             SELECT
                 feeds.url,
                 feeds.title,
@@ -196,7 +197,7 @@ class Reader:
             FROM entries, feeds
             WHERE feeds.url = entries.feed {}
             ORDER BY entries.updated DESC;
-        """.format(unread_only_snippet))
+        """.format(where_extra_snippet))
 
         for t in cursor:
             feed = t[0:4]
