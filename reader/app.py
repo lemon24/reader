@@ -1,4 +1,4 @@
-from flask import Flask, render_template, current_app, g
+from flask import Flask, render_template, current_app, g, request, jsonify
 import humanize
 
 from .reader import Reader
@@ -23,7 +23,16 @@ def close_db(error):
 
 @app.route('/')
 def root():
-    entries = get_reader().get_entries()
+    entries = get_reader().get_entries(_unread_only=True)
     return render_template('root.html', entries=entries)
 
+
+@app.route('/mark-as-read', methods=['POST'])
+def mark_as_read():
+    response = {}
+    try:
+        get_reader()._add_entry_tag(request.form['feed'], request.form['entry'], 'read');
+    except Exception as e:
+        response['error'] = "{}: {}".format(type(e).__name__, e)
+    return jsonify(response)
 

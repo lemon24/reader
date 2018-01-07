@@ -3,12 +3,48 @@
 
 <title>Feeds</title>
 
+<script>
+
+function mark_as_read(button, data) {
+    var xhr = new XMLHttpRequest();
+    var fd  = new FormData();
+
+    for (name in data) {
+        fd.append(name, data[name]);
+    }
+
+    xhr.addEventListener('load', function(event) {
+        var status = xhr.status;
+//         var data = JSON.parse(xhr.responseText);
+        if (status == 200) {
+            button.innerHTML = 'done';
+        } else {
+            alert('got unexpected response');
+            console.log(event);
+        }
+    });
+
+    xhr.addEventListener('error', function(event) {
+        alert('error during the ajax request');
+        console.log(event);
+    });
+
+    xhr.open('POST', '{{ url_for('mark_as_read') }}');
+    xhr.send(fd);
+}
+
+</script>
+
+
 
 {% for feed, entry in entries %}
 
 <p><b><a href="{{ entry.link }}">{{ entry.title }}</a></b> <br>
 <small><a href="{{ feed.link }}">{{ feed.title }}</a>
-<span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}<span></small></p>
+<span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>
+<button type="button" onclick='mark_as_read(this, {{  {'feed': feed.url, 'entry': entry.id} | tojson }})'>mark as read</button>
+</small></p>
+
 
 
 {% if entry.summary %}

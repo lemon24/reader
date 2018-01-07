@@ -3,6 +3,7 @@ import time
 import datetime
 import json
 import logging
+import re
 
 import feedparser
 
@@ -167,7 +168,17 @@ class Reader:
         """, locals()).fetchone()
         return rv[0] if rv else None
 
-    def get_entries(self):
+    def get_entries(self, _unread_only=False):
+        unread_only_snippet = ''
+        if _unread_only:
+            unread_only_snippet = """
+                AND 'read' NOT IN (
+                    SELECT tag
+                    FROM entry_tags
+                    WHERE entry_tags.entry = entries.id
+                        AND entry_tags.feed = entries.feed
+                    )
+                """
         cursor = self.db.execute("""
             SELECT
                 feeds.url,
@@ -183,9 +194,9 @@ class Reader:
                 entries.content,
                 entries.enclosures
             FROM entries, feeds
-            WHERE feeds.url = entries.feed
+            WHERE feeds.url = entries.feed {}
             ORDER BY entries.updated DESC;
-        """)
+        """.format(unread_only_snippet))
 
         for t in cursor:
             feed = t[0:4]
@@ -197,3 +208,13 @@ class Reader:
             entry = Entry._make(entry)
             yield feed, entry
 
+    def _add_entry_tag(self, feed_url, entry_id, tag):
+        assert re.match('^[a-z0-9][a-z0-9-]+$', tag)
+        with self.db:
+            self.db.execute("""
+                INSERT INTO entry_tags (
+                    entry, feed, tag
+                ) VALUES (
+                    :entry_id, :feed_url, :tag
+                );
+            """, locals())
