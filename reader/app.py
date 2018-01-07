@@ -24,7 +24,19 @@ def close_db(error):
 @app.route('/')
 def root():
     entries = get_reader().get_entries(_unread_only=True)
-    return render_template('root.html', entries=entries)
+
+    feed_url = request.args.get('feed')
+    feed = None
+    entries_data = None
+    if feed_url:
+        entries = [(f, e) for f, e in entries if f.url == feed_url]
+        try:
+            feed = entries[0][0]
+        except IndexError:
+            return "Unknown feed (or has no entries): {}".format(feed_url), 404
+        entries_data = [{'feed': f.url, 'entry': e.id} for f, e in entries]
+
+    return render_template('root.html', entries=entries, feed=feed, entries_data=entries_data)
 
 
 @app.route('/mark-as-read', methods=['POST'])

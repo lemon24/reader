@@ -1,11 +1,12 @@
 <!doctype html>
 
 
-<title>Feeds</title>
+<title>{% if feed %}Feed: {{ feed.title }}{% else %}Feeds{% endif %}</title>
 
 <script>
 
-function mark_as_read(button, data) {
+
+function _mark_as_read(data, load_callback, error_callback) {
     var xhr = new XMLHttpRequest();
     var fd  = new FormData();
 
@@ -14,26 +15,84 @@ function mark_as_read(button, data) {
     }
 
     xhr.addEventListener('load', function(event) {
-        var status = xhr.status;
-//         var data = JSON.parse(xhr.responseText);
-        if (status == 200) {
-            button.innerHTML = 'done';
-        } else {
-            alert('got unexpected response');
-            console.log(event);
-        }
+        load_callback(xhr);
     });
 
     xhr.addEventListener('error', function(event) {
-        alert('error during the ajax request');
-        console.log(event);
+        error_callback(xhr);
     });
 
     xhr.open('POST', '{{ url_for('mark_as_read') }}');
     xhr.send(fd);
 }
 
+
+function mark_as_read(button, data) {
+    console.log(data);
+    _mark_as_read(
+        data,
+        function(xhr) {
+            var status = xhr.status;
+//             var data = JSON.parse(xhr.responseText);
+            if (status == 200) {
+                button.innerHTML = 'done';
+            } else {
+                alert('got unexpected response');
+                console.log(xhr);
+            }
+        },
+        function(xhr) {
+            alert('error during the ajax request');
+            console.log(xhr);
+        }
+    );
+}
+
+
+function mark_all_as_read(button, data) {
+    if (confirm("Mark all as read?")) {
+        button.innerHTML = '';
+        for (i = 0; i < data.length; i++) {
+            obj = data[i];
+            _mark_as_read(
+                obj,
+                function(xhr) {
+                    if (xhr.status == 200) {
+                        button.innerHTML = button.innerHTML + '.';
+                    } else {
+                        button.innerHTML = button.innerHTML + 'e';
+                        console.log(xhr);
+                    }
+                    if (data.length == button.innerHTML.length) {
+                        setTimeout(function() {
+                            button.innerHTML = 'done';
+                        }, 1000);
+                    }
+                },
+                function(xhr) {
+                    button.innerHTML = button.innerHTML + 'E';
+                    console.log(event);
+                    if (data.length == button.innerHTML.length) {
+                        setTimeout(function() {
+                            button.innerHTML = 'done';
+                        }, 1000);
+                    }
+                }
+            );
+        }
+    }
+}
+
+
 </script>
+
+
+
+{% if feed %}
+<h1>{{ feed.title }}</h1>
+<p><button type="button" onclick='mark_all_as_read(this, {{ entries_data | tojson }})'>mark all as read</button></p>
+<br>
+{% endif %}
 
 
 
@@ -42,6 +101,7 @@ function mark_as_read(button, data) {
 <p><b><a href="{{ entry.link }}">{{ entry.title }}</a></b> <br>
 <small><a href="{{ feed.link }}">{{ feed.title }}</a>
 <span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>
+<a href="{{ url_for('root', feed=feed.url) }}">feed</a>
 <button type="button" onclick='mark_as_read(this, {{  {'feed': feed.url, 'entry': entry.id} | tojson }})'>mark as read</button>
 </small></p>
 
