@@ -209,7 +209,7 @@ class Reader:
             entry = Entry._make(entry)
             yield feed, entry
 
-    def _add_entry_tag(self, feed_url, entry_id, tag):
+    def add_entry_tag(self, feed_url, entry_id, tag):
         assert re.match('^[a-z0-9][a-z0-9-]+$', tag)
         with self.db:
             self.db.execute("""
@@ -219,3 +219,23 @@ class Reader:
                     :entry_id, :feed_url, :tag
                 );
             """, locals())
+
+    def remove_entry_tag(self, feed_url, entry_id, tag):
+        with self.db:
+            self.db.execute("""
+                DELETE FROM entry_tags
+                WHERE entry = :entry_id
+                    AND feed = :feed_url
+                    AND tag = :tag;
+            """, locals())
+
+    def get_entry_tags(self, feed_url, entry_id):
+        cursor = self.db.execute("""
+            SELECT tag
+            FROM entry_tags
+            WHERE entry_tags.entry = :entry_id
+            AND entry_tags.feed = :feed_url;
+        """, locals())
+        for t in cursor:
+            yield t[0]
+

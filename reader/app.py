@@ -43,7 +43,7 @@ def root():
 def mark_as_read():
     response = {}
     try:
-        get_reader()._add_entry_tag(request.form['feed'], request.form['entry'], 'read');
+        get_reader().add_entry_tag(request.form['feed'], request.form['entry'], 'read');
     except Exception as e:
         response['error'] = "{}: {}".format(type(e).__name__, e)
     return jsonify(response)
