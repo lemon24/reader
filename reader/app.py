@@ -1,4 +1,7 @@
-from flask import Flask, render_template, current_app, g, request, jsonify
+import json
+from urllib.parse import urlparse, urljoin
+
+from flask import Flask, render_template, current_app, g, request, jsonify, url_for, redirect
 import humanize
 
 from .reader import Reader
@@ -47,4 +50,30 @@ def mark_as_read():
     except Exception as e:
         response['error'] = "{}: {}".format(type(e).__name__, e)
     return jsonify(response)
+
+
+def is_safe_url(target):
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
+
+
+def redirect_next():
+    target = request.form['next']
+    if not is_safe_url(target):
+        return "bad next", 400
+    return redirect(target)
+
+
+@app.route('/update-entry', methods=['POST'])
+def update_entry():
+    print(request.form)
+    action = request.form['action']
+    data = json.loads(request.form['data'])
+    if action == 'mark-as-read':
+        get_reader().add_entry_tag(data['feed'], data['entry'], 'read')
+        return redirect_next()
+    else:
+        return "unknown or missing action", 400
+
 
