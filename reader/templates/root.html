@@ -87,6 +87,18 @@ function mark_all_as_read(button, data) {
 </script>
 
 
+{% if config.DEBUG  %}
+<p style="
+color: white;
+background: red;
+padding: .5rem 1rem;
+margin: 0;
+position: fixed;
+bottom: 0;
+right: 0;
+"><code>{{ config.READER_DB }}</code></p>
+{% endif %}
+
 
 {% if feed %}
 <h1>{{ feed.title }}</h1>
