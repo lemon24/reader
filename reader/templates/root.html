@@ -25,12 +25,19 @@ right: 0;
 
 {% for feed, entry in entries %}
 
-<p><b><a href="{{ entry.link }}">{{ entry.title }}</a></b> <br>
+<form action="{{ url_for('update_entry') }}" method="post">
+<b><a href="{{ entry.link }}">{{ entry.title }}</a></b> <br>
 <small><a href="{{ feed.link }}">{{ feed.title }}</a>
 <span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>
 <a href="{{ url_for('root', feed=feed.url) }}">feed</a>
-</small></p>
 
+<button type="submit" name="action" value="mark-as-read">mark as read</button>
+
+<input type="hidden" name="entry-id" value='{{ {'feed': feed.url, 'entry': entry.id} | tojson }}'>
+<input type="hidden" name="next" value='{{ url_for('root', **request.args) }}'>
+
+</small>
+</form>
 
 
 {% if entry.summary %}

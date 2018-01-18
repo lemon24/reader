@@ -1,4 +1,7 @@
-from flask import Flask, render_template, current_app, g, request, jsonify
+import json
+from urllib.parse import urlparse, urljoin
+
+from flask import Flask, render_template, current_app, g, request, redirect
 import humanize
 
 from .reader import Reader
@@ -21,6 +24,12 @@ def close_db(error):
         g.reader.db.close()
 
 
+def is_safe_url(target):
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
+
+
 @app.route('/')
 def root():
     entries = get_reader().get_entries(_unread_only=True)
@@ -38,4 +47,17 @@ def root():
 
     return render_template('root.html', entries=entries, feed=feed, entries_data=entries_data)
 
+
+@app.route('/update-entry', methods=['POST'])
+def update_entry():
+    action = request.form['action']
+    entry_id = json.loads(request.form['entry-id'])
+    next = request.form['next']
+    if not is_safe_url(next):
+        return "bad next", 400
+    if action == 'mark-as-read':
+        get_reader().add_entry_tag(entry_id['feed'], entry_id['entry'], 'read')
+        return redirect(next)
+    else:
+        return "unknown action", 400
 
