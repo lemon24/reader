@@ -17,10 +17,9 @@ right: 0;
 {% endif %}
 
 
-{% if feed %}
-<h1>{{ feed.title }}</h1>
+<h1>{{ feed.title if feed else 'Feeds' }}</h1>
+<p><small>{% if feed %}<a href='{{ url_for('root') }}'>home</a>{% else %}&nbsp;{% endif %}</small></p>
 <br>
-{% endif %}
 
 
 
