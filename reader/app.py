@@ -39,12 +39,3 @@ def root():
     return render_template('root.html', entries=entries, feed=feed, entries_data=entries_data)
 
 
-@app.route('/mark-as-read', methods=['POST'])
-def mark_as_read():
-    response = {}
-    try:
-        get_reader().add_entry_tag(request.form['feed'], request.form['entry'], 'read');
-    except Exception as e:
-        response['error'] = "{}: {}".format(type(e).__name__, e)
-    return jsonify(response)
-
