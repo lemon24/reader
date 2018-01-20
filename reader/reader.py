@@ -168,11 +168,16 @@ class Reader:
         """, locals()).fetchone()
         return rv[0] if rv else None
 
-    def get_entries(self, _unread_only=False):
+    def get_entries(self, _unread_only=False, _read_only=False):
         where_extra_snippet = ''
+        assert _unread_only + _read_only <= 1
         if _unread_only:
             where_extra_snippet = """
                 AND 'read' NOT IN tags_of_this_entry
+            """
+        elif _read_only:
+            where_extra_snippet = """
+                AND 'read' IN tags_of_this_entry
             """
         cursor = self.db.execute("""
             WITH tags_of_this_entry AS (
