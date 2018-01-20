@@ -32,7 +32,9 @@ def is_safe_url(target):
 
 @app.route('/')
 def root():
-    entries = get_reader().get_entries(_unread_only=True)
+    show = request.args.get('show', 'unread')
+    assert show in ('all', 'read', 'unread')
+    entries = get_reader().get_entries(_unread_only=(show == 'unread'), _read_only=(show == 'read'))
 
     feed_url = request.args.get('feed')
     feed = None
