@@ -60,6 +60,19 @@ class Reader:
         for row in cursor:
             self._update_feed(*row)
 
+    def update_feed(self, url):
+        cursor =  self.db.execute("""
+            SELECT url, updated, http_etag, http_last_modified, stale FROM feeds
+            WHERE url = :url
+        """, locals())
+        rows = list(cursor)
+        if len(rows) == 0:
+            log.warning("update feed %r: unknown feed", url)
+        elif len(rows) == 1:
+            self._update_feed(*rows[0])
+        else:
+            assert False, "shouldn't get here"
+
     def _update_feed(self, url, db_updated, http_etag, http_last_modified, stale):
         if stale:
             db_updated = None
