@@ -67,6 +67,26 @@ def update_entry():
     if action == 'mark-as-unread':
         get_reader().remove_entry_tag(entry_id['feed'], entry_id['entry'], 'read')
         return redirect(next)
-    else:
-        return "unknown action", 400
+    return "unknown action", 400
+
+
+@app.route('/update-entries', methods=['POST'])
+def update_entries():
+    action = request.form['action']
+    entry_id = json.loads(request.form['entry-id'])
+    next = request.form['next']
+    if not is_safe_url(next):
+        return "bad next", 400
+    really = request.form.get('really')
+    if really != 'really':
+        return "really not checked", 400
+    if action == 'mark-all-as-read':
+        for entry_id in entry_id:
+            get_reader().add_entry_tag(entry_id['feed'], entry_id['entry'], 'read')
+        return redirect(next)
+    if action == 'mark-all-as-unread':
+        for entry_id in entry_id:
+            get_reader().remove_entry_tag(entry_id['feed'], entry_id['entry'], 'read')
+        return redirect(next)
+    return "unknown action", 400
 

@@ -18,7 +18,8 @@ right: 0;
 
 
 <h1>{{ feed.title if feed else 'Feeds' }}</h1>
-<p><small>
+<form action="{{ url_for('update_entries') }}" method="post">
+<small>
 {% if feed %}<a href='{{ url_for('root') }}'>home</a>{% endif %}
 
 {% set current_what = request.args.get('show', 'unread') %}
@@ -30,7 +31,19 @@ right: 0;
 {% if what != current_what %}</a>{% endif %}
 {% endfor %}
 
-</small></p>
+{% if feed %}
+<input type="checkbox" name="really" id="really-mark-all-as" value="really">
+<label for="really-mark-all-as">I really want to</label>
+
+<button type="submit" name="action" value="mark-all-as-read">mark all as read</button>
+<button type="submit" name="action" value="mark-all-as-unread">mark all as unread</button>
+
+<input type="hidden" name="entry-id" value='{{ entries_data | tojson }}'>
+<input type="hidden" name="next" value='{{ url_for('root', **request.args) }}'>
+{% endif %}
+
+</small>
+</form>
 <br>
 
 
