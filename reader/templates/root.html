@@ -18,7 +18,19 @@ right: 0;
 
 
 <h1>{{ feed.title if feed else 'Feeds' }}</h1>
-<p><small>{% if feed %}<a href='{{ url_for('root') }}'>home</a>{% else %}&nbsp;{% endif %}</small></p>
+<p><small>
+{% if feed %}<a href='{{ url_for('root') }}'>home</a>{% endif %}
+
+{% set current_what = request.args.get('show', 'unread') %}
+{% for what in ['unread', 'read', 'all'] %}
+{% set args = request.args.copy() %}
+{% set _ = args.setlist('show', [what]) %}
+{% if what != current_what %}<a href='{{ url_for('root', **args) }}'>{% endif %}
+{{- what -}}
+{% if what != current_what %}</a>{% endif %}
+{% endfor %}
+
+</small></p>
 <br>
 
 
