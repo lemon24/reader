@@ -49,13 +49,18 @@ def cli(ctx, db):
 
 @cli.command()
 @click.argument('url')
+@click.option('--update/--no-update')
+@click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def add(db_path, url):
+def add(db_path, url, update, verbose):
+    setup_logging(verbose)
     try:
         reader = Reader(db_path)
     except Exception as e:
         abort("{}: {}", db_path, e)
     reader.add_feed(url)
+    if update:
+        reader.update_feed(url)
 
 
 @cli.command()
