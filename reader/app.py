@@ -34,7 +34,9 @@ def is_safe_url(target):
 def root():
     show = request.args.get('show', 'unread')
     assert show in ('all', 'read', 'unread')
-    entries = get_reader().get_entries(_unread_only=(show == 'unread'), _read_only=(show == 'read'))
+
+    reader = get_reader()
+    entries = reader.get_entries(_unread_only=(show == 'unread'), _read_only=(show == 'read'))
 
     feed_url = request.args.get('feed')
     feed = None
@@ -46,6 +48,8 @@ def root():
         except IndexError:
             return "Unknown feed (or has no entries): {}".format(feed_url), 404
         entries_data = [{'feed': f.url, 'entry': e.id} for f, e in entries]
+
+    entries = ((f, e, reader.get_entry_tags(f.url, e.id)) for f, e in entries)
 
     return render_template('root.html', entries=entries, feed=feed, entries_data=entries_data)
 
@@ -59,6 +63,9 @@ def update_entry():
         return "bad next", 400
     if action == 'mark-as-read':
         get_reader().add_entry_tag(entry_id['feed'], entry_id['entry'], 'read')
+        return redirect(next)
+    if action == 'mark-as-unread':
+        get_reader().remove_entry_tag(entry_id['feed'], entry_id['entry'], 'read')
         return redirect(next)
     else:
         return "unknown action", 400
