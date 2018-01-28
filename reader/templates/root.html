@@ -50,7 +50,7 @@ right: 0;
 
 {% for feed, entry, entry_tags in entries %}
 
-<form action="{{ url_for('update_entry') }}" method="post">
+<form action="{{ url_for('update_entry') }}" method="post" id="entry-{{ loop.index }}">
 <b><a href="{{ entry.link }}">{{ entry.title }}</a></b> <br>
 <small><a href="{{ feed.link }}">{{ feed.title }}</a>
 <span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>
@@ -63,7 +63,7 @@ right: 0;
 {% endif %}
 
 <input type="hidden" name="entry-id" value='{{ {'feed': feed.url, 'entry': entry.id} | tojson }}'>
-<input type="hidden" name="next" value='{{ url_for('root', **request.args) }}'>
+<input type="hidden" name="next" value='{{ url_for('root', **request.args) }}#entry-{{ loop.index if not loop.last else loop.index - 1 }}'>
 
 </small>
 </form>
