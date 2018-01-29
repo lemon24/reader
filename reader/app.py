@@ -49,8 +49,6 @@ def root():
             return "Unknown feed (or has no entries): {}".format(feed_url), 404
         entries_data = [{'feed': f.url, 'entry': e.id} for f, e in entries]
 
-    entries = ((f, e, reader.get_entry_tags(f.url, e.id)) for f, e in entries)
-
     return render_template('root.html', entries=entries, feed=feed, entries_data=entries_data)
 
 
@@ -62,10 +60,10 @@ def update_entry():
     if not is_safe_url(next):
         return "bad next", 400
     if action == 'mark-as-read':
-        get_reader().add_entry_tag(entry_id['feed'], entry_id['entry'], 'read')
+        get_reader().mark_as_read(entry_id['feed'], entry_id['entry'])
         return redirect(next)
     if action == 'mark-as-unread':
-        get_reader().remove_entry_tag(entry_id['feed'], entry_id['entry'], 'read')
+        get_reader().mark_as_unread(entry_id['feed'], entry_id['entry'])
         return redirect(next)
     return "unknown action", 400
 
@@ -82,11 +80,11 @@ def update_entries():
         return "really not checked", 400
     if action == 'mark-all-as-read':
         for entry_id in entry_id:
-            get_reader().add_entry_tag(entry_id['feed'], entry_id['entry'], 'read')
+            get_reader().mark_as_read(entry_id['feed'], entry_id['entry'])
         return redirect(next)
     if action == 'mark-all-as-unread':
         for entry_id in entry_id:
-            get_reader().remove_entry_tag(entry_id['feed'], entry_id['entry'], 'read')
+            get_reader().mark_as_unread(entry_id['feed'], entry_id['entry'])
         return redirect(next)
     return "unknown action", 400
 

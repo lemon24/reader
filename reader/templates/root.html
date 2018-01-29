@@ -48,7 +48,7 @@ right: 0;
 
 
 
-{% for feed, entry, entry_tags in entries %}
+{% for feed, entry in entries %}
 
 <form action="{{ url_for('update_entry') }}" method="post" id="entry-{{ loop.index }}">
 <b><a href="{{ entry.link }}">{{ entry.title }}</a></b> <br>
@@ -56,7 +56,7 @@ right: 0;
 <span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>
 <a href="{{ url_for('root', feed=feed.url) }}">feed</a>
 
-{% if 'read' in entry_tags %}
+{% if entry.read %}
 <button type="submit" name="action" value="mark-as-unread">mark as unread</button>
 {% else %}
 <button type="submit" name="action" value="mark-as-read">mark as read</button>
