@@ -104,20 +104,12 @@ def create_db(db):
 
 def update_from_1_to_2(db):
     db.execute("""
-        UPDATE version
-        SET version = 2;
-    """)
-    db.execute("""
         ALTER TABLE feeds
         ADD COLUMN stale INTEGER;
     """)
 
 
 def update_from_2_to_3(db):
-    db.execute("""
-        UPDATE version
-        SET version = 3;
-    """)
     db.execute("""
         ALTER TABLE entries
         ADD COLUMN summary TEXT;
@@ -134,10 +126,6 @@ def update_from_2_to_3(db):
 
 def update_from_3_to_4(db):
     db.execute("""
-        UPDATE version
-        SET version = 4;
-    """)
-    db.execute("""
         CREATE TABLE entry_tags (
             entry TEXT NOT NULL,
             feed TEXT NOT NULL,
@@ -149,10 +137,6 @@ def update_from_3_to_4(db):
 
 
 def update_from_4_to_5(db):
-    db.execute("""
-        UPDATE version
-        SET version = 5;
-    """)
     db.execute("""
         ALTER TABLE entries
         ADD COLUMN read INTEGER;
@@ -173,30 +157,45 @@ def update_from_4_to_5(db):
     """)
 
 
+MIGRATIONS = {
+    1: update_from_1_to_2,
+    2: update_from_2_to_3,
+    3: update_from_3_to_4,
+    4: update_from_4_to_5,
+}
+
+
 def open_db(path):
     db = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
     db.execute("""
             PRAGMA foreign_keys = ON;
     """)
+
     with ddl_transaction(db):
         version = get_version(db)
+
         if version is None:
             create_db(db)
-        elif version == 1:
-            update_from_1_to_2(db)
-            update_from_2_to_3(db)
-            update_from_3_to_4(db)
-            update_from_4_to_5(db)
-        elif version == 2:
-            update_from_2_to_3(db)
-            update_from_3_to_4(db)
-            update_from_4_to_5(db)
-        elif version == 3:
-            update_from_3_to_4(db)
-            update_from_4_to_5(db)
-        elif version == 4:
-            update_from_4_to_5(db)
+
+        elif version < VERSION:
+            if not MIGRATIONS.get(version):
+                raise InvalidVersion("unsupported version: {}".format(version))
+
+            for from_version in range(version, VERSION):
+                to_version = from_version + 1
+                migration = MIGRATIONS.get(from_version)
+                assert migration is not None, (
+                    "no migration from {} to {}; expected migrations for all versions "
+                    "later than {}".format(from_version, to_version, version))
+
+                db.execute("""
+                    UPDATE version
+                    SET version = :to_version;
+                """, locals())
+                migration(db)
+
         elif version != VERSION:
             raise InvalidVersion("invalid version: {}".format(version))
+
     return db
 
