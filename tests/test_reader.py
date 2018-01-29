@@ -181,3 +181,18 @@ def test_mark_as_read_unread(reader, feed_type):
     (feed, entry), = list(reader.get_entries())
     assert not entry.read
 
+
+@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
+def test_add_remove_feed(reader, feed_type):
+
+    feed = make_feed(1, datetime(2010, 1, 1))
+    entry = make_entry(1, datetime(2010, 1, 1))
+    reader.add_feed(feed.url)
+    write_feed(feed_type, feed, [entry])
+    reader.update_feeds()
+
+    assert set(reader.get_entries()) == {(feed, entry)}
+
+    reader.remove_feed(feed.url)
+    assert set(reader.get_entries()) == set()
+

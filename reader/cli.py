@@ -64,6 +64,19 @@ def add(db_path, url, update, verbose):
 
 
 @cli.command()
+@click.argument('url')
+@click.option('-v', '--verbose', count=True)
+@click.pass_obj
+def remove(db_path, url, verbose):
+    setup_logging(verbose)
+    try:
+        reader = Reader(db_path)
+    except Exception as e:
+        abort("{}: {}", db_path, e)
+    reader.remove_feed(url)
+
+
+@cli.command()
 @click.option('-v', '--verbose', count=True)
 @click.pass_obj
 def update(db_path, verbose):

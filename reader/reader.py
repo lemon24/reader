@@ -54,6 +54,21 @@ class Reader:
                 VALUES (:url);
             """, locals())
 
+    def remove_feed(self, url):
+        with self.db:
+            self.db.execute("""
+                DELETE FROM entry_tags
+                WHERE feed = :url;
+            """, locals())
+            self.db.execute("""
+                DELETE FROM entries
+                WHERE feed = :url;
+            """, locals())
+            self.db.execute("""
+                DELETE FROM feeds
+                WHERE url = :url;
+            """, locals())
+
     def update_feeds(self):
         cursor =  self.db.execute("""
             SELECT url, updated, http_etag, http_last_modified, stale FROM feeds
