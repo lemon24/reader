@@ -4,6 +4,7 @@ import datetime
 import json
 import logging
 import re
+import sqlite3
 
 import feedparser
 
@@ -15,7 +16,7 @@ log = logging.getLogger(__name__)
 
 Feed = namedtuple('Feed', 'url title link updated')
 
-Entry = namedtuple('Entry', 'id title link updated published summary content enclosures')
+Entry = namedtuple('Entry', 'id title link updated published summary content enclosures read')
 
 
 def _datetime_from_timetuple(tt):
@@ -223,6 +224,7 @@ class Reader:
             entry = t[4:10] + (
                 json.loads(t[10]) if t[10] else None,
                 json.loads(t[11]) if t[11] else None,
+                'read' in self.get_entry_tags(t[0], t[4]),
             )
             entry = Entry._make(entry)
             yield feed, entry
@@ -256,4 +258,13 @@ class Reader:
         """, locals())
         for t in cursor:
             yield t[0]
+
+    def mark_as_read(self, feed_url, entry_id):
+        try:
+            self.add_entry_tag(feed_url, entry_id, 'read')
+        except sqlite3.IntegrityError:
+            pass
+
+    def mark_as_unread(self, feed_url, entry_id):
+        self.remove_entry_tag(feed_url, entry_id, 'read')
 

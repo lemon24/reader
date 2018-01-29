@@ -74,6 +74,7 @@ def make_entry(number, updated, published=None):
         None,
         None,
         None,
+        False,
     )
 
 
@@ -150,4 +151,33 @@ def test_add_remove_get_entry_tags(reader, feed_type):
         reader.one_entry_tag(feed.url, entry.id, 'one')
     reader.remove_entry_tag(feed.url, entry.id, 'two')
     assert set(reader.get_entry_tags(feed.url, entry.id)) == set()
+
+
+@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
+def test_mark_as_read_unread(reader, feed_type):
+
+    feed = make_feed(1, datetime(2010, 1, 1))
+    entry = make_entry(1, datetime(2010, 1, 1))
+    reader.add_feed(feed.url)
+    write_feed(feed_type, feed, [entry])
+    reader.update_feeds()
+
+    (feed, entry), = list(reader.get_entries())
+    assert not entry.read
+
+    reader.mark_as_read(feed.url, entry.id)
+    (feed, entry), = list(reader.get_entries())
+    assert entry.read
+
+    reader.mark_as_read(feed.url, entry.id)
+    (feed, entry), = list(reader.get_entries())
+    assert entry.read
+
+    reader.mark_as_unread(feed.url, entry.id)
+    (feed, entry), = list(reader.get_entries())
+    assert not entry.read
+
+    reader.mark_as_unread(feed.url, entry.id)
+    (feed, entry), = list(reader.get_entries())
+    assert not entry.read
 
