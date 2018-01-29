@@ -202,19 +202,13 @@ class Reader:
         assert _unread_only + _read_only <= 1
         if _unread_only:
             where_extra_snippet = """
-                AND 'read' NOT IN tags_of_this_entry
+                AND entries.read IS NULL OR entries.read != 1
             """
         elif _read_only:
             where_extra_snippet = """
-                AND 'read' IN tags_of_this_entry
+                AND entries.read = 1
             """
         cursor = self.db.execute("""
-            WITH tags_of_this_entry AS (
-                SELECT tag
-                FROM entry_tags
-                WHERE entry_tags.entry = entries.id
-                AND entry_tags.feed = entries.feed
-            )
             SELECT
                 feeds.url,
                 feeds.title,
@@ -227,7 +221,8 @@ class Reader:
                 entries.published,
                 entries.summary,
                 entries.content,
-                entries.enclosures
+                entries.enclosures,
+                entries.read
             FROM entries, feeds
             WHERE feeds.url = entries.feed {}
             ORDER BY entries.updated DESC;
@@ -239,47 +234,24 @@ class Reader:
             entry = t[4:10] + (
                 json.loads(t[10]) if t[10] else None,
                 json.loads(t[11]) if t[11] else None,
-                'read' in self.get_entry_tags(t[0], t[4]),
+                t[12] == 1,
             )
             entry = Entry._make(entry)
             yield feed, entry
 
-    def add_entry_tag(self, feed_url, entry_id, tag):
-        assert re.match('^[a-z0-9][a-z0-9-]+$', tag)
-        with self.db:
-            self.db.execute("""
-                INSERT INTO entry_tags (
-                    entry, feed, tag
-                ) VALUES (
-                    :entry_id, :feed_url, :tag
-                );
-            """, locals())
-
-    def remove_entry_tag(self, feed_url, entry_id, tag):
-        with self.db:
-            self.db.execute("""
-                DELETE FROM entry_tags
-                WHERE entry = :entry_id
-                    AND feed = :feed_url
-                    AND tag = :tag;
-            """, locals())
-
-    def get_entry_tags(self, feed_url, entry_id):
-        cursor = self.db.execute("""
-            SELECT tag
-            FROM entry_tags
-            WHERE entry_tags.entry = :entry_id
-            AND entry_tags.feed = :feed_url;
-        """, locals())
-        for t in cursor:
-            yield t[0]
-
     def mark_as_read(self, feed_url, entry_id):
-        try:
-            self.add_entry_tag(feed_url, entry_id, 'read')
-        except sqlite3.IntegrityError:
-            pass
+        with self.db:
+            self.db.execute("""
+                UPDATE entries
+                SET read = 1
+                WHERE feed = :feed_url AND id = :entry_id;
+            """, locals())
 
     def mark_as_unread(self, feed_url, entry_id):
-        self.remove_entry_tag(feed_url, entry_id, 'read')
+        with self.db:
+            self.db.execute("""
+                UPDATE entries
+                SET read = 0
+                WHERE feed = :feed_url AND id = :entry_id;
+            """, locals())
 

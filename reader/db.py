@@ -38,7 +38,7 @@ def ddl_transaction(db):
         db.isolation_level = isolation_level
 
 
-VERSION = 4
+VERSION = 5
 
 
 class InvalidVersion(Exception):
@@ -85,6 +85,7 @@ def create_db(db):
             summary TEXT,
             content TEXT,
             enclosures TEXT,
+            read INTEGER,
             PRIMARY KEY (id, feed),
             FOREIGN KEY (feed) REFERENCES feeds(url)
         );
@@ -147,6 +148,31 @@ def update_from_3_to_4(db):
     """)
 
 
+def update_from_4_to_5(db):
+    db.execute("""
+        UPDATE version
+        SET version = 5;
+    """)
+    db.execute("""
+        ALTER TABLE entries
+        ADD COLUMN read INTEGER;
+    """)
+    db.execute("""
+        WITH tags_of_this_entry AS (
+            SELECT tag
+            FROM entry_tags
+            WHERE entry_tags.entry = entries.id
+            AND entry_tags.feed = entries.feed
+        )
+        UPDATE entries
+        SET read = 1
+        WHERE 'read' in tags_of_this_entry;
+    """)
+    db.execute("""
+        DROP TABLE entry_tags;
+    """)
+
+
 def open_db(path):
     db = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
     db.execute("""
@@ -160,11 +186,16 @@ def open_db(path):
             update_from_1_to_2(db)
             update_from_2_to_3(db)
             update_from_3_to_4(db)
+            update_from_4_to_5(db)
         elif version == 2:
             update_from_2_to_3(db)
             update_from_3_to_4(db)
+            update_from_4_to_5(db)
         elif version == 3:
             update_from_3_to_4(db)
+            update_from_4_to_5(db)
+        elif version == 4:
+            update_from_4_to_5(db)
         elif version != VERSION:
             raise InvalidVersion("invalid version: {}".format(version))
     return db

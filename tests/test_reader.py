@@ -130,30 +130,6 @@ def test_update_entry_updated(reader, feed_type):
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_add_remove_get_entry_tags(reader, feed_type):
-
-    feed = make_feed(1, datetime(2010, 1, 1))
-    entry = make_entry(1, datetime(2010, 1, 1))
-    reader.add_feed(feed.url)
-    write_feed(feed_type, feed, [entry])
-    reader.update_feeds()
-
-    assert set(reader.get_entry_tags(feed.url, entry.id)) == set()
-    reader.add_entry_tag(feed.url, entry.id, 'one')
-    with pytest.raises(Exception):
-        reader.add_entry_tag(feed.url, entry.id, 'one')
-    assert set(reader.get_entry_tags(feed.url, entry.id)) == {'one'}
-    reader.add_entry_tag(feed.url, entry.id, 'two')
-    assert set(reader.get_entry_tags(feed.url, entry.id)) == {'one', 'two'}
-    reader.remove_entry_tag(feed.url, entry.id, 'one')
-    assert set(reader.get_entry_tags(feed.url, entry.id)) == {'two'}
-    with pytest.raises(Exception):
-        reader.one_entry_tag(feed.url, entry.id, 'one')
-    reader.remove_entry_tag(feed.url, entry.id, 'two')
-    assert set(reader.get_entry_tags(feed.url, entry.id)) == set()
-
-
-@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_mark_as_read_unread(reader, feed_type):
 
     feed = make_feed(1, datetime(2010, 1, 1))
