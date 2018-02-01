@@ -172,3 +172,46 @@ def test_add_remove_feed(reader, feed_type):
     reader.remove_feed(feed.url)
     assert set(reader.get_entries()) == set()
 
+
+def test_mark_as_read_during_update_feeds(monkeypatch, tmpdir):
+    monkeypatch.chdir(tmpdir)
+    db_path = str(tmpdir.join('db.sqlite'))
+
+    feed = make_feed(1, datetime(2010, 1, 1))
+    entry = make_entry(1, datetime(2010, 1, 1))
+    write_feed('rss', feed, [entry])
+    feed2 = make_feed(2, datetime(2010, 1, 1))
+    write_feed('rss', feed2, [])
+
+    reader = Reader(db_path)
+    reader.add_feed(feed.url)
+    reader.add_feed(feed2.url)
+    reader.update_feeds()
+
+    import threading
+
+    class BozoFeed(dict):
+        bozo = True
+
+    in_feedparser_parse = threading.Event()
+    can_return_from_feedparser_parse = threading.Event()
+
+    def fake_feedparser_parse(*args, **kwargs):
+        in_feedparser_parse.set()
+        can_return_from_feedparser_parse.wait()
+        return BozoFeed()
+
+    monkeypatch.setattr('feedparser.parse', fake_feedparser_parse)
+
+    t = threading.Thread(target=lambda: Reader(db_path).update_feeds())
+    t.start()
+
+    in_feedparser_parse.wait()
+
+    try:
+        # shouldn't raise an exception
+        reader.mark_as_read(feed.url, entry.id)
+    finally:
+        can_return_from_feedparser_parse.set()
+        t.join()
+

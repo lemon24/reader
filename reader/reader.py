@@ -73,7 +73,7 @@ class Reader:
         cursor =  self.db.execute("""
             SELECT url, updated, http_etag, http_last_modified, stale FROM feeds
         """)
-        for row in cursor:
+        for row in list(cursor):
             self._update_feed(*row)
 
     def update_feed(self, url):
