@@ -51,7 +51,13 @@ right: 0;
 {% for feed, entry in entries %}
 
 <form action="{{ url_for('update_entry') }}" method="post" id="entry-{{ loop.index }}">
-<b><a href="{{ entry.link }}">{{ entry.title }}</a></b> <br>
+<b><a href="{{ entry.link }}">
+{%- if entry.title and entry.title.strip() -%}
+{{ entry.title }}
+{%- else -%}
+untitled
+{%- endif -%}
+</a></b> <br>
 <small><a href="{{ feed.link }}">{{ feed.title }}</a>
 <span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>
 <a href="{{ url_for('root', feed=feed.url) }}">feed</a>
