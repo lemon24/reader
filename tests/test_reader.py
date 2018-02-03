@@ -288,3 +288,28 @@ def test_get_entries_order(reader):
 
     assert list(reader.get_entries()) == expected
 
+
+@pytest.mark.xfail(strict=True)
+def test_mark_as_read_during_get_entries(monkeypatch, tmpdir):
+    monkeypatch.chdir(tmpdir)
+    db_path = str(tmpdir.join('db.sqlite'))
+
+    feed = make_feed(1, datetime(2010, 1, 1))
+    entry = make_entry(1, datetime(2010, 1, 1))
+    entry2 = make_entry(2, datetime(2010, 1, 2))
+    entry3 = make_entry(3, datetime(2010, 1, 3))
+    write_feed('rss', feed, [entry, entry2, entry3])
+
+    reader = Reader(db_path)
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    entries = reader.get_entries()
+    next(entries)
+
+    # shouldn't raise an exception
+    Reader(db_path).mark_as_read(feed.url, entry.id)
+
+    # just a sanity check
+    assert len(list(entries)) == 3 - 1
+
