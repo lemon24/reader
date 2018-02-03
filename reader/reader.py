@@ -44,7 +44,7 @@ def _get_updated_published(thing, is_rss):
 
 class Reader:
 
-    _get_entries_chunk_size = 2 ** 8
+    _get_entries_chunk_size = 0
 
     def __init__(self, path=None, db=None):
         self.db = db if db else open_db(path)
