@@ -1,4 +1,6 @@
 from datetime import datetime
+from itertools import chain
+from collections import OrderedDict
 
 import pytest
 import feedgen.feed
@@ -214,4 +216,75 @@ def test_mark_as_read_during_update_feeds(monkeypatch, tmpdir):
     finally:
         can_return_from_feedparser_parse.set()
         t.join()
+
+
+class FeedWriter:
+
+    def __init__(self, number, type):
+        self.number = number
+        self.type = type
+        self.updated = None
+        self.entries = OrderedDict()
+
+    def entry(self, number, *args, **kwargs):
+        self.entries[number] = make_entry(number, *args, **kwargs)
+
+    def get_feed(self):
+        return make_feed(self.number, self.updated)
+
+    def get_tuples(self):
+        feed = self.get_feed()
+        for entry in self.entries.values():
+            yield feed, entry
+
+    def write(self):
+        write_feed(self.type, self.get_feed(), self.entries.values())
+
+
+def test_get_entries_order(reader):
+    one = FeedWriter(1, 'rss')
+    two = FeedWriter(2, 'atom')
+
+    reader.add_feed(two.get_feed().url)
+
+    two.entry(1, datetime(2010, 1, 1))
+    two.entry(4, datetime(2010, 1, 4))
+    two.updated = datetime(2010, 1, 4)
+    two.write()
+
+    reader.update_feeds()
+
+    reader.add_feed(one.get_feed().url)
+
+    one.entry(1, datetime(2010, 1, 2))
+    one.updated = datetime(2010, 1, 2)
+    one.write()
+
+    reader.update_feeds()
+
+    two.entry(1, datetime(2010, 1, 5))
+    two.entry(2, datetime(2010, 1, 2))
+    two.updated = datetime(2010, 1, 5)
+    two.write()
+
+    reader.update_feeds()
+
+    one.entry(2, datetime(2010, 1, 2))
+    one.entry(4, datetime(2010, 1, 3))
+    one.entry(3, datetime(2010, 1, 4))
+    one.updated = datetime(2010, 1, 6)
+    one.write()
+    two.entry(3, datetime(2010, 1, 2))
+    two.entry(5, datetime(2010, 1, 3))
+    two.updated = datetime(2010, 1, 6)
+    two.write()
+
+    reader.update_feeds()
+
+    expected = sorted(
+        chain(one.get_tuples(), two.get_tuples()),
+        key=lambda t: (t[1].updated, t[0].url, t[1].id),
+        reverse=True)
+
+    assert list(reader.get_entries()) == expected
 
