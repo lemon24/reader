@@ -225,7 +225,11 @@ class Reader:
                 entries.read
             FROM entries, feeds
             WHERE feeds.url = entries.feed {}
-            ORDER BY entries.updated DESC;
+            ORDER BY
+                entries.updated DESC,
+                feeds.url DESC,
+                entries.id DESC
+            ;
         """.format(where_extra_snippet))
 
         for t in cursor:
