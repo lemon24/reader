@@ -241,7 +241,12 @@ class FeedWriter:
         write_feed(self.type, self.get_feed(), self.entries.values())
 
 
-def test_get_entries_order(reader):
+@pytest.mark.parametrize('chunk_size', [
+    Reader._get_entries_chunk_size,     # the default
+    1, 2, 3, 8,                         # rough result size for this test
+    0,                                  # unchunked query
+])
+def test_get_entries_order(reader, chunk_size):
     one = FeedWriter(1, 'rss')
     two = FeedWriter(2, 'atom')
 
@@ -289,8 +294,14 @@ def test_get_entries_order(reader):
     assert list(reader.get_entries()) == expected
 
 
-@pytest.mark.xfail(strict=True)
-def test_mark_as_read_during_get_entries(monkeypatch, tmpdir):
+@pytest.mark.parametrize('chunk_size', [
+    Reader._get_entries_chunk_size,     # the default
+    1, 2, 3, 8,                         # rough result size for this test
+
+    # check unchunked queries still blocks writes
+    pytest.param(0, marks=pytest.mark.xfail(raises=Exception, strict=True)),
+])
+def test_mark_as_read_during_get_entries(monkeypatch, tmpdir, chunk_size):
     monkeypatch.chdir(tmpdir)
     db_path = str(tmpdir.join('db.sqlite'))
 
@@ -303,6 +314,8 @@ def test_mark_as_read_during_get_entries(monkeypatch, tmpdir):
     reader = Reader(db_path)
     reader.add_feed(feed.url)
     reader.update_feeds()
+
+    reader._get_entries_chunk_size = chunk_size
 
     entries = reader.get_entries()
     next(entries)

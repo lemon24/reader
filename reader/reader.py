@@ -44,6 +44,8 @@ def _get_updated_published(thing, is_rss):
 
 class Reader:
 
+    _get_entries_chunk_size = 2 ** 8
+
     def __init__(self, path=None, db=None):
         self.db = db if db else open_db(path)
 
@@ -197,17 +199,33 @@ class Reader:
         """, locals()).fetchone()
         return rv[0] if rv else None
 
-    def get_entries(self, _unread_only=False, _read_only=False):
-        where_extra_snippet = ''
+    def _get_entries(self, _unread_only=False, _read_only=False, chunk_size=None, last=None):
+
+        where_read_snippet = ''
         assert _unread_only + _read_only <= 1
         if _unread_only:
-            where_extra_snippet = """
+            where_read_snippet = """
                 AND entries.read IS NULL OR entries.read != 1
             """
         elif _read_only:
-            where_extra_snippet = """
+            where_read_snippet = """
                 AND entries.read = 1
             """
+
+        chunk_size = self._get_entries_chunk_size
+        where_next_snippet = ''
+        limit_snippet = ''
+        if chunk_size:
+            limit_snippet = """
+                LIMIT :chunk_size
+            """
+            if last:
+                last_entry_updated, last_feed_url, last_entry_id = last
+                where_next_snippet = """
+                    AND (entries.updated, feeds.url, entries.id) <
+                        (:last_entry_updated, :last_feed_url, :last_entry_id)
+                """
+
         cursor = self.db.execute("""
             SELECT
                 feeds.url,
@@ -224,13 +242,17 @@ class Reader:
                 entries.enclosures,
                 entries.read
             FROM entries, feeds
-            WHERE feeds.url = entries.feed {}
+            WHERE
+                feeds.url = entries.feed
+                {where_read_snippet}
+                {where_next_snippet}
             ORDER BY
                 entries.updated DESC,
                 feeds.url DESC,
                 entries.id DESC
+            {limit_snippet}
             ;
-        """.format(where_extra_snippet))
+        """.format(**locals()), locals())
 
         for t in cursor:
             feed = t[0:4]
@@ -242,6 +264,42 @@ class Reader:
             )
             entry = Entry._make(entry)
             yield feed, entry
+
+    def get_entries(self, _unread_only=False, _read_only=False):
+        chunk_size = self._get_entries_chunk_size
+        entries = None
+
+        while True:
+            last = None
+            if entries:
+                last = (
+                    entries[-1][1].updated,
+                    entries[-1][0].url,
+                    entries[-1][1].id,
+                )
+
+            entries = self._get_entries(
+                _unread_only=_unread_only,
+                _read_only=_read_only,
+                chunk_size=chunk_size,
+                last=last,
+            )
+
+            # When chunk_size is 0, don't chunk the query.
+            #
+            # This will ensure there are no missing/duplicated entries, but
+            # will block database writes until the whole generator is consumed.
+            #
+            # Currently not exposed through the public API.
+            #
+            if not chunk_size:
+                yield from entries
+                return
+
+            entries = list(entries)
+            if not entries:
+                break
+            yield from entries
 
     def mark_as_read(self, feed_url, entry_id):
         with self.db:
