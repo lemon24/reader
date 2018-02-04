@@ -206,14 +206,13 @@ class Reader:
         assert _unread_only + _read_only <= 1
         if _unread_only:
             where_read_snippet = """
-                AND entries.read IS NULL OR entries.read != 1
+                AND (entries.read IS NULL OR entries.read != 1)
             """
         elif _read_only:
             where_read_snippet = """
                 AND entries.read = 1
             """
 
-        chunk_size = self._get_entries_chunk_size
         where_next_snippet = ''
         limit_snippet = ''
         if chunk_size:

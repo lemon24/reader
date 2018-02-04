@@ -319,11 +319,12 @@ def test_mark_as_read_during_get_entries(monkeypatch, tmpdir, chunk_size):
 
     reader._get_entries_chunk_size = chunk_size
 
-    entries = reader.get_entries()
+    entries = reader.get_entries(_unread_only=True)
     next(entries)
 
     # shouldn't raise an exception
     Reader(db_path).mark_as_read(feed.url, entry.id)
+    Reader(db_path).mark_as_unread(feed.url, entry.id)
 
     # just a sanity check
     assert len(list(entries)) == 3 - 1
