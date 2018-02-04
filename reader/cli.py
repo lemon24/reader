@@ -32,7 +32,10 @@ def setup_logging(verbose):
     else:
         level = logging.DEBUG
     reader.reader.log.setLevel(level)
-    logging.basicConfig()
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s %(levelname)-7s %(message)s', '%Y-%m-%dT%H:%M:%S')
+    handler.setFormatter(formatter)
+    reader.reader.log.addHandler(handler)
 
 
 @click.group()
@@ -90,7 +93,9 @@ def update(db_path, verbose):
 
 @cli.command()
 @click.pass_obj
-def serve(db_path):
+@click.option('-v', '--verbose', count=True)
+def serve(db_path, verbose):
+    setup_logging(verbose)
     from werkzeug.serving import run_simple
     from .app import app
     app.config['READER_DB'] = db_path
