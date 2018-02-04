@@ -175,6 +175,7 @@ def test_add_remove_feed(reader, feed_type):
     assert set(reader.get_entries()) == set()
 
 
+@pytest.mark.slow
 def test_mark_as_read_during_update_feeds(monkeypatch, tmpdir):
     monkeypatch.chdir(tmpdir)
     db_path = str(tmpdir.join('db.sqlite'))
@@ -296,6 +297,7 @@ def test_get_entries_order(reader, chunk_size):
     assert list(reader.get_entries()) == expected
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('chunk_size', [
     Reader._get_entries_chunk_size,     # the default
     1, 2, 3, 8,                         # rough result size for this test
