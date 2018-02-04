@@ -247,6 +247,8 @@ class FeedWriter:
     0,                                  # unchunked query
 ])
 def test_get_entries_order(reader, chunk_size):
+    reader._get_entries_chunk_size = chunk_size
+
     one = FeedWriter(1, 'rss')
     two = FeedWriter(2, 'atom')
 
