@@ -267,16 +267,9 @@ class Reader:
 
     def get_entries(self, _unread_only=False, _read_only=False):
         chunk_size = self._get_entries_chunk_size
-        entries = None
 
+        last = None
         while True:
-            last = None
-            if entries:
-                last = (
-                    entries[-1][1].updated,
-                    entries[-1][0].url,
-                    entries[-1][1].id,
-                )
 
             entries = self._get_entries(
                 _unread_only=_unread_only,
@@ -299,7 +292,14 @@ class Reader:
             entries = list(entries)
             if not entries:
                 break
+
             yield from entries
+
+            last = (
+                entries[-1][1].updated,
+                entries[-1][0].url,
+                entries[-1][1].id,
+            )
 
     def mark_as_read(self, feed_url, entry_id):
         with self.db:
