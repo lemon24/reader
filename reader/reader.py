@@ -200,6 +200,7 @@ class Reader:
         return rv[0] if rv else None
 
     def _get_entries(self, _unread_only=False, _read_only=False, chunk_size=None, last=None):
+        log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
         where_read_snippet = ''
         assert _unread_only + _read_only <= 1
