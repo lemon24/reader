@@ -71,6 +71,13 @@ class Reader:
                 WHERE url = :url;
             """, locals())
 
+    def get_feeds(self):
+        cursor = self.db.execute("""
+            SELECT url, title, link, updated FROM feeds
+        """)
+        for row in list(cursor):
+            yield Feed._make(row)
+
     def update_feeds(self):
         cursor =  self.db.execute("""
             SELECT url, updated, http_etag, http_last_modified, stale FROM feeds

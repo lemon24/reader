@@ -331,3 +331,21 @@ def test_mark_as_read_during_get_entries(monkeypatch, tmpdir, chunk_size):
     # just a sanity check
     assert len(list(entries)) == 3 - 1
 
+
+def test_get_feeds(reader):
+    one = make_feed(1, datetime(2010, 1, 1))
+    two = make_feed(2, datetime(2010, 1, 2))
+
+    reader.add_feed(one.url)
+    reader.add_feed(two.url)
+
+    assert set(reader.get_feeds()) == {
+        Feed(f.url, None, None, None) for f in (one, two)
+    }, "only url should be set for feeds not yet updated"
+
+    write_feed('rss', one, [])
+    write_feed('atom', two, [])
+    reader.update_feeds()
+
+    assert set(reader.get_feeds()) == {one, two}
+
