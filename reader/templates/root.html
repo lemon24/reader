@@ -107,4 +107,6 @@ untitled
 
 <br>
 
+{% else %}
+<p>no {% if current_what != 'all' %}{{ current_what }} {% endif %}entries for this feed</p>
 {% endfor %}

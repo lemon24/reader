@@ -1,7 +1,7 @@
 import json
 from urllib.parse import urlparse, urljoin
 
-from flask import Flask, render_template, current_app, g, request, redirect
+from flask import Flask, render_template, current_app, g, request, redirect, abort
 import humanize
 
 from .reader import Reader
@@ -42,11 +42,10 @@ def root():
     feed = None
     entries_data = None
     if feed_url:
+        feed = reader.get_feed(feed_url)
+        if not feed:
+            abort(404)
         entries = [(f, e) for f, e in entries if f.url == feed_url]
-        try:
-            feed = entries[0][0]
-        except IndexError:
-            return "Unknown feed (or has no entries): {}".format(feed_url), 404
         entries_data = [{'feed': f.url, 'entry': e.id} for f, e in entries]
 
     return render_template('root.html', entries=entries, feed=feed, entries_data=entries_data)
