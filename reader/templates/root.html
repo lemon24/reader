@@ -1,7 +1,7 @@
 <!doctype html>
 
 
-<title>{% if feed %}Feed: {{ feed.title }}{% else %}Feeds{% endif %}</title>
+<title>{% if feed %}Feed: {{ feed.title or feed.url }}{% else %}Feeds{% endif %}</title>
 
 
 {% if config.DEBUG  %}
@@ -17,7 +17,7 @@ right: 0;
 {% endif %}
 
 
-<h1>{{ feed.title if feed else 'Feeds' }}</h1>
+<h1>{{ (feed.title or feed.url) if feed else 'Feeds' }}</h1>
 <form action="{{ url_for('update_entries') }}" method="post">
 <small>
 {% if feed %}<a href='{{ url_for('root') }}'>home</a>{% endif %}
