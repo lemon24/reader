@@ -78,6 +78,19 @@ class Reader:
         for row in list(cursor):
             yield Feed._make(row)
 
+    def get_feed(self, url):
+        cursor = self.db.execute("""
+            SELECT url, title, link, updated FROM feeds
+            WHERE url = :url
+        """, locals())
+        rows = list(cursor)
+        if len(rows) == 0:
+            return None
+        elif len(rows) == 1:
+            return Feed._make(rows[0])
+        else:
+            assert False, "shouldn't get here"
+
     def update_feeds(self):
         cursor =  self.db.execute("""
             SELECT url, updated, http_etag, http_last_modified, stale FROM feeds

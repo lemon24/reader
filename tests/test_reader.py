@@ -349,3 +349,18 @@ def test_get_feeds(reader):
 
     assert set(reader.get_feeds()) == {one, two}
 
+
+def test_get_feed(reader):
+    feed = make_feed(1, datetime(2010, 1, 1))
+
+    assert reader.get_feed(feed.url) == None
+
+    reader.add_feed(feed.url)
+
+    assert reader.get_feed(feed.url) == Feed(feed.url, None, None, None)
+
+    write_feed('rss', feed, [])
+    reader.update_feeds()
+
+    assert reader.get_feed(feed.url) == feed
+
