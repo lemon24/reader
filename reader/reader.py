@@ -46,8 +46,8 @@ class Reader:
 
     _get_entries_chunk_size = 2 ** 8
 
-    def __init__(self, path=None, db=None):
-        self.db = db if db else open_db(path)
+    def __init__(self, path=None):
+        self.db = open_db(path)
 
     def add_feed(self, url):
         with self.db:
