@@ -3,8 +3,8 @@ from datetime import datetime
 import pytest
 import feedgen.feed
 
-from reader.reader import Feed, Entry
 from reader.parser import parse, ParseError, NotModified
+from fakeparser import Parser
 
 
 def write_feed(type, feed, entries):
@@ -51,35 +51,15 @@ def write_feed(type, feed, entries):
         fg.rss_file(feed.url, pretty=True)
 
 
-def make_feed(number, updated):
-    return Feed(
-        'feed-{}.xml'.format(number),
-        'Feed #{}'.format(number),
-        'http://www.example.com/{}'.format(number),
-        updated,
-    )
-
-def make_entry(number, updated, published=None):
-    return Entry(
-        'http://www.example.com/entries/{}'.format(number),
-        'Entry #{}'.format(number),
-        'http://www.example.com/entries/{}'.format(number),
-        updated,
-        published,
-        None,
-        None,
-        None,
-        False,
-    )
-
-
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse(monkeypatch, tmpdir, feed_type):
     monkeypatch.chdir(tmpdir)
 
-    feed = make_feed(1, datetime(2010, 1, 1))
-    entry_one = make_entry(1, datetime(2010, 1, 1))
-    entry_two = make_entry(2, datetime(2010, 2, 1))
+    parser = Parser()
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
+    entry_two = parser.entry(1, 2, datetime(2010, 2, 1))
     entries = [entry_one, entry_two]
     write_feed(feed_type, feed, entries)
 

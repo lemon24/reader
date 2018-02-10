@@ -1,14 +1,12 @@
 from datetime import datetime
-from itertools import chain
-from collections import OrderedDict
 import threading
 
 import pytest
 
-from reader.reader import Reader, Feed, Entry
+from reader.reader import Reader
+from reader.types import Feed
 from reader.parser import ParseError, NotModified
-
-from test_parser import make_feed, make_entry
+from fakeparser import Parser
 
 
 @pytest.fixture
@@ -17,43 +15,7 @@ def reader(monkeypatch, tmpdir):
     return Reader(':memory:')
 
 
-class FakeParser:
-
-    def __init__(self, feeds=None, entries=None):
-        self.feeds = feeds or {}
-        self.entries = entries or {}
-
-    @classmethod
-    def from_parser(cls, other):
-        return cls(other.feeds, other.entries)
-
-    def feed(self, number, updated=None):
-        feed = make_feed(number, updated)
-        self.feeds[number] = feed
-        self.entries.setdefault(number, OrderedDict())
-        return feed
-
-    def entry(self, feed_number, number, updated):
-        entry = make_entry(number, updated)
-        self.entries[feed_number][number] = entry
-        return entry
-
-    def __call__(self, url, http_etag, http_last_modified):
-        for feed_number, feed in self.feeds.items():
-            if feed.url == url:
-                break
-        else:
-            raise RuntimeError("unkown feed: {}".format(url))
-        return feed, self.entries[feed_number].values(), http_etag, http_last_modified
-
-    def get_tuples(self):
-        for feed_number, entries in self.entries.items():
-            feed = self.feeds[feed_number]
-            for entry in entries.values():
-                yield feed, entry
-
-
-class BlockingFakeParser(FakeParser):
+class BlockingParser(Parser):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -69,7 +31,7 @@ class BlockingFakeParser(FakeParser):
 def test_update_feed_updated(reader):
     """A feed should be processed only if it is newer than the stored one."""
 
-    parser = FakeParser()
+    parser = Parser()
     reader._parse = parser
 
     old_feed = parser.feed(1, datetime(2010, 1, 1))
@@ -91,7 +53,7 @@ def test_update_feed_updated(reader):
 def test_update_entry_updated(reader):
     """An entry should be updated only if it is newer than the stored one."""
 
-    parser = FakeParser()
+    parser = Parser()
     reader._parse = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
@@ -116,7 +78,7 @@ def test_update_entry_updated(reader):
 
 def test_mark_as_read_unread(reader):
 
-    parser = FakeParser()
+    parser = Parser()
     reader._parse = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
@@ -147,7 +109,7 @@ def test_mark_as_read_unread(reader):
 
 def test_add_remove_feed(reader):
 
-    parser = FakeParser()
+    parser = Parser()
     reader._parse = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
@@ -167,7 +129,7 @@ def test_mark_as_read_during_update_feeds(monkeypatch, tmpdir):
     monkeypatch.chdir(tmpdir)
     db_path = str(tmpdir.join('db.sqlite'))
 
-    parser = FakeParser()
+    parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
     feed2 = parser.feed(2, datetime(2010, 1, 1))
@@ -179,7 +141,7 @@ def test_mark_as_read_during_update_feeds(monkeypatch, tmpdir):
     reader.add_feed(feed2.url)
     reader.update_feeds()
 
-    blocking_parser = BlockingFakeParser.from_parser(parser)
+    blocking_parser = BlockingParser.from_parser(parser)
 
     def target():
         reader = Reader(db_path)
@@ -207,7 +169,7 @@ def test_mark_as_read_during_update_feeds(monkeypatch, tmpdir):
 def test_get_entries_order(reader, chunk_size):
     reader._get_entries_chunk_size = chunk_size
 
-    parser = FakeParser()
+    parser = Parser()
     reader._parse = parser
 
     one = parser.feed(1)
@@ -259,7 +221,7 @@ def test_mark_as_read_during_get_entries(monkeypatch, tmpdir, chunk_size):
     monkeypatch.chdir(tmpdir)
     db_path = str(tmpdir.join('db.sqlite'))
 
-    parser = FakeParser()
+    parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
     parser.entry(1, 2, datetime(2010, 1, 2))
@@ -284,7 +246,7 @@ def test_mark_as_read_during_get_entries(monkeypatch, tmpdir, chunk_size):
 
 
 def test_get_feeds(reader):
-    parser = FakeParser()
+    parser = Parser()
     reader._parse = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
@@ -303,7 +265,7 @@ def test_get_feeds(reader):
 
 
 def test_get_feed(reader):
-    parser = FakeParser()
+    parser = Parser()
     reader._parse = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
