@@ -90,15 +90,6 @@ def create_db(db):
             FOREIGN KEY (feed) REFERENCES feeds(url)
         );
     """)
-    db.execute("""
-        CREATE TABLE entry_tags (
-            entry TEXT NOT NULL,
-            feed TEXT NOT NULL,
-            tag TEXT NOT NULL,
-            FOREIGN KEY (entry, feed) REFERENCES entries(id, feed),
-            UNIQUE (entry, feed, tag)
-        );
-    """)
     db.execute("INSERT INTO version VALUES (?);", (VERSION, ))
 
 

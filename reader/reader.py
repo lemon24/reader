@@ -59,10 +59,6 @@ class Reader:
     def remove_feed(self, url):
         with self.db:
             self.db.execute("""
-                DELETE FROM entry_tags
-                WHERE feed = :url;
-            """, locals())
-            self.db.execute("""
                 DELETE FROM entries
                 WHERE feed = :url;
             """, locals())
