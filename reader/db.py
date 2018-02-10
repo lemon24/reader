@@ -38,7 +38,7 @@ def ddl_transaction(db):
         db.isolation_level = isolation_level
 
 
-VERSION = 5
+VERSION = 6
 
 
 class InvalidVersion(Exception):
@@ -88,6 +88,8 @@ def create_db(db):
             read INTEGER,
             PRIMARY KEY (id, feed),
             FOREIGN KEY (feed) REFERENCES feeds(url)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
         );
     """)
     db.execute("INSERT INTO version VALUES (?);", (VERSION, ))
@@ -148,11 +150,47 @@ def update_from_4_to_5(db):
     """)
 
 
+def update_from_5_to_6(db):
+    db.execute("""
+        ALTER TABLE entries
+        RENAME TO old_entries;
+    """)
+    db.execute("""
+        CREATE TABLE entries (
+            id TEXT NOT NULL,
+            feed TEXT NOT NULL,
+            title TEXT,
+            link TEXT,
+            updated TIMESTAMP,
+            published TIMESTAMP,
+            summary TEXT,
+            content TEXT,
+            enclosures TEXT,
+            read INTEGER,
+            PRIMARY KEY (id, feed),
+            FOREIGN KEY (feed) REFERENCES feeds(url)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
+        );
+    """)
+    db.execute("""
+        INSERT INTO entries
+        SELECT
+            id, feed, title, link, updated, published,
+            summary, content, enclosures, read
+        FROM old_entries;
+    """)
+    db.execute("""
+        DROP TABLE old_entries;
+    """)
+
+
 MIGRATIONS = {
     1: update_from_1_to_2,
     2: update_from_2_to_3,
     3: update_from_3_to_4,
     4: update_from_4_to_5,
+    5: update_from_5_to_6,
 }
 
 
