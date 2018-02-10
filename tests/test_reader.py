@@ -1,12 +1,14 @@
 from datetime import datetime
 from itertools import chain
 from collections import OrderedDict
+import threading
 
 import pytest
 
 from reader.reader import Reader, Feed, Entry
+from reader.parser import ParseError, NotModified
 
-from test_parser import write_feed, make_feed, make_entry
+from test_parser import make_feed, make_entry
 
 
 @pytest.fixture
@@ -15,25 +17,73 @@ def reader(monkeypatch, tmpdir):
     return Reader(':memory:')
 
 
+class FakeParser:
+
+    def __init__(self, feeds=None, entries=None):
+        self.feeds = feeds or {}
+        self.entries = entries or {}
+
+    @classmethod
+    def from_parser(cls, other):
+        return cls(other.feeds, other.entries)
+
+    def feed(self, number, updated=None):
+        feed = make_feed(number, updated)
+        self.feeds[number] = feed
+        self.entries.setdefault(number, OrderedDict())
+        return feed
+
+    def entry(self, feed_number, number, updated):
+        entry = make_entry(number, updated)
+        self.entries[feed_number][number] = entry
+        return entry
+
+    def __call__(self, url, http_etag, http_last_modified):
+        for feed_number, feed in self.feeds.items():
+            if feed.url == url:
+                break
+        else:
+            raise RuntimeError("unkown feed: {}".format(url))
+        return feed, self.entries[feed_number].values(), http_etag, http_last_modified
+
+    def get_tuples(self):
+        for feed_number, entries in self.entries.items():
+            feed = self.feeds[feed_number]
+            for entry in entries.values():
+                yield feed, entry
+
+
+class BlockingFakeParser(FakeParser):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.in_parser = threading.Event()
+        self.can_return_from_parser = threading.Event()
+
+    def __call__(self, *args, **kwargs):
+        self.in_parser.set()
+        self.can_return_from_parser.wait()
+        raise ParseError()
+
+
 def test_update_feed_updated(reader):
     """A feed should be processed only if it is newer than the stored one."""
 
-    old_feed = make_feed(1, datetime(2010, 1, 1))
-    new_feed = old_feed._replace(updated=datetime(2010, 1, 2))
-    entry_one = make_entry(1, datetime(2010, 1, 1))
-    entry_two = make_entry(2, datetime(2010, 2, 1))
+    parser = FakeParser()
+    reader._parse = parser
+
+    old_feed = parser.feed(1, datetime(2010, 1, 1))
+    entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
 
     reader.add_feed(old_feed.url)
-
-    write_feed('atom', old_feed, [entry_one])
     reader.update_feeds()
     assert set(reader.get_entries()) == {(old_feed, entry_one)}
 
-    write_feed('atom', old_feed, [entry_one, entry_two])
+    entry_two = parser.entry(1, 2, datetime(2010, 2, 1))
     reader.update_feeds()
     assert set(reader.get_entries()) == {(old_feed, entry_one)}
 
-    write_feed('atom', new_feed, [entry_one, entry_two])
+    new_feed = parser.feed(1, datetime(2010, 1, 2))
     reader.update_feeds()
     assert set(reader.get_entries()) == {(new_feed, entry_one), (new_feed, entry_two)}
 
@@ -41,35 +91,38 @@ def test_update_feed_updated(reader):
 def test_update_entry_updated(reader):
     """An entry should be updated only if it is newer than the stored one."""
 
-    feed = make_feed(1, datetime(2010, 1, 1))
-    old_entry = make_entry(1, datetime(2010, 1, 1))
+    parser = FakeParser()
+    reader._parse = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    old_entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
     reader.add_feed(feed.url)
-
-    write_feed('atom', feed, [old_entry])
     reader.update_feeds()
     assert set(reader.get_entries()) == {(feed, old_entry)}
 
-    feed = feed._replace(updated=datetime(2010, 1, 2))
+    feed = parser.feed(1, datetime(2010, 1, 2))
     new_entry = old_entry._replace(title='New Entry')
-    write_feed('atom', feed, [new_entry])
+    parser.entries[1][1] = new_entry
     reader.update_feeds()
     assert set(reader.get_entries()) == {(feed, old_entry)}
 
-    feed = feed._replace(updated=datetime(2010, 1, 3))
+    feed = parser.feed(1, datetime(2010, 1, 3))
     new_entry = new_entry._replace(updated=datetime(2010, 1, 2))
-    write_feed('atom', feed, [new_entry])
+    parser.entries[1][1] = new_entry
     reader.update_feeds()
-
     assert set(reader.get_entries()) == {(feed, new_entry)}
 
 
 def test_mark_as_read_unread(reader):
 
-    feed = make_feed(1, datetime(2010, 1, 1))
-    entry = make_entry(1, datetime(2010, 1, 1))
+    parser = FakeParser()
+    reader._parse = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+
     reader.add_feed(feed.url)
-    write_feed('atom', feed, [entry])
     reader.update_feeds()
 
     (feed, entry), = list(reader.get_entries())
@@ -94,10 +147,13 @@ def test_mark_as_read_unread(reader):
 
 def test_add_remove_feed(reader):
 
-    feed = make_feed(1, datetime(2010, 1, 1))
-    entry = make_entry(1, datetime(2010, 1, 1))
+    parser = FakeParser()
+    reader._parse = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+
     reader.add_feed(feed.url)
-    write_feed('atom', feed, [entry])
     reader.update_feeds()
 
     assert set(reader.get_entries()) == {(feed, entry)}
@@ -111,66 +167,36 @@ def test_mark_as_read_during_update_feeds(monkeypatch, tmpdir):
     monkeypatch.chdir(tmpdir)
     db_path = str(tmpdir.join('db.sqlite'))
 
-    feed = make_feed(1, datetime(2010, 1, 1))
-    entry = make_entry(1, datetime(2010, 1, 1))
-    write_feed('rss', feed, [entry])
-    feed2 = make_feed(2, datetime(2010, 1, 1))
-    write_feed('rss', feed2, [])
+    parser = FakeParser()
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+    feed2 = parser.feed(2, datetime(2010, 1, 1))
 
     reader = Reader(db_path)
+    reader._parse = parser
+
     reader.add_feed(feed.url)
     reader.add_feed(feed2.url)
     reader.update_feeds()
 
-    import threading
+    blocking_parser = BlockingFakeParser.from_parser(parser)
 
-    class BozoFeed(dict):
-        bozo = True
+    def target():
+        reader = Reader(db_path)
+        reader._parse = blocking_parser
+        reader.update_feeds()
 
-    in_feedparser_parse = threading.Event()
-    can_return_from_feedparser_parse = threading.Event()
-
-    def fake_feedparser_parse(*args, **kwargs):
-        in_feedparser_parse.set()
-        can_return_from_feedparser_parse.wait()
-        return BozoFeed()
-
-    monkeypatch.setattr('feedparser.parse', fake_feedparser_parse)
-
-    t = threading.Thread(target=lambda: Reader(db_path).update_feeds())
+    t = threading.Thread(target=target)
     t.start()
 
-    in_feedparser_parse.wait()
+    blocking_parser.in_parser.wait()
 
     try:
         # shouldn't raise an exception
         reader.mark_as_read(feed.url, entry.id)
     finally:
-        can_return_from_feedparser_parse.set()
+        blocking_parser.can_return_from_parser.set()
         t.join()
-
-
-class FeedWriter:
-
-    def __init__(self, number, type):
-        self.number = number
-        self.type = type
-        self.updated = None
-        self.entries = OrderedDict()
-
-    def entry(self, number, *args, **kwargs):
-        self.entries[number] = make_entry(number, *args, **kwargs)
-
-    def get_feed(self):
-        return make_feed(self.number, self.updated)
-
-    def get_tuples(self):
-        feed = self.get_feed()
-        for entry in self.entries.values():
-            yield feed, entry
-
-    def write(self):
-        write_feed(self.type, self.get_feed(), self.entries.values())
 
 
 @pytest.mark.parametrize('chunk_size', [
@@ -181,47 +207,40 @@ class FeedWriter:
 def test_get_entries_order(reader, chunk_size):
     reader._get_entries_chunk_size = chunk_size
 
-    one = FeedWriter(1, 'rss')
-    two = FeedWriter(2, 'atom')
+    parser = FakeParser()
+    reader._parse = parser
 
-    reader.add_feed(two.get_feed().url)
+    one = parser.feed(1)
+    two = parser.feed(2)
+    reader.add_feed(two.url)
 
-    two.entry(1, datetime(2010, 1, 1))
-    two.entry(4, datetime(2010, 1, 4))
-    two.updated = datetime(2010, 1, 4)
-    two.write()
-
+    parser.entry(2, 1, datetime(2010, 1, 1))
+    parser.entry(2, 4, datetime(2010, 1, 4))
+    two = parser.feed(2, datetime(2010, 1, 4))
     reader.update_feeds()
 
-    reader.add_feed(one.get_feed().url)
+    reader.add_feed(one.url)
 
-    one.entry(1, datetime(2010, 1, 2))
-    one.updated = datetime(2010, 1, 2)
-    one.write()
-
+    parser.entry(1, 1, datetime(2010, 1, 2))
+    one = parser.feed(1, datetime(2010, 1, 2))
     reader.update_feeds()
 
-    two.entry(1, datetime(2010, 1, 5))
-    two.entry(2, datetime(2010, 1, 2))
-    two.updated = datetime(2010, 1, 5)
-    two.write()
-
+    parser.entry(2, 1, datetime(2010, 1, 5))
+    parser.entry(2, 2, datetime(2010, 1, 2))
+    two = parser.feed(2, datetime(2010, 1, 5))
     reader.update_feeds()
 
-    one.entry(2, datetime(2010, 1, 2))
-    one.entry(4, datetime(2010, 1, 3))
-    one.entry(3, datetime(2010, 1, 4))
-    one.updated = datetime(2010, 1, 6)
-    one.write()
-    two.entry(3, datetime(2010, 1, 2))
-    two.entry(5, datetime(2010, 1, 3))
-    two.updated = datetime(2010, 1, 6)
-    two.write()
-
+    parser.entry(1, 2, datetime(2010, 1, 2))
+    parser.entry(1, 4, datetime(2010, 1, 3))
+    parser.entry(1, 3, datetime(2010, 1, 4))
+    one = parser.feed(1, datetime(2010, 1, 6))
+    parser.entry(2, 3, datetime(2010, 1, 2))
+    parser.entry(2, 5, datetime(2010, 1, 3))
+    two = parser.feed(2, datetime(2010, 1, 6))
     reader.update_feeds()
 
     expected = sorted(
-        chain(one.get_tuples(), two.get_tuples()),
+        parser.get_tuples(),
         key=lambda t: (t[1].updated, t[0].url, t[1].id),
         reverse=True)
 
@@ -240,13 +259,14 @@ def test_mark_as_read_during_get_entries(monkeypatch, tmpdir, chunk_size):
     monkeypatch.chdir(tmpdir)
     db_path = str(tmpdir.join('db.sqlite'))
 
-    feed = make_feed(1, datetime(2010, 1, 1))
-    entry = make_entry(1, datetime(2010, 1, 1))
-    entry2 = make_entry(2, datetime(2010, 1, 2))
-    entry3 = make_entry(3, datetime(2010, 1, 3))
-    write_feed('rss', feed, [entry, entry2, entry3])
+    parser = FakeParser()
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+    parser.entry(1, 2, datetime(2010, 1, 2))
+    parser.entry(1, 3, datetime(2010, 1, 3))
 
     reader = Reader(db_path)
+    reader._parse = parser
     reader.add_feed(feed.url)
     reader.update_feeds()
 
@@ -264,8 +284,11 @@ def test_mark_as_read_during_get_entries(monkeypatch, tmpdir, chunk_size):
 
 
 def test_get_feeds(reader):
-    one = make_feed(1, datetime(2010, 1, 1))
-    two = make_feed(2, datetime(2010, 1, 2))
+    parser = FakeParser()
+    reader._parse = parser
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 1, 2))
 
     reader.add_feed(one.url)
     reader.add_feed(two.url)
@@ -274,15 +297,16 @@ def test_get_feeds(reader):
         Feed(f.url, None, None, None) for f in (one, two)
     }, "only url should be set for feeds not yet updated"
 
-    write_feed('rss', one, [])
-    write_feed('atom', two, [])
     reader.update_feeds()
 
     assert set(reader.get_feeds()) == {one, two}
 
 
 def test_get_feed(reader):
-    feed = make_feed(1, datetime(2010, 1, 1))
+    parser = FakeParser()
+    reader._parse = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
 
     assert reader.get_feed(feed.url) == None
 
@@ -290,7 +314,6 @@ def test_get_feed(reader):
 
     assert reader.get_feed(feed.url) == Feed(feed.url, None, None, None)
 
-    write_feed('rss', feed, [])
     reader.update_feeds()
 
     assert reader.get_feed(feed.url) == feed

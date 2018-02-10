@@ -31,7 +31,7 @@ def _get_updated_published(thing, is_rss):
 
 class ParseError(Exception):
 
-    def __init__(self, exception):
+    def __init__(self, exception=None):
         super().__init__(exception)
         self.exception = exception
 
