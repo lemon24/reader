@@ -25,15 +25,15 @@ def test_update_feed_updated(reader):
 
     reader.add_feed(old_feed.url)
 
-    write_feed(feed_type, old_feed, [entry_one])
+    write_feed('atom', old_feed, [entry_one])
     reader.update_feeds()
     assert set(reader.get_entries()) == {(old_feed, entry_one)}
 
-    write_feed(feed_type, old_feed, [entry_one, entry_two])
+    write_feed('atom', old_feed, [entry_one, entry_two])
     reader.update_feeds()
     assert set(reader.get_entries()) == {(old_feed, entry_one)}
 
-    write_feed(feed_type, new_feed, [entry_one, entry_two])
+    write_feed('atom', new_feed, [entry_one, entry_two])
     reader.update_feeds()
     assert set(reader.get_entries()) == {(new_feed, entry_one), (new_feed, entry_two)}
 
@@ -46,19 +46,19 @@ def test_update_entry_updated(reader):
 
     reader.add_feed(feed.url)
 
-    write_feed(feed_type, feed, [old_entry])
+    write_feed('atom', feed, [old_entry])
     reader.update_feeds()
     assert set(reader.get_entries()) == {(feed, old_entry)}
 
     feed = feed._replace(updated=datetime(2010, 1, 2))
     new_entry = old_entry._replace(title='New Entry')
-    write_feed(feed_type, feed, [new_entry])
+    write_feed('atom', feed, [new_entry])
     reader.update_feeds()
     assert set(reader.get_entries()) == {(feed, old_entry)}
 
     feed = feed._replace(updated=datetime(2010, 1, 3))
     new_entry = new_entry._replace(updated=datetime(2010, 1, 2))
-    write_feed(feed_type, feed, [new_entry])
+    write_feed('atom', feed, [new_entry])
     reader.update_feeds()
 
     assert set(reader.get_entries()) == {(feed, new_entry)}
@@ -69,7 +69,7 @@ def test_mark_as_read_unread(reader):
     feed = make_feed(1, datetime(2010, 1, 1))
     entry = make_entry(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
-    write_feed(feed_type, feed, [entry])
+    write_feed('atom', feed, [entry])
     reader.update_feeds()
 
     (feed, entry), = list(reader.get_entries())
@@ -97,7 +97,7 @@ def test_add_remove_feed(reader):
     feed = make_feed(1, datetime(2010, 1, 1))
     entry = make_entry(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
-    write_feed(feed_type, feed, [entry])
+    write_feed('atom', feed, [entry])
     reader.update_feeds()
 
     assert set(reader.get_entries()) == {(feed, entry)}
