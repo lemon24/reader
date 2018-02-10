@@ -1,50 +1,18 @@
-from collections import namedtuple
-import time
-import datetime
 import json
 import logging
-import re
-import sqlite3
-
-import feedparser
 
 from .db import open_db
+from .types import Feed, Entry
+from .parser import parse, ParseError, NotModified
 
 
 log = logging.getLogger(__name__)
 
 
-Feed = namedtuple('Feed', 'url title link updated')
-
-Entry = namedtuple('Entry', 'id title link updated published summary content enclosures read')
-
-
-def _datetime_from_timetuple(tt):
-    return datetime.datetime.fromtimestamp(time.mktime(tt)) if tt else None
-
-def _get_updated_published(thing, is_rss):
-    # feed.get and entry.get don't work for updated due historical reasons;
-    # from the docs: "As of version 5.1.1, if this key [.updated] doesn't
-    # exist but [thing].published does, the value of [thing].published
-    # will be returned. [...] This mapping is temporary and will be
-    # removed in a future version of feedparser."
-
-    updated = None
-    published = None
-    if 'updated_parsed' in thing:
-        updated = _datetime_from_timetuple(thing.updated_parsed)
-    if 'published_parsed' in thing:
-        published = _datetime_from_timetuple(thing.published_parsed)
-
-    if published and not updated and is_rss:
-            updated, published = published, None
-
-    return updated, published
-
-
 class Reader:
 
     _get_entries_chunk_size = 2 ** 8
+    _parse = staticmethod(parse)
 
     def __init__(self, path=None):
         self.db = open_db(path)
@@ -109,29 +77,27 @@ class Reader:
             http_etag = None
             http_last_modified = None
             log.info("update feed %r: feed marked as stale, ignoring updated, http_etag or http_last_modified", url)
-        feed = feedparser.parse(url, etag=http_etag, modified=http_last_modified)
 
-        if feed.bozo:
-            log.warning("update feed %r: bozo feed, skipping; bozo exception: %r", url, feed.get('bozo_exception'))
+        try:
+            t = self._parse(url, http_etag, http_last_modified)
+            feed, entries, http_etag, http_last_modified = t
+        except ParseError as e:
+            log.warning("update feed %r: error while getting/parsing feed, skipping; exception: %r", url, e.exception)
+            return
+        except NotModified:
+            log.info("update feed %r: feed not modified, skipping", url)
             return
 
-        if feed.get('status') == 304:
-            log.info("update feed %r: got 304, skipping", url)
-            return
-
-        is_rss = feed.version.startswith('rss')
-        updated, _ = _get_updated_published(feed.feed, is_rss)
+        updated = feed.updated
         if not stale and updated and db_updated and updated <= db_updated:
             log.info("update feed %r: feed not updated, skipping", url)
             log.debug("update feed %r: old updated %s, new updated %s", url, db_updated, updated)
             return
 
-        with self.db:
-            title = feed.feed.get('title')
-            link = feed.feed.get('link')
-            http_etag = feed.get('etag')
-            http_last_modified = feed.get('modified')
+        title = feed.title
+        link = feed.link
 
+        with self.db:
             self.db.execute("""
                 UPDATE feeds
                 SET
@@ -145,20 +111,18 @@ class Reader:
             """, locals())
 
             entries_updated, entries_new = 0, 0
-            for entry in feed.entries:
-                entry_updated, entry_new = self._update_entry(url, entry, is_rss, stale)
+            for entry in entries:
+                entry_updated, entry_new = self._update_entry(url, entry, stale)
                 entries_updated += entry_updated
                 entries_new += entry_new
 
             log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
-    def _update_entry(self, feed_url, entry, is_rss, stale):
+    def _update_entry(self, feed_url, entry, stale):
         assert self.db.in_transaction
 
-        assert entry.id
         db_updated = self._get_entry_updated(feed_url, entry.id)
-        updated, published = _get_updated_published(entry, is_rss)
-        assert updated
+        updated, published = entry.updated, entry.published
 
         if stale:
             log.debug("update entry %r of feed %r: feed marked as stale, updating anyway", entry.id, feed_url)
@@ -167,13 +131,11 @@ class Reader:
             return 0, 0
 
         id = entry.id
-        title = entry.get('title')
-        link = entry.get('link')
-        summary = entry.get('summary')
-        content = entry.get('content')
-        content = json.dumps(content) if content else None
-        enclosures = entry.get('enclosures')
-        enclosures = json.dumps(enclosures) if enclosures else None
+        title = entry.title
+        link = entry.link
+        summary = entry.summary
+        content = json.dumps(entry.content) if entry.content else None
+        enclosures = json.dumps(entry.enclosures) if entry.enclosures else None
 
         if not db_updated:
             self.db.execute("""
