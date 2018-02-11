@@ -59,7 +59,7 @@ class Reader:
         elif len(feeds) == 1:
             return feeds[0]
         else:
-            assert False, "shouldn't get here"
+            assert False, "shouldn't get here"  # pragma: no cover
 
     def _get_feeds_for_update(self, url=None):
         where_url_snippet = '' if not url else "WHERE url = :url"
@@ -83,7 +83,7 @@ class Reader:
         elif len(rows) == 1:
             self._update_feed(*rows[0])
         else:
-            assert False, "shouldn't get here"
+            assert False, "shouldn't get here"  # pragma: no cover
 
     def _update_feed(self, url, db_updated, http_etag, http_last_modified, stale):
         if stale:
@@ -198,7 +198,7 @@ class Reader:
                 AND entries.read = 1
             """
         else:
-            assert False, "shouldn't get here"
+            assert False, "shouldn't get here"  # pragma: no cover
 
         where_next_snippet = ''
         limit_snippet = ''
