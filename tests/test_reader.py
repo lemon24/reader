@@ -10,19 +10,6 @@ from reader import FeedExistsError, FeedNotFoundError, ParseError, EntryNotFound
 from fakeparser import Parser, BlockingParser, FailingParser, NotModifiedParser
 
 
-@pytest.fixture
-def reader():
-    return Reader(':memory:')
-
-
-def call_update_feeds(reader, _):
-    reader.update_feeds()
-
-def call_update_feed(reader, url):
-    reader.update_feed(url)
-
-
-@pytest.mark.parametrize('call_update_method', [call_update_feeds, call_update_feed])
 def test_update_feed_updated(reader, call_update_method):
     """A feed should be processed only if it is newer than the stored one."""
 
@@ -45,7 +32,6 @@ def test_update_feed_updated(reader, call_update_method):
     assert set(reader.get_entries()) == {(new_feed, entry_one), (new_feed, entry_two)}
 
 
-@pytest.mark.parametrize('call_update_method', [call_update_feeds, call_update_feed])
 def test_update_entry_updated(reader, call_update_method):
     """An entry should be updated only if it is newer than the stored one."""
 
@@ -73,7 +59,6 @@ def test_update_entry_updated(reader, call_update_method):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('call_update_method', [call_update_feeds, call_update_feed])
 def test_update_blocking(monkeypatch, tmpdir, call_update_method):
     """Calls to reader._parse() shouldn't block the underlying storage."""
 
@@ -111,7 +96,7 @@ def test_update_blocking(monkeypatch, tmpdir, call_update_method):
         blocking_parser.can_return_from_parser.set()
         t.join()
 
-@pytest.mark.parametrize('call_update_method', [call_update_feeds, call_update_feed])
+
 def test_update_not_modified(reader, call_update_method):
     """A feed should not be updated if it was not modified."""
 
@@ -394,3 +379,4 @@ def test_add_remove_get_feeds(reader):
 
     with pytest.raises(FeedNotFoundError):
         reader.remove_feed(one.url)
+

@@ -5,10 +5,8 @@ import pytest
 from reader import FeedNotFoundError
 
 from fakeparser import ParserThatRemembers
-from test_reader import reader, call_update_feed, call_update_feeds
 
 
-@pytest.mark.parametrize('call_update_method', [call_update_feeds, call_update_feed])
 def test_update_stale(reader, call_update_method):
     """When a feed is marked as stale feeds/entries should be updated
     regardless of their .updated or caching headers.
@@ -43,7 +41,6 @@ def test_update_stale(reader, call_update_method):
     assert set(reader.get_entries()) == {(new_feed, new_entry)}
 
 
-@pytest.mark.parametrize('call_update_method', [call_update_feeds, call_update_feed])
 def test_update_parse(reader, call_update_method):
     """Updated feeds should pass caching headers back to ._parse()."""
 
