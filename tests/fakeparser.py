@@ -1,6 +1,8 @@
 from collections import OrderedDict
+import threading
 
 from reader.types import Feed, Entry
+from reader.exceptions import ParseError
 
 
 def _make_feed(number, updated):
@@ -58,4 +60,23 @@ class Parser:
             feed = self.feeds[feed_number]
             for entry in entries.values():
                 yield feed, entry
+
+
+class BlockingParser(Parser):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.in_parser = threading.Event()
+        self.can_return_from_parser = threading.Event()
+
+    def __call__(self, *args, **kwargs):
+        self.in_parser.set()
+        self.can_return_from_parser.wait()
+        raise ParseError(None)
+
+
+class FailingParser(Parser):
+
+    def __call__(self, *args, **kwargs):
+        raise ParseError(None)
 

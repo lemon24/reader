@@ -6,7 +6,7 @@ import pytest
 from reader.reader import Reader
 from reader.types import Feed
 from reader.exceptions import FeedExistsError, FeedNotFoundError, ParseError, NotModified
-from fakeparser import Parser
+from fakeparser import Parser, BlockingParser, FailingParser
 
 
 @pytest.fixture
@@ -72,19 +72,6 @@ def test_update_entry_updated(reader, call_update_method):
     assert set(reader.get_entries()) == {(feed, new_entry)}
 
 
-class BlockingParser(Parser):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.in_parser = threading.Event()
-        self.can_return_from_parser = threading.Event()
-
-    def __call__(self, *args, **kwargs):
-        self.in_parser.set()
-        self.can_return_from_parser.wait()
-        raise ParseError(None)
-
-
 @pytest.mark.slow
 @pytest.mark.parametrize('call_update_method', [call_update_feeds, call_update_feed])
 def test_update_blocking(monkeypatch, tmpdir, call_update_method):
@@ -123,12 +110,6 @@ def test_update_blocking(monkeypatch, tmpdir, call_update_method):
     finally:
         blocking_parser.can_return_from_parser.set()
         t.join()
-
-
-class FailingParser(Parser):
-
-    def __call__(self, *args, **kwargs):
-        raise ParseError(None)
 
 
 def test_update_feed(reader):
