@@ -297,25 +297,20 @@ class Reader:
                 entries[-1][1].id,
             )
 
-    def mark_as_read(self, feed_url, entry_id):
+    def _mark_as(self, feed_url, entry_id, read):
         with self.db:
             rows = self.db.execute("""
                 UPDATE entries
-                SET read = 1
+                SET read = :read
                 WHERE feed = :feed_url AND id = :entry_id;
             """, locals())
             if rows.rowcount == 0:
                 raise EntryNotFoundError(feed_url, entry_id)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
+    def mark_as_read(self, feed_url, entry_id):
+       self._mark_as(feed_url, entry_id, 1)
+
     def mark_as_unread(self, feed_url, entry_id):
-        with self.db:
-            rows = self.db.execute("""
-                UPDATE entries
-                SET read = 0
-                WHERE feed = :feed_url AND id = :entry_id;
-            """, locals())
-            if rows.rowcount == 0:
-                raise EntryNotFoundError(feed_url, entry_id)
-            assert rows.rowcount == 1, "shouldn't happen"
+        self._mark_as(feed_url, entry_id, 0)
 
