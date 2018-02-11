@@ -30,3 +30,15 @@ class ParseError(FeedError):
 class NotModified(FeedError):
     """Feed not modified."""
 
+
+class EntryError(ReaderError):
+    """An entry error occured."""
+
+    def __init__(self, url, id):
+        super().__init__(url, id)
+        self.url = url
+        self.id = id
+
+class EntryNotFoundError(EntryError):
+    """Entry not found."""
+

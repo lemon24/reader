@@ -5,13 +5,12 @@ import pytest
 
 from reader.reader import Reader
 from reader.types import Feed
-from reader.exceptions import FeedExistsError, FeedNotFoundError, ParseError, NotModified
+from reader.exceptions import FeedExistsError, FeedNotFoundError, ParseError, NotModified, EntryNotFoundError
 from fakeparser import Parser, BlockingParser, FailingParser
 
 
 @pytest.fixture
-def reader(monkeypatch, tmpdir):
-    monkeypatch.chdir(tmpdir)
+def reader():
     return Reader(':memory:')
 
 
@@ -161,14 +160,24 @@ def test_update_feed(reader):
 
 
 def test_mark_as_read_unread(reader):
-
     parser = Parser()
     reader._parse = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
+    with pytest.raises(EntryNotFoundError):
+        reader.mark_as_read(feed.url, entry.id)
+    with pytest.raises(EntryNotFoundError):
+        reader.mark_as_unread(feed.url, entry.id)
+
     reader.add_feed(feed.url)
+
+    with pytest.raises(EntryNotFoundError):
+        reader.mark_as_read(feed.url, entry.id)
+    with pytest.raises(EntryNotFoundError):
+        reader.mark_as_unread(feed.url, entry.id)
+
     reader.update_feeds()
 
     (feed, entry), = list(reader.get_entries())

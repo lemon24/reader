@@ -5,7 +5,7 @@ import sqlite3
 from .db import open_db
 from .types import Feed, Entry
 from .parser import parse, ParseError, NotModified
-from .exceptions import FeedExistsError, FeedNotFoundError
+from .exceptions import FeedExistsError, FeedNotFoundError, EntryNotFoundError
 
 
 log = logging.getLogger(__name__)
@@ -37,6 +37,7 @@ class Reader:
             """, locals())
             if rows.rowcount == 0:
                 raise FeedNotFoundError(url)
+            assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     def _get_feeds(self, url=None):
         where_url_snippet = '' if not url else "WHERE url = :url"
@@ -298,17 +299,23 @@ class Reader:
 
     def mark_as_read(self, feed_url, entry_id):
         with self.db:
-            self.db.execute("""
+            rows = self.db.execute("""
                 UPDATE entries
                 SET read = 1
                 WHERE feed = :feed_url AND id = :entry_id;
             """, locals())
+            if rows.rowcount == 0:
+                raise EntryNotFoundError(feed_url, entry_id)
+            assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     def mark_as_unread(self, feed_url, entry_id):
         with self.db:
-            self.db.execute("""
+            rows = self.db.execute("""
                 UPDATE entries
                 SET read = 0
                 WHERE feed = :feed_url AND id = :entry_id;
             """, locals())
+            if rows.rowcount == 0:
+                raise EntryNotFoundError(feed_url, entry_id)
+            assert rows.rowcount == 1, "shouldn't happen"
 
