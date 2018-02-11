@@ -1,9 +1,11 @@
 import json
 import logging
+import sqlite3
 
 from .db import open_db
 from .types import Feed, Entry
 from .parser import parse, ParseError, NotModified
+from .exceptions import FeedExistsError, FeedNotFoundError
 
 
 log = logging.getLogger(__name__)
@@ -19,17 +21,22 @@ class Reader:
 
     def add_feed(self, url):
         with self.db:
-            self.db.execute("""
-                INSERT INTO feeds (url)
-                VALUES (:url);
-            """, locals())
+            try:
+                self.db.execute("""
+                    INSERT INTO feeds (url)
+                    VALUES (:url);
+                """, locals())
+            except sqlite3.IntegrityError:
+                raise FeedExistsError(url)
 
     def remove_feed(self, url):
         with self.db:
-            self.db.execute("""
+            rows = self.db.execute("""
                 DELETE FROM feeds
                 WHERE url = :url;
             """, locals())
+            if rows.rowcount == 0:
+                raise FeedNotFoundError(url)
 
     def _get_feeds(self, url=None):
         where_url_snippet = '' if not url else "WHERE url = :url"

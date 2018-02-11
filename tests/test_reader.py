@@ -6,6 +6,7 @@ import pytest
 from reader.reader import Reader
 from reader.types import Feed
 from reader.parser import ParseError, NotModified
+from reader.exceptions import FeedExistsError, FeedNotFoundError
 from fakeparser import Parser
 
 
@@ -92,23 +93,6 @@ def test_mark_as_read_unread(reader):
     reader.mark_as_unread(feed.url, entry.id)
     (feed, entry), = list(reader.get_entries())
     assert not entry.read
-
-
-def test_add_remove_feed(reader):
-
-    parser = Parser()
-    reader._parse = parser
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    entry = parser.entry(1, 1, datetime(2010, 1, 1))
-
-    reader.add_feed(feed.url)
-    reader.update_feeds()
-
-    assert set(reader.get_entries()) == {(feed, entry)}
-
-    reader.remove_feed(feed.url)
-    assert set(reader.get_entries()) == set()
 
 
 @pytest.mark.parametrize('chunk_size', [
@@ -203,38 +187,44 @@ def test_get_entries_feed_url(reader):
     # TODO: How do we test the combination between which and feed_url?
 
 
-def test_get_feeds(reader):
+def test_add_remove_get_feeds(reader):
     parser = Parser()
     reader._parse = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
-    two = parser.feed(2, datetime(2010, 1, 2))
+    entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 2, 1))
+    entry_two = parser.entry(2, 2, datetime(2010, 2, 1))
+
+    assert set(reader.get_feeds()) == set()
+    assert reader.get_feed(one.url) == None
+    assert set(reader.get_entries()) == set()
+
+    with pytest.raises(FeedNotFoundError):
+        reader.remove_feed(one.url)
 
     reader.add_feed(one.url)
     reader.add_feed(two.url)
 
     assert set(reader.get_feeds()) == {
         Feed(f.url, None, None, None) for f in (one, two)
-    }, "only url should be set for feeds not yet updated"
+    }
+    assert reader.get_feed(one.url) == Feed(one.url, None, None, None)
+    assert set(reader.get_entries()) == set()
+
+    with pytest.raises(FeedExistsError):
+        reader.add_feed(one.url)
 
     reader.update_feeds()
 
     assert set(reader.get_feeds()) == {one, two}
+    assert reader.get_feed(one.url) == one
+    assert set(reader.get_entries()) == {(one, entry_one), (two, entry_two)}
 
+    reader.remove_feed(one.url)
+    assert set(reader.get_feeds()) == {two}
+    assert reader.get_feed(one.url) == None
+    assert set(reader.get_entries()) == {(two, entry_two)}
 
-def test_get_feed(reader):
-    parser = Parser()
-    reader._parse = parser
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-
-    assert reader.get_feed(feed.url) == None
-
-    reader.add_feed(feed.url)
-
-    assert reader.get_feed(feed.url) == Feed(feed.url, None, None, None)
-
-    reader.update_feeds()
-
-    assert reader.get_feed(feed.url) == feed
-
+    with pytest.raises(FeedNotFoundError):
+        reader.remove_feed(one.url)
