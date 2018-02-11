@@ -31,39 +31,50 @@ class Reader:
                 WHERE url = :url;
             """, locals())
 
-    def get_feeds(self):
+    def _get_feeds(self, feed_url=None):
+        where_url_snippet = ''
+        if feed_url:
+            where_url_snippet = """
+                WHERE url = :feed_url
+            """
         cursor = self.db.execute("""
             SELECT url, title, link, updated FROM feeds
-        """)
-        for row in list(cursor):
+            {where_url_snippet}
+        """.format(**locals()), locals())
+
+        for row in cursor:
             yield Feed._make(row)
 
-    def get_feed(self, url):
-        cursor = self.db.execute("""
-            SELECT url, title, link, updated FROM feeds
-            WHERE url = :url
-        """, locals())
-        rows = list(cursor)
-        if len(rows) == 0:
+    def get_feeds(self):
+        return list(self._get_feeds())
+
+    def get_feed(self, feed_url):
+        feeds = list(self._get_feeds(feed_url))
+        if len(feeds) == 0:
             return None
-        elif len(rows) == 1:
-            return Feed._make(rows[0])
+        elif len(feeds) == 1:
+            return feeds[0]
         else:
             assert False, "shouldn't get here"
 
-    def update_feeds(self):
-        cursor =  self.db.execute("""
+    def _get_feeds_for_update(self, feed_url=None):
+        where_url_snippet = ''
+        if feed_url:
+            where_url_snippet = """
+                WHERE url = :feed_url
+            """
+        cursor = self.db.execute("""
             SELECT url, updated, http_etag, http_last_modified, stale FROM feeds
-        """)
-        for row in list(cursor):
+            {where_url_snippet}
+        """.format(**locals()), locals())
+        return cursor
+
+    def update_feeds(self):
+        for row in list(self._get_feeds_for_update()):
             self._update_feed(*row)
 
-    def update_feed(self, url):
-        cursor =  self.db.execute("""
-            SELECT url, updated, http_etag, http_last_modified, stale FROM feeds
-            WHERE url = :url
-        """, locals())
-        rows = list(cursor)
+    def update_feed(self, feed_url):
+        rows = list(self._get_feeds_for_update(feed_url))
         if len(rows) == 0:
             log.warning("update feed %r: unknown feed", url)
         elif len(rows) == 1:
