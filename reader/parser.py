@@ -4,6 +4,7 @@ import datetime
 import feedparser
 
 from .types import Feed, Entry
+from .exceptions import ParseError, NotModified
 
 
 def _datetime_from_timetuple(tt):
@@ -29,15 +30,6 @@ def _get_updated_published(thing, is_rss):
     return updated, published
 
 
-class ParseError(Exception):
-
-    def __init__(self, exception=None):
-        super().__init__(exception)
-        self.exception = exception
-
-class NotModified(Exception): pass
-
-
 def _make_entry(entry, is_rss):
     assert entry.id
     updated, published = _get_updated_published(entry, is_rss)
@@ -61,7 +53,7 @@ def parse(url, http_etag=None, http_last_modified=None):
     d = feedparser.parse(url, etag=http_etag, modified=http_last_modified)
 
     if d.get('bozo'):
-        raise ParseError(url, d.get('bozo_exception'))
+        raise ParseError(url, exception=d.get('bozo_exception'))
 
     if d.get('status') == 304:
         raise NotModified(url)

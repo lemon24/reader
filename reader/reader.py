@@ -70,12 +70,15 @@ class Reader:
 
     def update_feeds(self):
         for row in list(self._get_feeds_for_update()):
-            self._update_feed(*row)
+            try:
+                self._update_feed(*row)
+            except ParseError as e:
+                log.warning("update feed %r: error while getting/parsing feed, skipping; exception: %r", e.url, e.exception)
 
     def update_feed(self, url):
         rows = list(self._get_feeds_for_update(url))
         if len(rows) == 0:
-            log.warning("update feed %r: unknown feed", url)
+            raise FeedNotFoundError(url)
         elif len(rows) == 1:
             self._update_feed(*rows[0])
         else:
@@ -91,9 +94,6 @@ class Reader:
         try:
             t = self._parse(url, http_etag, http_last_modified)
             feed, entries, http_etag, http_last_modified = t
-        except ParseError as e:
-            log.warning("update feed %r: error while getting/parsing feed, skipping; exception: %r", url, e.exception)
-            return
         except NotModified:
             log.info("update feed %r: feed not modified, skipping", url)
             return

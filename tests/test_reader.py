@@ -5,8 +5,7 @@ import pytest
 
 from reader.reader import Reader
 from reader.types import Feed
-from reader.parser import ParseError, NotModified
-from reader.exceptions import FeedExistsError, FeedNotFoundError
+from reader.exceptions import FeedExistsError, FeedNotFoundError, ParseError, NotModified
 from fakeparser import Parser
 
 
@@ -83,7 +82,7 @@ class BlockingParser(Parser):
     def __call__(self, *args, **kwargs):
         self.in_parser.set()
         self.can_return_from_parser.wait()
-        raise ParseError()
+        raise ParseError(None)
 
 
 @pytest.mark.slow
@@ -124,6 +123,46 @@ def test_update_blocking(monkeypatch, tmpdir, call_update_method):
     finally:
         blocking_parser.can_return_from_parser.set()
         t.join()
+
+
+class FailingParser(Parser):
+
+    def __call__(self, *args, **kwargs):
+        raise ParseError(None)
+
+
+def test_update_feed(reader):
+    parser = Parser()
+    reader._parse = parser
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 2, 1))
+    entry_two = parser.entry(2, 2, datetime(2010, 2, 1))
+
+    with pytest.raises(FeedNotFoundError):
+        reader.update_feed(one.url)
+
+    reader.add_feed(one.url)
+    reader.add_feed(two.url)
+    reader.update_feed(one.url)
+
+    assert set(reader.get_feeds()) == {one, Feed(two.url, None, None, None)}
+    assert reader.get_feed(one.url) == one
+    assert reader.get_feed(two.url) == Feed(two.url, None, None, None)
+    assert set(reader.get_entries()) == {(one, entry_one)}
+
+    reader.update_feed(two.url)
+
+    assert set(reader.get_feeds()) == {one, two}
+    assert reader.get_feed(one.url) == one
+    assert reader.get_feed(two.url) == two
+    assert set(reader.get_entries()) == {(one, entry_one), (two, entry_two)}
+
+    reader._parse = FailingParser()
+
+    with pytest.raises(ParseError):
+        reader.update_feed(one.url)
 
 
 def test_mark_as_read_unread(reader):
