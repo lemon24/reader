@@ -36,16 +36,18 @@ def root():
     assert show in ('all', 'read', 'unread')
 
     reader = get_reader()
-    entries = reader.get_entries(which=show)
 
     feed_url = request.args.get('feed')
     feed = None
-    entries_data = None
     if feed_url:
         feed = reader.get_feed(feed_url)
         if not feed:
             abort(404)
-        entries = [(f, e) for f, e in entries if f.url == feed_url]
+
+    entries = list(reader.get_entries(which=show, feed_url=feed_url))
+
+    entries_data = None
+    if feed_url:
         entries_data = [{'feed': f.url, 'entry': e.id} for f, e in entries]
 
     return render_template('root.html', entries=entries, feed=feed, entries_data=entries_data)

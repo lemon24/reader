@@ -173,7 +173,7 @@ class Reader:
         """, locals()).fetchone()
         return rv[0] if rv else None
 
-    def _get_entries(self, which, chunk_size=None, last=None):
+    def _get_entries(self, which, feed_url, chunk_size=None, last=None):
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
         if which == 'all':
@@ -202,6 +202,12 @@ class Reader:
                         (:last_entry_updated, :last_feed_url, :last_entry_id)
                 """
 
+        where_feed_snippet = ''
+        if feed_url:
+            where_feed_snippet = """
+                AND feeds.url = :feed_url
+            """
+
         cursor = self.db.execute("""
             SELECT
                 feeds.url,
@@ -221,6 +227,7 @@ class Reader:
             WHERE
                 feeds.url = entries.feed
                 {where_read_snippet}
+                {where_feed_snippet}
                 {where_next_snippet}
             ORDER BY
                 entries.updated DESC,
@@ -241,7 +248,7 @@ class Reader:
             entry = Entry._make(entry)
             yield feed, entry
 
-    def get_entries(self, which='all'):
+    def get_entries(self, which='all', feed_url=None):
         if which not in ('all', 'unread', 'read'):
             raise ValueError("which should be one of ('all', 'read', 'unread')")
         chunk_size = self._get_entries_chunk_size
@@ -251,6 +258,7 @@ class Reader:
 
             entries = self._get_entries(
                 which=which,
+                feed_url=feed_url,
                 chunk_size=chunk_size,
                 last=last,
             )

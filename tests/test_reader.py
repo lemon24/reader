@@ -181,6 +181,28 @@ def test_get_entries_which(reader):
         set(reader.get_entries(which='bad which'))
 
 
+def test_get_entries_feed_url(reader):
+    parser = Parser()
+    reader._parse = parser
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 2, 1))
+    entry_two = parser.entry(2, 2, datetime(2010, 2, 1))
+    reader.add_feed(one.url)
+    reader.add_feed(two.url)
+    reader.update_feeds()
+
+    assert set(reader.get_entries()) == {(one, entry_one), (two, entry_two)}
+    assert set(reader.get_entries(feed_url=one.url)) == {(one, entry_one)}
+    assert set(reader.get_entries(feed_url=two.url)) == {(two, entry_two)}
+
+    # TODO: Should this raise an exception?
+    assert set(reader.get_entries(feed_url='bad feed')) == set()
+
+    # TODO: How do we test the combination between which and feed_url?
+
+
 def test_get_feeds(reader):
     parser = Parser()
     reader._parse = parser
