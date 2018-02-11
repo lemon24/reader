@@ -112,6 +112,20 @@ def test_update_blocking(monkeypatch, tmpdir, call_update_method):
         t.join()
 
 
+def test_update_feeds_parse_error(reader):
+    parser = Parser()
+    reader._parse = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    reader._parse = FailingParser()
+
+    # shouldn't raise an exception
+    reader.update_feeds()
+
+
 def test_update_feed(reader):
     parser = Parser()
     reader._parse = parser
