@@ -4,11 +4,13 @@ import sqlite3
 
 from .db import open_db
 from .types import Feed, Entry
-from .parser import parse, ParseError, NotModified
-from .exceptions import FeedExistsError, FeedNotFoundError, EntryNotFoundError
+from .parser import parse
+from .exceptions import (
+    ParseError, NotModified,
+    FeedExistsError, FeedNotFoundError, EntryNotFoundError,
+)
 
-
-log = logging.getLogger(__name__)
+log = logging.getLogger('reader')
 
 
 class Reader:

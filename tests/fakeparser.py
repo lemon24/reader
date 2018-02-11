@@ -1,8 +1,8 @@
 from collections import OrderedDict
 import threading
 
-from reader.types import Feed, Entry
-from reader.exceptions import ParseError, NotModified
+from reader import Feed, Entry, ParseError
+from reader.exceptions import NotModified
 
 
 def _make_feed(number, updated=None, title=None):

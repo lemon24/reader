@@ -4,8 +4,7 @@ import logging
 
 import click
 
-from .reader import Reader
-import reader.reader
+from . import Reader
 
 
 APP_NAME = 'reader'
@@ -31,11 +30,11 @@ def setup_logging(verbose):
         level = logging.INFO
     else:
         level = logging.DEBUG
-    reader.reader.log.setLevel(level)
+    logging.getLogger('reader').setLevel(level)
     handler = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s %(levelname)-7s %(message)s', '%Y-%m-%dT%H:%M:%S')
     handler.setFormatter(formatter)
-    reader.reader.log.addHandler(handler)
+    logging.getLogger('reader').addHandler(handler)
 
 
 @click.group()

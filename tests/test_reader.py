@@ -3,9 +3,10 @@ import threading
 
 import pytest
 
-from reader.reader import Reader
-from reader.types import Feed
-from reader.exceptions import FeedExistsError, FeedNotFoundError, ParseError, NotModified, EntryNotFoundError
+from reader import Reader
+from reader import Feed
+from reader import FeedExistsError, FeedNotFoundError, ParseError, EntryNotFoundError
+
 from fakeparser import Parser, BlockingParser, FailingParser, NotModifiedParser
 
 

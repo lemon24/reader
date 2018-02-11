@@ -2,7 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from reader.exceptions import FeedNotFoundError
+from reader import FeedNotFoundError
+
 from fakeparser import ParserThatRemembers
 from test_reader import reader, call_update_feed, call_update_feeds
 

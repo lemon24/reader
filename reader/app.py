@@ -4,7 +4,7 @@ from urllib.parse import urlparse, urljoin
 from flask import Flask, render_template, current_app, g, request, redirect, abort
 import humanize
 
-from .reader import Reader
+from . import Reader
 
 
 app = Flask(__name__)

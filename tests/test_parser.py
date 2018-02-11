@@ -3,7 +3,9 @@ from datetime import datetime
 import pytest
 import feedgen.feed
 
-from reader.parser import parse, ParseError, NotModified
+from reader.parser import parse
+from reader.exceptions import ParseError, NotModified
+
 from fakeparser import Parser
 
 
