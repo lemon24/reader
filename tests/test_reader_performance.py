@@ -89,7 +89,7 @@ def test_mark_as_read_during_get_entries(monkeypatch, tmpdir, chunk_size):
 
     reader._get_entries_chunk_size = chunk_size
 
-    entries = reader.get_entries(_unread_only=True)
+    entries = reader.get_entries(which='unread')
     next(entries)
 
     # shouldn't raise an exception

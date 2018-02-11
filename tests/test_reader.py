@@ -159,6 +159,28 @@ def test_get_entries_order(reader, chunk_size):
     assert list(reader.get_entries()) == expected
 
 
+def test_get_entries_which(reader):
+    parser = Parser()
+    reader._parse = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
+    entry_two = parser.entry(1, 2, datetime(2010, 2, 1))
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    reader.mark_as_read(feed.url, entry_one.id)
+    entry_one = entry_one._replace(read=True)
+
+    assert set(reader.get_entries()) == {(feed, entry_one), (feed, entry_two)}
+    assert set(reader.get_entries(which='all')) == {(feed, entry_one), (feed, entry_two)}
+    assert set(reader.get_entries(which='read')) == {(feed, entry_one)}
+    assert set(reader.get_entries(which='unread')) == {(feed, entry_two)}
+
+    with pytest.raises(ValueError):
+        set(reader.get_entries(which='bad which'))
+
+
 def test_get_feeds(reader):
     parser = Parser()
     reader._parse = parser

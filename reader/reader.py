@@ -173,19 +173,21 @@ class Reader:
         """, locals()).fetchone()
         return rv[0] if rv else None
 
-    def _get_entries(self, _unread_only=False, _read_only=False, chunk_size=None, last=None):
+    def _get_entries(self, which, chunk_size=None, last=None):
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
-        where_read_snippet = ''
-        assert _unread_only + _read_only <= 1
-        if _unread_only:
+        if which == 'all':
+            where_read_snippet = ''
+        elif which == 'unread':
             where_read_snippet = """
                 AND (entries.read IS NULL OR entries.read != 1)
             """
-        elif _read_only:
+        elif which == 'read':
             where_read_snippet = """
                 AND entries.read = 1
             """
+        else:
+            assert False, "shouldn't get here"
 
         where_next_snippet = ''
         limit_snippet = ''
@@ -239,15 +241,16 @@ class Reader:
             entry = Entry._make(entry)
             yield feed, entry
 
-    def get_entries(self, _unread_only=False, _read_only=False):
+    def get_entries(self, which='all'):
+        if which not in ('all', 'unread', 'read'):
+            raise ValueError("which should be one of ('all', 'read', 'unread')")
         chunk_size = self._get_entries_chunk_size
 
         last = None
         while True:
 
             entries = self._get_entries(
-                _unread_only=_unread_only,
-                _read_only=_read_only,
+                which=which,
                 chunk_size=chunk_size,
                 last=last,
             )

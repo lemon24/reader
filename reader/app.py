@@ -36,7 +36,7 @@ def root():
     assert show in ('all', 'read', 'unread')
 
     reader = get_reader()
-    entries = reader.get_entries(_unread_only=(show == 'unread'), _read_only=(show == 'read'))
+    entries = reader.get_entries(which=show)
 
     feed_url = request.args.get('feed')
     feed = None
