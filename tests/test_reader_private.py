@@ -1,0 +1,47 @@
+from datetime import datetime
+
+import pytest
+
+from reader.exceptions import FeedNotFoundError
+from fakeparser import ParserThatRemembers
+from test_reader import reader, call_update_feed, call_update_feeds
+
+
+@pytest.mark.parametrize('call_update_method', [call_update_feeds, call_update_feed])
+def test_update_stale(reader, call_update_method):
+    """When a feed is marked as stale feeds/entries should be updated
+    regardless of their .updated or caching headers.
+
+    """
+    parser = ParserThatRemembers()
+    parser.http_etag = 'etag'
+    parser.http_last_modified = 'last-modified'
+    reader._parse = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+
+    with pytest.raises(FeedNotFoundError):
+        reader._mark_as_stale(feed.url)
+
+    reader.add_feed(feed.url)
+
+    call_update_method(reader, feed.url)
+    assert parser.calls == [(feed.url, None, None)]
+    assert set(reader.get_entries()) == {(feed, entry)}
+    parser.calls[:] = []
+
+    new_feed = parser.feed(1, datetime(2010, 1, 1), title="new feed title")
+    new_entry = parser.entry(1, 1, datetime(2010, 1, 1), title="new entry title")
+
+    call_update_method(reader, feed.url)
+    assert parser.calls == [(feed.url, 'etag', 'last-modified')]
+    assert set(reader.get_entries()) == {(feed, entry)}
+    parser.calls[:] = []
+
+    reader._mark_as_stale(feed.url)
+    call_update_method(reader, feed.url)
+    assert parser.calls == [(feed.url, None, None)]
+    assert set(reader.get_entries()) == {(new_feed, new_entry)}
+    parser.calls[:] = []
+

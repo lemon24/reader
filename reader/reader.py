@@ -69,6 +69,17 @@ class Reader:
         """.format(**locals()), locals())
         return cursor
 
+    def _mark_as_stale(self, url):
+        with self.db:
+            rows = self.db.execute("""
+                UPDATE feeds
+                SET stale = 1
+                WHERE url = :url;
+            """, locals())
+            if rows.rowcount == 0:
+                raise FeedNotFoundError(url)
+            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+
     def update_feeds(self):
         for row in list(self._get_feeds_for_update()):
             try:
@@ -297,7 +308,7 @@ class Reader:
                 entries[-1][1].id,
             )
 
-    def _mark_as(self, feed_url, entry_id, read):
+    def _mark_as_read_unread(self, feed_url, entry_id, read):
         with self.db:
             rows = self.db.execute("""
                 UPDATE entries
@@ -309,8 +320,8 @@ class Reader:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     def mark_as_read(self, feed_url, entry_id):
-       self._mark_as(feed_url, entry_id, 1)
+       self._mark_as_read_unread(feed_url, entry_id, 1)
 
     def mark_as_unread(self, feed_url, entry_id):
-        self._mark_as(feed_url, entry_id, 0)
+        self._mark_as_read_unread(feed_url, entry_id, 0)
 

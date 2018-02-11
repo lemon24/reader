@@ -5,18 +5,18 @@ from reader.types import Feed, Entry
 from reader.exceptions import ParseError, NotModified
 
 
-def _make_feed(number, updated):
+def _make_feed(number, updated=None, title=None):
     return Feed(
         'feed-{}.xml'.format(number),
-        'Feed #{}'.format(number),
+        title or 'Feed #{}'.format(number),
         'http://www.example.com/{}'.format(number),
         updated,
     )
 
-def _make_entry(number, updated, published=None):
+def _make_entry(number, updated, published=None, title=None):
     return Entry(
         'http://www.example.com/entries/{}'.format(number),
-        'Entry #{}'.format(number),
+        title or 'Entry #{}'.format(number),
         'http://www.example.com/entries/{}'.format(number),
         updated,
         published,
@@ -31,19 +31,21 @@ class Parser:
     def __init__(self, feeds=None, entries=None):
         self.feeds = feeds or {}
         self.entries = entries or {}
+        self.http_etag = None
+        self.http_last_modified = None
 
     @classmethod
     def from_parser(cls, other):
         return cls(other.feeds, other.entries)
 
-    def feed(self, number, updated=None):
-        feed = _make_feed(number, updated)
+    def feed(self, number, updated=None, title=None):
+        feed = _make_feed(number, updated, title=title)
         self.feeds[number] = feed
         self.entries.setdefault(number, OrderedDict())
         return feed
 
-    def entry(self, feed_number, number, updated):
-        entry = _make_entry(number, updated)
+    def entry(self, feed_number, number, updated, title=None):
+        entry = _make_entry(number, updated, title=title)
         self.entries[feed_number][number] = entry
         return entry
 
@@ -53,7 +55,7 @@ class Parser:
                 break
         else:
             raise RuntimeError("unkown feed: {}".format(url))
-        return feed, self.entries[feed_number].values(), http_etag, http_last_modified
+        return feed, self.entries[feed_number].values(), self.http_etag, self.http_last_modified
 
     def get_tuples(self):
         for feed_number, entries in self.entries.items():
@@ -85,4 +87,15 @@ class NotModifiedParser(Parser):
 
     def __call__(self, *args, **kwargs):
         raise NotModified(None)
+
+
+class ParserThatRemembers(Parser):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.calls = []
+
+    def __call__(self, url, http_etag, http_last_modified):
+        self.calls.append((url, http_etag, http_last_modified))
+        return super().__call__(url, http_etag, http_last_modified)
 
