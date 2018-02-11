@@ -1,13 +1,20 @@
 .PHONY:
 
-all: clean test
+all: test
 
-test:
-	python3 -m pytest
+test: clean-pyc
+	python3 -m pytest -v --runslow
 
-clean:
+coverage: clean-pyc
+	coverage run --include='reader/*' -p -m pytest -v --runslow
+	coverage combine
+	coverage report
+	coverage html
+
+cov: coverage
+
+clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
 	find . -name '*.pyo' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -rf {} +
-	rm -rf reader.egg-info
 
