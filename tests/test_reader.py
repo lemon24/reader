@@ -6,7 +6,7 @@ import pytest
 from reader.reader import Reader
 from reader.types import Feed
 from reader.exceptions import FeedExistsError, FeedNotFoundError, ParseError, NotModified, EntryNotFoundError
-from fakeparser import Parser, BlockingParser, FailingParser
+from fakeparser import Parser, BlockingParser, FailingParser, NotModifiedParser
 
 
 @pytest.fixture
@@ -109,6 +109,28 @@ def test_update_blocking(monkeypatch, tmpdir, call_update_method):
     finally:
         blocking_parser.can_return_from_parser.set()
         t.join()
+
+@pytest.mark.parametrize('call_update_method', [call_update_feeds, call_update_feed])
+def test_update_not_modified(reader, call_update_method):
+    """A feed should not be updated if it was not modified."""
+
+    parser = Parser()
+    reader._parse = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    reader.add_feed(feed.url)
+    call_update_method(reader, feed.url)
+
+    parser.feed(1, datetime(2010, 1, 2))
+    parser.entry(1, 1, datetime(2010, 1, 2))
+
+    not_modified_parser = NotModifiedParser.from_parser(parser)
+    reader._parse = not_modified_parser
+
+    # shouldn't raise an exception
+    call_update_method(reader, feed.url)
+
+    assert set(reader.get_entries()) == set()
 
 
 def test_update_feeds_parse_error(reader):

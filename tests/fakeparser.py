@@ -2,7 +2,7 @@ from collections import OrderedDict
 import threading
 
 from reader.types import Feed, Entry
-from reader.exceptions import ParseError
+from reader.exceptions import ParseError, NotModified
 
 
 def _make_feed(number, updated):
@@ -79,4 +79,10 @@ class FailingParser(Parser):
 
     def __call__(self, *args, **kwargs):
         raise ParseError(None)
+
+
+class NotModifiedParser(Parser):
+
+    def __call__(self, *args, **kwargs):
+        raise NotModified(None)
 
