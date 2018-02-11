@@ -1,5 +1,5 @@
 """
-Test behaviors that are not specified API but are expected of the
+Test behaviors that are not specified by the API but are expected of the
 SQLite implementation.
 
 """
@@ -12,6 +12,8 @@ import pytest
 from reader.reader import Reader
 from reader.parser import ParseError
 from fakeparser import Parser
+
+from test_reader import call_update_feeds, call_update_feed
 
 
 class BlockingParser(Parser):
@@ -28,7 +30,8 @@ class BlockingParser(Parser):
 
 
 @pytest.mark.slow
-def test_mark_as_read_during_update_feeds(monkeypatch, tmpdir):
+@pytest.mark.parametrize('call_update_method', [call_update_feeds, call_update_feed])
+def test_mark_as_read_during_update_feeds(monkeypatch, tmpdir, call_update_method):
     monkeypatch.chdir(tmpdir)
     db_path = str(tmpdir.join('db.sqlite'))
 
@@ -49,7 +52,7 @@ def test_mark_as_read_during_update_feeds(monkeypatch, tmpdir):
     def target():
         reader = Reader(db_path)
         reader._parse = blocking_parser
-        reader.update_feeds()
+        call_update_method(reader, feed.url)
 
     t = threading.Thread(target=target)
     t.start()

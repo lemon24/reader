@@ -16,7 +16,15 @@ def reader(monkeypatch, tmpdir):
     return Reader(':memory:')
 
 
-def test_update_feed_updated(reader):
+def call_update_feeds(reader, _):
+    reader.update_feeds()
+
+def call_update_feed(reader, url):
+    reader.update_feed(url)
+
+
+@pytest.mark.parametrize('call_update_method', [call_update_feeds, call_update_feed])
+def test_update_feed_updated(reader, call_update_method):
     """A feed should be processed only if it is newer than the stored one."""
 
     parser = Parser()
@@ -26,19 +34,20 @@ def test_update_feed_updated(reader):
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
 
     reader.add_feed(old_feed.url)
-    reader.update_feeds()
+    call_update_method(reader, old_feed.url)
     assert set(reader.get_entries()) == {(old_feed, entry_one)}
 
     entry_two = parser.entry(1, 2, datetime(2010, 2, 1))
-    reader.update_feeds()
+    call_update_method(reader, old_feed.url)
     assert set(reader.get_entries()) == {(old_feed, entry_one)}
 
     new_feed = parser.feed(1, datetime(2010, 1, 2))
-    reader.update_feeds()
+    call_update_method(reader, old_feed.url)
     assert set(reader.get_entries()) == {(new_feed, entry_one), (new_feed, entry_two)}
 
 
-def test_update_entry_updated(reader):
+@pytest.mark.parametrize('call_update_method', [call_update_feeds, call_update_feed])
+def test_update_entry_updated(reader, call_update_method):
     """An entry should be updated only if it is newer than the stored one."""
 
     parser = Parser()
@@ -48,19 +57,19 @@ def test_update_entry_updated(reader):
     old_entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
     reader.add_feed(feed.url)
-    reader.update_feeds()
+    call_update_method(reader, feed.url)
     assert set(reader.get_entries()) == {(feed, old_entry)}
 
     feed = parser.feed(1, datetime(2010, 1, 2))
     new_entry = old_entry._replace(title='New Entry')
     parser.entries[1][1] = new_entry
-    reader.update_feeds()
+    call_update_method(reader, feed.url)
     assert set(reader.get_entries()) == {(feed, old_entry)}
 
     feed = parser.feed(1, datetime(2010, 1, 3))
     new_entry = new_entry._replace(updated=datetime(2010, 1, 2))
     parser.entries[1][1] = new_entry
-    reader.update_feeds()
+    call_update_method(reader, feed.url)
     assert set(reader.get_entries()) == {(feed, new_entry)}
 
 
