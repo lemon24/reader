@@ -31,12 +31,8 @@ class Reader:
                 WHERE url = :url;
             """, locals())
 
-    def _get_feeds(self, feed_url=None):
-        where_url_snippet = ''
-        if feed_url:
-            where_url_snippet = """
-                WHERE url = :feed_url
-            """
+    def _get_feeds(self, url=None):
+        where_url_snippet = '' if not url else "WHERE url = :url"
         cursor = self.db.execute("""
             SELECT url, title, link, updated FROM feeds
             {where_url_snippet}
@@ -48,8 +44,8 @@ class Reader:
     def get_feeds(self):
         return list(self._get_feeds())
 
-    def get_feed(self, feed_url):
-        feeds = list(self._get_feeds(feed_url))
+    def get_feed(self, url):
+        feeds = list(self._get_feeds(url))
         if len(feeds) == 0:
             return None
         elif len(feeds) == 1:
@@ -57,12 +53,8 @@ class Reader:
         else:
             assert False, "shouldn't get here"
 
-    def _get_feeds_for_update(self, feed_url=None):
-        where_url_snippet = ''
-        if feed_url:
-            where_url_snippet = """
-                WHERE url = :feed_url
-            """
+    def _get_feeds_for_update(self, url=None):
+        where_url_snippet = '' if not url else "WHERE url = :url"
         cursor = self.db.execute("""
             SELECT url, updated, http_etag, http_last_modified, stale FROM feeds
             {where_url_snippet}
@@ -73,8 +65,8 @@ class Reader:
         for row in list(self._get_feeds_for_update()):
             self._update_feed(*row)
 
-    def update_feed(self, feed_url):
-        rows = list(self._get_feeds_for_update(feed_url))
+    def update_feed(self, url):
+        rows = list(self._get_feeds_for_update(url))
         if len(rows) == 0:
             log.warning("update feed %r: unknown feed", url)
         elif len(rows) == 1:
