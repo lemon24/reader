@@ -53,7 +53,7 @@ def parse(url, http_etag=None, http_last_modified=None):
     d = feedparser.parse(url, etag=http_etag, modified=http_last_modified)
 
     if d.get('bozo'):
-        raise ParseError(url, exception=d.get('bozo_exception'))
+        raise ParseError(url) from d.get('bozo_exception')
 
     if d.get('status') == 304:
         raise NotModified(url)
