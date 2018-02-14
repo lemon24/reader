@@ -5,7 +5,7 @@ import pytest
 
 from reader import Reader
 from reader import Feed
-from reader import FeedExistsError, FeedNotFoundError, ParseError, EntryNotFoundError
+from reader import FeedExistsError, FeedNotFoundError, ParseError, EntryNotFoundError, StorageError
 
 from fakeparser import Parser, BlockingParser, FailingParser, NotModifiedParser
 
@@ -379,4 +379,47 @@ def test_add_remove_get_feeds(reader):
 
     with pytest.raises(FeedNotFoundError):
         reader.remove_feed(one.url)
+
+
+def test_storage_errors_open(tmpdir):
+    # try to open a directory
+    with pytest.raises(StorageError):
+        Reader(str(tmpdir))
+
+
+@pytest.mark.slow
+def test_storage_errors_locked(tmpdir):
+    db_path = str(tmpdir.join('db.sqlite'))
+
+    parser = Parser()
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+
+    reader = Reader(db_path)
+    reader._parse = parser
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    in_transaction = threading.Event()
+    can_return_from_transaction = threading.Event()
+
+    def target():
+        reader = Reader(db_path)
+        reader.db.isolation_level = None
+        reader.db.execute("BEGIN EXCLUSIVE;")
+        in_transaction.set()
+        can_return_from_transaction.wait()
+        reader.db.execute("ROLLBACK;")
+
+    t = threading.Thread(target=target)
+    t.start()
+
+    in_transaction.wait()
+
+    try:
+        with pytest.raises(StorageError):
+            reader.mark_as_read(feed.url, entry.id)
+    finally:
+        can_return_from_transaction.set()
+        t.join()
 

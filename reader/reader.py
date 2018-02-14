@@ -1,6 +1,7 @@
 import json
 import logging
 import sqlite3
+import functools
 
 from .db import open_db
 from .types import Feed, Entry
@@ -8,9 +9,34 @@ from .parser import parse
 from .exceptions import (
     ParseError, NotModified,
     FeedExistsError, FeedNotFoundError, EntryNotFoundError,
+    StorageError,
 )
 
 log = logging.getLogger('reader')
+
+
+def wrap_storage_exceptions(f):
+    """Wrap sqlite3 exceptions in StorageError.
+
+    Only wraps exceptions that are unlikely to be programming errors (bugs),
+    can only be fixed by the user (e.g. access permission denied), and aren't
+    domain-related (those should have other custom exceptions).
+
+    This is an imprecise science, since the DB-API exceptions are somewhat
+    fuzzy in their meaning and we can't access the SQLite result code.
+
+    Full discussion at https://github.com/lemon24/reader/issues/21
+
+    """
+
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except sqlite3.OperationalError as e:
+            raise StorageError("sqlite3 error") from e
+
+    return wrapper
 
 
 class Reader:
@@ -18,9 +44,11 @@ class Reader:
     _get_entries_chunk_size = 2 ** 8
     _parse = staticmethod(parse)
 
+    @wrap_storage_exceptions
     def __init__(self, path=None):
         self.db = open_db(path)
 
+    @wrap_storage_exceptions
     def add_feed(self, url):
         with self.db:
             try:
@@ -31,6 +59,7 @@ class Reader:
             except sqlite3.IntegrityError:
                 raise FeedExistsError(url)
 
+    @wrap_storage_exceptions
     def remove_feed(self, url):
         with self.db:
             rows = self.db.execute("""
@@ -51,9 +80,11 @@ class Reader:
         for row in cursor:
             yield Feed._make(row)
 
+    @wrap_storage_exceptions
     def get_feeds(self):
         return list(self._get_feeds())
 
+    @wrap_storage_exceptions
     def get_feed(self, url):
         feeds = list(self._get_feeds(url))
         if len(feeds) == 0:
@@ -82,6 +113,7 @@ class Reader:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
+    @wrap_storage_exceptions
     def update_feeds(self):
         for row in list(self._get_feeds_for_update()):
             try:
@@ -89,6 +121,7 @@ class Reader:
             except ParseError as e:
                 log.warning("update feed %r: error while getting/parsing feed, skipping; exception: %r", e.url, e.__cause__)
 
+    @wrap_storage_exceptions
     def update_feed(self, url):
         rows = list(self._get_feeds_for_update(url))
         if len(rows) == 0:
@@ -272,6 +305,7 @@ class Reader:
             entry = Entry._make(entry)
             yield feed, entry
 
+    @wrap_storage_exceptions
     def get_entries(self, which='all', feed_url=None):
         if which not in ('all', 'unread', 'read'):
             raise ValueError("which should be one of ('all', 'read', 'unread')")
@@ -321,9 +355,11 @@ class Reader:
                 raise EntryNotFoundError(feed_url, entry_id)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
+    @wrap_storage_exceptions
     def mark_as_read(self, feed_url, entry_id):
        self._mark_as_read_unread(feed_url, entry_id, 1)
 
+    @wrap_storage_exceptions
     def mark_as_unread(self, feed_url, entry_id):
         self._mark_as_read_unread(feed_url, entry_id, 0)
 

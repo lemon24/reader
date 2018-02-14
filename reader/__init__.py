@@ -10,5 +10,6 @@ from .exceptions import (
     ReaderError,
     FeedError, FeedExistsError, FeedNotFoundError, ParseError,
     EntryError, EntryNotFoundError,
+    StorageError,
 )
 

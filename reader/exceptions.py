@@ -38,3 +38,11 @@ class EntryError(ReaderError):
 class EntryNotFoundError(EntryError):
     """Entry not found."""
 
+
+class StorageError(ReaderError):
+    """An exception was raised by the underlying storage.
+
+    The original exception should be chained to this one (e.__cause__).
+
+    """
+
