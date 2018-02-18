@@ -306,7 +306,7 @@ def test_get_entries_feed_url(reader):
     1, 2, 3, 8,                         # rough result size for this test
 
     # check unchunked queries still blocks writes
-    pytest.param(0, marks=pytest.mark.xfail(raises=Exception, strict=True)),
+    pytest.param(0, marks=pytest.mark.xfail(raises=StorageError, strict=True)),
 ])
 def test_get_entries_blocking(monkeypatch, tmpdir, chunk_size):
     """Unconsumed reader.get_entries() shouldn't block the underlying storage."""
