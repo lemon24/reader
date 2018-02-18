@@ -331,8 +331,12 @@ def test_get_entries_blocking(monkeypatch, tmpdir, chunk_size):
     next(entries)
 
     # shouldn't raise an exception
-    Reader(db_path).mark_as_read(feed.url, entry.id)
-    Reader(db_path).mark_as_unread(feed.url, entry.id)
+    reader = Reader(db_path)
+    reader.db.execute("PRAGMA busy_timeout = 0;")
+    reader.mark_as_read(feed.url, entry.id)
+    reader = Reader(db_path)
+    reader.db.execute("PRAGMA busy_timeout = 0;")
+    reader.mark_as_unread(feed.url, entry.id)
 
     # just a sanity check
     assert len(list(entries)) == 3 - 1
@@ -396,6 +400,7 @@ def test_storage_errors_locked(tmpdir):
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
     reader = Reader(db_path)
+    reader.db.execute("PRAGMA busy_timeout = 0;")
     reader._parse = parser
     reader.add_feed(feed.url)
     reader.update_feeds()
