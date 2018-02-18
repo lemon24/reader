@@ -22,6 +22,8 @@ right: 0;
 <small>
 {% if feed %}<a href='{{ url_for('root') }}'>home</a>{% endif %}
 
+<a href='{{ url_for('feeds') }}'>feeds</a>
+
 {% set current_what = request.args.get('show', 'unread') %}
 {% for what in ['unread', 'read', 'all'] %}
 {% set args = request.args.copy() %}

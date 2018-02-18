@@ -89,3 +89,9 @@ def update_entries():
         return redirect(next)
     return "unknown action", 400
 
+
+@app.route('/feeds')
+def feeds():
+    feeds = get_reader().get_feeds()
+    return render_template('feeds.html', feeds=feeds)
+
