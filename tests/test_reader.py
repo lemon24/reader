@@ -385,6 +385,26 @@ def test_add_remove_get_feeds(reader):
         reader.remove_feed(one.url)
 
 
+def test_get_feeds_order(reader):
+    parser = Parser()
+    reader._parse = parser
+
+    feed2 = parser.feed(2, datetime(2010, 1, 2), title='two')
+    feed1 = parser.feed(1, datetime(2010, 1, 1), title='one')
+    feed3 = parser.feed(3, datetime(2010, 1, 3), title='three')
+
+    reader.add_feed(feed2.url)
+    reader.add_feed(feed1.url)
+    reader.add_feed(feed3.url)
+
+    assert list(reader.get_feeds()) == [
+        Feed(f.url, None, None, None) for f in (feed1, feed2, feed3)]
+
+    reader.update_feeds()
+
+    assert list(reader.get_feeds()) == [feed1, feed3, feed2]
+
+
 def test_storage_errors_open(tmpdir):
     # try to open a directory
     with pytest.raises(StorageError):

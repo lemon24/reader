@@ -75,6 +75,7 @@ class Reader:
         cursor = self.db.execute("""
             SELECT url, title, link, updated FROM feeds
             {where_url_snippet}
+            ORDER BY feeds.title, feeds.url;
         """.format(**locals()), locals())
 
         for row in cursor:
@@ -99,6 +100,7 @@ class Reader:
         cursor = self.db.execute("""
             SELECT url, updated, http_etag, http_last_modified, stale FROM feeds
             {where_url_snippet}
+            ORDER BY feeds.url;
         """.format(**locals()), locals())
         return cursor
 
