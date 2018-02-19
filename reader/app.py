@@ -95,3 +95,18 @@ def feeds():
     feeds = get_reader().get_feeds()
     return render_template('feeds.html', feeds=feeds)
 
+
+@app.route('/add-feed', methods=['POST'])
+def add_feed():
+    action = request.form['action']
+    next = request.form['next']
+    if not is_safe_url(next):
+        return "bad next", 400
+    if action == 'add-feed':
+        feed_url = request.form['feed-url'].strip()
+        assert feed_url, "feed-url cannot be empty"
+        # TODO: handle FeedExistsError
+        get_reader().add_feed(feed_url)
+        return redirect(next)
+    return "unknown action", 400
+
