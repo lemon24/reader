@@ -411,8 +411,53 @@ def test_storage_errors_open(tmpdir):
         Reader(str(tmpdir))
 
 
+def mark_as_read(reader, feed, entry):
+    reader.mark_as_read(feed.url, entry.id)
+
+def mark_as_unread(reader, feed, entry):
+    reader.mark_as_unread(feed.url, entry.id)
+
+def add_feed(reader, _, __):
+    feed = reader._parse.feed(2)
+    reader.add_feed(feed.url)
+
+def remove_feed(reader, feed, __):
+    reader.remove_feed(feed.url)
+
+def update_feed(reader, feed, __):
+    reader.update_feed(feed.url)
+
+def update_feeds(reader, _, __):
+    reader.update_feeds()
+
+def get_feed(reader, feed, __):
+    reader.get_feed(feed.url)
+
+def get_feeds(reader, _, __):
+    reader.get_feeds()
+
+def get_entries(reader, _, __):
+    list(reader.get_entries())
+
+def get_entries_chunk_size_zero(reader, _, __):
+    reader._get_entries_chunk_size = 0
+    list(reader.get_entries())
+
+
 @pytest.mark.slow
-def test_storage_errors_locked(tmpdir):
+@pytest.mark.parametrize('do_stuff', [
+    mark_as_read,
+    mark_as_unread,
+    add_feed,
+    remove_feed,
+    update_feed,
+    update_feeds,
+    get_feed,
+    get_feeds,
+    get_entries,
+    get_entries_chunk_size_zero,
+])
+def test_storage_errors_locked(tmpdir, do_stuff):
     db_path = str(tmpdir.join('db.sqlite'))
 
     parser = Parser()
@@ -443,7 +488,7 @@ def test_storage_errors_locked(tmpdir):
 
     try:
         with pytest.raises(StorageError):
-            reader.mark_as_read(feed.url, entry.id)
+            do_stuff(reader, feed, entry)
     finally:
         can_return_from_transaction.set()
         t.join()

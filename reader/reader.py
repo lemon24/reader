@@ -2,6 +2,7 @@ import json
 import logging
 import sqlite3
 import functools
+import contextlib
 
 from .db import open_db
 from .types import Feed, Entry
@@ -15,7 +16,8 @@ from .exceptions import (
 log = logging.getLogger('reader')
 
 
-def wrap_storage_exceptions(f):
+@contextlib.contextmanager
+def wrap_storage_exceptions(*args):
     """Wrap sqlite3 exceptions in StorageError.
 
     Only wraps exceptions that are unlikely to be programming errors (bugs),
@@ -29,14 +31,11 @@ def wrap_storage_exceptions(f):
 
     """
 
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except sqlite3.OperationalError as e:
-            raise StorageError("sqlite3 error") from e
+    try:
+        yield
+    except sqlite3.OperationalError as e:
+        raise StorageError("sqlite3 error") from e
 
-    return wrapper
 
 
 class Reader:
@@ -44,11 +43,11 @@ class Reader:
     _get_entries_chunk_size = 2 ** 8
     _parse = staticmethod(parse)
 
-    @wrap_storage_exceptions
+    @wrap_storage_exceptions()
     def __init__(self, path=None):
         self.db = open_db(path)
 
-    @wrap_storage_exceptions
+    @wrap_storage_exceptions()
     def add_feed(self, url):
         with self.db:
             try:
@@ -59,7 +58,7 @@ class Reader:
             except sqlite3.IntegrityError:
                 raise FeedExistsError(url)
 
-    @wrap_storage_exceptions
+    @wrap_storage_exceptions()
     def remove_feed(self, url):
         with self.db:
             rows = self.db.execute("""
@@ -81,11 +80,11 @@ class Reader:
         for row in cursor:
             yield Feed._make(row)
 
-    @wrap_storage_exceptions
+    @wrap_storage_exceptions()
     def get_feeds(self):
         return list(self._get_feeds())
 
-    @wrap_storage_exceptions
+    @wrap_storage_exceptions()
     def get_feed(self, url):
         feeds = list(self._get_feeds(url))
         if len(feeds) == 0:
@@ -115,7 +114,7 @@ class Reader:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    @wrap_storage_exceptions
+    @wrap_storage_exceptions()
     def update_feeds(self):
         for row in list(self._get_feeds_for_update()):
             try:
@@ -123,7 +122,7 @@ class Reader:
             except ParseError as e:
                 log.warning("update feed %r: error while getting/parsing feed, skipping; exception: %r", e.url, e.__cause__)
 
-    @wrap_storage_exceptions
+    @wrap_storage_exceptions()
     def update_feed(self, url):
         rows = list(self._get_feeds_for_update(url))
         if len(rows) == 0:
@@ -267,34 +266,35 @@ class Reader:
                 AND feeds.url = :feed_url
             """
 
-        cursor = self.db.execute("""
-            SELECT
-                feeds.url,
-                feeds.title,
-                feeds.link,
-                feeds.updated,
-                entries.id,
-                entries.title,
-                entries.link,
-                entries.updated,
-                entries.published,
-                entries.summary,
-                entries.content,
-                entries.enclosures,
-                entries.read
-            FROM entries, feeds
-            WHERE
-                feeds.url = entries.feed
-                {where_read_snippet}
-                {where_feed_snippet}
-                {where_next_snippet}
-            ORDER BY
-                entries.updated DESC,
-                feeds.url DESC,
-                entries.id DESC
-            {limit_snippet}
-            ;
-        """.format(**locals()), locals())
+        with wrap_storage_exceptions():
+            cursor = self.db.execute("""
+                SELECT
+                    feeds.url,
+                    feeds.title,
+                    feeds.link,
+                    feeds.updated,
+                    entries.id,
+                    entries.title,
+                    entries.link,
+                    entries.updated,
+                    entries.published,
+                    entries.summary,
+                    entries.content,
+                    entries.enclosures,
+                    entries.read
+                FROM entries, feeds
+                WHERE
+                    feeds.url = entries.feed
+                    {where_read_snippet}
+                    {where_feed_snippet}
+                    {where_next_snippet}
+                ORDER BY
+                    entries.updated DESC,
+                    feeds.url DESC,
+                    entries.id DESC
+                {limit_snippet}
+                ;
+            """.format(**locals()), locals())
 
         for t in cursor:
             feed = t[0:4]
@@ -307,7 +307,7 @@ class Reader:
             entry = Entry._make(entry)
             yield feed, entry
 
-    @wrap_storage_exceptions
+    @wrap_storage_exceptions()
     def get_entries(self, which='all', feed_url=None):
         if which not in ('all', 'unread', 'read'):
             raise ValueError("which should be one of ('all', 'read', 'unread')")
@@ -357,11 +357,11 @@ class Reader:
                 raise EntryNotFoundError(feed_url, entry_id)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    @wrap_storage_exceptions
+    @wrap_storage_exceptions()
     def mark_as_read(self, feed_url, entry_id):
        self._mark_as_read_unread(feed_url, entry_id, 1)
 
-    @wrap_storage_exceptions
+    @wrap_storage_exceptions()
     def mark_as_unread(self, feed_url, entry_id):
         self._mark_as_read_unread(feed_url, entry_id, 0)
 
