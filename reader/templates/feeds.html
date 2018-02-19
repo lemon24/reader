@@ -35,7 +35,7 @@ right: 0;
 
 {% for feed in feeds %}
 
-<form method="post" id="feed-{{ loop.index }}">
+<form action="{{ url_for('update_feed') }}" method="post" id="feed-{{ loop.index }}">
 
 <b><a href="{{ feed.link }}">
 {%- if feed.title and feed.title.strip() -%}
@@ -43,8 +43,19 @@ right: 0;
 {%- else -%}
 {{ feed.url }}
 {%- endif -%}
-</a></b> <br><small><a href="{{ url_for('root', feed=feed.url) }}">entries</a></small>
+</a></b> <br>
+<small>
+<a href="{{ url_for('root', feed=feed.url) }}">entries</a>
 
+<input type="checkbox" name="really" id="really-mark-all-as" value="really">
+<label for="really-mark-all-as">I really want to</label>
+
+<button type="submit" name="action" value="delete">delete</button>
+
+<input type="hidden" name="feed-url" value='{{ feed.url }}'>
+<input type="hidden" name="next" value='{{ url_for('feeds', **request.args) }}#feed-{{ loop.index if not loop.last else loop.index - 1 }}'>
+
+</small>
 </form>
 <br>
 

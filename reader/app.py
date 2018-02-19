@@ -110,3 +110,18 @@ def add_feed():
         return redirect(next)
     return "unknown action", 400
 
+
+@app.route('/update-feed', methods=['POST'])
+def update_feed():
+    action = request.form['action']
+    feed_url = request.form['feed-url']
+    next = request.form['next']
+    if not is_safe_url(next):
+        return "bad next", 400
+    really = request.form.get('really')
+    if really != 'really':
+        return "really not checked", 400
+    if action == 'delete':
+        get_reader().remove_feed(feed_url)
+        return redirect(next)
+    return "unknown action", 400
