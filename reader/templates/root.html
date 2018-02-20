@@ -18,7 +18,7 @@ right: 0;
 
 
 <h1>{{ (feed.title or feed.url) if feed else 'Feeds' }}</h1>
-<form action="{{ url_for('update_entries') }}" method="post">
+<form action="{{ url_for('update_entries') }}" method="post" id="update-entries">
 <small>
 {% if feed %}<a href='{{ url_for('root') }}'>home</a>{% endif %}
 
@@ -52,7 +52,7 @@ right: 0;
 
 {% for feed, entry in entries %}
 
-<form action="{{ url_for('update_entry') }}" method="post" id="entry-{{ loop.index }}">
+<form action="{{ url_for('update_entry') }}" method="post" id="entry-{{ loop.index }}" class="entry">
 <b><a href="{{ entry.link }}">
 {%- if entry.title and entry.title.strip() -%}
 {{ entry.title }}
