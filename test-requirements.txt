@@ -1,0 +1,5 @@
+pytest
+coverage
+feedgen
+mechanicalsoup
+requests-wsgi-adapter
