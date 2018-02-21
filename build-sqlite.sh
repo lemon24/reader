@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ ! -d $HOME/sqlite ]; then
+if [ ! -e $HOME/sqlite/libsqlite3.so.0 ]; then
     echo "compiling sqlite"
     wget https://sqlite.org/2018/sqlite-amalgamation-3220000.zip
     unzip sqlite-amalgamation-3220000.zip
