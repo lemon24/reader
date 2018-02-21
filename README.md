@@ -1,5 +1,7 @@
 **reader** is a minimal feed reader.
 
+[![Build Status](https://travis-ci.org/lemon24/reader.svg?branch=master)](https://travis-ci.org/lemon24/reader)
+
 Goals:
 
 * clearly documented API
@@ -19,31 +21,31 @@ In scope:
     * see all entries
     * see entries for a feed
     * mark entries as read
-    * (later) mark entries as unread
-    * (later) add/remove feeds
+    * mark entries as unread
+    * add/remove feeds
     * (much later) basic auth
 
 Usage:
 
 Most commands need a database to work. The following are equivalent:
 
-    python3 -m reader.cli --db /path/to/db some-command
-    READER_DB=/path/to/db python3 -m reader.cli some-command
+    python3 -m reader --db /path/to/db some-command
+    READER_DB=/path/to/db python3 -m reader some-command
 
 If no database path is given, `~/.config/reader/db.sqlite` is used
 (at least on Linux).
 
 Add a feed:
 
-    python3 -m reader.cli add http://www.example.com/atom.xml
+    python3 -m reader add http://www.example.com/atom.xml
 
 Update all feeds:
 
-    python3 -m reader.cli update
+    python3 -m reader update
 
 Start a local server (http://localhost:8080/):
 
-    python3 -m reader.cli serve
+    python3 -m reader serve
 
 Start a local development server:
 
