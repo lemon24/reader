@@ -6,6 +6,7 @@ python:
     - "pypy3.5"
 
 install:
+    - ./build-sqlite.sh
     - pip install .
     - pip install -r test-requirements.txt
 
@@ -13,4 +14,11 @@ script: make coverage
 
 notifications:
     email: false
+
+env:
+    - LD_LIBRARY_PATH=$HOME/sqlite
+
+cache:
+    directories:
+        - $HOME/sqlite
 
