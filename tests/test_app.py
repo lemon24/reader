@@ -82,7 +82,10 @@ def test_add_delete_feed(tmpdir):
     assert response.status_code == 200
     assert len(browser.get_current_page().select('form.feed')) == 1
 
-    response = browser.follow_link(browser.find_link(text='home'))
+    feed_link = browser.find_link(text='entries')
+
+    response = browser.follow_link(feed_link)
+    assert response.status_code == 200
     assert len(browser.get_current_page().select('form.entry')) == 0
 
     reader.update_feeds()
@@ -100,5 +103,9 @@ def test_add_delete_feed(tmpdir):
     assert len(browser.get_current_page().select('form.feed')) == 0
 
     response = browser.follow_link(browser.find_link(text='home'))
+    assert response.status_code == 200
     assert len(browser.get_current_page().select('form.entry')) == 0
+
+    response = browser.follow_link(feed_link)
+    assert response.status_code == 404
 
