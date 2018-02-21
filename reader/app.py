@@ -31,7 +31,7 @@ def is_safe_url(target):
 
 
 @app.route('/')
-def root():
+def entries():
     show = request.args.get('show', 'unread')
     assert show in ('all', 'read', 'unread')
 
@@ -50,7 +50,7 @@ def root():
     if feed_url:
         entries_data = [{'feed': f.url, 'entry': e.id} for f, e in entries]
 
-    return render_template('root.html', entries=entries, feed=feed, entries_data=entries_data)
+    return render_template('entries.html', entries=entries, feed=feed, entries_data=entries_data)
 
 
 @app.route('/update-entry', methods=['POST'])
