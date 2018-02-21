@@ -3,8 +3,9 @@
 
 import os
 
-from reader.app import app
+from reader.app import create_app
 from reader.cli import get_default_db_path
 
+app = create_app(os.environ.get('READER_DB', get_default_db_path()))
+
 app.config['TRAP_BAD_REQUEST_ERRORS'] = True
-app.config['READER_DB'] = os.environ.get('READER_DB', get_default_db_path())

@@ -6,7 +6,7 @@ import wsgiadapter
 import mechanicalsoup
 
 from reader import Reader
-from reader.app import app
+from reader.app import create_app
 
 from fakeparser import Parser
 
@@ -25,7 +25,7 @@ def test_mark_as_read_unread(tmpdir):
     reader.add_feed(feed.url)
     reader.update_feeds()
 
-    app.config['READER_DB'] = db_path
+    app = create_app(db_path)
 
     session = requests.Session()
     session.mount('http://app/', wsgiadapter.WSGIAdapter(app))
@@ -65,7 +65,7 @@ def test_add_delete_feed(tmpdir):
     reader = Reader(db_path)
     reader._parse = parser
 
-    app.config['READER_DB'] = db_path
+    app = create_app(db_path)
 
     session = requests.Session()
     session.mount('http://app/', wsgiadapter.WSGIAdapter(app))

@@ -125,7 +125,10 @@ def update_feed():
     return "unknown action", 400
 
 
-app = Flask(__name__)
-app.teardown_appcontext(close_db)
-app.register_blueprint(blueprint)
+def create_app(db_path):
+    app = Flask(__name__)
+    app.config['READER_DB'] = db_path
+    app.teardown_appcontext(close_db)
+    app.register_blueprint(blueprint)
+    return app
 

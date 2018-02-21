@@ -96,8 +96,8 @@ def update(db_path, verbose):
 def serve(db_path, verbose):
     setup_logging(verbose)
     from werkzeug.serving import run_simple
-    from .app import app
-    app.config['READER_DB'] = db_path
+    from .app import create_app
+    app = create_app(db_path)
     run_simple('localhost', 8080, app)
 
 
