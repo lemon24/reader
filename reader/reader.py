@@ -266,35 +266,38 @@ class Reader:
                 AND feeds.url = :feed_url
             """
 
+        query = """
+            SELECT
+                feeds.url,
+                feeds.title,
+                feeds.link,
+                feeds.updated,
+                entries.id,
+                entries.title,
+                entries.link,
+                entries.updated,
+                entries.published,
+                entries.summary,
+                entries.content,
+                entries.enclosures,
+                entries.read
+            FROM entries, feeds
+            WHERE
+                feeds.url = entries.feed
+                {where_read_snippet}
+                {where_feed_snippet}
+                {where_next_snippet}
+            ORDER BY
+                entries.updated DESC,
+                feeds.url DESC,
+                entries.id DESC
+            {limit_snippet}
+            ;
+        """.format(**locals())
+
+        log.debug("_get_entries query\n%s\n", query)
         with wrap_storage_exceptions():
-            cursor = self.db.execute("""
-                SELECT
-                    feeds.url,
-                    feeds.title,
-                    feeds.link,
-                    feeds.updated,
-                    entries.id,
-                    entries.title,
-                    entries.link,
-                    entries.updated,
-                    entries.published,
-                    entries.summary,
-                    entries.content,
-                    entries.enclosures,
-                    entries.read
-                FROM entries, feeds
-                WHERE
-                    feeds.url = entries.feed
-                    {where_read_snippet}
-                    {where_feed_snippet}
-                    {where_next_snippet}
-                ORDER BY
-                    entries.updated DESC,
-                    feeds.url DESC,
-                    entries.id DESC
-                {limit_snippet}
-                ;
-            """.format(**locals()), locals())
+            cursor = self.db.execute(query, locals())
 
         for t in cursor:
             feed = t[0:4]
