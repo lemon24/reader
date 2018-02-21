@@ -11,8 +11,3 @@ install:
 
 script: make coverage
 
-matrix:
-    include:
-        -   os: linux
-            dist: artful
-
