@@ -1,15 +1,15 @@
 import json
 from urllib.parse import urlparse, urljoin
 
-from flask import Flask, render_template, current_app, g, request, redirect, abort
+from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint
 import humanize
 
 from . import Reader
 
 
-app = Flask(__name__)
+blueprint = Blueprint('reader', __name__)
 
-app.template_filter('humanize_naturaltime')(humanize.naturaltime)
+blueprint.app_template_filter('humanize_naturaltime')(humanize.naturaltime)
 
 
 def get_reader():
@@ -17,8 +17,6 @@ def get_reader():
         g.reader = Reader(current_app.config['READER_DB'])
     return g.reader
 
-
-@app.teardown_appcontext
 def close_db(error):
     if hasattr(g, 'reader'):
         g.reader.db.close()
@@ -30,7 +28,7 @@ def is_safe_url(target):
     return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
 
 
-@app.route('/')
+@blueprint.route('/')
 def entries():
     show = request.args.get('show', 'unread')
     assert show in ('all', 'read', 'unread')
@@ -53,7 +51,7 @@ def entries():
     return render_template('entries.html', entries=entries, feed=feed, entries_data=entries_data)
 
 
-@app.route('/update-entry', methods=['POST'])
+@blueprint.route('/update-entry', methods=['POST'])
 def update_entry():
     action = request.form['action']
     entry_id = json.loads(request.form['entry-id'])
@@ -69,7 +67,7 @@ def update_entry():
     return "unknown action", 400
 
 
-@app.route('/update-entries', methods=['POST'])
+@blueprint.route('/update-entries', methods=['POST'])
 def update_entries():
     action = request.form['action']
     entry_id = json.loads(request.form['entry-id'])
@@ -90,13 +88,13 @@ def update_entries():
     return "unknown action", 400
 
 
-@app.route('/feeds')
+@blueprint.route('/feeds')
 def feeds():
     feeds = get_reader().get_feeds()
     return render_template('feeds.html', feeds=feeds)
 
 
-@app.route('/add-feed', methods=['POST'])
+@blueprint.route('/add-feed', methods=['POST'])
 def add_feed():
     action = request.form['action']
     next = request.form['next']
@@ -111,7 +109,7 @@ def add_feed():
     return "unknown action", 400
 
 
-@app.route('/update-feed', methods=['POST'])
+@blueprint.route('/update-feed', methods=['POST'])
 def update_feed():
     action = request.form['action']
     feed_url = request.form['feed-url']
@@ -125,3 +123,9 @@ def update_feed():
         get_reader().remove_feed(feed_url)
         return redirect(next)
     return "unknown action", 400
+
+
+app = Flask(__name__)
+app.teardown_appcontext(close_db)
+app.register_blueprint(blueprint)
+
