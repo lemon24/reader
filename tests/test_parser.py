@@ -2,6 +2,7 @@ from datetime import datetime
 
 import pytest
 import feedgen.feed
+import feedparser
 
 from reader.parser import parse
 from reader.exceptions import ParseError, NotModified
@@ -77,4 +78,53 @@ def test_parse(monkeypatch, tmpdir, feed_type):
     assert entries == expected_entries
     assert expected_http_etag is None
     assert expected_http_last_modified is None
+
+
+def test_parse_error(monkeypatch, tmpdir):
+    """parse() should reraise most feedparser exceptions."""
+
+    monkeypatch.chdir(tmpdir)
+
+    parser = Parser()
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    write_feed('atom', feed, [])
+
+    feedparser_exception = Exception("whatever")
+    old_feedparser_parse = feedparser.parse
+    def feedparser_parse(*args, **kwargs):
+        rv = old_feedparser_parse(*args, **kwargs)
+        rv['bozo'] = 1
+        rv['bozo_exception'] = feedparser_exception
+        return rv
+
+    monkeypatch.setattr('feedparser.parse', feedparser_parse)
+
+    with pytest.raises(ParseError) as excinfo:
+        parse(feed.url)
+
+    assert excinfo.value.__cause__ is feedparser_exception
+
+
+def test_parse_character_encoding_override(monkeypatch, tmpdir):
+    """parse() should not reraise feedparser.CharacterEncodingOverride."""
+
+    monkeypatch.chdir(tmpdir)
+
+    parser = Parser()
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    write_feed('atom', feed, [])
+
+    old_feedparser_parse = feedparser.parse
+    def feedparser_parse(*args, **kwargs):
+        rv = old_feedparser_parse(*args, **kwargs)
+        rv['bozo'] = 1
+        rv['bozo_exception'] = feedparser.CharacterEncodingOverride("whatever")
+        return rv
+
+    monkeypatch.setattr('feedparser.parse', feedparser_parse)
+
+    # shouldn't raise an exception
+    parse(feed.url)
 
