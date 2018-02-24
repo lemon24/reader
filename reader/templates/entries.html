@@ -1,23 +1,11 @@
-<!doctype html>
+{% extends "layout.html" %}
+
+{% block page_title %}{% if feed %}Entries for {{ feed.title or feed.url }}{% else %}Entries{% endif %}{% endblock %}
+{% block main_title %}{% if feed %}Entries for {{ feed.title or feed.url }}{% else %}Entries{% endif %}{% endblock %}
 
 
-<title>{% if feed %}Feed: {{ feed.title or feed.url }}{% else %}Feeds{% endif %}</title>
+{% block body %}
 
-
-{% if config.DEBUG  %}
-<p style="
-color: white;
-background: red;
-padding: .5rem 1rem;
-margin: 0;
-position: fixed;
-bottom: 0;
-right: 0;
-"><code>{{ config.READER_DB }}</code></p>
-{% endif %}
-
-
-<h1>{{ (feed.title or feed.url) if feed else 'Feeds' }}</h1>
 <form action="{{ url_for('.update_entries') }}" method="post" id="update-entries">
 <small>
 {% if feed %}<a href='{{ url_for('.entries') }}'>home</a>{% endif %}
@@ -115,3 +103,6 @@ untitled
 {% else %}
 <p>no {% if current_what != 'all' %}{{ current_what }} {% endif %}entries for this feed</p>
 {% endfor %}
+
+{% endblock %}
+

@@ -1,23 +1,11 @@
-<!doctype html>
+{% extends "layout.html" %}
+
+{% block page_title %}Feeds{% endblock %}
+{% block main_title %}Feeds{% endblock %}
 
 
-<title>Feeds</title>
 
-
-{% if config.DEBUG  %}
-<p style="
-color: white;
-background: red;
-padding: .5rem 1rem;
-margin: 0;
-position: fixed;
-bottom: 0;
-right: 0;
-"><code>{{ config.READER_DB }}</code></p>
-{% endif %}
-
-
-<h1>Feeds</h1>
+{% block body %}
 
 <form action="{{ url_for('.add_feed') }}" method="post" id="add-feed">
 <small>
@@ -61,3 +49,4 @@ right: 0;
 
 {% endfor %}
 
+{% endblock %}
