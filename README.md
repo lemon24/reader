@@ -1,6 +1,7 @@
 **reader** is a minimal feed reader.
 
-[![Build Status](https://travis-ci.org/lemon24/reader.svg?branch=master)](https://travis-ci.org/lemon24/reader)
+[![Build Status](https://travis-ci.org/lemon24/reader.svg?branch=master)](https://travis-ci.org/lemon24/reader) [![codecov](https://codecov.io/gh/lemon24/reader/branch/master/graph/badge.svg)](https://codecov.io/gh/lemon24/reader)
+
 
 Goals:
 
