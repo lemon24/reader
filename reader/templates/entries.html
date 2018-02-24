@@ -62,7 +62,7 @@ right: 0;
 untitled
 {%- endif -%}
 </a></b> <br>
-<small><a href="{{ feed.link }}">{{ feed.title }}</a>
+<small>{% if feed.link %}<a href="{{ feed.link }}">{% endif %}{{ feed.title }}{% if feed.link %}</a>{% endif %}
 <span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>
 <a href="{{ url_for('.entries', feed=feed.url) }}">feed</a>
 
