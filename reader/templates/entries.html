@@ -39,7 +39,9 @@ right: 0;
 
 <button type="submit" name="action" value="mark-all-as-read">mark all as read</button>
 <button type="submit" name="action" value="mark-all-as-unread">mark all as unread</button>
+<button type="submit" name="action" value="delete-feed">delete feed</button>
 
+<input type="hidden" name="feed-url" value='{{ feed.url }}'>
 <input type="hidden" name="entry-id" value='{{ entries_data | tojson }}'>
 <input type="hidden" name="next" value='{{ url_for('.entries', **request.args) }}'>
 {% endif %}
@@ -70,7 +72,8 @@ untitled
 <button type="submit" name="action" value="mark-as-read">mark as read</button>
 {% endif %}
 
-<input type="hidden" name="entry-id" value='{{ {'feed': feed.url, 'entry': entry.id} | tojson }}'>
+<input type="hidden" name="feed-url" value='{{ feed.url }}'>
+<input type="hidden" name="entry-id" value='{{ entry.id }}'>
 <input type="hidden" name="next" value='{{ url_for('.entries', **request.args) }}#entry-{{ loop.index if not loop.last else loop.index - 1 }}'>
 
 </small>

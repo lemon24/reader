@@ -46,7 +46,7 @@ def entries():
 
     entries_data = None
     if feed_url:
-        entries_data = [{'feed': f.url, 'entry': e.id} for f, e in entries]
+        entries_data = [e.id for f, e in entries]
 
     return render_template('entries.html', entries=entries, feed=feed, entries_data=entries_data)
 
@@ -54,15 +54,16 @@ def entries():
 @blueprint.route('/update-entry', methods=['POST'])
 def update_entry():
     action = request.form['action']
-    entry_id = json.loads(request.form['entry-id'])
+    feed_url = request.form['feed-url']
+    entry_id = request.form['entry-id']
     next = request.form['next']
     if not is_safe_url(next):
         return "bad next", 400
     if action == 'mark-as-read':
-        get_reader().mark_as_read(entry_id['feed'], entry_id['entry'])
+        get_reader().mark_as_read(feed_url, entry_id)
         return redirect(next)
     if action == 'mark-as-unread':
-        get_reader().mark_as_unread(entry_id['feed'], entry_id['entry'])
+        get_reader().mark_as_unread(feed_url, entry_id)
         return redirect(next)
     return "unknown action", 400
 
@@ -70,7 +71,6 @@ def update_entry():
 @blueprint.route('/update-entries', methods=['POST'])
 def update_entries():
     action = request.form['action']
-    entry_id = json.loads(request.form['entry-id'])
     next = request.form['next']
     if not is_safe_url(next):
         return "bad next", 400
@@ -78,12 +78,20 @@ def update_entries():
     if really != 'really':
         return "really not checked", 400
     if action == 'mark-all-as-read':
+        feed_url = request.form['feed-url']
+        entry_id = json.loads(request.form['entry-id'])
         for entry_id in entry_id:
-            get_reader().mark_as_read(entry_id['feed'], entry_id['entry'])
+            get_reader().mark_as_read(feed_url, entry_id)
         return redirect(next)
     if action == 'mark-all-as-unread':
+        feed_url = request.form['feed-url']
+        entry_id = json.loads(request.form['entry-id'])
         for entry_id in entry_id:
-            get_reader().mark_as_unread(entry_id['feed'], entry_id['entry'])
+            get_reader().mark_as_unread(feed_url, entry_id)
+        return redirect(next)
+    if action == 'delete-feed':
+        feed_url = request.form['feed-url']
+        get_reader().remove_feed(feed_url)
         return redirect(next)
     return "unknown action", 400
 
@@ -105,22 +113,6 @@ def add_feed():
         assert feed_url, "feed-url cannot be empty"
         # TODO: handle FeedExistsError
         get_reader().add_feed(feed_url)
-        return redirect(next)
-    return "unknown action", 400
-
-
-@blueprint.route('/update-feed', methods=['POST'])
-def update_feed():
-    action = request.form['action']
-    feed_url = request.form['feed-url']
-    next = request.form['next']
-    if not is_safe_url(next):
-        return "bad next", 400
-    really = request.form.get('really')
-    if really != 'really':
-        return "really not checked", 400
-    if action == 'delete':
-        get_reader().remove_feed(feed_url)
         return redirect(next)
     return "unknown action", 400
 
