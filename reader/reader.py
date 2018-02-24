@@ -120,7 +120,7 @@ class Reader:
             try:
                 self._update_feed(*row)
             except ParseError as e:
-                log.warning("update feed %r: error while getting/parsing feed, skipping; exception: %r", e.url, e.__cause__)
+                log.exception("update feed %r: error while getting/parsing feed, skipping; exception: %r", e.url, e.__cause__)
 
     @wrap_storage_exceptions()
     def update_feed(self, url):
