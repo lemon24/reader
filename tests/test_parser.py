@@ -128,3 +128,25 @@ def test_parse_character_encoding_override(monkeypatch, tmpdir):
     # shouldn't raise an exception
     parse(feed.url)
 
+
+def test_parse_not_modified(monkeypatch, tmpdir):
+    """parse() should raise NotModified for unchanged feeds."""
+
+    monkeypatch.chdir(tmpdir)
+
+    parser = Parser()
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    write_feed('atom', feed, [])
+
+    old_feedparser_parse = feedparser.parse
+    def feedparser_parse(*args, **kwargs):
+        rv = old_feedparser_parse(*args, **kwargs)
+        rv['status'] = 304
+        return rv
+
+    monkeypatch.setattr('feedparser.parse', feedparser_parse)
+
+    with pytest.raises(NotModified):
+        parse(feed.url)
+
