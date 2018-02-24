@@ -79,15 +79,19 @@ def remove(db_path, url, verbose):
 
 
 @cli.command()
+@click.argument('url', required=False)
 @click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def update(db_path, verbose):
+def update(db_path, url, verbose):
     setup_logging(verbose)
     try:
         reader = Reader(db_path)
     except Exception as e:
         abort("{}: {}", db_path, e)
-    reader.update_feeds()
+    if url:
+        reader.update_feed(url)
+    else:
+        reader.update_feeds()
 
 
 @cli.command()
