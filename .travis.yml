@@ -9,6 +9,7 @@ install:
     - ./build-sqlite.sh
     - pip install .
     - pip install -r test-requirements.txt
+    - pip install codecov
 
 script: make coverage
 
@@ -21,4 +22,7 @@ env:
 cache:
     directories:
         - $HOME/sqlite
+
+after_success:
+    - codecov
 
