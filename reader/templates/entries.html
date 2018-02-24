@@ -1,7 +1,9 @@
 {% extends "layout.html" %}
 
-{% block page_title %}{% if feed %}Entries for {{ feed.title or feed.url }}{% else %}Entries{% endif %}{% endblock %}
-{% block main_title %}{% if feed %}Entries for {{ feed.title or feed.url }}{% else %}Entries{% endif %}{% endblock %}
+{% import "macros.html" as macros %}
+
+{% block page_title %}{% if feed %}Entries for {{ macros.feed_title(feed) }}{% else %}Entries{% endif %}{% endblock %}
+{% block main_title %}{% if feed %}Entries for {{ macros.feed_title(feed) }}{% else %}Entries{% endif %}{% endblock %}
 
 
 {% block body %}
@@ -50,7 +52,7 @@
 untitled
 {%- endif -%}
 </a></b> <br>
-<small>{% if feed.link %}<a href="{{ feed.link }}">{% endif %}{{ feed.title }}{% if feed.link %}</a>{% endif %}
+<small>{{ macros.feed_link(feed) }}
 <span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>
 <a href="{{ url_for('.entries', feed=feed.url) }}">feed</a>
 

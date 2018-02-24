@@ -1,0 +1,15 @@
+
+{% macro feed_link(feed) %}
+{% if feed.link %}<a href="{{ feed.link }}">{% endif %}
+{{ feed_title(feed) }}
+{% if feed.link %}</a>{% endif %}
+{% endmacro %}
+
+{% macro feed_title(feed) %}
+{%- if feed.title and feed.title.strip() -%}
+    {{ feed.title }}
+{%- else -%}
+    {{ feed.url }}
+{%- endif -%}
+{% endmacro %}
+

@@ -1,5 +1,7 @@
 {% extends "layout.html" %}
 
+{% import "macros.html" as macros %}
+
 {% block page_title %}Feeds{% endblock %}
 {% block main_title %}Feeds{% endblock %}
 
@@ -25,13 +27,7 @@
 
 <form action="{{ url_for('.update_entries') }}" method="post" id="feed-{{ loop.index }}" class="feed">
 
-<b>{% if feed.link %}<a href="{{ feed.link }}">{% endif %}
-{%- if feed.title and feed.title.strip() -%}
-{{ feed.title }}
-{%- else -%}
-{{ feed.url }}
-{%- endif -%}
-{% if feed.link %}</a>{% endif %}</b> <br>
+<b>{{ macros.feed_link(feed) }}</b> <br>
 <small>
 <a href="{{ url_for('.entries', feed=feed.url) }}">entries</a>
 
