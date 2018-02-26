@@ -61,20 +61,34 @@ class APIThing:
 
     def __init__(self, blueprint, rule, endpoint):
         self.actions = {}
+        self.really = {}
         blueprint.add_url_rule(rule, endpoint, methods=['POST'], view_func=self.dispatch)
 
     def dispatch(self):
         action = request.form['action']
-        if action not in self.actions:
+        func = self.actions.get(action)
+        if func is None:
             return "unknown action", 400
         next = request.form['next']
         if not is_safe_url(next):
             return "bad next", 400
-        self.actions[action]()
+        if self.really[func]:
+            really = request.form.get('really')
+            if really != 'really':
+                return "really not checked", 400
+        func()
         return redirect(next)
 
-    def __call__(self, f):
-        self.actions[f.__name__.replace('_', '-')] = f
+    def __call__(self, func=None, *, really=False):
+
+        def register(f):
+            self.actions[f.__name__.replace('_', '-')] = f
+            self.really[f] = really
+            return f
+
+        if func is None:
+            return register
+        return register(func)
 
 
 update_entry = APIThing(blueprint, '/update-entry', 'update_entry')
@@ -97,33 +111,24 @@ def mark_as_unread():
 update_entries = APIThing(blueprint,'/update-entries', 'update_entries')
 
 
-@update_entries
+@update_entries(really=True)
 def mark_all_as_read():
-    really = request.form.get('really')
-    if really != 'really':
-        return "really not checked", 400
     feed_url = request.form['feed-url']
     entry_id = json.loads(request.form['entry-id'])
     for entry_id in entry_id:
         get_reader().mark_as_read(feed_url, entry_id)
 
 
-@update_entries
+@update_entries(really=True)
 def mark_all_as_unread():
-    really = request.form.get('really')
-    if really != 'really':
-        return "really not checked", 400
     feed_url = request.form['feed-url']
     entry_id = json.loads(request.form['entry-id'])
     for entry_id in entry_id:
         get_reader().mark_as_unread(feed_url, entry_id)
 
 
-@update_entries
+@update_entries(really=True)
 def delete_feed():
-    really = request.form.get('really')
-    if really != 'really':
-        return "really not checked", 400
     feed_url = request.form['feed-url']
     get_reader().remove_feed(feed_url)
 
