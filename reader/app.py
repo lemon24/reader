@@ -51,70 +51,94 @@ def entries():
     return render_template('entries.html', entries=entries, feed=feed, entries_data=entries_data)
 
 
-@blueprint.route('/update-entry', methods=['POST'])
-def update_entry():
-    action = request.form['action']
-    feed_url = request.form['feed-url']
-    entry_id = request.form['entry-id']
-    next = request.form['next']
-    if not is_safe_url(next):
-        return "bad next", 400
-    if action == 'mark-as-read':
-        get_reader().mark_as_read(feed_url, entry_id)
-        return redirect(next)
-    if action == 'mark-as-unread':
-        get_reader().mark_as_unread(feed_url, entry_id)
-        return redirect(next)
-    return "unknown action", 400
-
-
-@blueprint.route('/update-entries', methods=['POST'])
-def update_entries():
-    action = request.form['action']
-    next = request.form['next']
-    if not is_safe_url(next):
-        return "bad next", 400
-    really = request.form.get('really')
-    if really != 'really':
-        return "really not checked", 400
-    if action == 'mark-all-as-read':
-        feed_url = request.form['feed-url']
-        entry_id = json.loads(request.form['entry-id'])
-        for entry_id in entry_id:
-            get_reader().mark_as_read(feed_url, entry_id)
-        return redirect(next)
-    if action == 'mark-all-as-unread':
-        feed_url = request.form['feed-url']
-        entry_id = json.loads(request.form['entry-id'])
-        for entry_id in entry_id:
-            get_reader().mark_as_unread(feed_url, entry_id)
-        return redirect(next)
-    if action == 'delete-feed':
-        feed_url = request.form['feed-url']
-        get_reader().remove_feed(feed_url)
-        return redirect(next)
-    return "unknown action", 400
-
-
 @blueprint.route('/feeds')
 def feeds():
     feeds = get_reader().get_feeds()
     return render_template('feeds.html', feeds=feeds)
 
 
-@blueprint.route('/add-feed', methods=['POST'])
-def add_feed():
-    action = request.form['action']
-    next = request.form['next']
-    if not is_safe_url(next):
-        return "bad next", 400
-    if action == 'add-feed':
-        feed_url = request.form['feed-url'].strip()
-        assert feed_url, "feed-url cannot be empty"
-        # TODO: handle FeedExistsError
-        get_reader().add_feed(feed_url)
+class APIThing:
+
+    def __init__(self):
+        self.actions = {}
+
+    def dispatch_request(self):
+        action = request.form['action']
+        if action not in self.actions:
+            return "unknown action", 400
+        next = request.form['next']
+        if not is_safe_url(next):
+            return "bad next", 400
+        self.actions[action]()
         return redirect(next)
-    return "unknown action", 400
+
+    def __call__(self, f):
+        self.actions[f.__name__.replace('_', '-')] = f
+
+
+update_entry = APIThing()
+blueprint.add_url_rule('/update-entry', 'update_entry', methods=['POST'], view_func=update_entry.dispatch_request)
+
+
+@update_entry
+def mark_as_read():
+    feed_url = request.form['feed-url']
+    entry_id = request.form['entry-id']
+    get_reader().mark_as_read(feed_url, entry_id)
+
+
+@update_entry
+def mark_as_unread():
+    feed_url = request.form['feed-url']
+    entry_id = request.form['entry-id']
+    get_reader().mark_as_unread(feed_url, entry_id)
+
+
+update_entries = APIThing()
+blueprint.add_url_rule('/update-entries', 'update_entries', methods=['POST'], view_func=update_entries.dispatch_request)
+
+
+@update_entries
+def mark_all_as_read():
+    really = request.form.get('really')
+    if really != 'really':
+        return "really not checked", 400
+    feed_url = request.form['feed-url']
+    entry_id = json.loads(request.form['entry-id'])
+    for entry_id in entry_id:
+        get_reader().mark_as_read(feed_url, entry_id)
+
+
+@update_entries
+def mark_all_as_unread():
+    really = request.form.get('really')
+    if really != 'really':
+        return "really not checked", 400
+    feed_url = request.form['feed-url']
+    entry_id = json.loads(request.form['entry-id'])
+    for entry_id in entry_id:
+        get_reader().mark_as_unread(feed_url, entry_id)
+
+
+@update_entries
+def delete_feed():
+    really = request.form.get('really')
+    if really != 'really':
+        return "really not checked", 400
+    feed_url = request.form['feed-url']
+    get_reader().remove_feed(feed_url)
+
+
+add_feed = APIThing()
+blueprint.add_url_rule('/add_feed', 'add_feed', methods=['POST'], view_func=add_feed.dispatch_request)
+
+
+@add_feed
+def add_feed():
+    feed_url = request.form['feed-url'].strip()
+    assert feed_url, "feed-url cannot be empty"
+    # TODO: handle FeedExistsError
+    get_reader().add_feed(feed_url)
 
 
 def create_app(db_path):
