@@ -59,10 +59,11 @@ def feeds():
 
 class APIThing:
 
-    def __init__(self):
+    def __init__(self, blueprint, rule, endpoint):
         self.actions = {}
+        blueprint.add_url_rule(rule, endpoint, methods=['POST'], view_func=self.dispatch)
 
-    def dispatch_request(self):
+    def dispatch(self):
         action = request.form['action']
         if action not in self.actions:
             return "unknown action", 400
@@ -76,8 +77,7 @@ class APIThing:
         self.actions[f.__name__.replace('_', '-')] = f
 
 
-update_entry = APIThing()
-blueprint.add_url_rule('/update-entry', 'update_entry', methods=['POST'], view_func=update_entry.dispatch_request)
+update_entry = APIThing(blueprint, '/update-entry', 'update_entry')
 
 
 @update_entry
@@ -94,8 +94,7 @@ def mark_as_unread():
     get_reader().mark_as_unread(feed_url, entry_id)
 
 
-update_entries = APIThing()
-blueprint.add_url_rule('/update-entries', 'update_entries', methods=['POST'], view_func=update_entries.dispatch_request)
+update_entries = APIThing(blueprint,'/update-entries', 'update_entries')
 
 
 @update_entries
@@ -129,8 +128,7 @@ def delete_feed():
     get_reader().remove_feed(feed_url)
 
 
-add_feed = APIThing()
-blueprint.add_url_rule('/add_feed', 'add_feed', methods=['POST'], view_func=add_feed.dispatch_request)
+add_feed = APIThing(blueprint, '/add_feed', 'add_feed')
 
 
 @add_feed
