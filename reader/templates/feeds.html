@@ -17,10 +17,16 @@
 <button type="submit" name="action" value="add-feed">add feed</button>
 
 <input type="hidden" name="next" value='{{ url_for('.feeds', **request.args) }}'>
-
 </small>
 </form>
 <br>
+
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<p id="messages"><b>{% for message in messages %}{{ message }}. {% endfor %}</b></p>
+{% endif %}
+{% endwith %}
 
 
 {% for feed in feeds %}

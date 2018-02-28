@@ -41,6 +41,12 @@
 <br>
 
 
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<p id="messages"><b>{% for message in messages %}{{ message }}. {% endfor %}</b></p>
+{% endif %}
+{% endwith %}
+
 
 {% for feed, entry in entries %}
 

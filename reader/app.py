@@ -1,10 +1,10 @@
 import json
 from urllib.parse import urlparse, urljoin
 
-from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint
+from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash
 import humanize
 
-from . import Reader
+from . import Reader, ReaderError
 
 
 blueprint = Blueprint('reader', __name__)
@@ -75,8 +75,13 @@ class APIThing:
         if self.really[func]:
             really = request.form.get('really')
             if really != 'really':
-                return "really not checked", 400
-        func()
+                flash("really not checked")
+                return redirect(next)
+        try:
+            func()
+        except ReaderError as e:
+            flash("error: {}".format(e))
+            return redirect(next)
         return redirect(next)
 
     def __call__(self, func=None, *, really=False):
@@ -147,6 +152,7 @@ def add_feed():
 def create_app(db_path):
     app = Flask(__name__)
     app.config['READER_DB'] = db_path
+    app.secret_key = 'secret'
     app.teardown_appcontext(close_db)
     app.register_blueprint(blueprint)
     return app
