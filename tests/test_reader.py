@@ -149,9 +149,9 @@ def test_update_feed(reader):
     reader.add_feed(two.url)
     reader.update_feed(one.url)
 
-    assert set(reader.get_feeds()) == {one, Feed(two.url, None, None, None)}
+    assert set(reader.get_feeds()) == {one, Feed(two.url, None, None, None, None)}
     assert reader.get_feed(one.url) == one
-    assert reader.get_feed(two.url) == Feed(two.url, None, None, None)
+    assert reader.get_feed(two.url) == Feed(two.url, None, None, None, None)
     assert set(reader.get_entries()) == {(one, entry_one)}
 
     reader.update_feed(two.url)
@@ -362,9 +362,9 @@ def test_add_remove_get_feeds(reader):
     reader.add_feed(two.url)
 
     assert set(reader.get_feeds()) == {
-        Feed(f.url, None, None, None) for f in (one, two)
+        Feed(f.url, None, None, None, None) for f in (one, two)
     }
-    assert reader.get_feed(one.url) == Feed(one.url, None, None, None)
+    assert reader.get_feed(one.url) == Feed(one.url, None, None, None, None)
     assert set(reader.get_entries()) == set()
 
     with pytest.raises(FeedExistsError):
@@ -398,11 +398,44 @@ def test_get_feeds_order(reader):
     reader.add_feed(feed3.url)
 
     assert list(reader.get_feeds()) == [
-        Feed(f.url, None, None, None) for f in (feed1, feed2, feed3)]
+        Feed(f.url, None, None, None, None) for f in (feed1, feed2, feed3)]
 
     reader.update_feeds()
 
     assert list(reader.get_feeds()) == [feed1, feed3, feed2]
+
+
+def test_set_feed_user_title(reader):
+    parser = Parser()
+    reader._parse = parser
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+
+    with pytest.raises(FeedNotFoundError):
+        reader.set_feed_user_title(one.url, 'blah')
+
+    reader.add_feed(one.url)
+
+    assert reader.get_feed(one.url) == Feed(one.url, None, None, None, None)
+    assert list(reader.get_feeds()) == [Feed(one.url, None, None, None, None)]
+
+    reader.set_feed_user_title(one.url, 'blah')
+
+    assert reader.get_feed(one.url) == Feed(one.url, None, None, None, 'blah')
+    assert list(reader.get_feeds()) == [Feed(one.url, None, None, None, 'blah')]
+
+    reader.update_feeds()
+
+    assert reader.get_feed(one.url) == one._replace(user_title='blah')
+    assert list(reader.get_feeds()) == [one._replace(user_title='blah')]
+    assert list(reader.get_entries()) == [(one._replace(user_title='blah'), entry)]
+
+    reader.set_feed_user_title(one.url, None)
+
+    assert reader.get_feed(one.url) == one
+    assert list(reader.get_feeds()) == [one]
+    assert list(reader.get_entries()) == [(one, entry)]
 
 
 def test_storage_errors_open(tmpdir):

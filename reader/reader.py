@@ -72,7 +72,7 @@ class Reader:
     def _get_feeds(self, url=None):
         where_url_snippet = '' if not url else "WHERE url = :url"
         cursor = self.db.execute("""
-            SELECT url, title, link, updated FROM feeds
+            SELECT url, title, link, updated, user_title FROM feeds
             {where_url_snippet}
             ORDER BY feeds.title, feeds.url;
         """.format(**locals()), locals())
@@ -108,6 +108,18 @@ class Reader:
             rows = self.db.execute("""
                 UPDATE feeds
                 SET stale = 1
+                WHERE url = :url;
+            """, locals())
+            if rows.rowcount == 0:
+                raise FeedNotFoundError(url)
+            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+
+    @wrap_storage_exceptions()
+    def set_feed_user_title(self, url, title):
+        with self.db:
+            rows = self.db.execute("""
+                UPDATE feeds
+                SET user_title = :title
                 WHERE url = :url;
             """, locals())
             if rows.rowcount == 0:
@@ -272,6 +284,7 @@ class Reader:
                 feeds.title,
                 feeds.link,
                 feeds.updated,
+                feeds.user_title,
                 entries.id,
                 entries.title,
                 entries.link,
@@ -300,12 +313,12 @@ class Reader:
             cursor = self.db.execute(query, locals())
 
         for t in cursor:
-            feed = t[0:4]
+            feed = t[0:5]
             feed = Feed._make(feed)
-            entry = t[4:10] + (
-                json.loads(t[10]) if t[10] else None,
+            entry = t[5:11] + (
                 json.loads(t[11]) if t[11] else None,
-                t[12] == 1,
+                json.loads(t[12]) if t[12] else None,
+                t[13] == 1,
             )
             entry = Entry._make(entry)
             yield feed, entry

@@ -5,12 +5,13 @@ from reader import Feed, Entry, ParseError
 from reader.exceptions import NotModified
 
 
-def _make_feed(number, updated=None, title=None):
+def _make_feed(number, updated=None, title=None, user_title=None):
     return Feed(
         'feed-{}.xml'.format(number),
         title or 'Feed #{}'.format(number),
         'http://www.example.com/{}'.format(number),
         updated,
+        user_title,
     )
 
 def _make_entry(number, updated, published=None, title=None):
@@ -38,8 +39,8 @@ class Parser:
     def from_parser(cls, other):
         return cls(other.feeds, other.entries)
 
-    def feed(self, number, updated=None, title=None):
-        feed = _make_feed(number, updated, title=title)
+    def feed(self, number, updated=None, title=None, user_title=None):
+        feed = _make_feed(number, updated, title=title, user_title=user_title)
         self.feeds[number] = feed
         self.entries.setdefault(number, OrderedDict())
         return feed
