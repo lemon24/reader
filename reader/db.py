@@ -38,7 +38,7 @@ def ddl_transaction(db):
         db.isolation_level = isolation_level
 
 
-VERSION = 6
+VERSION = 7
 
 
 class InvalidVersion(Exception):
@@ -69,6 +69,7 @@ def create_db(db):
             title TEXT,
             link TEXT,
             updated TIMESTAMP,
+            user_title TEXT,
             http_etag TEXT,
             http_last_modified TEXT,
             stale INTEGER
@@ -185,12 +186,20 @@ def update_from_5_to_6(db):
     """)
 
 
+def update_from_6_to_7(db):
+    db.execute("""
+        ALTER TABLE feeds
+        ADD COLUMN user_title TEXT;
+    """)
+
+
 MIGRATIONS = {
     1: update_from_1_to_2,
     2: update_from_2_to_3,
     3: update_from_3_to_4,
     4: update_from_4_to_5,
     5: update_from_5_to_6,
+    6: update_from_6_to_7,
 }
 
 
