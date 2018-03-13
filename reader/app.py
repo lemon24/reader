@@ -28,6 +28,14 @@ def is_safe_url(target):
     return test_url.scheme in ('http', 'https') and ref_url.netloc == test_url.netloc
 
 
+def redirect_to_referrer():
+    if not request.referrer:
+        return "no referrer", 400
+    if not is_safe_url(request.referrer):
+        return "bad referrer", 400
+    return redirect(request.referrer)
+
+
 @blueprint.route('/')
 def entries():
     show = request.args.get('show', 'unread')
@@ -76,12 +84,12 @@ class APIThing:
             really = request.form.get('really')
             if really != 'really':
                 flash("really not checked")
-                return redirect(next)
+                return redirect_to_referrer()
         try:
             func()
         except ReaderError as e:
             flash("error: {}".format(e))
-            return redirect(next)
+            return redirect_to_referrer()
         return redirect(next)
 
     def __call__(self, func=None, *, really=False):
