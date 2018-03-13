@@ -151,6 +151,13 @@ def add_feed():
     get_reader().add_feed(feed_url)
 
 
+@form_api
+def update_feed_title():
+    feed_url = request.form['feed-url']
+    feed_title = request.form['feed-title'].strip() or None
+    get_reader().set_feed_user_title(feed_url, feed_title)
+
+
 def create_app(db_path):
     app = Flask(__name__)
     app.config['READER_DB'] = db_path

@@ -6,7 +6,9 @@
 {% endmacro %}
 
 {% macro feed_title(feed) %}
-{%- if feed.title and feed.title.strip() -%}
+{%- if feed.user_title and feed.user_title.strip() -%}
+    {{ feed.user_title }}
+{%- elif feed.title and feed.title.strip() -%}
     {{ feed.title }}
 {%- else -%}
     {{ feed.url }}

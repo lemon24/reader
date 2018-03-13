@@ -31,6 +31,9 @@
 {% if current_what != 'unread' %}<button type="submit" name="action" value="mark-all-as-unread">mark all as unread</button>{% endif %}
 <button type="submit" name="action" value="delete-feed">delete feed</button>
 
+<input type="text" name="feed-title" placeholder="feed title">
+<button type="submit" name="action" value="update-feed-title">update feed title</button>
+
 <input type="hidden" name="feed-url" value='{{ feed.url }}'>
 <input type="hidden" name="entry-id" value='{{ entries_data | tojson }}'>
 <input type="hidden" name="next" value='{{ url_for('.entries', **request.args) }}'>

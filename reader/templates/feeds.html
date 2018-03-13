@@ -42,6 +42,9 @@
 
 <button type="submit" name="action" value="delete-feed">delete feed</button>
 
+<input type="text" name="feed-title" placeholder="feed title">
+<button type="submit" name="action" value="update-feed-title">update feed title</button>
+
 <input type="hidden" name="feed-url" value='{{ feed.url }}'>
 <input type="hidden" name="next" value='{{ url_for('.feeds', **request.args) }}#feed-{{ loop.index if not loop.last else loop.index - 1 }}'>
 
