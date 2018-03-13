@@ -10,6 +10,20 @@ from .exceptions import ParseError, NotModified
 log = logging.getLogger('reader')
 
 
+HANDLERS = []
+
+try:
+    import certifi
+    import ssl
+    import urllib.request
+    HANDLERS.append(
+        urllib.request.HTTPSHandler(
+            context=ssl.create_default_context(cafile=certifi.where()))
+    )
+except ImportError:
+    pass
+
+
 def _datetime_from_timetuple(tt):
     return datetime.datetime.fromtimestamp(time.mktime(tt)) if tt else None
 
@@ -53,7 +67,8 @@ def _make_entry(entry, is_rss):
 
 def parse(url, http_etag=None, http_last_modified=None):
 
-    d = feedparser.parse(url, etag=http_etag, modified=http_last_modified)
+    d = feedparser.parse(url, etag=http_etag, modified=http_last_modified,
+                         handlers=HANDLERS)
 
     if d.get('bozo'):
         exception = d.get('bozo_exception')
