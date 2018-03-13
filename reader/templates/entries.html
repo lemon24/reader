@@ -8,7 +8,7 @@
 
 {% block body %}
 
-<form action="{{ url_for('.update_entries') }}" method="post" id="update-entries">
+<form action="{{ url_for('.form_api') }}" method="post" id="update-entries">
 <small>
 {% if feed %}<a href='{{ url_for('.entries') }}'>home</a>{% endif %}
 
@@ -50,7 +50,7 @@
 
 {% for feed, entry in entries %}
 
-<form action="{{ url_for('.update_entry') }}" method="post" id="entry-{{ loop.index }}" class="entry">
+<form action="{{ url_for('.form_api') }}" method="post" id="entry-{{ loop.index }}" class="entry">
 <b><a href="{{ entry.link }}">
 {%- if entry.title and entry.title.strip() -%}
 {{ entry.title }}

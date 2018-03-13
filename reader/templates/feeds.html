@@ -9,7 +9,7 @@
 
 {% block body %}
 
-<form action="{{ url_for('.add_feed') }}" method="post" id="add-feed">
+<form action="{{ url_for('.form_api') }}" method="post" id="add-feed">
 <small>
 <a href='{{ url_for('.entries') }}'>home</a>
 
@@ -31,7 +31,7 @@
 
 {% for feed in feeds %}
 
-<form action="{{ url_for('.update_entries') }}" method="post" id="feed-{{ loop.index }}" class="feed">
+<form action="{{ url_for('.form_api') }}" method="post" id="feed-{{ loop.index }}" class="feed">
 
 <b>{{ macros.feed_link(feed) }}</b> <br>
 <small>

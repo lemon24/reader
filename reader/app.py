@@ -104,27 +104,24 @@ class APIThing:
         return register(func)
 
 
-update_entry = APIThing(blueprint, '/update-entry', 'update_entry')
+form_api = APIThing(blueprint, '/form-api', 'form_api')
 
 
-@update_entry
+@form_api
 def mark_as_read():
     feed_url = request.form['feed-url']
     entry_id = request.form['entry-id']
     get_reader().mark_as_read(feed_url, entry_id)
 
 
-@update_entry
+@form_api
 def mark_as_unread():
     feed_url = request.form['feed-url']
     entry_id = request.form['entry-id']
     get_reader().mark_as_unread(feed_url, entry_id)
 
 
-update_entries = APIThing(blueprint,'/update-entries', 'update_entries')
-
-
-@update_entries(really=True)
+@form_api(really=True)
 def mark_all_as_read():
     feed_url = request.form['feed-url']
     entry_id = json.loads(request.form['entry-id'])
@@ -132,7 +129,7 @@ def mark_all_as_read():
         get_reader().mark_as_read(feed_url, entry_id)
 
 
-@update_entries(really=True)
+@form_api(really=True)
 def mark_all_as_unread():
     feed_url = request.form['feed-url']
     entry_id = json.loads(request.form['entry-id'])
@@ -140,16 +137,13 @@ def mark_all_as_unread():
         get_reader().mark_as_unread(feed_url, entry_id)
 
 
-@update_entries(really=True)
+@form_api(really=True)
 def delete_feed():
     feed_url = request.form['feed-url']
     get_reader().remove_feed(feed_url)
 
 
-add_feed = APIThing(blueprint, '/add_feed', 'add_feed')
-
-
-@add_feed
+@form_api
 def add_feed():
     feed_url = request.form['feed-url'].strip()
     assert feed_url, "feed-url cannot be empty"
