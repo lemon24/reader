@@ -24,8 +24,8 @@
 {% endfor %}
 
 {% if feed %}
-<input type="checkbox" name="really" id="really-mark-all-as" value="really">
-<label for="really-mark-all-as">I really want to</label>
+<input type="checkbox" name="really" id="really" value="really">
+<label for="really">I really want to</label>
 
 {% if current_what != 'read' %}<button type="submit" name="action" value="mark-all-as-read">mark all as read</button>{% endif %}
 {% if current_what != 'unread' %}<button type="submit" name="action" value="mark-all-as-unread">mark all as unread</button>{% endif %}

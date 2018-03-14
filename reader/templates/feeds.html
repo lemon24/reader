@@ -37,8 +37,8 @@
 <small>
 <a href="{{ url_for('.entries', feed=feed.url) }}">entries</a>
 
-<input type="checkbox" name="really" id="really-mark-all-as" value="really">
-<label for="really-mark-all-as">I really want to</label>
+<input type="checkbox" name="really" id="really-{{ loop.index }}" value="really">
+<label for="really-{{ loop.index }}">I really want to</label>
 
 <button type="submit" name="action" value="delete-feed">delete feed</button>
 
