@@ -141,7 +141,7 @@ def test_add_delete_feed(tmpdir):
 
     form = browser.select_form('form.feed')
     form.set_checkbox({'really': True})
-    response = browser.submit_selected(form.form.find('button', text='delete'))
+    response = browser.submit_selected(form.form.find('button', text='delete feed'))
     assert response.status_code == 200
     assert len(browser.get_current_page().select('form.feed')) == 0
 
