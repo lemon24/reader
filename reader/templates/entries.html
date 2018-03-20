@@ -37,6 +37,7 @@
 <input type="hidden" name="feed-url" value='{{ feed.url }}'>
 <input type="hidden" name="entry-id" value='{{ entries_data | tojson }}'>
 <input type="hidden" name="next" value='{{ url_for('.entries', **request.args) }}'>
+<input type="hidden" name="next-delete-feed" value='{{ url_for('.entries') }}'>
 {% endif %}
 
 </small>

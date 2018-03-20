@@ -77,7 +77,9 @@ class APIThing:
         func = self.actions.get(action)
         if func is None:
             return "unknown action", 400
-        next = request.form['next']
+        next = request.form.get('next-' + action)
+        if next is None:
+            next = request.form['next']
         if not is_safe_url(next):
             return "bad next", 400
         if self.really[func]:
