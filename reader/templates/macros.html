@@ -1,9 +1,9 @@
 
-{% macro feed_link(feed) %}
-{% if feed.link %}<a href="{{ feed.link }}">{% endif %}
+{% macro feed_link(feed) -%}
+{%- if feed.link %}<a href="{{ feed.link }}">{%- endif -%}
 {{ feed_title(feed) }}
-{% if feed.link %}</a>{% endif %}
-{% endmacro %}
+{%- if feed.link %}</a>{% endif -%}
+{%- endmacro %}
 
 {% macro feed_title(feed) %}
 {%- if feed.user_title and feed.user_title.strip() -%}
