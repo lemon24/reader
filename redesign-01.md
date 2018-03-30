@@ -27,4 +27,7 @@ User interactions, by logical groups:
 * feed list
     * see a list of all the feeds
 
+* other
+    * be notified of the success/failure of a previous action
+
 
