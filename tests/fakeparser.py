@@ -11,7 +11,7 @@ def _make_feed(number, updated=None, **kwargs):
         updated,
         kwargs.pop('title', 'Feed #{}'.format(number)),
         'http://www.example.com/{}'.format(number),
-        kwargs.pop('user_title', None),
+        **kwargs,
     )
 
 def _make_entry(number, updated, **kwargs):
@@ -20,11 +20,7 @@ def _make_entry(number, updated, **kwargs):
         updated,
         kwargs.pop('title', 'Entry #{}'.format(number)),
         'http://www.example.com/entries/{}'.format(number),
-        kwargs.pop('published', None),
-        None,
-        None,
-        None,
-        False,
+        **kwargs,
     )
 
 class Parser:
