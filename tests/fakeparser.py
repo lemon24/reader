@@ -8,18 +8,18 @@ from reader.exceptions import NotModified
 def _make_feed(number, updated=None, **kwargs):
     return Feed(
         'feed-{}.xml'.format(number),
+        updated,
         kwargs.pop('title', 'Feed #{}'.format(number)),
         'http://www.example.com/{}'.format(number),
-        updated,
         kwargs.pop('user_title', None),
     )
 
 def _make_entry(number, updated, **kwargs):
     return Entry(
         'http://www.example.com/entries/{}'.format(number),
+        updated,
         kwargs.pop('title', 'Entry #{}'.format(number)),
         'http://www.example.com/entries/{}'.format(number),
-        updated,
         kwargs.pop('published', None),
         None,
         None,

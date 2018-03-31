@@ -72,7 +72,7 @@ class Reader:
     def _get_feeds(self, url=None):
         where_url_snippet = '' if not url else "WHERE url = :url"
         cursor = self.db.execute("""
-            SELECT url, title, link, updated, user_title FROM feeds
+            SELECT url, updated, title, link, user_title FROM feeds
             {where_url_snippet}
             ORDER BY feeds.title, feeds.url;
         """.format(**locals()), locals())
@@ -281,14 +281,14 @@ class Reader:
         query = """
             SELECT
                 feeds.url,
+                feeds.updated,
                 feeds.title,
                 feeds.link,
-                feeds.updated,
                 feeds.user_title,
                 entries.id,
+                entries.updated,
                 entries.title,
                 entries.link,
-                entries.updated,
                 entries.published,
                 entries.summary,
                 entries.content,
