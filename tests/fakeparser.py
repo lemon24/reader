@@ -5,22 +5,22 @@ from reader import Feed, Entry, ParseError
 from reader.exceptions import NotModified
 
 
-def _make_feed(number, updated=None, title=None, user_title=None):
+def _make_feed(number, updated=None, **kwargs):
     return Feed(
         'feed-{}.xml'.format(number),
-        title or 'Feed #{}'.format(number),
+        kwargs.pop('title', 'Feed #{}'.format(number)),
         'http://www.example.com/{}'.format(number),
         updated,
-        user_title,
+        kwargs.pop('user_title', None),
     )
 
-def _make_entry(number, updated, published=None, title=None):
+def _make_entry(number, updated, **kwargs):
     return Entry(
         'http://www.example.com/entries/{}'.format(number),
-        title or 'Entry #{}'.format(number),
+        kwargs.pop('title', 'Entry #{}'.format(number)),
         'http://www.example.com/entries/{}'.format(number),
         updated,
-        published,
+        kwargs.pop('published', None),
         None,
         None,
         None,
@@ -39,14 +39,14 @@ class Parser:
     def from_parser(cls, other):
         return cls(other.feeds, other.entries)
 
-    def feed(self, number, updated=None, title=None, user_title=None):
-        feed = _make_feed(number, updated, title=title, user_title=user_title)
+    def feed(self, number, updated=None, **kwargs):
+        feed = _make_feed(number, updated, **kwargs)
         self.feeds[number] = feed
         self.entries.setdefault(number, OrderedDict())
         return feed
 
-    def entry(self, feed_number, number, updated, title=None):
-        entry = _make_entry(number, updated, title=title)
+    def entry(self, feed_number, number, updated, **kwargs):
+        entry = _make_entry(number, updated, **kwargs)
         self.entries[feed_number][number] = entry
         return entry
 
