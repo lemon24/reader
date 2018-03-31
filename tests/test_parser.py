@@ -6,6 +6,7 @@ import feedparser
 
 from reader.parser import parse
 from reader.exceptions import ParseError, NotModified
+from reader.types import Content, Enclosure
 
 from fakeparser import Parser
 
@@ -46,7 +47,7 @@ def write_feed(type, feed, entries):
                 assert False, "RSS doesn't support published"
 
         for enclosure in entry.enclosures or ():
-            fe.enclosure(enclosure['href'], enclosure['length'], enclosure['type'])
+            fe.enclosure(enclosure.href, str(enclosure.length), enclosure.type)
 
     if type == 'atom':
         fg.atom_file(feed.url, pretty=True)
@@ -62,7 +63,25 @@ def test_parse(monkeypatch, tmpdir, feed_type):
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
-    entry_two = parser.entry(1, 2, datetime(2010, 2, 1))
+    entry_two = parser.entry(1, 2, datetime(2010, 2, 1),
+
+        # Can't figure out how to do this with feedgen
+        # (the summary and the content get mixed up
+        # and don't know how to pass the language).
+        #summary='summary',
+        #content=(
+            #Content('value3', 'type', 'en'),
+            #Content('value2'),
+        #),
+
+        enclosures=(
+            Enclosure('http://e1', 'type', 1000),
+
+            # Can't figure out how to get this with feedgen
+            # (it forces type to 'text/html' and length to 0).
+            #Enclosure('http://e2'),
+        ),
+    )
     entries = [entry_one, entry_two]
     write_feed(feed_type, feed, entries)
 

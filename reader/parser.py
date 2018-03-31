@@ -4,7 +4,7 @@ import logging
 
 import feedparser
 
-from .types import Feed, Entry
+from .types import Feed, Entry, Content, Enclosure
 from .exceptions import ParseError, NotModified
 
 log = logging.getLogger('reader')
@@ -52,6 +52,23 @@ def _make_entry(entry, is_rss):
     updated, published = _get_updated_published(entry, is_rss)
     assert updated
 
+    content = []
+    for data in entry.get('content', ()):
+        data = {k: v for k, v in data.items() if k in ('value', 'type', 'language')}
+        content.append(Content(**data))
+    content = tuple(content)
+
+    enclosures = []
+    for data in entry.get('enclosures', ()):
+        data = {k: v for k, v in data.items() if k in ('href', 'type', 'length')}
+        if 'length' in data:
+            try:
+                data['length'] = int(data['length'])
+            except (TypeError, ValueError):
+                del data['length']
+        enclosures.append(Enclosure(**data))
+    enclosures = tuple(enclosures)
+
     return Entry(
         entry.id,
         updated,
@@ -59,8 +76,8 @@ def _make_entry(entry, is_rss):
         entry.get('link'),
         published,
         entry.get('summary'),
-        entry.get('content'),
-        entry.get('enclosures') or None,
+        content or None,
+        enclosures or None,
         False,
     )
 

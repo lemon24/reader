@@ -4,7 +4,7 @@ import threading
 import pytest
 
 from reader import Reader
-from reader import Feed
+from reader import Feed, Entry, Content, Enclosure
 from reader import FeedExistsError, FeedNotFoundError, ParseError, EntryNotFoundError, StorageError
 
 from fakeparser import Parser, BlockingParser, FailingParser, NotModifiedParser
@@ -525,4 +525,27 @@ def test_storage_errors_locked(tmpdir, do_stuff):
     finally:
         can_return_from_transaction.set()
         t.join()
+
+
+def test_data_roundrip(reader):
+    parser = Parser()
+    reader._parse = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, datetime(2010, 1, 1),
+        summary='summary',
+        content=(
+            Content('value3', 'type', 'en'),
+            Content('value2'),
+        ),
+        enclosures=(
+            Enclosure('http://e1', 'type', 1000),
+            Enclosure('http://e2'),
+        ),
+    )
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    assert list(reader.get_entries()) == [(feed, entry)]
 

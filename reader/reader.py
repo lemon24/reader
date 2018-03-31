@@ -5,7 +5,7 @@ import functools
 import contextlib
 
 from .db import open_db
-from .types import Feed, Entry
+from .types import Feed, Entry, Content, Enclosure
 from .parser import parse
 from .exceptions import (
     ParseError, NotModified,
@@ -204,8 +204,8 @@ class Reader:
         title = entry.title
         link = entry.link
         summary = entry.summary
-        content = json.dumps(entry.content) if entry.content else None
-        enclosures = json.dumps(entry.enclosures) if entry.enclosures else None
+        content = json.dumps([t._asdict() for t in entry.content]) if entry.content else None
+        enclosures = json.dumps([t._asdict() for t in entry.enclosures]) if entry.enclosures else None
 
         if not db_updated:
             self.db.execute("""
@@ -316,8 +316,8 @@ class Reader:
             feed = t[0:5]
             feed = Feed._make(feed)
             entry = t[5:11] + (
-                json.loads(t[11]) if t[11] else None,
-                json.loads(t[12]) if t[12] else None,
+                tuple(Content(**d) for d in json.loads(t[11])) if t[11] else None,
+                tuple(Enclosure(**d) for d in json.loads(t[12])) if t[12] else None,
                 t[13] == 1,
             )
             entry = Entry._make(entry)

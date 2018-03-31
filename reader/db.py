@@ -38,7 +38,7 @@ def ddl_transaction(db):
         db.isolation_level = isolation_level
 
 
-VERSION = 7
+VERSION = 8
 
 
 class InvalidVersion(Exception):
@@ -193,6 +193,46 @@ def update_from_6_to_7(db):
     """)
 
 
+def update_from_7_to_8(db):
+    """https://github.com/lemon24/reader/issues/46
+
+    Drop content extra keys. Ensure enclosures 'length' is int.
+
+    Doing this here to avoid special cases in Reader code.
+
+    """
+
+    import json
+
+    cursor = db.execute("""
+        SELECT id, feed, content, enclosures
+        FROM entries;
+    """)
+    for id, feed, content_json, enclosures_json in cursor:
+        if content_json is not None:
+            content = []
+            for data in json.loads(content_json):
+                data = {k: v for k, v in data.items() if k in ('value', 'type', 'language')}
+                content.append(data)
+            content_json = json.dumps(content, sort_keys=True)
+        if enclosures_json is not None:
+            enclosures = []
+            for data in json.loads(enclosures_json):
+                data = {k: v for k, v in data.items() if k in ('href', 'type', 'length')}
+                if 'length' in data:
+                    try:
+                        data['length'] = int(data['length'])
+                    except (TypeError, ValueError):
+                        del data['length']
+                enclosures.append(data)
+            enclosures_json = json.dumps(enclosures, sort_keys=True)
+        db.execute("""
+            UPDATE entries
+            SET content = :content_json, enclosures = :enclosures_json
+            WHERE id = :id and feed = :feed;
+        """, locals())
+
+
 MIGRATIONS = {
     1: update_from_1_to_2,
     2: update_from_2_to_3,
@@ -200,6 +240,7 @@ MIGRATIONS = {
     4: update_from_4_to_5,
     5: update_from_5_to_6,
     6: update_from_6_to_7,
+    7: update_from_7_to_8,
 }
 
 
