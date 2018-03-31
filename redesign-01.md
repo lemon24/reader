@@ -1,4 +1,6 @@
 
+## User interactions
+
 User interactions, by logical groups:
 
 * entry
@@ -29,5 +31,64 @@ User interactions, by logical groups:
 
 * other
     * be notified of the success/failure of a previous action
+
+Controls (below), mapped to user interactions:
+
+* link
+    * go to ...
+    * see ...
+
+* simple button
+    * mark an entry as read
+    * mark an entry as unread
+
+* button with input
+    * add a feed
+    * change a feed's title
+
+* button with checkbox
+    * mark all the entries are read
+    * mark all the entries are unread
+    * delete a feed
+
+
+## Controls
+
+There are three interaction modes, HTML-only, HTML+CSS, and HTML+CSS+JS.
+Each mode adds enhancements on top of the previous one.
+
+In the HTML-only mode, all elements of a control are visible. Clicking the
+element that triggers the action (e.g. a button) submits a form and, if
+possible, redirects back to the source page, with any error messages shown
+after the action element.
+
+In the HTML+CSS mode, some elements might be hidden so that only the action
+element is visible; in its inert state it should look like text. On hover,
+the other elements of the control should become visible.
+
+In the HTML+CSS+JS mode, clicking the action element results in an asynchronous
+call, with the status of the action displayed after it.
+
+Links are just links.
+
+Simple buttons consist of a single button.
+
+Buttons with input consist of an text input element followed by a button.
+The text input are hidden when not hovered.
+
+Buttons with checkbox consist of a checkbox, a label for the checkbox, and
+a button. The checkbox and label are hidden when not hovered.
+
+
+## Page structure
+
+Text TBD.
+
+
+## Pages
+
+Text TBD.
+
+![page structure, controls](redesign-01.png)
 
 
