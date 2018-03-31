@@ -61,5 +61,22 @@ or:
     python3 -m pytest
 
 
+Short API overview:
+
+```
+Reader(path=None)
+Reader.add_feed(url)
+Reader.get_entries(which='all', feed_url=None)
+Reader.get_feed(url)
+Reader.get_feeds()
+Reader.mark_as_read(feed_url, entry_id)
+Reader.mark_as_unread(feed_url, entry_id)
+Reader.remove_feed(url)
+Reader.set_feed_user_title(url, title)
+Reader.update_feed(url)
+Reader.update_feeds()
+```
+
+
 
 [problem-solution]: https://hintjens.gitbooks.io/scalable-c/content/chapter1.html#problem-what-do-we-do-next
