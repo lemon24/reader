@@ -22,11 +22,15 @@
 }
 
 .hidden-button .hidden {
-    display: none;
+    width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 .hidden-button:hover .hidden {
-    display: initial;
+    width: auto;
 }
 
 </style>
@@ -44,7 +48,9 @@
     <a href="">feeds</a>
 </li>
 <li class="text-button hidden-button">
-    <input type="text" placeholder="http://..." class="hidden">
+    <span class="hidden">
+        <input type="text" placeholder="http://...">
+    </span>
     <button type="submit" class="button">add feed</button>
 </li>
 </ul>
@@ -71,7 +77,9 @@
     <button type="submit" class="button">mark all as read</button>
 </li>
 <li class="text-button hidden-button">
-    <input type="text" placeholder="title" class="hidden">
+    <span class="hidden">
+        <input type="text" placeholder="title">
+    </span>
     <button type="submit" class="button">change title</button>
 </li>
 <li class="text-button hidden-button">
@@ -122,7 +130,9 @@ enclosure.mp3 audio/mpeg 3.5M
     <a href="">site</a>
 </li>
 <li class="text-button hidden-button">
-    <input type="text" placeholder="title" class="hidden">
+    <span class="hidden">
+        <input type="text" placeholder="title">
+    </span>
     <button type="submit" class="button">change title</button>
 </li>
 <li class="text-button hidden-button">
