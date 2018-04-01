@@ -13,6 +13,22 @@
     padding-right: 1em;
 }
 
+.text-button .button {
+    border: 1px solid rgba(0, 0, 0, 0);
+}
+
+.text-button:hover .button {
+    border: 1px solid rgba(0, 0, 0, 1);
+}
+
+.hidden-button .hidden {
+    display: none;
+}
+
+.hidden-button:hover .hidden {
+    display: initial;
+}
+
 </style>
 
 
@@ -27,9 +43,9 @@
 <li>
     <a href="">feeds</a>
 </li>
-<li>
-    <input type="text" placeholder="http://...">
-    <button type="submit">add feed</button>
+<li class="text-button hidden-button">
+    <input type="text" placeholder="http://..." class="hidden">
+    <button type="submit" class="button">add feed</button>
 </li>
 </ul>
 </form>
@@ -47,19 +63,23 @@
 <li>
     <a href="">all</a>
 </li>
-<li>
-    <input type="checkbox" id="really-1">
-    <label for="really-1">I really want to</label>
-    <button type="submit">mark all as read</button>
+<li class="text-button hidden-button">
+    <span class="hidden">
+        <input type="checkbox" id="really-1">
+        <label for="really-1">I really want to</label>
+    </span>
+    <button type="submit" class="button">mark all as read</button>
 </li>
-<li>
-    <input type="text" placeholder="title">
-    <button type="submit">change title</button>
+<li class="text-button hidden-button">
+    <input type="text" placeholder="title" class="hidden">
+    <button type="submit" class="button">change title</button>
 </li>
-<li>
-    <input type="checkbox" id="really-2">
-    <label for="really-2">I really want to</label>
-    <button type="submit">delete feed</button>
+<li class="text-button hidden-button">
+    <span class="hidden">
+        <input type="checkbox" id="really-2">
+        <label for="really-2">I really want to</label>
+    </span>
+    <button type="submit" class="button">delete feed</button>
 </li>
 </ul>
 </form>
@@ -76,8 +96,8 @@
 <li>
     one day ago
 </li>
-<li>
-    <button type="submit">mark as read</button>
+<li class="text-button">
+    <button type="submit" class="button">mark as read</button>
 </li>
 </ul>
 </form>
@@ -101,14 +121,16 @@ enclosure.mp3 audio/mpeg 3.5M
 <li>
     <a href="">site</a>
 </li>
-<li>
-    <input type="text" placeholder="title">
-    <button type="submit">change title</button>
+<li class="text-button hidden-button">
+    <input type="text" placeholder="title" class="hidden">
+    <button type="submit" class="button">change title</button>
 </li>
-<li>
-    <input type="checkbox" id="really-2">
-    <label for="really-2">I really want to</label>
-    <button type="submit">delete feed</button>
+<li class="text-button hidden-button">
+    <span class="hidden">
+        <input type="checkbox" id="really-3">
+        <label for="really-3">I really want to</label>
+    </span>
+    <button type="submit" class="button">delete feed</button>
 </li>
 </ul>
 </form>
