@@ -1,0 +1,129 @@
+
+
+ul.controls {
+    padding: 0;
+}
+
+ul.controls li {
+    list-style-type: none;
+    padding: 0;
+}
+
+ul.controls li.error {
+    color: red;
+}
+
+ul.controls .collapsible {
+    position: relative;
+}
+
+
+@media only screen and (min-width: 600px) {
+
+    body { background: lightgreen; }
+
+    ul.controls {
+        margin-left: -.5em;
+    }
+
+    ul.controls li {
+        display: inline-block;
+        padding: .5em;
+    }
+
+    ul.controls li.error{
+        display: block;
+    }
+
+    ul.controls li.simple-button {
+        padding: .2em 0 .2em 0;
+    }
+
+    ul.controls .simple-button button {
+        background: inherit;
+        border: none;
+        outline: none;
+        font-size: inherit;
+        color: inherit;
+
+        line-height: inherit; /*
+
+        Even so, line height remains 20px even if it is 17px for everything else.
+
+        The li and button vertical paddings aren't adding up to 1em, but it
+        looks ok because of the line height thing.
+
+        */
+
+        padding: .2em .5em .2em .5em;
+    }
+
+    ul.controls .simple-button button:hover {
+        outline: .1px solid black;
+    }
+
+    ul.controls .collapsible:hover,
+    ul.controls .collapsible:focus-within {
+        background: green;
+    }
+
+    ul.controls .collapsible .label::after {
+        content: "↴";
+        font-size: .8em;
+    }
+
+    ul.controls .collapsible .hidden {
+        display: inline-block;
+        overflow: hidden;
+        width: 0;
+        margin: 0;
+        padding: 0;
+
+        position: absolute;
+        left: 0;
+        top: 2em;
+
+        text-align: right;
+        white-space: nowrap;
+
+        background: green;
+    }
+
+    ul.controls .collapsible:hover .hidden,
+    ul.controls .collapsible:focus-within .hidden {
+        width: auto;
+        padding: .8em;
+    }
+
+}
+
+
+@media only screen and (max-width: 600px) {
+
+    body { background: lightblue; }
+
+    ul.controls li {
+        display: block;
+    }
+
+    ul.controls .collapsible:hover,
+    ul.controls .collapsible:focus-within {
+        background: blue;
+    }
+
+    ul.controls .collapsible:hover .label,
+    ul.controls .collapsible:focus-within .label {
+        display: none;
+    }
+
+    ul.controls .collapsible .hidden {
+        display: none;
+    }
+
+    ul.controls .collapsible:hover .hidden,
+    ul.controls .collapsible:focus-within .hidden {
+        display: initial;
+    }
+
+}
+
