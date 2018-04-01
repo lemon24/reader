@@ -1,6 +1,9 @@
 <!doctype html>
 
 
+<meta name="viewport" content="width=device-width" />
+
+
 <style>
 
 .inline-list {
@@ -8,30 +11,91 @@
 }
 
 .inline-list li {
-    display: inline;
     list-style-type: none;
-    padding-right: 1em;
+    padding-left: 0;
 }
 
-.text-button .button {
-    border: 1px solid rgba(0, 0, 0, 0);
+.inline-list li.error {
+    color: red;
 }
 
-.text-button:hover .button {
-    border: 1px solid rgba(0, 0, 0, 1);
+@media only screen and (min-width: 600px) {
+
+    body { background: lightgreen; }
+
+    .inline-list li:not(.error) {
+        display: inline;
+        padding-right: .5em;
+    }
+
+    .hidden-button {
+        position: relative;
+    }
+
+    .hidden-button .hidden {
+        display: inline-block;
+        overflow: hidden;
+        width: 0;
+        margin: 0;
+        padding: 0;
+
+        position: absolute;
+        left: 0;
+        top: 1em;
+
+        text-align: right;
+        white-space: nowrap;
+
+        background: green;
+
+
+    }
+
+    .hidden-button:hover,
+    .hidden-button:focus-within {
+        background: green;
+    }
+
+    .hidden-button:hover .hidden,
+    .hidden-button:focus-within .hidden {
+        width: auto;
+        padding: .5em;
+    }
+
 }
 
-.hidden-button .hidden {
-    width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    display: inline-block;
-    vertical-align: middle;
+
+@media only screen and (max-width: 600px) {
+
+    body { background: lightblue; }
+
+    .inline-list li {
+        display: block;
+    }
+
+    .hidden-button .hidden {
+        display: none;
+    }
+
+    .hidden-button:hover,
+    .hidden-button:focus-within {
+        background: blue;
+    }
+
+    .hidden-button:hover .hidden,
+    .hidden-button:focus-within .hidden {
+        display: initial;
+    }
+
+    .hidden-button:hover .label,
+    .hidden-button:focus-within .label {
+        display: none;
+
+    }
+
 }
 
-.hidden-button:hover .hidden {
-    width: auto;
-}
+
 
 </style>
 
@@ -47,11 +111,12 @@
 <li>
     <a href="">feeds</a>
 </li>
-<li class="text-button hidden-button">
+<li class="hidden-button">
+    <span class="label">add feed</span>
     <span class="hidden">
         <input type="text" placeholder="http://...">
+        <button type="submit" class="button">add feed</button>
     </span>
-    <button type="submit" class="button">add feed</button>
 </li>
 </ul>
 </form>
@@ -69,26 +134,30 @@
 <li>
     <a href="">all</a>
 </li>
-<li class="text-button hidden-button">
+<li class="hidden-button">
+    <span class="label">mark all as read</span>
     <span class="hidden">
         <input type="checkbox" id="really-1">
         <label for="really-1">I really want to</label>
+        <button type="submit" class="button">mark all as read</button>
     </span>
-    <button type="submit" class="button">mark all as read</button>
 </li>
-<li class="text-button hidden-button">
+<li class="hidden-button">
+    <span class="label">change title</span>
     <span class="hidden">
         <input type="text" placeholder="title">
+        <button type="submit" class="button">change title</button>
     </span>
-    <button type="submit" class="button">change title</button>
 </li>
-<li class="text-button hidden-button">
+<li class="hidden-button">
+    <span class="label">delete feed</span>
     <span class="hidden">
         <input type="checkbox" id="really-2">
         <label for="really-2">I really want to</label>
+        <button type="submit" class="button">delete feed</button>
     </span>
-    <button type="submit" class="button">delete feed</button>
 </li>
+<li class="error">error message</error>
 </ul>
 </form>
 
@@ -104,7 +173,7 @@
 <li>
     one day ago
 </li>
-<li class="text-button">
+<li class="">
     <button type="submit" class="button">mark as read</button>
 </li>
 </ul>
@@ -129,18 +198,20 @@ enclosure.mp3 audio/mpeg 3.5M
 <li>
     <a href="">site</a>
 </li>
-<li class="text-button hidden-button">
+<li class="hidden-button">
+    <span class="label">change title</span>
     <span class="hidden">
         <input type="text" placeholder="title">
+        <button type="submit" class="button">change title</button>
     </span>
-    <button type="submit" class="button">change title</button>
 </li>
-<li class="text-button hidden-button">
+<li class="hidden-button">
+    <span class="label">delete feed</span>
     <span class="hidden">
         <input type="checkbox" id="really-3">
         <label for="really-3">I really want to</label>
+        <button type="submit" class="button">delete feed</button>
     </span>
-    <button type="submit" class="button">delete feed</button>
 </li>
 </ul>
 </form>
