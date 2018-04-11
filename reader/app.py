@@ -83,7 +83,9 @@ class APIThing:
         if not is_safe_url(next):
             return "bad next", 400
         if self.really[func]:
-            really = request.form.get('really')
+            really = request.form.get('really-' + action)
+            if really is None:
+                really = request.form.get('really')
             if really != 'really':
                 flash("really not checked")
                 return redirect_to_referrer()
