@@ -15,3 +15,34 @@
 {%- endif -%}
 {% endmacro %}
 
+
+{% macro text_input_button(action, label, name, placeholder) -%}
+<li class="collapsible">
+    <span class="label">{{ label }}</span>
+    <span class="hidden">
+        <input type="text" name="{{ name }}" placeholder="{{ placeholder }}">
+        <button type="submit" name="action" value="{{ action }}">{{ label }}</button>
+    </span>
+{%- endmacro %}
+
+
+{% macro confirm_button(action, label) -%}
+<li class="collapsible">
+    <span class="label">{{ label }}</span>
+    <span class="hidden">
+        <input type="checkbox" id="really-{{ action }}">
+        <label for="really-{{ action }}">I really want to</label>
+        <button type="submit" name="action" value="{{ action }}">{{ label }}</button>
+    </span>
+{%- endmacro %}
+
+
+{% macro simple_button(action, label) -%}
+<li class="simple-button">
+    <button type="submit" name="action" value="{{ action }}">{{ label }}</button>
+{%- endmacro %}
+
+
+
+
+

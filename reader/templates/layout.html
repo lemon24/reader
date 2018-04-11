@@ -1,5 +1,7 @@
 <!doctype html>
 
+<meta name="viewport" content="width=device-width" />
+<link rel="stylesheet" href="style.css">
 
 <title>{% block page_title %}{% endblock %}</title>
 
@@ -14,6 +16,21 @@ bottom: 0;
 right: 0;
 "><code>{{ config.READER_DB }}</code></p>
 {% endif %}
+
+
+
+<form action="{{ url_for('.form_api') }}" method="post" id="top-bar">
+<ul class="inline-list">
+<li><a href="{{ url_for('.entries') }}">entries</a>
+<li><a href="{{ url_for('.feeds') }}">feeds</a>
+{{ macros.text_input_button('add-feed', 'add feed', 'feed-url', 'feed URL') }}
+</ul>
+
+<input type="hidden" name="next-add-feed" value='{{ url_for('.feeds', **request.args) }}'>
+</form>
+
+
+
 
 
 <h1>{% block main_title %}{% endblock %}</h1>
