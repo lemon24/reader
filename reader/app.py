@@ -1,7 +1,7 @@
 import json
 from urllib.parse import urlparse, urljoin
 
-from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash
+from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash, Response, stream_with_context, url_for
 import humanize
 
 from . import Reader, ReaderError
@@ -162,11 +162,48 @@ def update_feed_title():
     get_reader().set_feed_user_title(feed_url, feed_title)
 
 
+
+enclosure_tags_blueprint = Blueprint('enclosure_tags', __name__)
+
+
+@enclosure_tags_blueprint.route('/enclosure-tags')
+def enclosure_tags():
+    url = request.args['url']
+    import requests
+    req = requests.get(url, stream=True)
+    # TODO: actually update tags here
+    return Response(
+        stream_with_context(req.iter_content()),
+        content_type = req.headers['content-type'],
+    )
+
+
+def enclosure_tags_filter(enclosure):
+    try:
+        import mutagen
+        import requests
+    except ImportError:
+        return enclosure.href
+    if enclosure.href.endswith('.mp3'):
+        return url_for('enclosure_tags.enclosure_tags', url=enclosure.href)
+    return enclosure.href
+
+
+blueprint.app_template_filter('enclosure_tags')(enclosure_tags_filter)
+
+
+
 def create_app(db_path):
     app = Flask(__name__)
     app.config['READER_DB'] = db_path
     app.secret_key = 'secret'
     app.teardown_appcontext(close_db)
+    try:
+        import mutagen
+        import requests
+        app.register_blueprint(enclosure_tags_blueprint)
+    except ImportError:
+        pass
     app.register_blueprint(blueprint)
     return app
 
