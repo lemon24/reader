@@ -1,5 +1,7 @@
 import json
 from urllib.parse import urlparse, urljoin
+import tempfile
+
 
 from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash, Response, stream_with_context, url_for
 import humanize
@@ -169,12 +171,32 @@ enclosure_tags_blueprint = Blueprint('enclosure_tags', __name__)
 @enclosure_tags_blueprint.route('/enclosure-tags')
 def enclosure_tags():
     url = request.args['url']
+
     import requests
     req = requests.get(url, stream=True)
+
+    tmp = tempfile.TemporaryFile()
+
+    for chunk in req.iter_content(chunk_size=None):
+        tmp.write(chunk)
+    tmp.seek(0)
+
     # TODO: actually update tags here
+    #tmp.seek(0)
+
+    def chunks():
+        try:
+            while True:
+                data = tmp.read(2**20)
+                if not data:
+                    break
+                yield data
+        finally:
+            tmp.close()
+
     return Response(
-        stream_with_context(req.iter_content()),
-        content_type = req.headers['content-type'],
+        stream_with_context(chunks()),
+        content_type=req.headers['content-type'],
     )
 
 
