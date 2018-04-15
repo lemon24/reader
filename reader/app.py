@@ -170,19 +170,28 @@ enclosure_tags_blueprint = Blueprint('enclosure_tags', __name__)
 
 @enclosure_tags_blueprint.route('/enclosure-tags')
 def enclosure_tags():
-    url = request.args['url']
-
     import requests
+    import mutagen.mp3
+
+    url = request.args['url']
     req = requests.get(url, stream=True)
 
     tmp = tempfile.TemporaryFile()
-
     for chunk in req.iter_content(chunk_size=None):
         tmp.write(chunk)
     tmp.seek(0)
 
-    # TODO: actually update tags here
-    #tmp.seek(0)
+    emp3 = mutagen.mp3.EasyMP3(tmp)
+    changed = False
+    for key in ('album', 'title'):
+        value = request.args.get(key)
+        if not value:
+            continue
+        emp3[key] = [value]
+        changed = True
+    if changed:
+        emp3.save(tmp)
+    tmp.seek(0)
 
     def chunks():
         try:
@@ -200,14 +209,19 @@ def enclosure_tags():
     )
 
 
-def enclosure_tags_filter(enclosure):
+def enclosure_tags_filter(enclosure, entry, feed):
     try:
         import mutagen
         import requests
     except ImportError:
         return enclosure.href
     if enclosure.href.endswith('.mp3'):
-        return url_for('enclosure_tags.enclosure_tags', url=enclosure.href)
+        args = {}
+        if entry.title:
+            args['title'] = entry.title
+        if feed.title:
+            args['album'] = feed.title
+        return url_for('enclosure_tags.enclosure_tags', url=enclosure.href, **args)
     return enclosure.href
 
 

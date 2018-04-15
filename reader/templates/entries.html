@@ -102,7 +102,7 @@ untitled
 {% for enclosure in entry.enclosures %}
 
 <li>
-<a href="{{ enclosure | enclosure_tags }}">{{ enclosure.href.split('/')[-1].split('?')[0] }}</a>
+<a href="{{ enclosure | enclosure_tags(entry, feed) }}">{{ enclosure.href.split('/')[-1].split('?')[0] }}</a>
 <small>{{ enclosure.type }}</small>
 </li>
 
