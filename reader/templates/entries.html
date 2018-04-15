@@ -59,29 +59,34 @@
 
 {% for feed, entry in entries %}
 
-<form action="{{ url_for('.form_api') }}" method="post" id="entry-{{ loop.index }}" class="entry">
-<b><a href="{{ entry.link }}">
+<div id="entry-{{ loop.index }}" class="entry">
+
+<h2><a href="{{ entry.link }}">
 {%- if entry.title and entry.title.strip() -%}
 {{ entry.title }}
 {%- else -%}
 untitled
 {%- endif -%}
-</a></b> <br>
-<small>{{ macros.feed_link(feed) }}
-<span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>
-<a href="{{ url_for('.entries', feed=feed.url) }}">feed</a>
+</a>
+</h2>
+
+<form action="{{ url_for('.form_api') }}" method="post">
+<ul class="inline-list">
+
+<li><a href="{{ url_for('.entries', feed=feed.url) }}">{{ macros.feed_title(feed) }}</a>
+<li><span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>
 
 {% if entry.read %}
-<button type="submit" name="action" value="mark-as-unread">mark as unread</button>
+{{ macros.simple_button('mark-as-unread', 'mark as unread') }}
 {% else %}
-<button type="submit" name="action" value="mark-as-read">mark as read</button>
+{{ macros.simple_button('mark-as-read', 'mark as read') }}
 {% endif %}
+</ul>
 
 <input type="hidden" name="feed-url" value='{{ feed.url }}'>
 <input type="hidden" name="entry-id" value='{{ entry.id }}'>
 <input type="hidden" name="next" value='{{ url_for('.entries', **request.args) }}#entry-{{ loop.index if not loop.last else loop.index - 1 }}'>
 
-</small>
 </form>
 
 
@@ -115,7 +120,7 @@ untitled
 </ul>
 {% endif %}
 
-<br>
+</div>
 
 {% else %}
 <p>no {% if current_what != 'all' %}{{ current_what }} {% endif %}entries for this feed</p>
