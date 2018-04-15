@@ -1,7 +1,7 @@
 import json
 from urllib.parse import urlparse, urljoin
 
-from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash
+from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash, get_flashed_messages
 import humanize
 
 from . import Reader, ReaderError
@@ -92,7 +92,12 @@ class APIThing:
         try:
             func()
         except ReaderError as e:
-            flash("error: {}".format(e))
+            category = (action, )
+            if hasattr(e, 'url'):
+                category += (e.url, )
+                if hasattr(e, 'id'):
+                    category += (e.id, )
+            flash("error: {}".format(e), category)
             return redirect_to_referrer()
         return redirect(next)
 
@@ -106,6 +111,20 @@ class APIThing:
         if func is None:
             return register
         return register(func)
+
+
+@blueprint.app_template_global()
+def get_flashed_messages_by_prefix(self, *prefix):
+    messages = get_flashed_messages(with_categories=True)
+    rv = []
+    for pair in messages:
+        category, message = pair
+        if not isinstance(category, tuple):
+            category = (category, )
+        category_prefix = category[:len(prefix)]
+        if category_prefix == prefix:
+            rv.append(message)
+    return rv
 
 
 form_api = APIThing(blueprint, '/form-api', 'form_api')
