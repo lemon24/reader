@@ -9,47 +9,52 @@
 {% block body %}
 
 <form action="{{ url_for('.form_api') }}" method="post" id="update-entries">
-<small>
-{% if feed %}<a href='{{ url_for('.entries') }}'>home</a>{% endif %}
-
-<a href='{{ url_for('.feeds') }}'>feeds</a>
+<ul class="inline-list">
 
 {% set current_what = request.args.get('show', 'unread') %}
 {% for what in ['unread', 'read', 'all'] %}
 {% set args = request.args.copy() %}
 {% set _ = args.setlist('show', [what]) %}
-{% if what != current_what %}<a href='{{ url_for('.entries', **args) }}'>{% endif %}
+<li>
+{%- if what != current_what %}<a href='{{ url_for('.entries', **args) }}'>{% endif %}
 {{- what -}}
 {% if what != current_what %}</a>{% endif %}
 {% endfor %}
 
 {% if feed %}
-<input type="checkbox" name="really" id="really" value="really">
-<label for="really">I really want to</label>
 
-{% if current_what != 'read' %}<button type="submit" name="action" value="mark-all-as-read">mark all as read</button>{% endif %}
-{% if current_what != 'unread' %}<button type="submit" name="action" value="mark-all-as-unread">mark all as unread</button>{% endif %}
-<button type="submit" name="action" value="delete-feed">delete feed</button>
+{% if current_what != 'read' %}
+{{- macros.confirm_button('mark-all-as-read', 'mark all as read') -}}
+{% endif %}
+{% if current_what != 'unread' %}
+{{- macros.confirm_button('mark-all-as-unread', 'mark all as unread') -}}
+{% endif %}
 
-<input type="text" name="feed-title" placeholder="feed title">
-<button type="submit" name="action" value="update-feed-title">update feed title</button>
+{{ macros.confirm_button('delete-feed', 'delete feed') }}
+
+{{ macros.text_input_button('update-feed-title', 'update feed title', 'feed-title', 'feed title') }}
+
+{% endif %}
+
+{% for message in get_flashed_messages_by_prefix(
+    'mark-all-as-read',
+    'mark-all-as-unread',
+    'delete-feed',
+    'update-feed-title',
+) %}
+<li class="error">{{ message }}
+{% endfor %}
+
+</ul>
+
 
 <input type="hidden" name="feed-url" value='{{ feed.url }}'>
 <input type="hidden" name="entry-id" value='{{ entries_data | tojson }}'>
 <input type="hidden" name="next" value='{{ url_for('.entries', **request.args) }}'>
 <input type="hidden" name="next-delete-feed" value='{{ url_for('.entries') }}'>
-{% endif %}
 
-</small>
+
 </form>
-<br>
-
-
-{% with messages = get_flashed_messages() %}
-{% if messages %}
-<p id="messages"><b>{% for message in messages %}{{ message }}. {% endfor %}</b></p>
-{% endif %}
-{% endwith %}
 
 
 {% for feed, entry in entries %}

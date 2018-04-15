@@ -87,7 +87,7 @@ class APIThing:
             if really is None:
                 really = request.form.get('really')
             if really != 'really':
-                flash("really not checked")
+                flash("{}: really not checked".format(action), (action, ))
                 return redirect_to_referrer()
         try:
             func()
@@ -97,7 +97,7 @@ class APIThing:
                 category += (e.url, )
                 if hasattr(e, 'id'):
                     category += (e.id, )
-            flash("error: {}".format(e), category)
+            flash("{}: error: {}".format(action, e), category)
             return redirect_to_referrer()
         return redirect(next)
 
@@ -114,16 +114,19 @@ class APIThing:
 
 
 @blueprint.app_template_global()
-def get_flashed_messages_by_prefix(self, *prefix):
+def get_flashed_messages_by_prefix(*prefixes):
     messages = get_flashed_messages(with_categories=True)
     rv = []
     for pair in messages:
         category, message = pair
         if not isinstance(category, tuple):
             category = (category, )
-        category_prefix = category[:len(prefix)]
-        if category_prefix == prefix:
-            rv.append(message)
+        for prefix in prefixes:
+            if not isinstance(prefix, tuple):
+                prefix = (prefix, )
+            category_prefix = category[:len(prefix)]
+            if category_prefix == prefix:
+                rv.append(message)
     return rv
 
 

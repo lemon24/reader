@@ -30,7 +30,7 @@
 <li class="collapsible">
     <span class="label">{{ label }}</span>
     <span class="hidden">
-        <input type="checkbox" id="really-{{ action }}">
+        <input type="checkbox" id="really-{{ action }}" name="really-{{ action }}" value="really">
         <label for="really-{{ action }}">I really want to</label>
         <button type="submit" name="action" value="{{ action }}">{{ label }}</button>
     </span>
