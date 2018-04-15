@@ -81,6 +81,14 @@ untitled
 {% else %}
 {{ macros.simple_button('mark-as-read', 'mark as read') }}
 {% endif %}
+
+{% for message in get_flashed_messages_by_prefix(
+    ('mark-as-read', feed.url, entry.id),
+    ('mark-as-unread', feed.url, entry.id),
+) %}
+<li class="error">{{ message }}
+{% endfor %}
+
 </ul>
 
 <input type="hidden" name="feed-url" value='{{ feed.url }}'>
