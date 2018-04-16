@@ -1,19 +1,14 @@
+<!doctype html>
 
-{% macro feed_link(feed) -%}
-{%- if feed.link %}<a href="{{ feed.link }}">{%- endif -%}
-{{ feed_title(feed) }}
-{%- if feed.link %}</a>{% endif -%}
-{%- endmacro %}
 
-{% macro feed_title(feed) %}
-{%- if feed.user_title and feed.user_title.strip() -%}
-    {{ feed.user_title }}
-{%- elif feed.title and feed.title.strip() -%}
-    {{ feed.title }}
-{%- else -%}
-    {{ feed.url }}
-{%- endif -%}
-{% endmacro %}
+<meta charset="utf-8"> 
+
+<meta name="viewport" content="width=device-width" />
+
+<link rel="stylesheet" href="style.css">
+
+
+<title>Reader: Entries for Feed Title</title>
 
 
 {% macro text_input_button(action, label, name, placeholder) -%}
@@ -26,12 +21,12 @@
 {%- endmacro %}
 
 
-{% macro confirm_button(action, label, id=none) -%}
+{% macro confirm_button(action, label) -%}
 <li class="collapsible">
     <span class="label">{{ label }}</span>
     <span class="hidden">
-        <input type="checkbox" id="really-{{ action }}{% if id is not none %}-{{ id }}{% endif %}" name="really-{{ action }}" value="really">
-        <label for="really-{{ action }}{% if id %}-{{ id }}{% endif %}">I really want to</label>
+        <input type="checkbox" id="really-{{ action }}">
+        <label for="really-{{ action }}">I really want to</label>
         <button type="submit" name="action" value="{{ action }}">{{ label }}</button>
     </span>
 {%- endmacro %}
@@ -44,5 +39,13 @@
 
 
 
-
-
+<form>
+<ul class="controls">
+<li>text
+<li><a href="">link</a>
+{{ simple_button('mark-as-read', 'mark as read') }}
+{{ text_input_button('add-feed', 'add feed', 'feed-url', 'feed URL') }}
+{{ confirm_button('delete-feed', 'delete feed') }}
+<li class="error">error message
+</ul>
+</form>

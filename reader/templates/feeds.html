@@ -9,49 +9,38 @@
 
 {% block body %}
 
-<form action="{{ url_for('.form_api') }}" method="post" id="add-feed">
-<small>
-<a href='{{ url_for('.entries') }}'>home</a>
-
-<input type="text" name="feed-url" id="feed-url" placeholder="feed url">
-<button type="submit" name="action" value="add-feed">add feed</button>
-
-<input type="hidden" name="next" value='{{ url_for('.feeds', **request.args) }}'>
-</small>
-</form>
-<br>
-
-
-{% with messages = get_flashed_messages() %}
-{% if messages %}
-<p id="messages"><b>{% for message in messages %}{{ message }}. {% endfor %}</b></p>
-{% endif %}
-{% endwith %}
-
-
 {% for feed in feeds %}
+<div id="feed-{{ loop.index }}" class="feed">
 
-<form action="{{ url_for('.form_api') }}" method="post" id="feed-{{ loop.index }}" class="feed">
+<h2><a href="{{ url_for('.entries', feed=feed.url) }}">
+{{- macros.feed_title(feed) -}}
+</a></h2>
 
-<b>{{ macros.feed_link(feed) }}</b> <br>
-<small>
-<a href="{{ url_for('.entries', feed=feed.url) }}">entries</a>
+<form action="{{ url_for('.form_api') }}" method="post">
+<ul class="controls">
 
-<input type="checkbox" name="really" id="really-{{ loop.index }}" value="really">
-<label for="really-{{ loop.index }}">I really want to</label>
+<li>{% if feed.link %}<a href="{{ feed.link }}">site</a>{% else %}no site{% endif %}
 
-<button type="submit" name="action" value="delete-feed">delete feed</button>
+{{ macros.confirm_button('delete-feed', 'delete feed', loop.index) }}
 
-<input type="text" name="feed-title" placeholder="feed title">
-<button type="submit" name="action" value="update-feed-title">update feed title</button>
+{{ macros.text_input_button('update-feed-title', 'update feed title', 'feed-title', 'feed title') }}
+
+{% for message in get_flashed_messages_by_prefix(
+    ('delete-feed', feed.url),
+    ('update-feed-title', feed.url),
+) %}
+<li class="error">{{ message }}
+{% endfor %}
+
+</ul>
 
 <input type="hidden" name="feed-url" value='{{ feed.url }}'>
+<input type="hidden" name="target" value='{{ feed.url }}'>
 <input type="hidden" name="next" value='{{ url_for('.feeds', **request.args) }}#feed-{{ loop.index if not loop.last else loop.index - 1 }}'>
 
-</small>
 </form>
-<br>
 
+</div>
 {% endfor %}
 
 {% endblock %}

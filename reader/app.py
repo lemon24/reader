@@ -2,8 +2,7 @@ import json
 from urllib.parse import urlparse, urljoin
 import tempfile
 
-
-from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash, Response, stream_with_context, url_for
+from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash, get_flashed_messages, Response, stream_with_context, url_for
 import humanize
 
 from . import Reader, ReaderError
@@ -88,13 +87,22 @@ class APIThing:
             really = request.form.get('really-' + action)
             if really is None:
                 really = request.form.get('really')
+            target = request.form.get('target')
             if really != 'really':
-                flash("really not checked")
+                category = (action, )
+                if target is not None:
+                    category += (target, )
+                flash("{}: really not checked".format(action), category)
                 return redirect_to_referrer()
         try:
             func()
         except ReaderError as e:
-            flash("error: {}".format(e))
+            category = (action, )
+            if hasattr(e, 'url'):
+                category += (e.url, )
+                if hasattr(e, 'id'):
+                    category += (e.id, )
+            flash("{}: error: {}".format(action, e), category)
             return redirect_to_referrer()
         return redirect(next)
 
@@ -108,6 +116,23 @@ class APIThing:
         if func is None:
             return register
         return register(func)
+
+
+@blueprint.app_template_global()
+def get_flashed_messages_by_prefix(*prefixes):
+    messages = get_flashed_messages(with_categories=True)
+    rv = []
+    for pair in messages:
+        category, message = pair
+        if not isinstance(category, tuple):
+            category = (category, )
+        for prefix in prefixes:
+            if not isinstance(prefix, tuple):
+                prefix = (prefix, )
+            category_prefix = category[:len(prefix)]
+            if category_prefix == prefix:
+                rv.append(message)
+    return rv
 
 
 form_api = APIThing(blueprint, '/form-api', 'form_api')
