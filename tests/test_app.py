@@ -32,25 +32,25 @@ def test_mark_as_read_unread(tmpdir):
     browser = mechanicalsoup.StatefulBrowser(session)
     browser.open('http://app/')
 
-    assert len(browser.get_current_page().select('form.entry')) == 1
+    assert len(browser.get_current_page().select('.entry form')) == 1
 
-    form = browser.select_form('form.entry')
+    form = browser.select_form('.entry form')
     response = browser.submit_selected(form.form.find('button', text='mark as read'))
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.entry')) == 0
+    assert len(browser.get_current_page().select('.entry form')) == 0
 
     response = browser.follow_link(browser.find_link(text='read'))
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.entry')) == 1
+    assert len(browser.get_current_page().select('.entry form')) == 1
 
-    form = browser.select_form('form.entry')
+    form = browser.select_form('.entry form')
     response = browser.submit_selected(form.form.find('button', text='mark as unread'))
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.entry')) == 0
+    assert len(browser.get_current_page().select('.entry form')) == 0
 
     response = browser.follow_link(browser.find_link(text='unread'))
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.entry')) == 1
+    assert len(browser.get_current_page().select('.entry form')) == 1
 
 
 @pytest.mark.slow
@@ -74,27 +74,27 @@ def test_mark_all_as_read_unread(tmpdir):
     browser = mechanicalsoup.StatefulBrowser(session)
     browser.open('http://app/', params={'feed': feed.url})
 
-    assert len(browser.get_current_page().select('form.entry')) == 1
+    assert len(browser.get_current_page().select('.entry form')) == 1
 
-    form = browser.select_form('form#update-entries')
-    form.set_checkbox({'really': True})
+    form = browser.select_form('#update-entries')
+    form.set_checkbox({'really-mark-all-as-read': True})
     response = browser.submit_selected(form.form.find('button', text='mark all as read'))
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.entry')) == 0
+    assert len(browser.get_current_page().select('.entry form')) == 0
 
     response = browser.follow_link(browser.find_link(text='read'))
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.entry')) == 1
+    assert len(browser.get_current_page().select('.entry form')) == 1
 
     form = browser.select_form('form#update-entries')
-    form.set_checkbox({'really': True})
+    form.set_checkbox({'really-mark-all-as-unread': True})
     response = browser.submit_selected(form.form.find('button', text='mark all as unread'))
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.entry')) == 0
+    assert len(browser.get_current_page().select('.entry form')) == 0
 
     response = browser.follow_link(browser.find_link(text='unread'))
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.entry')) == 1
+    assert len(browser.get_current_page().select('.entry form')) == 1
 
 
 @pytest.mark.slow
@@ -117,37 +117,38 @@ def test_add_delete_feed(tmpdir):
 
     response = browser.follow_link(browser.find_link(text='feeds'))
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.feed')) == 0
+    assert len(browser.get_current_page().select('.feed form')) == 0
 
-    form = browser.select_form('form#add-feed')
+    form = browser.select_form('form#top-bar')
     form.input({'feed-url': feed.url})
     response = browser.submit_selected(form.form.find('button', text='add feed'))
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.feed')) == 1
+    assert len(browser.get_current_page().select('.feed form')) == 1
 
-    feed_link = browser.find_link(text='entries')
+    # because we don't have a title at this point
+    feed_link = browser.find_link(text=feed.url)
 
     response = browser.follow_link(feed_link)
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.entry')) == 0
+    assert len(browser.get_current_page().select('.entry form')) == 0
 
     reader.update_feeds()
 
     browser.refresh()
-    assert len(browser.get_current_page().select('form.entry')) == 1
+    assert len(browser.get_current_page().select('.entry form')) == 1
 
     response = browser.follow_link(browser.find_link(text='feeds'))
     assert response.status_code == 200
 
-    form = browser.select_form('form.feed')
-    form.set_checkbox({'really': True})
+    form = browser.select_form('.feed form')
+    form.set_checkbox({'really-delete-feed': True})
     response = browser.submit_selected(form.form.find('button', text='delete feed'))
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.feed')) == 0
+    assert len(browser.get_current_page().select('.feed form')) == 0
 
-    response = browser.follow_link(browser.find_link(text='home'))
+    response = browser.follow_link(browser.find_link(text='entries'))
     assert response.status_code == 200
-    assert len(browser.get_current_page().select('form.entry')) == 0
+    assert len(browser.get_current_page().select('.entry form')) == 0
 
     response = browser.follow_link(feed_link)
     assert response.status_code == 404
@@ -175,9 +176,9 @@ def test_delete_feed_from_entries_page_redirects(tmpdir):
     browser.open('http://app/', params={'feed': feed.url})
 
     form = browser.select_form('form#update-entries')
-    form.set_checkbox({'really': True})
+    form.set_checkbox({'really-delete-feed': True})
     response = browser.submit_selected(form.form.find('button', text='delete feed'))
     assert response.status_code == 200
     assert browser.get_url() == 'http://app/'
-    assert len(browser.get_current_page().select('form.entry')) == 0
+    assert len(browser.get_current_page().select('.entry form')) == 0
 
