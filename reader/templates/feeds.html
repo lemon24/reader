@@ -13,7 +13,7 @@
 <div id="feed-{{ loop.index }}" class="feed">
 
 <h2><a href="{{ url_for('.entries', feed=feed.url) }}">
-{{- macros.feed_link(feed) -}}
+{{- macros.feed_title(feed) -}}
 </a></h2>
 
 <form action="{{ url_for('.form_api') }}" method="post">
