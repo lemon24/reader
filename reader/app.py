@@ -86,8 +86,12 @@ class APIThing:
             really = request.form.get('really-' + action)
             if really is None:
                 really = request.form.get('really')
+            target = request.form.get('target')
             if really != 'really':
-                flash("{}: really not checked".format(action), (action, ))
+                category = (action, )
+                if target is not None:
+                    category += (target, )
+                flash("{}: really not checked".format(action), category)
                 return redirect_to_referrer()
         try:
             func()
