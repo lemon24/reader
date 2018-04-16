@@ -24,7 +24,7 @@
 <form action="{{ url_for('.form_api') }}" method="post">
 <ul class="controls">
 
-<li><a href="{{ feed.link }}">site</a>
+<li>{% if feed.link %}<a href="{{ feed.link }}">site</a>{% else %}no site{% endif %}
 
 {{ macros.confirm_button('delete-feed', 'delete feed', loop.index) }}
 
