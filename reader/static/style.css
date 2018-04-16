@@ -88,3 +88,32 @@ ul.controls .collapsible {
 
 }
 
+
+@media only screen and (max-width: 600px) {
+
+    body { }
+
+    ul.controls li {
+        display: block;
+    }
+
+    ul.controls .collapsible:hover,
+    ul.controls .collapsible:focus-within {
+    }
+
+    ul.controls .collapsible:hover .label,
+    ul.controls .collapsible:focus-within .label {
+        display: none;
+    }
+
+    ul.controls .collapsible .hidden {
+        display: none;
+    }
+
+    ul.controls .collapsible:hover .hidden,
+    ul.controls .collapsible:focus-within .hidden {
+        display: initial;
+    }
+
+}
+
