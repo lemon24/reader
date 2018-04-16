@@ -9,7 +9,7 @@
 {% block body %}
 
 <form action="{{ url_for('.form_api') }}" method="post" id="update-entries">
-<ul class="inline-list">
+<ul class="controls">
 
 {% set current_what = request.args.get('show', 'unread') %}
 {% for what in ['unread', 'read', 'all'] %}
@@ -71,7 +71,7 @@ untitled
 </h2>
 
 <form action="{{ url_for('.form_api') }}" method="post">
-<ul class="inline-list">
+<ul class="controls">
 
 <li><a href="{{ url_for('.entries', feed=feed.url) }}">{{ macros.feed_title(feed) }}</a>
 <li><span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>

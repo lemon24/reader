@@ -1,0 +1,90 @@
+
+
+ul.controls {
+    padding: 0;
+}
+
+ul.controls li {
+    list-style-type: none;
+    padding: 0;
+}
+
+ul.controls li.error {
+    color: red;
+}
+
+ul.controls .collapsible {
+    position: relative;
+}
+
+
+@media only screen and (min-width: 600px) {
+
+    body { }
+
+    ul.controls {
+        margin-left: -.5em;
+    }
+
+    ul.controls li {
+        display: inline-block;
+        padding: .5em;
+    }
+
+    ul.controls li:hover,
+    ul.controls li:focus-within {
+    }
+
+    ul.controls li.error{
+        display: block;
+    }
+
+    ul.controls li.simple-button {
+    }
+
+    ul.controls .simple-button button {
+    }
+
+    ul.controls .simple-button button:hover {
+    }
+
+    ul.controls .collapsible:hover,
+    ul.controls .collapsible:focus-within {
+    }
+
+    ul.controls .collapsible:hover .label,
+    ul.controls .collapsible:focus-within .label {
+    }
+
+    ul.controls .collapsible .label::after {
+        content: "↴";
+        font-size: .8em;
+    }
+
+    ul.controls .collapsible .hidden {
+        display: inline-block;
+        overflow: hidden;
+        width: 0;
+        margin: 0;
+        padding: 0;
+
+        position: absolute;
+        left: 0;
+        top: 2em;
+
+        text-align: right;
+        white-space: nowrap;
+
+        background: #fff;
+    }
+
+    ul.controls .collapsible:hover .hidden,
+    ul.controls .collapsible:focus-within .hidden {
+        width: auto;
+        padding: .8em;
+
+        outline: .1px solid silver;
+    }
+
+}
+
