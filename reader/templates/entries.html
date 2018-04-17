@@ -63,7 +63,7 @@
 
 <h2><a href="{{ entry.link }}">
 {%- if entry.title and entry.title.strip() -%}
-{{ entry.title }}
+{{ entry.title | safe }}
 {%- else -%}
 untitled
 {%- endif -%}
