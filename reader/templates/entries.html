@@ -120,8 +120,8 @@ untitled
 {% for enclosure in entry.enclosures %}
 
 <li>
-<a href="{{ enclosure | enclosure_tags(entry, feed) }}">{{ enclosure.href.split('/')[-1].split('?')[0] }}</a>
-<small>{{ enclosure.type }}</small>
+<a href="{{ enclosure.href }}">{{ enclosure.href.split('/')[-1].split('?')[0] }}</a>
+<small><a href="{{ enclosure | enclosure_tags(entry, feed) }}">with tags</a> {{ enclosure.type }}</small>
 </li>
 
 {% endfor %}
