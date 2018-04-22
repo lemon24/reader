@@ -228,9 +228,15 @@ def enclosure_tags():
         finally:
             tmp.close()
 
+
+    headers = {}
+    for name in ('Content-Type', 'Content-Disposition'):
+        if name in req.headers:
+            headers[name] = req.headers[name]
+
     return Response(
         stream_with_context(chunks()),
-        content_type=req.headers['content-type'],
+        headers=headers,
     )
 
 
