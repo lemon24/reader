@@ -213,6 +213,10 @@ def enclosure_tags(filename):
         file.seek(0)
 
     def chunks(req):
+        # Send the headers as soon as possible.
+        # Some browsers wait for the headers before showing the "Save As" dialog.
+        yield ''
+
         tmp = tempfile.TemporaryFile()
         for chunk in req.iter_content(chunk_size=None):
             tmp.write(chunk)
