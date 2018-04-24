@@ -199,27 +199,27 @@ def enclosure_tags(filename):
     import requests
     import mutagen.mp3
 
-    url = request.args['url']
-    req = requests.get(url, stream=True)
+    def update_tags(file):
+        emp3 = mutagen.mp3.EasyMP3(file)
+        changed = False
+        for key in ('album', 'title'):
+            value = request.args.get(key)
+            if not value:
+                continue
+            emp3[key] = [value]
+            changed = True
+        if changed:
+            emp3.save(file)
+        file.seek(0)
 
-    tmp = tempfile.TemporaryFile()
-    for chunk in req.iter_content(chunk_size=None):
-        tmp.write(chunk)
-    tmp.seek(0)
+    def chunks(req):
+        tmp = tempfile.TemporaryFile()
+        for chunk in req.iter_content(chunk_size=None):
+            tmp.write(chunk)
+        tmp.seek(0)
 
-    emp3 = mutagen.mp3.EasyMP3(tmp)
-    changed = False
-    for key in ('album', 'title'):
-        value = request.args.get(key)
-        if not value:
-            continue
-        emp3[key] = [value]
-        changed = True
-    if changed:
-        emp3.save(tmp)
-    tmp.seek(0)
+        update_tags(tmp)
 
-    def chunks():
         try:
             while True:
                 data = tmp.read(2**20)
@@ -229,6 +229,8 @@ def enclosure_tags(filename):
         finally:
             tmp.close()
 
+    url = request.args['url']
+    req = requests.get(url, stream=True)
 
     headers = {}
     for name in ('Content-Type', 'Content-Disposition'):
@@ -236,7 +238,7 @@ def enclosure_tags(filename):
             headers[name] = req.headers[name]
 
     return Response(
-        stream_with_context(chunks()),
+        stream_with_context(chunks(req)),
         headers=headers,
     )
 
