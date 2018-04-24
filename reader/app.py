@@ -193,8 +193,9 @@ def update_feed_title():
 enclosure_tags_blueprint = Blueprint('enclosure_tags', __name__)
 
 
-@enclosure_tags_blueprint.route('/enclosure-tags')
-def enclosure_tags():
+@enclosure_tags_blueprint.route('/enclosure-tags', defaults={'filename': None})
+@enclosure_tags_blueprint.route('/enclosure-tags/<filename>')
+def enclosure_tags(filename):
     import requests
     import mutagen.mp3
 
@@ -246,13 +247,14 @@ def enclosure_tags_filter(enclosure, entry, feed):
         import requests
     except ImportError:
         return enclosure.href
-    if enclosure.href.endswith('.mp3'):
-        args = {}
+    filename = urlparse(enclosure.href).path.split('/')[-1]
+    if filename.endswith('.mp3'):
+        args = {'url': enclosure.href, 'filename': filename}
         if entry.title:
             args['title'] = entry.title
         if feed.title:
             args['album'] = feed.title
-        return url_for('enclosure_tags.enclosure_tags', url=enclosure.href, **args)
+        return url_for('enclosure_tags.enclosure_tags', **args)
     return enclosure.href
 
 
