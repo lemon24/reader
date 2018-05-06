@@ -36,36 +36,44 @@ Entry Objects
 Exceptions
 ----------
 
+All exceptions that :class:`Reader` explicitly raises inherit from :exc:`ReaderError`.
+
+
 .. autoclass:: ReaderError
     :members:
-    :inherited-members:
 
-.. autoclass:: FeedError
+.. autoexception:: FeedError
     :members:
-    :inherited-members:
 
-.. autoclass:: FeedExistsError
+    Subclass of :exc:`ReaderError`.
+
+.. autoexception:: FeedExistsError
     :members:
-    :inherited-members:
 
-.. autoclass:: FeedNotFoundError
+    Subclass of :exc:`FeedError`.
+
+.. autoexception:: FeedNotFoundError
     :members:
-    :inherited-members:
 
-.. autoclass:: ParseError
+    Subclass of :exc:`FeedError`.
+
+.. autoexception:: ParseError
     :members:
-    :inherited-members:
 
-.. autoclass:: EntryError
+    Subclass of :exc:`FeedError`.
+
+.. autoexception:: EntryError
     :members:
-    :inherited-members:
 
-.. autoclass:: EntryNotFoundError
+    Subclass of :exc:`FeedError`.
+
+.. autoexception:: EntryNotFoundError
     :members:
-    :inherited-members:
 
-.. autoclass:: StorageError
+    Subclass of :exc:`EntryError`.
+
+.. autoexception:: StorageError
     :members:
-    :inherited-members:
 
+    Subclass of :exc:`ReaderError`.
 

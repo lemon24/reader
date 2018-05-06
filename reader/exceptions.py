@@ -8,11 +8,13 @@ class FeedError(ReaderError):
 
     def __init__(self, url):
         super().__init__(url)
+
+        #: The feed URL.
         self.url = url
 
 
 class FeedExistsError(FeedError):
-    """File already exists."""
+    """Feed already exists."""
 
 
 class FeedNotFoundError(FeedError):
@@ -32,7 +34,11 @@ class EntryError(ReaderError):
 
     def __init__(self, url, id):
         super().__init__(url, id)
+
+        #: The feed URL.
         self.url = url
+
+        #: The entry id.
         self.id = id
 
 class EntryNotFoundError(EntryError):
