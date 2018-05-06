@@ -6,8 +6,11 @@ import attr
 class attrs_namedtuple_compat:
 
     @classmethod
-    def _make(cls, it):
-        return cls(*it)
+    def _make(cls, iterable):
+        iterable = tuple(iterable)
+        if len(iterable) != len(cls.__attrs_attrs__):
+            TypeError('Expected %d arguments, got %d' % (len(cls.__attrs_attrs__), len(iterable)))
+        return cls(*iterable)
 
     def _replace(self, **kwargs):
         rv = self._make(
