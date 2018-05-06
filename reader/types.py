@@ -1,17 +1,63 @@
-from collections import namedtuple
+from collections import OrderedDict
+
+import attr
 
 
-Feed = namedtuple('Feed', 'url updated title link user_title')
-Feed.__new__.__defaults__ = (None, None, None, None)
+class attrs_namedtuple_compat:
 
-Entry = namedtuple('Entry', 'id updated title link published summary content enclosures read')
-Entry.__new__.__defaults__ = (None, None, None, None, None, None, False)
+    @classmethod
+    def _make(cls, it):
+        return cls(*it)
+
+    def _replace(self, **kwargs):
+        rv = self._make(
+            kwargs.pop(a.name, getattr(self, a.name))
+            for a in self.__attrs_attrs__
+        )
+        if kwargs:
+            raise ValueError('Got unexpected field names: %r' % list(kwargs))
+        return rv
+
+    def _asdict(self):
+        return OrderedDict(
+            (a.name, getattr(self, a.name))
+            for a in self.__attrs_attrs__
+        )
 
 
-Content = namedtuple('Content', 'value type language')
-Content.__new__.__defaults__ = (None, None)
+@attr.s(slots=True, frozen=True)
+class Feed(attrs_namedtuple_compat):
+    url = attr.ib()
+    updated = attr.ib(default=None)
+    title = attr.ib(default=None)
+    link = attr.ib(default=None)
+    user_title = attr.ib(default=None)
 
-Enclosure = namedtuple('Enclosure', 'href type length')
-Enclosure.__new__.__defaults__ = (None, None)
+
+@attr.s(slots=True, frozen=True)
+class Entry(attrs_namedtuple_compat):
+    id = attr.ib()
+    updated = attr.ib()
+    title = attr.ib(default=None)
+    link = attr.ib(default=None)
+    published = attr.ib(default=None)
+    summary = attr.ib(default=None)
+    content = attr.ib(default=None)
+    enclosures = attr.ib(default=None)
+    read = attr.ib(default=False)
+
+
+@attr.s(slots=True, frozen=True)
+class Content(attrs_namedtuple_compat):
+    value = attr.ib()
+    type = attr.ib(default=None)
+    language = attr.ib(default=None)
+
+
+@attr.s(slots=True, frozen=True)
+class Enclosure(attrs_namedtuple_compat):
+    href = attr.ib()
+    type = attr.ib(default=None)
+    length = attr.ib(default=None)
 
 

@@ -16,6 +16,7 @@ setup(
     packages=['reader'],
     include_package_data=True,
     install_requires=[
+        'attrs>=17',
         'feedparser>=5',
         'click>=5',
         'flask>=0.10',
