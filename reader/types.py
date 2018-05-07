@@ -80,15 +80,27 @@ class Entry(attrs_namedtuple_compat):
 
 @attr.s(slots=True, frozen=True)
 class Content(attrs_namedtuple_compat):
+
+    #: The value of the piece of content.
     value = attr.ib()
+
+    #: The content type of the piece of content.
     type = attr.ib(default=None)
+
+    #: The language of the piece of content.
     language = attr.ib(default=None)
 
 
 @attr.s(slots=True, frozen=True)
 class Enclosure(attrs_namedtuple_compat):
+
+    #: The URL of the linked file.
     href = attr.ib()
+
+    #: The content type of the linked file.
     type = attr.ib(default=None)
+
+    #: The length of the linked file.
     length = attr.ib(default=None)
 
 
