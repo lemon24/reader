@@ -40,6 +40,16 @@ def wrap_storage_exceptions(*args):
 
 class Reader:
 
+    """A feed reader.
+
+    Args:
+        path (str): Path to the reader database.
+
+    Raises:
+        StorageError
+
+    """
+
     _get_entries_chunk_size = 2 ** 8
     _parse = staticmethod(parse)
 
