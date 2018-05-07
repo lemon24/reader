@@ -31,6 +31,8 @@ class attrs_namedtuple_compat:
 @attr.s(slots=True, frozen=True)
 class Feed(attrs_namedtuple_compat):
 
+    """Data type representing a feed."""
+
     #: The URL of the feed.
     url = attr.ib()
 
@@ -50,6 +52,8 @@ class Feed(attrs_namedtuple_compat):
 @attr.s(slots=True, frozen=True)
 class Entry(attrs_namedtuple_compat):
 
+    """Data type representing an entry."""
+
     #: Entry identifier.
     id = attr.ib()
 
@@ -68,10 +72,12 @@ class Entry(attrs_namedtuple_compat):
     #: A summary of the entry.
     summary = attr.ib(default=None)
 
-    #: Entry content. An iterable of :class:`Content` objects.
+    #: Full content of the entry.
+    #: An iterable of :class:`Content` objects.
     content = attr.ib(default=None)
 
-    #: Entry enclosures. An iterable of :class:`Enclosure` objects.
+    #: External files associated with the entry.
+    #: An iterable of :class:`Enclosure` objects.
     enclosures = attr.ib(default=None)
 
     #: Whether the entry was read or not.
@@ -81,26 +87,30 @@ class Entry(attrs_namedtuple_compat):
 @attr.s(slots=True, frozen=True)
 class Content(attrs_namedtuple_compat):
 
-    #: The value of the piece of content.
+    """Data type representing a piece of content."""
+
+    #: The content value.
     value = attr.ib()
 
-    #: The content type of the piece of content.
+    #: The content type.
     type = attr.ib(default=None)
 
-    #: The language of the piece of content.
+    #: The content language.
     language = attr.ib(default=None)
 
 
 @attr.s(slots=True, frozen=True)
 class Enclosure(attrs_namedtuple_compat):
 
-    #: The URL of the linked file.
+    """Data type representing an external file."""
+
+    #: The file URL.
     href = attr.ib()
 
-    #: The content type of the linked file.
+    #: The file content type.
     type = attr.ib(default=None)
 
-    #: The length of the linked file.
+    #: The file length.
     length = attr.ib(default=None)
 
 
