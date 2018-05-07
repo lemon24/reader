@@ -49,6 +49,16 @@ class Reader:
 
     @wrap_storage_exceptions()
     def add_feed(self, url):
+        """Add a new feed.
+
+        Args:
+            url (str): The feed URL.
+
+        Raises:
+            FeedExistsError
+            StorageError
+
+        """
         with self.db:
             try:
                 self.db.execute("""
@@ -60,6 +70,18 @@ class Reader:
 
     @wrap_storage_exceptions()
     def remove_feed(self, url):
+        """Remove a feed.
+
+        Also removes all of the feed's entries.
+
+        Args:
+            url (str): The feed URL.
+
+        Raises:
+            FeedNotFoundError
+            StorageError
+
+        """
         with self.db:
             rows = self.db.execute("""
                 DELETE FROM feeds
@@ -82,10 +104,31 @@ class Reader:
 
     @wrap_storage_exceptions()
     def get_feeds(self):
+        """Get all the feeds.
+
+        Yields:
+            :class:`Feed`
+
+        Raises:
+            StorageError
+
+        """
         return list(self._get_feeds())
 
     @wrap_storage_exceptions()
     def get_feed(self, url):
+        """Get a feed.
+
+        Arguments:
+            url (str): The feed URL.
+
+        Returns:
+            Feed or None: The feed if it exists, None if it doesn't.
+
+        Raises:
+            StorageError
+
+        """
         feeds = list(self._get_feeds(url))
         if len(feeds) == 0:
             return None
@@ -116,6 +159,17 @@ class Reader:
 
     @wrap_storage_exceptions()
     def set_feed_user_title(self, url, title):
+        """Set a user-defined title for a feed.
+
+        Args:
+            url (str): The feed URL.
+            title (str or None): The title, or None to remove the current title.
+
+        Raises:
+            FeedNotFoundError
+            StorageError
+
+        """
         with self.db:
             rows = self.db.execute("""
                 UPDATE feeds
@@ -128,6 +182,12 @@ class Reader:
 
     @wrap_storage_exceptions()
     def update_feeds(self):
+        """Update all the feeds.
+
+        Raises:
+            StorageError
+
+        """
         for row in list(self._get_feeds_for_update()):
             try:
                 self._update_feed(*row)
@@ -136,6 +196,16 @@ class Reader:
 
     @wrap_storage_exceptions()
     def update_feed(self, url):
+        """Update a single feed.
+
+        Args:
+            url (str): The feed URL.
+
+        Raises:
+            FeedNotFoundError
+            StorageError
+
+        """
         rows = list(self._get_feeds_for_update(url))
         if len(rows) == 0:
             raise FeedNotFoundError(url)
@@ -325,6 +395,20 @@ class Reader:
 
     @wrap_storage_exceptions()
     def get_entries(self, which='all', feed_url=None):
+        """Get all or some of the entries.
+
+        Args:
+            which (str): One of ``'all'``, ``'read'``, or ``'unread'``.
+            feed_url (str or None): Only return the entries for this feed.
+
+        Yields:
+            tuple(:class:`Feed`, :class:`Entry`): Last updated entries first.
+
+        Raises:
+            FeedNotFoundError: Only if `feed_url` is not None.
+            StorageError
+
+        """
         if which not in ('all', 'unread', 'read'):
             raise ValueError("which should be one of ('all', 'read', 'unread')")
         chunk_size = self._get_entries_chunk_size
@@ -375,9 +459,31 @@ class Reader:
 
     @wrap_storage_exceptions()
     def mark_as_read(self, feed_url, entry_id):
-       self._mark_as_read_unread(feed_url, entry_id, 1)
+        """Mark an entry as read.
+
+        Args:
+            feed_url (str): The feed URL.
+            entry_id (None): The entry id.
+
+        Raises:
+            EntryNotFoundError
+            StorageError
+
+        """
+        self._mark_as_read_unread(feed_url, entry_id, 1)
 
     @wrap_storage_exceptions()
     def mark_as_unread(self, feed_url, entry_id):
+        """Mark an entry as unread.
+
+        Args:
+            feed_url (str): The feed URL.
+            entry_id (None): The entry id.
+
+        Raises:
+            EntryNotFoundError
+            StorageError
+
+        """
         self._mark_as_read_unread(feed_url, entry_id, 0)
 
