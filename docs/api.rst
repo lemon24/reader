@@ -10,7 +10,6 @@ Reader Object
 
 .. autoclass:: Reader
     :members:
-    :inherited-members:
 
 
 Entry Objects
@@ -18,19 +17,15 @@ Entry Objects
 
 .. autoclass:: Feed
     :members:
-    :inherited-members:
 
 .. autoclass:: Entry
     :members:
-    :inherited-members:
 
 .. autoclass:: Content
     :members:
-    :inherited-members:
 
 .. autoclass:: Enclosure
     :members:
-    :inherited-members:
 
 
 Exceptions
@@ -39,7 +34,7 @@ Exceptions
 All exceptions that :class:`Reader` explicitly raises inherit from :exc:`ReaderError`.
 
 
-.. autoclass:: ReaderError
+.. autoexception:: ReaderError
     :members:
 
 .. autoexception:: FeedError
