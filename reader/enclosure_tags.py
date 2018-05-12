@@ -61,7 +61,7 @@ def enclosure_tags(filename):
     )
 
 
-def enclosure_tags_filter(enclosure, entry, feed):
+def enclosure_tags_filter(enclosure, entry):
     try:
         import mutagen
         import requests
@@ -72,8 +72,8 @@ def enclosure_tags_filter(enclosure, entry, feed):
         args = {'url': enclosure.href, 'filename': filename}
         if entry.title:
             args['title'] = entry.title
-        if feed.title:
-            args['album'] = feed.title
+        if entry.feed.title:
+            args['album'] = entry.feed.title
         return url_for('enclosure_tags.enclosure_tags', **args)
     return enclosure.href
 

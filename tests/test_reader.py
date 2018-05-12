@@ -21,15 +21,18 @@ def test_update_feed_updated(reader, call_update_method):
 
     reader.add_feed(old_feed.url)
     call_update_method(reader, old_feed.url)
-    assert set(reader.get_entries()) == {(old_feed, entry_one)}
+    assert set(reader.get_entries()) == {entry_one._replace(feed=old_feed)}
 
     entry_two = parser.entry(1, 2, datetime(2010, 2, 1))
     call_update_method(reader, old_feed.url)
-    assert set(reader.get_entries()) == {(old_feed, entry_one)}
+    assert set(reader.get_entries()) == {entry_one._replace(feed=old_feed)}
 
     new_feed = parser.feed(1, datetime(2010, 1, 2))
     call_update_method(reader, old_feed.url)
-    assert set(reader.get_entries()) == {(new_feed, entry_one), (new_feed, entry_two)}
+    assert set(reader.get_entries()) == {
+        entry_one._replace(feed=new_feed),
+        entry_two._replace(feed=new_feed),
+    }
 
 
 def test_update_entry_updated(reader, call_update_method):
@@ -43,19 +46,19 @@ def test_update_entry_updated(reader, call_update_method):
 
     reader.add_feed(feed.url)
     call_update_method(reader, feed.url)
-    assert set(reader.get_entries()) == {(feed, old_entry)}
+    assert set(reader.get_entries()) == {old_entry._replace(feed=feed)}
 
     feed = parser.feed(1, datetime(2010, 1, 2))
     new_entry = old_entry._replace(title='New Entry')
     parser.entries[1][1] = new_entry
     call_update_method(reader, feed.url)
-    assert set(reader.get_entries()) == {(feed, old_entry)}
+    assert set(reader.get_entries()) == {old_entry._replace(feed=feed)}
 
     feed = parser.feed(1, datetime(2010, 1, 3))
     new_entry = new_entry._replace(updated=datetime(2010, 1, 2))
     parser.entries[1][1] = new_entry
     call_update_method(reader, feed.url)
-    assert set(reader.get_entries()) == {(feed, new_entry)}
+    assert set(reader.get_entries()) == {new_entry._replace(feed=feed)}
 
 
 @pytest.mark.slow
@@ -152,14 +155,17 @@ def test_update_feed(reader):
     assert set(reader.get_feeds()) == {one, Feed(two.url, None, None, None, None)}
     assert reader.get_feed(one.url) == one
     assert reader.get_feed(two.url) == Feed(two.url, None, None, None, None)
-    assert set(reader.get_entries()) == {(one, entry_one)}
+    assert set(reader.get_entries()) == {entry_one._replace(feed=one)}
 
     reader.update_feed(two.url)
 
     assert set(reader.get_feeds()) == {one, two}
     assert reader.get_feed(one.url) == one
     assert reader.get_feed(two.url) == two
-    assert set(reader.get_entries()) == {(one, entry_one), (two, entry_two)}
+    assert set(reader.get_entries()) == {
+        entry_one._replace(feed=one),
+        entry_two._replace(feed=two),
+    }
 
     reader._parse = FailingParser()
 
@@ -189,23 +195,23 @@ def test_mark_as_read_unread(reader):
 
     reader.update_feeds()
 
-    (feed, entry), = list(reader.get_entries())
+    entry, = list(reader.get_entries())
     assert not entry.read
 
     reader.mark_as_read(entry_tuple)
-    (feed, entry), = list(reader.get_entries())
+    entry, = list(reader.get_entries())
     assert entry.read
 
     reader.mark_as_read(entry_tuple)
-    (feed, entry), = list(reader.get_entries())
+    entry, = list(reader.get_entries())
     assert entry.read
 
     reader.mark_as_unread(entry_tuple)
-    (feed, entry), = list(reader.get_entries())
+    entry, = list(reader.get_entries())
     assert not entry.read
 
     reader.mark_as_unread(entry_tuple)
-    (feed, entry), = list(reader.get_entries())
+    entry, = list(reader.get_entries())
     assert not entry.read
 
 
@@ -251,7 +257,7 @@ def test_get_entries_order(reader, chunk_size):
 
     expected = sorted(
         parser.get_tuples(),
-        key=lambda t: (t[1].updated, t[0].url, t[1].id),
+        key=lambda e: (e.updated, e.feed.url, e.id),
         reverse=True)
 
     assert list(reader.get_entries()) == expected
@@ -270,10 +276,13 @@ def test_get_entries_which(reader):
     reader.mark_as_read((feed.url, entry_one.id))
     entry_one = entry_one._replace(read=True)
 
-    assert set(reader.get_entries()) == {(feed, entry_one), (feed, entry_two)}
-    assert set(reader.get_entries(which='all')) == {(feed, entry_one), (feed, entry_two)}
-    assert set(reader.get_entries(which='read')) == {(feed, entry_one)}
-    assert set(reader.get_entries(which='unread')) == {(feed, entry_two)}
+    entry_one = entry_one._replace(feed=feed)
+    entry_two = entry_two._replace(feed=feed)
+
+    assert set(reader.get_entries()) == {entry_one, entry_two}
+    assert set(reader.get_entries(which='all')) == {entry_one, entry_two}
+    assert set(reader.get_entries(which='read')) == {entry_one}
+    assert set(reader.get_entries(which='unread')) == {entry_two}
 
     with pytest.raises(ValueError):
         set(reader.get_entries(which='bad which'))
@@ -291,9 +300,12 @@ def test_get_entries_feed_url(reader):
     reader.add_feed(two.url)
     reader.update_feeds()
 
-    assert set(reader.get_entries()) == {(one, entry_one), (two, entry_two)}
-    assert set(reader.get_entries(feed=one.url)) == {(one, entry_one)}
-    assert set(reader.get_entries(feed=two.url)) == {(two, entry_two)}
+    entry_one = entry_one._replace(feed=one)
+    entry_two = entry_two._replace(feed=two)
+
+    assert set(reader.get_entries()) == {entry_one, entry_two}
+    assert set(reader.get_entries(feed=one.url)) == {entry_one}
+    assert set(reader.get_entries(feed=two.url)) == {entry_two}
 
     # TODO: Should this raise an exception?
     assert set(reader.get_entries(feed='bad feed')) == set()
@@ -373,14 +385,17 @@ def test_add_remove_get_feeds(reader):
 
     reader.update_feeds()
 
+    entry_one = entry_one._replace(feed=one)
+    entry_two = entry_two._replace(feed=two)
+
     assert set(reader.get_feeds()) == {one, two}
     assert reader.get_feed(one.url) == one
-    assert set(reader.get_entries()) == {(one, entry_one), (two, entry_two)}
+    assert set(reader.get_entries()) == {entry_one, entry_two}
 
     reader.remove_feed(one.url)
     assert set(reader.get_feeds()) == {two}
     assert reader.get_feed(one.url) == None
-    assert set(reader.get_entries()) == {(two, entry_two)}
+    assert set(reader.get_entries()) == {entry_two}
 
     with pytest.raises(FeedNotFoundError):
         reader.remove_feed(one.url)
@@ -428,15 +443,17 @@ def test_set_feed_user_title(reader):
 
     reader.update_feeds()
 
-    assert reader.get_feed(one.url) == one._replace(user_title='blah')
-    assert list(reader.get_feeds()) == [one._replace(user_title='blah')]
-    assert list(reader.get_entries()) == [(one._replace(user_title='blah'), entry)]
+    one_with_title = one._replace(user_title='blah')
+
+    assert reader.get_feed(one.url) == one_with_title
+    assert list(reader.get_feeds()) == [one_with_title]
+    assert list(reader.get_entries()) == [entry._replace(feed=one_with_title)]
 
     reader.set_feed_user_title(one.url, None)
 
     assert reader.get_feed(one.url) == one
     assert list(reader.get_feeds()) == [one]
-    assert list(reader.get_entries()) == [(one, entry)]
+    assert list(reader.get_entries()) == [entry._replace(feed=one)]
 
 
 def test_storage_errors_open(tmpdir):
@@ -548,5 +565,5 @@ def test_data_roundrip(reader):
     reader.add_feed(feed.url)
     reader.update_feeds()
 
-    assert list(reader.get_entries()) == [(feed, entry)]
+    assert list(reader.get_entries()) == [entry._replace(feed=feed)]
 

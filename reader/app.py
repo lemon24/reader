@@ -54,7 +54,7 @@ def entries():
 
     entries_data = None
     if feed_url:
-        entries_data = [e.id for f, e in entries]
+        entries_data = [e.id for e in entries]
 
     return render_template('entries.html', entries=entries, feed=feed, entries_data=entries_data)
 

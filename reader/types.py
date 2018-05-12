@@ -83,6 +83,9 @@ class Entry(attrs_namedtuple_compat):
     #: Whether the entry was read or not.
     read = attr.ib(default=False)
 
+    #: The entry's feed.
+    feed = attr.ib(default=None)
+
 
 @attr.s(slots=True, frozen=True)
 class Content(attrs_namedtuple_compat):

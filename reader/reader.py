@@ -267,6 +267,7 @@ class Reader:
 
             entries_updated, entries_new = 0, 0
             for entry in entries:
+                assert entry.feed is None
                 entry_updated, entry_new = self._update_entry(url, entry, stale)
                 entries_updated += entry_updated
                 entries_new += entry_new
@@ -404,9 +405,10 @@ class Reader:
                 tuple(Content(**d) for d in json.loads(t[11])) if t[11] else None,
                 tuple(Enclosure(**d) for d in json.loads(t[12])) if t[12] else None,
                 t[13] == 1,
+                feed,
             )
             entry = Entry._make(entry)
-            yield feed, entry
+            yield entry
 
     @wrap_storage_exceptions()
     def get_entries(self, which='all', feed=None):
@@ -417,7 +419,7 @@ class Reader:
             feed (str or None): Only return the entries for this feed.
 
         Yields:
-            tuple(:class:`Feed`, :class:`Entry`): Last updated entries first.
+            :class:`Entry`: Last updated entries first.
 
         Raises:
             FeedNotFoundError: Only if `feed` is not None.
@@ -457,9 +459,9 @@ class Reader:
             yield from entries
 
             last = (
-                entries[-1][1].updated,
-                entries[-1][0].url,
-                entries[-1][1].id,
+                entries[-1].updated,
+                entries[-1].feed.url,
+                entries[-1].id,
             )
 
     def _mark_as_read_unread(self, feed_url, entry_id, read):

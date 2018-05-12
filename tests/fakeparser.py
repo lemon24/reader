@@ -58,7 +58,7 @@ class Parser:
         for feed_number, entries in self.entries.items():
             feed = self.feeds[feed_number]
             for entry in entries.values():
-                yield feed, entry
+                yield entry._replace(feed=feed)
 
 
 class BlockingParser(Parser):

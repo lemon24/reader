@@ -79,6 +79,7 @@ def _make_entry(entry, is_rss):
         content or None,
         enclosures or None,
         False,
+        None,
     )
 
 

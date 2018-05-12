@@ -57,7 +57,8 @@
 </form>
 
 
-{% for feed, entry in entries %}
+{% for entry in entries %}
+{% set feed = entry.feed %}
 
 <div id="entry-{{ loop.index }}" class="entry">
 
@@ -121,7 +122,7 @@ untitled
 
 <li>
 <a href="{{ enclosure.href }}">{{ enclosure.href.split('/')[-1].split('?')[0] }}</a>
-<small><a href="{{ enclosure | enclosure_tags(entry, feed) }}">with tags</a> {{ enclosure.type }}</small>
+<small><a href="{{ enclosure | enclosure_tags(entry) }}">with tags</a> {{ enclosure.type }}</small>
 </li>
 
 {% endfor %}
