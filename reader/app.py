@@ -50,7 +50,7 @@ def entries():
         if not feed:
             abort(404)
 
-    entries = list(reader.get_entries(which=show, feed_url=feed_url))
+    entries = list(reader.get_entries(which=show, feed=feed_url))
 
     entries_data = None
     if feed_url:
@@ -141,14 +141,14 @@ form_api = APIThing(blueprint, '/form-api', 'form_api')
 def mark_as_read():
     feed_url = request.form['feed-url']
     entry_id = request.form['entry-id']
-    get_reader().mark_as_read(feed_url, entry_id)
+    get_reader().mark_as_read((feed_url, entry_id))
 
 
 @form_api
 def mark_as_unread():
     feed_url = request.form['feed-url']
     entry_id = request.form['entry-id']
-    get_reader().mark_as_unread(feed_url, entry_id)
+    get_reader().mark_as_unread((feed_url, entry_id))
 
 
 @form_api(really=True)
@@ -156,7 +156,7 @@ def mark_all_as_read():
     feed_url = request.form['feed-url']
     entry_id = json.loads(request.form['entry-id'])
     for entry_id in entry_id:
-        get_reader().mark_as_read(feed_url, entry_id)
+        get_reader().mark_as_read((feed_url, entry_id))
 
 
 @form_api(really=True)
@@ -164,7 +164,7 @@ def mark_all_as_unread():
     feed_url = request.form['feed-url']
     entry_id = json.loads(request.form['entry-id'])
     for entry_id in entry_id:
-        get_reader().mark_as_unread(feed_url, entry_id)
+        get_reader().mark_as_unread((feed_url, entry_id))
 
 
 @form_api(really=True)

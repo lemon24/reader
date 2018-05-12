@@ -91,7 +91,7 @@ def test_update_blocking(monkeypatch, tmpdir, call_update_method):
 
     try:
         # shouldn't raise an exception
-        reader.mark_as_read(feed.url, entry.id)
+        reader.mark_as_read((feed.url, entry.id))
     finally:
         blocking_parser.can_return_from_parser.set()
         t.join()
@@ -173,37 +173,38 @@ def test_mark_as_read_unread(reader):
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
+    entry_tuple = feed.url, entry.id
 
     with pytest.raises(EntryNotFoundError):
-        reader.mark_as_read(feed.url, entry.id)
+        reader.mark_as_read(entry_tuple)
     with pytest.raises(EntryNotFoundError):
-        reader.mark_as_unread(feed.url, entry.id)
+        reader.mark_as_unread(entry_tuple)
 
     reader.add_feed(feed.url)
 
     with pytest.raises(EntryNotFoundError):
-        reader.mark_as_read(feed.url, entry.id)
+        reader.mark_as_read(entry_tuple)
     with pytest.raises(EntryNotFoundError):
-        reader.mark_as_unread(feed.url, entry.id)
+        reader.mark_as_unread(entry_tuple)
 
     reader.update_feeds()
 
     (feed, entry), = list(reader.get_entries())
     assert not entry.read
 
-    reader.mark_as_read(feed.url, entry.id)
+    reader.mark_as_read(entry_tuple)
     (feed, entry), = list(reader.get_entries())
     assert entry.read
 
-    reader.mark_as_read(feed.url, entry.id)
+    reader.mark_as_read(entry_tuple)
     (feed, entry), = list(reader.get_entries())
     assert entry.read
 
-    reader.mark_as_unread(feed.url, entry.id)
+    reader.mark_as_unread(entry_tuple)
     (feed, entry), = list(reader.get_entries())
     assert not entry.read
 
-    reader.mark_as_unread(feed.url, entry.id)
+    reader.mark_as_unread(entry_tuple)
     (feed, entry), = list(reader.get_entries())
     assert not entry.read
 
@@ -266,7 +267,7 @@ def test_get_entries_which(reader):
     reader.add_feed(feed.url)
     reader.update_feeds()
 
-    reader.mark_as_read(feed.url, entry_one.id)
+    reader.mark_as_read((feed.url, entry_one.id))
     entry_one = entry_one._replace(read=True)
 
     assert set(reader.get_entries()) == {(feed, entry_one), (feed, entry_two)}
@@ -291,11 +292,11 @@ def test_get_entries_feed_url(reader):
     reader.update_feeds()
 
     assert set(reader.get_entries()) == {(one, entry_one), (two, entry_two)}
-    assert set(reader.get_entries(feed_url=one.url)) == {(one, entry_one)}
-    assert set(reader.get_entries(feed_url=two.url)) == {(two, entry_two)}
+    assert set(reader.get_entries(feed=one.url)) == {(one, entry_one)}
+    assert set(reader.get_entries(feed=two.url)) == {(two, entry_two)}
 
     # TODO: Should this raise an exception?
-    assert set(reader.get_entries(feed_url='bad feed')) == set()
+    assert set(reader.get_entries(feed='bad feed')) == set()
 
     # TODO: How do we test the combination between which and feed_url?
 
@@ -333,10 +334,10 @@ def test_get_entries_blocking(monkeypatch, tmpdir, chunk_size):
     # shouldn't raise an exception
     reader = Reader(db_path)
     reader.db.execute("PRAGMA busy_timeout = 0;")
-    reader.mark_as_read(feed.url, entry.id)
+    reader.mark_as_read((feed.url, entry.id))
     reader = Reader(db_path)
     reader.db.execute("PRAGMA busy_timeout = 0;")
-    reader.mark_as_unread(feed.url, entry.id)
+    reader.mark_as_unread((feed.url, entry.id))
 
     # just a sanity check
     assert len(list(entries)) == 3 - 1
@@ -445,10 +446,10 @@ def test_storage_errors_open(tmpdir):
 
 
 def mark_as_read(reader, feed, entry):
-    reader.mark_as_read(feed.url, entry.id)
+    reader.mark_as_read((feed.url, entry.id))
 
 def mark_as_unread(reader, feed, entry):
-    reader.mark_as_unread(feed.url, entry.id)
+    reader.mark_as_unread((feed.url, entry.id))
 
 def add_feed(reader, _, __):
     feed = reader._parse.feed(2)
