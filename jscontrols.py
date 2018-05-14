@@ -1,4 +1,5 @@
-from flask import Flask, request, redirect, flash
+from flask import Flask, request, redirect, flash, jsonify
+import werkzeug
 
 from reader.app import get_flashed_messages_by_prefix, redirect_to_referrer, is_safe_url
 
@@ -116,7 +117,7 @@ class APIThing:
                 flash("{}: really not checked".format(action), category)
                 return redirect_to_referrer()
         try:
-            rv = func()
+            rv = func(request.form)
             flash(rv)
         except APIError as e:
             category = (action, )
@@ -127,8 +128,22 @@ class APIThing:
         return redirect(next)
 
     def dispatch_json(self):
-        print(request.json);
-        raise NotImplementedError
+        data = werkzeug.MultiDict(request.get_json())
+        action = data['action']
+        func = self.actions.get(action)
+        if func is None:
+            return "unknown action", 400
+
+        try:
+            rv = func(request.form)
+            rv = {'ok': rv}
+        except APIError as e:
+            category = (action, )
+            if e.category:
+                category += e.category
+            rv = {'err': e.message}
+
+        return jsonify(rv)
 
     def dispatch(self):
         if request.mimetype == 'application/x-www-form-urlencoded':
@@ -153,6 +168,7 @@ class APIError(Exception):
 
     def __init__(self, message, category=None):
         super().__init__(message)
+        self.message = message
         if category is not None:
             if not isinstance(category, tuple):
                 category = (category, )
@@ -163,16 +179,16 @@ class APIError(Exception):
 form = APIThing(app, '/form', 'form')
 
 @form
-def simple():
+def simple(data):
     return 'simple'
 
 @form(really=True)
-def confirm():
+def confirm(data):
     return 'confirm'
 
 @form
-def text():
-    text = request.form['text']
+def text(data):
+    text = data['text']
     if text.startswith('err'):
         raise APIError(text, 'category')
     return 'text: %s' % text
