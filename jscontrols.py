@@ -26,28 +26,66 @@ def root():
 
 <script>
 
+// TODO: handle bad status code
+// TODO: handle parse errors
+// TODO: handle timeouts
+// TODO: handle ok/err
+// TODO: autoregister buttons based on class or whatever
 
-window.onload = function () {
-    var button = document.querySelector('button[value=simple]');
+
+function do_json_request(data, callback) {
+    var xhr = new XMLHttpRequest();
+
+    xhr.onload = function () {
+        callback(JSON.parse(xhr.response));
+    }
+
+    xhr.open('POST', {{ url_for('form') | tojson | safe }});
+    xhr.setRequestHeader('Accept', 'application/json');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+
+    xhr.send(JSON.stringify(data));
+}
+
+
+function register_simple(button, callback) {
     button.onclick = function () {
-        var data = {action: 'simple', other: 'other'};
-
-        var xhr = new XMLHttpRequest();
-
-        xhr.onload = function () {
-            alert(xhr.response);
-        }
-
-        xhr.open('POST', {{ url_for('form') | tojson|safe }});
-        xhr.setRequestHeader('Accept', 'application/json');
-        xhr.setRequestHeader('Content-Type', 'application/json');
-
-        xhr.send(JSON.stringify(data));
-
-
+        do_json_request({
+            action: button.value,
+        }, callback);
         return false;
     };
+}
 
+register_confirm = register_simple;
+
+function register_text(button, input, callback) {
+    button.onclick = function () {
+        do_json_request({
+            action: button.value,
+            text: input.value,
+        }, callback);
+        return false;
+    };
+}
+
+
+window.onload = function () {
+
+    function update_out(data) {
+        document.querySelector('#out').innerHTML = JSON.stringify(data);
+    }
+
+    register_simple(
+        document.querySelector('button[value=simple]'),
+        update_out);
+    register_confirm(
+        document.querySelector('button[value=confirm]'),
+        update_out);
+    register_text(
+        document.querySelector('button[value=text]'),
+        document.querySelector('input[name=text]'),
+        update_out);
 
 };
 
@@ -83,6 +121,8 @@ window.onload = function () {
 {% for message in get_flashed_messages_by_prefix('message') %}
 <pre>{{ message }}</pre>
 {% endfor %}
+
+<pre id='out'></pre>
 
 
 """).render()
@@ -135,7 +175,7 @@ class APIThing:
             return "unknown action", 400
 
         try:
-            rv = func(request.form)
+            rv = func(data)
             rv = {'ok': rv}
         except APIError as e:
             category = (action, )
