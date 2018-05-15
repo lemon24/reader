@@ -57,7 +57,14 @@ function register_simple(button, callback) {
     };
 }
 
-function register_confirm(button, callback) {
+function register_confirm(collapsible, callback) {
+    button = collapsible.querySelector('button[value=confirm]');
+
+    while (collapsible.firstChild) {
+        collapsible.removeChild(collapsible.firstChild);
+    }
+    collapsible.appendChild(button);
+
     var state = 'none';
     var original_text = button.innerHTML;
     var timeout_id = null;
@@ -69,7 +76,7 @@ function register_confirm(button, callback) {
             timeout_id = setTimeout(function () {
                 state = 'none';
                 button.innerHTML = original_text;
-            }, 5000);
+            }, 2000);
         }
 
         else if (state == 'waiting') {
@@ -111,7 +118,7 @@ window.onload = function () {
         document.querySelector('button[value=simple]'),
         update_out);
     register_confirm(
-        document.querySelector('button[value=confirm]'),
+        document.querySelector('button[value=confirm]').parentElement.parentElement,
         update_out);
     register_text(
         document.querySelector('button[value=text]'),
