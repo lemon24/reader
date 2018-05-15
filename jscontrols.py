@@ -57,7 +57,38 @@ function register_simple(button, callback) {
     };
 }
 
-register_confirm = register_simple;
+function register_confirm(button, callback) {
+    var state = 'none';
+    var original_text = button.innerHTML;
+    var timeout_id = null;
+
+    button.onclick = function () {
+        if (state == 'none') {
+            state = 'waiting';
+            button.innerHTML = 'sure?';
+            timeout_id = setTimeout(function () {
+                state = 'none';
+                button.innerHTML = original_text;
+            }, 5000);
+        }
+
+        else if (state == 'waiting') {
+            clearTimeout(timeout_id);
+            timeout_id = null;
+            do_json_request({
+                action: button.value,
+            }, callback);
+            state = 'none';
+            button.innerHTML = original_text;
+        }
+
+        else {
+            alert('should not happen');
+        }
+
+        return false;
+    };
+}
 
 function register_text(button, input, callback) {
     button.onclick = function () {
