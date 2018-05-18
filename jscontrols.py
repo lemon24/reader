@@ -46,7 +46,19 @@ function do_json_request(data, callback, errback) {
             errback("bad status code: " + xhr.status);
         }
         else {
-            callback(JSON.parse(xhr.response));
+            var data = JSON.parse(xhr.response);
+            if ('err' in data && 'ok' in data) {
+                errback("bad response: both ok and err");
+            }
+            else if ('err' in data) {
+                errback(data.err);
+            }
+            else if ('ok' in data) {
+                callback(data.ok);
+            }
+            else {
+                errback("bad response: neither ok nor err");
+            }
         };
     };
 
@@ -108,7 +120,7 @@ function register_confirm(collapsible, callback, errback) {
     };
 }
 
-function register_text(collapsible, callback) {
+function register_text(collapsible, callback, errback) {
     var button = collapsible.querySelector('button[value=text]');
     var input = collapsible.querySelector('input[name=text]');
 
