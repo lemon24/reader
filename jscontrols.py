@@ -26,7 +26,6 @@ def root():
 
 <script>
 
-// TODO: handle parse errors
 // TODO: autoregister buttons based on class or whatever
 
 
@@ -46,7 +45,11 @@ function do_json_request(data, callback, errback) {
             errback("bad status code: " + xhr.status);
         }
         else {
-            var data = JSON.parse(xhr.response);
+            try {
+                var data = JSON.parse(xhr.response);
+            } catch (e) {
+                errback("JSON parse error");
+            }
             if ('err' in data && 'ok' in data) {
                 errback("bad response: both ok and err");
             }
