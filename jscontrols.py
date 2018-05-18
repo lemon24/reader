@@ -26,8 +26,6 @@ def root():
 
 <script>
 
-// TODO: autoregister buttons based on class or whatever
-
 
 JSON_REQUEST_TIMEOUT = 2000;
 DONE_TIMEOUT = 1500;
@@ -84,6 +82,7 @@ function do_json_request(data, callback, errback) {
 
 function register_simple(collapsible, callback, errback) {
     var button = collapsible.querySelector('button[value=simple]');
+    if (button === null) { return; };
 
     var state = 'none';
     var original_text = button.innerHTML;
@@ -122,6 +121,7 @@ function register_simple(collapsible, callback, errback) {
 
 function register_confirm(collapsible, callback, errback) {
     var button = collapsible.querySelector('button[value=confirm]');
+    if (button === null) { return; };
 
     while (collapsible.firstChild) {
         collapsible.removeChild(collapsible.firstChild);
@@ -178,6 +178,7 @@ function register_confirm(collapsible, callback, errback) {
 function register_text(collapsible, callback, errback) {
     var button = collapsible.querySelector('button[value=text]');
     var input = collapsible.querySelector('input[name=text]');
+    if (button === null || input === null) { return; };
 
     var state = 'none';
     var original_text = button.innerHTML;
@@ -218,14 +219,9 @@ function register_text(collapsible, callback, errback) {
 }
 
 
-window.onload = function () {
-
-    function update_out(data) {
-        document.querySelector('#out').innerHTML = JSON.stringify(data);
-    }
+function register_controls(controls, callback) {
 
     function errback(message) {
-        var controls = document.querySelector('.controls');
         var error = controls.querySelector('.error');
 
         if (error === null) {
@@ -238,17 +234,41 @@ window.onload = function () {
         error.innerHTML = message;
     }
 
-    register_simple(
-        document.querySelector('button[value=simple]').parentElement,
-        update_out, errback);
-    register_confirm(
-        document.querySelector('button[value=confirm]').parentElement.parentElement,
-        update_out, errback);
-    register_text(
-        document.querySelector('button[value=text]').parentElement.parentElement,
-        update_out, errback);
+    var collapsible_register_functions = [
+        register_simple, register_confirm, register_text
+    ];
+
+    var collapsibles = controls.querySelectorAll('li');
+
+    for (var ixc = 0; ixc < collapsibles.length; ixc++) {
+        var collapsible = collapsibles[ixc];
+        for (var ixf = 0; ixf < collapsible_register_functions.length; ixf++) {
+            collapsible_register_functions[ixf](collapsible, callback, errback);
+        }
+    }
+
+}
+
+
+
+window.onload = function () {
+
+    function update_out(data) {
+        document.querySelector('#out').innerHTML = JSON.stringify(data);
+    }
+
+    var controls = document.querySelector('.controls');
+
+    register_controls(controls, update_out);
 
 };
+
+
+// TODO: per-button callback definition (think registry or smth)
+// TODO: better class names for buttons
+// TODO: don't hardcode the li class=error bit
+// TODO: autoregister ul.controls
+// TODO: no global state
 
 
 </script>
