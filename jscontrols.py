@@ -49,6 +49,7 @@ function do_json_request(data, callback, errback) {
                 var data = JSON.parse(xhr.response);
             } catch (e) {
                 errback("JSON parse error");
+                return;
             }
             if ('err' in data && 'ok' in data) {
                 errback("bad response: both ok and err");
@@ -69,7 +70,13 @@ function do_json_request(data, callback, errback) {
     xhr.setRequestHeader('Accept', 'application/json');
     xhr.setRequestHeader('Content-Type', 'application/json');
 
-    xhr.send(JSON.stringify(data));
+    try {
+        var json_data = JSON.stringify(data);
+    } catch (e) {
+        errback("JSON stringify error");
+        return;
+    }
+    xhr.send(json_data);
 }
 
 
