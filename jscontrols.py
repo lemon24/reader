@@ -28,13 +28,19 @@ def root():
 
 // TODO: handle bad status code
 // TODO: handle parse errors
-// TODO: handle timeouts
-// TODO: handle ok/err
 // TODO: autoregister buttons based on class or whatever
 
 
-function do_json_request(data, callback) {
+JSON_REQUEST_TIMEOUT = 2000;
+
+
+function do_json_request(data, callback, errback) {
     var xhr = new XMLHttpRequest();
+
+    xhr.timeout = JSON_REQUEST_TIMEOUT;
+    xhr.ontimeout = function () { errback("request: timeout"); };
+    xhr.onerror = function () { errback("request: error"); };
+    xhr.onabort = function () { errback("request: abort"); };
 
     xhr.onload = function () {
         callback(JSON.parse(xhr.response));
@@ -48,17 +54,17 @@ function do_json_request(data, callback) {
 }
 
 
-function register_simple(collapsible, callback) {
+function register_simple(collapsible, callback, errback) {
     var button = collapsible.querySelector('button[value=simple]');
     button.onclick = function () {
         do_json_request({
             action: button.value,
-        }, callback);
+        }, callback, errback);
         return false;
     };
 }
 
-function register_confirm(collapsible, callback) {
+function register_confirm(collapsible, callback, errback) {
     var button = collapsible.querySelector('button[value=confirm]');
 
     while (collapsible.firstChild) {
@@ -85,7 +91,7 @@ function register_confirm(collapsible, callback) {
             timeout_id = null;
             do_json_request({
                 action: button.value,
-            }, callback);
+            }, callback, errback);
             state = 'none';
             button.innerHTML = original_text;
         }
@@ -106,7 +112,7 @@ function register_text(collapsible, callback) {
         do_json_request({
             action: button.value,
             text: input.value,
-        }, callback);
+        }, callback, errback);
         return false;
     };
 }
@@ -118,15 +124,19 @@ window.onload = function () {
         document.querySelector('#out').innerHTML = JSON.stringify(data);
     }
 
+    function errback(message) {
+        document.querySelector('#out').innerHTML = 'error: ' + message;
+    }
+
     register_simple(
         document.querySelector('button[value=simple]').parentElement,
-        update_out);
+        update_out, errback);
     register_confirm(
         document.querySelector('button[value=confirm]').parentElement.parentElement,
-        update_out);
+        update_out, errback);
     register_text(
         document.querySelector('button[value=text]').parentElement.parentElement,
-        update_out);
+        update_out, errback);
 
 };
 
