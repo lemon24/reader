@@ -82,10 +82,34 @@ function do_json_request(data, callback, errback) {
 
 function register_simple(collapsible, callback, errback) {
     var button = collapsible.querySelector('button[value=simple]');
+
+    var state = 'none';
+    var original_text = button.innerHTML;
+
+    function reset_button () {
+        state = 'none';
+        button.innerHTML = original_text;
+        button.disabled = false;
+    }
+
     button.onclick = function () {
-        do_json_request({
-            action: button.value,
-        }, callback, errback);
+        if (state == 'none') {
+            state = 'waiting';
+            button.innerHTML = '...';
+            button.disabled = true;
+            do_json_request({
+                action: button.value,
+            }, function (data) {
+                button.innerHTML = 'done';
+                callback(data);
+                setTimeout(reset_button, 2000);
+            }, errback);
+        }
+
+        else {
+            alert('should not happen');
+        }
+
         return false;
     };
 }
@@ -102,24 +126,34 @@ function register_confirm(collapsible, callback, errback) {
     var original_text = button.innerHTML;
     var timeout_id = null;
 
+    function reset_button () {
+        state = 'none';
+        button.innerHTML = original_text;
+        button.disabled = false;
+    }
+
     button.onclick = function () {
         if (state == 'none') {
-            state = 'waiting';
+            state = 'sure';
             button.innerHTML = 'sure?';
             timeout_id = setTimeout(function () {
                 state = 'none';
-                button.innerHTML = original_text;
+                reset_button();
             }, 2000);
         }
 
-        else if (state == 'waiting') {
+        else if (state == 'sure') {
             clearTimeout(timeout_id);
             timeout_id = null;
+            button.innerHTML = '...';
+            button.disabled = true;
             do_json_request({
                 action: button.value,
-            }, callback, errback);
-            state = 'none';
-            button.innerHTML = original_text;
+            }, function (data) {
+                button.innerHTML = 'done';
+                callback(data);
+                setTimeout(reset_button, 2000);
+            }, errback);
         }
 
         else {
@@ -134,14 +168,40 @@ function register_text(collapsible, callback, errback) {
     var button = collapsible.querySelector('button[value=text]');
     var input = collapsible.querySelector('input[name=text]');
 
+    var state = 'none';
+    var original_text = button.innerHTML;
+
+    function reset_button () {
+        state = 'none';
+        button.innerHTML = original_text;
+        button.disabled = false;
+    }
+
     button.onclick = function () {
-        do_json_request({
-            action: button.value,
-            text: input.value,
-        }, function (data) {
-            input.value = '';
-            callback(data);
-        }, errback);
+        if (state == 'none') {
+            state = 'waiting';
+            button.innerHTML = '...';
+            button.disabled = true;
+            input.disabled = true;
+            do_json_request({
+                action: button.value,
+                text: input.value,
+            }, function (data) {
+                button.innerHTML = 'done';
+                input.value = '';
+                input.disabled = false;
+                callback(data);
+                setTimeout(reset_button, 2000);
+            }, function (message) {
+                input.disabled = false;
+                errback(message);
+            });
+        }
+
+        else {
+            alert('should not happen');
+        }
+
         return false;
     };
 }
