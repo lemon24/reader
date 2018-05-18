@@ -48,7 +48,8 @@ function do_json_request(data, callback) {
 }
 
 
-function register_simple(button, callback) {
+function register_simple(collapsible, callback) {
+    var button = collapsible.querySelector('button[value=simple]');
     button.onclick = function () {
         do_json_request({
             action: button.value,
@@ -58,7 +59,7 @@ function register_simple(button, callback) {
 }
 
 function register_confirm(collapsible, callback) {
-    button = collapsible.querySelector('button[value=confirm]');
+    var button = collapsible.querySelector('button[value=confirm]');
 
     while (collapsible.firstChild) {
         collapsible.removeChild(collapsible.firstChild);
@@ -97,7 +98,10 @@ function register_confirm(collapsible, callback) {
     };
 }
 
-function register_text(button, input, callback) {
+function register_text(collapsible, callback) {
+    var button = collapsible.querySelector('button[value=text]');
+    var input = collapsible.querySelector('input[name=text]');
+
     button.onclick = function () {
         do_json_request({
             action: button.value,
@@ -115,14 +119,13 @@ window.onload = function () {
     }
 
     register_simple(
-        document.querySelector('button[value=simple]'),
+        document.querySelector('button[value=simple]').parentElement,
         update_out);
     register_confirm(
         document.querySelector('button[value=confirm]').parentElement.parentElement,
         update_out);
     register_text(
-        document.querySelector('button[value=text]'),
-        document.querySelector('input[name=text]'),
+        document.querySelector('button[value=text]').parentElement.parentElement,
         update_out);
 
 };
