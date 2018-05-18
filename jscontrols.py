@@ -138,7 +138,10 @@ function register_text(collapsible, callback, errback) {
         do_json_request({
             action: button.value,
             text: input.value,
-        }, callback, errback);
+        }, function (data) {
+            input.value = '';
+            callback(data);
+        }, errback);
         return false;
     };
 }
