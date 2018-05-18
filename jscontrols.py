@@ -30,6 +30,8 @@ def root():
 
 
 JSON_REQUEST_TIMEOUT = 2000;
+DONE_TIMEOUT = 1500;
+ERROR_TIMEOUT = 2000;
 
 
 function do_json_request(data, callback, errback) {
@@ -102,11 +104,11 @@ function register_simple(collapsible, callback, errback) {
             }, function (data) {
                 button.innerHTML = 'done';
                 callback(data);
-                setTimeout(reset_button, 2000);
+                setTimeout(reset_button, DONE_TIMEOUT);
             }, function (message) {
                 button.innerHTML = 'error';
-                errback(message);
-                setTimeout(reset_button, 2000);
+                errback(original_text + ': ' + message);
+                setTimeout(reset_button, ERROR_TIMEOUT);
             });
         }
 
@@ -157,11 +159,11 @@ function register_confirm(collapsible, callback, errback) {
             }, function (data) {
                 button.innerHTML = 'done';
                 callback(data);
-                setTimeout(reset_button, 2000);
+                setTimeout(reset_button, DONE_TIMEOUT);
             }, function (message) {
                 button.innerHTML = 'error';
-                errback(message);
-                setTimeout(reset_button, 2000);
+                errback(original_text + ': ' + message);
+                setTimeout(reset_button, ERROR_TIMEOUT);
             });
         }
 
@@ -198,12 +200,12 @@ function register_text(collapsible, callback, errback) {
                 button.innerHTML = 'done';
                 input.value = '';
                 callback(data);
-                setTimeout(reset_button, 2000);
+                setTimeout(reset_button, DONE_TIMEOUT);
             }, function (message) {
                 button.innerHTML = 'error';
                 input.select();
-                errback(message);
-                setTimeout(reset_button, 2000);
+                errback(original_text + ': ' + message);
+                setTimeout(reset_button, ERROR_TIMEOUT);
             });
         }
 
@@ -223,7 +225,17 @@ window.onload = function () {
     }
 
     function errback(message) {
-        document.querySelector('#out').innerHTML = 'error: ' + message;
+        var controls = document.querySelector('.controls');
+        var error = controls.querySelector('.error');
+
+        if (error === null) {
+            var template = document.createElement('template');
+            template.innerHTML = '<li class="error">';
+            controls.appendChild(template.content);
+            error = controls.querySelector('.error');
+        }
+
+        error.innerHTML = message;
     }
 
     register_simple(
