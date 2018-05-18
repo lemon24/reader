@@ -26,7 +26,6 @@ def root():
 
 <script>
 
-// TODO: handle bad status code
 // TODO: handle parse errors
 // TODO: autoregister buttons based on class or whatever
 
@@ -43,8 +42,13 @@ function do_json_request(data, callback, errback) {
     xhr.onabort = function () { errback("request: abort"); };
 
     xhr.onload = function () {
-        callback(JSON.parse(xhr.response));
-    }
+        if (xhr.status != 200) {
+            errback("bad status code: " + xhr.status);
+        }
+        else {
+            callback(JSON.parse(xhr.response));
+        };
+    };
 
     xhr.open('POST', {{ url_for('form') | tojson | safe }});
     xhr.setRequestHeader('Accept', 'application/json');
