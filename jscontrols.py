@@ -103,7 +103,11 @@ function register_simple(collapsible, callback, errback) {
                 button.innerHTML = 'done';
                 callback(data);
                 setTimeout(reset_button, 2000);
-            }, errback);
+            }, function (message) {
+                button.innerHTML = 'error';
+                errback(message);
+                setTimeout(reset_button, 2000);
+            });
         }
 
         else {
@@ -143,6 +147,7 @@ function register_confirm(collapsible, callback, errback) {
         }
 
         else if (state == 'sure') {
+            state = 'waiting';
             clearTimeout(timeout_id);
             timeout_id = null;
             button.innerHTML = '...';
@@ -153,7 +158,11 @@ function register_confirm(collapsible, callback, errback) {
                 button.innerHTML = 'done';
                 callback(data);
                 setTimeout(reset_button, 2000);
-            }, errback);
+            }, function (message) {
+                button.innerHTML = 'error';
+                errback(message);
+                setTimeout(reset_button, 2000);
+            });
         }
 
         else {
@@ -182,19 +191,19 @@ function register_text(collapsible, callback, errback) {
             state = 'waiting';
             button.innerHTML = '...';
             button.disabled = true;
-            input.disabled = true;
             do_json_request({
                 action: button.value,
                 text: input.value,
             }, function (data) {
                 button.innerHTML = 'done';
                 input.value = '';
-                input.disabled = false;
                 callback(data);
                 setTimeout(reset_button, 2000);
             }, function (message) {
-                input.disabled = false;
+                button.innerHTML = 'error';
+                input.select();
                 errback(message);
+                setTimeout(reset_button, 2000);
             });
         }
 
