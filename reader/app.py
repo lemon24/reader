@@ -1,7 +1,10 @@
 import json
 from urllib.parse import urlparse, urljoin
+import functools
+import contextlib
 
-from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash, get_flashed_messages
+from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash, get_flashed_messages, jsonify
+import werkzeug
 import humanize
 
 from . import Reader, ReaderError
@@ -72,7 +75,7 @@ class APIThing:
         self.really = {}
         blueprint.add_url_rule(rule, endpoint, methods=['POST'], view_func=self.dispatch)
 
-    def dispatch(self):
+    def dispatch_form(self):
         action = request.form['action']
         func = self.actions.get(action)
         if func is None:
@@ -94,16 +97,40 @@ class APIThing:
                 flash("{}: really not checked".format(action), category)
                 return redirect_to_referrer()
         try:
-            func()
-        except ReaderError as e:
+            rv = func(request.form)
+            flash(rv)
+        except APIError as e:
             category = (action, )
-            if hasattr(e, 'url'):
-                category += (e.url, )
-                if hasattr(e, 'id'):
-                    category += (e.id, )
-            flash("{}: error: {}".format(action, e), category)
+            if e.category:
+                category += e.category
+            flash("{}: {}".format(action, e), category)
             return redirect_to_referrer()
         return redirect(next)
+
+    def dispatch_json(self):
+        data = werkzeug.MultiDict(request.get_json())
+        action = data['action']
+        func = self.actions.get(action)
+        if func is None:
+            return "unknown action", 400
+
+        try:
+            rv = func(data)
+            rv = {'ok': rv}
+        except APIError as e:
+            category = (action, )
+            if e.category:
+                category += e.category
+            rv = {'err': e.message}
+
+        return jsonify(rv)
+
+    def dispatch(self):
+        if request.mimetype == 'application/x-www-form-urlencoded':
+            return self.dispatch_form()
+        if request.mimetype == 'application/json':
+            return self.dispatch_json()
+        return "bad content type", 400
 
     def __call__(self, func=None, *, really=False):
 
@@ -115,6 +142,17 @@ class APIThing:
         if func is None:
             return register
         return register(func)
+
+
+class APIError(Exception):
+
+    def __init__(self, message, category=None):
+        super().__init__(message)
+        self.message = message
+        if category is not None:
+            if not isinstance(category, tuple):
+                category = (category, )
+        self.category = category
 
 
 @blueprint.app_template_global()
@@ -137,54 +175,74 @@ def get_flashed_messages_by_prefix(*prefixes):
 form_api = APIThing(blueprint, '/form-api', 'form_api')
 
 
+@contextlib.contextmanager
+def readererror_to_apierror(*args):
+    try:
+        yield
+    except ReaderError as e:
+        category = None
+        if hasattr(e, 'url'):
+            category = (e.url, )
+            if hasattr(e, 'id'):
+                category += (e.id, )
+        raise APIError(str(e), category)
+
+
 @form_api
-def mark_as_read():
-    feed_url = request.form['feed-url']
-    entry_id = request.form['entry-id']
+@readererror_to_apierror()
+def mark_as_read(data):
+    feed_url = data['feed-url']
+    entry_id = data['entry-id']
     get_reader().mark_as_read((feed_url, entry_id))
 
 
 @form_api
-def mark_as_unread():
-    feed_url = request.form['feed-url']
-    entry_id = request.form['entry-id']
+@readererror_to_apierror()
+def mark_as_unread(data):
+    feed_url = data['feed-url']
+    entry_id = data['entry-id']
     get_reader().mark_as_unread((feed_url, entry_id))
 
 
 @form_api(really=True)
-def mark_all_as_read():
-    feed_url = request.form['feed-url']
-    entry_id = json.loads(request.form['entry-id'])
+@readererror_to_apierror()
+def mark_all_as_read(data):
+    feed_url = data['feed-url']
+    entry_id = json.loads(data['entry-id'])
     for entry_id in entry_id:
         get_reader().mark_as_read((feed_url, entry_id))
 
 
 @form_api(really=True)
-def mark_all_as_unread():
-    feed_url = request.form['feed-url']
-    entry_id = json.loads(request.form['entry-id'])
+@readererror_to_apierror()
+def mark_all_as_unread(data):
+    feed_url = data['feed-url']
+    entry_id = json.loads(data['entry-id'])
     for entry_id in entry_id:
         get_reader().mark_as_unread((feed_url, entry_id))
 
 
 @form_api(really=True)
-def delete_feed():
-    feed_url = request.form['feed-url']
+@readererror_to_apierror()
+def delete_feed(data):
+    feed_url = data['feed-url']
     get_reader().remove_feed(feed_url)
 
 
 @form_api
-def add_feed():
-    feed_url = request.form['feed-url'].strip()
+@readererror_to_apierror()
+def add_feed(data):
+    feed_url = data['feed-url'].strip()
     assert feed_url, "feed-url cannot be empty"
     # TODO: handle FeedExistsError
     get_reader().add_feed(feed_url)
 
 
 @form_api
-def update_feed_title():
-    feed_url = request.form['feed-url']
-    feed_title = request.form['feed-title'].strip() or None
+@readererror_to_apierror()
+def update_feed_title(data):
+    feed_url = data['feed-url']
+    feed_title = data['feed-title'].strip() or None
     get_reader().set_feed_user_title(feed_url, feed_title)
 
 
