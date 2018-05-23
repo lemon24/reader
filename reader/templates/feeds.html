@@ -21,9 +21,9 @@
 
 <li>{% if feed.link %}<a href="{{ feed.link }}">site</a>{% else %}no site{% endif %}
 
-{{ macros.confirm_button('delete-feed', 'delete feed', loop.index) }}
+{{ macros.confirm_button('delete-feed', 'delete feed', loop.index, leave_disabled=true) }}
 
-{{ macros.text_input_button('update-feed-title', 'update feed title', 'feed-title', 'feed title') }}
+{{ macros.text_input_button('update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true) }}
 
 {% for message in get_flashed_messages_by_prefix(
     ('delete-feed', feed.url),

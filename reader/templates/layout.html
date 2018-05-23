@@ -3,6 +3,15 @@
 <meta name="viewport" content="width=device-width" />
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
+<script src="{{ url_for('static', filename='controls.js') }}"></script>
+<script>
+
+window.onload = function () {
+    register_all({{ url_for('.form_api') | tojson | safe }});
+};
+
+</script>
+
 <title>{% block page_title %}{% endblock %}</title>
 
 {% if config.DEBUG  %}
