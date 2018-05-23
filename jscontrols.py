@@ -261,21 +261,26 @@ function register_controls(controls) {
 }
 
 
+function register_all() {
+    var controls = document.querySelectorAll('.controls');
+    for (var ixc = 0; ixc < controls.length; ixc++) {
+        var control = controls[ixc];
+        register_controls(control);
+    }
+};
+
 
 
 
 window.onload = function () {
 
-    var controls = document.querySelector('.controls');
-
-    register_controls(controls);
+    register_all();
 
 };
 
 
-// TODO: better class names for buttons
+// TODO: better class names for buttons and controls
 // TODO: don't hardcode the li class=error bit
-// TODO: autoregister ul.controls
 // TODO: no global state
 
 
