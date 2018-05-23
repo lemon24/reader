@@ -77,9 +77,15 @@ function register_simple(endpoint, collapsible, callback, errback) {
             state = 'waiting';
             button.innerHTML = '...';
             button.disabled = true;
-            do_json_request(endpoint, {
-                action: button.value,
-            }, function (data) {
+
+            var data = extract_form_data(button.form);
+            // We do this here to make sure the form data has the stuff from
+            // *our* control. If https://github.com/lemon24/reader/issues/69
+            // is implemented by having one form element per control,
+            // this won't be needed anymore.
+            update_object(data, {action: button.value});
+
+            do_json_request(endpoint, data, function (data) {
                 button.innerHTML = 'done';
                 callback(data);
                 setTimeout(reset_button, DONE_TIMEOUT);
@@ -136,9 +142,15 @@ function register_confirm(endpoint, collapsible, callback, errback) {
             timeout_id = null;
             button.innerHTML = '...';
             button.disabled = true;
-            do_json_request(endpoint, {
-                action: button.value,
-            }, function (data) {
+
+            var data = extract_form_data(button.form);
+            // We do this here to make sure the form data has the stuff from
+            // *our* control. If https://github.com/lemon24/reader/issues/69
+            // is implemented by having one form element per control,
+            // this won't be needed anymore.
+            update_object(data, {action: button.value});
+
+            do_json_request(endpoint, data, function (data) {
                 button.innerHTML = 'done';
                 callback(data);
                 setTimeout(reset_button, DONE_TIMEOUT);
@@ -183,10 +195,15 @@ function register_text_input(endpoint, collapsible, callback, errback) {
             if (collapsible.dataset.leaveDisabled == "true") {
                 input.disabled = true;
             }
-            do_json_request(endpoint, {
-                action: button.value,
-                text: input.value,
-            }, function (data) {
+
+            var data = extract_form_data(button.form);
+            // We do this here to make sure the form data has the stuff from
+            // *our* control. If https://github.com/lemon24/reader/issues/69
+            // is implemented by having one form element per control,
+            // this won't be needed anymore.
+            update_object(data, {action: button.value, text: input.value});
+
+            do_json_request(endpoint, data, function (data) {
                 button.innerHTML = 'done';
                 if (collapsible.dataset.leaveDisabled != "true") {
                     input.value = '';
@@ -259,4 +276,18 @@ function register_all(endpoint) {
         register_controls(endpoint, control);
     }
 };
+
+
+function extract_form_data(form) {
+    var data = {};
+    for (var ix = 0; ix < form.elements.length; ix++) {
+        var element = form.elements[ix];
+        data[element.name] = element.value;
+    }
+    return data;
+}
+
+function update_object(self, other) {
+    for (var attrname in other) { self[attrname] = other[attrname]; }
+}
 

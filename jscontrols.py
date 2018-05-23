@@ -64,6 +64,11 @@ window.onload = function () {
 {{ macros.confirm_button('confirm', 'confirm3', 'confirm3') }}
 {{ macros.text_input_button('text', 'text3', 'text', 'text') }}
 
+{% call macros.simple_button('simple-next', 'simple next') %}
+    document.querySelector('#out').innerHTML = JSON.stringify(data);
+{% endcall %}
+
+
 {% for message in get_flashed_messages_by_prefix(
     'simple',
     'confirm',
@@ -100,6 +105,10 @@ form = APIThing(app, '/form', 'form')
 @form
 def simple(data):
     return 'simple'
+
+@form
+def simple_next(data):
+    return 'simple-next: %s' % data['next']
 
 @form(really=True)
 def confirm(data):
