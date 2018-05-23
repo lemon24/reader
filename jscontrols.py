@@ -219,7 +219,7 @@ function register_text(collapsible, callback, errback) {
 }
 
 
-function register_controls(controls, callback) {
+function register_controls(controls) {
 
     function errback(message) {
         var error = controls.querySelector('.error');
@@ -242,6 +242,17 @@ function register_controls(controls, callback) {
 
     for (var ixc = 0; ixc < collapsibles.length; ixc++) {
         var collapsible = collapsibles[ixc];
+
+        if (collapsible.dataset.callback === undefined) {
+            continue;
+        } else {
+            try {
+                var callback = eval(collapsible.dataset.callback);
+            } catch (e) {
+                alert("syntax error in callback: " + collapsible.dataset.callback);
+            }
+        }
+
         for (var ixf = 0; ixf < collapsible_register_functions.length; ixf++) {
             collapsible_register_functions[ixf](collapsible, callback, errback);
         }
@@ -251,20 +262,17 @@ function register_controls(controls, callback) {
 
 
 
-window.onload = function () {
 
-    function update_out(data) {
-        document.querySelector('#out').innerHTML = JSON.stringify(data);
-    }
+
+window.onload = function () {
 
     var controls = document.querySelector('.controls');
 
-    register_controls(controls, update_out);
+    register_controls(controls);
 
 };
 
 
-// TODO: per-button callback definition (think registry or smth)
 // TODO: better class names for buttons
 // TODO: don't hardcode the li class=error bit
 // TODO: autoregister ul.controls
@@ -277,9 +285,15 @@ window.onload = function () {
 <form action="{{ url_for('form') }}" method="post">
 <ul class="controls">
 
-{{ macros.simple_button('simple', 'simple') }}
-{{ macros.confirm_button('confirm', 'confirm') }}
-{{ macros.text_input_button('text', 'text', 'text', 'text') }}
+{% call macros.simple_button('simple', 'simple') %}
+    document.querySelector('#out').innerHTML = JSON.stringify(data);
+{% endcall %}
+{% call macros.confirm_button('confirm', 'confirm') %}
+    document.querySelector('#out').innerHTML = JSON.stringify(data);
+{% endcall %}
+{% call macros.text_input_button('text', 'text', 'text', 'text') %}
+    document.querySelector('#out').innerHTML = JSON.stringify(data);
+{% endcall %}
 
 {% for message in get_flashed_messages_by_prefix(
     'simple',

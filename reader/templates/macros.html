@@ -17,7 +17,11 @@
 
 
 {% macro text_input_button(action, label, name, placeholder) -%}
-<li class="collapsible">
+<li class="collapsible"{% if caller is defined %} data-callback="function callback(data) {
+
+{{ caller() | forceescape }}
+
+}; callback"{% endif %}>
     <span class="label">{{ label }}</span>
     <span class="hidden">
         <input type="text" name="{{ name }}" placeholder="{{ placeholder }}">
@@ -27,7 +31,11 @@
 
 
 {% macro confirm_button(action, label, id=none) -%}
-<li class="collapsible">
+<li class="collapsible"{% if caller is defined %} data-callback="function callback(data) {
+
+{{ caller() | forceescape }}
+
+}; callback"{% endif %}>
     <span class="label">{{ label }}</span>
     <span class="hidden">
         <input type="checkbox" id="really-{{ action }}{% if id is not none %}-{{ id }}{% endif %}" name="really-{{ action }}" value="really">
@@ -38,7 +46,11 @@
 
 
 {% macro simple_button(action, label) -%}
-<li class="simple-button">
+<li class="simple-button"{% if caller is defined %} data-callback="function callback(data) {
+
+{{ caller() | forceescape }}
+
+}; callback"{% endif %}>
     <button type="submit" name="action" value="{{ action }}">{{ label }}</button>
 {%- endmacro %}
 
