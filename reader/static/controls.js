@@ -172,7 +172,7 @@ function register_confirm(endpoint, collapsible, callback, errback) {
 function register_text_input(endpoint, collapsible, callback, errback) {
     if (collapsible.dataset.buttonType != 'text-input') { return; }
     var button = collapsible.querySelector('button[name=action]');
-    var input = collapsible.querySelector('input[name=text]');
+    var input = collapsible.querySelector('input[type=text]');
     if (button === null || input === null) { return; };
 
     var state = 'none';
@@ -201,7 +201,7 @@ function register_text_input(endpoint, collapsible, callback, errback) {
             // *our* control. If https://github.com/lemon24/reader/issues/69
             // is implemented by having one form element per control,
             // this won't be needed anymore.
-            update_object(data, {action: button.value, text: input.value});
+            update_object(data, {action: button.value});
 
             do_json_request(endpoint, data, function (data) {
                 button.innerHTML = 'done';
