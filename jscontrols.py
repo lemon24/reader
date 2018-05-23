@@ -60,6 +60,10 @@ window.onload = function () {
     document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data);
 {% endcall %}
 
+{{ macros.simple_button('simple', 'simple3') }}
+{{ macros.confirm_button('confirm', 'confirm3', 'confirm3') }}
+{{ macros.text_input_button('text', 'text3', 'text', 'text') }}
+
 {% for message in get_flashed_messages_by_prefix(
     'simple',
     'confirm',
