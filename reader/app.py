@@ -1,5 +1,7 @@
 import json
 from urllib.parse import urlparse, urljoin
+import functools
+import contextlib
 
 from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash, get_flashed_messages, jsonify
 import werkzeug
@@ -173,7 +175,21 @@ def get_flashed_messages_by_prefix(*prefixes):
 form_api = APIThing(blueprint, '/form-api', 'form_api')
 
 
+@contextlib.contextmanager
+def readererror_to_apierror(*args):
+    try:
+        yield
+    except ReaderError as e:
+        category = None
+        if hasattr(e, 'url'):
+            category = (e.url, )
+            if hasattr(e, 'id'):
+                category += (e.id, )
+        raise APIError(str(e), category)
+
+
 @form_api
+@readererror_to_apierror()
 def mark_as_read(data):
     feed_url = data['feed-url']
     entry_id = data['entry-id']
@@ -181,6 +197,7 @@ def mark_as_read(data):
 
 
 @form_api
+@readererror_to_apierror()
 def mark_as_unread(data):
     feed_url = data['feed-url']
     entry_id = data['entry-id']
@@ -188,6 +205,7 @@ def mark_as_unread(data):
 
 
 @form_api(really=True)
+@readererror_to_apierror()
 def mark_all_as_read(data):
     feed_url = data['feed-url']
     entry_id = json.loads(data['entry-id'])
@@ -196,6 +214,7 @@ def mark_all_as_read(data):
 
 
 @form_api(really=True)
+@readererror_to_apierror()
 def mark_all_as_unread(data):
     feed_url = data['feed-url']
     entry_id = json.loads(data['entry-id'])
@@ -204,12 +223,14 @@ def mark_all_as_unread(data):
 
 
 @form_api(really=True)
+@readererror_to_apierror()
 def delete_feed(data):
     feed_url = data['feed-url']
     get_reader().remove_feed(feed_url)
 
 
 @form_api
+@readererror_to_apierror()
 def add_feed(data):
     feed_url = data['feed-url'].strip()
     assert feed_url, "feed-url cannot be empty"
@@ -218,6 +239,7 @@ def add_feed(data):
 
 
 @form_api
+@readererror_to_apierror()
 def update_feed_title(data):
     feed_url = data['feed-url']
     feed_title = data['feed-title'].strip() or None
