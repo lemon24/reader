@@ -43,11 +43,21 @@ window.onload = function () {
 {% call macros.simple_button('simple', 'simple') %}
     document.querySelector('#out').innerHTML = JSON.stringify(data);
 {% endcall %}
-{% call macros.confirm_button('confirm', 'confirm') %}
+{% call macros.confirm_button('confirm', 'confirm', 'confirm') %}
     document.querySelector('#out').innerHTML = JSON.stringify(data);
 {% endcall %}
 {% call macros.text_input_button('text', 'text', 'text', 'text') %}
     document.querySelector('#out').innerHTML = JSON.stringify(data);
+{% endcall %}
+
+{% call macros.simple_button('simple', 'simple2', leave_disabled=true) %}
+    document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data);
+{% endcall %}
+{% call macros.confirm_button('confirm', 'confirm2', 'confirm2', leave_disabled=true) %}
+    document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data);
+{% endcall %}
+{% call macros.text_input_button('text', 'text2', 'text', 'text', leave_disabled=true) %}
+    document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data);
 {% endcall %}
 
 {% for message in get_flashed_messages_by_prefix(

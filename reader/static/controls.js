@@ -67,7 +67,9 @@ function register_simple(endpoint, collapsible, callback, errback) {
     function reset_button () {
         state = 'none';
         button.innerHTML = original_text;
-        button.disabled = false;
+        if (collapsible.dataset.leaveDisabled != "true") {
+            button.disabled = false;
+        }
     }
 
     button.onclick = function () {
@@ -112,7 +114,9 @@ function register_confirm(endpoint, collapsible, callback, errback) {
     function reset_button () {
         state = 'none';
         button.innerHTML = original_text;
-        button.disabled = false;
+        if (collapsible.dataset.leaveDisabled != "true") {
+            button.disabled = false;
+        }
     }
 
     button.onclick = function () {
@@ -159,11 +163,14 @@ function register_text(endpoint, collapsible, callback, errback) {
 
     var state = 'none';
     var original_text = button.innerHTML;
+    var label_text = collapsible.querySelector('.label').innerHTML;
 
     function reset_button () {
         state = 'none';
         button.innerHTML = original_text;
-        button.disabled = false;
+        if (collapsible.dataset.leaveDisabled != "true") {
+            button.disabled = false;
+        }
     }
 
     button.onclick = function () {
@@ -171,6 +178,9 @@ function register_text(endpoint, collapsible, callback, errback) {
             state = 'waiting';
             button.innerHTML = '...';
             button.disabled = true;
+            if (collapsible.dataset.leaveDisabled == "true") {
+                input.disabled = true;
+            }
             do_json_request(endpoint, {
                 action: button.value,
                 text: input.value,
@@ -182,7 +192,7 @@ function register_text(endpoint, collapsible, callback, errback) {
             }, function (message) {
                 button.innerHTML = 'error';
                 input.select();
-                errback(original_text + ': ' + message);
+                errback(label_text + ': ' + message);
                 setTimeout(reset_button, ERROR_TIMEOUT);
             });
         }
