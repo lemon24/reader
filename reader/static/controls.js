@@ -1,5 +1,4 @@
 
-// TODO: better class names for buttons and controls
 // TODO: don't hardcode the li class=error bit
 // TODO: no global state
 
@@ -58,7 +57,8 @@ function do_json_request(endpoint, data, callback, errback) {
 
 
 function register_simple(endpoint, collapsible, callback, errback) {
-    var button = collapsible.querySelector('button[value=simple]');
+    if (collapsible.dataset.buttonType != 'simple') { return; }
+    var button = collapsible.querySelector('button[name=action]');
     if (button === null) { return; };
 
     var state = 'none';
@@ -99,7 +99,8 @@ function register_simple(endpoint, collapsible, callback, errback) {
 }
 
 function register_confirm(endpoint, collapsible, callback, errback) {
-    var button = collapsible.querySelector('button[value=confirm]');
+    if (collapsible.dataset.buttonType != 'confirm') { return; }
+    var button = collapsible.querySelector('button[name=action]');
     if (button === null) { return; };
 
     while (collapsible.firstChild) {
@@ -156,8 +157,9 @@ function register_confirm(endpoint, collapsible, callback, errback) {
     };
 }
 
-function register_text(endpoint, collapsible, callback, errback) {
-    var button = collapsible.querySelector('button[value=text]');
+function register_text_input(endpoint, collapsible, callback, errback) {
+    if (collapsible.dataset.buttonType != 'text-input') { return; }
+    var button = collapsible.querySelector('button[name=action]');
     var input = collapsible.querySelector('input[name=text]');
     if (button === null || input === null) { return; };
 
@@ -186,7 +188,9 @@ function register_text(endpoint, collapsible, callback, errback) {
                 text: input.value,
             }, function (data) {
                 button.innerHTML = 'done';
-                input.value = '';
+                if (collapsible.dataset.leaveDisabled != "true") {
+                    input.value = '';
+                }
                 callback(data);
                 setTimeout(reset_button, DONE_TIMEOUT);
             }, function (message) {
@@ -222,7 +226,7 @@ function register_controls(endpoint, controls) {
     }
 
     var collapsible_register_functions = [
-        register_simple, register_confirm, register_text
+        register_simple, register_confirm, register_text_input
     ];
 
     var collapsibles = controls.querySelectorAll('li');
