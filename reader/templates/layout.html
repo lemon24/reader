@@ -32,13 +32,13 @@ right: 0;
 <ul class="controls">
 <li><a href="{{ url_for('.entries') }}">entries</a>
 <li><a href="{{ url_for('.feeds') }}">feeds</a>
-{{ macros.text_input_button('add-feed', 'add feed', 'feed-url', 'feed URL') }}
+{{ macros.text_input_button('add-feed', 'add feed', 'feed-url', 'feed URL', 
+    next=url_for('.feeds', **request.args)) }}
 {% for message in get_flashed_messages_by_prefix('add-feed') %}
 <li class="error">{{ message }}
 {% endfor %}
 </ul>
 
-<input type="hidden" name="next-add-feed" value='{{ url_for('.feeds', **request.args) }}'>
 </form>
 
 

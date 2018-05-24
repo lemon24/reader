@@ -22,17 +22,18 @@
 {% endfor %}
 
 {% if feed %}
+{% set next = url_for('.entries', **request.args) %}
 
 {% if current_what != 'read' %}
-{{- macros.confirm_button('mark-all-as-read', 'mark all as read', leave_disabled=true) -}}
+{{- macros.confirm_button('mark-all-as-read', 'mark all as read', leave_disabled=true, next=next) -}}
 {% endif %}
 {% if current_what != 'unread' %}
-{{- macros.confirm_button('mark-all-as-unread', 'mark all as unread', leave_disabled=true) -}}
+{{- macros.confirm_button('mark-all-as-unread', 'mark all as unread', leave_disabled=true, next=next) -}}
 {% endif %}
 
-{{ macros.confirm_button('delete-feed', 'delete feed', leave_disabled=true) }}
+{{ macros.confirm_button('delete-feed', 'delete feed', leave_disabled=true, next=url_for('.entries')) }}
 
-{{ macros.text_input_button('update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true) }}
+{{ macros.text_input_button('update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true, next=next) }}
 
 {% endif %}
 
@@ -50,9 +51,6 @@
 
 <input type="hidden" name="feed-url" value='{{ feed.url }}'>
 <input type="hidden" name="entry-id" value='{{ entries_data | tojson }}'>
-<input type="hidden" name="next" value='{{ url_for('.entries', **request.args) }}'>
-<input type="hidden" name="next-delete-feed" value='{{ url_for('.entries') }}'>
-
 
 </form>
 
@@ -77,10 +75,12 @@ untitled
 <li><a href="{{ url_for('.entries', feed=feed.url) }}">{{ macros.feed_title(feed) }}</a>
 <li><span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>
 
+{% set next = url_for('.entries', **request.args) + '#entry-' + ((loop.index if not loop.last else loop.index - 1) | string) %}
+
 {% if entry.read %}
-{{ macros.simple_button('mark-as-unread', 'mark as unread', leave_disabled=true) }}
+{{ macros.simple_button('mark-as-unread', 'mark as unread', leave_disabled=true, next=next) }}
 {% else %}
-{{ macros.simple_button('mark-as-read', 'mark as read', leave_disabled=true) }}
+{{ macros.simple_button('mark-as-read', 'mark as read', leave_disabled=true, next=next) }}
 {% endif %}
 
 {% for message in get_flashed_messages_by_prefix(
@@ -94,7 +94,6 @@ untitled
 
 <input type="hidden" name="feed-url" value='{{ feed.url }}'>
 <input type="hidden" name="entry-id" value='{{ entry.id }}'>
-<input type="hidden" name="next" value='{{ url_for('.entries', **request.args) }}#entry-{{ loop.index if not loop.last else loop.index - 1 }}'>
 
 </form>
 

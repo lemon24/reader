@@ -40,29 +40,29 @@ window.onload = function () {
 <form action="{{ url_for('form') }}" method="post">
 <ul class="controls">
 
-{% call macros.simple_button('simple', 'simple') %}
+{% call macros.simple_button('simple', 'simple', next=url_for('root', from_action='next-simple')) %}
     document.querySelector('#out').innerHTML = JSON.stringify(data);
 {% endcall %}
-{% call macros.confirm_button('confirm', 'confirm', 'confirm') %}
+{% call macros.confirm_button('confirm', 'confirm', 'confirm', next=url_for('root', from_action='next-confirm')) %}
     document.querySelector('#out').innerHTML = JSON.stringify(data);
 {% endcall %}
-{% call macros.text_input_button('text', 'text', 'text', 'text') %}
+{% call macros.text_input_button('text', 'text', 'text', 'text', next=url_for('root', from_action='next-text')) %}
     document.querySelector('#out').innerHTML = JSON.stringify(data);
 {% endcall %}
 
-{% call macros.simple_button('simple', 'simple2', leave_disabled=true) %}
+{% call macros.simple_button('simple', 'simple2', leave_disabled=true, next=url_for('root', from_action='next-simple2')) %}
     document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data);
 {% endcall %}
-{% call macros.confirm_button('confirm', 'confirm2', 'confirm2', leave_disabled=true) %}
+{% call macros.confirm_button('confirm', 'confirm2', 'confirm2', leave_disabled=true, next=url_for('root', from_action='next-confirm2')) %}
     document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data);
 {% endcall %}
-{% call macros.text_input_button('text', 'text2', 'text', 'text', leave_disabled=true) %}
+{% call macros.text_input_button('text', 'text2', 'text', 'text', leave_disabled=true, next=url_for('root', from_action='next-text2')) %}
     document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data);
 {% endcall %}
 
-{{ macros.simple_button('simple', 'simple3') }}
-{{ macros.confirm_button('confirm', 'confirm3', 'confirm3') }}
-{{ macros.text_input_button('text', 'text3', 'text', 'text') }}
+{{ macros.simple_button('simple', 'simple3', next=url_for('root', from_action='next-simple3')) }}
+{{ macros.confirm_button('confirm', 'confirm3', 'confirm3', next=url_for('root', from_action='next-confirm3')) }}
+{{ macros.text_input_button('text', 'text3', 'text', 'text', next=url_for('root', from_action='next-text3')) }}
 
 {% call macros.simple_button('simple-next', 'simple next') %}
     document.querySelector('#out').innerHTML = JSON.stringify(data);
@@ -80,9 +80,6 @@ window.onload = function () {
 </ul>
 
 <input type="hidden" name="next" value='{{ url_for('root', from='next') }}'>
-<input type="hidden" name="next-simple" value='{{ url_for('root', from_action='next-simple') }}'>
-<input type="hidden" name="next-confirm" value='{{ url_for('root', from_action='next-confirm') }}'>
-<input type="hidden" name="next-text" value='{{ url_for('root', from_action='next-text') }}'>
 
 </form>
 
