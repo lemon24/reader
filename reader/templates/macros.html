@@ -24,8 +24,8 @@
 }; callback" data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}">
     <span class="label">{{ label }}</span>
     <span class="hidden">
-        <input type="text" name="{{ name }}" placeholder="{{ placeholder }}">
-        <button type="submit" name="action" value="{{ action }}">{{ label }}</button>
+        <input type="text" name="{{ name }}" placeholder="{{ placeholder }}" autocomplete="off">
+        <button type="submit" name="action" value="{{ action }}" autocomplete="off">{{ label }}</button>
     </span>
 {%- endmacro %}
 
@@ -38,9 +38,9 @@
 }; callback" data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}">
     <span class="label">{{ label }}</span>
     <span class="hidden">
-        <input type="checkbox" id="really-{{ action }}{% if id is not none %}-{{ id }}{% endif %}" name="really-{{ action }}" value="really">
+        <input type="checkbox" id="really-{{ action }}{% if id is not none %}-{{ id }}{% endif %}" name="really-{{ action }}" value="really" autocomplete="off">
         <label for="really-{{ action }}{% if id %}-{{ id }}{% endif %}">I really want to</label>
-        <button type="submit" name="action" value="{{ action }}">{{ label }}</button>
+        <button type="submit" name="action" value="{{ action }}" autocomplete="off">{{ label }}</button>
     </span>
 {%- endmacro %}
 
@@ -51,7 +51,7 @@
 {% if caller is defined %}{{ caller() | forceescape }}{% endif %}
 
 }; callback" data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}">
-    <button type="submit" name="action" value="{{ action }}">{{ label }}</button>
+    <button type="submit" name="action" value="{{ action }}" autocomplete="off">{{ label }}</button>
 {%- endmacro %}
 
 
