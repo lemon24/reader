@@ -56,7 +56,7 @@ def entries():
         if not feed:
             abort(404)
 
-    entries = list(reader.get_entries(which=show, feed=feed_url, _has_enclosures=has_enclosures))
+    entries = list(reader.get_entries(which=show, feed=feed_url, has_enclosures=has_enclosures))
 
     entries_data = None
     if feed_url:

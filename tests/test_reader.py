@@ -587,10 +587,10 @@ def test_get_entries_has_enclosure(reader):
     three = three._replace(feed=feed)
 
     assert set(reader.get_entries()) == {one, two, three}
-    assert set(reader.get_entries(_has_enclosures=None)) == {one, two, three}
-    assert set(reader.get_entries(_has_enclosures=False)) == {one, two}
-    assert set(reader.get_entries(_has_enclosures=True)) == {three}
+    assert set(reader.get_entries(has_enclosures=None)) == {one, two, three}
+    assert set(reader.get_entries(has_enclosures=False)) == {one, two}
+    assert set(reader.get_entries(has_enclosures=True)) == {three}
 
     with pytest.raises(ValueError):
-        set(reader.get_entries(_has_enclosures='bad _has_enclosures'))
+        set(reader.get_entries(has_enclosures='bad has_enclosures'))
 

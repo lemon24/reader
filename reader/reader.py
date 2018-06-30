@@ -420,12 +420,14 @@ class Reader:
             yield entry
 
     @wrap_storage_exceptions()
-    def get_entries(self, which='all', feed=None, _has_enclosures=None):
+    def get_entries(self, which='all', feed=None, has_enclosures=None):
         """Get all or some of the entries.
 
         Args:
             which (str): One of ``'all'``, ``'read'``, or ``'unread'``.
             feed (str or None): Only return the entries for this feed.
+            has_enclosures (bool or None): Only return entries that (don't)
+                have enclosures.
 
         Yields:
             :class:`Entry`: Last updated entries first.
@@ -438,8 +440,8 @@ class Reader:
         feed_url = feed
         if which not in ('all', 'unread', 'read'):
             raise ValueError("which should be one of ('all', 'read', 'unread')")
-        if _has_enclosures not in (None, False, True):
-            raise ValueError("_has_enclosures should be one of (None, False, True)")
+        if has_enclosures not in (None, False, True):
+            raise ValueError("has_enclosures should be one of (None, False, True)")
         chunk_size = self._get_entries_chunk_size
 
         last = None
@@ -448,7 +450,7 @@ class Reader:
             entries = self._get_entries(
                 which=which,
                 feed_url=feed_url,
-                has_enclosures=_has_enclosures,
+                has_enclosures=has_enclosures,
                 chunk_size=chunk_size,
                 last=last,
             )
