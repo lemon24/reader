@@ -22,7 +22,11 @@ class FeedNotFoundError(FeedError):
 
 
 class ParseError(FeedError):
-    """An error occured while getting/parsing feed."""
+    """An error occured while getting/parsing feed.
+
+    The original exception should be chained to this one (e.__cause__).
+
+    """
 
 
 class NotModified(FeedError):
