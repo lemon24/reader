@@ -30,8 +30,9 @@ right: 0;
 
 <form action="{{ url_for('.form_api') }}" method="post" id="top-bar">
 <ul class="controls">
-<li><a href="{{ url_for('.entries') }}">entries</a>
-<li><a href="{{ url_for('.feeds') }}">feeds</a>
+<li>
+<a href="{{ url_for('.entries') }}">entries</a>
+<a href="{{ url_for('.feeds') }}">feeds</a>
 {{ macros.text_input_button('add-feed', 'add feed', 'feed-url', 'feed URL', 
     next=url_for('.feeds', **request.args)) }}
 {% for message in get_flashed_messages_by_prefix('add-feed') %}
