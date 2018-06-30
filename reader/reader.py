@@ -329,7 +329,8 @@ class Reader:
         """, locals()).fetchone()
         return rv[0] if rv else None
 
-    def _get_entries(self, which, feed_url, chunk_size=None, last=None):
+    def _get_entries(self, which, feed_url, has_enclosures,
+                     chunk_size=None, last=None):
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
         if which == 'all':
@@ -364,6 +365,13 @@ class Reader:
                 AND feeds.url = :feed_url
             """
 
+        where_has_enclosures_snippet = ''
+        if has_enclosures is not None:
+            where_has_enclosures_snippet = """
+                AND {} (json_array_length(entries.enclosures) IS NULL
+                        OR json_array_length(entries.enclosures) = 0)
+            """.format('NOT' if has_enclosures else '')
+
         query = """
             SELECT
                 feeds.url,
@@ -386,6 +394,7 @@ class Reader:
                 {where_read_snippet}
                 {where_feed_snippet}
                 {where_next_snippet}
+                {where_has_enclosures_snippet}
             ORDER BY
                 entries.updated DESC,
                 feeds.url DESC,
@@ -411,7 +420,7 @@ class Reader:
             yield entry
 
     @wrap_storage_exceptions()
-    def get_entries(self, which='all', feed=None):
+    def get_entries(self, which='all', feed=None, _has_enclosures=None):
         """Get all or some of the entries.
 
         Args:
@@ -429,6 +438,8 @@ class Reader:
         feed_url = feed
         if which not in ('all', 'unread', 'read'):
             raise ValueError("which should be one of ('all', 'read', 'unread')")
+        if _has_enclosures not in (None, False, True):
+            raise ValueError("_has_enclosures should be one of (None, False, True)")
         chunk_size = self._get_entries_chunk_size
 
         last = None
@@ -437,6 +448,7 @@ class Reader:
             entries = self._get_entries(
                 which=which,
                 feed_url=feed_url,
+                has_enclosures=_has_enclosures,
                 chunk_size=chunk_size,
                 last=last,
             )
