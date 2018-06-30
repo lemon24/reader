@@ -44,6 +44,9 @@ def entries():
     show = request.args.get('show', 'unread')
     assert show in ('all', 'read', 'unread')
 
+    has_enclosures = request.args.get('has-enclosures')
+    has_enclosures = {None: None, 'no': False, 'yes': True}[has_enclosures]
+
     reader = get_reader()
 
     feed_url = request.args.get('feed')
@@ -53,7 +56,7 @@ def entries():
         if not feed:
             abort(404)
 
-    entries = list(reader.get_entries(which=show, feed=feed_url))
+    entries = list(reader.get_entries(which=show, feed=feed_url, _has_enclosures=has_enclosures))
 
     entries_data = None
     if feed_url:

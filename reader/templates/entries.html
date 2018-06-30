@@ -12,15 +12,28 @@
 <ul class="controls">
 
 <li>
-{%- set current_what = request.args.get('show', 'unread') -%}
-{%- for what in ['unread', 'read', 'all'] -%}
+{% set current_what = request.args.get('show', 'unread') -%}
+{%- for what in ['unread', 'read', 'all'] %}
 {%- set args = request.args.copy() -%}
 {%- set _ = args.setlist('show', [what]) -%}
 {%- if what != current_what %}<a href='{{ url_for('.entries', **args) }}'>{% endif -%}
 {{- what -}}
-{%- if what != current_what %}</a>{% endif -%}
-{%- if not loop.last %}&ensp;{% endif -%}
-{%- endfor %}
+{%- if what != current_what %}</a>{% endif %}
+{% endfor %}
+
+<li>has enclosures:
+{% set current_has_enclosures = request.args.get('has-enclosures') -%}
+{%- for has_enclosures in ['yes', 'no', none] -%}
+{%- set args = request.args.copy() -%}
+{%- if has_enclosures is none -%}
+    {%- set _ = args.poplist('has-enclosures') -%}
+{%- else -%}
+    {%- set _ = args.setlist('has-enclosures', [has_enclosures]) -%}
+{%- endif -%}
+{%- if has_enclosures != current_has_enclosures %}<a href='{{ url_for('.entries', **args) }}'>{% endif -%}
+{{- {none: "don't care"}.get(has_enclosures, has_enclosures) -}}
+{%- if has_enclosures != current_has_enclosures %}</a>{% endif %}
+{% endfor %}
 
 {% if feed %}
 {% set next = url_for('.entries', **request.args) %}
