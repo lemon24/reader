@@ -11,15 +11,16 @@
 <form action="{{ url_for('.form_api') }}" method="post" id="update-entries">
 <ul class="controls">
 
-{% set current_what = request.args.get('show', 'unread') %}
-{% for what in ['unread', 'read', 'all'] %}
-{% set args = request.args.copy() %}
-{% set _ = args.setlist('show', [what]) %}
 <li>
-{%- if what != current_what %}<a href='{{ url_for('.entries', **args) }}'>{% endif %}
+{%- set current_what = request.args.get('show', 'unread') -%}
+{%- for what in ['unread', 'read', 'all'] -%}
+{%- set args = request.args.copy() -%}
+{%- set _ = args.setlist('show', [what]) -%}
+{%- if what != current_what %}<a href='{{ url_for('.entries', **args) }}'>{% endif -%}
 {{- what -}}
-{% if what != current_what %}</a>{% endif %}
-{% endfor %}
+{%- if what != current_what %}</a>{% endif -%}
+{%- if not loop.last %}&ensp;{% endif -%}
+{%- endfor %}
 
 {% if feed %}
 {% set next = url_for('.entries', **request.args) %}
