@@ -39,6 +39,13 @@ def redirect_to_referrer():
     return redirect(request.referrer)
 
 
+def stream_template(template_name_or_list, **kwargs):
+    template = current_app.jinja_env.get_template(template_name_or_list)
+    stream = template.stream(**kwargs)
+    stream.enable_buffering(50)
+    return Response(stream_with_context(stream))
+
+
 @blueprint.route('/')
 def entries():
     show = request.args.get('show', 'unread')
@@ -62,16 +69,13 @@ def entries():
     if feed_url:
         entries_data = [e.id for e in entries]
 
-    template = current_app.jinja_env.get_template('entries.html')
-    stream = template.stream(entries=entries, feed=feed, entries_data=entries_data)
-    stream.enable_buffering(50)
-    return Response(stream_with_context(stream))
+    return stream_template('entries.html', entries=entries, feed=feed, entries_data=entries_data)
 
 
 @blueprint.route('/feeds')
 def feeds():
     feeds = get_reader().get_feeds()
-    return render_template('feeds.html', feeds=feeds)
+    return stream_template('feeds.html', feeds=feeds)
 
 
 class APIThing:
