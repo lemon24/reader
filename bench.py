@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from textwrap import dedent
 import tempfile
 import sys
 import os.path
@@ -53,12 +54,25 @@ def do_time(num_entries, number):
             "for _ in client.get('/?show=all').response: pass",
             globals=dict(client=client), number=number)
 
-    print("{:>7} {:>4} {:>11.2f} {:>10.2f} {:>5.1f}".format(
-        num_entries, number, reader_time, app_time, app_time/reader_time))
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, 'db.sqlite')
+        set_up_db(path, num_entries)
+        client = make_test_client(path)
+        app_time_100kb = timeit.timeit(dedent("""
+            length = 0
+            for chunk in client.get('/?show=all').response:
+                length += len(chunk)
+                if length >= 100000:
+                    break
+            """),
+            globals=dict(client=client), number=number)
+
+    print("{:>7} {:>4} {:>11.2f} {:>10.2f} {:>5.1f} {:>16.2f}".format(
+        num_entries, number, reader_time, app_time, app_time/reader_time, app_time_100kb))
 
 def do_time_all():
-    print("{} {} {} {} {}".format(
-        'entries', 'runs', 'get_entries', '/?show=all', 'ratio'))
+    print("{} {} {} {} {} {}".format(
+        'entries', 'runs', 'get_entries', '/?show=all', 'ratio', '/?show=all#100kb'))
     for i in range(5,13):
         do_time(2**i, min(8, 2**(12-i)))
 

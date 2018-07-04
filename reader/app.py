@@ -3,7 +3,7 @@ from urllib.parse import urlparse, urljoin
 import functools
 import contextlib
 
-from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash, get_flashed_messages, jsonify
+from flask import Flask, render_template, current_app, g, request, redirect, abort, Blueprint, flash, get_flashed_messages, jsonify, Response, stream_with_context
 import werkzeug
 import humanize
 
@@ -62,7 +62,10 @@ def entries():
     if feed_url:
         entries_data = [e.id for e in entries]
 
-    return render_template('entries.html', entries=entries, feed=feed, entries_data=entries_data)
+    template = current_app.jinja_env.get_template('entries.html')
+    stream = template.stream(entries=entries, feed=feed, entries_data=entries_data)
+    stream.enable_buffering(50)
+    return Response(stream_with_context(stream))
 
 
 @blueprint.route('/feeds')
