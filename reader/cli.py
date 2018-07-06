@@ -107,9 +107,16 @@ def serve(db_path, host, port, verbose):
     run_simple(host, port, app)
 
 
+@cli.group()
+def list():
+    pass
 
 
-
+@list.command()
+@click.pass_obj
+def feeds(db_path):
+    for feed in Reader(db_path).get_feeds():
+        click.echo(feed.url)
 
 
 
