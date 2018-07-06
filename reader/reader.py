@@ -244,9 +244,9 @@ class Reader:
             return
 
         updated = feed.updated
+        log.debug("update feed %r: old updated %s, new updated %s", url, db_updated, updated)
         if not stale and updated and db_updated and updated <= db_updated:
             log.info("update feed %r: feed not updated, skipping", url)
-            log.debug("update feed %r: old updated %s, new updated %s", url, db_updated, updated)
             return
 
         title = feed.title
