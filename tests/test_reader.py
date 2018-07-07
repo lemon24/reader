@@ -11,27 +11,48 @@ from fakeparser import Parser, BlockingParser, FailingParser, NotModifiedParser
 
 
 def test_update_feed_updated(reader, call_update_method):
-    """A feed should be processed only if it is newer than the stored one."""
+    """If a feed is not newer than the stored one, it should not be updated, 
+    but its entries should be processed anyway.
+
+    Details in https://github.com/lemon24/reader/issues/76
+
+    """
 
     parser = Parser()
     reader._parse = parser
 
-    old_feed = parser.feed(1, datetime(2010, 1, 1))
+    old_feed = parser.feed(1, datetime(2010, 1, 1), title='old')
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
 
     reader.add_feed(old_feed.url)
     call_update_method(reader, old_feed.url)
     assert set(reader.get_entries()) == {entry_one._replace(feed=old_feed)}
 
+    parser.feed(1, datetime(2010, 1, 1), title='old-different-title')
     entry_two = parser.entry(1, 2, datetime(2010, 2, 1))
     call_update_method(reader, old_feed.url)
-    assert set(reader.get_entries()) == {entry_one._replace(feed=old_feed)}
+    assert set(reader.get_entries()) == {
+        entry_one._replace(feed=old_feed),
+        entry_two._replace(feed=old_feed),
+    }
 
-    new_feed = parser.feed(1, datetime(2010, 1, 2))
+    parser.feed(1, datetime(2009, 1, 1), title='even-older')
+    entry_three = parser.entry(1, 3, datetime(2010, 2, 1))
+    call_update_method(reader, old_feed.url)
+    assert set(reader.get_entries()) == {
+        entry_one._replace(feed=old_feed),
+        entry_two._replace(feed=old_feed),
+        entry_three._replace(feed=old_feed),
+    }
+
+    new_feed = parser.feed(1, datetime(2010, 1, 2), title='new')
+    entry_four = parser.entry(1, 4, datetime(2010, 2, 1))
     call_update_method(reader, old_feed.url)
     assert set(reader.get_entries()) == {
         entry_one._replace(feed=new_feed),
         entry_two._replace(feed=new_feed),
+        entry_three._replace(feed=new_feed),
+        entry_four._replace(feed=new_feed),
     }
 
 

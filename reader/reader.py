@@ -245,25 +245,30 @@ class Reader:
 
         updated = feed.updated
         log.debug("update feed %r: old updated %s, new updated %s", url, db_updated, updated)
-        if not stale and updated and db_updated and updated <= db_updated:
-            log.info("update feed %r: feed not updated, skipping", url)
-            return
+
+        feed_was_updated = not(updated and db_updated and updated <= db_updated)
+        if not stale and not feed_was_updated:
+            # Some feeds have entries newer than the feed.
+            # https://github.com/lemon24/reader/issues/76
+            log.info("update feed %r: feed not updated, updating entries anyway", url)
 
         title = feed.title
         link = feed.link
 
         with self.db:
-            self.db.execute("""
-                UPDATE feeds
-                SET
-                    title = :title,
-                    link = :link,
-                    updated = :updated,
-                    http_etag = :http_etag,
-                    http_last_modified = :http_last_modified,
-                    stale = NULL
-                WHERE url = :url;
-            """, locals())
+
+            if stale or feed_was_updated:
+                self.db.execute("""
+                    UPDATE feeds
+                    SET
+                        title = :title,
+                        link = :link,
+                        updated = :updated,
+                        http_etag = :http_etag,
+                        http_last_modified = :http_last_modified,
+                        stale = NULL
+                    WHERE url = :url;
+                """, locals())
 
             entries_updated, entries_new = 0, 0
             for entry in entries:
@@ -275,8 +280,6 @@ class Reader:
             log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
     def _update_entry(self, feed_url, entry, stale):
-        assert self.db.in_transaction
-
         db_updated = self._get_entry_updated(feed_url, entry.id)
         updated, published = entry.updated, entry.published
 
