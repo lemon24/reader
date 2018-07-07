@@ -1,5 +1,6 @@
 import time
 import datetime
+import calendar
 import logging
 
 import feedparser
@@ -25,7 +26,7 @@ except ImportError:
 
 
 def _datetime_from_timetuple(tt):
-    return datetime.datetime.fromtimestamp(time.mktime(tt)) if tt else None
+    return datetime.datetime.utcfromtimestamp(calendar.timegm(tt)) if tt else None
 
 def _get_updated_published(thing, is_rss):
     # feed.get and entry.get don't work for updated due historical reasons;

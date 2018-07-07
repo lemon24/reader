@@ -169,3 +169,22 @@ def test_parse_not_modified(monkeypatch, tmpdir):
     with pytest.raises(NotModified):
         parse(feed.url)
 
+
+@pytest.mark.parametrize('tz', ['UTC', 'Europe/Helsinki'])
+def test_parse_local_timezone(monkeypatch, request, tmpdir, tz):
+    """parse() return the correct dates regardless of the local timezone."""
+    monkeypatch.chdir(tmpdir)
+
+    parser = Parser()
+
+    feed = parser.feed(1, datetime(2018, 7, 7))
+    write_feed('atom', feed, [])
+
+    import time
+    request.addfinalizer(time.tzset)
+    monkeypatch.setenv('TZ', tz)
+    time.tzset()
+    parsed_feed = parse(feed.url)[0]
+    assert feed.updated == parsed_feed.updated
+
+
