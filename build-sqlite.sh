@@ -1,6 +1,8 @@
 #!/bin/sh
 
-if [ ! -e $HOME/sqlite/libsqlite3.so.0 ]; then
+build_dir=$1
+
+if [ ! -e $build_dir/sqlite/libsqlite3.so.0 ]; then
     echo "compiling sqlite"
     wget https://sqlite.org/2018/sqlite-amalgamation-3220000.zip
     unzip sqlite-amalgamation-3220000.zip
@@ -19,7 +21,7 @@ if [ ! -e $HOME/sqlite/libsqlite3.so.0 ]; then
     gcc -shared -o libsqlite3.so -fPIC sqlite3.o -ldl -lpthread
     ln -s libsqlite3.so libsqlite3.so.0
     cd ..
-    mv sqlite $HOME
+    mv sqlite $build_dir
 else
     echo "using existing sqlite"
 fi
