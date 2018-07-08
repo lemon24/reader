@@ -7,6 +7,11 @@ from flask import Blueprint, Response, stream_with_context, url_for, request
 enclosure_tags_blueprint = Blueprint('enclosure_tags', __name__)
 
 
+
+ALL_TAGS = ('album', 'title', 'artist')
+SET_ONLY_IF_MISSING_TAGS = {'artist'}
+
+
 @enclosure_tags_blueprint.route('/enclosure-tags', defaults={'filename': None})
 @enclosure_tags_blueprint.route('/enclosure-tags/<filename>')
 def enclosure_tags(filename):
@@ -16,12 +21,16 @@ def enclosure_tags(filename):
     def update_tags(file):
         emp3 = mutagen.mp3.EasyMP3(file)
         changed = False
-        for key in ('album', 'title'):
+
+        for key in ALL_TAGS:
+            if key in SET_ONLY_IF_MISSING_TAGS and emp3.get(key):
+                continue
             value = request.args.get(key)
             if not value:
                 continue
             emp3[key] = [value]
             changed = True
+
         if changed:
             emp3.save(file)
         file.seek(0)
@@ -74,6 +83,8 @@ def enclosure_tags_filter(enclosure, entry):
             args['title'] = entry.title
         if entry.feed.title:
             args['album'] = entry.feed.title
+        if entry.author or entry.feed.author:
+            args['artist'] = entry.author or entry.feed.author
         return url_for('enclosure_tags.enclosure_tags', **args)
     return enclosure.href
 
