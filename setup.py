@@ -22,6 +22,9 @@ setup(
         'flask>=0.10',
         'humanize',
     ],
+    extras_require={
+        'enclosure-tags': ['requests', 'mutagen'],
+    },
     description="",
     classifiers=[
         "License :: OSI Approved :: BSD License",
