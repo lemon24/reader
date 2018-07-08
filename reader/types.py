@@ -45,6 +45,9 @@ class Feed(attrs_namedtuple_compat):
     #: The URL of a page associated with the feed.
     link = attr.ib(default=None)
 
+    #: The author of the feed.
+    author = attr.ib(default=None)
+
     #: User-defined feed title.
     user_title = attr.ib(default=None)
 
@@ -65,6 +68,9 @@ class Entry(attrs_namedtuple_compat):
 
     #: The URL of a page associated with the entry.
     link = attr.ib(default=None)
+
+    #: The author of the feed.
+    author = attr.ib(default=None)
 
     #: The date the entry was first published.
     published = attr.ib(default=None)

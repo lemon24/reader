@@ -75,6 +75,7 @@ def _make_entry(entry, is_rss):
         updated,
         entry.get('title'),
         entry.get('link'),
+        entry.get('author'),
         published,
         entry.get('summary'),
         content or None,
@@ -105,7 +106,14 @@ def parse(url, http_etag=None, http_last_modified=None):
     is_rss = d.version.startswith('rss')
     updated, _ = _get_updated_published(d.feed, is_rss)
 
-    feed = Feed(url, updated, d.feed.get('title'), d.feed.get('link'), None)
+    feed = Feed(
+        url,
+        updated,
+        d.feed.get('title'),
+        d.feed.get('link'),
+        d.feed.get('author'),
+        None,
+    )
     entries = (_make_entry(e, is_rss) for e in d.entries)
 
     return feed, entries, http_etag, http_last_modified

@@ -18,6 +18,7 @@ def write_feed(type, feed, entries):
         return dt.replace(tzinfo=datetime.timezone(datetime.timedelta()))
 
     fg = feedgen.feed.FeedGenerator()
+    fg.load_extension('podcast')
 
     if type == 'atom':
         fg.id(feed.link)
@@ -26,6 +27,11 @@ def write_feed(type, feed, entries):
         fg.link(href=feed.link)
     if feed.updated:
         fg.updated(utc(feed.updated))
+    if feed.author:
+        if type == 'atom':
+            fg.author({'name': feed.author})
+        elif type == 'rss':
+            fg.podcast.itunes_author(feed.author)
     if type == 'rss':
         fg.description('description')
 
@@ -40,6 +46,11 @@ def write_feed(type, feed, entries):
                 fe.updated(utc(entry.updated))
             elif type == 'rss':
                 fe.published(utc(entry.updated))
+        if entry.author:
+            if type == 'atom':
+                fe.author({'name': entry.author})
+            elif type == 'rss':
+                fe.podcast.itunes_author(entry.author)
         if entry.published:
             if type == 'atom':
                 fe.published(utc(entry.published))
@@ -61,9 +72,10 @@ def test_parse(monkeypatch, tmpdir, feed_type):
 
     parser = Parser()
 
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
+    feed = parser.feed(1, datetime(2010, 1, 1), author='feed author')
+    entry_one = parser.entry(1, 1, datetime(2010, 1, 1), author='one author')
     entry_two = parser.entry(1, 2, datetime(2010, 2, 1),
+        author='two author',
 
         # Can't figure out how to do this with feedgen
         # (the summary and the content get mixed up

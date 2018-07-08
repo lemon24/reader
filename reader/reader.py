@@ -106,7 +106,7 @@ class Reader:
     def _get_feeds(self, url=None):
         where_url_snippet = '' if not url else "WHERE url = :url"
         cursor = self.db.execute("""
-            SELECT url, updated, title, link, user_title FROM feeds
+            SELECT url, updated, title, link, author, user_title FROM feeds
             {where_url_snippet}
             ORDER BY feeds.title, feeds.url;
         """.format(**locals()), locals())
@@ -254,6 +254,7 @@ class Reader:
 
         title = feed.title
         link = feed.link
+        author = feed.author
 
         with self.db:
 
@@ -264,6 +265,7 @@ class Reader:
                         title = :title,
                         link = :link,
                         updated = :updated,
+                        author = :author,
                         http_etag = :http_etag,
                         http_last_modified = :http_last_modified,
                         stale = NULL
@@ -292,6 +294,7 @@ class Reader:
         id = entry.id
         title = entry.title
         link = entry.link
+        author = entry.author
         summary = entry.summary
         content = json.dumps([t._asdict() for t in entry.content]) if entry.content else None
         enclosures = json.dumps([t._asdict() for t in entry.enclosures]) if entry.enclosures else None
@@ -299,9 +302,9 @@ class Reader:
         if not db_updated:
             self.db.execute("""
                 INSERT INTO entries (
-                    id, feed, title, link, updated, published, summary, content, enclosures
+                    id, feed, title, link, updated, author, published, summary, content, enclosures
                 ) VALUES (
-                    :id, :feed_url, :title, :link, :updated, :published, :summary, :content, :enclosures
+                    :id, :feed_url, :title, :link, :updated, :author, :published, :summary, :content, :enclosures
                 );
             """, locals())
             log.debug("update entry %r of feed %r: entry added", entry.id, feed_url)
@@ -314,6 +317,7 @@ class Reader:
                     title = :title,
                     link = :link,
                     updated = :updated,
+                    author = :author,
                     published = :published,
                     summary = :summary,
                     content = :content,
@@ -381,11 +385,13 @@ class Reader:
                 feeds.updated,
                 feeds.title,
                 feeds.link,
+                feeds.author,
                 feeds.user_title,
                 entries.id,
                 entries.updated,
                 entries.title,
                 entries.link,
+                entries.author,
                 entries.published,
                 entries.summary,
                 entries.content,
@@ -411,12 +417,12 @@ class Reader:
             cursor = self.db.execute(query, locals())
 
         for t in cursor:
-            feed = t[0:5]
+            feed = t[0:6]
             feed = Feed._make(feed)
-            entry = t[5:11] + (
-                tuple(Content(**d) for d in json.loads(t[11])) if t[11] else None,
-                tuple(Enclosure(**d) for d in json.loads(t[12])) if t[12] else None,
-                t[13] == 1,
+            entry = t[6:13] + (
+                tuple(Content(**d) for d in json.loads(t[13])) if t[13] else None,
+                tuple(Enclosure(**d) for d in json.loads(t[14])) if t[14] else None,
+                t[15] == 1,
                 feed,
             )
             entry = Entry._make(entry)

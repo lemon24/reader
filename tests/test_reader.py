@@ -454,13 +454,13 @@ def test_set_feed_user_title(reader):
 
     reader.add_feed(one.url)
 
-    assert reader.get_feed(one.url) == Feed(one.url, None, None, None, None)
-    assert list(reader.get_feeds()) == [Feed(one.url, None, None, None, None)]
+    assert reader.get_feed(one.url) == Feed(one.url, None, None, None, None, None)
+    assert list(reader.get_feeds()) == [Feed(one.url, None, None, None, None, None)]
 
     reader.set_feed_user_title(one.url, 'blah')
 
-    assert reader.get_feed(one.url) == Feed(one.url, None, None, None, 'blah')
-    assert list(reader.get_feeds()) == [Feed(one.url, None, None, None, 'blah')]
+    assert reader.get_feed(one.url) == Feed(one.url, None, None, None, None, 'blah')
+    assert list(reader.get_feeds()) == [Feed(one.url, None, None, None, None, 'blah')]
 
     reader.update_feeds()
 
@@ -570,8 +570,8 @@ def test_data_roundrip(reader):
     parser = Parser()
     reader._parse = parser
 
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    entry = parser.entry(1, 1, datetime(2010, 1, 1),
+    feed = parser.feed(1, datetime(2010, 1, 1), author='feed author')
+    entry = parser.entry(1, 1, datetime(2010, 1, 1), author='entry author',
         summary='summary',
         content=(
             Content('value3', 'type', 'en'),
