@@ -67,16 +67,45 @@ def write_feed(type, feed, entries):
 
 
 def make_relative_path_url(feed, feed_dir, _):
-    return feed.url
+    return feed.url, None
 
 
 def make_absolute_path_url(feed, feed_dir, _):
-    return str(feed_dir.join(feed.url))
+    return str(feed_dir.join(feed.url)), None
+
+
+def make_http_url(feed, feed_dir, request):
+    from http.server import HTTPServer, SimpleHTTPRequestHandler
+    from threading import Thread
+    from queue import Queue
+
+    http_last_modified = 'Thu, 12 Jul 2018 20:14:00 GMT'
+
+    class Handler(SimpleHTTPRequestHandler):
+        def date_time_string(self, timestamp=None):
+            return http_last_modified
+
+    queue = Queue()
+
+    def serve_one():
+        httpd = HTTPServer(('127.0.0.1', 0), Handler)
+        queue.put(httpd.server_address)
+        httpd.handle_request()
+        httpd.service_actions()
+        httpd.server_close()
+
+    Thread(target=serve_one).start()
+
+    server_address = queue.get()
+
+    url = "http://{0[0]}:{0[1]}/{1}".format(server_address, feed.url)
+    return url, http_last_modified
 
 
 @pytest.fixture(params=[
     make_relative_path_url,
     make_absolute_path_url,
+    make_http_url,
 ])
 def make_url(request):
     return lambda feed, feed_dir: request.param(feed, feed_dir, request)
@@ -113,7 +142,7 @@ def test_parse(monkeypatch, tmpdir, feed_type, make_url):
     entries = [entry_one, entry_two]
     write_feed(feed_type, feed, entries)
 
-    feed_url = make_url(feed, tmpdir)
+    feed_url, http_last_modified = make_url(feed, tmpdir)
 
     (
         expected_feed,
@@ -126,7 +155,7 @@ def test_parse(monkeypatch, tmpdir, feed_type, make_url):
     assert feed._replace(url=feed_url) == expected_feed
     assert entries == expected_entries
     assert expected_http_etag is None
-    assert expected_http_last_modified is None
+    assert expected_http_last_modified == http_last_modified
 
 
 def test_parse_error(monkeypatch, tmpdir):
