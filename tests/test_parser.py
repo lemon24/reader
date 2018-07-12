@@ -66,8 +66,24 @@ def write_feed(type, feed, entries):
         fg.rss_file(feed.url, pretty=True)
 
 
+def make_relative_path_url(feed, feed_dir, _):
+    return feed.url
+
+
+def make_absolute_path_url(feed, feed_dir, _):
+    return str(feed_dir.join(feed.url))
+
+
+@pytest.fixture(params=[
+    make_relative_path_url,
+    make_absolute_path_url,
+])
+def make_url(request):
+    return lambda feed, feed_dir: request.param(feed, feed_dir, request)
+
+
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_parse(monkeypatch, tmpdir, feed_type):
+def test_parse(monkeypatch, tmpdir, feed_type, make_url):
     monkeypatch.chdir(tmpdir)
 
     parser = Parser()
@@ -97,15 +113,17 @@ def test_parse(monkeypatch, tmpdir, feed_type):
     entries = [entry_one, entry_two]
     write_feed(feed_type, feed, entries)
 
+    feed_url = make_url(feed, tmpdir)
+
     (
         expected_feed,
         expected_entries,
         expected_http_etag,
         expected_http_last_modified,
-    ) = parse(feed.url)
+    ) = parse(feed_url)
     expected_entries = sorted(expected_entries, key=lambda e: e.updated)
 
-    assert feed == expected_feed
+    assert feed._replace(url=feed_url) == expected_feed
     assert entries == expected_entries
     assert expected_http_etag is None
     assert expected_http_last_modified is None
