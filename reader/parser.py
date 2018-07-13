@@ -85,10 +85,21 @@ def _make_entry(entry, is_rss):
     )
 
 
-def parse(url, http_etag=None, http_last_modified=None):
+def _parse_feedparser(url, http_etag=None, http_last_modified=None):
 
     d = feedparser.parse(url, etag=http_etag, modified=http_last_modified,
                          handlers=HANDLERS)
+
+    if d.get('status') == 304:
+        raise NotModified(url)
+
+    http_etag = d.get('etag', http_etag)
+    http_last_modified = d.get('modified', http_last_modified)
+
+    return _process_feed(url, d) + (http_etag, http_last_modified)
+
+
+def _process_feed(url, d):
 
     if d.get('bozo'):
         exception = d.get('bozo_exception')
@@ -96,12 +107,6 @@ def parse(url, http_etag=None, http_last_modified=None):
             log.warning("parse %s: got %r", url, exception)
         else:
             raise ParseError(url) from exception
-
-    if d.get('status') == 304:
-        raise NotModified(url)
-
-    http_etag = d.get('etag', http_etag)
-    http_last_modified = d.get('modified', http_last_modified)
 
     is_rss = d.version.startswith('rss')
     updated, _ = _get_updated_published(d.feed, is_rss)
@@ -116,5 +121,8 @@ def parse(url, http_etag=None, http_last_modified=None):
     )
     entries = (_make_entry(e, is_rss) for e in d.entries)
 
-    return feed, entries, http_etag, http_last_modified
+    return feed, entries
+
+
+parse = _parse_feedparser
 
