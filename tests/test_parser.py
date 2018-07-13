@@ -85,27 +85,19 @@ def make_http_url(feed, feed_dir, request):
         def date_time_string(self, timestamp=None):
             return http_last_modified
 
-    queue = Queue()
+    httpd = HTTPServer(('127.0.0.1', 0), Handler)
+    request.addfinalizer(httpd.shutdown)
 
-    def serve_one():
-        httpd = HTTPServer(('127.0.0.1', 0), Handler)
-        queue.put(httpd.server_address)
-        httpd.handle_request()
-        httpd.service_actions()
-        httpd.server_close()
+    Thread(target=httpd.serve_forever).start()
 
-    Thread(target=serve_one).start()
-
-    server_address = queue.get()
-
-    url = "http://{0[0]}:{0[1]}/{1}".format(server_address, feed.url)
+    url = "http://{0[0]}:{0[1]}/{1}".format(httpd.server_address, feed.url)
     return url, http_last_modified
 
 
 @pytest.fixture(params=[
     make_relative_path_url,
     make_absolute_path_url,
-    make_http_url,
+    pytest.param(make_http_url, marks=pytest.mark.slow),
 ])
 def make_url(request):
     return lambda feed, feed_dir: request.param(feed, feed_dir, request)
