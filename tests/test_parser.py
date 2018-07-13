@@ -1,5 +1,6 @@
 from datetime import datetime
 from functools import partial
+from urllib.parse import urlparse
 
 import pytest
 import feedgen.feed
@@ -120,6 +121,14 @@ def make_url(request):
     return partial(request.param, request=request)
 
 
+@pytest.fixture(params=[
+    make_relative_path_url,
+    pytest.param(make_http_url, marks=pytest.mark.slow),
+])
+def make_url_local_remote(request):
+    return partial(request.param, request=request)
+
+
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse(monkeypatch, tmpdir, feed_type, make_url):
     if make_url.func is make_https_url:
@@ -168,6 +177,23 @@ def test_parse(monkeypatch, tmpdir, feed_type, make_url):
     assert entries == expected_entries
     assert expected_http_etag is None
     assert expected_http_last_modified == http_last_modified
+
+
+@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
+def test_parse_relative_links(monkeypatch, tmpdir, feed_type, make_url_local_remote):
+    make_url = make_url_local_remote
+
+    monkeypatch.chdir(tmpdir)
+
+    parser = Parser()
+
+    feed = parser.feed(1, datetime(2010, 1, 1), link="file.html")
+    write_feed(feed_type, feed, [])
+
+    feed_url, _ = make_url(feed, tmpdir)
+    parsed_feed, _, _, _ = parse(feed_url)
+
+    assert parsed_feed.link == urlparse(feed_url)._replace(path='file.html').geturl()
 
 
 def test_parse_error(monkeypatch, tmpdir):
