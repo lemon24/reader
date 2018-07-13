@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import partial
 
 import pytest
 import feedgen.feed
@@ -66,18 +67,25 @@ def write_feed(type, feed, entries):
         fg.rss_file(feed.url, pretty=True)
 
 
-def make_relative_path_url(feed, feed_dir, _):
+def make_relative_path_url(feed, feed_dir, request):
     return feed.url, None
 
 
-def make_absolute_path_url(feed, feed_dir, _):
+def make_absolute_path_url(feed, feed_dir, request):
     return str(feed_dir.join(feed.url)), None
 
 
-def make_http_url(feed, feed_dir, request):
+def make_http_url(feed, feed_dir, request, https=False):
     from http.server import HTTPServer, SimpleHTTPRequestHandler
     from threading import Thread
-    from queue import Queue
+    import subprocess
+    import ssl
+
+    if https:
+        subprocess.run(
+            "openssl req -new -x509 -keyout server.pem "
+            "-out server.pem -days 365 -nodes".split(),
+            input=b'\n'*7)
 
     http_last_modified = 'Thu, 12 Jul 2018 20:14:00 GMT'
 
@@ -86,25 +94,37 @@ def make_http_url(feed, feed_dir, request):
             return http_last_modified
 
     httpd = HTTPServer(('127.0.0.1', 0), Handler)
+    if https:
+        httpd.socket = ssl.wrap_socket(
+            httpd.socket, certfile='./server.pem', server_side=True)
     request.addfinalizer(httpd.shutdown)
 
     Thread(target=httpd.serve_forever).start()
 
-    url = "http://{0[0]}:{0[1]}/{1}".format(httpd.server_address, feed.url)
+    url = "{p}://{s[0]}:{s[1]}/{f.url}".format(
+        p=('https' if https else 'http'), s=httpd.server_address, f=feed)
     return url, http_last_modified
+
+
+def make_https_url(feed, feed_dir, request):
+    return make_http_url(feed, feed_dir, request, https=True)
 
 
 @pytest.fixture(params=[
     make_relative_path_url,
     make_absolute_path_url,
     pytest.param(make_http_url, marks=pytest.mark.slow),
+    pytest.param(make_https_url, marks=pytest.mark.slow),
 ])
 def make_url(request):
-    return lambda feed, feed_dir: request.param(feed, feed_dir, request)
+    return partial(request.param, request=request)
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse(monkeypatch, tmpdir, feed_type, make_url):
+    if make_url.func is make_https_url:
+        pytest.skip("cannot make feedparser not verify certificate")
+
     monkeypatch.chdir(tmpdir)
 
     parser = Parser()
