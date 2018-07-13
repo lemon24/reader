@@ -68,47 +68,61 @@ def write_feed(type, feed, entries):
         fg.rss_file(feed.url, pretty=True)
 
 
-def make_relative_path_url(feed, feed_dir, request):
-    return feed.url, None
+@pytest.fixture
+def make_relative_path_url(request):
+    def make_relative_path_url(feed, feed_dir):
+        return feed.url, None
+    return make_relative_path_url
 
 
-def make_absolute_path_url(feed, feed_dir, request):
-    return str(feed_dir.join(feed.url)), None
+@pytest.fixture
+def make_absolute_path_url(request):
+    def make_absolute_path_url(feed, feed_dir):
+        return str(feed_dir.join(feed.url)), None
+    return make_absolute_path_url
 
 
-def make_http_url(feed, feed_dir, request, https=False):
-    from http.server import HTTPServer, SimpleHTTPRequestHandler
-    from threading import Thread
-    import subprocess
-    import ssl
+@pytest.fixture
+def make_http_url(request, https=False):
+    def make_http_url(feed, feed_dir):
 
-    if https:
-        subprocess.run(
-            "openssl req -new -x509 -keyout server.pem "
-            "-out server.pem -days 365 -nodes".split(),
-            input=b'\n'*7)
+        from http.server import HTTPServer, SimpleHTTPRequestHandler
+        from threading import Thread
+        import subprocess
+        import ssl
 
-    http_last_modified = 'Thu, 12 Jul 2018 20:14:00 GMT'
+        if https:
+            subprocess.run(
+                "openssl req -new -x509 -keyout server.pem "
+                "-out server.pem -days 365 -nodes".split(),
+                input=b'\n'*7)
 
-    class Handler(SimpleHTTPRequestHandler):
-        def date_time_string(self, timestamp=None):
-            return http_last_modified
+        http_last_modified = 'Thu, 12 Jul 2018 20:14:00 GMT'
 
-    httpd = HTTPServer(('127.0.0.1', 0), Handler)
-    if https:
-        httpd.socket = ssl.wrap_socket(
-            httpd.socket, certfile='./server.pem', server_side=True)
-    request.addfinalizer(httpd.shutdown)
+        class Handler(SimpleHTTPRequestHandler):
+            def date_time_string(self, timestamp=None):
+                return http_last_modified
 
-    Thread(target=httpd.serve_forever).start()
+        httpd = HTTPServer(('127.0.0.1', 0), Handler)
+        if https:
+            httpd.socket = ssl.wrap_socket(
+                httpd.socket, certfile='./server.pem', server_side=True)
+        request.addfinalizer(httpd.shutdown)
 
-    url = "{p}://{s[0]}:{s[1]}/{f.url}".format(
-        p=('https' if https else 'http'), s=httpd.server_address, f=feed)
-    return url, http_last_modified
+        Thread(target=httpd.serve_forever).start()
+
+        url = "{p}://{s[0]}:{s[1]}/{f.url}".format(
+            p=('https' if https else 'http'), s=httpd.server_address, f=feed)
+        return url, http_last_modified
+
+    return make_http_url
 
 
-def make_https_url(feed, feed_dir, request):
-    return make_http_url(feed, feed_dir, request, https=True)
+@pytest.fixture
+def make_https_url(request):
+    def make_https_url(feed, feed_dir):
+        make_http_url(request, https=True)(feed, feed_dir)
+    return make_https_url
 
 
 @pytest.fixture(params=[
@@ -118,7 +132,7 @@ def make_https_url(feed, feed_dir, request):
     pytest.param(make_https_url, marks=pytest.mark.slow),
 ])
 def make_url(request):
-    return partial(request.param, request=request)
+    return request.param(request)
 
 
 @pytest.fixture(params=[
@@ -126,12 +140,12 @@ def make_url(request):
     pytest.param(make_http_url, marks=pytest.mark.slow),
 ])
 def make_url_local_remote(request):
-    return partial(request.param, request=request)
+    return request.param(request)
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse(monkeypatch, tmpdir, feed_type, make_url):
-    if make_url.func is make_https_url:
+    if make_url.__name__ ==  'make_https_url':
         pytest.skip("cannot make feedparser not verify certificate")
 
     monkeypatch.chdir(tmpdir)
