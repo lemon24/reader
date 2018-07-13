@@ -119,6 +119,28 @@ def make_http_url(request, https=False):
 
 
 @pytest.fixture
+def make_http_url_304(request):
+    def make_http_url(feed, feed_dir):
+        from http.server import HTTPServer, BaseHTTPRequestHandler
+        from threading import Thread
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_error(304)
+
+        httpd = HTTPServer(('127.0.0.1', 0), Handler)
+        request.addfinalizer(httpd.shutdown)
+
+        Thread(target=httpd.serve_forever).start()
+
+        url = "http://{s[0]}:{s[1]}/{f.url}".format(
+            s=httpd.server_address, f=feed)
+        return url, None
+
+    return make_http_url
+
+
+@pytest.fixture
 def make_https_url(request):
     def make_https_url(feed, feed_dir):
         make_http_url(request, https=True)(feed, feed_dir)
@@ -259,7 +281,8 @@ def test_parse_character_encoding_override(monkeypatch, tmpdir):
     parse(feed.url)
 
 
-def test_parse_not_modified(monkeypatch, tmpdir):
+@pytest.mark.slow
+def test_parse_not_modified(monkeypatch, tmpdir, make_http_url_304):
     """parse() should raise NotModified for unchanged feeds."""
 
     monkeypatch.chdir(tmpdir)
@@ -269,16 +292,10 @@ def test_parse_not_modified(monkeypatch, tmpdir):
     feed = parser.feed(1, datetime(2010, 1, 1))
     write_feed('atom', feed, [])
 
-    old_feedparser_parse = feedparser.parse
-    def feedparser_parse(*args, **kwargs):
-        rv = old_feedparser_parse(*args, **kwargs)
-        rv['status'] = 304
-        return rv
-
-    monkeypatch.setattr('feedparser.parse', feedparser_parse)
+    feed_url, _ = make_http_url_304(feed, tmpdir)
 
     with pytest.raises(NotModified):
-        parse(feed.url)
+        parse(feed_url)
 
 
 @pytest.mark.parametrize('tz', ['UTC', 'Europe/Helsinki'])
