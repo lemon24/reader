@@ -6,7 +6,7 @@ import pytest
 import feedgen.feed
 import feedparser
 
-from reader.parser import parse
+from reader.parser import parse_feedparser, parse_requests
 from reader.exceptions import ParseError, NotModified
 from reader.types import Content, Enclosure
 
@@ -66,6 +66,14 @@ def write_feed(type, feed, entries):
         fg.atom_file(feed.url, pretty=True)
     elif type == 'rss':
         fg.rss_file(feed.url, pretty=True)
+
+
+@pytest.fixture(params=[
+    parse_feedparser,
+    parse_requests,
+])
+def parse(request):
+    return request.param
 
 
 @pytest.fixture
@@ -166,7 +174,7 @@ def make_url_local_remote(request):
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_parse(monkeypatch, tmpdir, feed_type, make_url):
+def test_parse(monkeypatch, tmpdir, feed_type, parse, make_url):
     if make_url.__name__ ==  'make_https_url':
         pytest.skip("cannot make feedparser not verify certificate")
 
@@ -216,7 +224,7 @@ def test_parse(monkeypatch, tmpdir, feed_type, make_url):
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_parse_relative_links(monkeypatch, tmpdir, feed_type, make_url_local_remote):
+def test_parse_relative_links(monkeypatch, tmpdir, feed_type, parse, make_url_local_remote):
     make_url = make_url_local_remote
 
     monkeypatch.chdir(tmpdir)
@@ -232,7 +240,7 @@ def test_parse_relative_links(monkeypatch, tmpdir, feed_type, make_url_local_rem
     assert parsed_feed.link == urlparse(feed_url)._replace(path='file.html').geturl()
 
 
-def test_parse_error(monkeypatch, tmpdir):
+def test_parse_error(monkeypatch, tmpdir, parse):
     """parse() should reraise most feedparser exceptions."""
 
     monkeypatch.chdir(tmpdir)
@@ -258,7 +266,7 @@ def test_parse_error(monkeypatch, tmpdir):
     assert excinfo.value.__cause__ is feedparser_exception
 
 
-def test_parse_character_encoding_override(monkeypatch, tmpdir):
+def test_parse_character_encoding_override(monkeypatch, tmpdir, parse):
     """parse() should not reraise feedparser.CharacterEncodingOverride."""
 
     monkeypatch.chdir(tmpdir)
@@ -282,7 +290,7 @@ def test_parse_character_encoding_override(monkeypatch, tmpdir):
 
 
 @pytest.mark.slow
-def test_parse_not_modified(monkeypatch, tmpdir, make_http_url_304):
+def test_parse_not_modified(monkeypatch, tmpdir, parse, make_http_url_304):
     """parse() should raise NotModified for unchanged feeds."""
 
     monkeypatch.chdir(tmpdir)
@@ -299,7 +307,7 @@ def test_parse_not_modified(monkeypatch, tmpdir, make_http_url_304):
 
 
 @pytest.mark.parametrize('tz', ['UTC', 'Europe/Helsinki'])
-def test_parse_local_timezone(monkeypatch, request, tmpdir, tz):
+def test_parse_local_timezone(monkeypatch, request, parse, tmpdir, tz):
     """parse() return the correct dates regardless of the local timezone."""
     monkeypatch.chdir(tmpdir)
 
