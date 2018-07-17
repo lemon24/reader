@@ -38,6 +38,7 @@ except ImportError:
 
 
 def _make_empty_result():
+    """Create an empty FeedParserDict to serve as basis to the parse() result."""
     result = FeedParserDict(
         bozo = False,
         entries = [],
@@ -52,8 +53,8 @@ def parse_data(data, href=None, response_headers=None,
     '''Parse a feed from a string.
 
     :param data:
-        String. Both byte and text strings are accepted. If necessary, 
-        encoding will be derived from the response headers or automatically 
+        String. Both byte and text strings are accepted. If necessary,
+        encoding will be derived from the response headers or automatically
         detected.
 
     :param str href:
@@ -99,6 +100,17 @@ def parse_data(data, href=None, response_headers=None,
 
 
 def _parse_data(data, result, resolve_relative_uris, sanitize_html):
+    """Parse a feed from a string.
+
+    This function implements the feed parsing logic *after* the feed has
+    been retrieved.
+
+    result should be a FeedParserDict (e.g. as created by _make_empty_result).
+    result['headers'] should be a dict with the headers correponding to the
+    request.
+
+    """
+
     # following is a verbatim snippet from feedparser.api.parse()
     # https://github.com/kurtmckee/feedparser/blob/5646f4ca2069ffea349618eef9566005afec665e/feedparser/api.py#L168
 
