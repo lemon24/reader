@@ -2,43 +2,46 @@ import urllib.parse
 import xml.sax
 
 
+try:
+    # for the GitHub version
+    # https://github.com/kurtmckee/feedparser/tree/5646f4ca2069ffea349618eef9566005afec665e
+    from feedparser.api import (
+        convert_to_utf8,
+        StrictFeedParser,
+        LooseFeedParser,
+        replace_doctype, _makeSafeAbsoluteURI,
+        _XML_AVAILABLE, _SGML_AVAILABLE, PREFERRED_XML_PARSERS,
+        _StringIO,
+        bytes_,
+    )
+except ImportError:
+    # for the '5.2.1' in Ubuntu 16.04 / 18.04
+    from feedparser import (
+        convert_to_utf8 as original_convert_to_utf8,
+        _StrictFeedParser as StrictFeedParser,
+        _LooseFeedParser as LooseFeedParser,
+        replace_doctype, _makeSafeAbsoluteURI,
+        _XML_AVAILABLE, _SGML_AVAILABLE, PREFERRED_XML_PARSERS,
+        _StringIO,
+    )
+
+    def convert_to_utf8(http_headers, data, result):
+        data, rfc3023_encoding, error = original_convert_to_utf8(http_headers, data)
+        result['encoding'] = rfc3023_encoding
+        if error:
+            result['bozo'] = 1
+            result['bozo_exception'] = error
+        return data
+
+    bytes_ = bytes
+
+
 def _feedparser_parse_snippet(result, data, resolve_relative_uris=True, sanitize_html=True):
     """This is a verbatim snippet from feedparser.api.parse().
 
     https://github.com/kurtmckee/feedparser/blob/5646f4ca2069ffea349618eef9566005afec665e/feedparser/api.py#L168
 
     """
-    try:
-        # for the GitHub version
-        from feedparser.api import (
-            convert_to_utf8,
-            StrictFeedParser,
-            LooseFeedParser,
-            bytes_,
-            replace_doctype, _makeSafeAbsoluteURI,
-            _XML_AVAILABLE, _SGML_AVAILABLE, PREFERRED_XML_PARSERS,
-            _StringIO,
-        )
-    except ImportError:
-        # for '5.2.1'
-        from feedparser import (
-            convert_to_utf8 as original_convert_to_utf8,
-            _StrictFeedParser as StrictFeedParser,
-            _LooseFeedParser as LooseFeedParser,
-            replace_doctype, _makeSafeAbsoluteURI,
-            _XML_AVAILABLE, _SGML_AVAILABLE, PREFERRED_XML_PARSERS,
-            _StringIO,
-        )
-
-        def convert_to_utf8(http_headers, data, result):
-            data, rfc3023_encoding, error = original_convert_to_utf8(http_headers, data)
-            result['encoding'] = rfc3023_encoding
-            if error:
-                result['bozo'] = 1
-                result['bozo_exception'] = error
-            return data
-
-        bytes_ = bytes
 
     # BEGIN "feedparser.api.parse()"
 
