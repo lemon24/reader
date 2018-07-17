@@ -1,7 +1,6 @@
 import urllib.parse
 import xml.sax
 
-
 try:
     # for the GitHub version
     # https://github.com/kurtmckee/feedparser/tree/5646f4ca2069ffea349618eef9566005afec665e
@@ -9,6 +8,7 @@ try:
         convert_to_utf8,
         StrictFeedParser,
         LooseFeedParser,
+        FeedParserDict,
         replace_doctype, _makeSafeAbsoluteURI,
         _XML_AVAILABLE, _SGML_AVAILABLE, PREFERRED_XML_PARSERS,
         _StringIO,
@@ -20,6 +20,7 @@ except ImportError:
         convert_to_utf8 as original_convert_to_utf8,
         _StrictFeedParser as StrictFeedParser,
         _LooseFeedParser as LooseFeedParser,
+        FeedParserDict,
         replace_doctype, _makeSafeAbsoluteURI,
         _XML_AVAILABLE, _SGML_AVAILABLE, PREFERRED_XML_PARSERS,
         _StringIO,
@@ -36,12 +37,72 @@ except ImportError:
     bytes_ = bytes
 
 
-def _feedparser_parse_snippet(result, data, resolve_relative_uris=True, sanitize_html=True):
-    """This is a verbatim snippet from feedparser.api.parse().
+def _make_empty_result():
+    result = FeedParserDict(
+        bozo = False,
+        entries = [],
+        feed = FeedParserDict(),
+        headers = {},
+    )
+    return result
 
-    https://github.com/kurtmckee/feedparser/blob/5646f4ca2069ffea349618eef9566005afec665e/feedparser/api.py#L168
 
-    """
+def parse_data(data, href=None, response_headers=None,
+               resolve_relative_uris=None, sanitize_html=None,
+               _result=None):
+    '''Parse a feed from a string.
+
+    :param data:
+        String. Both byte and text strings are accepted. If necessary, 
+        encoding will be derived from the response headers or automatically 
+        detected.
+
+    :param str href:
+        Feed URL. Used for relative URL resolution.
+
+        When a URL is not passed the feed location to use in relative URL
+        resolution should be passed in the ``Content-Location`` response header
+        (see ``response_headers`` below).
+
+    :param response_headers:
+        A mapping of HTTP header name to HTTP header value corresponding to
+        the HTTP response that contained ``data``, if any. Multiple values may
+        be joined with a comma.
+    :type response_headers: :class:`dict` mapping :class:`str` to :class:`str`
+
+    :param bool resolve_relative_uris:
+        Should feedparser attempt to resolve relative URIs absolute ones within
+        HTML content?  Defaults to the value of
+        :data:`feedparser.RESOLVE_RELATIVE_URIS`, which is ``True``.
+    :param bool sanitize_html:
+        Should feedparser skip HTML sanitization? Only disable this if you know
+        what you are doing!  Defaults to the value of
+        :data:`feedparser.SANITIZE_HTML`, which is ``True``.
+
+    :return: A :class:`FeedParserDict`.
+    '''
+
+    if sanitize_html is None or resolve_relative_uris is None:
+        import feedparser
+    if sanitize_html is None:
+        sanitize_html = feedparser.SANITIZE_HTML
+    if resolve_relative_uris is None:
+        resolve_relative_uris = feedparser.RESOLVE_RELATIVE_URIS
+
+    if _result is not None:
+        if href is not None or response_headers is not None:
+            raise ValueError("href and response_headers cannot be used with _result")
+        result = _result
+    else:
+        result = _make_empty_result()
+
+    if href:
+        result['href'] = href
+    if response_headers:
+        result['headers'] = response_headers
+
+    # following is a verbatim snippet from feedparser.api.parse()
+    # https://github.com/kurtmckee/feedparser/blob/5646f4ca2069ffea349618eef9566005afec665e/feedparser/api.py#L168
 
     # BEGIN "feedparser.api.parse()"
 
@@ -92,6 +153,7 @@ def _feedparser_parse_snippet(result, data, resolve_relative_uris=True, sanitize
     result['entries'] = feedparser.entries
     result['version'] = result['version'] or feedparser.version
     result['namespaces'] = feedparser.namespacesInUse
+    return result
 
     # END "feedparser.api.parse()"
 

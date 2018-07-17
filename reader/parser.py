@@ -130,13 +130,11 @@ except ImportError:
     requests = None
 
 if requests:
-    from ._feedparser_parse_data import _feedparser_parse_snippet
+    from ._feedparser_parse_data import parse_data
     try:
         import feedparser.http as feedparser_http
-        import feedparser.api as feedparser_api
     except ImportError:
         feedparser_http = feedparser
-        feedparser_api = feedparser
 
 
 def parse_requests(url, http_etag=None, http_last_modified=None):
@@ -195,15 +193,11 @@ def parse_requests(url, http_etag=None, http_last_modified=None):
     if response.status_code == 304:
         raise NotModified(url)
 
-    result = feedparser_api.FeedParserDict(
-        bozo = False,
-        entries = [],
-        feed = feedparser_api.FeedParserDict(),
-        headers = {},
-    )
-
     """
-    Things we should set on result, but we don't because we're not using them:
+    If we were to pass a result to parse_data(..., _result=result):
+
+    Things we should set on result, but we don't because they don't seem to
+    be needed for the actual parsing, and we're not using them:
 
     * result['bozo'] and result['bozo_exception']
       (we're raising the exceptions directly)
@@ -211,24 +205,16 @@ def parse_requests(url, http_etag=None, http_last_modified=None):
       (we're returning them)
     * result['version'] and result['debug_message']
       (for 304s; we're raising the exception directly)
-
-    Things we are setting because they are or might be used by
-    _feedparser_parse_snippet:
-
     * result['status']
-    * result['headers'] (to response.headers, a CaseInsensitiveDict)
-    * result['href'] (to response.url)
     * result.newurl (for 30[01237]s, i.e. response.url != url)
 
+    Things that are needed for the actual parsing (will be set by parse_data):
+
+    * result['href'] (to response.url)
+    * result['headers'] (to response.headers, a CaseInsensitiveDict)
+
     """
-
-    result['status'] = response.status_code
-    result['headers'] = response.headers
-    result['href'] = response.url
-    if response.url != url:
-        result.newurl = response.url
-
-    _feedparser_parse_snippet(result, response.content)
+    result = parse_data(response.content, response.url, response.headers)
 
     http_etag = response.headers.get('ETag', http_etag)
     http_last_modified = response.headers.get('Last-Modified', http_last_modified)
