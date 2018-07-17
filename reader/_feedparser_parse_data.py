@@ -48,8 +48,7 @@ def _make_empty_result():
 
 
 def parse_data(data, href=None, response_headers=None,
-               resolve_relative_uris=None, sanitize_html=None,
-               _result=None):
+               resolve_relative_uris=None, sanitize_html=None):
     '''Parse a feed from a string.
 
     :param data:
@@ -89,18 +88,17 @@ def parse_data(data, href=None, response_headers=None,
     if resolve_relative_uris is None:
         resolve_relative_uris = feedparser.RESOLVE_RELATIVE_URIS
 
-    if _result is not None:
-        if href is not None or response_headers is not None:
-            raise ValueError("href and response_headers cannot be used with _result")
-        result = _result
-    else:
-        result = _make_empty_result()
+    result = _make_empty_result()
 
     if href:
         result['href'] = href
     if response_headers:
-        result['headers'] = response_headers
+        result['headers'] = response_headers or {}
 
+    return _parse_data(data, result, resolve_relative_uris, sanitize_html)
+
+
+def _parse_data(data, result, resolve_relative_uris, sanitize_html):
     # following is a verbatim snippet from feedparser.api.parse()
     # https://github.com/kurtmckee/feedparser/blob/5646f4ca2069ffea349618eef9566005afec665e/feedparser/api.py#L168
 
