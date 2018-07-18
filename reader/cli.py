@@ -80,9 +80,10 @@ def remove(db_path, url, verbose):
 
 @cli.command()
 @click.argument('url', required=False)
+@click.option('--new-only/--no-new-only')
 @click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def update(db_path, url, verbose):
+def update(db_path, url, new_only, verbose):
     setup_logging(verbose)
     try:
         reader = Reader(db_path)
@@ -91,7 +92,7 @@ def update(db_path, url, verbose):
     if url:
         reader.update_feed(url)
     else:
-        reader.update_feeds()
+        reader.update_feeds(new_only=new_only)
 
 
 @cli.command()
