@@ -143,6 +143,37 @@ def test_update_not_modified(reader, call_update_method):
     assert set(reader.get_entries()) == set()
 
 
+def test_update_new_only(reader):
+    parser = Parser()
+    reader._parse = parser
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    reader.add_feed(one.url)
+    reader.update_feeds(new_only=True)
+
+    assert len(set(reader.get_feeds())) == 1
+    assert set(reader.get_entries()) == set()
+
+    entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 2, 1))
+    entry_two = parser.entry(2, 2, datetime(2010, 2, 1))
+    reader.add_feed(two.url)
+    reader.update_feeds(new_only=True)
+
+    assert len(set(reader.get_feeds())) == 2
+    assert set(reader.get_entries()) == {
+        entry_two._replace(feed=two),
+    }
+
+    reader.update_feeds()
+
+    assert len(set(reader.get_feeds())) == 2
+    assert set(reader.get_entries()) == {
+        entry_one._replace(feed=one),
+        entry_two._replace(feed=two),
+    }
+
+
 def test_update_feeds_parse_error(reader):
     parser = Parser()
     reader._parse = parser

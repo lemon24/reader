@@ -151,11 +151,18 @@ class Reader:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
-    def _get_feeds_for_update(self, url=None):
-        where_url_snippet = '' if not url else "WHERE url = :url"
+    def _get_feeds_for_update(self, url=None, new_only=False):
+        if url or new_only:
+            where_snippet = "WHERE 1"
+        else:
+            where_snippet = ''
+        where_url_snippet = '' if not url else " AND url = :url"
+        where_new_only_snippet = '' if not new_only else " AND last_updated is NULL"
         cursor = self.db.execute("""
             SELECT url, updated, http_etag, http_last_modified, stale FROM feeds
+            {where_snippet}
             {where_url_snippet}
+            {where_new_only_snippet}
             ORDER BY feeds.url;
         """.format(**locals()), locals())
         return cursor
@@ -196,16 +203,20 @@ class Reader:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     @wrap_storage_exceptions()
-    def update_feeds(self):
+    def update_feeds(self, new_only=False):
         """Update all the feeds.
+
+        Args:
+            new_only (bool): Only update feeds that have never been updated.
 
         Raises:
             StorageError
 
         """
-        for row in list(self._get_feeds_for_update()):
+        for row in list(self._get_feeds_for_update(new_only=new_only)):
             try:
                 self._update_feed(*row)
+                # TODO: What if the feed doesn't exist anymore?
             except ParseError as e:
                 log.exception("update feed %r: error while getting/parsing feed, skipping; exception: %r", e.url, e.__cause__)
 
