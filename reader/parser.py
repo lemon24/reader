@@ -2,6 +2,7 @@ import time
 import datetime
 import calendar
 import logging
+import functools
 
 import feedparser
 
@@ -130,7 +131,6 @@ except ImportError:
     requests = None
 
 if requests:
-    from ._feedparser_parse_data import parse_data
     try:
         import feedparser.http as feedparser_http
     except ImportError:
@@ -184,37 +184,23 @@ def parse_requests(url, http_etag=None, http_last_modified=None):
         headers['If-Modified-Since'] = http_last_modified
 
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, stream=True)
         # Should we raise_for_status()? feedparser.parse() isn't.
         # Should we check the status on the feedparser.parse() result?
+
+        headers = response.headers.copy()
+        headers.setdefault('content-location', response.url)
+
+        response.raw.read = functools.partial(response.raw.read, decode_content=True)
+
+        with response:
+            result = feedparser.parse(response.raw, response_headers=headers)
+
     except Exception as e:
         raise ParseError(url) from e
 
     if response.status_code == 304:
         raise NotModified(url)
-
-    """
-    If we were to pass a result to parse_data(..., _result=result):
-
-    Things we should set on result, but we don't because they don't seem to
-    be needed for the actual parsing, and we're not using them:
-
-    * result['bozo'] and result['bozo_exception']
-      (we're raising the exceptions directly)
-    * result['etag'], result['modified'], result['modified_parsed']
-      (we're returning them)
-    * result['version'] and result['debug_message']
-      (for 304s; we're raising the exception directly)
-    * result['status']
-    * result.newurl (for 30[01237]s, i.e. response.url != url)
-
-    Things that are needed for the actual parsing (will be set by parse_data):
-
-    * result['href'] (to response.url)
-    * result['headers'] (to response.headers, a CaseInsensitiveDict)
-
-    """
-    result = parse_data(response.content, response.url, response.headers)
 
     http_etag = response.headers.get('ETag', http_etag)
     http_last_modified = response.headers.get('Last-Modified', http_last_modified)
