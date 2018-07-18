@@ -38,7 +38,7 @@ def ddl_transaction(db):
         db.isolation_level = isolation_level
 
 
-VERSION = 9
+VERSION = 10
 
 
 class InvalidVersion(Exception):
@@ -73,7 +73,8 @@ def create_db(db):
             user_title TEXT,
             http_etag TEXT,
             http_last_modified TEXT,
-            stale INTEGER
+            stale INTEGER,
+            last_updated TIMESTAMP
         );
     """)
     db.execute("""
@@ -89,6 +90,7 @@ def create_db(db):
             content TEXT,
             enclosures TEXT,
             read INTEGER,
+            last_updated TIMESTAMP,
             PRIMARY KEY (id, feed),
             FOREIGN KEY (feed) REFERENCES feeds(url)
                 ON UPDATE CASCADE
@@ -250,6 +252,17 @@ def update_from_8_to_9(db):
     """)
 
 
+def update_from_9_to_10(db):
+    db.execute("""
+        ALTER TABLE feeds
+        ADD COLUMN last_updated TIMESTAMP;
+    """)
+    db.execute("""
+        ALTER TABLE entries
+        ADD COLUMN last_updated TIMESTAMP;
+    """)
+
+
 MIGRATIONS = {
     1: update_from_1_to_2,
     2: update_from_2_to_3,
@@ -259,6 +272,7 @@ MIGRATIONS = {
     6: update_from_6_to_7,
     7: update_from_7_to_8,
     8: update_from_8_to_9,
+    9: update_from_9_to_10,
 }
 
 
