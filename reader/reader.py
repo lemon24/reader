@@ -3,6 +3,7 @@ import logging
 import sqlite3
 import functools
 import contextlib
+import datetime
 
 from .db import open_db
 from .types import Feed, Entry, Content, Enclosure
@@ -258,6 +259,8 @@ class Reader:
 
         with self.db:
 
+            now = datetime.datetime.utcnow()
+
             if stale or feed_was_updated:
                 self.db.execute("""
                     UPDATE feeds
@@ -268,20 +271,21 @@ class Reader:
                         author = :author,
                         http_etag = :http_etag,
                         http_last_modified = :http_last_modified,
-                        stale = NULL
+                        stale = NULL,
+                        last_updated = :now
                     WHERE url = :url;
                 """, locals())
 
             entries_updated, entries_new = 0, 0
             for entry in entries:
                 assert entry.feed is None
-                entry_updated, entry_new = self._update_entry(url, entry, stale)
+                entry_updated, entry_new = self._update_entry(url, entry, stale, now)
                 entries_updated += entry_updated
                 entries_new += entry_new
 
             log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
-    def _update_entry(self, feed_url, entry, stale):
+    def _update_entry(self, feed_url, entry, stale, now):
         db_updated = self._get_entry_updated(feed_url, entry.id)
         updated, published = entry.updated, entry.published
 
@@ -302,9 +306,9 @@ class Reader:
         if not db_updated:
             self.db.execute("""
                 INSERT INTO entries (
-                    id, feed, title, link, updated, author, published, summary, content, enclosures
+                    id, feed, title, link, updated, author, published, summary, content, enclosures, last_updated
                 ) VALUES (
-                    :id, :feed_url, :title, :link, :updated, :author, :published, :summary, :content, :enclosures
+                    :id, :feed_url, :title, :link, :updated, :author, :published, :summary, :content, :enclosures, :now
                 );
             """, locals())
             log.debug("update entry %r of feed %r: entry added", entry.id, feed_url)
@@ -321,7 +325,8 @@ class Reader:
                     published = :published,
                     summary = :summary,
                     content = :content,
-                    enclosures = :enclosures
+                    enclosures = :enclosures,
+                    last_updated = :now
                 WHERE feed = :feed_url AND id = :id;
             """, locals())
             log.debug("update entry %r of feed %r: entry updated", entry.id, feed_url)
