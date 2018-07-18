@@ -191,8 +191,6 @@ def parse_requests(url, http_etag=None, http_last_modified=None):
         headers = response.headers.copy()
         headers.setdefault('content-location', response.url)
 
-        response.raw.read = functools.partial(response.raw.read, decode_content=True)
-
         with response:
             result = feedparser.parse(response.raw, response_headers=headers)
 

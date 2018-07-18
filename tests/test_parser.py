@@ -91,13 +91,14 @@ def make_absolute_path_url(request):
 
 
 @pytest.fixture
-def make_http_url(request, https=False):
+def make_http_url(request, https=False, gzip_enabled=False):
     def make_http_url(feed, feed_dir):
 
         from http.server import HTTPServer, SimpleHTTPRequestHandler
         from threading import Thread
         import subprocess
         import ssl
+        import gzip, io
 
         if https:
             subprocess.run(
@@ -110,6 +111,43 @@ def make_http_url(request, https=False):
         class Handler(SimpleHTTPRequestHandler):
             def date_time_string(self, timestamp=None):
                 return http_last_modified
+
+            if gzip_enabled:
+
+                def send_head(self):
+                    self.end_headers = lambda: None
+                    original_send_header = self.send_header
+                    def send_header(keyword, value):
+                        if keyword == 'Content-Length':
+                            return
+                        original_send_header(keyword, value)
+                    self.send_header = send_header
+
+                    f = super().send_head()
+
+                    del self.end_headers
+                    del self.send_header
+
+                    if f:
+                        try:
+                            data = f.read()
+                        finally:
+                            f.close()
+
+                        compressed_file = io.BytesIO()
+                        gz = gzip.GzipFile(fileobj=compressed_file, mode='wb')
+                        gz.write(data)
+                        gz.close()
+
+                        self.send_header('Content-Encoding', 'gzip')
+                        self.send_header('Content-Length', str(len(compressed_file.getvalue())))
+
+                        self.end_headers()
+
+                        compressed_file.seek(0)
+                        return compressed_file
+
+                    return f
 
         httpd = HTTPServer(('127.0.0.1', 0), Handler)
         if https:
@@ -151,8 +189,15 @@ def make_http_url_304(request):
 @pytest.fixture
 def make_https_url(request):
     def make_https_url(feed, feed_dir):
-        make_http_url(request, https=True)(feed, feed_dir)
+        return make_http_url(request, https=True)(feed, feed_dir)
     return make_https_url
+
+
+@pytest.fixture
+def make_http_gzip_url(request):
+    def make_http_gzip_url(feed, feed_dir):
+        return make_http_url(request, gzip_enabled=True)(feed, feed_dir)
+    return make_http_gzip_url
 
 
 @pytest.fixture(params=[
@@ -160,6 +205,7 @@ def make_https_url(request):
     make_absolute_path_url,
     pytest.param(make_http_url, marks=pytest.mark.slow),
     pytest.param(make_https_url, marks=pytest.mark.slow),
+    pytest.param(make_http_gzip_url, marks=pytest.mark.slow),
 ])
 def make_url(request):
     return request.param(request)
