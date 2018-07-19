@@ -3,6 +3,7 @@ import datetime
 import calendar
 import logging
 import functools
+import urllib.parse
 
 import feedparser
 
