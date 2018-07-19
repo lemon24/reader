@@ -24,6 +24,7 @@ setup(
     ],
     extras_require={
         'enclosure-tags': ['requests', 'mutagen'],
+        'requests': ['requests'],
     },
     description="",
     classifiers=[
