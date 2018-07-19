@@ -4,6 +4,7 @@ import calendar
 import logging
 import functools
 import urllib.parse
+import contextlib
 
 import feedparser
 
@@ -192,7 +193,8 @@ def parse_requests(url, http_etag=None, http_last_modified=None):
         headers = response.headers.copy()
         headers.setdefault('content-location', response.url)
 
-        with response:
+        # with response doesn't work win requests 2.9.1
+        with contextlib.closing(response):
             result = feedparser.parse(response.raw, response_headers=headers)
 
     except Exception as e:
