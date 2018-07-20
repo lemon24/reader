@@ -216,7 +216,8 @@ class Reader:
         for row in list(self._get_feeds_for_update(new_only=new_only)):
             try:
                 self._update_feed(*row)
-                # TODO: What if the feed doesn't exist anymore?
+            except FeedNotFoundError as e:
+                log.info("update feed %r: feed removed during update", e.url)
             except ParseError as e:
                 log.exception("update feed %r: error while getting/parsing feed, skipping; exception: %r", e.url, e.__cause__)
 
@@ -273,7 +274,7 @@ class Reader:
             now = datetime.datetime.utcnow()
 
             if stale or feed_was_updated:
-                self.db.execute("""
+                rows = self.db.execute("""
                     UPDATE feeds
                     SET
                         title = :title,
@@ -286,6 +287,10 @@ class Reader:
                         last_updated = :now
                     WHERE url = :url;
                 """, locals())
+
+                if rows.rowcount == 0:
+                    raise FeedNotFoundError(url)
+                assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
             entries_updated, entries_new = 0, 0
             for entry in entries:
@@ -314,34 +319,39 @@ class Reader:
         content = json.dumps([t._asdict() for t in entry.content]) if entry.content else None
         enclosures = json.dumps([t._asdict() for t in entry.enclosures]) if entry.enclosures else None
 
-        if not db_updated:
-            self.db.execute("""
-                INSERT INTO entries (
-                    id, feed, title, link, updated, author, published, summary, content, enclosures, last_updated
-                ) VALUES (
-                    :id, :feed_url, :title, :link, :updated, :author, :published, :summary, :content, :enclosures, :now
-                );
-            """, locals())
-            log.debug("update entry %r of feed %r: entry added", entry.id, feed_url)
-            return 0, 1
+        try:
 
-        else:
-            self.db.execute("""
-                UPDATE entries
-                SET
-                    title = :title,
-                    link = :link,
-                    updated = :updated,
-                    author = :author,
-                    published = :published,
-                    summary = :summary,
-                    content = :content,
-                    enclosures = :enclosures,
-                    last_updated = :now
-                WHERE feed = :feed_url AND id = :id;
-            """, locals())
-            log.debug("update entry %r of feed %r: entry updated", entry.id, feed_url)
-            return 1, 0
+            if not db_updated:
+                self.db.execute("""
+                    INSERT INTO entries (
+                        id, feed, title, link, updated, author, published, summary, content, enclosures, last_updated
+                    ) VALUES (
+                        :id, :feed_url, :title, :link, :updated, :author, :published, :summary, :content, :enclosures, :now
+                    );
+                """, locals())
+                log.debug("update entry %r of feed %r: entry added", entry.id, feed_url)
+                return 0, 1
+
+            else:
+                self.db.execute("""
+                    UPDATE entries
+                    SET
+                        title = :title,
+                        link = :link,
+                        updated = :updated,
+                        author = :author,
+                        published = :published,
+                        summary = :summary,
+                        content = :content,
+                        enclosures = :enclosures,
+                        last_updated = :now
+                    WHERE feed = :feed_url AND id = :id;
+                """, locals())
+                log.debug("update entry %r of feed %r: entry updated", entry.id, feed_url)
+                return 1, 0
+
+        except sqlite3.IntegrityError as e:
+            raise FeedNotFoundError(feed_url)
 
     def _get_entry_updated(self, feed_url, id):
         rv = self.db.execute("""

@@ -71,7 +71,7 @@ class BlockingParser(Parser):
     def __call__(self, *args, **kwargs):
         self.in_parser.set()
         self.can_return_from_parser.wait()
-        raise ParseError(None)
+        return super().__call__(*args, **kwargs)
 
 
 class FailingParser(Parser):

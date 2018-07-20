@@ -1,5 +1,6 @@
 from datetime import datetime
 import threading
+from enum import Enum
 
 import pytest
 
@@ -11,7 +12,7 @@ from fakeparser import Parser, BlockingParser, FailingParser, NotModifiedParser
 
 
 def test_update_feed_updated(reader, call_update_method):
-    """If a feed is not newer than the stored one, it should not be updated, 
+    """If a feed is not newer than the stored one, it should not be updated,
     but its entries should be processed anyway.
 
     Details in https://github.com/lemon24/reader/issues/76
@@ -186,6 +187,80 @@ def test_update_feeds_parse_error(reader):
 
     # shouldn't raise an exception
     reader.update_feeds()
+
+
+class FeedAction(Enum):
+    none = object()
+    update = object()
+
+class EntryAction(Enum):
+    none = object()
+    insert = object()
+    update = object()
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize('feed_action, entry_action', [
+    (f, e)
+    for f in FeedAction
+    for e in EntryAction
+    if (f, e) != (FeedAction.none, EntryAction.none)
+])
+def test_update_feed_deleted(monkeypatch, tmpdir, call_update_method,
+                             feed_action, entry_action):
+    """reader.update_feed should raise FeedNotFoundError if the feed is
+    deleted during parsing.
+
+    reader.update_feeds shouldn't (but should log).
+
+    """
+
+    monkeypatch.chdir(tmpdir)
+    db_path = str(tmpdir.join('db.sqlite'))
+
+    parser = Parser()
+    reader = Reader(db_path)
+    reader._parse = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    if entry_action is not EntryAction.none:
+        parser.entry(1, 1, datetime(2010, 1, 1))
+        if entry_action is EntryAction.update:
+            reader.update_feeds()
+            parser.entry(1, 1, datetime(2010, 1, 2))
+
+    if feed_action is FeedAction.update:
+        feed = parser.feed(1, datetime(2010, 1, 2))
+
+    blocking_parser = BlockingParser.from_parser(parser)
+
+    def target():
+        try:
+            blocking_parser.in_parser.wait()
+            reader = Reader(db_path)
+            reader.remove_feed(feed.url)
+        finally:
+            blocking_parser.can_return_from_parser.set()
+
+    t = threading.Thread(target=target)
+    t.start()
+
+    try:
+        reader._parse = blocking_parser
+        if call_update_method.__name__ == 'call_update_feed':
+            with pytest.raises(FeedNotFoundError) as excinfo:
+                call_update_method(reader, feed.url)
+            assert excinfo.value.url == feed.url
+        elif call_update_method.__name__ == 'call_update_feeds':
+            # shouldn't raise an exception
+            call_update_method(reader, feed.url)
+        else:
+            assert False, "shouldn't happen"
+    finally:
+        t.join()
 
 
 def test_update_feed(reader):
