@@ -117,3 +117,9 @@ ul.controls .collapsible {
 
 }
 
+
+.feed, .entry {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
