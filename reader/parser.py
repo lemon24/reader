@@ -139,77 +139,97 @@ if requests:
         feedparser_http = feedparser
 
 
-def parse_requests(url, http_etag=None, http_last_modified=None):
+class RequestsParser:
 
-    url_split = urllib.parse.urlparse(url)
+    def __init__(self):
+        self.response_plugins = []
 
-    if url_split.scheme not in ('http', 'https'):
-        # TODO: raise ValueError
-        assert not url_split.netloc
-        assert not url_split.params
-        assert not url_split.query
-        assert not url_split.fragment
-        if url_split.scheme in ('file', ):
-            url = url_split.path
-        else:
-            url = url_split.scheme + (':' if url_split.scheme else '') + url_split.path
-        return parse_feedparser(url, http_etag, http_last_modified)
+    def __call__(self, url, http_etag=None, http_last_modified=None):
 
-    """
-    Following the implementation in:
-    https://github.com/kurtmckee/feedparser/blob/develop/feedparser/http.py
+        url_split = urllib.parse.urlparse(url)
 
-    "Porting" notes:
+        if url_split.scheme not in ('http', 'https'):
+            # TODO: raise ValueError
+            assert not url_split.netloc
+            assert not url_split.params
+            assert not url_split.query
+            assert not url_split.fragment
+            if url_split.scheme in ('file', ):
+                url = url_split.path
+            else:
+                url = url_split.scheme + (':' if url_split.scheme else '') + url_split.path
+            return parse_feedparser(url, http_etag, http_last_modified)
 
-    No need to add Accept-encoding (requests seems to do this already).
+        """
+        Following the implementation in:
+        https://github.com/kurtmckee/feedparser/blob/develop/feedparser/http.py
 
-    No need to add Referer / User-Agent / Authorization / custom request
-    headers, as they are not exposed in the reader.parser.parse interface
-    (not yet, at least).
+        "Porting" notes:
 
-    We should add:
+        No need to add Accept-encoding (requests seems to do this already).
 
-    * If-None-Match (http_etag)
-    * If-Modified-Since (http_last_modified)
-    * Accept (feedparser.(html.)ACCEPT_HEADER)
-    * A-IM ("feed")
+        No need to add Referer / User-Agent / Authorization / custom request
+        headers, as they are not exposed in the reader.parser.parse interface
+        (not yet, at least).
 
-    """
+        We should add:
 
-    headers = {
-        'Accept': feedparser_http.ACCEPT_HEADER,
-        'A-IM': 'feed',
-    }
-    if http_etag:
-        headers['If-None-Match'] = http_etag
-    if http_last_modified:
-        headers['If-Modified-Since'] = http_last_modified
+        * If-None-Match (http_etag)
+        * If-Modified-Since (http_last_modified)
+        * Accept (feedparser.(html.)ACCEPT_HEADER)
+        * A-IM ("feed")
 
-    try:
-        response = requests.get(url, headers=headers, stream=True)
-        # Should we raise_for_status()? feedparser.parse() isn't.
-        # Should we check the status on the feedparser.parse() result?
+        """
 
-        headers = response.headers.copy()
-        headers.setdefault('content-location', response.url)
+        headers = {
+            'Accept': feedparser_http.ACCEPT_HEADER,
+            'A-IM': 'feed',
+        }
+        if http_etag:
+            headers['If-None-Match'] = http_etag
+        if http_last_modified:
+            headers['If-Modified-Since'] = http_last_modified
 
-        # with response doesn't work win requests 2.9.1
-        with contextlib.closing(response):
-            result = feedparser.parse(response.raw, response_headers=headers)
+        request = requests.Request('GET', url, headers=headers)
 
-    except Exception as e:
-        raise ParseError(url) from e
+        try:
+            session = requests.Session()
+            response = session.send(session.prepare_request(request), stream=True)
 
-    if response.status_code == 304:
-        raise NotModified(url)
+            for plugin in self.response_plugins:
+                rv = plugin(session, response, request)
+                if rv is None:
+                    continue
+                assert isinstance(rv, requests.Request)
+                response.close()
+                request = rv
+                response = session.send(session.prepare_request(request), stream=True)
 
-    http_etag = response.headers.get('ETag', http_etag)
-    http_last_modified = response.headers.get('Last-Modified', http_last_modified)
+            # Should we raise_for_status()? feedparser.parse() isn't.
+            # Should we check the status on the feedparser.parse() result?
 
-    return _process_feed(url, result) + (http_etag, http_last_modified)
+            headers = response.headers.copy()
+            headers.setdefault('content-location', response.url)
+
+            # with response doesn't work with requests 2.9.1
+            with contextlib.closing(response):
+                result = feedparser.parse(response.raw, response_headers=headers)
+
+        except Exception as e:
+            raise ParseError(url) from e
+
+        if response.status_code == 304:
+            raise NotModified(url)
+
+        http_etag = response.headers.get('ETag', http_etag)
+        http_last_modified = response.headers.get('Last-Modified', http_last_modified)
+
+        return _process_feed(url, result) + (http_etag, http_last_modified)
 
 
 parse = parse_feedparser
 if requests:
+    parse_requests = RequestsParser()
+    parse_requests.__name__ = parse_requests.__qualname__ = 'parse_requests'
     parse = parse_requests
 
