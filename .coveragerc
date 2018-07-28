@@ -1,6 +1,7 @@
 [run]
 branch = True
 source = reader
+parallel = True
 
 [paths]
 source =
