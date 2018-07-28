@@ -7,7 +7,7 @@ python:
 
 install:
     - ./build-sqlite.sh $HOME
-    - pip install .
+    - pip install '.[web-app,requests,enclosure-tags]'
     - pip install -r test-requirements.txt
     - pip install codecov
 
