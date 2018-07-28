@@ -7,7 +7,7 @@ from flask import Flask, render_template, current_app, g, request, redirect, abo
 import werkzeug
 import humanize
 
-from . import Reader, ReaderError
+from reader import Reader, ReaderError
 
 
 blueprint = Blueprint('reader', __name__)

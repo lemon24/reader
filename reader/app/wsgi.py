@@ -2,7 +2,7 @@
 
 To run a local development server:
 
-    FLASK_TRAP_BAD_REQUEST_ERRORS=1 FLASK_DEBUG=1 FLASK_APP=reader/wsgi.py \
+    FLASK_TRAP_BAD_REQUEST_ERRORS=1 FLASK_DEBUG=1 FLASK_APP=reader/app/wsgi.py \
     READER_DB=db.sqlite flask run -h 0.0.0.0 -p 8000
 
 """
