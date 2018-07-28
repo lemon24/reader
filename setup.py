@@ -13,7 +13,7 @@ setup(
     version=version,
     author='lemon24',
     url='https://github.com/lemon24/reader',
-    packages=['reader'],
+    packages=['reader', 'reader.app'],
     include_package_data=True,
     install_requires=[
         'attrs>=17',
