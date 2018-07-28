@@ -6,6 +6,8 @@ import os.path
 import timeit
 import cProfile, pstats
 
+sys.path.insert(0, 'src')
+
 sys.path.insert(0, 'tests')
 from fakeparser import Parser
 

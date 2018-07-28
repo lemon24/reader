@@ -1,0 +1,9 @@
+[run]
+branch = True
+source = reader
+
+[paths]
+source =
+   src/reader
+   .tox/*/lib/python*/site-packages/reader
+   .tox/pypy*/site-packages/reader

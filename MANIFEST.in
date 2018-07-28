@@ -1,5 +1,5 @@
-recursive-include reader/templates *
-recursive-include reader/static *
+recursive-include src/reader/app/templates *
+recursive-include src/reader/app/static *
 include Makefile CHANGES LICENSE
 recursive-include tests *
 recursive-include examples *

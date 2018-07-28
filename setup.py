@@ -1,10 +1,10 @@
 import re
 import ast
-from setuptools import setup
+from setuptools import setup, find_packages
 
 _version_re = re.compile(r'__version__\s+=\s+(.*)')
 
-with open('reader/__init__.py', 'rb') as f:
+with open('src/reader/__init__.py', 'rb') as f:
     version = str(ast.literal_eval(_version_re.search(
         f.read().decode('utf-8')).group(1)))
 
@@ -13,7 +13,8 @@ setup(
     version=version,
     author='lemon24',
     url='https://github.com/lemon24/reader',
-    packages=['reader', 'reader.app'],
+    packages=find_packages(where='src'),
+    package_dir={'': 'src'},
     include_package_data=True,
     install_requires=[
         'attrs>=17',

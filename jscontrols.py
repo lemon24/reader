@@ -1,13 +1,16 @@
 from flask import Flask, request, redirect, flash, jsonify
 import werkzeug
 
+import sys
+sys.path.insert(0, 'src')
+
 from reader.app import get_flashed_messages_by_prefix, APIThing, APIError
 
 
 app = Flask(
     __name__,
-    template_folder='reader/templates',
-    static_folder='reader/static',
+    template_folder='src/reader/app/templates',
+    static_folder='src/reader/app/static',
 )
 app.secret_key = 'secret'
 app.template_global()(get_flashed_messages_by_prefix)
