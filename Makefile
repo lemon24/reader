@@ -6,12 +6,13 @@ install-dev:
 	pip install -q -e '.[web-app,requests,enclosure-tags]'
 	pip install -q -r test-requirements.txt
 	pip install -q pytest-xdist
+	pip install -q pytest-cov
 
 test: clean-pyc install-dev
-	python3 -m pytest -v --runslow
+	pytest -v --runslow
 
 coverage: clean-pyc install-dev
-	coverage run -p -m pytest -n 4 -v --runslow
+	pytest --cov -n 4 -v --runslow
 	coverage combine
 	coverage report
 	coverage html
