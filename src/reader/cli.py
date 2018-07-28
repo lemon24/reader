@@ -95,19 +95,6 @@ def update(db_path, url, new_only, verbose):
         reader.update_feeds(new_only=new_only)
 
 
-@cli.command()
-@click.pass_obj
-@click.option('-h', '--host', default='localhost', show_default=True)
-@click.option('-p', '--port', default=8080, show_default=True, type=int)
-@click.option('-v', '--verbose', count=True)
-def serve(db_path, host, port, verbose):
-    setup_logging(verbose)
-    from werkzeug.serving import run_simple
-    from .app import create_app
-    app = create_app(db_path)
-    run_simple(host, port, app)
-
-
 @cli.group()
 def list():
     pass
@@ -119,6 +106,9 @@ def feeds(db_path):
     for feed in Reader(db_path).get_feeds():
         click.echo(feed.url)
 
+
+from reader.app.cli import serve
+cli.add_command(serve)
 
 
 if __name__ == '__main__':
