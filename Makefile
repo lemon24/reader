@@ -2,7 +2,11 @@
 
 all: test
 
-test: clean-pyc
+install-dev:
+	pip install -q -e '.[web-app,requests,enclosure-tags]'
+	pip install -r test-requirements.txt
+
+test: clean-pyc install-dev
 	python3 -m pytest -v --runslow
 
 coverage: clean-pyc
