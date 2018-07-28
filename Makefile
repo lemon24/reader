@@ -4,12 +4,12 @@ all: test
 
 install-dev:
 	pip install -q -e '.[web-app,requests,enclosure-tags]'
-	pip install -r test-requirements.txt
+	pip install -q -r test-requirements.txt
 
 test: clean-pyc install-dev
 	python3 -m pytest -v --runslow
 
-coverage: clean-pyc
+coverage: clean-pyc install-dev
 	coverage run -p -m pytest -v --runslow
 	coverage combine
 	coverage report
