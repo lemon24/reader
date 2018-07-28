@@ -6,7 +6,7 @@ test: clean-pyc
 	python3 -m pytest -v --runslow
 
 coverage: clean-pyc
-	coverage run --include='reader/*' -p -m pytest -v --runslow
+	coverage run -p -m pytest -v --runslow
 	coverage combine
 	coverage report
 	coverage html
