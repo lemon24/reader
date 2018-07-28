@@ -19,10 +19,9 @@ setup(
         'attrs>=17',
         'feedparser>=5',
         'click>=5',
-        'flask>=0.10',
-        'humanize',
     ],
     extras_require={
+        'web-app': ['flask>=0.10', 'humanize'],
         'enclosure-tags': ['requests', 'mutagen'],
         'requests': ['requests'],
     },
