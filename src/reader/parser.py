@@ -143,6 +143,7 @@ class RequestsParser:
 
     def __init__(self):
         self.response_plugins = []
+        self._verify = True
 
     def __call__(self, url, http_etag=None, http_last_modified=None):
 
@@ -194,7 +195,8 @@ class RequestsParser:
 
         try:
             session = requests.Session()
-            response = session.send(session.prepare_request(request), stream=True)
+            response = session.send(session.prepare_request(request),
+                                    stream=True, verify=self._verify)
 
             for plugin in self.response_plugins:
                 rv = plugin(session, response, request)
@@ -203,7 +205,8 @@ class RequestsParser:
                 assert isinstance(rv, requests.Request)
                 response.close()
                 request = rv
-                response = session.send(session.prepare_request(request), stream=True)
+                response = session.send(session.prepare_request(request),
+                                        stream=True, verify=self._verify)
 
             # Should we raise_for_status()? feedparser.parse() isn't.
             # Should we check the status on the feedparser.parse() result?

@@ -1,6 +1,7 @@
 from datetime import datetime
 from functools import partial
 from urllib.parse import urlparse
+import warnings
 
 import pytest
 import feedgen.feed
@@ -68,12 +69,17 @@ def write_feed(type, feed, entries):
         fg.rss_file(feed.url, pretty=True)
 
 
-@pytest.fixture(params=[
+@pytest.yield_fixture(params=[
     parse_feedparser,
     parse_requests,
 ])
-def parse(request):
-    return request.param
+def parse(request, monkeypatch):
+    parse = request.param
+    if parse is parse_requests:
+        monkeypatch.setattr(parse, '_verify', False)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        yield parse
 
 
 @pytest.fixture
@@ -221,7 +227,7 @@ def make_url_local_remote(request):
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse(monkeypatch, tmpdir, feed_type, parse, make_url):
-    if make_url.__name__ ==  'make_https_url':
+    if make_url.__name__ == 'make_https_url' and parse is parse_feedparser:
         pytest.skip("cannot make feedparser not verify certificate")
 
     monkeypatch.chdir(tmpdir)
