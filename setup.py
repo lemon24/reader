@@ -17,7 +17,7 @@ setup(
     package_dir={'': 'src'},
     include_package_data=True,
     install_requires=[
-        'attrs>=17',
+        'attrs>=17.1',
         'feedparser>=5',
         'click>=5',
         'requests',

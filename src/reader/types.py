@@ -8,24 +8,16 @@ class attrs_namedtuple_compat:
     @classmethod
     def _make(cls, iterable):
         iterable = tuple(iterable)
-        if len(iterable) != len(cls.__attrs_attrs__):
-            TypeError('Expected %d arguments, got %d' % (len(cls.__attrs_attrs__), len(iterable)))
+        attrs_len = len(attr.fields(cls))
+        if len(iterable) != attrs_len:
+            raise TypeError('Expected %d arguments, got %d' % (attrs_len, len(iterable)))
         return cls(*iterable)
 
     def _replace(self, **kwargs):
-        rv = self._make(
-            kwargs.pop(a.name, getattr(self, a.name))
-            for a in self.__attrs_attrs__
-        )
-        if kwargs:
-            raise ValueError('Got unexpected field names: %r' % list(kwargs))
-        return rv
+        return attr.evolve(self, **kwargs)
 
-    def _asdict(self):
-        return OrderedDict(
-            (a.name, getattr(self, a.name))
-            for a in self.__attrs_attrs__
-        )
+    def _asdict(self, recurse=False):
+        return attr.asdict(self, recurse=recurse, dict_factory=OrderedDict)
 
 
 @attr.s(slots=True, frozen=True)
