@@ -11,8 +11,17 @@ from reader.app import create_app
 from fakeparser import Parser
 
 
+@pytest.fixture
+def browser(db_path):
+    app = create_app(db_path)
+    session = requests.Session()
+    session.mount('http://app/', wsgiadapter.WSGIAdapter(app))
+    browser = mechanicalsoup.StatefulBrowser(session)
+    return browser
+
+
 @pytest.mark.slow
-def test_mark_as_read_unread(db_path):
+def test_mark_as_read_unread(db_path, browser):
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -23,13 +32,7 @@ def test_mark_as_read_unread(db_path):
     reader.add_feed(feed.url)
     reader.update_feeds()
 
-    app = create_app(db_path)
-
-    session = requests.Session()
-    session.mount('http://app/', wsgiadapter.WSGIAdapter(app))
-    browser = mechanicalsoup.StatefulBrowser(session)
     browser.open('http://app/')
-
     assert len(browser.get_current_page().select('.entry form')) == 1
 
     form = browser.select_form('.entry form')
@@ -52,7 +55,7 @@ def test_mark_as_read_unread(db_path):
 
 
 @pytest.mark.slow
-def test_mark_all_as_read_unread(db_path):
+def test_mark_all_as_read_unread(db_path, browser):
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -63,13 +66,7 @@ def test_mark_all_as_read_unread(db_path):
     reader.add_feed(feed.url)
     reader.update_feeds()
 
-    app = create_app(db_path)
-
-    session = requests.Session()
-    session.mount('http://app/', wsgiadapter.WSGIAdapter(app))
-    browser = mechanicalsoup.StatefulBrowser(session)
     browser.open('http://app/', params={'feed': feed.url})
-
     assert len(browser.get_current_page().select('.entry form')) == 1
 
     form = browser.select_form('#update-entries')
@@ -94,7 +91,7 @@ def test_mark_all_as_read_unread(db_path):
 
 
 @pytest.mark.slow
-def test_add_delete_feed(db_path):
+def test_add_delete_feed(db_path, browser):
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -102,13 +99,7 @@ def test_add_delete_feed(db_path):
     reader = Reader(db_path)
     reader._parse = parser
 
-    app = create_app(db_path)
-
-    session = requests.Session()
-    session.mount('http://app/', wsgiadapter.WSGIAdapter(app))
-    browser = mechanicalsoup.StatefulBrowser(session)
     browser.open('http://app/')
-
     response = browser.follow_link(browser.find_link(text='feeds'))
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.feed form')) == 0
@@ -149,7 +140,7 @@ def test_add_delete_feed(db_path):
 
 
 @pytest.mark.slow
-def test_delete_feed_from_entries_page_redirects(db_path):
+def test_delete_feed_from_entries_page_redirects(db_path, browser):
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -160,13 +151,7 @@ def test_delete_feed_from_entries_page_redirects(db_path):
     reader.add_feed(feed.url)
     reader.update_feeds()
 
-    app = create_app(db_path)
-
-    session = requests.Session()
-    session.mount('http://app/', wsgiadapter.WSGIAdapter(app))
-    browser = mechanicalsoup.StatefulBrowser(session)
     browser.open('http://app/', params={'feed': feed.url})
-
     form = browser.select_form('form#update-entries')
     form.set_checkbox({'really-delete-feed': True})
     response = browser.submit_selected(form.form.find('button', text='delete feed'))
