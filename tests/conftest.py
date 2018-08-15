@@ -32,3 +32,9 @@ def call_update_feed(reader, url):
 def call_update_method(request):
     return request.param
 
+
+@pytest.fixture
+def db_path(tmpdir):
+    return str(tmpdir.join('db.sqlite'))
+
+

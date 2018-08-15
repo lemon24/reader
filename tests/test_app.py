@@ -12,9 +12,7 @@ from fakeparser import Parser
 
 
 @pytest.mark.slow
-def test_mark_as_read_unread(tmpdir):
-    db_path = str(tmpdir.join('db.sqlite'))
-
+def test_mark_as_read_unread(db_path):
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -54,9 +52,7 @@ def test_mark_as_read_unread(tmpdir):
 
 
 @pytest.mark.slow
-def test_mark_all_as_read_unread(tmpdir):
-    db_path = str(tmpdir.join('db.sqlite'))
-
+def test_mark_all_as_read_unread(db_path):
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -98,9 +94,7 @@ def test_mark_all_as_read_unread(tmpdir):
 
 
 @pytest.mark.slow
-def test_add_delete_feed(tmpdir):
-    db_path = str(tmpdir.join('db.sqlite'))
-
+def test_add_delete_feed(db_path):
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -155,9 +149,7 @@ def test_add_delete_feed(tmpdir):
 
 
 @pytest.mark.slow
-def test_delete_feed_from_entries_page_redirects(tmpdir):
-    db_path = str(tmpdir.join('db.sqlite'))
-
+def test_delete_feed_from_entries_page_redirects(db_path):
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))

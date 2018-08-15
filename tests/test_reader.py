@@ -84,11 +84,8 @@ def test_update_entry_updated(reader, call_update_method):
 
 
 @pytest.mark.slow
-def test_update_blocking(monkeypatch, tmpdir, call_update_method):
+def test_update_blocking(db_path, call_update_method):
     """Calls to reader._parse() shouldn't block the underlying storage."""
-
-    monkeypatch.chdir(tmpdir)
-    db_path = str(tmpdir.join('db.sqlite'))
 
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
@@ -206,7 +203,7 @@ class EntryAction(Enum):
     for e in EntryAction
     if (f, e) != (FeedAction.none, EntryAction.none)
 ])
-def test_update_feed_deleted(monkeypatch, tmpdir, call_update_method,
+def test_update_feed_deleted(db_path, call_update_method,
                              feed_action, entry_action):
     """reader.update_feed should raise FeedNotFoundError if the feed is
     deleted during parsing.
@@ -214,9 +211,6 @@ def test_update_feed_deleted(monkeypatch, tmpdir, call_update_method,
     reader.update_feeds shouldn't (but should log).
 
     """
-
-    monkeypatch.chdir(tmpdir)
-    db_path = str(tmpdir.join('db.sqlite'))
 
     parser = Parser()
     reader = Reader(db_path)
@@ -448,11 +442,8 @@ def test_get_entries_feed_url(reader):
     # check unchunked queries still blocks writes
     pytest.param(0, marks=pytest.mark.xfail(raises=StorageError, strict=True)),
 ])
-def test_get_entries_blocking(monkeypatch, tmpdir, chunk_size):
+def test_get_entries_blocking(db_path, chunk_size):
     """Unconsumed reader.get_entries() shouldn't block the underlying storage."""
-
-    monkeypatch.chdir(tmpdir)
-    db_path = str(tmpdir.join('db.sqlite'))
 
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
@@ -635,9 +626,7 @@ def get_entries_chunk_size_zero(reader, _, __):
     get_entries,
     get_entries_chunk_size_zero,
 ])
-def test_storage_errors_locked(tmpdir, do_stuff):
-    db_path = str(tmpdir.join('db.sqlite'))
-
+def test_storage_errors_locked(db_path, do_stuff):
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
