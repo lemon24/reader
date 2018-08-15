@@ -7,25 +7,17 @@ import urllib.parse
 import contextlib
 
 import feedparser
+import requests
+
+try:
+    import feedparser.http as feedparser_http
+except ImportError:
+    feedparser_http = feedparser
 
 from .types import Feed, Entry, Content, Enclosure
 from .exceptions import ParseError, NotModified
 
 log = logging.getLogger('reader')
-
-
-HANDLERS = []
-
-try:
-    import certifi
-    import ssl
-    import urllib.request
-    HANDLERS.append(
-        urllib.request.HTTPSHandler(
-            context=ssl.create_default_context(cafile=certifi.where()))
-    )
-except ImportError:
-    pass
 
 
 def _datetime_from_timetuple(tt):
@@ -90,8 +82,7 @@ def _make_entry(entry, is_rss):
 
 def parse_feedparser(url, http_etag=None, http_last_modified=None):
 
-    d = feedparser.parse(url, etag=http_etag, modified=http_last_modified,
-                         handlers=HANDLERS)
+    d = feedparser.parse(url, etag=http_etag, modified=http_last_modified)
 
     if d.get('status') == 304:
         raise NotModified(url)
@@ -125,18 +116,6 @@ def _process_feed(url, d):
     entries = (_make_entry(e, is_rss) for e in d.entries)
 
     return feed, entries
-
-
-try:
-    import requests
-except ImportError:
-    requests = None
-
-if requests:
-    try:
-        import feedparser.http as feedparser_http
-    except ImportError:
-        feedparser_http = feedparser
 
 
 class RequestsParser:
@@ -230,12 +209,9 @@ class RequestsParser:
         return _process_feed(url, result) + (http_etag, http_last_modified)
 
 
-
-parse = parse_feedparser
-if requests:
-    parse_requests = RequestsParser()
-    parse_requests.__name__ = parse_requests.__qualname__ = 'parse_requests'
-    from .tumblr_gdpr_plugin import tumblr_gdpr_plugin
-    parse_requests.response_plugins.append(tumblr_gdpr_plugin)
-    parse = parse_requests
+parse_requests = RequestsParser()
+parse_requests.__name__ = parse_requests.__qualname__ = 'parse_requests'
+from .tumblr_gdpr_plugin import tumblr_gdpr_plugin
+parse_requests.response_plugins.append(tumblr_gdpr_plugin)
+parse = parse_requests
 
