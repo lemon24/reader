@@ -7,7 +7,7 @@ import pytest
 import feedgen.feed
 import feedparser
 
-from reader.parser import parse_feedparser, parse_requests
+from reader.parser import parse as reader_parse
 from reader.exceptions import ParseError, NotModified
 from reader.types import Content, Enclosure
 
@@ -69,17 +69,12 @@ def write_feed(type, feed, entries):
         fg.rss_file(feed.url, pretty=True)
 
 
-@pytest.yield_fixture(params=[
-    parse_feedparser,
-    parse_requests,
-])
-def parse(request, monkeypatch):
-    parse = request.param
-    if parse is parse_requests:
-        monkeypatch.setattr(parse, '_verify', False)
+@pytest.yield_fixture
+def parse(monkeypatch):
+    monkeypatch.setattr(reader_parse, '_verify', False)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        yield parse
+        yield reader_parse
 
 
 @pytest.fixture
@@ -227,9 +222,6 @@ def make_url_local_remote(request):
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse(monkeypatch, tmpdir, feed_type, parse, make_url):
-    if make_url.__name__ == 'make_https_url' and parse is parse_feedparser:
-        pytest.skip("cannot make feedparser not verify certificate")
-
     monkeypatch.chdir(tmpdir)
 
     parser = Parser()

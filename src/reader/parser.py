@@ -80,19 +80,6 @@ def _make_entry(entry, is_rss):
     )
 
 
-def parse_feedparser(url, http_etag=None, http_last_modified=None):
-
-    d = feedparser.parse(url, etag=http_etag, modified=http_last_modified)
-
-    if d.get('status') == 304:
-        raise NotModified(url)
-
-    http_etag = d.get('etag', http_etag)
-    http_last_modified = d.get('modified', http_last_modified)
-
-    return _process_feed(url, d) + (http_etag, http_last_modified)
-
-
 def _process_feed(url, d):
 
     if d.get('bozo'):
@@ -138,7 +125,9 @@ class RequestsParser:
                 url = url_split.path
             else:
                 url = url_split.scheme + (':' if url_split.scheme else '') + url_split.path
-            return parse_feedparser(url, http_etag, http_last_modified)
+
+            result = feedparser.parse(url)
+            return _process_feed(url, result) + (None, None)
 
         """
         Following the implementation in:
@@ -209,9 +198,7 @@ class RequestsParser:
         return _process_feed(url, result) + (http_etag, http_last_modified)
 
 
-parse_requests = RequestsParser()
-parse_requests.__name__ = parse_requests.__qualname__ = 'parse_requests'
+parse = RequestsParser()
 from .tumblr_gdpr_plugin import tumblr_gdpr_plugin
-parse_requests.response_plugins.append(tumblr_gdpr_plugin)
-parse = parse_requests
+parse.response_plugins.append(tumblr_gdpr_plugin)
 
