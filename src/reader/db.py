@@ -38,31 +38,73 @@ def ddl_transaction(db):
         db.isolation_level = isolation_level
 
 
-VERSION = 10
-
-
 class InvalidVersion(Exception):
     pass
 
 
-def get_version(db):
-    version_exists = db.execute("""
-        SELECT name
-        FROM sqlite_master
-        WHERE type = 'table' AND name = 'version';
-    """).fetchone() is not None
-    if not version_exists:
-        return None
-    version, = db.execute("SELECT MAX(version) FROM version;").fetchone()
-    return version
+class HeavyMigration:
+
+    def __init__(self, create, version, migrations):
+        self.create = create
+        self.version = version
+        self.migrations = migrations
+
+    @staticmethod
+    def get_version(db):
+        version_exists = db.execute("""
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'table' AND name = 'version';
+        """).fetchone() is not None
+        if not version_exists:
+            return None
+        version, = db.execute("SELECT MAX(version) FROM version;").fetchone()
+        return version
+
+    def open_db(self, path):
+        db = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
+        db.execute("""
+                PRAGMA foreign_keys = ON;
+        """)
+        self.setup_db(db)
+        return db
+
+    def setup_db(self, db):
+        with ddl_transaction(db):
+            version = self.get_version(db)
+
+            if version is None:
+                self.create(db)
+                db.execute("""
+                    CREATE TABLE version (
+                        version INTEGER NOT NULL
+                    );
+                """)
+                db.execute("INSERT INTO version VALUES (?);", (self.version, ))
+
+            elif version < self.version:
+                if not self.migrations.get(version):
+                    raise InvalidVersion("unsupported version: {}".format(version))
+
+                for from_version in range(version, self.version):
+                    to_version = from_version + 1
+                    migration = self.migrations.get(from_version)
+                    if migration is None:
+                        raise InvalidVersion(
+                            "no migration from {} to {}; expected migrations for all versions "
+                            "later than {}".format(from_version, to_version, version))
+
+                    db.execute("""
+                        UPDATE version
+                        SET version = :to_version;
+                    """, locals())
+                    migration(db)
+
+            elif version != self.version:
+                raise InvalidVersion("invalid version: {}".format(version))
 
 
 def create_db(db):
-    db.execute("""
-        CREATE TABLE version (
-            version INTEGER NOT NULL
-        );
-    """)
     db.execute("""
         CREATE TABLE feeds (
             url TEXT PRIMARY KEY NOT NULL,
@@ -97,46 +139,14 @@ def create_db(db):
                 ON DELETE CASCADE
         );
     """)
-    db.execute("INSERT INTO version VALUES (?);", (VERSION, ))
 
 
+open_db = HeavyMigration(
+    create=create_db,
+    version=10,
+    migrations={
+        # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
+    },
+).open_db
 
-MIGRATIONS = {
-    # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
-}
-
-
-def open_db(path):
-    db = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
-    db.execute("""
-            PRAGMA foreign_keys = ON;
-    """)
-
-    with ddl_transaction(db):
-        version = get_version(db)
-
-        if version is None:
-            create_db(db)
-
-        elif version < VERSION:
-            if not MIGRATIONS.get(version):
-                raise InvalidVersion("unsupported version: {}".format(version))
-
-            for from_version in range(version, VERSION):
-                to_version = from_version + 1
-                migration = MIGRATIONS.get(from_version)
-                assert migration is not None, (
-                    "no migration from {} to {}; expected migrations for all versions "
-                    "later than {}".format(from_version, to_version, version))
-
-                db.execute("""
-                    UPDATE version
-                    SET version = :to_version;
-                """, locals())
-                migration(db)
-
-        elif version != VERSION:
-            raise InvalidVersion("invalid version: {}".format(version))
-
-    return db
 
