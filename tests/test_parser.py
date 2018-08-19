@@ -1,85 +1,13 @@
-from datetime import datetime
-from functools import partial
 from urllib.parse import urlparse
 import warnings
 
 import pytest
 import py.path
-import feedgen.feed
 import feedparser
 
 from reader import Feed
 from reader.parser import parse as reader_parse
 from reader.exceptions import ParseError, NotModified
-from reader.types import Content, Enclosure
-
-from fakeparser import Parser
-
-
-def write_feed(type, feed, entries):
-
-    def utc(dt):
-        import datetime
-        return dt.replace(tzinfo=datetime.timezone(datetime.timedelta()))
-
-    fg = feedgen.feed.FeedGenerator()
-    fg.load_extension('podcast')
-
-    if type == 'atom':
-        fg.id(feed.link)
-    fg.title(feed.title)
-    if feed.link:
-        fg.link(href=feed.link)
-    if feed.updated:
-        fg.updated(utc(feed.updated))
-    if feed.author:
-        if type == 'atom':
-            fg.author({'name': feed.author})
-        elif type == 'rss':
-            fg.podcast.itunes_author(feed.author)
-    if type == 'rss':
-        fg.description('description')
-
-    for entry in entries:
-        fe = fg.add_entry()
-        fe.id(entry.id)
-        fe.title(entry.title)
-        if entry.link:
-            fe.link(href=entry.link)
-        if entry.updated:
-            if type == 'atom':
-                fe.updated(utc(entry.updated))
-            elif type == 'rss':
-                fe.published(utc(entry.updated))
-        if entry.author:
-            if type == 'atom':
-                fe.author({'name': entry.author})
-            elif type == 'rss':
-                fe.podcast.itunes_author(entry.author)
-        if entry.published:
-            if type == 'atom':
-                fe.published(utc(entry.published))
-            elif type == 'rss':
-                assert False, "RSS doesn't support published"
-
-        for enclosure in entry.enclosures or ():
-            fe.enclosure(enclosure.href, str(enclosure.length), enclosure.type)
-
-        if type == 'atom':
-            if entry.content:
-                assert len(entry.content) == 1, "feedgen only supports 1 content"
-                content = entry.content[0]
-                fe.content(content.value, type=content.type)
-
-        elif type == 'rss':
-            assert not entry.content, "feedgen forces content to summary"
-        if entry.summary:
-            fe.summary(entry.summary)
-
-    if type == 'atom':
-        fg.atom_file(feed.url, pretty=True)
-    elif type == 'rss':
-        fg.rss_file(feed.url, pretty=True)
 
 
 @pytest.yield_fixture
@@ -252,7 +180,6 @@ def test_parse(monkeypatch, tmpdir, feed_type, parse, make_url):
         http_etag,
         http_last_modified,
     ) = parse(feed_url)
-    #entries = sorted(entries, key=lambda e: e.updated)
     entries = list(entries)
 
     assert feed == expected['feed']._replace(url=feed_url)
@@ -267,26 +194,21 @@ def test_parse_relative_links(monkeypatch, tmpdir, feed_type, parse, make_url_lo
 
     monkeypatch.chdir(tmpdir)
 
-    parser = Parser()
+    data_dir = py.path.local(__file__).dirpath().join('data')
+    feed_filename = 'relative.{}'.format(feed_type)
+    data_dir.join(feed_filename).copy(tmpdir)
 
-    feed = parser.feed(1, datetime(2010, 1, 1), link="file.html")
-    write_feed(feed_type, feed, [])
+    expected = {}
+    exec(data_dir.join(feed_filename + '.py').read(), expected)
 
-    feed_url, _ = make_url(feed, tmpdir)
+    feed_url, _ = make_url(Feed(feed_filename), tmpdir)
     parsed_feed, _, _, _ = parse(feed_url)
 
-    assert parsed_feed.link == urlparse(feed_url)._replace(path='file.html').geturl()
+    assert parsed_feed.link == urlparse(feed_url)._replace(path=expected['feed'].link).geturl()
 
 
 def test_parse_error(monkeypatch, tmpdir, parse):
     """parse() should reraise most feedparser exceptions."""
-
-    monkeypatch.chdir(tmpdir)
-
-    parser = Parser()
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    write_feed('atom', feed, [])
 
     feedparser_exception = Exception("whatever")
     old_feedparser_parse = feedparser.parse
@@ -299,20 +221,13 @@ def test_parse_error(monkeypatch, tmpdir, parse):
     monkeypatch.setattr('feedparser.parse', feedparser_parse)
 
     with pytest.raises(ParseError) as excinfo:
-        parse(feed.url)
+        parse(str(py.path.local(__file__).dirpath().join('data/full.atom')))
 
     assert excinfo.value.__cause__ is feedparser_exception
 
 
-def test_parse_character_encoding_override(monkeypatch, tmpdir, parse):
+def test_parse_character_encoding_override(monkeypatch, parse):
     """parse() should not reraise feedparser.CharacterEncodingOverride."""
-
-    monkeypatch.chdir(tmpdir)
-
-    parser = Parser()
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    write_feed('atom', feed, [])
 
     old_feedparser_parse = feedparser.parse
     def feedparser_parse(*args, **kwargs):
@@ -324,7 +239,7 @@ def test_parse_character_encoding_override(monkeypatch, tmpdir, parse):
     monkeypatch.setattr('feedparser.parse', feedparser_parse)
 
     # shouldn't raise an exception
-    parse(feed.url)
+    parse(str(py.path.local(__file__).dirpath().join('data/full.atom')))
 
 
 @pytest.mark.slow
@@ -333,32 +248,28 @@ def test_parse_not_modified(monkeypatch, tmpdir, parse, make_http_url_304):
 
     monkeypatch.chdir(tmpdir)
 
-    parser = Parser()
+    py.path.local(__file__).dirpath().join('data/full.atom').copy(tmpdir)
 
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    write_feed('atom', feed, [])
-
-    feed_url, _ = make_http_url_304(feed, tmpdir)
+    feed_url, _ = make_http_url_304(Feed('full.atom'), tmpdir)
 
     with pytest.raises(NotModified):
         parse(feed_url)
 
 
 @pytest.mark.parametrize('tz', ['UTC', 'Europe/Helsinki'])
-def test_parse_local_timezone(monkeypatch, request, parse, tmpdir, tz):
+def test_parse_local_timezone(monkeypatch, request, parse, tz):
     """parse() return the correct dates regardless of the local timezone."""
-    monkeypatch.chdir(tmpdir)
 
-    parser = Parser()
+    feed_path = py.path.local(__file__).dirpath().join('data/full.atom')
 
-    feed = parser.feed(1, datetime(2018, 7, 7))
-    write_feed('atom', feed, [])
+    expected = {}
+    exec(feed_path.new(ext='.atom.py').read(), expected)
 
     import time
     request.addfinalizer(time.tzset)
     monkeypatch.setenv('TZ', tz)
     time.tzset()
-    parsed_feed = parse(feed.url)[0]
-    assert feed.updated == parsed_feed.updated
+    feed = parse(str(feed_path))[0]
+    assert feed.updated == expected['feed'].updated
 
 
