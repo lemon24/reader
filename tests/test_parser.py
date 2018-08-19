@@ -63,6 +63,17 @@ def write_feed(type, feed, entries):
         for enclosure in entry.enclosures or ():
             fe.enclosure(enclosure.href, str(enclosure.length), enclosure.type)
 
+        if type == 'atom':
+            if entry.content:
+                assert len(entry.content) == 1, "feedgen only supports 1 content"
+                content = entry.content[0]
+                fe.content(content.value, type=content.type)
+
+        elif type == 'rss':
+            assert not entry.content, "feedgen forces content to summary"
+        if entry.summary:
+            fe.summary(entry.summary)
+
     if type == 'atom':
         fg.atom_file(feed.url, pretty=True)
     elif type == 'rss':
@@ -228,28 +239,39 @@ def test_parse(monkeypatch, tmpdir, feed_type, parse, make_url):
 
     feed = parser.feed(1, datetime(2010, 1, 1), author='feed author')
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1), author='one author')
-    entry_two = parser.entry(1, 2, datetime(2010, 2, 1),
-        author='two author',
 
-        # Can't figure out how to do this with feedgen
-        # (the summary and the content get mixed up
-        # and don't know how to pass the language).
-        #summary='summary',
-        #content=(
-            #Content('value3', 'type', 'en'),
-            #Content('value2'),
-        #),
-
-        enclosures=(
+    kwargs = {
+        'author': 'two author',
+        'summary': 'value',
+        'enclosures': (
             Enclosure('http://e1', 'type', 1000),
 
             # Can't figure out how to get this with feedgen
             # (it forces type to 'text/html' and length to 0).
             #Enclosure('http://e2'),
         ),
-    )
-    entries = [entry_one, entry_two]
+    }
+    if feed_type == 'atom':
+        # Can only do this with feedgen in a limited way (summary is set to
+        # content for RSS, content must be XML, and I can't pass the language).
+        kwargs['content'] = content=(
+            Content('<a>value</a>', 'text/xml'),
+        )
+    entry_two = parser.entry(1, 2, datetime(2010, 2, 1), **kwargs)
+
+    # This tests enclosure length is dropped if invalid.
+    entry_three = parser.entry(1, 3, datetime(2010, 3, 1), enclosures=(
+        Enclosure('http://e3', 'type3', 'not a number'),
+    ))
+
+    entries = [entry_one, entry_two, entry_three]
+
     write_feed(feed_type, feed, entries)
+
+    entry_three = parser.entry(1, 3, datetime(2010, 3, 1), enclosures=(
+        Enclosure('http://e3', 'type3'),
+    ))
+    entries[2] = entry_three
 
     feed_url, http_last_modified = make_url(feed, tmpdir)
 
