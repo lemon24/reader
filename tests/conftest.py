@@ -33,6 +33,28 @@ def call_update_method(request):
     return request.param
 
 
+def feed_arg_as_str(feed):
+    return feed.url
+
+def feed_arg_as_feed(feed):
+    return feed
+
+@pytest.fixture(params=[feed_arg_as_str, feed_arg_as_feed])
+def feed_arg(request):
+    return request.param
+
+
+def entry_arg_as_tuple(entry):
+    return entry.feed.url, entry.id
+
+def entry_arg_as_entry(entry):
+    return entry
+
+@pytest.fixture(params=[entry_arg_as_tuple, entry_arg_as_entry])
+def entry_arg(request):
+    return request.param
+
+
 @pytest.fixture
 def db_path(tmpdir):
     return str(tmpdir.join('db.sqlite'))

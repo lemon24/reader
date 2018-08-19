@@ -38,6 +38,24 @@ def wrap_storage_exceptions(*args):
         raise StorageError("sqlite3 error") from e
 
 
+def feed_argument(feed):
+    try:
+        return feed.url
+    except AttributeError:
+        if isinstance(feed, str):
+            return feed
+        raise ValueError('feed')
+
+def entry_argument(entry):
+    try:
+        return entry.feed.url, entry.id
+    except AttributeError:
+        if isinstance(entry, tuple) and len(entry) == 2:
+            feed_url, entry_id = entry
+            if isinstance(feed_url, str) and isinstance(entry_id, str):
+                return entry
+        raise ValueError('entry')
+
 
 class Reader:
 
@@ -63,14 +81,14 @@ class Reader:
         """Add a new feed.
 
         Args:
-            feed (str): The feed URL.
+            feed (str or Feed): The feed URL.
 
         Raises:
             FeedExistsError
             StorageError
 
         """
-        url = feed
+        url = feed_argument(feed)
         with self.db:
             try:
                 self.db.execute("""
@@ -87,14 +105,14 @@ class Reader:
         Also removes all of the feed's entries.
 
         Args:
-            feed (str): The feed URL.
+            feed (str or Feed): The feed URL.
 
         Raises:
             FeedNotFoundError
             StorageError
 
         """
-        url = feed
+        url = feed_argument(feed)
         with self.db:
             rows = self.db.execute("""
                 DELETE FROM feeds
@@ -133,7 +151,7 @@ class Reader:
         """Get a feed.
 
         Arguments:
-            feed (str): The feed URL.
+            feed (str or Feed): The feed URL.
 
         Returns:
             Feed or None: The feed if it exists, None if it doesn't.
@@ -142,7 +160,7 @@ class Reader:
             StorageError
 
         """
-        url = feed
+        url = feed_argument(feed)
         feeds = list(self._get_feeds(url))
         if len(feeds) == 0:
             return None
@@ -183,7 +201,7 @@ class Reader:
         """Set a user-defined title for a feed.
 
         Args:
-            feed (str): The feed URL.
+            feed (str or Feed): The feed URL.
             title (str or None): The title, or None to remove the current title.
 
         Raises:
@@ -191,7 +209,7 @@ class Reader:
             StorageError
 
         """
-        url = feed
+        url = feed_argument(feed)
         with self.db:
             rows = self.db.execute("""
                 UPDATE feeds
@@ -226,14 +244,14 @@ class Reader:
         """Update a single feed.
 
         Args:
-            feed (str): The feed URL.
+            feed (str or Feed): The feed URL.
 
         Raises:
             FeedNotFoundError
             StorageError
 
         """
-        url = feed
+        url = feed_argument(feed)
         rows = list(self._get_feeds_for_update(url))
         if len(rows) == 0:
             raise FeedNotFoundError(url)
@@ -460,7 +478,7 @@ class Reader:
 
         Args:
             which (str): One of ``'all'``, ``'read'``, or ``'unread'``.
-            feed (str or None): Only return the entries for this feed.
+            feed (str or Feed or None): Only return the entries for this feed.
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
 
@@ -472,7 +490,7 @@ class Reader:
             StorageError
 
         """
-        feed_url = feed
+        feed_url = feed_argument(feed) if feed is not None else None
         if which not in ('all', 'unread', 'read'):
             raise ValueError("which should be one of ('all', 'read', 'unread')")
         if has_enclosures not in (None, False, True):
@@ -529,14 +547,14 @@ class Reader:
         """Mark an entry as read.
 
         Args:
-            entry (tuple(str, str)): (feed URL, entry id) tuple.
+            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
 
         Raises:
             EntryNotFoundError
             StorageError
 
         """
-        feed_url, entry_id = entry
+        feed_url, entry_id = entry_argument(entry)
         self._mark_as_read_unread(feed_url, entry_id, 1)
 
     @wrap_storage_exceptions()
@@ -544,13 +562,13 @@ class Reader:
         """Mark an entry as unread.
 
         Args:
-            entry (tuple(str, str)): (feed URL, entry id) tuple.
+            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
 
         Raises:
             EntryNotFoundError
             StorageError
 
         """
-        feed_url, entry_id = entry
+        feed_url, entry_id = entry_argument(entry)
         self._mark_as_read_unread(feed_url, entry_id, 0)
 

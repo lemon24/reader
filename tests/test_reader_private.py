@@ -2,7 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from reader import FeedNotFoundError
+from reader import FeedNotFoundError, Feed, Entry
+from reader.reader import feed_argument, entry_argument
 
 from fakeparser import ParserThatRemembers
 
@@ -60,4 +61,30 @@ def test_update_parse(reader, call_update_method):
     parser.calls[:] = []
     call_update_method(reader, feed.url)
     assert parser.calls == [(feed.url, 'etag', 'last-modified')]
+
+
+def test_feed_argument():
+    feed = Feed('url')
+    assert feed_argument(feed) == feed.url
+    assert feed_argument(feed.url) == feed.url
+    with pytest.raises(ValueError):
+        feed_argument(1)
+
+def test_entry_argument():
+    feed = Feed('url')
+    entry = Entry('entry', 'updated', feed=feed)
+    entry_tuple = feed.url, entry.id
+    assert entry_argument(entry) == entry_tuple
+    assert entry_argument(entry_tuple) == entry_tuple
+    with pytest.raises(ValueError):
+        entry_argument(1)
+    with pytest.raises(ValueError):
+        entry_argument('ab')
+    with pytest.raises(ValueError):
+        entry_argument((1, 'b'))
+    with pytest.raises(ValueError):
+        entry_argument(('a', 2))
+    with pytest.raises(ValueError):
+        entry_argument(('a', 'b', 'c'))
+
 
