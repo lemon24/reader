@@ -4,9 +4,11 @@ from urllib.parse import urlparse
 import warnings
 
 import pytest
+import py.path
 import feedgen.feed
 import feedparser
 
+from reader import Feed
 from reader.parser import parse as reader_parse
 from reader.exceptions import ParseError, NotModified
 from reader.types import Content, Enclosure
@@ -235,58 +237,28 @@ def make_url_local_remote(request):
 def test_parse(monkeypatch, tmpdir, feed_type, parse, make_url):
     monkeypatch.chdir(tmpdir)
 
-    parser = Parser()
+    data_dir = py.path.local(__file__).dirpath().join('data')
+    feed_filename = 'full.{}'.format(feed_type)
+    data_dir.join(feed_filename).copy(tmpdir)
 
-    feed = parser.feed(1, datetime(2010, 1, 1), author='feed author')
-    entry_one = parser.entry(1, 1, datetime(2010, 1, 1), author='one author')
+    feed_url, expected_http_last_modified = make_url(Feed(feed_filename), tmpdir)
 
-    kwargs = {
-        'author': 'two author',
-        'summary': 'value',
-        'enclosures': (
-            Enclosure('http://e1', 'type', 1000),
-
-            # Can't figure out how to get this with feedgen
-            # (it forces type to 'text/html' and length to 0).
-            #Enclosure('http://e2'),
-        ),
-    }
-    if feed_type == 'atom':
-        # Can only do this with feedgen in a limited way (summary is set to
-        # content for RSS, content must be XML, and I can't pass the language).
-        kwargs['content'] = content=(
-            Content('<a>value</a>', 'text/xml'),
-        )
-    entry_two = parser.entry(1, 2, datetime(2010, 2, 1), **kwargs)
-
-    # This tests enclosure length is dropped if invalid.
-    entry_three = parser.entry(1, 3, datetime(2010, 3, 1), enclosures=(
-        Enclosure('http://e3', 'type3', 'not a number'),
-    ))
-
-    entries = [entry_one, entry_two, entry_three]
-
-    write_feed(feed_type, feed, entries)
-
-    entry_three = parser.entry(1, 3, datetime(2010, 3, 1), enclosures=(
-        Enclosure('http://e3', 'type3'),
-    ))
-    entries[2] = entry_three
-
-    feed_url, http_last_modified = make_url(feed, tmpdir)
+    expected = {}
+    exec(data_dir.join(feed_filename + '.py').read(), expected)
 
     (
-        expected_feed,
-        expected_entries,
-        expected_http_etag,
-        expected_http_last_modified,
+        feed,
+        entries,
+        http_etag,
+        http_last_modified,
     ) = parse(feed_url)
-    expected_entries = sorted(expected_entries, key=lambda e: e.updated)
+    #entries = sorted(entries, key=lambda e: e.updated)
+    entries = list(entries)
 
-    assert feed._replace(url=feed_url) == expected_feed
-    assert entries == expected_entries
-    assert expected_http_etag is None
-    assert expected_http_last_modified == http_last_modified
+    assert feed == expected['feed']._replace(url=feed_url)
+    assert entries == expected['entries']
+    assert http_etag is None
+    assert http_last_modified == expected_http_last_modified
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
