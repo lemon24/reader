@@ -46,7 +46,6 @@ def _get_updated_published(thing, is_rss):
 def _make_entry(entry, is_rss):
     assert entry.id
     updated, published = _get_updated_published(entry, is_rss)
-    assert updated
 
     content = []
     for data in entry.get('content', ()):

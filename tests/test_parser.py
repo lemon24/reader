@@ -189,6 +189,27 @@ def test_parse(monkeypatch, tmpdir, feed_type, parse, make_url):
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
+def test_parse_empty(monkeypatch, tmpdir, feed_type, parse, make_relative_path_url):
+    make_url = make_relative_path_url
+    monkeypatch.chdir(tmpdir)
+
+    data_dir = py.path.local(__file__).dirpath().join('data')
+    feed_filename = 'empty.{}'.format(feed_type)
+    data_dir.join(feed_filename).copy(tmpdir)
+
+    feed_url, _ = make_url(Feed(feed_filename), tmpdir)
+
+    expected = {}
+    exec(data_dir.join(feed_filename + '.py').read(), expected)
+
+    feed, entries, _, _ = parse(feed_url)
+    entries = list(entries)
+
+    assert feed == expected['feed']._replace(url=feed_url)
+    assert entries == expected['entries']
+
+
+@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse_relative_links(monkeypatch, tmpdir, feed_type, parse, make_url_local_remote):
     make_url = make_url_local_remote
 

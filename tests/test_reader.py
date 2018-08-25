@@ -83,6 +83,38 @@ def test_update_entry_updated(reader, call_update_method):
     assert set(reader.get_entries()) == {new_entry._replace(feed=feed)}
 
 
+def test_update_no_updated(reader):
+    """If a feed or entry have updated == None, they should be treated as
+    updated.
+
+    """
+
+    parser = Parser()
+    reader._parse = parser
+
+    feed = parser.feed(1, None, title='old')
+    entry_one = parser.entry(1, 1, None, title='old')
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    assert set(reader.get_feeds()) == {feed}
+    assert set(reader.get_entries()) == {
+        entry_one._replace(feed=feed),
+    }
+
+    feed = parser.feed(1, None, title='new')
+    entry_one = parser.entry(1, 1, None, title='new')
+    entry_two = parser.entry(1, 2, None)
+    reader.update_feeds()
+
+    assert set(reader.get_feeds()) == {feed}
+    assert set(reader.get_entries()) == {
+        entry_one._replace(feed=feed),
+        entry_two._replace(feed=feed),
+    }
+
+
 @pytest.mark.slow
 def test_update_blocking(db_path, call_update_method):
     """Calls to reader._parse() shouldn't block the underlying storage."""

@@ -277,7 +277,12 @@ class Reader:
         updated = feed.updated
         log.debug("update feed %r: old updated %s, new updated %s", url, db_updated, updated)
 
-        feed_was_updated = not(updated and db_updated and updated <= db_updated)
+        if not updated:
+            log.info("update feed %r: feed has no updated, treating as updated", url)
+            feed_was_updated = True
+        else:
+            feed_was_updated = not(updated and db_updated and updated <= db_updated)
+
         if not stale and not feed_was_updated:
             # Some feeds have entries newer than the feed.
             # https://github.com/lemon24/reader/issues/76
@@ -320,11 +325,13 @@ class Reader:
             log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
     def _update_entry(self, feed_url, entry, stale, now):
-        db_updated = self._get_entry_updated(feed_url, entry.id)
+        entry_exists, db_updated = self._get_entry_updated(feed_url, entry.id)
         updated, published = entry.updated, entry.published
 
         if stale:
             log.debug("update entry %r of feed %r: feed marked as stale, updating anyway", entry.id, feed_url)
+        elif not updated:
+            log.debug("update entry %r of feed %r: has no updated, treating as updated", entry.id, feed_url)
         elif db_updated and updated <= db_updated:
             log.debug("update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)", entry.id, feed_url, db_updated, updated)
             return 0, 0
@@ -339,7 +346,7 @@ class Reader:
 
         try:
 
-            if not db_updated:
+            if not entry_exists:
                 self.db.execute("""
                     INSERT INTO entries (
                         id, feed, title, link, updated, author, published, summary, content, enclosures, last_updated
@@ -369,6 +376,7 @@ class Reader:
                 return 1, 0
 
         except sqlite3.IntegrityError as e:
+            log.debug("update entry %r of feed %r: got IntegrityError", entry.id, feed_url, exc_info=True)
             raise FeedNotFoundError(feed_url)
 
     def _get_entry_updated(self, feed_url, id):
@@ -378,7 +386,9 @@ class Reader:
             WHERE feed = :feed_url
                 AND id = :id;
         """, locals()).fetchone()
-        return rv[0] if rv else None
+        if not rv:
+            return False, None
+        return True, rv[0]
 
     def _get_entries(self, which, feed_url, has_enclosures,
                      chunk_size=None, last=None):
