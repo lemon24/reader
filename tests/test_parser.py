@@ -6,7 +6,7 @@ import py.path
 import feedparser
 
 from reader import Feed
-from reader.parser import parse as reader_parse
+from reader.parser import parse as reader_parse, RequestsParser
 from reader.exceptions import ParseError, NotModified
 
 
@@ -268,13 +268,47 @@ def test_parse_not_modified(monkeypatch, tmpdir, parse, make_http_url_304):
     """parse() should raise NotModified for unchanged feeds."""
 
     monkeypatch.chdir(tmpdir)
-
     py.path.local(__file__).dirpath().join('data/full.atom').copy(tmpdir)
 
     feed_url, _ = make_http_url_304(Feed('full.atom'), tmpdir)
 
     with pytest.raises(NotModified):
         parse(feed_url)
+
+
+@pytest.fixture
+def make_http_get_headers_url(request):
+    def make_http_url(feed, feed_dir):
+        from http.server import HTTPServer, SimpleHTTPRequestHandler
+        from threading import Thread
+
+        class Handler(SimpleHTTPRequestHandler):
+            def send_response(self, *args, **kwargs):
+                make_http_url.headers = self.headers
+                return super().send_response(*args, **kwargs)
+
+        httpd = HTTPServer(('127.0.0.1', 0), Handler)
+        request.addfinalizer(httpd.shutdown)
+
+        Thread(target=httpd.serve_forever).start()
+
+        url = "http://{s[0]}:{s[1]}/{f.url}".format(
+            s=httpd.server_address, f=feed)
+        return url, None
+
+    return make_http_url
+
+
+@pytest.mark.slow
+def test_parse_etag_last_modified(monkeypatch, tmpdir, parse, make_http_get_headers_url):
+    monkeypatch.chdir(tmpdir)
+    py.path.local(__file__).dirpath().join('data/full.atom').copy(tmpdir)
+
+    feed_url, _ = make_http_get_headers_url(Feed('full.atom'), tmpdir)
+    parse(feed_url, 'etag', 'last_modified')
+
+    assert make_http_get_headers_url.headers.get('If-None-Match') == 'etag'
+    assert make_http_get_headers_url.headers.get('If-Modified-Since') == 'last_modified'
 
 
 @pytest.mark.parametrize('tz', ['UTC', 'Europe/Helsinki'])
@@ -293,4 +327,49 @@ def test_parse_local_timezone(monkeypatch, request, parse, tz):
     feed = parse(str(feed_path))[0]
     assert feed.updated == expected['feed'].updated
 
+
+@pytest.mark.slow
+def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url):
+    monkeypatch.chdir(py.path.local(__file__).dirpath().join('data'))
+
+    feed_url, _ = make_http_url(Feed('empty.atom'), tmpdir)
+
+    import requests
+
+    def do_nothing_plugin(session, response, request):
+        do_nothing_plugin.called = True
+        assert isinstance(session, requests.Session)
+        assert isinstance(response, requests.Response)
+        assert isinstance(request, requests.Request)
+        assert request.url == feed_url
+        return None
+
+    def rewrite_to_empty_plugin(session, response, request):
+        rewrite_to_empty_plugin.called = True
+        request.url = request.url.replace('empty', 'full')
+        return request
+
+    parse = RequestsParser()
+    parse.response_plugins.append(do_nothing_plugin)
+    parse.response_plugins.append(rewrite_to_empty_plugin)
+
+    feed, _, _, _ = parse(feed_url)
+    assert do_nothing_plugin.called
+    assert rewrite_to_empty_plugin.called
+    assert feed.link is not None
+    print('---', feed)
+
+
+def test_parse_requests_exception(monkeypatch, parse):
+    exc = Exception('exc')
+    def raise_exc():
+        raise exc
+
+    import requests
+    monkeypatch.setattr(requests, 'Session', raise_exc)
+
+    with pytest.raises(ParseError) as excinfo:
+        parse('http://example.com')
+
+    assert excinfo.value.__cause__ is exc
 
