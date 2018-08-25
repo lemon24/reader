@@ -3,6 +3,7 @@ import threading
 from enum import Enum
 
 import pytest
+import py.path
 
 from reader import Reader
 from reader import Feed, Entry, Content, Enclosure
@@ -434,7 +435,7 @@ def test_get_entries_order(reader, chunk_size):
 def test_get_entries_feed_order(reader, chunk_size):
     """All other things being equal, get_entries() should yield entries
     in the reverse order they appear in the feed.
-    
+
     """
     reader._get_entries_chunk_size = chunk_size
 
@@ -795,4 +796,23 @@ def test_get_entries_has_enclosure(reader):
 
     with pytest.raises(ValueError):
         set(reader.get_entries(has_enclosures='bad has_enclosures'))
+
+
+@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
+def test_integration(reader, feed_type):
+    data_dir = py.path.local(__file__).dirpath().join('data')
+    feed_filename = 'full.{}'.format(feed_type)
+    feed_url = str(data_dir.join(feed_filename))
+
+    reader.add_feed(feed_url)
+    reader.update_feeds()
+
+    feed, = reader.get_feeds()
+    entries = set(reader.get_entries())
+
+    expected = {}
+    exec(data_dir.join(feed_filename + '.py').read(), expected)
+
+    assert feed == expected['feed']._replace(url=feed_url)
+    assert entries == {e._replace(feed=feed) for e in expected['entries']}
 
