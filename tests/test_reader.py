@@ -82,12 +82,13 @@ def test_update_entry_updated(reader, call_update_method):
     call_update_method(reader, feed.url)
     assert set(reader.get_entries()) == {new_entry._replace(feed=feed)}
 
-
-def test_update_no_updated(reader):
+@pytest.mark.parametrize('chunk_size', [Reader._get_entries_chunk_size, 1])
+def test_update_no_updated(reader, chunk_size):
     """If a feed or entry have updated == None, they should be treated as
     updated.
 
     """
+    reader._get_entries_chunk_size = chunk_size
 
     parser = Parser()
     reader._parse = parser
