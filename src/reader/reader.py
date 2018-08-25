@@ -260,6 +260,10 @@ class Reader:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
+    @staticmethod
+    def _now():
+        return datetime.datetime.utcnow()
+
     def _update_feed(self, url, db_updated, http_etag, http_last_modified, stale):
         if stale:
             db_updated = None
@@ -294,7 +298,7 @@ class Reader:
 
         with self.db:
 
-            now = datetime.datetime.utcnow()
+            now = self._now()
 
             if stale or feed_was_updated:
                 rows = self.db.execute("""
@@ -331,7 +335,8 @@ class Reader:
         if stale:
             log.debug("update entry %r of feed %r: feed marked as stale, updating anyway", entry.id, feed_url)
         elif not updated:
-            log.debug("update entry %r of feed %r: has no updated, treating as updated", entry.id, feed_url)
+            log.debug("update entry %r of feed %r: has no updated, updating but not changing updated", entry.id, feed_url)
+            updated = db_updated or now
         elif db_updated and updated <= db_updated:
             log.debug("update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)", entry.id, feed_url, db_updated, updated)
             return 0, 0
