@@ -320,15 +320,17 @@ class Reader:
                 assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
             entries_updated, entries_new = 0, 0
+            last_updated = now
             for entry in entries:
                 assert entry.feed is None
-                entry_updated, entry_new = self._update_entry(url, entry, stale, now)
+                entry_updated, entry_new = self._update_entry(url, entry, stale, now, last_updated)
                 entries_updated += entry_updated
                 entries_new += entry_new
+                last_updated += datetime.timedelta(microseconds=1)
 
             log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
-    def _update_entry(self, feed_url, entry, stale, now):
+    def _update_entry(self, feed_url, entry, stale, now, last_updated):
         entry_exists, db_updated = self._get_entry_updated(feed_url, entry.id)
         updated, published = entry.updated, entry.published
 
@@ -356,7 +358,7 @@ class Reader:
                     INSERT INTO entries (
                         id, feed, title, link, updated, author, published, summary, content, enclosures, last_updated
                     ) VALUES (
-                        :id, :feed_url, :title, :link, :updated, :author, :published, :summary, :content, :enclosures, :now
+                        :id, :feed_url, :title, :link, :updated, :author, :published, :summary, :content, :enclosures, :last_updated
                     );
                 """, locals())
                 log.debug("update entry %r of feed %r: entry added", entry.id, feed_url)
@@ -374,7 +376,7 @@ class Reader:
                         summary = :summary,
                         content = :content,
                         enclosures = :enclosures,
-                        last_updated = :now
+                        last_updated = :last_updated
                     WHERE feed = :feed_url AND id = :id;
                 """, locals())
                 log.debug("update entry %r of feed %r: entry updated", entry.id, feed_url)
@@ -419,10 +421,10 @@ class Reader:
                 LIMIT :chunk_size
             """
             if last:
-                last_entry_updated, last_feed_url, last_entry_id = last
+                last_entry_updated, last_feed_url, last_entry_last_updated, last_entry_id = last
                 where_next_snippet = """
-                    AND (entries.updated, feeds.url, entries.id) <
-                        (:last_entry_updated, :last_feed_url, :last_entry_id)
+                    AND (entries.updated, feeds.url, entries.last_updated, entries.id) <
+                        (:last_entry_updated, :last_feed_url, :last_entry_last_updated, :last_entry_id)
                 """
 
         where_feed_snippet = ''
@@ -455,7 +457,8 @@ class Reader:
                 entries.summary,
                 entries.content,
                 entries.enclosures,
-                entries.read
+                entries.read,
+                entries.last_updated
             FROM entries, feeds
             WHERE
                 feeds.url = entries.feed
@@ -466,6 +469,7 @@ class Reader:
             ORDER BY
                 entries.updated DESC,
                 feeds.url DESC,
+                entries.last_updated DESC,
                 entries.id DESC
             {limit_snippet}
             ;
@@ -484,8 +488,9 @@ class Reader:
                 t[15] == 1,
                 feed,
             )
+            last_updated = t[16]
             entry = Entry._make(entry)
-            yield entry
+            yield entry, last_updated
 
     @wrap_storage_exceptions()
     def get_entries(self, which='all', feed=None, has_enclosures=None):
@@ -531,6 +536,7 @@ class Reader:
             # Currently not exposed through the public API.
             #
             if not chunk_size:
+                entries = (e for e, _ in entries)
                 yield from entries
                 return
 
@@ -538,12 +544,16 @@ class Reader:
             if not entries:
                 break
 
+            last_entry, last_updated = entries[-1]
+
+            entries = (e for e, _ in entries)
             yield from entries
 
             last = (
-                entries[-1].updated,
-                entries[-1].feed.url,
-                entries[-1].id,
+                last_entry.updated,
+                last_entry.feed.url,
+                last_updated,
+                last_entry.id,
             )
 
     def _mark_as_read_unread(self, feed_url, entry_id, read):

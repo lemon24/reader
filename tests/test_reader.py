@@ -426,6 +426,50 @@ def test_get_entries_order(reader, chunk_size):
     assert list(reader.get_entries()) == expected
 
 
+@pytest.mark.parametrize('chunk_size', [
+    Reader._get_entries_chunk_size,     # the default
+    1, 2, 3, 8,                         # rough result size for this test
+    0,                                  # unchunked query
+])
+def test_get_entries_feed_order(reader, chunk_size):
+    """All other things being equal, get_entries() should yield entries
+    in the reverse order they appear in the feed.
+    
+    """
+    reader._get_entries_chunk_size = chunk_size
+
+    parser = Parser()
+    reader._parse = parser
+    reader._now = lambda: datetime(2010, 1, 1)
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    three = parser.entry(1, 3, datetime(2010, 1, 1))
+    two = parser.entry(1, 2, datetime(2010, 1, 1))
+    four = parser.entry(1, 4, datetime(2010, 1, 1))
+    one = parser.entry(1, 1, datetime(2010, 1, 1))
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    assert list(reader.get_entries()) == [
+        e._replace(feed=feed) for e in reversed(parser.entries[1].values())
+    ]
+
+    feed = parser.feed(1, datetime(2010, 1, 2))
+    del parser.entries[1][1]
+    one = parser.entry(1, 1, datetime(2010, 1, 2))
+    del parser.entries[1][4]
+    four = parser.entry(1, 4, datetime(2010, 1, 2))
+    del parser.entries[1][2]
+    two = parser.entry(1, 2, datetime(2010, 1, 2))
+
+    reader.update_feeds()
+
+    assert list(reader.get_entries()) == [
+        e._replace(feed=feed) for e in reversed(parser.entries[1].values())
+    ]
+
+
 def test_get_entries_which(reader):
     parser = Parser()
     reader._parse = parser
