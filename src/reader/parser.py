@@ -111,23 +111,19 @@ class RequestsParser:
         self._verify = True
 
     def __call__(self, url, http_etag=None, http_last_modified=None):
-
         url_split = urllib.parse.urlparse(url)
 
-        if url_split.scheme not in ('http', 'https'):
-            # TODO: raise ValueError
-            assert not url_split.netloc
-            assert not url_split.params
-            assert not url_split.query
-            assert not url_split.fragment
-            if url_split.scheme in ('file', ):
-                url = url_split.path
-            else:
-                url = url_split.scheme + (':' if url_split.scheme else '') + url_split.path
+        if url_split.scheme in ('http', 'https'):
+            return self._parse_http(url, http_etag, http_last_modified)
 
-            result = feedparser.parse(url)
-            return _process_feed(url, result) + (None, None)
+        return self._parse_file(url)
 
+    def _parse_file(self, path):
+        # TODO: What about untrusted input?
+        result = feedparser.parse(path)
+        return _process_feed(path, result) + (None, None)
+
+    def _parse_http(self, url, http_etag, http_last_modified):
         """
         Following the implementation in:
         https://github.com/kurtmckee/feedparser/blob/develop/feedparser/http.py
