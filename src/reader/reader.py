@@ -321,7 +321,7 @@ class Reader:
 
             entries_updated, entries_new = 0, 0
             last_updated = now
-            for entry in entries:
+            for entry in reversed(list(entries)):
                 assert entry.feed is None
                 entry_updated, entry_new = self._update_entry(url, entry, stale, now, last_updated)
                 entries_updated += entry_updated

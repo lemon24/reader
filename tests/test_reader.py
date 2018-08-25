@@ -434,7 +434,7 @@ def test_get_entries_order(reader, chunk_size):
 ])
 def test_get_entries_feed_order(reader, chunk_size):
     """All other things being equal, get_entries() should yield entries
-    in the reverse order they appear in the feed.
+    in the order they appear in the feed.
 
     """
     reader._get_entries_chunk_size = chunk_size
@@ -452,9 +452,9 @@ def test_get_entries_feed_order(reader, chunk_size):
     reader.add_feed(feed.url)
     reader.update_feeds()
 
-    assert list(reader.get_entries()) == [
-        e._replace(feed=feed) for e in reversed(parser.entries[1].values())
-    ]
+    have = list(reader.get_entries())
+    expected = [e._replace(feed=feed) for e in [three, two, four, one]]
+    assert have == expected
 
     feed = parser.feed(1, datetime(2010, 1, 2))
     del parser.entries[1][1]
@@ -466,9 +466,9 @@ def test_get_entries_feed_order(reader, chunk_size):
 
     reader.update_feeds()
 
-    assert list(reader.get_entries()) == [
-        e._replace(feed=feed) for e in reversed(parser.entries[1].values())
-    ]
+    have = list(reader.get_entries())
+    expected = [e._replace(feed=feed) for e in [one, four, two, three]]
+    assert have == expected
 
 
 def test_get_entries_which(reader):
