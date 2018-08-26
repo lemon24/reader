@@ -36,7 +36,7 @@ def fill_cookie_jar_requests(session, consent_form_url):
     assert response.status_code == 200
 
 
-def tumblr_gdpr_plugin(session, response, request):
+def tumblr_gdpr_parse_response_plugin(session, response, request):
     """Accept Tumblr GDPR  stuff.
 
     https://github.com/lemon24/reader/issues/67
@@ -47,5 +47,9 @@ def tumblr_gdpr_plugin(session, response, request):
 
     fill_cookie_jar_requests(session, response.url)
     return request
+
+
+def tumblr_gdpr(reader):
+    reader._parse.response_plugins.append(tumblr_gdpr_parse_response_plugin)
 
 

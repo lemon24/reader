@@ -194,6 +194,4 @@ class RequestsParser:
 
 
 parse = RequestsParser()
-from .tumblr_gdpr_plugin import tumblr_gdpr_plugin
-parse.response_plugins.append(tumblr_gdpr_plugin)
 
