@@ -2,7 +2,6 @@ from urllib.parse import urlparse
 import warnings
 
 import pytest
-import py.path
 import feedparser
 
 from reader import Feed
@@ -163,10 +162,9 @@ def make_url_local_remote(request):
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_parse(monkeypatch, tmpdir, feed_type, parse, make_url):
+def test_parse(monkeypatch, tmpdir, feed_type, parse, make_url, data_dir):
     monkeypatch.chdir(tmpdir)
 
-    data_dir = py.path.local(__file__).dirpath().join('data')
     feed_filename = 'full.{}'.format(feed_type)
     data_dir.join(feed_filename).copy(tmpdir)
 
@@ -190,11 +188,10 @@ def test_parse(monkeypatch, tmpdir, feed_type, parse, make_url):
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_parse_empty(monkeypatch, tmpdir, feed_type, parse, make_relative_path_url):
+def test_parse_empty(monkeypatch, tmpdir, feed_type, parse, make_relative_path_url, data_dir):
     make_url = make_relative_path_url
     monkeypatch.chdir(tmpdir)
 
-    data_dir = py.path.local(__file__).dirpath().join('data')
     feed_filename = 'empty.{}'.format(feed_type)
     data_dir.join(feed_filename).copy(tmpdir)
 
@@ -211,12 +208,11 @@ def test_parse_empty(monkeypatch, tmpdir, feed_type, parse, make_relative_path_u
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_parse_relative_links(monkeypatch, tmpdir, feed_type, parse, make_url_local_remote):
+def test_parse_relative_links(monkeypatch, tmpdir, feed_type, parse, make_url_local_remote, data_dir):
     make_url = make_url_local_remote
 
     monkeypatch.chdir(tmpdir)
 
-    data_dir = py.path.local(__file__).dirpath().join('data')
     feed_filename = 'relative.{}'.format(feed_type)
     data_dir.join(feed_filename).copy(tmpdir)
 
@@ -229,7 +225,7 @@ def test_parse_relative_links(monkeypatch, tmpdir, feed_type, parse, make_url_lo
     assert parsed_feed.link == urlparse(feed_url)._replace(path=expected['feed'].link).geturl()
 
 
-def test_parse_error(monkeypatch, tmpdir, parse):
+def test_parse_error(monkeypatch, tmpdir, parse, data_dir):
     """parse() should reraise most feedparser exceptions."""
 
     feedparser_exception = Exception("whatever")
@@ -243,12 +239,12 @@ def test_parse_error(monkeypatch, tmpdir, parse):
     monkeypatch.setattr('feedparser.parse', feedparser_parse)
 
     with pytest.raises(ParseError) as excinfo:
-        parse(str(py.path.local(__file__).dirpath().join('data/full.atom')))
+        parse(str(data_dir.join('full.atom')))
 
     assert excinfo.value.__cause__ is feedparser_exception
 
 
-def test_parse_character_encoding_override(monkeypatch, parse):
+def test_parse_character_encoding_override(monkeypatch, parse, data_dir):
     """parse() should not reraise feedparser.CharacterEncodingOverride."""
 
     old_feedparser_parse = feedparser.parse
@@ -261,15 +257,15 @@ def test_parse_character_encoding_override(monkeypatch, parse):
     monkeypatch.setattr('feedparser.parse', feedparser_parse)
 
     # shouldn't raise an exception
-    parse(str(py.path.local(__file__).dirpath().join('data/full.atom')))
+    parse(str(data_dir.join('full.atom')))
 
 
 @pytest.mark.slow
-def test_parse_not_modified(monkeypatch, tmpdir, parse, make_http_url_304):
+def test_parse_not_modified(monkeypatch, tmpdir, parse, make_http_url_304, data_dir):
     """parse() should raise NotModified for unchanged feeds."""
 
     monkeypatch.chdir(tmpdir)
-    py.path.local(__file__).dirpath().join('data/full.atom').copy(tmpdir)
+    data_dir.join('full.atom').copy(tmpdir)
 
     feed_url, _ = make_http_url_304(Feed('full.atom'), tmpdir)
 
@@ -301,9 +297,9 @@ def make_http_get_headers_url(request):
 
 
 @pytest.mark.slow
-def test_parse_etag_last_modified(monkeypatch, tmpdir, parse, make_http_get_headers_url):
+def test_parse_etag_last_modified(monkeypatch, tmpdir, parse, make_http_get_headers_url, data_dir):
     monkeypatch.chdir(tmpdir)
-    py.path.local(__file__).dirpath().join('data/full.atom').copy(tmpdir)
+    data_dir.join('full.atom').copy(tmpdir)
 
     feed_url, _ = make_http_get_headers_url(Feed('full.atom'), tmpdir)
     parse(feed_url, 'etag', 'last_modified')
@@ -313,10 +309,10 @@ def test_parse_etag_last_modified(monkeypatch, tmpdir, parse, make_http_get_head
 
 
 @pytest.mark.parametrize('tz', ['UTC', 'Europe/Helsinki'])
-def test_parse_local_timezone(monkeypatch, request, parse, tz):
+def test_parse_local_timezone(monkeypatch, request, parse, tz, data_dir):
     """parse() return the correct dates regardless of the local timezone."""
 
-    feed_path = py.path.local(__file__).dirpath().join('data/full.atom')
+    feed_path = data_dir.join('full.atom')
 
     expected = {}
     exec(feed_path.new(ext='.atom.py').read(), expected)
@@ -330,8 +326,8 @@ def test_parse_local_timezone(monkeypatch, request, parse, tz):
 
 
 @pytest.mark.slow
-def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url):
-    monkeypatch.chdir(py.path.local(__file__).dirpath().join('data'))
+def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
+    monkeypatch.chdir(data_dir)
 
     feed_url, _ = make_http_url(Feed('empty.atom'), tmpdir)
 

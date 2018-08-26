@@ -3,7 +3,6 @@ import threading
 from enum import Enum
 
 import pytest
-import py.path
 
 from reader import Reader
 from reader import Feed, Entry, Content, Enclosure
@@ -799,8 +798,7 @@ def test_get_entries_has_enclosure(reader):
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_integration(reader, feed_type):
-    data_dir = py.path.local(__file__).dirpath().join('data')
+def test_integration(reader, feed_type, data_dir):
     feed_filename = 'full.{}'.format(feed_type)
     feed_url = str(data_dir.join(feed_filename))
 

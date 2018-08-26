@@ -7,8 +7,7 @@ from reader import Reader
 
 
 @pytest.mark.slow
-def test_cli(db_path):
-    data_dir = py.path.local(__file__).dirpath().join('data')
+def test_cli(db_path, data_dir):
     feed_filename = 'full.atom'
     feed_path = str(data_dir.join(feed_filename))
 

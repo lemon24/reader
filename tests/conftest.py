@@ -1,4 +1,5 @@
 import pytest
+import py.path
 
 from reader import Reader
 
@@ -58,5 +59,9 @@ def entry_arg(request):
 @pytest.fixture
 def db_path(tmpdir):
     return str(tmpdir.join('db.sqlite'))
+
+@pytest.fixture
+def data_dir():
+    return py.path.local(__file__).dirpath().join('data')
 
 
