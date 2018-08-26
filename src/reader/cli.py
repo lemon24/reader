@@ -5,7 +5,7 @@ import logging
 import click
 
 from . import Reader
-from .plugins import load_plugins
+from .plugin import load_plugins
 
 
 APP_NAME = 'reader'
