@@ -6,16 +6,17 @@ import py.path
 import feedparser
 
 from reader import Feed
-from reader.parser import parse as reader_parse, RequestsParser
+from reader.parser import RequestsParser
 from reader.exceptions import ParseError, NotModified
 
 
 @pytest.yield_fixture
-def parse(monkeypatch):
-    monkeypatch.setattr(reader_parse, '_verify', False)
+def parse():
+    parse = RequestsParser()
+    parse._verify = False
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        yield reader_parse
+        yield parse
 
 
 @pytest.fixture

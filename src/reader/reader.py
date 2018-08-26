@@ -7,7 +7,7 @@ import datetime
 
 from .db import open_db
 from .types import Feed, Entry, Content, Enclosure
-from .parser import parse
+from .parser import RequestsParser
 from .exceptions import (
     ParseError, NotModified,
     FeedExistsError, FeedNotFoundError, EntryNotFoundError,
@@ -70,11 +70,11 @@ class Reader:
     """
 
     _get_entries_chunk_size = 2 ** 8
-    _parse = staticmethod(parse)
 
     @wrap_storage_exceptions()
     def __init__(self, path=None):
         self.db = open_db(path)
+        self._parse = RequestsParser()
 
     @wrap_storage_exceptions()
     def add_feed(self, feed):

@@ -193,5 +193,3 @@ class RequestsParser:
         return _process_feed(url, result) + (http_etag, http_last_modified)
 
 
-parse = RequestsParser()
-
