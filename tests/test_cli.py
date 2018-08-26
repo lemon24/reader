@@ -3,6 +3,7 @@ import py.path
 from click.testing import CliRunner
 
 from reader.cli import cli
+from reader import Reader
 
 
 @pytest.mark.slow
@@ -47,5 +48,23 @@ def test_cli(db_path):
         for e in
         sorted(expected['entries'], key=lambda e: e.updated, reverse=True)
     ]
+
+
+def raise_exception_plugin(reader):
+    assert isinstance(reader, Reader)
+    raise Exception("plug-in error")
+
+@pytest.mark.slow
+def test_cli_plugin(db_path, monkeypatch):
+    import sys
+
+    monkeypatch.setattr(sys, 'path', [str(py.path.local(__file__).dirpath())] + sys.path)
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ['--db', db_path,
+                                 '--plugin', 'test_cli:raise_exception_plugin',
+                                 'list', 'feeds'])
+    assert result.exit_code != 0
+    assert "plug-in error" in result.output
 
 

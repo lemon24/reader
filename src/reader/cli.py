@@ -5,10 +5,12 @@ import logging
 import click
 
 from . import Reader
+from .plugins import load_plugins
 
 
 APP_NAME = 'reader'
 DB_ENVVAR = '{}_DB'.format(APP_NAME.upper())
+PLUGIN_ENVVAR = '{}_PLUGIN'.format(APP_NAME.upper())
 
 
 def get_default_db_path(create_dir=False):
@@ -23,11 +25,15 @@ def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
 
-def make_reader(db_path):
+def make_reader(db_path, plugins):
     try:
         reader = Reader(db_path)
     except Exception as e:
         abort("{}: {}", db_path, e)
+    try:
+        load_plugins(reader, plugins)
+    except Exception as e:
+        abort("while loading plugins: {}".format(e))
     return reader
 
 
@@ -47,14 +53,16 @@ def setup_logging(verbose):
 
 @click.group()
 @click.option('--db', type=click.Path(dir_okay=False), envvar=DB_ENVVAR)
+@click.option('--plugin', multiple=True, envvar=PLUGIN_ENVVAR,
+    help="Import path to a plug-in. Can be passed multiple times.")
 @click.pass_context
-def cli(ctx, db):
+def cli(ctx, db, plugin):
     if db is None:
         try:
             db = get_default_db_path(create_dir=True)
         except Exception as e:
             abort("{}", e)
-    ctx.obj = {'db_path': db}
+    ctx.obj = {'db_path': db, 'plugins': plugin}
 
 
 @cli.command()
