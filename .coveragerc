@@ -1,6 +1,8 @@
 [run]
 branch = True
-source = reader
+source =
+    reader
+    tests
 parallel = True
 
 [paths]
