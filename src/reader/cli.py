@@ -23,6 +23,14 @@ def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
 
+def make_reader(db_path):
+    try:
+        reader = Reader(db_path)
+    except Exception as e:
+        abort("{}: {}", db_path, e)
+    return reader
+
+
 def setup_logging(verbose):
     if verbose == 0:
         level = logging.WARNING
@@ -46,7 +54,7 @@ def cli(ctx, db):
             db = get_default_db_path(create_dir=True)
         except Exception as e:
             abort("{}", e)
-    ctx.obj = db
+    ctx.obj = {'db_path': db}
 
 
 @cli.command()
@@ -54,12 +62,9 @@ def cli(ctx, db):
 @click.option('--update/--no-update')
 @click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def add(db_path, url, update, verbose):
+def add(kwargs, url, update, verbose):
     setup_logging(verbose)
-    try:
-        reader = Reader(db_path)
-    except Exception as e:
-        abort("{}: {}", db_path, e)
+    reader = make_reader(**kwargs)
     reader.add_feed(url)
     if update:
         reader.update_feed(url)
@@ -69,12 +74,9 @@ def add(db_path, url, update, verbose):
 @click.argument('url')
 @click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def remove(db_path, url, verbose):
+def remove(kwargs, url, verbose):
     setup_logging(verbose)
-    try:
-        reader = Reader(db_path)
-    except Exception as e:
-        abort("{}: {}", db_path, e)
+    reader = make_reader(**kwargs)
     reader.remove_feed(url)
 
 
@@ -83,12 +85,9 @@ def remove(db_path, url, verbose):
 @click.option('--new-only/--no-new-only')
 @click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def update(db_path, url, new_only, verbose):
+def update(kwargs, url, new_only, verbose):
     setup_logging(verbose)
-    try:
-        reader = Reader(db_path)
-    except Exception as e:
-        abort("{}: {}", db_path, e)
+    reader = make_reader(**kwargs)
     if url:
         reader.update_feed(url)
     else:
@@ -102,9 +101,19 @@ def list():
 
 @list.command()
 @click.pass_obj
-def feeds(db_path):
-    for feed in Reader(db_path).get_feeds():
+def feeds(kwargs):
+    reader = make_reader(**kwargs)
+    for feed in reader.get_feeds():
         click.echo(feed.url)
+
+
+@list.command()
+@click.pass_obj
+def entries(kwargs):
+    reader = make_reader(**kwargs)
+    for entry in reader.get_entries():
+        click.echo("{} {}".format(entry.feed.url, entry.link or entry.id))
+
 
 
 from reader.app.cli import serve
