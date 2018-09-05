@@ -4,16 +4,20 @@ API
 
 .. module:: reader
 
+This part of the documentation covers all the interfaces of reader.
+
 
 Reader Object
 -------------
+
+All of reader's functionality can be accessed through a :class:`Reader` instance.
 
 .. autoclass:: Reader
     :members:
 
 
-Entry Objects
--------------
+Data Objects
+------------
 
 .. autoclass:: Feed
     :members:
@@ -32,7 +36,6 @@ Exceptions
 ----------
 
 All exceptions that :class:`Reader` explicitly raises inherit from :exc:`ReaderError`.
-
 
 .. autoexception:: ReaderError
     :members:
