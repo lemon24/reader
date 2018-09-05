@@ -13,8 +13,6 @@ test: clean-pyc install-dev
 
 coverage: clean-pyc install-dev
 	pytest --cov -n 4 -v --runslow
-	coverage combine
-	coverage report
 	coverage html
 
 cov: coverage
