@@ -22,7 +22,7 @@ Most commands need a database to work. The following are equivalent:
 .. code-block:: bash
 
     python -m reader --db /path/to/db some-command
-    READER_DB=/path/to/db reader some-command
+    READER_DB=/path/to/db python -m reader some-command
 
 If no database path is given, ``~/.config/reader/db.sqlite`` is used
 (at least on Linux).
