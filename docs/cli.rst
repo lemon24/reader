@@ -4,9 +4,18 @@ Command-line interface
 
 This part of the documentation covers the reader command-line interface.
 
-.. warning::
+.. note::
 
     The CLI is not stable yet and might change without any notice.
+
+.. note::
+
+    The command-line interface is optional, use the ``cli`` extra to install
+    its dependencies:
+
+    .. code-block:: bash
+
+        pip install reader[cli]
 
 Most commands need a database to work. The following are equivalent:
 

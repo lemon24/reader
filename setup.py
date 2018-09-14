@@ -19,10 +19,10 @@ setup(
     install_requires=[
         'attrs>=17.1',
         'feedparser>=5',
-        'click>=5',
         'requests',
     ],
     extras_require={
+        'cli': ['click>=5'],
         'web-app': ['flask>=0.10', 'humanize'],
         'enclosure-tags': ['requests', 'mutagen'],
     },
