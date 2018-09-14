@@ -40,8 +40,8 @@ Usage
     ['H.I. #108: Project Cyclops']
 
 
-API documentation
------------------
+API reference
+-------------
 
 If you are looking for information on a specific function, class, or method,
 this part of the documentation is for you.
@@ -50,8 +50,8 @@ this part of the documentation is for you.
     api
 
 
-CLI documentation
------------------
+Command-line interface
+----------------------
 
 .. toctree::
     cli
