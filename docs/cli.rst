@@ -5,13 +5,14 @@ Command-line interface
 This part of the documentation covers the reader command-line interface.
 
 .. warning::
+
     The CLI is not stable yet and might change without any notice.
 
 Most commands need a database to work. The following are equivalent:
 
 .. code-block:: bash
 
-    reader --db /path/to/db some-command
+    python -m reader --db /path/to/db some-command
     READER_DB=/path/to/db reader some-command
 
 If no database path is given, ``~/.config/reader/db.sqlite`` is used
@@ -21,19 +22,19 @@ Add a feed:
 
 .. code-block:: bash
 
-    reader add http://www.example.com/atom.xml
+    python -m reader add http://www.example.com/atom.xml
 
 Update all feeds:
 
 .. code-block:: bash
 
-    reader update
+    python -m reader update
 
 Start a local reader server at ``http://localhost:8080/``:
 
 .. code-block:: bash
 
-    reader serve
+    python -m reader serve
 
 
 Reference
