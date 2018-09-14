@@ -123,9 +123,11 @@ def entries(kwargs):
         click.echo("{} {}".format(entry.feed.url, entry.link or entry.id))
 
 
-
-from reader.app.cli import serve
-cli.add_command(serve)
+try:
+    from reader.app.cli import serve
+    cli.add_command(serve)
+except ImportError:
+    pass
 
 
 if __name__ == '__main__':
