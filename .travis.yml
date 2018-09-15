@@ -6,7 +6,7 @@ python:
     - "pypy3.5"
 
 install:
-    - ./build-sqlite.sh $HOME
+    - scripts/build-sqlite.sh $HOME
     - make install-dev
     - pip install codecov
 
