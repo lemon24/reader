@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/lemon24/reader.svg?branch=master)](https://travis-ci.org/lemon24/reader)
 [![Code Coverage](https://codecov.io/github/lemon24/reader/coverage.svg?branch=master)](https://codecov.io/github/lemon24/reader?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/pip/badge/?version=latest&style=flat)](https://reader.readthedocs.io/en/latest/?badge=latest)
+[![PyPI Status](https://img.shields.io/pypi/v/reader.svg)](https://pypi.python.org/pypi/reader)
 
 Features:
 
