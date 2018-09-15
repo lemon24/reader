@@ -6,9 +6,10 @@ import os.path
 import timeit
 import cProfile, pstats
 
-sys.path.insert(0, 'src')
+root_dir = os.path.dirname(__file__)
+sys.path.insert(0, os.path.join(root_dir, '../src'))
+sys.path.insert(0, os.path.join(root_dir, '../tests'))
 
-sys.path.insert(0, 'tests')
 from fakeparser import Parser
 
 from reader import Reader
