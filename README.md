@@ -16,7 +16,7 @@ Documentation: [reader.readthedocs.io](http://reader.readthedocs.io/)
 Usage:
 
 ```bash
-$ pip install git+https://github.com/lemon24/reader.git#egg=reader
+$ pip install reader
 ```
 
 ```python
