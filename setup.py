@@ -8,11 +8,15 @@ with open('src/reader/__init__.py', 'rb') as f:
     version = str(ast.literal_eval(_version_re.search(
         f.read().decode('utf-8')).group(1)))
 
+with open('README.md') as f:
+    long_description = f.read()
+
 setup(
     name='reader',
     version=version,
     author='lemon24',
     url='https://github.com/lemon24/reader',
+    license='BSD',
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
     include_package_data=True,
@@ -26,7 +30,9 @@ setup(
         'web-app': ['flask>=0.10', 'humanize'],
         'enclosure-tags': ['requests', 'mutagen'],
     },
-    description="",
+    description="A minimal feed reader.",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     classifiers=[
         "License :: OSI Approved :: BSD License",
         "Programming Language :: Python",
