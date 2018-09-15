@@ -57,6 +57,12 @@ Command-line interface
     cli
 
 
+Development
+-----------
+
+.. toctree::
+    dev
+
 Indices and tables
 ==================
 
