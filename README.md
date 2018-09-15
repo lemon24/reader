@@ -11,6 +11,8 @@ Features:
 * Excellent test coverage.
 * Minimal web interface.
 
+Documentation: [reader.readthedocs.io](http://reader.readthedocs.io/)
+
 Usage:
 
 ```bash
@@ -35,6 +37,4 @@ $ pip install git+https://github.com/lemon24/reader.git#egg=reader
 >>> [e.title for e in reader.get_entries(which='read')]
 ['H.I. #108: Project Cyclops']
 ```
-
-Documentation: [reader.readthedocs.io](http://reader.readthedocs.io/)
 
