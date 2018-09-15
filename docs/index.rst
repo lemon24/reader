@@ -63,6 +63,14 @@ Development
 .. toctree::
     dev
 
+
+Changelog
+---------
+
+.. toctree::
+    changelog
+
+
 Indices and tables
 ==================
 
