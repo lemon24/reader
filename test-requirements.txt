@@ -1,4 +1,5 @@
 pytest
 coverage
+requests-mock
 mechanicalsoup
 requests-wsgi-adapter
