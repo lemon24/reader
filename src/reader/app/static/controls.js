@@ -109,10 +109,18 @@ function register_confirm(endpoint, collapsible, callback, errback) {
     var button = collapsible.querySelector('button[name=action]');
     if (button === null) { return; };
 
-    while (collapsible.firstChild) {
-        collapsible.removeChild(collapsible.firstChild);
+    var form = button.form;
+    // form.children is a "live collection",
+    // weird stuff happens if we mutate while iterating
+    var children = Array.from(form.children);
+    for (var i = 0; i < children.length; i++) {
+        var child = children[i];
+        if (child.tagName == 'INPUT' && child.type == 'hidden') {
+            continue;
+        }
+        form.removeChild(child);
     }
-    collapsible.appendChild(button);
+    form.appendChild(button);
 
     var state = 'none';
     var original_text = button.innerHTML;

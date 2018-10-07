@@ -8,7 +8,7 @@
 
 {% block body %}
 
-<form action="{{ url_for('.form_api') }}" method="post" id="update-entries">
+<div id="update-entries">
 <ul class="controls">
 
 <li>
@@ -39,15 +39,15 @@
 {% set next = url_for('.entries', **request.args) %}
 
 {% if current_what != 'read' %}
-{{- macros.confirm_button('mark-all-as-read', 'mark all as read', leave_disabled=true, next=next) -}}
+{{- macros.confirm_button('.form_api', 'mark-all-as-read', 'mark all as read', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
 {% endif %}
 {% if current_what != 'unread' %}
-{{- macros.confirm_button('mark-all-as-unread', 'mark all as unread', leave_disabled=true, next=next) -}}
+{{- macros.confirm_button('.form_api', 'mark-all-as-unread', 'mark all as unread', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
 {% endif %}
 
-{{ macros.confirm_button('delete-feed', 'delete feed', leave_disabled=true, next=url_for('.entries')) }}
+{{ macros.confirm_button('.form_api', 'delete-feed', 'delete feed', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
 
-{{ macros.text_input_button('update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true, next=next) }}
+{{ macros.text_input_button('.form_api', 'update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true, next=next, context={'feed-url': feed.url}) }}
 
 {% endif %}
 
@@ -63,10 +63,7 @@
 </ul>
 
 
-<input type="hidden" name="feed-url" value='{{ feed.url }}'>
-<input type="hidden" name="entry-id" value='{{ entries_data | tojson }}'>
-
-</form>
+</div>
 
 
 {% for entry in entries %}
@@ -83,18 +80,18 @@ untitled
 </a>
 </h2>
 
-<form action="{{ url_for('.form_api') }}" method="post">
 <ul class="controls">
 
 <li><a href="{{ url_for('.entries', feed=feed.url) }}">{{ macros.feed_title(feed) }}</a>
 <li><span title="{{ entry.updated }}">{{ entry.updated | humanize_naturaltime }}</span>
 
 {% set next = url_for('.entries', **request.args) + '#entry-' + ((loop.index if not loop.last else loop.index - 1) | string) %}
+{% set context = {'feed-url': feed.url, 'entry-id': entry.id} %}
 
 {% if entry.read %}
-{{ macros.simple_button('mark-as-unread', 'mark as unread', leave_disabled=true, next=next) }}
+{{ macros.simple_button('.form_api', 'mark-as-unread', 'mark as unread', leave_disabled=true, next=next, context=context) }}
 {% else %}
-{{ macros.simple_button('mark-as-read', 'mark as read', leave_disabled=true, next=next) }}
+{{ macros.simple_button('.form_api', 'mark-as-read', 'mark as read', leave_disabled=true, next=next, context=context) }}
 {% endif %}
 
 {% for message in get_flashed_messages_by_prefix(
@@ -106,10 +103,6 @@ untitled
 
 </ul>
 
-<input type="hidden" name="feed-url" value='{{ feed.url }}'>
-<input type="hidden" name="entry-id" value='{{ entry.id }}'>
-
-</form>
 
 
 {% if entry.summary %}

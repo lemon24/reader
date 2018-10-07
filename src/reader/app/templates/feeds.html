@@ -16,16 +16,16 @@
 {{- macros.feed_title(feed) -}}
 </a></h2>
 
-<form action="{{ url_for('.form_api') }}" method="post">
 <ul class="controls">
 
 <li>{% if feed.link %}<a href="{{ feed.link }}">site</a>{% else %}no site{% endif %}
 
 {% set next = url_for('.feeds', **request.args) + '#feed-' + ((loop.index if not loop.last else loop.index - 1) | string) %}
+{% set context = {'feed-url': feed.url, 'target': feed.url} %}
 
-{{ macros.confirm_button('delete-feed', 'delete feed', loop.index, leave_disabled=true, next=next) }}
+{{ macros.confirm_button('.form_api', 'delete-feed', 'delete feed', loop.index, leave_disabled=true, next=next, context=context) }}
 
-{{ macros.text_input_button('update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true, next=next) }}
+{{ macros.text_input_button('.form_api', 'update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true, next=next, context=context) }}
 
 {% for message in get_flashed_messages_by_prefix(
     ('delete-feed', feed.url),
@@ -36,10 +36,6 @@
 
 </ul>
 
-<input type="hidden" name="feed-url" value='{{ feed.url }}'>
-<input type="hidden" name="target" value='{{ feed.url }}'>
-
-</form>
 
 </div>
 {% endfor %}

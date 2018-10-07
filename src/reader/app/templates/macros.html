@@ -16,27 +16,33 @@
 {% endmacro %}
 
 
-{% macro text_input_button(action, label, name, placeholder, leave_disabled=false, next=none) -%}
+{% macro text_input_button(form_view, action, label, name, placeholder, leave_disabled=false, next=none, context=none) -%}
 <li class="collapsible" data-button-type="text-input" data-callback="function callback(data) {
 
 {% if caller is defined %}{{ caller() | forceescape }}{% endif %}
 
 }; callback" data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}">
+<form action="{{ url_for(form_view) }}" method="post" class="action-{{ action }}">
     <span class="label">{{ label }}</span>
     <span class="hidden">
         <input type="text" name="{{ name }}" placeholder="{{ placeholder }}" autocomplete="off">
         <button type="submit" name="action" value="{{ action }}" autocomplete="off">{{ label }}</button>
     </span>
     {% if next is not none %}<input type="hidden" name="next-{{ action }}" value='{{ next }}'>{% endif %}
+    {% for name, value in (context or {}) | dictsort -%}
+    <input type="hidden" name='{{ name }}' value='{{ value }}'>
+    {% endfor %}
+</form>
 {%- endmacro %}
 
 
-{% macro confirm_button(action, label, id=none, leave_disabled=false, next=none) -%}
+{% macro confirm_button(form_view, action, label, id=none, leave_disabled=false, next=none, context=none) -%}
 <li class="collapsible" data-button-type="confirm" data-callback="function callback(data) {
 
 {% if caller is defined %}{{ caller() | forceescape }}{% endif %}
 
 }; callback" data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}">
+<form action="{{ url_for(form_view) }}" method="post" class="action-{{ action }}">
     <span class="label">{{ label }}</span>
     <span class="hidden">
         <input type="checkbox" id="really-{{ action }}{% if id is not none %}-{{ id }}{% endif %}" name="really-{{ action }}" value="really" autocomplete="off">
@@ -44,17 +50,26 @@
         <button type="submit" name="action" value="{{ action }}" autocomplete="off">{{ label }}</button>
     </span>
     {% if next is not none %}<input type="hidden" name="next-{{ action }}" value='{{ next }}'>{% endif %}
+    {% for name, value in (context or {}) | dictsort -%}
+    <input type="hidden" name='{{ name }}' value='{{ value }}'>
+    {% endfor %}
+</form>
 {%- endmacro %}
 
 
-{% macro simple_button(action, label, leave_disabled=false, next=none) -%}
+{% macro simple_button(form_view, action, label, leave_disabled=false, next=none, context=none) -%}
 <li class="simple-button" data-button-type="simple" data-callback="function callback(data) {
 
 {% if caller is defined %}{{ caller() | forceescape }}{% endif %}
 
 }; callback" data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}">
+<form action="{{ url_for(form_view) }}" method="post" class="action-{{ action }}">
     <button type="submit" name="action" value="{{ action }}" autocomplete="off">{{ label }}</button>
     {% if next is not none %}<input type="hidden" name="next-{{ action }}" value='{{ next }}'>{% endif %}
+    {% for name, value in (context or {}) | dictsort -%}
+    <input type="hidden" name='{{ name }}' value='{{ value }}'>
+    {% endfor %}
+</form>
 {%- endmacro %}
 
 
