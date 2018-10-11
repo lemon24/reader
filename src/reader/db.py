@@ -38,7 +38,10 @@ def ddl_transaction(db):
         db.isolation_level = isolation_level
 
 
-class InvalidVersion(Exception):
+class DBError(Exception):
+    pass
+
+class SchemaVersionError(DBError):
     pass
 
 
@@ -84,13 +87,13 @@ class HeavyMigration:
 
             elif version < self.version:
                 if not self.migrations.get(version):
-                    raise InvalidVersion("unsupported version: {}".format(version))
+                    raise SchemaVersionError("unsupported version: {}".format(version))
 
                 for from_version in range(version, self.version):
                     to_version = from_version + 1
                     migration = self.migrations.get(from_version)
                     if migration is None:
-                        raise InvalidVersion(
+                        raise SchemaVersionError(
                             "no migration from {} to {}; expected migrations for all versions "
                             "later than {}".format(from_version, to_version, version))
 
@@ -101,7 +104,7 @@ class HeavyMigration:
                     migration(db)
 
             elif version != self.version:
-                raise InvalidVersion("invalid version: {}".format(version))
+                raise SchemaVersionError("invalid version: {}".format(version))
 
 
 def create_db(db):

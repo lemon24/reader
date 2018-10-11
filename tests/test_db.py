@@ -3,7 +3,7 @@ import sqlite3
 import pytest
 
 from reader.db import ddl_transaction
-from reader.db import HeavyMigration, InvalidVersion
+from reader.db import HeavyMigration, SchemaVersionError
 
 
 class WeirdError(Exception): pass
@@ -82,7 +82,7 @@ def test_migration_unsupported_old_version():
     migration = HeavyMigration(create_db_1, 1, {})
     migration.setup_db(db)
     migration = HeavyMigration(create_db_2, 2, {})
-    with pytest.raises(InvalidVersion) as excinfo:
+    with pytest.raises(SchemaVersionError) as excinfo:
         migration.setup_db(db)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one']
@@ -92,7 +92,7 @@ def test_migration_unsupported_intermediary_version():
     migration = HeavyMigration(create_db_1, 1, {})
     migration.setup_db(db)
     migration = HeavyMigration(create_db_2, 3, {1: update_from_1_to_2})
-    with pytest.raises(InvalidVersion) as excinfo:
+    with pytest.raises(SchemaVersionError) as excinfo:
         migration.setup_db(db)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one']
@@ -102,7 +102,7 @@ def test_migration_invalid_version():
     migration = HeavyMigration(create_db_2, 2, {})
     migration.setup_db(db)
     migration = HeavyMigration(create_db_1, 1, {})
-    with pytest.raises(InvalidVersion) as excinfo:
+    with pytest.raises(SchemaVersionError) as excinfo:
         migration.setup_db(db)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one', 'two']
