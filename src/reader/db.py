@@ -44,6 +44,9 @@ class DBError(Exception):
 class SchemaVersionError(DBError):
     pass
 
+class RequirementError(DBError):
+    pass
+
 
 class HeavyMigration:
 
@@ -136,8 +139,41 @@ def create_db(db):
     """)
 
 
+def require_sqlite_version(version_info):
+    if version_info > sqlite3.sqlite_version_info:
+        raise RequirementError(
+            "at least SQLite version {} required, {} installed".format(
+                '.'.join(str(i) for i in version_info),
+                '.'.join(str(i) for i in sqlite3.sqlite_version_info)
+            ))
+
+
+def get_db_compile_options(db):
+    cursor = db.cursor()
+    try:
+        cursor.execute("PRAGMA compile_options;")
+        return [r[0] for r in cursor.fetchall()]
+    finally:
+        cursor.close()
+
+
+def require_sqlite_compile_options(db, options):
+    missing = set(options).difference(get_db_compile_options(db))
+    if missing:
+        raise RequirementError(
+            "required SQLite compile options missing: {}"
+            .format(sorted(missing)))
+
+
 def open_db(path):
+    # row value support was added in 3.15
+    require_sqlite_version((3, 15))
+
     db = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
+
+    # require the JSON1 extension
+    require_sqlite_compile_options(db, ['ENABLE_JSON1'])
+
     db.execute("""
             PRAGMA foreign_keys = ON;
     """)
@@ -149,5 +185,6 @@ def open_db(path):
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
         })
     migration.migrate(db)
+
     return db
 

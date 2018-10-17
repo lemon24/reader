@@ -4,6 +4,8 @@ import pytest
 
 from reader.db import ddl_transaction
 from reader.db import HeavyMigration, SchemaVersionError
+from reader.db import RequirementError
+from reader.db import require_sqlite_version, require_sqlite_compile_options
 
 
 class WeirdError(Exception): pass
@@ -106,4 +108,54 @@ def test_migration_invalid_version():
         migration.migrate(db)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one', 'two']
+
+
+def test_require_sqlite_version(monkeypatch):
+    monkeypatch.setattr('sqlite3.sqlite_version_info', (3, 15, 0))
+
+    with pytest.raises(RequirementError):
+        require_sqlite_version((3, 16, 0))
+
+    # shouldn't raise an exception
+    require_sqlite_version((3, 15, 0))
+    require_sqlite_version((3, 14))
+
+
+class MockCursor:
+
+    def __init__(self):
+        self._execute_args = None
+        self._fetchall_rv = None
+
+    def execute(self, *args):
+        self._execute_args = args
+
+    def fetchall(self):
+        return self._fetchall_rv
+
+    def close(self):
+        pass
+
+class MockConnection:
+
+    def __init__(self):
+        self._cursor = MockCursor()
+
+    def cursor(self):
+        return self._cursor
+
+
+def test_require_sqlite_compile_options():
+    db = MockConnection()
+    db._cursor._fetchall_rv = [('ONE', ), ('TWO', )]
+
+    with pytest.raises(RequirementError):
+        require_sqlite_compile_options(db, ['THREE'])
+    with pytest.raises(RequirementError):
+        require_sqlite_compile_options(db, ['ONE', 'THREE'])
+
+    # shouldn't raise an exception
+    require_sqlite_compile_options(db, ['ONE'])
+    require_sqlite_compile_options(db, ['ONE', 'TWO'])
+
 
