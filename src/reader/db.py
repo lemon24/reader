@@ -64,15 +64,7 @@ class HeavyMigration:
         version, = db.execute("SELECT MAX(version) FROM version;").fetchone()
         return version
 
-    def open_db(self, path):
-        db = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
-        db.execute("""
-                PRAGMA foreign_keys = ON;
-        """)
-        self.setup_db(db)
-        return db
-
-    def setup_db(self, db):
+    def migrate(self, db):
         with ddl_transaction(db):
             version = self.get_version(db)
 
@@ -144,12 +136,18 @@ def create_db(db):
     """)
 
 
-open_db = HeavyMigration(
-    create=create_db,
-    version=10,
-    migrations={
-        # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
-    },
-).open_db
+def open_db(path):
+    db = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
+    db.execute("""
+            PRAGMA foreign_keys = ON;
+    """)
 
+    migration = HeavyMigration(
+        create=create_db,
+        version=10,
+        migrations={
+            # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
+        })
+    migration.migrate(db)
+    return db
 
