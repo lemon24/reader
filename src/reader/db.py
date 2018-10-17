@@ -39,13 +39,19 @@ def ddl_transaction(db):
 
 
 class DBError(Exception):
-    pass
+
+    display_name = "database error"
+
+    def __str__(self):
+        return "{}: {}".format(self.display_name, super().__str__())
 
 class SchemaVersionError(DBError):
-    pass
+    display_name = "schema version error"
 
 class RequirementError(DBError):
-    pass
+    display_name = "database requirement error"
+
+db_errors = [DBError, SchemaVersionError, RequirementError]
 
 
 class HeavyMigration:

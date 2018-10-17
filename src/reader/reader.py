@@ -5,7 +5,7 @@ import functools
 import contextlib
 import datetime
 
-from .db import open_db
+from .db import open_db, DBError
 from .types import Feed, Entry, Content, Enclosure
 from .parser import RequestsParser
 from .exceptions import (
@@ -71,9 +71,14 @@ class Reader:
 
     _get_entries_chunk_size = 2 ** 8
 
+    _open_db = staticmethod(open_db)
+
     @wrap_storage_exceptions()
     def __init__(self, path=None):
-        self.db = open_db(path)
+        try:
+            self.db = self._open_db(path)
+        except DBError as e:
+            raise StorageError(str(e)) from e
         self._parse = RequestsParser()
 
     @wrap_storage_exceptions()

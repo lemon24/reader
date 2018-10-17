@@ -7,6 +7,7 @@ import pytest
 from reader import Reader
 from reader import Feed, Entry, Content, Enclosure
 from reader import FeedExistsError, FeedNotFoundError, ParseError, EntryNotFoundError, StorageError
+import reader.db
 
 from fakeparser import Parser, BlockingParser, FailingParser, NotModifiedParser
 
@@ -664,6 +665,19 @@ def test_storage_errors_open(tmpdir):
     # try to open a directory
     with pytest.raises(StorageError):
         Reader(str(tmpdir))
+
+
+@pytest.mark.parametrize('db_error_cls', reader.db.db_errors)
+def test_db_errors(monkeypatch, db_path, db_error_cls):
+    """reader.db.DBError subclasses should be wrapped in StorageError."""
+
+    def open_db(*args):
+        raise db_error_cls("whatever")
+
+    monkeypatch.setattr(Reader, '_open_db', staticmethod(open_db))
+
+    with pytest.raises(StorageError):
+        Reader(db_path)
 
 
 def mark_as_read(reader, feed, entry):
