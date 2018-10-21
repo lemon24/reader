@@ -1,41 +1,17 @@
 import json
 import logging
 import sqlite3
-import functools
-import contextlib
 import datetime
 
-from .db import open_db, DBError
+from .storage import Storage, wrap_storage_exceptions
 from .types import Feed, Entry, Content, Enclosure
 from .parser import RequestsParser
 from .exceptions import (
     ParseError, NotModified,
     FeedExistsError, FeedNotFoundError, EntryNotFoundError,
-    StorageError,
 )
 
 log = logging.getLogger('reader')
-
-
-@contextlib.contextmanager
-def wrap_storage_exceptions(*args):
-    """Wrap sqlite3 exceptions in StorageError.
-
-    Only wraps exceptions that are unlikely to be programming errors (bugs),
-    can only be fixed by the user (e.g. access permission denied), and aren't
-    domain-related (those should have other custom exceptions).
-
-    This is an imprecise science, since the DB-API exceptions are somewhat
-    fuzzy in their meaning and we can't access the SQLite result code.
-
-    Full discussion at https://github.com/lemon24/reader/issues/21
-
-    """
-
-    try:
-        yield
-    except sqlite3.OperationalError as e:
-        raise StorageError("sqlite3 error") from e
 
 
 def feed_argument(feed):
@@ -71,15 +47,18 @@ class Reader:
 
     _get_entries_chunk_size = 2 ** 8
 
-    _open_db = staticmethod(open_db)
-
-    @wrap_storage_exceptions()
     def __init__(self, path=None):
-        try:
-            self.db = self._open_db(path)
-        except DBError as e:
-            raise StorageError(str(e)) from e
+        self._storage = Storage(path)
         self._parse = RequestsParser()
+
+    @property
+    def db(self):
+        """Temporary property.
+
+        TODO: Remove after all the storage stuff is moved on Storage.
+
+        """
+        return self._storage.db
 
     @wrap_storage_exceptions()
     def add_feed(self, feed):
