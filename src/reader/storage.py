@@ -2,7 +2,7 @@ import sqlite3
 import contextlib
 
 from .db import open_db, DBError
-from .exceptions import StorageError
+from .exceptions import StorageError, EntryNotFoundError
 
 
 @contextlib.contextmanager
@@ -36,4 +36,16 @@ class Storage:
             self.db = self._open_db(path)
         except DBError as e:
             raise StorageError(str(e)) from e
+
+    @wrap_storage_exceptions()
+    def mark_as_read_unread(self, feed_url, entry_id, read):
+        with self.db:
+            rows = self.db.execute("""
+                UPDATE entries
+                SET read = :read
+                WHERE feed = :feed_url AND id = :entry_id;
+            """, locals())
+            if rows.rowcount == 0:
+                raise EntryNotFoundError(feed_url, entry_id)
+            assert rows.rowcount == 1, "shouldn't have more than 1 row"
 

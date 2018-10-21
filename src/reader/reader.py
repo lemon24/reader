@@ -540,18 +540,6 @@ class Reader:
                 last_entry.id,
             )
 
-    def _mark_as_read_unread(self, feed_url, entry_id, read):
-        with self.db:
-            rows = self.db.execute("""
-                UPDATE entries
-                SET read = :read
-                WHERE feed = :feed_url AND id = :entry_id;
-            """, locals())
-            if rows.rowcount == 0:
-                raise EntryNotFoundError(feed_url, entry_id)
-            assert rows.rowcount == 1, "shouldn't have more than 1 row"
-
-    @wrap_storage_exceptions()
     def mark_as_read(self, entry):
         """Mark an entry as read.
 
@@ -564,9 +552,8 @@ class Reader:
 
         """
         feed_url, entry_id = entry_argument(entry)
-        self._mark_as_read_unread(feed_url, entry_id, 1)
+        self._storage.mark_as_read_unread(feed_url, entry_id, 1)
 
-    @wrap_storage_exceptions()
     def mark_as_unread(self, entry):
         """Mark an entry as unread.
 
@@ -579,5 +566,5 @@ class Reader:
 
         """
         feed_url, entry_id = entry_argument(entry)
-        self._mark_as_read_unread(feed_url, entry_id, 0)
+        self._storage.mark_as_read_unread(feed_url, entry_id, 0)
 
