@@ -10,13 +10,15 @@ from reader.cli import setup_logging
 @click.option('-p', '--port', default=8080, type=int,
     help="The port to bind to.")
 @click.option('-v', '--verbose', count=True)
-def serve(db_path, host, port, verbose):
+def serve(kwargs, host, port, verbose):
     """Start a local HTTP reader server.
-    
+
     """
+    if kwargs['plugins']:
+        raise click.ClickException("plug-ins not supported with serve")
     setup_logging(verbose)
     from werkzeug.serving import run_simple
     from . import create_app
-    app = create_app(db_path)
+    app = create_app(kwargs['db_path'])
     run_simple(host, port, app)
 
