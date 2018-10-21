@@ -1,11 +1,13 @@
 import sqlite3
 import contextlib
+import functools
 
 from .db import open_db, DBError
 from .exceptions import (
     StorageError,
     EntryNotFoundError, FeedNotFoundError, FeedExistsError,
 )
+from .types import Feed
 
 
 @contextlib.contextmanager
@@ -27,6 +29,21 @@ def wrap_storage_exceptions(*args):
         yield
     except sqlite3.OperationalError as e:
         raise StorageError("sqlite3 error") from e
+
+
+def wrap_storage_exceptions_generator(fn):
+    """Like wrap_storage_exceptions, but for generators.
+
+    TODO: Is this worth doing to prevent an indentation level in a few functions?
+
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with wrap_storage_exceptions():
+            yield from fn(*args, **kwargs)
+
+    return wrapper
 
 
 class Storage:
@@ -61,6 +78,18 @@ class Storage:
             if rows.rowcount == 0:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
+
+    @wrap_storage_exceptions_generator
+    def get_feeds(self, url=None):
+        where_url_snippet = '' if not url else "WHERE url = :url"
+        cursor = self.db.execute("""
+            SELECT url, updated, title, link, author, user_title FROM feeds
+            {where_url_snippet}
+            ORDER BY feeds.title, feeds.url;
+        """.format(**locals()), locals())
+
+        for row in cursor:
+            yield Feed._make(row)
 
     @wrap_storage_exceptions()
     def mark_as_read_unread(self, feed_url, entry_id, read):

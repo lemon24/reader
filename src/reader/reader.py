@@ -90,18 +90,6 @@ class Reader:
         url = feed_argument(feed)
         return self._storage.remove_feed(url)
 
-    def _get_feeds(self, url=None):
-        where_url_snippet = '' if not url else "WHERE url = :url"
-        cursor = self.db.execute("""
-            SELECT url, updated, title, link, author, user_title FROM feeds
-            {where_url_snippet}
-            ORDER BY feeds.title, feeds.url;
-        """.format(**locals()), locals())
-
-        for row in cursor:
-            yield Feed._make(row)
-
-    @wrap_storage_exceptions()
     def get_feeds(self):
         """Get all the feeds.
 
@@ -112,9 +100,14 @@ class Reader:
             StorageError
 
         """
-        return list(self._get_feeds())
 
-    @wrap_storage_exceptions()
+        # The list() call is here to make sure clients can't block the
+        # storage if they keep the result around and don't iterate over it.
+        #
+        # TODO: Make Storage ensure it can't be blocked.
+
+        return list(self._storage.get_feeds())
+
     def get_feed(self, feed):
         """Get a feed.
 
@@ -129,7 +122,7 @@ class Reader:
 
         """
         url = feed_argument(feed)
-        feeds = list(self._get_feeds(url))
+        feeds = list(self._storage.get_feeds(url))
         if len(feeds) == 0:
             return None
         elif len(feeds) == 1:
