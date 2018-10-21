@@ -60,7 +60,6 @@ class Reader:
         """
         return self._storage.db
 
-    @wrap_storage_exceptions()
     def add_feed(self, feed):
         """Add a new feed.
 
@@ -73,16 +72,8 @@ class Reader:
 
         """
         url = feed_argument(feed)
-        with self.db:
-            try:
-                self.db.execute("""
-                    INSERT INTO feeds (url)
-                    VALUES (:url);
-                """, locals())
-            except sqlite3.IntegrityError:
-                raise FeedExistsError(url)
+        return self._storage.add_feed(url)
 
-    @wrap_storage_exceptions()
     def remove_feed(self, feed):
         """Remove a feed.
 
@@ -97,14 +88,7 @@ class Reader:
 
         """
         url = feed_argument(feed)
-        with self.db:
-            rows = self.db.execute("""
-                DELETE FROM feeds
-                WHERE url = :url;
-            """, locals())
-            if rows.rowcount == 0:
-                raise FeedNotFoundError(url)
-            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+        return self._storage.remove_feed(url)
 
     def _get_feeds(self, url=None):
         where_url_snippet = '' if not url else "WHERE url = :url"

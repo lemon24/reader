@@ -2,7 +2,10 @@ import sqlite3
 import contextlib
 
 from .db import open_db, DBError
-from .exceptions import StorageError, EntryNotFoundError
+from .exceptions import (
+    StorageError,
+    EntryNotFoundError, FeedNotFoundError, FeedExistsError,
+)
 
 
 @contextlib.contextmanager
@@ -36,6 +39,28 @@ class Storage:
             self.db = self._open_db(path)
         except DBError as e:
             raise StorageError(str(e)) from e
+
+    @wrap_storage_exceptions()
+    def add_feed(self, url):
+        with self.db:
+            try:
+                self.db.execute("""
+                    INSERT INTO feeds (url)
+                    VALUES (:url);
+                """, locals())
+            except sqlite3.IntegrityError:
+                raise FeedExistsError(url)
+
+    @wrap_storage_exceptions()
+    def remove_feed(self, url):
+        with self.db:
+            rows = self.db.execute("""
+                DELETE FROM feeds
+                WHERE url = :url;
+            """, locals())
+            if rows.rowcount == 0:
+                raise FeedNotFoundError(url)
+            assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     @wrap_storage_exceptions()
     def mark_as_read_unread(self, feed_url, entry_id, read):
