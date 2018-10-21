@@ -67,3 +67,20 @@ def test_cli_plugin(db_path, monkeypatch):
     assert "plug-in error" in result.output
 
 
+@pytest.mark.slow
+def test_cli_serve_calls_create_app(db_path, monkeypatch):
+
+    exception = Exception("create_app error")
+
+    def create_app(*args):
+        assert args == (db_path, )
+        raise exception
+
+    monkeypatch.setattr('reader.app.create_app', create_app)
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ['--db', db_path, 'serve'])
+
+    assert result.exit_code != 0
+    assert result.exception == exception
+
