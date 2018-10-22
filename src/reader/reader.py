@@ -157,7 +157,6 @@ class Reader:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    @wrap_storage_exceptions()
     def set_feed_user_title(self, feed, title):
         """Set a user-defined title for a feed.
 
@@ -171,15 +170,7 @@ class Reader:
 
         """
         url = feed_argument(feed)
-        with self.db:
-            rows = self.db.execute("""
-                UPDATE feeds
-                SET user_title = :title
-                WHERE url = :url;
-            """, locals())
-            if rows.rowcount == 0:
-                raise FeedNotFoundError(url)
-            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+        return self._storage.set_feed_user_title(url, title)
 
     @wrap_storage_exceptions()
     def update_feeds(self, new_only=False):

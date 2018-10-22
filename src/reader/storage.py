@@ -92,6 +92,18 @@ class Storage:
             yield Feed._make(row)
 
     @wrap_storage_exceptions()
+    def set_feed_user_title(self, url, title):
+        with self.db:
+            rows = self.db.execute("""
+                UPDATE feeds
+                SET user_title = :title
+                WHERE url = :url;
+            """, locals())
+            if rows.rowcount == 0:
+                raise FeedNotFoundError(url)
+            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+
+    @wrap_storage_exceptions()
     def mark_as_read_unread(self, feed_url, entry_id, read):
         with self.db:
             rows = self.db.execute("""
