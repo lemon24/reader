@@ -146,17 +146,6 @@ class Reader:
         """.format(**locals()), locals())
         return cursor
 
-    def _mark_as_stale(self, url):
-        with self.db:
-            rows = self.db.execute("""
-                UPDATE feeds
-                SET stale = 1
-                WHERE url = :url;
-            """, locals())
-            if rows.rowcount == 0:
-                raise FeedNotFoundError(url)
-            assert rows.rowcount == 1, "shouldn't have more than 1 row"
-
     def set_feed_user_title(self, feed, title):
         """Set a user-defined title for a feed.
 
