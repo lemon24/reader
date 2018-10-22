@@ -256,7 +256,7 @@ class Reader:
             log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
     def _update_entry(self, feed_url, entry, stale, now, last_updated):
-        entry_exists, db_updated = self._get_entry_updated(feed_url, entry.id)
+        entry_exists, db_updated = self._storage.get_entry_updated(feed_url, entry.id)
         updated, published = entry.updated, entry.published
 
         if stale:
@@ -310,17 +310,6 @@ class Reader:
         except sqlite3.IntegrityError as e:
             log.debug("update entry %r of feed %r: got IntegrityError", entry.id, feed_url, exc_info=True)
             raise FeedNotFoundError(feed_url)
-
-    def _get_entry_updated(self, feed_url, id):
-        rv = self.db.execute("""
-            SELECT updated
-            FROM entries
-            WHERE feed = :feed_url
-                AND id = :id;
-        """, locals()).fetchone()
-        if not rv:
-            return False, None
-        return True, rv[0]
 
     def _get_entries(self, which, feed_url, has_enclosures,
                      chunk_size=None, last=None):

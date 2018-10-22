@@ -107,6 +107,17 @@ class Storage:
         """.format(**locals()), locals())
         return cursor
 
+    def get_entry_updated(self, feed_url, id):
+        rv = self.db.execute("""
+            SELECT updated
+            FROM entries
+            WHERE feed = :feed_url
+                AND id = :id;
+        """, locals()).fetchone()
+        if not rv:
+            return False, None
+        return True, rv[0]
+
     @wrap_storage_exceptions()
     def set_feed_user_title(self, url, title):
         with self.db:
