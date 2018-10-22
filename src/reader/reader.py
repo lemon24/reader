@@ -130,22 +130,6 @@ class Reader:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
-    def _get_feeds_for_update(self, url=None, new_only=False):
-        if url or new_only:
-            where_snippet = "WHERE 1"
-        else:
-            where_snippet = ''
-        where_url_snippet = '' if not url else " AND url = :url"
-        where_new_only_snippet = '' if not new_only else " AND last_updated is NULL"
-        cursor = self.db.execute("""
-            SELECT url, updated, http_etag, http_last_modified, stale FROM feeds
-            {where_snippet}
-            {where_url_snippet}
-            {where_new_only_snippet}
-            ORDER BY feeds.url;
-        """.format(**locals()), locals())
-        return cursor
-
     def set_feed_user_title(self, feed, title):
         """Set a user-defined title for a feed.
 
@@ -172,7 +156,7 @@ class Reader:
             StorageError
 
         """
-        for row in list(self._get_feeds_for_update(new_only=new_only)):
+        for row in list(self._storage.get_feeds_for_update(new_only=new_only)):
             try:
                 self._update_feed(*row)
             except FeedNotFoundError as e:
@@ -193,7 +177,7 @@ class Reader:
 
         """
         url = feed_argument(feed)
-        rows = list(self._get_feeds_for_update(url))
+        rows = list(self._storage.get_feeds_for_update(url))
         if len(rows) == 0:
             raise FeedNotFoundError(url)
         elif len(rows) == 1:

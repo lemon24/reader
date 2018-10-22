@@ -91,6 +91,22 @@ class Storage:
         for row in cursor:
             yield Feed._make(row)
 
+    def get_feeds_for_update(self, url=None, new_only=False):
+        if url or new_only:
+            where_snippet = "WHERE 1"
+        else:
+            where_snippet = ''
+        where_url_snippet = '' if not url else " AND url = :url"
+        where_new_only_snippet = '' if not new_only else " AND last_updated is NULL"
+        cursor = self.db.execute("""
+            SELECT url, updated, http_etag, http_last_modified, stale FROM feeds
+            {where_snippet}
+            {where_url_snippet}
+            {where_new_only_snippet}
+            ORDER BY feeds.url;
+        """.format(**locals()), locals())
+        return cursor
+
     @wrap_storage_exceptions()
     def set_feed_user_title(self, url, title):
         with self.db:
