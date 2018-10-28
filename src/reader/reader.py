@@ -217,32 +217,12 @@ class Reader:
             # https://github.com/lemon24/reader/issues/76
             log.info("update feed %r: feed not updated, updating entries anyway", url)
 
-        title = feed.title
-        link = feed.link
-        author = feed.author
-
         with self.db:
 
             now = self._now()
 
             if stale or feed_was_updated:
-                rows = self.db.execute("""
-                    UPDATE feeds
-                    SET
-                        title = :title,
-                        link = :link,
-                        updated = :updated,
-                        author = :author,
-                        http_etag = :http_etag,
-                        http_last_modified = :http_last_modified,
-                        stale = NULL,
-                        last_updated = :now
-                    WHERE url = :url;
-                """, locals())
-
-                if rows.rowcount == 0:
-                    raise FeedNotFoundError(url)
-                assert rows.rowcount == 1, "shouldn't have more than 1 row"
+                self._storage.update_feed(url, feed, http_etag, http_last_modified, now)
 
             entries_updated, entries_new = 0, 0
             last_updated = now

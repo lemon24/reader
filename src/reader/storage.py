@@ -171,3 +171,30 @@ class Storage:
                 raise EntryNotFoundError(feed_url, entry_id)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
+    @wrap_storage_exceptions()
+    def update_feed(self, url, feed, http_etag, http_last_modified, now):
+        assert not self.in_transaction
+
+        updated = feed.updated
+        title = feed.title
+        link = feed.link
+        author = feed.author
+
+        rows = self.db.execute("""
+            UPDATE feeds
+            SET
+                title = :title,
+                link = :link,
+                updated = :updated,
+                author = :author,
+                http_etag = :http_etag,
+                http_last_modified = :http_last_modified,
+                stale = NULL,
+                last_updated = :now
+            WHERE url = :url;
+        """, locals())
+
+        if rows.rowcount == 0:
+            raise FeedNotFoundError(url)
+        assert rows.rowcount == 1, "shouldn't have more than 1 row"
+
