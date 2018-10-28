@@ -56,9 +56,20 @@ class Storage:
             self.db = self._open_db(path)
         except DBError as e:
             raise StorageError(str(e)) from e
+        self.in_transaction = False
+
+    def __enter__(self):
+        assert not self.in_transaction
+        self.in_transaction = True
+        self.db.__enter__()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.in_transaction = False
+        return self.db.__exit__(exc_type, exc_value, traceback)
 
     @wrap_storage_exceptions()
     def add_feed(self, url):
+        assert not self.in_transaction
         with self.db:
             try:
                 self.db.execute("""
@@ -70,6 +81,7 @@ class Storage:
 
     @wrap_storage_exceptions()
     def remove_feed(self, url):
+        assert not self.in_transaction
         with self.db:
             rows = self.db.execute("""
                 DELETE FROM feeds
@@ -81,6 +93,7 @@ class Storage:
 
     @wrap_storage_exceptions_generator
     def get_feeds(self, url=None):
+        assert not self.in_transaction
         where_url_snippet = '' if not url else "WHERE url = :url"
         cursor = self.db.execute("""
             SELECT url, updated, title, link, author, user_title FROM feeds
@@ -92,6 +105,7 @@ class Storage:
             yield Feed._make(row)
 
     def get_feeds_for_update(self, url=None, new_only=False):
+        assert not self.in_transaction
         if url or new_only:
             where_snippet = "WHERE 1"
         else:
@@ -108,6 +122,7 @@ class Storage:
         return cursor
 
     def get_entry_updated(self, feed_url, id):
+        assert not self.in_transaction
         rv = self.db.execute("""
             SELECT updated
             FROM entries
@@ -120,6 +135,7 @@ class Storage:
 
     @wrap_storage_exceptions()
     def set_feed_user_title(self, url, title):
+        assert not self.in_transaction
         with self.db:
             rows = self.db.execute("""
                 UPDATE feeds
@@ -131,6 +147,7 @@ class Storage:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     def mark_as_stale(self, url):
+        assert not self.in_transaction
         with self.db:
             rows = self.db.execute("""
                 UPDATE feeds
@@ -143,6 +160,7 @@ class Storage:
 
     @wrap_storage_exceptions()
     def mark_as_read_unread(self, feed_url, entry_id, read):
+        assert not self.in_transaction
         with self.db:
             rows = self.db.execute("""
                 UPDATE entries
