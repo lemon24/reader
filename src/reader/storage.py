@@ -3,6 +3,7 @@ import contextlib
 import functools
 import logging
 import json
+from collections import namedtuple
 
 from .db import open_db, DBError
 from .exceptions import (
@@ -12,6 +13,10 @@ from .exceptions import (
 from .types import Feed
 
 log = logging.getLogger('reader')
+
+
+FeedForUpdate = namedtuple('FeedForUpdate', 'url updated http_etag http_last_modified stale')
+EntryForUpdate = namedtuple('EntryForUpdate', 'exists updated')
 
 
 @contextlib.contextmanager
@@ -123,9 +128,10 @@ class Storage:
             {where_new_only_snippet}
             ORDER BY feeds.url;
         """.format(**locals()), locals())
-        return cursor
+        for row in cursor:
+            yield FeedForUpdate._make(row)
 
-    def get_entry_updated(self, feed_url, id):
+    def get_entry_for_update(self, feed_url, id):
         assert self.in_transaction
         rv = self.db.execute("""
             SELECT updated
@@ -134,8 +140,8 @@ class Storage:
                 AND id = :id;
         """, locals()).fetchone()
         if not rv:
-            return False, None
-        return True, rv[0]
+            return EntryForUpdate(False, None)
+        return EntryForUpdate(True, rv[0])
 
     @wrap_storage_exceptions()
     def set_feed_user_title(self, url, title):

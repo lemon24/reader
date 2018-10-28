@@ -236,7 +236,7 @@ class Reader:
             log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
     def _update_entry(self, feed_url, entry, stale, now, last_updated):
-        entry_exists, db_updated = self._storage.get_entry_updated(feed_url, entry.id)
+        entry_exists, db_updated = self._storage.get_entry_for_update(feed_url, entry.id)
         updated, published = entry.updated, entry.published
 
         if stale:
