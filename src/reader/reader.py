@@ -248,48 +248,15 @@ class Reader:
             log.debug("update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)", entry.id, feed_url, db_updated, updated)
             return 0, 0
 
-        id = entry.id
-        title = entry.title
-        link = entry.link
-        author = entry.author
-        summary = entry.summary
-        content = json.dumps([t._asdict() for t in entry.content]) if entry.content else None
-        enclosures = json.dumps([t._asdict() for t in entry.enclosures]) if entry.enclosures else None
+        if not entry_exists:
+            self._storage.add_entry(feed_url, entry, updated, last_updated)
+            log.debug("update entry %r of feed %r: entry added", entry.id, feed_url)
+            return 0, 1
 
-        try:
-
-            if not entry_exists:
-                self.db.execute("""
-                    INSERT INTO entries (
-                        id, feed, title, link, updated, author, published, summary, content, enclosures, last_updated
-                    ) VALUES (
-                        :id, :feed_url, :title, :link, :updated, :author, :published, :summary, :content, :enclosures, :last_updated
-                    );
-                """, locals())
-                log.debug("update entry %r of feed %r: entry added", entry.id, feed_url)
-                return 0, 1
-
-            else:
-                self.db.execute("""
-                    UPDATE entries
-                    SET
-                        title = :title,
-                        link = :link,
-                        updated = :updated,
-                        author = :author,
-                        published = :published,
-                        summary = :summary,
-                        content = :content,
-                        enclosures = :enclosures,
-                        last_updated = :last_updated
-                    WHERE feed = :feed_url AND id = :id;
-                """, locals())
-                log.debug("update entry %r of feed %r: entry updated", entry.id, feed_url)
-                return 1, 0
-
-        except sqlite3.IntegrityError as e:
-            log.debug("update entry %r of feed %r: got IntegrityError", entry.id, feed_url, exc_info=True)
-            raise FeedNotFoundError(feed_url)
+        else:
+            self._storage.update_entry(feed_url, entry, updated, last_updated)
+            log.debug("update entry %r of feed %r: entry updated", entry.id, feed_url)
+            return 1, 0
 
     def _get_entries(self, which, feed_url, has_enclosures,
                      chunk_size=None, last=None):
