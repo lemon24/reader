@@ -126,7 +126,7 @@ class Storage:
         return cursor
 
     def get_entry_updated(self, feed_url, id):
-        assert not self.in_transaction
+        assert self.in_transaction
         rv = self.db.execute("""
             SELECT updated
             FROM entries
@@ -177,7 +177,7 @@ class Storage:
 
     @wrap_storage_exceptions()
     def update_feed(self, url, feed, http_etag, http_last_modified, now):
-        assert not self.in_transaction
+        assert self.in_transaction
 
         updated = feed.updated
         title = feed.title
@@ -204,7 +204,7 @@ class Storage:
 
     @wrap_storage_exceptions()
     def add_entry(self, feed_url, entry, updated, last_updated):
-        assert not self.in_transaction
+        assert self.in_transaction
 
         published = entry.published
         id = entry.id
@@ -229,7 +229,7 @@ class Storage:
 
     @wrap_storage_exceptions()
     def update_entry(self, feed_url, entry, updated, last_updated):
-        assert not self.in_transaction
+        assert self.in_transaction
 
         published = entry.published
         id = entry.id

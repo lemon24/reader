@@ -217,7 +217,7 @@ class Reader:
             # https://github.com/lemon24/reader/issues/76
             log.info("update feed %r: feed not updated, updating entries anyway", url)
 
-        with self.db:
+        with self._storage:
 
             now = self._now()
 
