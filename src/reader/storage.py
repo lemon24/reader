@@ -113,6 +113,7 @@ class Storage:
         for row in cursor:
             yield Feed._make(row)
 
+    @wrap_storage_exceptions_generator
     def get_feeds_for_update(self, url=None, new_only=False):
         assert not self.in_transaction
         if url or new_only:

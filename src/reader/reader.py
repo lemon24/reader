@@ -1,14 +1,11 @@
-import json
 import logging
-import sqlite3
 import datetime
 
-from .storage import Storage, wrap_storage_exceptions
-from .types import Feed, Entry, Content, Enclosure
+from .storage import Storage
 from .parser import RequestsParser
 from .exceptions import (
     ParseError, NotModified,
-    FeedExistsError, FeedNotFoundError, EntryNotFoundError,
+    FeedNotFoundError,
 )
 
 log = logging.getLogger('reader')
@@ -145,7 +142,6 @@ class Reader:
         url = feed_argument(feed)
         return self._storage.set_feed_user_title(url, title)
 
-    @wrap_storage_exceptions()
     def update_feeds(self, new_only=False):
         """Update all the feeds.
 
@@ -164,7 +160,6 @@ class Reader:
             except ParseError as e:
                 log.exception("update feed %r: error while getting/parsing feed, skipping; exception: %r", e.url, e.__cause__)
 
-    @wrap_storage_exceptions()
     def update_feed(self, feed):
         """Update a single feed.
 
@@ -237,7 +232,7 @@ class Reader:
 
     def _update_entry(self, feed_url, entry, stale, now, last_updated):
         entry_exists, db_updated = self._storage.get_entry_for_update(feed_url, entry.id)
-        updated, published = entry.updated, entry.published
+        updated = entry.updated
 
         if stale:
             log.debug("update entry %r of feed %r: feed marked as stale, updating anyway", entry.id, feed_url)
