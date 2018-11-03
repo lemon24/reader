@@ -258,102 +258,6 @@ class Reader:
             log.debug("update entry %r of feed %r: entry updated", entry.id, feed_url)
             return 1, 0
 
-    def _get_entries(self, which, feed_url, has_enclosures,
-                     chunk_size=None, last=None):
-        log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
-
-        if which == 'all':
-            where_read_snippet = ''
-        elif which == 'unread':
-            where_read_snippet = """
-                AND (entries.read IS NULL OR entries.read != 1)
-            """
-        elif which == 'read':
-            where_read_snippet = """
-                AND entries.read = 1
-            """
-        else:
-            assert False, "shouldn't get here"  # pragma: no cover
-
-        where_next_snippet = ''
-        limit_snippet = ''
-        if chunk_size:
-            limit_snippet = """
-                LIMIT :chunk_size
-            """
-            if last:
-                last_entry_updated, last_feed_url, last_entry_last_updated, last_entry_id = last
-                where_next_snippet = """
-                    AND (entries.updated, feeds.url, entries.last_updated, entries.id) <
-                        (:last_entry_updated, :last_feed_url, :last_entry_last_updated, :last_entry_id)
-                """
-
-        where_feed_snippet = ''
-        if feed_url:
-            where_feed_snippet = """
-                AND feeds.url = :feed_url
-            """
-
-        where_has_enclosures_snippet = ''
-        if has_enclosures is not None:
-            where_has_enclosures_snippet = """
-                AND {} (json_array_length(entries.enclosures) IS NULL
-                        OR json_array_length(entries.enclosures) = 0)
-            """.format('NOT' if has_enclosures else '')
-
-        query = """
-            SELECT
-                feeds.url,
-                feeds.updated,
-                feeds.title,
-                feeds.link,
-                feeds.author,
-                feeds.user_title,
-                entries.id,
-                entries.updated,
-                entries.title,
-                entries.link,
-                entries.author,
-                entries.published,
-                entries.summary,
-                entries.content,
-                entries.enclosures,
-                entries.read,
-                entries.last_updated
-            FROM entries, feeds
-            WHERE
-                feeds.url = entries.feed
-                {where_read_snippet}
-                {where_feed_snippet}
-                {where_next_snippet}
-                {where_has_enclosures_snippet}
-            ORDER BY
-                entries.updated DESC,
-                feeds.url DESC,
-                entries.last_updated DESC,
-                entries.id DESC
-            {limit_snippet}
-            ;
-        """.format(**locals())
-
-        log.debug("_get_entries query\n%s\n", query)
-        with wrap_storage_exceptions():
-            cursor = self.db.execute(query, locals())
-
-        for t in cursor:
-            feed = t[0:6]
-            feed = Feed._make(feed)
-            entry = t[6:13] + (
-                tuple(Content(**d) for d in json.loads(t[13])) if t[13] else None,
-                tuple(Enclosure(**d) for d in json.loads(t[14])) if t[14] else None,
-                t[15] == 1,
-                feed,
-            )
-            last_updated = t[16]
-            entry = Entry._make(entry)
-            yield entry, last_updated
-
-    @wrap_storage_exceptions()
     def get_entries(self, which='all', feed=None, has_enclosures=None):
         """Get all or some of the entries.
 
@@ -381,7 +285,7 @@ class Reader:
         last = None
         while True:
 
-            entries = self._get_entries(
+            entries = self._storage.get_entries(
                 which=which,
                 feed_url=feed_url,
                 has_enclosures=has_enclosures,
