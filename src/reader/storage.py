@@ -65,6 +65,7 @@ class Storage:
             self.db = self._open_db(path)
         except DBError as e:
             raise StorageError(str(e)) from e
+        self.path = path
 
     @wrap_storage_exceptions()
     def add_feed(self, url):

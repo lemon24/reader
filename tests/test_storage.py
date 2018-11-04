@@ -29,6 +29,11 @@ def test_db_errors(monkeypatch, db_path, db_error_cls):
         Storage(db_path)
 
 
+def test_path(db_path):
+    storage = Storage(db_path)
+    assert storage.path == db_path
+
+
 def add_feed(storage, feed, __):
     storage.add_feed(feed.url + '_')
 
