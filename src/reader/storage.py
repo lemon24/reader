@@ -353,5 +353,5 @@ class Storage:
             )
             last_updated = t[16]
             entry = Entry._make(entry)
-            yield entry, last_updated
+            yield entry, (entry.updated, entry.feed.url, last_updated, entry.id)
 

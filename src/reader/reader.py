@@ -298,17 +298,10 @@ class Reader:
             if not entries:
                 break
 
-            last_entry, last_updated = entries[-1]
+            _, last = entries[-1]
 
             entries = (e for e, _ in entries)
             yield from entries
-
-            last = (
-                last_entry.updated,
-                last_entry.feed.url,
-                last_updated,
-                last_entry.id,
-            )
 
     def mark_as_read(self, entry):
         """Mark an entry as read.
