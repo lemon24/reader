@@ -520,45 +520,6 @@ def test_get_entries_feed_url(reader, feed_arg):
     # TODO: How do we test the combination between which and feed_url?
 
 
-@pytest.mark.slow
-@pytest.mark.parametrize('chunk_size', [
-    Reader._get_entries_chunk_size,     # the default
-    1, 2, 3, 8,                         # rough result size for this test
-
-    # check unchunked queries still blocks writes
-    pytest.param(0, marks=pytest.mark.xfail(raises=StorageError, strict=True)),
-])
-def test_get_entries_blocking(db_path, chunk_size):
-    """Unconsumed reader.get_entries() shouldn't block the underlying storage."""
-
-    parser = Parser()
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    entry = parser.entry(1, 1, datetime(2010, 1, 1))
-    parser.entry(1, 2, datetime(2010, 1, 2))
-    parser.entry(1, 3, datetime(2010, 1, 3))
-
-    reader = Reader(db_path)
-    reader._parse = parser
-    reader.add_feed(feed.url)
-    reader.update_feeds()
-
-    reader._get_entries_chunk_size = chunk_size
-
-    entries = reader.get_entries(which='unread')
-    next(entries)
-
-    # shouldn't raise an exception
-    reader = Reader(db_path)
-    reader.db.execute("PRAGMA busy_timeout = 0;")
-    reader.mark_as_read((feed.url, entry.id))
-    reader = Reader(db_path)
-    reader.db.execute("PRAGMA busy_timeout = 0;")
-    reader.mark_as_unread((feed.url, entry.id))
-
-    # just a sanity check
-    assert len(list(entries)) == 3 - 1
-
-
 def test_add_remove_get_feeds(reader, feed_arg):
     parser = Parser()
     reader._parse = parser

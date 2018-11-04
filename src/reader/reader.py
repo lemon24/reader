@@ -97,13 +97,7 @@ class Reader:
             StorageError
 
         """
-
-        # The list() call is here to make sure clients can't block the
-        # storage if they keep the result around and don't iterate over it.
-        #
-        # TODO: Make Storage ensure it can't be blocked.
-
-        return list(self._storage.get_feeds())
+        return self._storage.get_feeds()
 
     def get_feed(self, feed):
         """Get a feed.
@@ -152,7 +146,7 @@ class Reader:
             StorageError
 
         """
-        for row in list(self._storage.get_feeds_for_update(new_only=new_only)):
+        for row in self._storage.get_feeds_for_update(new_only=new_only):
             try:
                 self._update_feed(*row)
             except FeedNotFoundError as e:

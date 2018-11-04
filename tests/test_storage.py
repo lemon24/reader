@@ -81,11 +81,11 @@ def update_feed(storage, feed, entry):
 def add_or_update_entry(storage, feed, entry):
     storage.add_or_update_entry(feed.url, entry, entry.updated, entry.updated)
 
-def get_entries(storage, _, __):
-    list(storage.get_entries('all', None, False))
+def get_entries_chunk_size_0(storage, _, __):
+    list(storage.get_entries('all', None, None, chunk_size=0))
 
-def get_entries_chunk_size_zero(storage, _, __):
-    list(storage.get_entries('all', None, False, chunk_size=0))
+def get_entries_chunk_size_1(storage, _, __):
+    list(storage.get_entries('all', None, None, chunk_size=1))
 
 @pytest.mark.slow
 @pytest.mark.parametrize('do_stuff', [
@@ -100,8 +100,8 @@ def get_entries_chunk_size_zero(storage, _, __):
     mark_as_read_unread,
     update_feed,
     add_or_update_entry,
-    get_entries,
-    get_entries_chunk_size_zero,
+    get_entries_chunk_size_0,
+    get_entries_chunk_size_1,
 ])
 def test_errors_locked(db_path, do_stuff):
     """All methods should raise StorageError when the database is locked.
@@ -111,7 +111,7 @@ def test_errors_locked(db_path, do_stuff):
     storage.db.execute("PRAGMA busy_timeout = 0;")
 
     feed = Feed('one')
-    entry = Entry('two_entry', datetime(2010, 1, 2))
+    entry = Entry('entry', datetime(2010, 1, 2))
     storage.add_feed(feed.url)
     storage.add_or_update_entry(feed.url, entry, entry.updated, entry.updated)
 
@@ -138,4 +138,57 @@ def test_errors_locked(db_path, do_stuff):
     finally:
         can_return_from_transaction.set()
         thread.join()
+
+
+def iter_get_feeds(storage):
+    return storage.get_feeds()
+
+def iter_get_feeds_for_update(storage):
+    return storage.get_feeds_for_update()
+
+def iter_get_entries_chunk_size_0(storage):
+    return storage.get_entries('all', None, None, chunk_size=0)
+
+def iter_get_entries_chunk_size_1(storage):
+    return storage.get_entries('all', None, None, chunk_size=1)
+
+def iter_get_entries_chunk_size_2(storage):
+    return storage.get_entries('all', None, None, chunk_size=2)
+
+def iter_get_entries_chunk_size_3(storage):
+    return storage.get_entries('all', None, None, chunk_size=3)
+
+@pytest.mark.slow
+@pytest.mark.parametrize('iter_stuff', [
+    iter_get_feeds,
+    iter_get_feeds_for_update,
+    pytest.param(
+        iter_get_entries_chunk_size_0,
+        marks=pytest.mark.xfail(raises=StorageError, strict=True)),
+    iter_get_entries_chunk_size_1,
+    iter_get_entries_chunk_size_2,
+    iter_get_entries_chunk_size_3,
+])
+def test_iter_locked(db_path, iter_stuff):
+    """Methods that return an iterable shouldn't block the underlying storage
+    if the iterable is not consumed.
+
+    """
+    storage = Storage(db_path)
+
+    feed = Feed('one')
+    entry = Entry('entry', datetime(2010, 1, 2))
+    storage.add_feed(feed.url)
+    storage.add_or_update_entry(feed.url, entry, entry.updated, entry.updated)
+    storage.add_feed('two')
+    storage.add_or_update_entry('two', entry, entry.updated, entry.updated)
+
+    rv = iter_stuff(storage)
+    next(rv)
+
+    # shouldn't raise an exception
+    storage = Storage(db_path, timeout=0)
+    storage.mark_as_read_unread(feed.url, entry.id, 1)
+    storage = Storage(db_path, timeout=0)
+    storage.mark_as_read_unread(feed.url, entry.id, 0)
 

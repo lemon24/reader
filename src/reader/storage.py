@@ -40,21 +40,6 @@ def wrap_storage_exceptions(*args):
         raise StorageError("sqlite3 error") from e
 
 
-def wrap_storage_exceptions_generator(fn):
-    """Like wrap_storage_exceptions, but for generators.
-
-    TODO: Is this worth doing to prevent an indentation level in a few functions?
-
-    """
-
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
-        with wrap_storage_exceptions():
-            yield from fn(*args, **kwargs)
-
-    return wrapper
-
-
 class Storage:
 
     open_db = staticmethod(open_db)
@@ -89,8 +74,7 @@ class Storage:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    @wrap_storage_exceptions_generator
-    def get_feeds(self, url=None):
+    def _get_feeds(self, url=None):
         where_url_snippet = '' if not url else "WHERE url = :url"
         cursor = self.db.execute("""
             SELECT url, updated, title, link, author, user_title FROM feeds
@@ -101,8 +85,11 @@ class Storage:
         for row in cursor:
             yield Feed._make(row)
 
-    @wrap_storage_exceptions_generator
-    def get_feeds_for_update(self, url=None, new_only=False):
+    @wrap_storage_exceptions()
+    def get_feeds(self, url=None):
+        return iter(list(self._get_feeds(url=url)))
+
+    def _get_feeds_for_update(self, url=None, new_only=False):
         if url or new_only:
             where_snippet = "WHERE 1"
         else:
@@ -118,6 +105,10 @@ class Storage:
         """.format(**locals()), locals())
         for row in cursor:
             yield FeedForUpdate._make(row)
+
+    @wrap_storage_exceptions()
+    def get_feeds_for_update(self, url=None, new_only=False):
+        return iter(list(self._get_feeds_for_update(url=url, new_only=new_only)))
 
     @wrap_storage_exceptions()
     def get_entry_for_update(self, feed_url, id):
@@ -243,9 +234,8 @@ class Storage:
             log.debug("add_entry %r of feed %r: got IntegrityError", entry.id, feed_url, exc_info=True)
             raise FeedNotFoundError(feed_url)
 
-    @wrap_storage_exceptions_generator
-    def get_entries(self, which, feed_url, has_enclosures,
-                    chunk_size=None, last=None):
+    def _get_entries(self, which, feed_url, has_enclosures,
+                     chunk_size=None, last=None):
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
         if which == 'all':
@@ -323,18 +313,35 @@ class Storage:
         """.format(**locals())
 
         log.debug("_get_entries query\n%s\n", query)
-        cursor = self.db.execute(query, locals())
 
-        for t in cursor:
-            feed = t[0:6]
-            feed = Feed._make(feed)
-            entry = t[6:13] + (
-                tuple(Content(**d) for d in json.loads(t[13])) if t[13] else None,
-                tuple(Enclosure(**d) for d in json.loads(t[14])) if t[14] else None,
-                t[15] == 1,
-                feed,
-            )
-            last_updated = t[16]
-            entry = Entry._make(entry)
-            yield entry, (entry.updated, entry.feed.url, last_updated, entry.id)
+        with wrap_storage_exceptions():
+            cursor = self.db.execute(query, locals())
+            for t in cursor:
+                feed = t[0:6]
+                feed = Feed._make(feed)
+                entry = t[6:13] + (
+                    tuple(Content(**d) for d in json.loads(t[13])) if t[13] else None,
+                    tuple(Enclosure(**d) for d in json.loads(t[14])) if t[14] else None,
+                    t[15] == 1,
+                    feed,
+                )
+                last_updated = t[16]
+                entry = Entry._make(entry)
+                yield entry, (entry.updated, entry.feed.url, last_updated, entry.id)
+
+    @wrap_storage_exceptions()
+    def get_entries(self, which, feed_url, has_enclosures,
+                    chunk_size=None, last=None):
+        rv = self._get_entries(which=which, feed_url=feed_url,
+                               has_enclosures=has_enclosures,
+                               chunk_size=chunk_size, last=last)
+
+        if chunk_size:
+            # The list() call is here to make sure callers can't block the
+            # storage if they keep the result around and don't iterate over it.
+            # The iter() call is here to make sure callers don't expect the
+            # result to be anything more than an iterable.
+            rv = iter(list(rv))
+
+        return rv
 
