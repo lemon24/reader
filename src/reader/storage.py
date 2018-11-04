@@ -57,12 +57,12 @@ def wrap_storage_exceptions_generator(fn):
 
 class Storage:
 
-    _open_db = staticmethod(open_db)
+    open_db = staticmethod(open_db)
 
     @wrap_storage_exceptions()
     def __init__(self, path=None):
         try:
-            self.db = self._open_db(path)
+            self.db = self.open_db(path)
         except DBError as e:
             raise StorageError(str(e)) from e
         self.path = path

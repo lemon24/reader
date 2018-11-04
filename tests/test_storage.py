@@ -23,7 +23,7 @@ def test_db_errors(monkeypatch, db_path, db_error_cls):
     def open_db(*args):
         raise db_error_cls("whatever")
 
-    monkeypatch.setattr(Storage, '_open_db', staticmethod(open_db))
+    monkeypatch.setattr(Storage, 'open_db', staticmethod(open_db))
 
     with pytest.raises(StorageError):
         Storage(db_path)
