@@ -118,6 +118,7 @@ class Storage:
         for row in cursor:
             yield FeedForUpdate._make(row)
 
+    @wrap_storage_exceptions()
     def get_entry_for_update(self, feed_url, id):
         rv = self.db.execute("""
             SELECT updated
@@ -141,6 +142,7 @@ class Storage:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
+    @wrap_storage_exceptions()
     def mark_as_stale(self, url):
         with self.db:
             rows = self.db.execute("""
