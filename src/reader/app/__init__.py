@@ -22,7 +22,8 @@ def get_reader():
 
 def close_db(error):
     if hasattr(g, 'reader'):
-        g.reader.db.close()
+        # TODO: Expose "closing" the storage in the Reader API.
+        g.reader._storage.db.close()
 
 
 def is_safe_url(target):

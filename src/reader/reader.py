@@ -48,15 +48,6 @@ class Reader:
         self._storage = Storage(path)
         self._parse = RequestsParser()
 
-    @property
-    def db(self):
-        """Temporary property.
-
-        TODO: Remove after all the storage stuff is moved on Storage.
-
-        """
-        return self._storage.db
-
     def add_feed(self, feed):
         """Add a new feed.
 
