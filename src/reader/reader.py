@@ -212,23 +212,21 @@ class Reader:
             # https://github.com/lemon24/reader/issues/76
             log.info("update feed %r: feed not updated, updating entries anyway", url)
 
-        with self._storage:
+        now = self._now()
 
-            now = self._now()
+        if stale or feed_was_updated:
+            self._storage.update_feed(url, feed, http_etag, http_last_modified, now)
 
-            if stale or feed_was_updated:
-                self._storage.update_feed(url, feed, http_etag, http_last_modified, now)
+        entries_updated, entries_new = 0, 0
+        last_updated = now
+        for entry in reversed(list(entries)):
+            assert entry.feed is None
+            entry_updated, entry_new = self._update_entry(url, entry, stale, now, last_updated)
+            entries_updated += entry_updated
+            entries_new += entry_new
+            last_updated += datetime.timedelta(microseconds=1)
 
-            entries_updated, entries_new = 0, 0
-            last_updated = now
-            for entry in reversed(list(entries)):
-                assert entry.feed is None
-                entry_updated, entry_new = self._update_entry(url, entry, stale, now, last_updated)
-                entries_updated += entry_updated
-                entries_new += entry_new
-                last_updated += datetime.timedelta(microseconds=1)
-
-            log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
+        log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
     def _update_entry(self, feed_url, entry, stale, now, last_updated):
         entry_exists, db_updated = self._storage.get_entry_for_update(feed_url, entry.id)

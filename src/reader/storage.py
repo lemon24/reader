@@ -65,20 +65,9 @@ class Storage:
             self.db = self._open_db(path)
         except DBError as e:
             raise StorageError(str(e)) from e
-        self.in_transaction = False
-
-    def __enter__(self):
-        assert not self.in_transaction
-        self.in_transaction = True
-        self.db.__enter__()
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.in_transaction = False
-        return self.db.__exit__(exc_type, exc_value, traceback)
 
     @wrap_storage_exceptions()
     def add_feed(self, url):
-        assert not self.in_transaction
         with self.db:
             try:
                 self.db.execute("""
@@ -90,7 +79,6 @@ class Storage:
 
     @wrap_storage_exceptions()
     def remove_feed(self, url):
-        assert not self.in_transaction
         with self.db:
             rows = self.db.execute("""
                 DELETE FROM feeds
@@ -102,7 +90,6 @@ class Storage:
 
     @wrap_storage_exceptions_generator
     def get_feeds(self, url=None):
-        assert not self.in_transaction
         where_url_snippet = '' if not url else "WHERE url = :url"
         cursor = self.db.execute("""
             SELECT url, updated, title, link, author, user_title FROM feeds
@@ -115,7 +102,6 @@ class Storage:
 
     @wrap_storage_exceptions_generator
     def get_feeds_for_update(self, url=None, new_only=False):
-        assert not self.in_transaction
         if url or new_only:
             where_snippet = "WHERE 1"
         else:
@@ -133,7 +119,6 @@ class Storage:
             yield FeedForUpdate._make(row)
 
     def get_entry_for_update(self, feed_url, id):
-        assert self.in_transaction
         rv = self.db.execute("""
             SELECT updated
             FROM entries
@@ -146,7 +131,6 @@ class Storage:
 
     @wrap_storage_exceptions()
     def set_feed_user_title(self, url, title):
-        assert not self.in_transaction
         with self.db:
             rows = self.db.execute("""
                 UPDATE feeds
@@ -158,7 +142,6 @@ class Storage:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     def mark_as_stale(self, url):
-        assert not self.in_transaction
         with self.db:
             rows = self.db.execute("""
                 UPDATE feeds
@@ -171,7 +154,6 @@ class Storage:
 
     @wrap_storage_exceptions()
     def mark_as_read_unread(self, feed_url, entry_id, read):
-        assert not self.in_transaction
         with self.db:
             rows = self.db.execute("""
                 UPDATE entries
@@ -184,26 +166,25 @@ class Storage:
 
     @wrap_storage_exceptions()
     def update_feed(self, url, feed, http_etag, http_last_modified, now):
-        assert self.in_transaction
-
         updated = feed.updated
         title = feed.title
         link = feed.link
         author = feed.author
 
-        rows = self.db.execute("""
-            UPDATE feeds
-            SET
-                title = :title,
-                link = :link,
-                updated = :updated,
-                author = :author,
-                http_etag = :http_etag,
-                http_last_modified = :http_last_modified,
-                stale = NULL,
-                last_updated = :now
-            WHERE url = :url;
-        """, locals())
+        with self.db:
+            rows = self.db.execute("""
+                UPDATE feeds
+                SET
+                    title = :title,
+                    link = :link,
+                    updated = :updated,
+                    author = :author,
+                    http_etag = :http_etag,
+                    http_last_modified = :http_last_modified,
+                    stale = NULL,
+                    last_updated = :now
+                WHERE url = :url;
+            """, locals())
 
         if rows.rowcount == 0:
             raise FeedNotFoundError(url)
@@ -211,8 +192,6 @@ class Storage:
 
     @wrap_storage_exceptions()
     def add_or_update_entry(self, feed_url, entry, updated, last_updated):
-        assert self.in_transaction
-
         published = entry.published
         id = entry.id
         title = entry.title
@@ -223,39 +202,40 @@ class Storage:
         enclosures = json.dumps([t._asdict() for t in entry.enclosures]) if entry.enclosures else None
 
         try:
-            self.db.execute("""
-                INSERT OR REPLACE INTO entries (
-                    id,
-                    feed,
-                    title,
-                    link,
-                    updated,
-                    author,
-                    published,
-                    summary,
-                    content,
-                    enclosures,
-                    read,
-                    last_updated
-                ) VALUES (
-                    :id,
-                    :feed_url,
-                    :title,
-                    :link,
-                    :updated,
-                    :author,
-                    :published,
-                    :summary,
-                    :content,
-                    :enclosures,
-                    (
-                        SELECT read
-                        FROM entries
-                        WHERE id = :id AND feed = :feed_url
-                    ),
-                    :last_updated
-                );
-            """, locals())
+            with self.db:
+                self.db.execute("""
+                    INSERT OR REPLACE INTO entries (
+                        id,
+                        feed,
+                        title,
+                        link,
+                        updated,
+                        author,
+                        published,
+                        summary,
+                        content,
+                        enclosures,
+                        read,
+                        last_updated
+                    ) VALUES (
+                        :id,
+                        :feed_url,
+                        :title,
+                        :link,
+                        :updated,
+                        :author,
+                        :published,
+                        :summary,
+                        :content,
+                        :enclosures,
+                        (
+                            SELECT read
+                            FROM entries
+                            WHERE id = :id AND feed = :feed_url
+                        ),
+                        :last_updated
+                    );
+                """, locals())
         except sqlite3.IntegrityError as e:
             log.debug("add_entry %r of feed %r: got IntegrityError", entry.id, feed_url, exc_info=True)
             raise FeedNotFoundError(feed_url)
