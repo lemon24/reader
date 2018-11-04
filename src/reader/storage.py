@@ -210,7 +210,7 @@ class Storage:
         assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     @wrap_storage_exceptions()
-    def add_entry(self, feed_url, entry, updated, last_updated):
+    def add_or_update_entry(self, feed_url, entry, updated, last_updated):
         assert self.in_transaction
 
         published = entry.published
@@ -224,46 +224,40 @@ class Storage:
 
         try:
             self.db.execute("""
-                INSERT INTO entries (
-                    id, feed, title, link, updated, author, published, summary, content, enclosures, last_updated
+                INSERT OR REPLACE INTO entries (
+                    id,
+                    feed,
+                    title,
+                    link,
+                    updated,
+                    author,
+                    published,
+                    summary,
+                    content,
+                    enclosures,
+                    read,
+                    last_updated
                 ) VALUES (
-                    :id, :feed_url, :title, :link, :updated, :author, :published, :summary, :content, :enclosures, :last_updated
+                    :id,
+                    :feed_url,
+                    :title,
+                    :link,
+                    :updated,
+                    :author,
+                    :published,
+                    :summary,
+                    :content,
+                    :enclosures,
+                    (
+                        SELECT read
+                        FROM entries
+                        WHERE id = :id AND feed = :feed_url
+                    ),
+                    :last_updated
                 );
             """, locals())
         except sqlite3.IntegrityError as e:
             log.debug("add_entry %r of feed %r: got IntegrityError", entry.id, feed_url, exc_info=True)
-            raise FeedNotFoundError(feed_url)
-
-    @wrap_storage_exceptions()
-    def update_entry(self, feed_url, entry, updated, last_updated):
-        assert self.in_transaction
-
-        published = entry.published
-        id = entry.id
-        title = entry.title
-        link = entry.link
-        author = entry.author
-        summary = entry.summary
-        content = json.dumps([t._asdict() for t in entry.content]) if entry.content else None
-        enclosures = json.dumps([t._asdict() for t in entry.enclosures]) if entry.enclosures else None
-
-        try:
-            self.db.execute("""
-                UPDATE entries
-                SET
-                    title = :title,
-                    link = :link,
-                    updated = :updated,
-                    author = :author,
-                    published = :published,
-                    summary = :summary,
-                    content = :content,
-                    enclosures = :enclosures,
-                    last_updated = :last_updated
-                WHERE feed = :feed_url AND id = :id;
-            """, locals())
-        except sqlite3.IntegrityError as e:
-            log.debug("update_entry %r of feed %r: got IntegrityError", entry.id, feed_url, exc_info=True)
             raise FeedNotFoundError(feed_url)
 
     @wrap_storage_exceptions_generator

@@ -243,15 +243,9 @@ class Reader:
             log.debug("update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)", entry.id, feed_url, db_updated, updated)
             return 0, 0
 
-        if not entry_exists:
-            self._storage.add_entry(feed_url, entry, updated, last_updated)
-            log.debug("update entry %r of feed %r: entry added", entry.id, feed_url)
-            return 0, 1
-
-        else:
-            self._storage.update_entry(feed_url, entry, updated, last_updated)
-            log.debug("update entry %r of feed %r: entry updated", entry.id, feed_url)
-            return 1, 0
+        self._storage.add_or_update_entry(feed_url, entry, updated, last_updated)
+        log.debug("update entry %r of feed %r: entry added/updated", entry.id, feed_url)
+        return (0, 1) if not entry_exists else (1, 0)
 
     def get_entries(self, which='all', feed=None, has_enclosures=None):
         """Get all or some of the entries.
