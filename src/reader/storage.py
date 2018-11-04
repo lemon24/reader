@@ -60,9 +60,9 @@ class Storage:
     open_db = staticmethod(open_db)
 
     @wrap_storage_exceptions()
-    def __init__(self, path=None):
+    def __init__(self, path=None, timeout=None):
         try:
-            self.db = self.open_db(path)
+            self.db = self.open_db(path, timeout=timeout)
         except DBError as e:
             raise StorageError(str(e)) from e
         self.path = path

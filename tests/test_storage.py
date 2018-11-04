@@ -20,7 +20,7 @@ def test_storage_errors_open(tmpdir):
 def test_db_errors(monkeypatch, db_path, db_error_cls):
     """reader.db.DBError subclasses should be wrapped in StorageError."""
 
-    def open_db(*args):
+    def open_db(*args, **kwargs):
         raise db_error_cls("whatever")
 
     monkeypatch.setattr(Storage, 'open_db', staticmethod(open_db))
@@ -33,6 +33,23 @@ def test_path(db_path):
     storage = Storage(db_path)
     assert storage.path == db_path
 
+
+def test_timeout(monkeypatch, db_path):
+    """Storage.__init__ must pass timeout= to open_db."""
+
+    def open_db(*args, timeout=None):
+        open_db.timeout = timeout
+
+    monkeypatch.setattr(Storage, 'open_db', staticmethod(open_db))
+
+    timeout = object()
+    Storage(db_path, timeout)
+
+    assert open_db.timeout is timeout
+
+
+def init(storage, _, __):
+    Storage(storage.path, timeout=0)
 
 def add_feed(storage, feed, __):
     storage.add_feed(feed.url + '_')
@@ -72,9 +89,7 @@ def get_entries_chunk_size_zero(storage, _, __):
 
 @pytest.mark.slow
 @pytest.mark.parametrize('do_stuff', [
-    # TODO: also test __init__; need to be able to pass connect(timeout=0)
-    # for it, otherwise the test will take 5 seconds
-
+    init,
     add_feed,
     remove_feed,
     get_feeds,
@@ -87,7 +102,6 @@ def get_entries_chunk_size_zero(storage, _, __):
     add_or_update_entry,
     get_entries,
     get_entries_chunk_size_zero,
-
 ])
 def test_errors_locked(db_path, do_stuff):
     """All methods should raise StorageError when the database is locked.
