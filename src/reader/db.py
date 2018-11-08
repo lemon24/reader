@@ -171,11 +171,15 @@ def require_sqlite_compile_options(db, options):
             .format(sorted(missing)))
 
 
-def open_db(path):
+def open_db(path, *, timeout=None):
     # row value support was added in 3.15
     require_sqlite_version((3, 15))
 
-    db = sqlite3.connect(path, detect_types=sqlite3.PARSE_DECLTYPES)
+    kwargs = dict(detect_types=sqlite3.PARSE_DECLTYPES)
+    if timeout is not None:
+        kwargs['timeout'] = timeout
+
+    db = sqlite3.connect(path, **kwargs)
 
     # require the JSON1 extension
     require_sqlite_compile_options(db, ['ENABLE_JSON1'])

@@ -7,7 +7,6 @@ import pytest
 from reader import Reader
 from reader import Feed, Entry, Content, Enclosure
 from reader import FeedExistsError, FeedNotFoundError, ParseError, EntryNotFoundError, StorageError
-import reader.db
 
 from fakeparser import Parser, BlockingParser, FailingParser, NotModifiedParser
 
@@ -521,45 +520,6 @@ def test_get_entries_feed_url(reader, feed_arg):
     # TODO: How do we test the combination between which and feed_url?
 
 
-@pytest.mark.slow
-@pytest.mark.parametrize('chunk_size', [
-    Reader._get_entries_chunk_size,     # the default
-    1, 2, 3, 8,                         # rough result size for this test
-
-    # check unchunked queries still blocks writes
-    pytest.param(0, marks=pytest.mark.xfail(raises=StorageError, strict=True)),
-])
-def test_get_entries_blocking(db_path, chunk_size):
-    """Unconsumed reader.get_entries() shouldn't block the underlying storage."""
-
-    parser = Parser()
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    entry = parser.entry(1, 1, datetime(2010, 1, 1))
-    parser.entry(1, 2, datetime(2010, 1, 2))
-    parser.entry(1, 3, datetime(2010, 1, 3))
-
-    reader = Reader(db_path)
-    reader._parse = parser
-    reader.add_feed(feed.url)
-    reader.update_feeds()
-
-    reader._get_entries_chunk_size = chunk_size
-
-    entries = reader.get_entries(which='unread')
-    next(entries)
-
-    # shouldn't raise an exception
-    reader = Reader(db_path)
-    reader.db.execute("PRAGMA busy_timeout = 0;")
-    reader.mark_as_read((feed.url, entry.id))
-    reader = Reader(db_path)
-    reader.db.execute("PRAGMA busy_timeout = 0;")
-    reader.mark_as_unread((feed.url, entry.id))
-
-    # just a sanity check
-    assert len(list(entries)) == 3 - 1
-
-
 def test_add_remove_get_feeds(reader, feed_arg):
     parser = Parser()
     reader._parse = parser
@@ -659,106 +619,6 @@ def test_set_feed_user_title(reader, feed_arg):
     assert reader.get_feed(one.url) == one
     assert list(reader.get_feeds()) == [one]
     assert list(reader.get_entries()) == [entry._replace(feed=one)]
-
-
-def test_storage_errors_open(tmpdir):
-    # try to open a directory
-    with pytest.raises(StorageError):
-        Reader(str(tmpdir))
-
-
-@pytest.mark.parametrize('db_error_cls', reader.db.db_errors)
-def test_db_errors(monkeypatch, db_path, db_error_cls):
-    """reader.db.DBError subclasses should be wrapped in StorageError."""
-
-    def open_db(*args):
-        raise db_error_cls("whatever")
-
-    monkeypatch.setattr(Reader, '_open_db', staticmethod(open_db))
-
-    with pytest.raises(StorageError):
-        Reader(db_path)
-
-
-def mark_as_read(reader, feed, entry):
-    reader.mark_as_read((feed.url, entry.id))
-
-def mark_as_unread(reader, feed, entry):
-    reader.mark_as_unread((feed.url, entry.id))
-
-def add_feed(reader, _, __):
-    feed = reader._parse.feed(2)
-    reader.add_feed(feed.url)
-
-def remove_feed(reader, feed, __):
-    reader.remove_feed(feed.url)
-
-def update_feed(reader, feed, __):
-    reader.update_feed(feed.url)
-
-def update_feeds(reader, _, __):
-    reader.update_feeds()
-
-def get_feed(reader, feed, __):
-    reader.get_feed(feed.url)
-
-def get_feeds(reader, _, __):
-    reader.get_feeds()
-
-def get_entries(reader, _, __):
-    list(reader.get_entries())
-
-def get_entries_chunk_size_zero(reader, _, __):
-    reader._get_entries_chunk_size = 0
-    list(reader.get_entries())
-
-
-@pytest.mark.slow
-@pytest.mark.parametrize('do_stuff', [
-    mark_as_read,
-    mark_as_unread,
-    add_feed,
-    remove_feed,
-    update_feed,
-    update_feeds,
-    get_feed,
-    get_feeds,
-    get_entries,
-    get_entries_chunk_size_zero,
-])
-def test_storage_errors_locked(db_path, do_stuff):
-    parser = Parser()
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    entry = parser.entry(1, 1, datetime(2010, 1, 1))
-
-    reader = Reader(db_path)
-    reader.db.execute("PRAGMA busy_timeout = 0;")
-    reader._parse = parser
-    reader.add_feed(feed.url)
-    reader.update_feeds()
-
-    in_transaction = threading.Event()
-    can_return_from_transaction = threading.Event()
-
-    def target():
-        reader = Reader(db_path)
-        reader.db.isolation_level = None
-        reader.db.execute("BEGIN EXCLUSIVE;")
-        in_transaction.set()
-        can_return_from_transaction.wait()
-        reader.db.execute("ROLLBACK;")
-
-    t = threading.Thread(target=target)
-    t.start()
-
-    in_transaction.wait()
-
-    try:
-        with pytest.raises(StorageError):
-            do_stuff(reader, feed, entry)
-    finally:
-        can_return_from_transaction.set()
-        t.join()
 
 
 def test_data_roundrip(reader):
