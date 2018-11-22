@@ -57,6 +57,13 @@ Command-line interface
     cli
 
 
+Deployment options
+------------------
+
+.. toctree::
+    deploying
+
+
 Development
 -----------
 
