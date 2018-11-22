@@ -46,7 +46,7 @@ An example uWSGI configuration file (probably not idiomatic, from `here`_)::
     virtualenv = /apps/reader/
     env = READER_DB=/data/www-data/reader.sqlite
 
-You can also run the web application by using the ``serve`` command.
+You can also run the web application with the ``serve`` command.
 ``serve`` uses `Werkzeug's development server`_, so it probably won't scale
 well past a single user.
 
