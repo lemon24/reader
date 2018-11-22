@@ -14,7 +14,7 @@ hour). Note that reader uses the ETag and Last-Modified headers, so, if
 supported by the the server, feeds will only be downloaded if they changed.
 
 To avoid waiting too much for a new feed to be updated, you can run
-``update --new-only`` more often (e.g. every minutes); this will update
+``update --new-only`` more often (e.g. every minute); this will update
 only newly-added feeds.
 
 You can achieve this using cron::
