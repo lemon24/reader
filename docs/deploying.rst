@@ -14,7 +14,7 @@ hour). Note that reader uses the ETag and Last-Modified headers, so, if
 supported by the the server, feeds will only be downloaded if they changed.
 
 To avoid waiting too much for a new feed to be updated, you can run
-``update --new-only`` more often (e.g. every minutes); this will update
+``update --new-only`` more often (e.g. every minute); this will update
 only newly-added feeds.
 
 You can achieve this using cron::
@@ -46,7 +46,7 @@ An example uWSGI configuration file (probably not idiomatic, from `here`_)::
     virtualenv = /apps/reader/
     env = READER_DB=/data/www-data/reader.sqlite
 
-You can also run the web application by using the ``serve`` command.
+You can also run the web application with the ``serve`` command.
 ``serve`` uses `Werkzeug's development server`_, so it probably won't scale
 well past a single user.
 
