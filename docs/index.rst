@@ -57,6 +57,13 @@ Command-line interface
     cli
 
 
+Web application
+---------------
+
+.. toctree::
+    app
+
+
 Deployment options
 ------------------
 
