@@ -5,10 +5,23 @@ reader changelog
 .. module:: reader
 
 
+Version 0.2
+-----------
+
+Released on 2018-11-25
+
+* Factor out storage-related functionality into a separate interface. (`#94`_)
+* Fix ``update --new-only`` updating the same feed repeatedly on databases
+  that predate ``--new-only``. (`#95`_)
+
+.. _#94: https://github.com/lemon24/reader/issues/94
+.. _#95: https://github.com/lemon24/reader/issues/95
+
+
 Version 0.1.1
 -------------
 
-Release on 2018-10-21
+Released on 2018-10-21
 
 * Fix broken ``reader serve`` command (broken in 0.1).
 * Raise :exc:`StorageError` for unsupported SQLite configurations at
