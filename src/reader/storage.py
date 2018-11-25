@@ -15,7 +15,7 @@ from .types import Feed, Entry, Content, Enclosure
 log = logging.getLogger('reader')
 
 
-FeedForUpdate = namedtuple('FeedForUpdate', 'url updated http_etag http_last_modified stale')
+FeedForUpdate = namedtuple('FeedForUpdate', 'url updated http_etag http_last_modified stale last_updated')
 EntryForUpdate = namedtuple('EntryForUpdate', 'exists updated')
 
 
@@ -97,7 +97,7 @@ class Storage:
         where_url_snippet = '' if not url else " AND url = :url"
         where_new_only_snippet = '' if not new_only else " AND last_updated is NULL"
         cursor = self.db.execute("""
-            SELECT url, updated, http_etag, http_last_modified, stale FROM feeds
+            SELECT url, updated, http_etag, http_last_modified, stale, last_updated FROM feeds
             {where_snippet}
             {where_url_snippet}
             {where_new_only_snippet}

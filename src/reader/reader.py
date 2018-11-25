@@ -169,7 +169,7 @@ class Reader:
     def _now():
         return datetime.datetime.utcnow()
 
-    def _update_feed(self, url, db_updated, http_etag, http_last_modified, stale):
+    def _update_feed(self, url, db_updated, http_etag, http_last_modified, stale, last_updated):
         if stale:
             db_updated = None
             http_etag = None
@@ -186,7 +186,10 @@ class Reader:
         updated = feed.updated
         log.debug("update feed %r: old updated %s, new updated %s", url, db_updated, updated)
 
-        if not updated:
+        if not last_updated:
+            log.info("update feed %r: feed has no last_updated, treating as updated", url)
+            feed_was_updated = True
+        elif not updated:
             log.info("update feed %r: feed has no updated, treating as updated", url)
             feed_was_updated = True
         else:
