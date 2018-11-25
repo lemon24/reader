@@ -2,6 +2,10 @@
 Development
 ===========
 
+
+Goals
+-----
+
 Goals:
 
 * clearly documented API
@@ -9,6 +13,10 @@ Goals:
 * minimal CLI
 
 Development should follow a problem-solution_ approach.
+
+
+Testing
+-------
 
 Run tests::
 
@@ -30,6 +38,10 @@ Start a local development server for the web-app::
 
 .. _problem-solution: https://hintjens.gitbooks.io/scalable-c/content/chapter1.html#problem-what-do-we-do-next
 
+
+Making a release
+----------------
+
 Making a release (from ``x`` to ``y`` == ``x + 1``):
 
 * make sure all tests pass etc.
@@ -42,6 +54,6 @@ Making a release (from ``x`` to ``y`` == ``x + 1``):
 * upload to test PyPI and check: ``twine upload --repository-url https://test.pypi.org/legacy/ dist/*``
 * upload to PyPI: ``twine upload dist/*``
 * tag release in GitHub
-* build docs from latest and enable ``y`` docs version
-* bump versions from ``y`` to ``y.dev0``
+* build docs from latest and enable ``y`` docs version (should happen automatically after the first time)
+* bump versions from ``y`` to ``(y + 1).dev0``, add ``(y + 1)`` changelog section
 
