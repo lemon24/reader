@@ -159,7 +159,7 @@ class Storage:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     @wrap_storage_exceptions()
-    def update_feed(self, url, feed, http_etag, http_last_modified, now):
+    def update_feed(self, url, feed, http_etag, http_last_modified, last_updated):
         updated = feed.updated
         title = feed.title
         link = feed.link
@@ -176,7 +176,7 @@ class Storage:
                     http_etag = :http_etag,
                     http_last_modified = :http_last_modified,
                     stale = NULL,
-                    last_updated = :now
+                    last_updated = :last_updated
                 WHERE url = :url;
             """, locals())
 
