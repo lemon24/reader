@@ -185,6 +185,20 @@ class Storage:
         assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     @wrap_storage_exceptions()
+    def update_feed_last_updated(self, url, last_updated):
+        with self.db:
+            rows = self.db.execute("""
+                UPDATE feeds
+                SET
+                    last_updated = :last_updated
+                WHERE url = :url;
+            """, locals())
+
+        if rows.rowcount == 0:
+            raise FeedNotFoundError(url)
+        assert rows.rowcount == 1, "shouldn't have more than 1 row"
+
+    @wrap_storage_exceptions()
     def add_or_update_entry(self, feed_url, entry, updated, last_updated):
         published = entry.published
         id = entry.id

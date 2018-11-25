@@ -176,11 +176,15 @@ class Reader:
             http_last_modified = None
             log.info("update feed %r: feed marked as stale, ignoring updated, http_etag or http_last_modified", url)
 
+        now = self._now()
+
         try:
             t = self._parse(url, http_etag, http_last_modified)
             feed, entries, http_etag, http_last_modified = t
         except NotModified:
             log.info("update feed %r: feed not modified, skipping", url)
+            # The feed shouldn't be considered new anymore.
+            self._storage.update_feed_last_updated(url, now)
             return
 
         updated = feed.updated
@@ -199,8 +203,6 @@ class Reader:
             # Some feeds have entries newer than the feed.
             # https://github.com/lemon24/reader/issues/76
             log.info("update feed %r: feed not updated, updating entries anyway", url)
-
-        now = self._now()
 
         if stale or feed_was_updated:
             self._storage.update_feed(url, feed, http_etag, http_last_modified, now)

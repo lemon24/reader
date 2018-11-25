@@ -239,6 +239,32 @@ def test_update_new_only_no_last_updated(reader):
     assert len(list(reader.get_entries(feed=feed.url))) == 0
 
 
+def test_update_new_only_not_modified(reader):
+    """A feed should not be considered new anymore after getting NotModified.
+
+    https://github.com/lemon24/reader/issues/95
+
+    """
+    parser = NotModifiedParser()
+    reader._parse = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+
+    reader.add_feed(feed.url)
+    reader._storage.update_feed(feed.url, feed, None, None, last_updated=None)
+
+    reader.update_feeds(new_only=True)
+
+    parser = Parser.from_parser(parser)
+    reader._parse = parser
+
+    parser.entry(1, 1, datetime(2010, 1, 1))
+    reader.update_feeds(new_only=True)
+
+    # the entry isn't added because feed is not new on the second update_feeds
+    assert len(list(reader.get_entries(feed=feed.url))) == 0
+
+
 def test_update_feeds_parse_error(reader):
     parser = Parser()
     reader._parse = parser
