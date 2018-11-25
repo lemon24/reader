@@ -82,8 +82,9 @@ def test_update_entry_updated(reader, call_update_method):
     call_update_method(reader, feed.url)
     assert set(reader.get_entries()) == {new_entry._replace(feed=feed)}
 
+
 @pytest.mark.parametrize('chunk_size', [Reader._get_entries_chunk_size, 1])
-def test_update_no_updated(reader, chunk_size):
+def test_update_no_updated(reader, chunk_size, call_update_method):
     """If a feed has updated == None, it should be treated as updated.
 
     If an entry has updated == None, it should:
@@ -93,6 +94,8 @@ def test_update_no_updated(reader, chunk_size):
       updated != None
 
     This means a stored entry always has updated set.
+
+    https://github.com/lemon24/reader/issues/88
 
     """
     reader._get_entries_chunk_size = chunk_size
@@ -104,7 +107,7 @@ def test_update_no_updated(reader, chunk_size):
     entry_one = parser.entry(1, 1, None, title='old')
     reader.add_feed(feed.url)
     reader._now = lambda: datetime(2010, 1, 1)
-    reader.update_feeds()
+    call_update_method(reader, feed)
 
     assert set(reader.get_feeds()) == {feed}
     assert set(reader.get_entries()) == {
@@ -115,7 +118,7 @@ def test_update_no_updated(reader, chunk_size):
     entry_one = parser.entry(1, 1, None, title='new')
     entry_two = parser.entry(1, 2, None)
     reader._now = lambda: datetime(2010, 1, 2)
-    reader.update_feeds()
+    call_update_method(reader, feed)
 
     assert set(reader.get_feeds()) == {feed}
     assert set(reader.get_entries()) == {
