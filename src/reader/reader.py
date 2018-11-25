@@ -199,12 +199,14 @@ class Reader:
         else:
             feed_was_updated = not(updated and db_updated and updated <= db_updated)
 
-        if not stale and not feed_was_updated:
+        should_be_updated = stale or feed_was_updated
+
+        if not should_be_updated:
             # Some feeds have entries newer than the feed.
             # https://github.com/lemon24/reader/issues/76
             log.info("update feed %r: feed not updated, updating entries anyway", url)
 
-        if stale or feed_was_updated:
+        if should_be_updated:
             self._storage.update_feed(url, feed, http_etag, http_last_modified, now)
 
         entries_updated, entries_new = 0, 0
@@ -215,6 +217,9 @@ class Reader:
             entries_updated += entry_updated
             entries_new += entry_new
             last_updated += datetime.timedelta(microseconds=1)
+
+        if not should_be_updated and (entries_updated or entries_new):
+            self._storage.update_feed_last_updated(url, now)
 
         log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
