@@ -250,7 +250,7 @@ class Reader:
                 have enclosures.
 
         Yields:
-            :class:`Entry`: Last updated entries first.
+            :class:`Entry`: Last published/updated entries first.
 
         Raises:
             FeedNotFoundError: Only if `feed` is not None.

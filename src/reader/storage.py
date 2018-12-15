@@ -274,8 +274,17 @@ class Storage:
             if last:
                 last_entry_updated, last_feed_url, last_entry_last_updated, last_entry_id = last
                 where_next_snippet = """
-                    AND (entries.updated, feeds.url, entries.last_updated, entries.id) <
-                        (:last_entry_updated, :last_feed_url, :last_entry_last_updated, :last_entry_id)
+                    AND (
+                        coalesce(entries.published, entries.updated),
+                        feeds.url,
+                        entries.last_updated,
+                        entries.id
+                    ) < (
+                        :last_entry_updated,
+                        :last_feed_url,
+                        :last_entry_last_updated,
+                        :last_entry_id
+                    )
                 """
 
         where_feed_snippet = ''
@@ -318,7 +327,7 @@ class Storage:
                 {where_next_snippet}
                 {where_has_enclosures_snippet}
             ORDER BY
-                entries.updated DESC,
+                coalesce(entries.published, entries.updated) DESC,
                 feeds.url DESC,
                 entries.last_updated DESC,
                 entries.id DESC
@@ -341,7 +350,12 @@ class Storage:
                 )
                 last_updated = t[16]
                 entry = Entry._make(entry)
-                yield entry, (entry.updated, entry.feed.url, last_updated, entry.id)
+                yield entry, (
+                    entry.published or entry.updated,
+                    entry.feed.url,
+                    last_updated,
+                    entry.id,
+                )
 
     @wrap_storage_exceptions()
     def get_entries(self, which, feed_url, has_enclosures,

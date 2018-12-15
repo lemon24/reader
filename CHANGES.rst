@@ -10,6 +10,11 @@ Version 0.3
 
 Unreleased
 
+* :meth:`~Reader.get_entries` now prefers sorting by :attr:`~Entry.published`
+  (if present) to sorting by :attr:`~Entry.updated`. (`#97`_)
+
+.. _#97: https://github.com/lemon24/reader/issues/97
+
 
 Version 0.2
 -----------
