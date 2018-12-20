@@ -1,0 +1,9 @@
+{
+    "http://www.cgpgrey.com/blog?format=rss": [
+        "^H\\.I\\. #\\d+: ",
+        "^Cortex #\\d+: "
+    ],
+    "http://feeds.feedburner.com/99pi": [
+        "\\[EPISODE]$"
+    ]
+}
