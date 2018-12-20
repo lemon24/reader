@@ -47,6 +47,7 @@ class Reader:
     def __init__(self, path=None):
         self._storage = Storage(path)
         self._parse = RequestsParser()
+        self._post_entry_add_plugins = []
 
     def add_feed(self, feed):
         """Add a new feed.
@@ -217,6 +218,10 @@ class Reader:
             entries_updated += entry_updated
             entries_new += entry_new
             last_updated += datetime.timedelta(microseconds=1)
+
+            if entry_new:
+                for plugin in self._post_entry_add_plugins:
+                    plugin(self, feed, entry)
 
         if not should_be_updated and (entries_updated or entries_new):
             self._storage.update_feed_last_updated(url, now)

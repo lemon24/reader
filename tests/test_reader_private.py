@@ -5,7 +5,7 @@ import pytest
 from reader import FeedNotFoundError, Feed, Entry
 from reader.reader import feed_argument, entry_argument
 
-from fakeparser import ParserThatRemembers
+from fakeparser import ParserThatRemembers, Parser
 
 
 def test_update_stale(reader, call_update_method):
@@ -87,4 +87,41 @@ def test_entry_argument():
     with pytest.raises(ValueError):
         entry_argument(('a', 'b', 'c'))
 
+
+def test_post_entry_add_plugins(reader):
+    parser = Parser()
+    reader._parse = parser
+
+    plugin_calls = []
+
+    def first_plugin(r, f, e):
+        assert r is reader
+        plugin_calls.append((first_plugin, f, e))
+
+    def second_plugin(r, f, e):
+        assert r is reader
+        plugin_calls.append((second_plugin, f, e))
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.entry(1, 1, datetime(2010, 1, 1))
+    reader.add_feed(feed.url)
+    reader._post_entry_add_plugins.append(first_plugin)
+    reader.update_feeds()
+    assert plugin_calls == [(first_plugin, feed, one)]
+
+    plugin_calls[:] = []
+
+    feed = parser.feed(1, datetime(2010, 1, 2))
+    one = parser.entry(1, 1, datetime(2010, 1, 2))
+    two = parser.entry(1, 2, datetime(2010, 1, 2))
+    reader._post_entry_add_plugins.append(second_plugin)
+    reader.update_feeds()
+    assert plugin_calls == [
+        (first_plugin, feed, two),
+        (second_plugin, feed, two),
+    ]
+    assert set(reader.get_entries()) == {
+        one._replace(feed=feed),
+        two._replace(feed=feed),
+    }
 
