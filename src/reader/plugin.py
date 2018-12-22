@@ -8,7 +8,7 @@ import pkg_resources
 
 def import_string(import_name):
     ep = pkg_resources.EntryPoint.parse('none = ' + import_name)
-    return ep.load(require=False)
+    return ep.resolve()
 
 
 def load_plugins(reader, import_names):
