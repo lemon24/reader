@@ -1,4 +1,7 @@
 """
+feed_entry_dedupe
+~~~~~~~~~~~~~~~~~
+
 Deduplicate entries for the same feed.
 
 Duplicates are entries with the same title *and* summary/content.
@@ -6,18 +9,22 @@ Duplicates are entries with the same title *and* summary/content.
 If the old entry is read, the new one will be too.
 If the old entry is unread, it will be marked as read in favor of the new one.
 
-To load:
+To load::
 
-    READER_PLUGIN='reader.plugins.feed_entry_dedupe:feed_entry_dedupe' \
+    READER_PLUGIN='reader.plugins.feed_entry_dedupe:feed_entry_dedupe' \\
     python -m reader update -v
 
-Implemented for https://github.com/lemon24/reader/issues/79
+Implemented for https://github.com/lemon24/reader/issues/79.
 
-TODO: Some possible optimizations:
+.. todo::
+    
+    Some possible optimizations:
 
-1. Do this once per feed (now it's one get_entries(feed=...) per entry).
-2. Only get entries with the same title (not possible with the current API).
-
+    1.  Do this once per feed (now it's one ``get_entries(feed=...)`` per entry).
+    2.  Only get entries with the same title (not possible with the current API).
+    3.  Add the entry directly as read instead of marking it afterwards
+        (requires a new hook to process the entry before it is added,
+        and Storage support).
 
 """
 

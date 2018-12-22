@@ -1,22 +1,31 @@
 """
+regex_mark_as_read
+~~~~~~~~~~~~~~~~~~
+
 Mark added entries of specific feeds as read if their title matches a regex.
 
-To load:
+To load::
 
-    READER_PLUGIN='reader.plugins.regex_mark_as_read:regex_mark_as_read' \
-    READER_PLUGIN_REGEX_MARK_AS_READ_CONFIG='examples/regex_mark_as_read_config.json' \
+    READER_PLUGIN='reader.plugins.regex_mark_as_read:regex_mark_as_read' \\
+    READER_PLUGIN_REGEX_MARK_AS_READ_CONFIG='examples/regex_mark_as_read_config.json' \\
     python -m reader update -v
 
-READER_PLUGIN_REGEX_MARK_AS_READ_CONFIG should be a JSON file like:
+``READER_PLUGIN_REGEX_MARK_AS_READ_CONFIG`` should be a JSON file with this
+structure::
 
     {
-        "feed-url": [
-            "first-regex",
-            "second-regex"
-        ]
+        "feed-url": ["first-regex", "second-regex"]
     }
 
-Implemented for https://github.com/lemon24/reader/issues/79
+Implemented for https://github.com/lemon24/reader/issues/79.
+
+.. todo::
+
+    Possible optimizations:
+
+    1.  Add the entry directly as read instead of marking it afterwards
+        (requires a new hook to process the entry before it is added,
+        and Storage support).
 
 """
 

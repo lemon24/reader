@@ -71,6 +71,13 @@ Deployment options
     deploying
 
 
+Plugins
+-------
+
+.. toctree::
+    plugins
+
+
 Development
 -----------
 

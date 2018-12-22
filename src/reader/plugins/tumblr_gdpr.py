@@ -1,4 +1,7 @@
 """
+tumblr_gdpr
+~~~~~~~~~~~
+
 Accept Tumblr GDPR  stuff.
 
 Since May 2018, Tumblr redirects all new sessions to an "accept the terms of
@@ -7,12 +10,12 @@ breaking them.
 
 This plugin "accepts the terms of service" on your behalf.
 
-To load:
+To load::
 
-    READER_PLUGIN='reader.plugins.tumblr_gdpr:tumblr_gdpr' \
+    READER_PLUGIN='reader.plugins.tumblr_gdpr:tumblr_gdpr' \\
     python -m reader update -v
 
-Implemented for https://github.com/lemon24/reader/issues/67
+Implemented for https://github.com/lemon24/reader/issues/67.
 
 """
 
