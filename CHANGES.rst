@@ -8,7 +8,7 @@ reader changelog
 Version 0.3
 -----------
 
-Unreleased
+Released on 2018-12-22
 
 * :meth:`~Reader.get_entries` now prefers sorting by :attr:`~Entry.published`
   (if present) to sorting by :attr:`~Entry.updated`. (`#97`_)
@@ -18,6 +18,7 @@ Unreleased
   (`#79`_)
 * Plugin loading machinery dependencies are now installed via the
   ``[plugins]`` extra.
+* Add a plugins section to the documentation.
 
 .. _#97: https://github.com/lemon24/reader/issues/97
 .. _#79: https://github.com/lemon24/reader/issues/79
@@ -31,6 +32,7 @@ Released on 2018-11-25
 * Factor out storage-related functionality into a separate interface. (`#94`_)
 * Fix ``update --new-only`` updating the same feed repeatedly on databases
   that predate ``--new-only``. (`#95`_)
+* Add web application screenshots to the documentation.
 
 .. _#94: https://github.com/lemon24/reader/issues/94
 .. _#95: https://github.com/lemon24/reader/issues/95
