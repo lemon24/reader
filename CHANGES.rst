@@ -12,8 +12,13 @@ Unreleased
 
 * :meth:`~Reader.get_entries` now prefers sorting by :attr:`~Entry.published`
   (if present) to sorting by :attr:`~Entry.updated`. (`#97`_)
+* Add ``regex_mark_as_read`` plugin (mark new entries as read based on a regex).
+  (`#79`_)
+* Add ``feed_entry_dedupe`` plugin (deduplicate new entries for a feed).
+  (`#79`_)
 
 .. _#97: https://github.com/lemon24/reader/issues/97
+.. _#79: https://github.com/lemon24/reader/issues/79
 
 
 Version 0.2
@@ -55,6 +60,7 @@ Version 0.1
 
 Released on 2018-09-15
 
-* Initial release; API stable.
+* Initial release; public API stable.
+* Support broken Tumblr feeds via the the ``tumblr_gdpr`` plugin. (`#67`_)
 
-
+.. _#67: https://github.com/lemon24/reader/issues/67
