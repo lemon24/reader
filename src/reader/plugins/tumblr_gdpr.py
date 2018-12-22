@@ -1,3 +1,21 @@
+"""
+Accept Tumblr GDPR  stuff.
+
+Since May 2018, Tumblr redirects all new sessions to an "accept the terms of
+service" page, including RSS feeds (supposed to be machine-readable),
+breaking them.
+
+This plugin "accepts the terms of service" on your behalf.
+
+To load:
+
+    READER_PLUGIN='reader.plugins.tumblr_gdpr:tumblr_gdpr' \
+    python -m reader update -v
+
+Implemented for https://github.com/lemon24/reader/issues/67
+
+"""
+
 import re
 
 
@@ -37,11 +55,6 @@ def fill_cookie_jar_requests(session, consent_form_url):
 
 
 def tumblr_gdpr_parse_response_plugin(session, response, request):
-    """Accept Tumblr GDPR  stuff.
-
-    https://github.com/lemon24/reader/issues/67
-
-    """
     if not response.url.startswith('https://www.tumblr.com/privacy/consent'):
         return None
 
