@@ -8,7 +8,6 @@ If the old entry is unread, it will be marked as read in favor of the new one.
 
 To load:
 
-    READER_DB=db.sqlite \
     READER_PLUGIN='reader.plugins.feed_entry_dedupe:feed_entry_dedupe' \
     python -m reader update -v
 

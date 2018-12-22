@@ -1,9 +1,8 @@
 """
 Mark added entries of specific feeds as read if their title matches a regex.
 
-To run:
+To load:
 
-    READER_DB=db.sqlite \
     READER_PLUGIN='reader.plugins.regex_mark_as_read:regex_mark_as_read' \
     READER_PLUGIN_REGEX_MARK_AS_READ_CONFIG='examples/regex_mark_as_read_config.json' \
     python -m reader update -v
@@ -16,6 +15,8 @@ READER_PLUGIN_REGEX_MARK_AS_READ_CONFIG should be a JSON file like:
             "second-regex"
         ]
     }
+
+Implemented for https://github.com/lemon24/reader/issues/79
 
 """
 
