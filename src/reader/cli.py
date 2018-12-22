@@ -5,12 +5,18 @@ import logging
 import click
 
 from . import Reader
-from .plugin import load_plugins
 
 
 APP_NAME = 'reader'
 DB_ENVVAR = '{}_DB'.format(APP_NAME.upper())
 PLUGIN_ENVVAR = '{}_PLUGIN'.format(APP_NAME.upper())
+
+LOAD_PLUGINS_DEPENDENCIES_TEXT = """\
+This might be due to missing dependencies. The plugin loading is
+optional, use the 'plugins' extra to install its dependencies:
+
+    pip install reader[plugins]
+"""
 
 
 def get_default_db_path(create_dir=False):
@@ -30,10 +36,18 @@ def make_reader(db_path, plugins):
         reader = Reader(db_path)
     except Exception as e:
         abort("{}: {}", db_path, e)
-    try:
-        load_plugins(reader, plugins)
-    except Exception as e:
-        abort("while loading plugins: {}".format(e))
+
+    if plugins:
+        try:
+            from .plugin import load_plugins
+        except ImportError as e:
+            abort("{}\n\n{}", e, LOAD_PLUGINS_DEPENDENCIES_TEXT)
+
+        try:
+            load_plugins(reader, plugins)
+        except Exception as e:
+            abort("while loading plugins: {}".format(e))
+
     return reader
 
 

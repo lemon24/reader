@@ -16,6 +16,8 @@ Unreleased
   (`#79`_)
 * Add ``feed_entry_dedupe`` plugin (deduplicate new entries for a feed).
   (`#79`_)
+* Plugin loading machinery dependencies are now installed via the
+  ``[plugins]`` extra.
 
 .. _#97: https://github.com/lemon24/reader/issues/97
 .. _#79: https://github.com/lemon24/reader/issues/79

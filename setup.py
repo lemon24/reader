@@ -29,6 +29,7 @@ setup(
         'cli': ['click>=5'],
         'web-app': ['flask>=0.10', 'humanize'],
         'enclosure-tags': ['requests', 'mutagen'],
+        'plugins': ['setuptools>=40'],
     },
     description="A minimal feed reader.",
     long_description=long_description,
