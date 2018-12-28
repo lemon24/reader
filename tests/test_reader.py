@@ -724,7 +724,7 @@ def test_get_entries_has_enclosure(reader):
     reader.update_feeds()
 
     one = one._replace(feed=feed)
-    two = two._replace(feed=feed, enclosures=None)
+    two = two._replace(feed=feed, enclosures=())
     three = three._replace(feed=feed)
 
     assert set(reader.get_entries()) == {one, two, three}

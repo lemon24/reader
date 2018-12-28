@@ -71,12 +71,12 @@ class Entry(attrs_namedtuple_compat):
     summary = attr.ib(default=None)
 
     #: Full content of the entry.
-    #: An iterable of :class:`Content` objects.
-    content = attr.ib(default=None)
+    #: A sequence of :class:`Content` objects.
+    content = attr.ib(default=())
 
     #: External files associated with the entry.
-    #: An iterable of :class:`Enclosure` objects.
-    enclosures = attr.ib(default=None)
+    #: A sequence of :class:`Enclosure` objects.
+    enclosures = attr.ib(default=())
 
     #: Whether the entry was read or not.
     read = attr.ib(default=False)

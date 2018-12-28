@@ -343,8 +343,8 @@ class Storage:
                 feed = t[0:6]
                 feed = Feed._make(feed)
                 entry = t[6:13] + (
-                    tuple(Content(**d) for d in json.loads(t[13])) if t[13] else None,
-                    tuple(Enclosure(**d) for d in json.loads(t[14])) if t[14] else None,
+                    tuple(Content(**d) for d in json.loads(t[13])) if t[13] else (),
+                    tuple(Enclosure(**d) for d in json.loads(t[14])) if t[14] else (),
                     t[15] == 1,
                     feed,
                 )

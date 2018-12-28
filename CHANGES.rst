@@ -11,6 +11,10 @@ Version 0.4
 Unreleased
 
 * Support Python 3.7.
+* Entry :attr:`~Entry.content` and :attr:`~Entry.enclosures` now default to
+  an empty tuple instead of ``None``. (`#99`_)
+
+.. _#99: https://github.com/lemon24/reader/issues/99
 
 
 Version 0.3

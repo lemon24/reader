@@ -72,8 +72,8 @@ def _make_entry(entry, is_rss):
         entry.get('author'),
         published,
         entry.get('summary'),
-        content or None,
-        enclosures or None,
+        content,
+        enclosures,
         False,
         None,
     )
