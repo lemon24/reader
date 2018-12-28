@@ -39,7 +39,7 @@ def make_reader(db_path, plugins):
 
     if plugins:
         try:
-            from .plugin import load_plugins
+            from .plugins import load_plugins
         except ImportError as e:
             abort("{}\n\n{}", e, LOAD_PLUGINS_DEPENDENCIES_TEXT)
 
