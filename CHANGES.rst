@@ -10,6 +10,8 @@ Version 0.4
 
 Unreleased
 
+* Support Python 3.7.
+
 
 Version 0.3
 -----------
