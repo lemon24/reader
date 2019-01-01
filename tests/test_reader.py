@@ -632,23 +632,38 @@ def test_add_remove_get_feeds(reader, feed_arg):
 
 
 def test_get_feeds_order(reader):
+    """Feeds should be sorted by (with decreasing priority):
+
+    * feed user_title or feed title; feeds that have neither should appear first
+    * feed URL
+
+    https://github.com/lemon24/reader/issues/29
+    https://github.com/lemon24/reader/issues/102
+
+    """
     parser = Parser()
     reader._parse = parser
 
     feed2 = parser.feed(2, datetime(2010, 1, 2), title='two')
     feed1 = parser.feed(1, datetime(2010, 1, 1), title='one')
     feed3 = parser.feed(3, datetime(2010, 1, 3), title='three')
+    feed4 = parser.feed(4, datetime(2010, 1, 1))
+    feed5 = parser.feed(5, datetime(2010, 1, 1))
 
     reader.add_feed(feed2.url)
     reader.add_feed(feed1.url)
     reader.add_feed(feed3.url)
+    reader.add_feed(feed4.url)
+    reader.add_feed(feed5.url)
 
     assert list(reader.get_feeds()) == [
-        Feed(f.url, None, None, None, None) for f in (feed1, feed2, feed3)]
+        Feed(f.url, None, None, None, None) for f in (feed1, feed2, feed3, feed4, feed5)]
 
     reader.update_feeds()
+    reader.set_feed_user_title(feed5, 'five')
 
-    assert list(reader.get_feeds()) == [feed1, feed3, feed2]
+    assert list(reader.get_feeds()) == [
+        feed4, feed5._replace(user_title='five'), feed1, feed3, feed2]
 
 
 def test_set_feed_user_title(reader, feed_arg):

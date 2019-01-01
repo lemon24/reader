@@ -13,8 +13,12 @@ Unreleased
 * Support Python 3.7.
 * Entry :attr:`~Entry.content` and :attr:`~Entry.enclosures` now default to
   an empty tuple instead of ``None``. (`#99`_)
+* :meth:`~Reader.get_feeds` now returns feeds sorted by
+  :attr:`~Feed.user_title` or :attr:`~Feed.title` instead of just
+  :attr:`~Feed.title`. (`#102`_)
 
 .. _#99: https://github.com/lemon24/reader/issues/99
+.. _#102: https://github.com/lemon24/reader/issues/102
 
 
 Version 0.3
@@ -29,7 +33,7 @@ Released on 2018-12-22
 * Add ``feed_entry_dedupe`` plugin (deduplicate new entries for a feed).
   (`#79`_)
 * Plugin loading machinery dependencies are now installed via the
-  ``[plugins]`` extra.
+  ``plugins`` extra.
 * Add a plugins section to the documentation.
 
 .. _#97: https://github.com/lemon24/reader/issues/97
