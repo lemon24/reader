@@ -13,12 +13,13 @@ Unreleased
 * Support Python 3.7.
 * Entry :attr:`~Entry.content` and :attr:`~Entry.enclosures` now default to
   an empty tuple instead of ``None``. (`#99`_)
-* :meth:`~Reader.get_feeds` now returns feeds sorted by
-  :attr:`~Feed.user_title` or :attr:`~Feed.title` instead of just
-  :attr:`~Feed.title`. (`#102`_)
+* :meth:`~Reader.get_feeds` now sorts feeds by :attr:`~Feed.user_title` or
+  :attr:`~Feed.title` instead of just :attr:`~Feed.title`. (`#102`_)
+* :meth:`~Reader.get_feeds` now sorts feeds in a case insensitive way. (`#103`_)
 
 .. _#99: https://github.com/lemon24/reader/issues/99
 .. _#102: https://github.com/lemon24/reader/issues/102
+.. _#103: https://github.com/lemon24/reader/issues/103
 
 
 Version 0.3

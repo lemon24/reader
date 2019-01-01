@@ -80,7 +80,7 @@ class Storage:
             SELECT url, updated, title, link, author, user_title FROM feeds
             {where_url_snippet}
             ORDER BY
-                coalesce(feeds.user_title, feeds.title),
+                lower(coalesce(feeds.user_title, feeds.title)),
                 feeds.url;
         """.format(**locals()), locals())
 

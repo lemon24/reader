@@ -83,7 +83,8 @@ class Reader:
         """Get all the feeds.
 
         Yields:
-            :class:`Feed`: Sorted by :attr:`~Feed.user_title` or :attr:`~Feed.title`.
+            :class:`Feed`: Sorted by :attr:`~Feed.user_title` or 
+            :attr:`~Feed.title` (case insensitive).
 
         Raises:
             StorageError
