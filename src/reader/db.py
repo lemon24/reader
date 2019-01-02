@@ -120,7 +120,8 @@ def create_db(db):
             http_etag TEXT,
             http_last_modified TEXT,
             stale INTEGER,
-            last_updated TIMESTAMP
+            last_updated TIMESTAMP,
+            added TIMESTAMP
         );
     """)
     db.execute("""
@@ -171,6 +172,13 @@ def require_sqlite_compile_options(db, options):
             .format(sorted(missing)))
 
 
+def update_from_10_to_11(db):
+    db.execute("""
+        ALTER TABLE feeds
+        ADD COLUMN added TIMESTAMP;
+    """)
+
+
 def open_db(path, *, timeout=None):
     # row value support was added in 3.15
     require_sqlite_version((3, 15))
@@ -190,9 +198,10 @@ def open_db(path, *, timeout=None):
 
     migration = HeavyMigration(
         create=create_db,
-        version=10,
+        version=11,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
+            10: update_from_10_to_11,
         })
     migration.migrate(db)
 
