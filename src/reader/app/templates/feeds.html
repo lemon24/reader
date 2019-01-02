@@ -12,15 +12,10 @@
 <div id="update-entries">
 <ul class="controls">
 
-<li>sort by:
-{% set current_sort = request.args.get('sort', 'title') -%}
-{%- for sort in ['title', 'added'] %}
-{%- set args = request.args.copy() -%}
-{%- set _ = args.setlist('sort', [sort]) -%}
-{%- if sort != current_sort %}<a href='{{ url_for('.feeds', **args) }}'>{% endif -%}
-{{- sort -}}
-{%- if sort != current_sort %}</a>{% endif %}
-{% endfor %}
+{{ macros.radio_links('sort', [
+    ('title', none),
+    ('added', none),
+], 'title', '.feeds', 'sort by') }}
 
 </ul>
 </div>

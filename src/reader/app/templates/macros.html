@@ -73,6 +73,23 @@
 {%- endmacro %}
 
 
+{% macro radio_links(name, options, default, endpoint, label=none) -%}
+<li>{% if label %}{{ label }}: {% endif %}
+{% set current_option = request.args.get(name, default) -%}
+{%- for option, option_label in options -%}
+{%- set option_label = option_label or option -%}
 
+{%- set args = request.args.copy() -%}
+{%- if option is none -%}
+    {%- set _ = args.poplist(name) -%}
+{%- else -%}
+    {%- set _ = args.setlist(name, [option]) -%}
+{%- endif -%}
+
+{%- if option != current_option %}<a href='{{ url_for(endpoint, **args) }}'>{% endif -%}
+{{- option_label -}}
+{%- if option != current_option %}</a> {% endif %}
+{% endfor %}
+{%- endmacro %}
 
 
