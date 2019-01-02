@@ -9,6 +9,23 @@
 
 {% block body %}
 
+<div id="update-entries">
+<ul class="controls">
+
+<li>order by:
+{% set current_order_by = request.args.get('order_by', 'title') -%}
+{%- for order_by in ['title', 'added'] %}
+{%- set args = request.args.copy() -%}
+{%- set _ = args.setlist('order_by', [order_by]) -%}
+{%- if order_by != current_order_by %}<a href='{{ url_for('.feeds', **args) }}'>{% endif -%}
+{{- order_by -}}
+{%- if order_by != current_order_by %}</a>{% endif %}
+{% endfor %}
+
+</ul>
+</div>
+
+
 {% for feed in feeds %}
 <div id="feed-{{ loop.index }}" class="feed">
 
