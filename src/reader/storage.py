@@ -53,12 +53,12 @@ class Storage:
         self.path = path
 
     @wrap_storage_exceptions()
-    def add_feed(self, url):
+    def add_feed(self, url, added=None):
         with self.db:
             try:
                 self.db.execute("""
-                    INSERT INTO feeds (url)
-                    VALUES (:url);
+                    INSERT INTO feeds (url, added)
+                    VALUES (:url, :added);
                 """, locals())
             except sqlite3.IntegrityError:
                 raise FeedExistsError(url)
@@ -74,13 +74,21 @@ class Storage:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    def _get_feeds(self, url=None):
+    def _get_feeds(self, url=None, order_by='title'):
         where_url_snippet = '' if not url else "WHERE url = :url"
+
+        if order_by == 'title':
+            order_by_snippet = "lower(coalesce(feeds.user_title, feeds.title)) ASC"
+        elif order_by == 'added':
+            order_by_snippet = "feeds.added DESC"
+        else:
+            assert False, "shouldn't get here"  # pragma: no cover
+
         cursor = self.db.execute("""
             SELECT url, updated, title, link, author, user_title FROM feeds
             {where_url_snippet}
             ORDER BY
-                lower(coalesce(feeds.user_title, feeds.title)),
+                {order_by_snippet},
                 feeds.url;
         """.format(**locals()), locals())
 
@@ -88,8 +96,8 @@ class Storage:
             yield Feed._make(row)
 
     @wrap_storage_exceptions()
-    def get_feeds(self, url=None):
-        return iter(list(self._get_feeds(url=url)))
+    def get_feeds(self, url=None, order_by='title'):
+        return iter(list(self._get_feeds(url=url, order_by=order_by)))
 
     def _get_feeds_for_update(self, url=None, new_only=False):
         if url or new_only:

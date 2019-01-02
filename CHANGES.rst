@@ -16,10 +16,13 @@ Unreleased
 * :meth:`~Reader.get_feeds` now sorts feeds by :attr:`~Feed.user_title` or
   :attr:`~Feed.title` instead of just :attr:`~Feed.title`. (`#102`_)
 * :meth:`~Reader.get_feeds` now sorts feeds in a case insensitive way. (`#103`_)
+* Add ``order_by`` argument to :meth:`~Reader.get_feeds`, allowing to sort
+  feeds by title or by when they were added. (`#98`_)
 
 .. _#99: https://github.com/lemon24/reader/issues/99
 .. _#102: https://github.com/lemon24/reader/issues/102
 .. _#103: https://github.com/lemon24/reader/issues/103
+.. _#98: https://github.com/lemon24/reader/issues/98
 
 
 Version 0.3
