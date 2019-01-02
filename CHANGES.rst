@@ -8,7 +8,7 @@ reader changelog
 Version 0.4
 -----------
 
-Unreleased
+Released 2019-01-02
 
 * Support Python 3.7.
 * Entry :attr:`~Entry.content` and :attr:`~Entry.enclosures` now default to
