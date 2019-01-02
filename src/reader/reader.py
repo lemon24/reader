@@ -270,6 +270,10 @@ class Reader:
             StorageError
 
         """
+
+        # If we ever implement pagination, consider following the guidance in
+        # https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
+
         feed_url = feed_argument(feed) if feed is not None else None
         if which not in ('all', 'unread', 'read'):
             raise ValueError("which should be one of ('all', 'read', 'unread')")
