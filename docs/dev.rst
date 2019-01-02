@@ -56,4 +56,5 @@ Making a release (from ``x`` to ``y`` == ``x + 1``):
 * tag release in GitHub
 * build docs from latest and enable ``y`` docs version (should happen automatically after the first time)
 * bump versions from ``y`` to ``(y + 1).dev0``, add ``(y + 1)`` changelog section
+* deactivate old versions in Read the Docs
 
