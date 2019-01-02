@@ -75,10 +75,10 @@ def entries():
 
 @blueprint.route('/feeds')
 def feeds():
-    order_by = request.args.get('order_by', 'title')
-    assert order_by in ('title', 'added')
+    sort = request.args.get('sort', 'title')
+    assert sort in ('title', 'added')
 
-    feeds = get_reader().get_feeds(order_by=order_by)
+    feeds = get_reader().get_feeds(sort=sort)
     return stream_template('feeds.html', feeds=feeds)
 
 

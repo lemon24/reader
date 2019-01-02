@@ -632,7 +632,7 @@ def test_add_remove_get_feeds(reader, feed_arg):
 
 
 def test_get_feeds_order_title(reader):
-    """When order_by='title', feeds should be sorted by (with decreasing
+    """When sort='title', feeds should be sorted by (with decreasing
     priority):
 
     * feed user_title or feed title; feeds that have neither should appear first
@@ -668,7 +668,7 @@ def test_get_feeds_order_title(reader):
 
 
 def test_get_feeds_order_title_case_insensitive(reader):
-    """When order_by='title', feeds should be sorted by title in a case
+    """When sort='title', feeds should be sorted by title in a case
     insensitive way.
 
     https://github.com/lemon24/reader/issues/103
@@ -691,7 +691,7 @@ def test_get_feeds_order_title_case_insensitive(reader):
 
 
 def test_get_feeds_order_added(reader):
-    """When order_by='added', feeds should be sorted by (with decreasing
+    """When sort='added', feeds should be sorted by (with decreasing
     priority):
 
     * feed added, descending (feeds that don't have it should appear last)
@@ -716,12 +716,12 @@ def test_get_feeds_order_added(reader):
     feed3 = parser.feed(3, datetime(2010, 1, 3))
     reader.add_feed(feed3.url)
 
-    assert list(reader.get_feeds(order_by='added')) == [
+    assert list(reader.get_feeds(sort='added')) == [
         Feed(f.url, None, None, None, None) for f in [feed2, feed1, feed3]]
 
     reader.update_feeds()
 
-    assert list(reader.get_feeds(order_by='added')) == [feed2, feed1, feed3]
+    assert list(reader.get_feeds(sort='added')) == [feed2, feed1, feed3]
 
 
 def test_set_feed_user_title(reader, feed_arg):

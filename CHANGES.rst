@@ -16,7 +16,7 @@ Unreleased
 * :meth:`~Reader.get_feeds` now sorts feeds by :attr:`~Feed.user_title` or
   :attr:`~Feed.title` instead of just :attr:`~Feed.title`. (`#102`_)
 * :meth:`~Reader.get_feeds` now sorts feeds in a case insensitive way. (`#103`_)
-* Add ``order_by`` argument to :meth:`~Reader.get_feeds`, allowing to sort
+* Add ``sort`` argument to :meth:`~Reader.get_feeds`; allows sorting
   feeds by title or by when they were added. (`#98`_)
 * Allow changing the feed sort order in the web application. (`#98`_)
 

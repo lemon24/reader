@@ -74,12 +74,12 @@ class Storage:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    def _get_feeds(self, url=None, order_by='title'):
+    def _get_feeds(self, url=None, sort='title'):
         where_url_snippet = '' if not url else "WHERE url = :url"
 
-        if order_by == 'title':
+        if sort == 'title':
             order_by_snippet = "lower(coalesce(feeds.user_title, feeds.title)) ASC"
-        elif order_by == 'added':
+        elif sort == 'added':
             order_by_snippet = "feeds.added DESC"
         else:
             assert False, "shouldn't get here"  # pragma: no cover
@@ -96,8 +96,8 @@ class Storage:
             yield Feed._make(row)
 
     @wrap_storage_exceptions()
-    def get_feeds(self, url=None, order_by='title'):
-        return iter(list(self._get_feeds(url=url, order_by=order_by)))
+    def get_feeds(self, url=None, sort='title'):
+        return iter(list(self._get_feeds(url=url, sort=sort)))
 
     def _get_feeds_for_update(self, url=None, new_only=False):
         if url or new_only:

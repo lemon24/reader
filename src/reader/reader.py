@@ -80,24 +80,24 @@ class Reader:
         url = feed_argument(feed)
         return self._storage.remove_feed(url)
 
-    def get_feeds(self, order_by='title'):
+    def get_feeds(self, sort='title'):
         """Get all the feeds.
 
         Args:
-            order_by (str): How to order feeds; one of ``'title'`` (by
+            sort (str): How to order feeds; one of ``'title'`` (by
                 :attr:`~Feed.user_title` or :attr:`~Feed.title`, case
-                insensitive; default), ``'added'`` (last added first).
+                insensitive; default), or ``'added'`` (last added first).
 
         Yields:
-            :class:`Feed`: Sorted according to ``order_by``.
+            :class:`Feed`: Sorted according to ``sort``.
 
         Raises:
             StorageError
 
         """
-        if order_by not in ('title', 'added'):
-            raise ValueError("order_by should be one of ('title', 'added')")
-        return self._storage.get_feeds(order_by=order_by)
+        if sort not in ('title', 'added'):
+            raise ValueError("sort should be one of ('title', 'added')")
+        return self._storage.get_feeds(sort=sort)
 
     def get_feed(self, feed):
         """Get a feed.
