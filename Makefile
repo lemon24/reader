@@ -6,6 +6,7 @@ install-dev:
 	pip install -q -e '.[cli,web-app,enclosure-tags,plugins]'
 	pip install -q -r test-requirements.txt
 	pip install -q pytest-cov
+	pip install -q twine
 
 test: clean-pyc install-dev
 	pytest -v --runslow
