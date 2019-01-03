@@ -1,4 +1,6 @@
 from collections import OrderedDict
+from typing import Sequence, Optional
+from datetime import datetime
 
 import attr
 
@@ -26,22 +28,22 @@ class Feed(attrs_namedtuple_compat):
     """Data type representing a feed."""
 
     #: The URL of the feed.
-    url = attr.ib()
+    url = attr.ib(type=str)
 
     #: The date the feed was last updated.
-    updated = attr.ib(default=None)
+    updated = attr.ib(type=Optional[datetime], default=None)
 
     #: The title of the feed.
-    title = attr.ib(default=None)
+    title = attr.ib(type=Optional[str], default=None)
 
     #: The URL of a page associated with the feed.
-    link = attr.ib(default=None)
+    link = attr.ib(type=Optional[str], default=None)
 
     #: The author of the feed.
-    author = attr.ib(default=None)
+    author = attr.ib(type=Optional[str], default=None)
 
     #: User-defined feed title.
-    user_title = attr.ib(default=None)
+    user_title = attr.ib(type=Optional[str], default=None)
 
 
 @attr.s(slots=True, frozen=True)
@@ -50,39 +52,39 @@ class Entry(attrs_namedtuple_compat):
     """Data type representing an entry."""
 
     #: Entry identifier.
-    id = attr.ib()
+    id = attr.ib(type=str)
 
     #: The date the entry was last updated.
-    updated = attr.ib()
+    updated = attr.ib(type=datetime)
 
     #: The title of the entry.
-    title = attr.ib(default=None)
+    title = attr.ib(type=Optional[str], default=None)
 
     #: The URL of a page associated with the entry.
-    link = attr.ib(default=None)
+    link = attr.ib(type=Optional[str], default=None)
 
     #: The author of the feed.
-    author = attr.ib(default=None)
+    author = attr.ib(type=Optional[str], default=None)
 
     #: The date the entry was first published.
-    published = attr.ib(default=None)
+    published = attr.ib(type=Optional[datetime], default=None)
 
     #: A summary of the entry.
-    summary = attr.ib(default=None)
+    summary = attr.ib(type=Optional[str], default=None)
 
     #: Full content of the entry.
     #: A sequence of :class:`Content` objects.
-    content = attr.ib(default=())
+    content = attr.ib(type=Sequence['Content'], default=())
 
     #: External files associated with the entry.
     #: A sequence of :class:`Enclosure` objects.
-    enclosures = attr.ib(default=())
+    enclosures = attr.ib(type=Sequence['Enclosure'], default=())
 
     #: Whether the entry was read or not.
-    read = attr.ib(default=False)
+    read = attr.ib(type=bool, default=False)
 
     #: The entry's feed.
-    feed = attr.ib(default=None)
+    feed = attr.ib(type=Optional[Feed], default=None)
 
 
 @attr.s(slots=True, frozen=True)
@@ -91,13 +93,13 @@ class Content(attrs_namedtuple_compat):
     """Data type representing a piece of content."""
 
     #: The content value.
-    value = attr.ib()
+    value = attr.ib(type=str)
 
     #: The content type.
-    type = attr.ib(default=None)
+    type = attr.ib(type=Optional[str], default=None)
 
     #: The content language.
-    language = attr.ib(default=None)
+    language = attr.ib(type=Optional[str], default=None)
 
 
 @attr.s(slots=True, frozen=True)
@@ -106,12 +108,12 @@ class Enclosure(attrs_namedtuple_compat):
     """Data type representing an external file."""
 
     #: The file URL.
-    href = attr.ib()
+    href = attr.ib(type=str)
 
     #: The file content type.
-    type = attr.ib(default=None)
+    type = attr.ib(type=Optional[str], default=None)
 
     #: The file length.
-    length = attr.ib(default=None)
+    length = attr.ib(type=Optional[int], default=None)
 
 
