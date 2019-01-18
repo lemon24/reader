@@ -219,24 +219,37 @@ class Reader:
             self._storage.update_feed(url, feed, http_etag, http_last_modified, now)
 
         entries_updated, entries_new = 0, 0
-        last_updated = now
-        for entry in reversed(list(entries)):
-            assert entry.feed is None
-            entry_updated, entry_new = self._update_entry(url, entry, stale, now, last_updated)
-            entries_updated += entry_updated
-            entries_new += entry_new
-            last_updated += datetime.timedelta(microseconds=1)
+        entries_new_list = []
 
-            if entry_new:
-                for plugin in self._post_entry_add_plugins:
-                    plugin(self, feed, entry)
+        def filter_entries_for_update():
+            nonlocal entries_updated, entries_new
+
+            last_updated = now
+            for entry in reversed(list(entries)):
+                assert entry.feed is None
+                entry_updated, entry_new, updated = self._should_update_entry(url, entry, stale, now, last_updated)
+
+                if entry_new:
+                    entries_new_list.append(entry)
+                if entry_updated or entry_new:
+                    yield url, entry, updated, last_updated
+
+                entries_updated += entry_updated
+                entries_new += entry_new
+                last_updated += datetime.timedelta(microseconds=1)
+
+        self._storage.add_or_update_entries(filter_entries_for_update())
+
+        for entry in entries_new_list:
+            for plugin in self._post_entry_add_plugins:
+                plugin(self, feed, entry)
 
         if not should_be_updated and (entries_updated or entries_new):
             self._storage.update_feed_last_updated(url, now)
 
         log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
-    def _update_entry(self, feed_url, entry, stale, now, last_updated):
+    def _should_update_entry(self, feed_url, entry, stale, now, last_updated):
         entry_exists, db_updated = self._storage.get_entry_for_update(feed_url, entry.id)
         updated = entry.updated
 
@@ -247,11 +260,10 @@ class Reader:
             updated = db_updated or now
         elif db_updated and updated <= db_updated:
             log.debug("update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)", entry.id, feed_url, db_updated, updated)
-            return 0, 0
+            return 0, 0, updated
 
-        self._storage.add_or_update_entry(feed_url, entry, updated, last_updated)
         log.debug("update entry %r of feed %r: entry added/updated", entry.id, feed_url)
-        return (0, 1) if not entry_exists else (1, 0)
+        return (0, 1, updated) if not entry_exists else (1, 0, updated)
 
     def get_entries(self, which='all', feed=None, has_enclosures=None):
         """Get all or some of the entries.

@@ -10,6 +10,11 @@ Version 0.5
 
 Unreleased
 
+* Make updating new feeds up to 2 orders of magnitude faster;
+  fixes a problem introduced by `#94`_. (`#104`_)
+
+.. _#104: https://github.com/lemon24/reader/issues/104
+
 
 Version 0.4
 -----------

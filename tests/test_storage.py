@@ -81,6 +81,9 @@ def update_feed(storage, feed, entry):
 def add_or_update_entry(storage, feed, entry):
     storage.add_or_update_entry(feed.url, entry, entry.updated, entry.updated)
 
+def add_or_update_entries(storage, feed, entry):
+    storage.add_or_update_entries([(feed.url, entry, entry.updated, entry.updated)])
+
 def get_entries_chunk_size_0(storage, _, __):
     list(storage.get_entries('all', None, None, chunk_size=0))
 
@@ -100,6 +103,7 @@ def get_entries_chunk_size_1(storage, _, __):
     mark_as_read_unread,
     update_feed,
     add_or_update_entry,
+    add_or_update_entries,
     get_entries_chunk_size_0,
     get_entries_chunk_size_1,
 ])

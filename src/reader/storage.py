@@ -208,8 +208,7 @@ class Storage:
             raise FeedNotFoundError(url)
         assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    @wrap_storage_exceptions()
-    def add_or_update_entry(self, feed_url, entry, updated, last_updated):
+    def _add_or_update_entry(self, feed_url, entry, updated, last_updated):
         published = entry.published
         id = entry.id
         title = entry.title
@@ -220,43 +219,52 @@ class Storage:
         enclosures = json.dumps([t._asdict() for t in entry.enclosures]) if entry.enclosures else None
 
         try:
-            with self.db:
-                self.db.execute("""
-                    INSERT OR REPLACE INTO entries (
-                        id,
-                        feed,
-                        title,
-                        link,
-                        updated,
-                        author,
-                        published,
-                        summary,
-                        content,
-                        enclosures,
-                        read,
-                        last_updated
-                    ) VALUES (
-                        :id,
-                        :feed_url,
-                        :title,
-                        :link,
-                        :updated,
-                        :author,
-                        :published,
-                        :summary,
-                        :content,
-                        :enclosures,
-                        (
-                            SELECT read
-                            FROM entries
-                            WHERE id = :id AND feed = :feed_url
-                        ),
-                        :last_updated
-                    );
-                """, locals())
+            self.db.execute("""
+                INSERT OR REPLACE INTO entries (
+                    id,
+                    feed,
+                    title,
+                    link,
+                    updated,
+                    author,
+                    published,
+                    summary,
+                    content,
+                    enclosures,
+                    read,
+                    last_updated
+                ) VALUES (
+                    :id,
+                    :feed_url,
+                    :title,
+                    :link,
+                    :updated,
+                    :author,
+                    :published,
+                    :summary,
+                    :content,
+                    :enclosures,
+                    (
+                        SELECT read
+                        FROM entries
+                        WHERE id = :id AND feed = :feed_url
+                    ),
+                    :last_updated
+                );
+            """, locals())
         except sqlite3.IntegrityError as e:
             log.debug("add_entry %r of feed %r: got IntegrityError", entry.id, feed_url, exc_info=True)
             raise FeedNotFoundError(feed_url)
+
+    @wrap_storage_exceptions()
+    def add_or_update_entries(self, entry_tuples):
+        with self.db:
+            for t in entry_tuples:
+                self._add_or_update_entry(*t)
+
+    def add_or_update_entry(self, feed_url, entry, updated, last_updated):
+        # this is only for convenience (it's called from tests)
+        self.add_or_update_entries([(feed_url, entry, updated, last_updated)])
 
     def _get_entries(self, which, feed_url, has_enclosures,
                      chunk_size=None, last=None):
