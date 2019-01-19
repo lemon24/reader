@@ -5,6 +5,9 @@ import sys
 import os.path
 import timeit
 import cProfile, pstats
+from contextlib import contextmanager, ExitStack
+import inspect
+from functools import partial
 
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../src'))
@@ -40,55 +43,112 @@ def make_test_client(path):
     return client
 
 
-def do_time(num_entries, number):
-    with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, 'db.sqlite')
-        set_up_db(path, num_entries)
-        reader = Reader(path)
-        reader_time = timeit.timeit(
-            "list(reader.get_entries(which='all'))",
-            globals=dict(reader=reader), number=number)
+class Timings:
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, 'db.sqlite')
-        set_up_db(path, num_entries)
-        client = make_test_client(path)
-        app_time = timeit.timeit(
-            "for _ in client.get('/?show=all').response: pass",
-            globals=dict(client=client), number=number)
+    def get_methods_with_prefix(self, prefix):
+        for name, method in inspect.getmembers(self, inspect.ismethod):
+            if name.startswith(prefix):
+                yield name.partition(prefix)[2], method
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, 'db.sqlite')
-        set_up_db(path, num_entries)
-        client = make_test_client(path)
-        app_time_100kb = timeit.timeit(dedent("""
-            length = 0
-            for chunk in client.get('/?show=all').response:
-                length += len(chunk)
-                if length >= 100000:
-                    break
-            """),
-            globals=dict(client=client), number=number)
+    def extract_setups(self, method):
+        setups = dict(self.get_methods_with_prefix('setup_'))
 
-    print("{:>7} {:>4} {:>11.2f} {:>10.2f} {:>5.1f} {:>16.2f}".format(
-        num_entries, number, reader_time, app_time, app_time/reader_time, app_time_100kb))
+        for param in inspect.signature(method).parameters.values():
+            assert param.kind == param.POSITIONAL_OR_KEYWORD, (
+                "parameter {p.name} of {t.__name__}.{m.__name__} "
+                "is variable"
+                .format(p=param, m=method, t=type(self)))
+            assert param.name in setups, (
+                "{t.__name__}.setup_{p.name} required by "
+                "{t.__name__}.{m.__name__} not found"
+                .format(p=param, m=method, t=type(self)))
+
+            yield param.name, setups[param.name]
+
+    @staticmethod
+    @contextmanager
+    def bind_setups(fn, setups):
+        with ExitStack() as stack:
+            yield partial(fn, **{
+                name: stack.enter_context(setup())
+                for name, setup in setups
+            })
+
+    def extract_times(self):
+        for name, method in self.get_methods_with_prefix('time_'):
+            setups = self.extract_setups(method)
+            yield name, self.bind_setups(method, setups)
+
+
+class GetEntries(Timings):
+
+    def __init__(self, num_entries):
+        self.num_entries = num_entries
+
+    @contextmanager
+    def setup_db(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, 'db.sqlite')
+            set_up_db(path, self.num_entries)
+            yield path
+
+    @contextmanager
+    def setup_reader(self):
+        with self.setup_db() as path:
+            yield Reader(path)
+
+    @contextmanager
+    def setup_client(self):
+        with self.setup_db() as path:
+            yield make_test_client(path)
+
+    def time_get_entries(self, reader):
+        for _ in reader.get_entries(which='all'):
+            pass
+
+    def time_show(self, client):
+        for _ in client.get('/?show=all').response:
+            pass
+
+    def time_show_100k(self, client):
+        length = 0
+        for chunk in client.get('/?show=all').response:
+            length += len(chunk)
+            if length >= 100000:
+                break
+
 
 def do_time_all():
-    print("{} {} {} {} {} {}".format(
-        'entries', 'runs', 'get_entries', '/?show=all', 'ratio', '/?show=all#100kb'))
+    names = sorted(name for name, _ in GetEntries(1).extract_times())
+    extra = ['entries', 'runs']
+    header = ' '.join(extra + names)
+    print(header)
+
+    extra_fmt = ['{{:>{}}}'.format(len(e)) for e in extra]
+    names_fmt = ['{{:>{}.2f}}'.format(len(n)) for n in names]
+    row_fmt = ' '.join(extra_fmt + names_fmt)
+
+    # TODO: use timeit.Timer.autorange
+
     for i in range(5,13):
-        do_time(2**i, min(8, 2**(12-i)))
+        entries = 2**i
+        runs = min(8, 2**(12-i))
+
+        times = []
+        for _, cm in sorted(GetEntries(entries).extract_times()):
+            with cm as fn:
+                time = timeit.timeit('fn()', globals=dict(fn=fn), number=runs)
+            times.append(time)
+
+        print(row_fmt.format(entries, runs, *times))
 
 
 def do_profile(num_entries):
-    with tempfile.TemporaryDirectory() as tmpdir:
-        path = os.path.join(tmpdir, 'db.sqlite')
-        set_up_db(path, num_entries)
-        client = make_test_client(path)
-
+    cm = dict(GetEntries(num_entries).extract_times())['show']
+    with cm as fn:
         pr = cProfile.Profile()
         pr.enable()
-        for _ in client.get('/?show=all').response: pass
+        fn()
         pr.disable()
         pstats.Stats(pr).strip_dirs().sort_stats('cumulative').print_stats(40)
 
