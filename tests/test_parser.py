@@ -21,16 +21,15 @@ def parse():
         yield parse
 
 
-@pytest.fixture
-def make_relative_path_url(**_):
+def _make_relative_path_url(**_):
     yield lambda feed_path: feed_path.basename
 
-@pytest.fixture
-def make_absolute_path_url(**_):
+make_relative_path_url = pytest.fixture(_make_relative_path_url)
+
+def _make_absolute_path_url(**_):
     yield lambda feed_path: str(feed_path)
 
-@pytest.fixture
-def make_http_url(requests_mock, **_):
+def _make_http_url(requests_mock, **_):
     def make_url(feed_path):
         url = 'http://example.com/' + feed_path.basename
         headers = {}
@@ -42,8 +41,9 @@ def make_http_url(requests_mock, **_):
         return url
     yield make_url
 
-@pytest.fixture
-def make_https_url(requests_mock, **_):
+make_http_url = pytest.fixture(_make_http_url)
+
+def _make_https_url(requests_mock, **_):
     def make_url(feed_path):
         url = 'http://example.com/' + feed_path.basename
         headers = {}
@@ -55,8 +55,7 @@ def make_https_url(requests_mock, **_):
         return url
     yield make_url
 
-@pytest.fixture
-def make_http_gzip_url(requests_mock, **_):
+def _make_http_gzip_url(requests_mock, **_):
     def make_url(feed_path):
         url = 'http://example.com/' + feed_path.basename
         headers = {}
@@ -77,19 +76,19 @@ def make_http_gzip_url(requests_mock, **_):
     yield make_url
 
 @pytest.fixture(params=[
-    make_relative_path_url,
-    make_absolute_path_url,
-    make_http_url,
-    make_https_url,
-    make_http_gzip_url,
+    _make_relative_path_url,
+    _make_absolute_path_url,
+    _make_http_url,
+    _make_https_url,
+    _make_http_gzip_url,
 ])
 def make_url(request, requests_mock):
     yield from request.param(requests_mock=requests_mock)
 
 
 @pytest.fixture(params=[
-    make_relative_path_url,
-    pytest.param(make_http_url, marks=pytest.mark.slow),
+    _make_relative_path_url,
+    pytest.param(_make_http_url, marks=pytest.mark.slow),
 ])
 def make_url_local_remote(request, requests_mock):
     yield from request.param(requests_mock=requests_mock)
