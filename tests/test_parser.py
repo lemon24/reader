@@ -5,8 +5,6 @@ import subprocess
 import pytest
 import feedparser
 
-from server import run_httpd
-
 from reader import Feed
 from reader.parser import RequestsParser
 from reader.exceptions import ParseError, NotModified
