@@ -22,12 +22,12 @@ def parse():
 
 
 def _make_relative_path_url(**_):
-    yield lambda feed_path: feed_path.basename
+    return lambda feed_path: feed_path.basename
 
 make_relative_path_url = pytest.fixture(_make_relative_path_url)
 
 def _make_absolute_path_url(**_):
-    yield lambda feed_path: str(feed_path)
+    return lambda feed_path: str(feed_path)
 
 def _make_http_url(requests_mock, **_):
     def make_url(feed_path):
@@ -39,7 +39,7 @@ def _make_http_url(requests_mock, **_):
             headers['Content-Type'] = 'application/atom+xml'
         requests_mock.get(url, text=feed_path.read(), headers=headers)
         return url
-    yield make_url
+    return make_url
 
 make_http_url = pytest.fixture(_make_http_url)
 
@@ -53,7 +53,7 @@ def _make_https_url(requests_mock, **_):
             headers['Content-Type'] = 'application/atom+xml'
         requests_mock.get(url, text=feed_path.read(), headers=headers)
         return url
-    yield make_url
+    return make_url
 
 def _make_http_gzip_url(requests_mock, **_):
     def make_url(feed_path):
@@ -73,7 +73,7 @@ def _make_http_gzip_url(requests_mock, **_):
 
         requests_mock.get(url, content=compressed_file.getvalue(), headers=headers)
         return url
-    yield make_url
+    return make_url
 
 @pytest.fixture(params=[
     _make_relative_path_url,
@@ -83,15 +83,15 @@ def _make_http_gzip_url(requests_mock, **_):
     _make_http_gzip_url,
 ])
 def make_url(request, requests_mock):
-    yield from request.param(requests_mock=requests_mock)
+    return request.param(requests_mock=requests_mock)
 
 
 @pytest.fixture(params=[
     _make_relative_path_url,
-    pytest.param(_make_http_url, marks=pytest.mark.slow),
+    _make_http_url,
 ])
 def make_url_local_remote(request, requests_mock):
-    yield from request.param(requests_mock=requests_mock)
+    return request.param(requests_mock=requests_mock)
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
@@ -278,7 +278,6 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
     assert do_nothing_plugin.called
     assert rewrite_to_empty_plugin.called
     assert feed.link is not None
-    print('---', feed)
 
 
 def test_parse_requests_exception(monkeypatch, parse):
