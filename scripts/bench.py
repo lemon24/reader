@@ -45,6 +45,42 @@ def make_test_client(path):
 
 class Timings:
 
+    """Scaffolding to manage setup and teardown for a bunch of functions.
+
+    >>> from contextlib import contextmanager
+    >>>
+    >>> class MyTimings(Timings):
+    ...
+    ...     @contextmanager
+    ...     def setup_thing(self):
+    ...         print("setup_thing: before making thing")
+    ...         yield 'thing value'
+    ...         print("setup_thing: after making thing")
+    ...
+    ...     def time_one(self, thing):
+    ...         print("time_one: doing stuff with thing:", thing)
+    ...
+    ...     def time_two(self):
+    ...         print("time_two: doing stuff")
+    ...
+    >>> for name, cm in sorted(MyTimings().extract_times()):
+    ...     with cm as fn:
+    ...         print("setup for", name, "done")
+    ...         fn()
+    ...     print("teardown for", name, "done")
+    ...
+    setup_thing: before making thing
+    setup for one done
+    time_one: doing stuff with thing: thing value
+    setup_thing: after making thing
+    teardown for one done
+    setup for two done
+    time_two: doing stuff
+    teardown for two done
+
+
+    """
+
     def get_methods_with_prefix(self, prefix):
         for name, method in inspect.getmembers(self, inspect.ismethod):
             if name.startswith(prefix):
@@ -65,24 +101,26 @@ class Timings:
 
             yield param.name, setups[param.name]
 
-    @staticmethod
     @contextmanager
-    def bind_setups(fn, setups):
+    def bind_setups(self, method):
         with ExitStack() as stack:
-            yield partial(fn, **{
+            yield partial(method, **{
                 name: stack.enter_context(setup())
-                for name, setup in setups
+                for name, setup in self.extract_setups(method)
             })
 
     def extract_times(self):
         for name, method in self.get_methods_with_prefix('time_'):
-            setups = self.extract_setups(method)
-            yield name, self.bind_setups(method, setups)
+            yield name, self.bind_setups(method)
+
+    def extract_time_names(self):
+        for name, _ in self.extract_times():
+            yield name
 
 
 class GetEntries(Timings):
 
-    def __init__(self, num_entries):
+    def __init__(self, num_entries=1):
         self.num_entries = num_entries
 
     @contextmanager
@@ -119,7 +157,7 @@ class GetEntries(Timings):
 
 
 def do_time_all():
-    names = sorted(name for name, _ in GetEntries(1).extract_times())
+    names = sorted(GetEntries().extract_time_names())
     extra = ['entries', 'runs']
     header = ' '.join(extra + names)
     print(header)
