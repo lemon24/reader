@@ -156,9 +156,9 @@ class GetEntries(Timings):
                 break
 
 
-def do_time_all():
-    names = sorted(GetEntries().extract_time_names())
-    extra = ['entries', 'runs']
+def do_time_all(timings_cls, params_list, ids, number):
+    names = sorted(timings_cls().extract_time_names())
+    extra = ['runs'] + ids
     header = ' '.join(extra + names)
     print(header)
 
@@ -166,35 +166,30 @@ def do_time_all():
     names_fmt = ['{{:>{}.2f}}'.format(len(n)) for n in names]
     row_fmt = ' '.join(extra_fmt + names_fmt)
 
-    # TODO: use timeit.Timer.autorange
-
-    for i in range(5,13):
-        entries = 2**i
-        runs = min(8, 2**(12-i))
-
+    for params in params_list:
         times = []
-        for _, cm in sorted(GetEntries(entries).extract_times()):
+        for _, cm in sorted(timings_cls(*params).extract_times()):
             with cm as fn:
-                time = timeit.timeit('fn()', globals=dict(fn=fn), number=runs)
+                time = timeit.timeit('fn()', globals=dict(fn=fn), number=number)
             times.append(time)
+        print(row_fmt.format(number, *(list(params) + times)))
 
-        print(row_fmt.format(entries, runs, *times))
 
-
-def do_profile(num_entries):
-    cm = dict(GetEntries(num_entries).extract_times())['show']
+def do_profile(timings_cls, params, name):
+    cm = dict(timings_cls(*params).extract_times())[name]
+    pr = cProfile.Profile()
     with cm as fn:
-        pr = cProfile.Profile()
         pr.enable()
         fn()
         pr.disable()
-        pstats.Stats(pr).strip_dirs().sort_stats('cumulative').print_stats(40)
+    pstats.Stats(pr).strip_dirs().sort_stats('cumulative').print_stats(40)
 
 
 if __name__ == '__main__':
 
     {
-        'profile': lambda: do_profile(2048),
-        'time': do_time_all,
+        'profile': lambda: do_profile(GetEntries, (2048, ), sys.argv[2]),
+        'time': lambda: do_time_all(
+            GetEntries, [(2**i,) for i in range(5, 13)], ['entries'], 4),
     }[sys.argv[1]]()
 
