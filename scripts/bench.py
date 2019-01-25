@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from textwrap import dedent
 import tempfile
 import sys
 import os.path
@@ -8,6 +7,9 @@ import cProfile, pstats
 from contextlib import contextmanager, ExitStack
 import inspect
 from functools import partial
+from fnmatch import fnmatchcase
+
+import click
 
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../src'))
@@ -156,40 +158,83 @@ class GetEntries(Timings):
                 break
 
 
-def do_time_all(timings_cls, params_list, ids, number):
-    names = sorted(timings_cls().extract_time_names())
-    extra = ['runs'] + ids
-    header = ' '.join(extra + names)
-    print(header)
+TIMES = [
+    (GetEntries, [(2**i,) for i in range(5, 13)], ['entries'], 4),
+]
 
-    extra_fmt = ['{{:>{}}}'.format(len(e)) for e in extra]
-    names_fmt = ['{{:>{}.2f}}'.format(len(n)) for n in names]
-    row_fmt = ' '.join(extra_fmt + names_fmt)
+PROFILES = [
+    (GetEntries, (2048, ), ['entries']),
+]
 
-    for params in params_list:
-        times = []
-        for _, cm in sorted(timings_cls(*params).extract_times()):
+
+def make_full_name(timings_cls, name):
+    return "{}::{}".format(timings_cls.__name__, name)
+
+
+@click.group()
+def cli():
+    pass
+
+@cli.command()
+@click.argument('which', nargs=-1)
+def time(which):
+    if not which:
+        which = ['*']
+
+    for timings_cls, params_list, ids, number in TIMES:
+        names = sorted(
+            name
+            for name in timings_cls().extract_time_names()
+            if any(
+                fnmatchcase(make_full_name(timings_cls, name), w)
+                for w in which
+            )
+        )
+        if not names:
+            continue
+
+        print(timings_cls.__name__)
+
+        extra = ['runs'] + ids
+        header = ' '.join(extra + names)
+        print(header)
+
+        extra_fmt = ['{{:>{}}}'.format(len(e)) for e in extra]
+        names_fmt = ['{{:>{}.2f}}'.format(len(n)) for n in names]
+        row_fmt = ' '.join(extra_fmt + names_fmt)
+
+        for params in params_list:
+            times = []
+            for name, cm in sorted(timings_cls(*params).extract_times()):
+                if name not in names:
+                    continue
+                with cm as fn:
+                    time = timeit.timeit('fn()', globals=dict(fn=fn), number=number)
+                times.append(time)
+            print(row_fmt.format(number, *(list(params) + times)))
+
+        print()
+
+
+@cli.command()
+@click.argument('which', nargs=-1)
+def profile(which):
+    for timings_cls, params, ids in PROFILES:
+        for name, cm in sorted(timings_cls(*params).extract_times()):
+            full_name = make_full_name(timings_cls, name)
+            if not any(fnmatchcase(full_name, w) for w in which):
+                continue
+
+            print(full_name, ' '.join('{}={}'.format(i, p) for i, p in zip(ids, params)))
+            print()
+
+            pr = cProfile.Profile()
             with cm as fn:
-                time = timeit.timeit('fn()', globals=dict(fn=fn), number=number)
-            times.append(time)
-        print(row_fmt.format(number, *(list(params) + times)))
-
-
-def do_profile(timings_cls, params, name):
-    cm = dict(timings_cls(*params).extract_times())[name]
-    pr = cProfile.Profile()
-    with cm as fn:
-        pr.enable()
-        fn()
-        pr.disable()
-    pstats.Stats(pr).strip_dirs().sort_stats('cumulative').print_stats(40)
+                pr.enable()
+                fn()
+                pr.disable()
+            pstats.Stats(pr).strip_dirs().sort_stats('cumulative').print_stats(40)
 
 
 if __name__ == '__main__':
-
-    {
-        'profile': lambda: do_profile(GetEntries, (2048, ), sys.argv[2]),
-        'time': lambda: do_time_all(
-            GetEntries, [(2**i,) for i in range(5, 13)], ['entries'], 4),
-    }[sys.argv[1]]()
-
+    cli()
