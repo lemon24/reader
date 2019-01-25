@@ -158,12 +158,44 @@ class GetEntries(Timings):
                 break
 
 
+class UpdateFeeds(Timings):
+
+    def __init__(self, num_entries=1):
+        self.num_entries = num_entries
+
+    @contextmanager
+    def setup_reader(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, 'db.sqlite')
+
+            parser = Parser()
+            reader = Reader(path)
+
+            num_feeds = 8
+            for i in range(num_feeds):
+                feed = parser.feed(i, datetime(2010, 1, 1))
+                reader.add_feed(feed.url)
+
+            for i in range(self.num_entries):
+                parser.entry(i % num_feeds, i, datetime(2010, 1, 1) + timedelta(i))
+
+            reader._parse = parser
+
+            yield reader
+
+    def time_update_feeds(self, reader):
+        reader.update_feeds()
+
+
 TIMES = [
     (GetEntries, [(2**i,) for i in range(5, 13)], ['entries'], 4),
+    (UpdateFeeds, [(2**i,) for i in range(5, 13)], ['entries'], 4),
+
 ]
 
 PROFILES = [
     (GetEntries, (2048, ), ['entries']),
+    (UpdateFeeds, (2048, ), ['entries']),
 ]
 
 
