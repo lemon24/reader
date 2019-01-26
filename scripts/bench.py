@@ -207,6 +207,14 @@ def make_full_name(timings_cls, name):
 def cli():
     pass
 
+
+@cli.command(name='list')
+def list_():
+    for timings_cls, params_list, ids, number in TIMES:
+        for name in timings_cls().extract_time_names():
+            print(make_full_name(timings_cls, name))
+
+
 @cli.command()
 @click.argument('which', nargs=-1)
 def time(which):
