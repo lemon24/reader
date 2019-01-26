@@ -43,7 +43,7 @@ make_http_url = pytest.fixture(_make_http_url)
 
 def _make_https_url(requests_mock, **_):
     def make_url(feed_path):
-        url = 'http://example.com/' + feed_path.basename
+        url = 'https://example.com/' + feed_path.basename
         headers = {}
         if feed_path.ext == '.rss':
             headers['Content-Type'] = 'application/x-rss+xml'
