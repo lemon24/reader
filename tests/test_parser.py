@@ -20,7 +20,7 @@ def parse():
 
 
 def _make_relative_path_url(**_):
-    return lambda feed_path: feed_path.basename
+    return lambda feed_path: feed_path.relto(feed_path.join('../..'))
 
 make_relative_path_url = pytest.fixture(_make_relative_path_url)
 
@@ -94,7 +94,7 @@ def make_url_local_remote(request, requests_mock):
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse(monkeypatch, feed_type, parse, make_url, data_dir):
-    monkeypatch.chdir(data_dir)
+    monkeypatch.chdir(data_dir.dirname)
 
     feed_filename = 'full.{}'.format(feed_type)
     feed_url = make_url(data_dir.join(feed_filename))
@@ -112,7 +112,7 @@ def test_parse(monkeypatch, feed_type, parse, make_url, data_dir):
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse_empty(monkeypatch, feed_type, parse, make_relative_path_url, data_dir):
     make_url = make_relative_path_url
-    monkeypatch.chdir(data_dir)
+    monkeypatch.chdir(data_dir.dirname)
 
     feed_filename = 'empty.{}'.format(feed_type)
     feed_url = make_url(data_dir.join(feed_filename))
@@ -136,7 +136,7 @@ def test_parse_returns_etag_last_modified():
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse_relative_links(monkeypatch, feed_type, parse, make_url_local_remote, data_dir):
     make_url = make_url_local_remote
-    monkeypatch.chdir(data_dir)
+    monkeypatch.chdir(data_dir.dirname)
 
     feed_filename = 'relative.{}'.format(feed_type)
     feed_url = make_url(data_dir.join(feed_filename))
@@ -146,8 +146,12 @@ def test_parse_relative_links(monkeypatch, feed_type, parse, make_url_local_remo
         path=posixpath.dirname(url_base.path),
         params='', query='', fragment='',
     ).geturl()
+    if url_base:
+        url_base = url_base.rstrip('/') + '/'
 
-    expected = {'url_base': url_base}
+    rel_base = url_base if feed_url.startswith('http') else ''
+
+    expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(data_dir.join(feed_filename + '.py').read(), expected)
 
     feed, entries, _, _ = parse(feed_url)
