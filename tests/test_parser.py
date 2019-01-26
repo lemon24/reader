@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
+import posixpath
 import warnings
-import subprocess
 
 import pytest
 import feedparser
@@ -141,11 +141,20 @@ def test_parse_relative_links(monkeypatch, feed_type, parse, make_url_local_remo
     feed_filename = 'relative.{}'.format(feed_type)
     feed_url = make_url(data_dir.join(feed_filename))
 
-    expected = {}
+    url_base = urlparse(feed_url)
+    url_base = url_base._replace(
+        path=posixpath.dirname(url_base.path),
+        params='', query='', fragment='',
+    ).geturl()
+
+    expected = {'url_base': url_base}
     exec(data_dir.join(feed_filename + '.py').read(), expected)
 
-    parsed_feed, _, _, _ = parse(feed_url)
-    assert parsed_feed.link == urlparse(feed_url)._replace(path=expected['feed'].link).geturl()
+    feed, entries, _, _ = parse(feed_url)
+    entries = list(entries)
+
+    assert feed == expected['feed']
+    assert entries == expected['entries']
 
 
 def test_parse_error(monkeypatch, parse, data_dir):

@@ -4,9 +4,19 @@ from reader import Feed, Entry, Content, Enclosure
 
 
 feed = Feed(
-    url='relative.atom',
-    link='file.html',
+    url='{}relative.atom'.format(url_base),
+    link='{}file.html'.format(url_base),
 )
 
-entries = []
+entries = [
+     Entry(
+        id='urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a',
+        updated=None,
+        link='{}entries/entry.html'.format(url_base),
+        enclosures=(
+            # the text/html type comes from feedparser
+            Enclosure(href='{}enclosure?q=a#fragment'.format(url_base), type='text/html'),
+        ),
+    ),
+]
 

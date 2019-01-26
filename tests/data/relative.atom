@@ -3,4 +3,11 @@
 
     <link href="file.html"/>
 
+    <entry>
+        <link href="entries/entry.html"/>
+        <id>urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a</id>
+
+        <link rel="enclosure" href="enclosure?q=a#fragment" />
+    </entry>
+
 </feed>
