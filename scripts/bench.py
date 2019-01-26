@@ -122,6 +122,11 @@ class Timings:
 
 class GetEntries(Timings):
 
+    time_number = 4
+    time_params_list = [(2**i,) for i in range(5, 13)]
+    profile_params = (2**11, )
+    ids = ('entries', )
+
     def __init__(self, num_entries=1):
         self.num_entries = num_entries
 
@@ -160,6 +165,11 @@ class GetEntries(Timings):
 
 class UpdateFeeds(Timings):
 
+    time_number = 4
+    time_params_list = [(2**i,) for i in range(5, 13)]
+    profile_params = (2**11, )
+    ids = ('entries', )
+
     def __init__(self, num_entries=1):
         self.num_entries = num_entries
 
@@ -187,16 +197,7 @@ class UpdateFeeds(Timings):
         reader.update_feeds()
 
 
-TIMES = [
-    (GetEntries, [(2**i,) for i in range(5, 13)], ['entries'], 4),
-    (UpdateFeeds, [(2**i,) for i in range(5, 13)], ['entries'], 4),
-
-]
-
-PROFILES = [
-    (GetEntries, (2048, ), ['entries']),
-    (UpdateFeeds, (2048, ), ['entries']),
-]
+TIMINGS = [GetEntries, UpdateFeeds]
 
 
 def make_full_name(timings_cls, name):
@@ -210,8 +211,8 @@ def cli():
 
 @cli.command(name='list')
 def list_():
-    for timings_cls, params_list, ids, number in TIMES:
-        for name in timings_cls().extract_time_names():
+    for timings_cls in TIMINGS:
+        for name in sorted(timings_cls().extract_time_names()):
             print(make_full_name(timings_cls, name))
 
 
@@ -221,7 +222,7 @@ def time(which):
     if not which:
         which = ['*']
 
-    for timings_cls, params_list, ids, number in TIMES:
+    for timings_cls in TIMINGS:
         names = sorted(
             name
             for name in timings_cls().extract_time_names()
@@ -235,7 +236,7 @@ def time(which):
 
         print(timings_cls.__name__)
 
-        extra = ['runs'] + ids
+        extra = ['number'] + list(timings_cls.ids)
         header = ' '.join(extra + names)
         print(header)
 
@@ -243,14 +244,21 @@ def time(which):
         names_fmt = ['{{:>{}.2f}}'.format(len(n)) for n in names]
         row_fmt = ' '.join(extra_fmt + names_fmt)
 
-        for params in params_list:
+        number = timings_cls.time_number
+
+        for params in timings_cls.time_params_list:
             times = []
             for name, cm in sorted(timings_cls(*params).extract_times()):
                 if name not in names:
                     continue
+
                 with cm as fn:
-                    time = timeit.timeit('fn()', globals=dict(fn=fn), number=number)
+                    time = timeit.timeit(
+                        'fn()', globals=dict(fn=fn),
+                        number=number)
+
                 times.append(time)
+
             print(row_fmt.format(number, *(list(params) + times)))
 
         print()
@@ -259,7 +267,10 @@ def time(which):
 @cli.command()
 @click.argument('which', nargs=-1)
 def profile(which):
-    for timings_cls, params, ids in PROFILES:
+    for timings_cls in TIMINGS:
+        params = timings_cls.profile_params
+        ids = timings_cls.ids
+
         for name, cm in sorted(timings_cls(*params).extract_times()):
             full_name = make_full_name(timings_cls, name)
             if not any(fnmatchcase(full_name, w) for w in which):
