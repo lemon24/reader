@@ -4,7 +4,7 @@ from reader import Feed, Entry, Content, Enclosure
 
 
 feed = Feed(
-    url='full.rss',
+    url='{}full.rss'.format(url_base),
     updated=datetime.datetime(2010, 9, 6, 0, 1),
     title='RSS Title',
     link='http://www.example.com/main.html',

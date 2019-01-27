@@ -4,7 +4,7 @@ from reader import Feed, Entry, Content, Enclosure
 
 
 feed = Feed(
-    url='empty.atom',
+    url='{}empty.atom'.format(url_base),
 )
 
 entries = [

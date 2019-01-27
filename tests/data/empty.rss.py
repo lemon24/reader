@@ -4,7 +4,7 @@ from reader import Feed, Entry, Content, Enclosure
 
 
 feed = Feed(
-    url='empty.rss',
+    url='{}empty.rss'.format(url_base),
 )
 
 entries = [

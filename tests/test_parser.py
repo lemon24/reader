@@ -1,9 +1,8 @@
-from urllib.parse import urlparse
-import posixpath
 import warnings
 
 import pytest
 import feedparser
+from utils import make_url_base
 
 from reader import Feed
 from reader.parser import RequestsParser
@@ -84,73 +83,15 @@ def make_url(request, requests_mock):
     return request.param(requests_mock=requests_mock)
 
 
-@pytest.fixture(params=[
-    _make_relative_path_url,
-    _make_http_url,
-])
-def make_url_local_remote(request, requests_mock):
-    return request.param(requests_mock=requests_mock)
-
-
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_parse(monkeypatch, feed_type, parse, make_url, data_dir):
+@pytest.mark.parametrize('data_file', ['full', 'empty', 'relative'])
+def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     monkeypatch.chdir(data_dir.dirname)
 
-    feed_filename = 'full.{}'.format(feed_type)
+    feed_filename = '{}.{}'.format(data_file, feed_type)
     feed_url = make_url(data_dir.join(feed_filename))
 
-    expected = {}
-    exec(data_dir.join(feed_filename + '.py').read(), expected)
-
-    feed, entries, _, _ = parse(feed_url)
-    entries = list(entries)
-
-    assert feed == expected['feed']._replace(url=feed_url)
-    assert entries == expected['entries']
-
-
-@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_parse_empty(monkeypatch, feed_type, parse, make_relative_path_url, data_dir):
-    make_url = make_relative_path_url
-    monkeypatch.chdir(data_dir.dirname)
-
-    feed_filename = 'empty.{}'.format(feed_type)
-    feed_url = make_url(data_dir.join(feed_filename))
-
-    expected = {}
-    exec(data_dir.join(feed_filename + '.py').read(), expected)
-
-    feed, entries, _, _ = parse(feed_url)
-    entries = list(entries)
-
-    assert feed == expected['feed']._replace(url=feed_url)
-    assert entries == expected['entries']
-
-
-@pytest.mark.xfail
-def test_parse_returns_etag_last_modified():
-    # TODO: write this
-    assert False
-
-
-@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_parse_relative_links(monkeypatch, feed_type, parse, make_url_local_remote, data_dir):
-    make_url = make_url_local_remote
-    monkeypatch.chdir(data_dir.dirname)
-
-    feed_filename = 'relative.{}'.format(feed_type)
-    feed_url = make_url(data_dir.join(feed_filename))
-
-    url_base = urlparse(feed_url)
-    url_base = url_base._replace(
-        path=posixpath.dirname(url_base.path),
-        params='', query='', fragment='',
-    ).geturl()
-    if url_base:
-        url_base = url_base.rstrip('/') + '/'
-
-    rel_base = url_base if feed_url.startswith('http') else ''
-
+    url_base, rel_base = make_url_base(feed_url)
     expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(data_dir.join(feed_filename + '.py').read(), expected)
 
@@ -159,6 +100,12 @@ def test_parse_relative_links(monkeypatch, feed_type, parse, make_url_local_remo
 
     assert feed == expected['feed']
     assert entries == expected['entries']
+
+
+@pytest.mark.xfail
+def test_parse_returns_etag_last_modified():
+    # TODO: write this
+    assert False
 
 
 def test_parse_error(monkeypatch, parse, data_dir):
@@ -249,7 +196,8 @@ def test_parse_local_timezone(monkeypatch, request, parse, tz, data_dir):
 
     feed_path = data_dir.join('full.atom')
 
-    expected = {}
+    url_base, rel_base = make_url_base(str(feed_path))
+    expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(feed_path.new(ext='.atom.py').read(), expected)
 
     import time

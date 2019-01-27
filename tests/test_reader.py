@@ -10,6 +10,8 @@ from reader import FeedExistsError, FeedNotFoundError, ParseError, EntryNotFound
 
 from fakeparser import Parser, BlockingParser, FailingParser, NotModifiedParser
 
+from utils import make_url_base
+
 
 def test_update_feed_updated(reader, call_update_method):
     """If a feed is not newer than the stored one, it should not be updated,
@@ -820,9 +822,10 @@ def test_integration(reader, feed_type, data_dir):
     feed, = reader.get_feeds()
     entries = set(reader.get_entries())
 
-    expected = {}
+    url_base, rel_base = make_url_base(feed_url)
+    expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(data_dir.join(feed_filename + '.py').read(), expected)
 
-    assert feed == expected['feed']._replace(url=feed_url)
+    assert feed == expected['feed']
     assert entries == {e._replace(feed=feed) for e in expected['entries']}
 

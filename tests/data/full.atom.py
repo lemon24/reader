@@ -4,7 +4,7 @@ from reader import Feed, Entry, Content, Enclosure
 
 
 feed = Feed(
-    url='full.atom',
+    url='{}full.atom'.format(url_base),
     updated=datetime.datetime(2003, 12, 13, 18, 30, 2),
     title='Example Feed',
     link='http://example.org/',

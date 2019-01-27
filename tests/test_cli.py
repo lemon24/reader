@@ -2,6 +2,8 @@ import pytest
 import py.path
 from click.testing import CliRunner
 
+from utils import make_url_base
+
 from reader.cli import cli
 from reader import Reader
 
@@ -11,7 +13,8 @@ def test_cli(db_path, data_dir):
     feed_filename = 'full.atom'
     feed_path = str(data_dir.join(feed_filename))
 
-    expected = {}
+    url_base, rel_base = make_url_base(feed_path)
+    expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(data_dir.join(feed_filename + '.py').read(), expected)
 
     runner = CliRunner()
