@@ -102,12 +102,6 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     assert entries == expected['entries']
 
 
-@pytest.mark.xfail
-def test_parse_returns_etag_last_modified():
-    # TODO: write this
-    assert False
-
-
 def test_parse_error(monkeypatch, parse, data_dir):
     """parse() should reraise most feedparser exceptions."""
 
@@ -154,8 +148,6 @@ def make_http_url_304(requests_mock):
 def test_parse_not_modified(monkeypatch, parse, make_http_url_304, data_dir):
     """parse() should raise NotModified for unchanged feeds."""
 
-    monkeypatch.chdir(data_dir)
-
     feed_url = make_http_url_304(data_dir.join('full.atom'))
 
     with pytest.raises(NotModified):
@@ -179,8 +171,6 @@ def make_http_get_headers_url(requests_mock):
     yield make_url
 
 def test_parse_sends_etag_last_modified(monkeypatch, parse, make_http_get_headers_url, data_dir):
-    monkeypatch.chdir(data_dir)
-
     feed_url = make_http_get_headers_url(data_dir.join('full.atom'))
     parse(feed_url, 'etag', 'last_modified')
 
@@ -188,6 +178,49 @@ def test_parse_sends_etag_last_modified(monkeypatch, parse, make_http_get_header
 
     assert headers.get('If-None-Match') == 'etag'
     assert headers.get('If-Modified-Since') == 'last_modified'
+
+
+@pytest.fixture
+def make_http_etag_last_modified_url(requests_mock):
+    def make_url(feed_path):
+        url = 'http://example.com/' + feed_path.basename
+        headers = {
+            'ETag': make_url.etag,
+            'Last-Modified': make_url.last_modified,
+        }
+        if feed_path.ext == '.rss':
+            headers['Content-Type'] = 'application/x-rss+xml'
+        elif feed_path.ext == '.atom':
+            headers['Content-Type'] = 'application/atom+xml'
+        requests_mock.get(url, text=feed_path.read(), headers=headers)
+        return url
+    yield make_url
+
+def test_parse_returns_etag_last_modified(monkeypatch, parse,
+                                          make_http_etag_last_modified_url,
+                                          make_http_url,
+                                          make_relative_path_url,
+                                          data_dir):
+    monkeypatch.chdir(data_dir.dirname)
+
+    make_http_etag_last_modified_url.etag = 'etag'
+    make_http_etag_last_modified_url.last_modified = 'last_modified'
+
+    feed_url = make_http_etag_last_modified_url(data_dir.join('full.atom'))
+    _, _, etag, last_modified = parse(feed_url)
+
+    assert etag == 'etag'
+    assert last_modified == 'last_modified'
+
+    feed_url = make_http_url(data_dir.join('full.atom'))
+    _, _, etag, last_modified = parse(feed_url)
+
+    assert etag == last_modified == None
+
+    feed_url = make_relative_path_url(data_dir.join('full.atom'))
+    _, _, etag, last_modified = parse(feed_url)
+
+    assert etag == last_modified == None
 
 
 @pytest.mark.parametrize('tz', ['UTC', 'Europe/Helsinki'])
@@ -209,8 +242,6 @@ def test_parse_local_timezone(monkeypatch, request, parse, tz, data_dir):
 
 
 def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
-    monkeypatch.chdir(data_dir)
-
     feed_url = make_http_url(data_dir.join('empty.atom'))
     make_http_url(data_dir.join('full.atom'))
 
