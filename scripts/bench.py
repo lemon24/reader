@@ -8,6 +8,7 @@ from contextlib import contextmanager, ExitStack
 import inspect
 from functools import partial
 from fnmatch import fnmatchcase
+from collections import OrderedDict
 
 import click
 
@@ -21,11 +22,54 @@ from reader import Reader
 from reader.app import create_app, get_reader
 
 
-def set_up_db(path, num_entries):
-    parser = Parser()
-    reader = Reader(path)
+def get_params(fn):
+    rv = []
+    for param in inspect.signature(fn).parameters.values():
+        assert param.kind == param.POSITIONAL_OR_KEYWORD, (
+            f"parameter {param.name} of {fn.__name__} is variable")
+        rv.append(param.name)
+    return rv
 
-    num_feeds = 8
+def inject(**factories):
+    params = {p for cm in factories.values() for p in get_params(cm)}
+
+    def decorator(fn):
+        fn_params = get_params(fn)
+
+        @contextmanager
+        def wrapper(**kwargs):
+            for kw in kwargs:
+                if kw not in params:
+                    raise TypeError(
+                        f"{fn.__name__}({', '.join(sorted(params))}) "
+                        f"got an unexpected keyword argument {kw!r}")
+
+            with ExitStack() as stack:
+                fn_kwargs = {}
+                for cm_name, cm in factories.items():
+                    try:
+                        cm_kwargs = {p: kwargs[p] for p in get_params(cm)}
+                    except KeyError as e:
+                        raise TypeError(
+                            f"{fn.__name__}({', '.join(sorted(params))}) "
+                            f"missing required argument {e} (from {cm.__name__})"
+                        ) from None
+
+                    cm_val = stack.enter_context(cm(**cm_kwargs))
+                    if cm_name in fn_params:
+                        fn_kwargs[cm_name] = cm_val
+
+                yield partial(fn, **fn_kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def make_reader_with_entries(path, num_entries, num_feeds=8):
+    reader = Reader(path)
+    reader._parse = parser = Parser()
+
     for i in range(num_feeds):
         feed = parser.feed(i, datetime(2010, 1, 1))
         reader.add_feed(feed.url)
@@ -33,9 +77,7 @@ def set_up_db(path, num_entries):
     for i in range(num_entries):
         parser.entry(i % num_feeds, i, datetime(2010, 1, 1) + timedelta(i))
 
-    reader._parse = parser
-    reader.update_feeds()
-
+    return reader
 
 def make_test_client(path):
     app = create_app(path)
@@ -45,163 +87,66 @@ def make_test_client(path):
     return client
 
 
-class Timings:
+@contextmanager
+def setup_db():
+    with tempfile.TemporaryDirectory() as tmpdir:
+       yield os.path.join(tmpdir, 'db.sqlite')
 
-    """Scaffolding to manage setup and teardown for a bunch of functions.
+@contextmanager
+def setup_db_with_entries(num_entries):
+    with setup_db() as path:
+        make_reader_with_entries(path, num_entries).update_feeds()
+        yield path
 
-    >>> from contextlib import contextmanager
-    >>>
-    >>> class MyTimings(Timings):
-    ...
-    ...     @contextmanager
-    ...     def setup_thing(self):
-    ...         print("setup_thing: before making thing")
-    ...         yield 'thing value'
-    ...         print("setup_thing: after making thing")
-    ...
-    ...     def time_one(self, thing):
-    ...         print("time_one: doing stuff with thing:", thing)
-    ...
-    ...     def time_two(self):
-    ...         print("time_two: doing stuff")
-    ...
-    >>> for name, cm in sorted(MyTimings().extract_times()):
-    ...     with cm as fn:
-    ...         print("setup for", name, "done")
-    ...         fn()
-    ...     print("teardown for", name, "done")
-    ...
-    setup_thing: before making thing
-    setup for one done
-    time_one: doing stuff with thing: thing value
-    setup_thing: after making thing
-    teardown for one done
-    setup for two done
-    time_two: doing stuff
-    teardown for two done
+@contextmanager
+def setup_reader_with_entries(num_entries):
+    with setup_db_with_entries(num_entries) as path:
+        yield Reader(path)
+
+@contextmanager
+def setup_client_with_entries(num_entries):
+    with setup_db_with_entries(num_entries) as path:
+        yield make_test_client(path)
 
 
-    """
+@inject(reader=setup_reader_with_entries)
+def time_get_entries(reader):
+    for _ in reader.get_entries(which='all'):
+        pass
 
-    def get_methods_with_prefix(self, prefix):
-        for name, method in inspect.getmembers(self, inspect.ismethod):
-            if name.startswith(prefix):
-                yield name.partition(prefix)[2], method
+@inject(client=setup_client_with_entries)
+def time_show(client):
+    for _ in client.get('/?show=all').response:
+        pass
 
-    def extract_setups(self, method):
-        setups = dict(self.get_methods_with_prefix('setup_'))
-
-        for param in inspect.signature(method).parameters.values():
-            assert param.kind == param.POSITIONAL_OR_KEYWORD, (
-                "parameter {p.name} of {t.__name__}.{m.__name__} "
-                "is variable"
-                .format(p=param, m=method, t=type(self)))
-            assert param.name in setups, (
-                "{t.__name__}.setup_{p.name} required by "
-                "{t.__name__}.{m.__name__} not found"
-                .format(p=param, m=method, t=type(self)))
-
-            yield param.name, setups[param.name]
-
-    @contextmanager
-    def bind_setups(self, method):
-        with ExitStack() as stack:
-            yield partial(method, **{
-                name: stack.enter_context(setup())
-                for name, setup in self.extract_setups(method)
-            })
-
-    def extract_times(self):
-        for name, method in self.get_methods_with_prefix('time_'):
-            yield name, self.bind_setups(method)
-
-    def extract_time_names(self):
-        for name, _ in self.extract_times():
-            yield name
+@inject(client=setup_client_with_entries)
+def time_show_100k(client):
+    length = 0
+    for chunk in client.get('/?show=all').response:
+        length += len(chunk)
+        if length >= 100000:
+            break
 
 
-class GetEntries(Timings):
+@contextmanager
+def setup_reader_with_fake_parser(num_entries):
+    with setup_db() as path:
+        yield make_reader_with_entries(path, num_entries)
 
-    time_number = 4
-    time_params_list = [(2**i,) for i in range(5, 13)]
-    profile_params = (2**11, )
-    ids = ('entries', )
-
-    def __init__(self, num_entries=1):
-        self.num_entries = num_entries
-
-    @contextmanager
-    def setup_db(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, 'db.sqlite')
-            set_up_db(path, self.num_entries)
-            yield path
-
-    @contextmanager
-    def setup_reader(self):
-        with self.setup_db() as path:
-            yield Reader(path)
-
-    @contextmanager
-    def setup_client(self):
-        with self.setup_db() as path:
-            yield make_test_client(path)
-
-    def time_get_entries(self, reader):
-        for _ in reader.get_entries(which='all'):
-            pass
-
-    def time_show(self, client):
-        for _ in client.get('/?show=all').response:
-            pass
-
-    def time_show_100k(self, client):
-        length = 0
-        for chunk in client.get('/?show=all').response:
-            length += len(chunk)
-            if length >= 100000:
-                break
+@inject(reader=setup_reader_with_fake_parser)
+def time_update_feeds(reader):
+    reader.update_feeds()
 
 
-class UpdateFeeds(Timings):
-
-    time_number = 4
-    time_params_list = [(2**i,) for i in range(5, 13)]
-    profile_params = (2**11, )
-    ids = ('entries', )
-
-    def __init__(self, num_entries=1):
-        self.num_entries = num_entries
-
-    @contextmanager
-    def setup_reader(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = os.path.join(tmpdir, 'db.sqlite')
-
-            parser = Parser()
-            reader = Reader(path)
-
-            num_feeds = 8
-            for i in range(num_feeds):
-                feed = parser.feed(i, datetime(2010, 1, 1))
-                reader.add_feed(feed.url)
-
-            for i in range(self.num_entries):
-                parser.entry(i % num_feeds, i, datetime(2010, 1, 1) + timedelta(i))
-
-            reader._parse = parser
-
-            yield reader
-
-    def time_update_feeds(self, reader):
-        reader.update_feeds()
-
-
-TIMINGS = [GetEntries, UpdateFeeds]
-
-
-def make_full_name(timings_cls, name):
-    return "{}::{}".format(timings_cls.__name__, name)
+TIMINGS = OrderedDict(
+    (tn.partition('_')[2], t)
+    for tn, t in sorted(globals().items())
+    if tn.startswith('time_')
+)
+TIMINGS_PARAMS_LIST = [(2**i,) for i in range(5, 12)]
+TIMINGS_NUMBER = 4
+PROFILE_PARAMS = (2**11, )
+IDS = ('num_entries', )
 
 
 @click.group()
@@ -211,9 +156,8 @@ def cli():
 
 @cli.command(name='list')
 def list_():
-    for timings_cls in TIMINGS:
-        for name in sorted(timings_cls().extract_time_names()):
-            print(make_full_name(timings_cls, name))
+    for timing in TIMINGS:
+        print(timing)
 
 
 @cli.command()
@@ -222,69 +166,55 @@ def time(which):
     if not which:
         which = ['*']
 
-    for timings_cls in TIMINGS:
-        names = sorted(
-            name
-            for name in timings_cls().extract_time_names()
-            if any(
-                fnmatchcase(make_full_name(timings_cls, name), w)
-                for w in which
-            )
-        )
-        if not names:
-            continue
+    names = [
+        name
+        for name in TIMINGS
+        if any(fnmatchcase(name, w) for w in which)
+    ]
 
-        print(timings_cls.__name__)
+    extra = ['number'] + list(IDS)
+    header = ' '.join(extra + names)
+    print(header)
 
-        extra = ['number'] + list(timings_cls.ids)
-        header = ' '.join(extra + names)
-        print(header)
+    extra_fmt = ['{{:>{}}}'.format(len(e)) for e in extra]
+    names_fmt = ['{{:>{}.2f}}'.format(len(n)) for n in names]
+    row_fmt = ' '.join(extra_fmt + names_fmt)
 
-        extra_fmt = ['{{:>{}}}'.format(len(e)) for e in extra]
-        names_fmt = ['{{:>{}.2f}}'.format(len(n)) for n in names]
-        row_fmt = ' '.join(extra_fmt + names_fmt)
+    number = TIMINGS_NUMBER
 
-        number = timings_cls.time_number
+    for params in TIMINGS_PARAMS_LIST:
+        times = []
+        for name in names:
+            cm = TIMINGS[name](**dict(zip(IDS, params)))
+            with cm as fn:
+                time = timeit.timeit('fn()', globals=dict(fn=fn), number=number)
+            times.append(time)
 
-        for params in timings_cls.time_params_list:
-            times = []
-            for name, cm in sorted(timings_cls(*params).extract_times()):
-                if name not in names:
-                    continue
-
-                with cm as fn:
-                    time = timeit.timeit(
-                        'fn()', globals=dict(fn=fn),
-                        number=number)
-
-                times.append(time)
-
-            print(row_fmt.format(number, *(list(params) + times)))
-
-        print()
+        print(row_fmt.format(number, *(list(params) + times)))
 
 
 @cli.command()
 @click.argument('which', nargs=-1)
 def profile(which):
-    for timings_cls in TIMINGS:
-        params = timings_cls.profile_params
-        ids = timings_cls.ids
+    names = [
+        name
+        for name in TIMINGS
+        if any(fnmatchcase(name, w) for w in which)
+    ]
+    params = PROFILE_PARAMS
 
-        for name, cm in sorted(timings_cls(*params).extract_times()):
-            full_name = make_full_name(timings_cls, name)
-            if not any(fnmatchcase(full_name, w) for w in which):
-                continue
+    for name in names:
+        print(name, ' '.join('{}={}'.format(i, p) for i, p in zip(IDS, params)))
+        print()
 
-            print(full_name, ' '.join('{}={}'.format(i, p) for i, p in zip(ids, params)))
-            print()
+        cm = TIMINGS[name](**dict(zip(IDS, params)))
 
-            pr = cProfile.Profile()
-            with cm as fn:
-                pr.enable()
-                fn()
-                pr.disable()
-            pstats.Stats(pr).strip_dirs().sort_stats('cumulative').print_stats(40)
+        pr = cProfile.Profile()
+        with cm as fn:
+            pr.enable()
+            fn()
+            pr.disable()
+        pstats.Stats(pr).strip_dirs().sort_stats('cumulative').print_stats(40)
 
 
 if __name__ == '__main__':
