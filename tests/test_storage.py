@@ -3,9 +3,9 @@ import threading
 
 import pytest
 
-from reader.storage import Storage
-from reader.exceptions import StorageError
-import reader.db
+from reader.core.storage import Storage
+from reader import StorageError
+import reader.core.db
 
 from reader import Feed, Entry
 
@@ -16,9 +16,9 @@ def test_storage_errors_open(tmpdir):
         Storage(str(tmpdir))
 
 
-@pytest.mark.parametrize('db_error_cls', reader.db.db_errors)
+@pytest.mark.parametrize('db_error_cls', reader.core.db.db_errors)
 def test_db_errors(monkeypatch, db_path, db_error_cls):
-    """reader.db.DBError subclasses should be wrapped in StorageError."""
+    """reader.core.db.DBError subclasses should be wrapped in StorageError."""
 
     def open_db(*args, **kwargs):
         raise db_error_cls("whatever")

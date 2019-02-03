@@ -40,11 +40,11 @@ Print the titles of the unread entries::
 __version__ = '0.5.dev0'
 
 
-from .reader import Reader
+from .core.reader import Reader
 
-from .types import Feed, Entry, Content, Enclosure
+from .core.types import Feed, Entry, Content, Enclosure
 
-from .exceptions import (
+from .core.exceptions import (
     ReaderError,
     FeedError, FeedExistsError, FeedNotFoundError, ParseError,
     EntryError, EntryNotFoundError,

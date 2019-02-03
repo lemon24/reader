@@ -2,10 +2,10 @@ import sqlite3
 
 import pytest
 
-from reader.db import ddl_transaction
-from reader.db import HeavyMigration, SchemaVersionError
-from reader.db import RequirementError
-from reader.db import require_sqlite_version, require_sqlite_compile_options
+from reader.core.db import ddl_transaction
+from reader.core.db import HeavyMigration, SchemaVersionError
+from reader.core.db import RequirementError
+from reader.core.db import require_sqlite_version, require_sqlite_compile_options
 
 
 class WeirdError(Exception): pass

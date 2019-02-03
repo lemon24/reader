@@ -5,8 +5,8 @@ import feedparser
 from utils import make_url_base
 
 from reader import Feed
-from reader.parser import RequestsParser
-from reader.exceptions import ParseError, NotModified
+from reader.core.parser import RequestsParser
+from reader.core.exceptions import ParseError, NotModified
 
 
 @pytest.fixture

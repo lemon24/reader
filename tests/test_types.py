@@ -3,7 +3,7 @@ from collections import OrderedDict
 import pytest
 import attr
 
-from reader.types import attrs_namedtuple_compat
+from reader.core.types import attrs_namedtuple_compat
 
 
 def test_attrs_namedtuple_compat():

@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 
 from reader import FeedNotFoundError, Feed, Entry
-from reader.reader import feed_argument, entry_argument
+from reader.core.reader import feed_argument, entry_argument
 
 from fakeparser import ParserThatRemembers, Parser
 

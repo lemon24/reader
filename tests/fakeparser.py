@@ -2,7 +2,7 @@ from collections import OrderedDict
 import threading
 
 from reader import Feed, Entry, ParseError
-from reader.exceptions import NotModified
+from reader.core.exceptions import NotModified
 
 
 def _make_feed(number, updated=None, **kwargs):
