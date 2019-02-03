@@ -172,7 +172,7 @@ def require_sqlite_compile_options(db, options):
             .format(sorted(missing)))
 
 
-def update_from_10_to_11(db):
+def update_from_10_to_11(db):   # pragma: no cover
     db.execute("""
         ALTER TABLE feeds
         ADD COLUMN added TIMESTAMP;

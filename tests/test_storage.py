@@ -7,7 +7,7 @@ from reader.core.storage import Storage
 from reader import StorageError
 import reader.core.db
 
-from reader import Feed, Entry
+from reader import Feed, Entry, FeedNotFoundError
 
 
 def test_storage_errors_open(tmpdir):
@@ -195,4 +195,10 @@ def test_iter_locked(db_path, iter_stuff):
     storage.mark_as_read_unread(feed.url, entry.id, 1)
     storage = Storage(db_path, timeout=0)
     storage.mark_as_read_unread(feed.url, entry.id, 0)
+
+
+def test_update_feed_last_updated_not_found(db_path):
+    storage = Storage(db_path)
+    with pytest.raises(FeedNotFoundError):
+        storage.update_feed_last_updated('inexistent-feed', datetime(2010, 1, 2))
 

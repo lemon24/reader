@@ -632,6 +632,9 @@ def test_add_remove_get_feeds(reader, feed_arg):
     with pytest.raises(FeedNotFoundError):
         reader.remove_feed(feed_arg(one))
 
+    with pytest.raises(ValueError):
+        set(reader.get_feeds(sort='bad sort'))
+
 
 def test_get_feeds_order_title(reader):
     """When sort='title', feeds should be sorted by (with decreasing
