@@ -14,6 +14,7 @@ test: clean-pyc install-dev
 coverage: clean-pyc install-dev
 	pytest --cov -v --runslow
 	coverage html
+	coverage report --include '*/reader/core/*,*/reader/__init__.py' --fail-under 100 >/dev/null
 
 cov: coverage
 
