@@ -8,7 +8,7 @@ reader changelog
 Version 0.5
 -----------
 
-Unreleased
+Released 2019-02-09
 
 * Make updating new feeds up to 2 orders of magnitude faster;
   fixes a problem introduced by `#94`_. (`#104`_)
