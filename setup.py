@@ -32,7 +32,7 @@ setup(
         'plugins': ['setuptools>=40'],
         'dev': [
             # tests
-            'pytest>=3',
+            'pytest>=4',
             'coverage',
             'pytest-cov',
             'tox',
