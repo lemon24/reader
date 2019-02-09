@@ -12,8 +12,12 @@ Unreleased
 
 * Make updating new feeds up to 2 orders of magnitude faster;
   fixes a problem introduced by `#94`_. (`#104`_)
+* Move the core modules to a separate subpackage and enforce test coverage
+  (``make coverage`` now fails if :mod:`reader.core` coverage is less than
+  100%). (`#101`_)
 
 .. _#104: https://github.com/lemon24/reader/issues/104
+.. _#101: https://github.com/lemon24/reader/issues/101
 
 
 Version 0.4
