@@ -17,6 +17,8 @@ Unreleased
   100%). (`#101`_)
 * Support Python 3.8 development branch.
 * Add ``dev`` and ``docs`` extras (to install development requirements).
+* Build HTML documentation when running tox.
+* Add ``test-all`` and ``docs`` make targets (to run tox / build HTML docs).
 
 .. _#104: https://github.com/lemon24/reader/issues/104
 .. _#101: https://github.com/lemon24/reader/issues/101

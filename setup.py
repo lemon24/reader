@@ -43,6 +43,7 @@ setup(
             # docs
             'sphinx',
             'sphinx_rtd_theme',
+            'click>=5',
             'sphinx-click',
 
             # release
@@ -52,6 +53,7 @@ setup(
         'docs': [
             'sphinx',
             'sphinx_rtd_theme',
+            'click>=5',
             'sphinx-click',
         ],
     },

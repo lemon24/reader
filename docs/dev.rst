@@ -48,18 +48,13 @@ Start a local development server for the web-app::
 Building the documentation
 --------------------------
 
-The documentation is build with Sphinx.
+The documentation is build with Sphinx::
 
-To install the dependencies::
+    make docs               # installs the dependencies for you
 
-    pip install '.[cli,web-app,docs]'
+or, using Sphinx's Makefile directly::
 
-Then::
-
-    make docs
-
-or (using Sphinx's Makefile directly)::
-
+    pip install '.[docs]'   # to install the dependencies
     make -C docs html
 
 The built HTML docs should be in ``./docs/_build/html/``.
