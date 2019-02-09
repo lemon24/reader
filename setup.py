@@ -30,6 +30,30 @@ setup(
         'web-app': ['flask>=0.10', 'humanize'],
         'enclosure-tags': ['requests', 'mutagen'],
         'plugins': ['setuptools>=40'],
+        'dev': [
+            # tests
+            'pytest>=3',
+            'coverage',
+            'pytest-cov',
+            'tox',
+            'requests-mock',
+            'mechanicalsoup',
+            'requests-wsgi-adapter',
+
+            # docs
+            'sphinx',
+            'sphinx_rtd_theme',
+            'sphinx-click',
+
+            # release
+            'twine',
+
+        ],
+        'docs': [
+            'sphinx',
+            'sphinx_rtd_theme',
+            'sphinx-click',
+        ],
     },
     description="A minimal feed reader.",
     long_description=long_description,

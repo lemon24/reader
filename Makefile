@@ -3,10 +3,7 @@
 all: test
 
 install-dev:
-	pip install -q -e '.[cli,web-app,enclosure-tags,plugins]'
-	pip install -q -r test-requirements.txt
-	pip install -q pytest-cov
-	pip install -q twine
+	pip install -q -e '.[cli,web-app,enclosure-tags,plugins,dev]'
 
 test: clean-pyc install-dev
 	pytest -v --runslow
@@ -17,6 +14,12 @@ coverage: clean-pyc install-dev
 	coverage report --include '*/reader/core/*,*/reader/__init__.py' --fail-under 100 >/dev/null
 
 cov: coverage
+
+test-all: install-dev
+	tox
+
+docs: clean-pyc install-dev
+	 $(MAKE) -C docs html
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +

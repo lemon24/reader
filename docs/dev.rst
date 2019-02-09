@@ -14,30 +14,55 @@ Goals:
 
 Development should follow a problem-solution_ approach.
 
+.. _problem-solution: https://hintjens.gitbooks.io/scalable-c/content/chapter1.html#problem-what-do-we-do-next
+
 
 Testing
 -------
 
-Run tests::
+To install the testing dependencies::
 
-    tox
+    pip install '.[cli,web-app,enclosure-tags,plugins,dev]'
 
-or::
+Run tests for all supported Python versions::
 
-    make
+    make test-all           # installs the dependencies for you, or
+    tox                     # you need to install the dependencies first
 
-or::
+Run tests using the current Python interpreter::
 
-    python3 -m pytest --runslow
+    make                    # installs the dependencies for you, or
+    pytest -v --runslow     # you need to install the dependencies first
+
+Run tests with coverage and generate an HTML report (in ``./htmlcov``)::
+
+    make coverage           # installs the dependencies for you
 
 Start a local development server for the web-app::
 
-    READER_DB=db.sqlite FLASK_DEBUG=1 FLASK_APP=autoapp.py \
-        flask run -h localhost -p 8080
+    FLASK_DEBUG=1 FLASK_TRAP_BAD_REQUEST_ERRORS=1 \
+    FLASK_APP=src/reader/app/wsgi.py \
+    READER_DB=db.sqlite flask run -h 0.0.0.0 -p 8000
 
 
-.. _problem-solution: https://hintjens.gitbooks.io/scalable-c/content/chapter1.html#problem-what-do-we-do-next
+Building the documentation
+--------------------------
 
+The documentation is build with Sphinx.
+
+To install the dependencies::
+
+    pip install '.[cli,web-app,docs]'
+
+Then::
+
+    make docs
+
+or (using Sphinx's Makefile directly)::
+
+    make -C docs html
+
+The built HTML docs should be in ``./docs/_build/html/``.
 
 Making a release
 ----------------
