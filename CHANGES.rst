@@ -10,6 +10,8 @@ Version 0.6
 
 Unreleased
 
+* Minor web application style changes to make the layout more condensed.
+
 
 Version 0.5
 -----------

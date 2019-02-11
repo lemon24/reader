@@ -123,3 +123,51 @@ ul.controls .collapsible {
     word-break: break-word;
 }
 
+
+/* BEGIN Skeleton
+
+Using a stripped down version of https://github.com/dhg/Skeleton/
+
+Only kept stuff related to text typography.
+
+Headers bumped down 3 steps (h1 has the size of h4, ...).
+
+Many vertical margins removed, to make stuff more condensed.
+
+*/
+
+html {
+    font-size: 62.5%;
+}
+body {
+    font-size: 1.5em;
+    line-height: 1.2;
+    font-family: sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    margin-bottom: 2rem;
+    font-weight: bold;
+}
+h1 { font-size: 2.4rem; line-height: 1.35; }
+h2 { font-size: 1.8rem; line-height: 1.5; }
+h3, h4, h5, h6 { font-size: 1.5rem; line-height: 1.6; }
+
+p {
+    margin-top: 0;
+}
+
+ol, ul {
+    margin-top: 0;
+}
+ul ul,
+ul ol,
+ol ol,
+ol ul {
+    font-size: 90%;
+}
+
+/* END Skeleton */
+
+
