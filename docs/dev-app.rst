@@ -1,58 +1,74 @@
 
-## User interactions
+Web application philosophy
+==========================
+
+
+User interactions
+-----------------
 
 User interactions, by logical groups:
 
 * entry
-    * mark an entry as read
-    * mark an entry as unread
-    * go to an entry's link
-    * go to an entry's feed
-    * go to an entry's feed link
+
+  * mark an entry as read
+  * mark an entry as unread
+  * go to an entry's link
+  * go to an entry's feed
+  * go to an entry's feed link
 
 * entry list
-    * see the latest unread entries
-    * see the latest read entries
-    * see the latest entries
+
+  * see the latest unread entries
+  * see the latest read entries
+  * see the latest entries
 
 * entry list (feed)
-    * mark all the entries as read
-    * mark all the entries as unread
+
+  * mark all the entries as read
+  * mark all the entries as unread
 
 * feed
-    * add a feed
-    * delete a feed
-    * change a feed's title
-    * go to a feed's entries
-    * go to a feed's link
+
+  * add a feed
+  * delete a feed
+  * change a feed's title
+  * go to a feed's entries
+  * go to a feed's link
 
 * feed list
-    * see a list of all the feeds
+
+  * see a list of all the feeds
 
 * other
-    * be notified of the success/failure of a previous action
+
+  * be notified of the success/failure of a previous action
 
 Controls (below), mapped to user interactions:
 
 * link
-    * go to ...
-    * see ...
+
+  * go to ...
+  * see ...
 
 * simple button
-    * mark an entry as read
-    * mark an entry as unread
+
+  * mark an entry as read
+  * mark an entry as unread
 
 * button with input
-    * add a feed
-    * change a feed's title
+
+  * add a feed
+  * change a feed's title
 
 * button with checkbox
-    * mark all the entries are read
-    * mark all the entries are unread
-    * delete a feed
+
+  * mark all the entries are read
+  * mark all the entries are unread
+  * delete a feed
 
 
-## Controls
+Controls
+--------
 
 There are three interaction modes, HTML-only, HTML+CSS, and HTML+CSS+JS.
 Each mode adds enhancements on top of the previous one.
@@ -80,15 +96,19 @@ Buttons with checkbox consist of a checkbox, a label for the checkbox, and
 a button. The checkbox and label are hidden when not hovered.
 
 
-## Page structure
+Page structure
+--------------
 
 Text TBD.
 
 
-## Pages
+Pages
+-----
 
 Text TBD.
 
-![page structure, controls](redesign-01.png)
+.. figure:: images/redesign-01.png
+  :alt: page structure, controls
 
+  page structure, controls
 

@@ -78,3 +78,10 @@ Making a release (from ``x`` to ``y`` == ``x + 1``):
 * bump versions from ``y`` to ``(y + 1).dev0``, add ``(y + 1)`` changelog section
 * deactivate old versions in Read the Docs
 
+
+Web application
+---------------
+
+.. toctree::
+    dev-app
+
