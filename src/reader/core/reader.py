@@ -148,7 +148,7 @@ class Reader:
         """
         for row in self._storage.get_feeds_for_update(new_only=new_only):
             try:
-                self._update_feed(*row)
+                self._update_feed(row)
             except FeedNotFoundError as e:
                 log.info("update feed %r: feed removed during update", e.url)
             except ParseError as e:
@@ -170,7 +170,7 @@ class Reader:
         if len(rows) == 0:
             raise FeedNotFoundError(url)
         elif len(rows) == 1:
-            self._update_feed(*rows[0])
+            self._update_feed(rows[0])
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
@@ -178,23 +178,42 @@ class Reader:
     def _now():
         return datetime.datetime.utcnow()
 
-    def _update_feed(self, url, db_updated, http_etag, http_last_modified, stale, last_updated):
-        if stale:
-            db_updated = None
-            http_etag = None
-            http_last_modified = None
-            log.info("update feed %r: feed marked as stale, ignoring updated, http_etag or http_last_modified", url)
-
+    def _update_feed(self, feed_for_update):
         now = self._now()
 
+        url = feed_for_update.url
+        stale = feed_for_update.stale
+
+        if stale:
+            http_etag = None
+            http_last_modified = None
+            log.info("update feed %r: feed marked as stale, ignoring http_etag and http_last_modified", url)
+        else:
+            http_etag = feed_for_update.http_etag
+            http_last_modified = feed_for_update.http_last_modified
+
         try:
-            t = self._parse(url, http_etag, http_last_modified)
-            feed, entries, http_etag, http_last_modified = t
+            parsed_feed = self._parse(url, http_etag, http_last_modified)
         except NotModified:
             log.info("update feed %r: feed not modified, skipping", url)
             # The feed shouldn't be considered new anymore.
             self._storage.update_feed_last_updated(url, now)
             return
+
+        parsed_feed = parsed_feed[:1] + ((
+            (e, self._storage.get_entry_for_update(url, e.id))
+            for e in parsed_feed[1]
+        ), ) + parsed_feed[2:]
+
+        self._update_feed_inner(now, feed_for_update, parsed_feed)
+
+    def _update_feed_inner(self, now, feed_for_update, parsed_feed):
+        url, db_updated, _, _, stale, last_updated = feed_for_update
+        feed, entries, http_etag, http_last_modified = parsed_feed
+
+        if stale:
+            db_updated = None
+            log.info("update feed %r: feed marked as stale, ignoring updated", url)
 
         updated = feed.updated
         log.debug("update feed %r: old updated %s, new updated %s", url, db_updated, updated)
@@ -225,9 +244,9 @@ class Reader:
             nonlocal entries_updated, entries_new
 
             last_updated = now
-            for entry in reversed(list(entries)):
+            for entry, entry_for_update in reversed(list(entries)):
                 assert entry.feed is None
-                entry_updated, entry_new, updated = self._should_update_entry(url, entry, stale, now, last_updated)
+                entry_updated, entry_new, updated = self._should_update_entry(url, entry, stale, now, entry_for_update)
 
                 if entry_new:
                     entries_new_list.append(entry)
@@ -249,8 +268,8 @@ class Reader:
 
         log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
 
-    def _should_update_entry(self, feed_url, entry, stale, now, last_updated):
-        entry_exists, db_updated = self._storage.get_entry_for_update(feed_url, entry.id)
+    def _should_update_entry(self, feed_url, entry, stale, now, entry_for_update):
+        entry_exists, db_updated = entry_for_update
         updated = entry.updated
 
         if stale:
