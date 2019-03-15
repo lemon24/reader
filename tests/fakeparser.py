@@ -3,6 +3,7 @@ import threading
 
 from reader import Feed, Entry, ParseError
 from reader.core.exceptions import NotModified
+from reader.core.parser import ParsedFeed
 
 
 def _make_feed(number, updated=None, **kwargs):
@@ -52,7 +53,9 @@ class Parser:
                 break
         else:
             raise RuntimeError("unkown feed: {}".format(url))
-        return feed, self.entries[feed_number].values(), self.http_etag, self.http_last_modified
+        return ParsedFeed(
+            feed, self.entries[feed_number].values(),
+            self.http_etag, self.http_last_modified)
 
     def get_tuples(self):
         for feed_number, entries in self.entries.items():

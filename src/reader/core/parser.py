@@ -5,6 +5,7 @@ import logging
 import functools
 import urllib.parse
 import contextlib
+from collections import namedtuple
 
 import feedparser
 import requests
@@ -18,6 +19,9 @@ from .types import Feed, Entry, Content, Enclosure
 from .exceptions import ParseError, NotModified
 
 log = logging.getLogger('reader')
+
+
+ParsedFeed = namedtuple('ParsedFeed', 'feed entries http_etag http_last_modified')
 
 
 def _datetime_from_timetuple(tt):
@@ -121,7 +125,8 @@ class RequestsParser:
     def _parse_file(self, path):
         # TODO: What about untrusted input?
         result = feedparser.parse(path)
-        return _process_feed(path, result) + (None, None)
+        feed, entries = _process_feed(path, result)
+        return ParsedFeed(feed, entries, None, None)
 
     def _parse_http(self, url, http_etag, http_last_modified):
         """
@@ -190,6 +195,7 @@ class RequestsParser:
         http_etag = response.headers.get('ETag', http_etag)
         http_last_modified = response.headers.get('Last-Modified', http_last_modified)
 
-        return _process_feed(url, result) + (http_etag, http_last_modified)
+        feed, entries = _process_feed(url, result)
+        return ParsedFeed(feed, entries, http_etag, http_last_modified)
 
 

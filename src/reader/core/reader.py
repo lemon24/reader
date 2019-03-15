@@ -200,10 +200,10 @@ class Reader:
             self._storage.update_feed_last_updated(url, now)
             return
 
-        parsed_feed = parsed_feed[:1] + ((
+        parsed_feed = parsed_feed._replace(entries=(
             (e, self._storage.get_entry_for_update(url, e.id))
-            for e in parsed_feed[1]
-        ), ) + parsed_feed[2:]
+            for e in parsed_feed.entries
+        ))
 
         self._update_feed_inner(now, feed_for_update, parsed_feed)
 
