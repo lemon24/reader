@@ -205,7 +205,11 @@ class Reader:
             for e in parsed_feed.entries
         ))
 
-        self._update_feed_inner(now, feed_for_update, parsed_feed)
+        new_entries = self._update_feed_inner(now, feed_for_update, parsed_feed)
+
+        for entry in new_entries:
+            for plugin in self._post_entry_add_plugins:
+                plugin(self, parsed_feed.feed, entry)
 
     def _update_feed_inner(self, now, feed_for_update, parsed_feed):
         url, db_updated, _, _, stale, last_updated = feed_for_update
@@ -270,14 +274,12 @@ class Reader:
 
         self._storage.add_or_update_entries(filter_entries_for_update())
 
-        for entry in entries_new_list:
-            for plugin in self._post_entry_add_plugins:
-                plugin(self, feed, entry)
-
         if not should_be_updated and (entries_updated or entries_new):
             self._storage.update_feed_last_updated(url, now)
 
         log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
+
+        return entries_new_list
 
     def _should_update_entry(self, feed_url, entry, stale, now, entry_for_update):
         entry_exists, db_updated = entry_for_update
