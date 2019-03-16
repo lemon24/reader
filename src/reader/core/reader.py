@@ -212,7 +212,14 @@ class Reader:
         feed, entries, http_etag, http_last_modified = parsed_feed
 
         if stale:
-            # FIXME: not tested (replaced with pass and no tests failed)
+            # Not tested (replaced the line with pass and no tests failed).
+            #
+            # This only matters if last_updated is None *and* db_updated is
+            # not None. The way the code is, this shouldn't be possible
+            # (last_updated is always set if the feed was updated at least
+            # once, unless the database predates last_updated). Added an
+            # assert in the "if not last_updated" block for this.
+            #
             db_updated = None
             log.info("update feed %r: feed marked as stale, ignoring updated", url)
 
@@ -222,6 +229,9 @@ class Reader:
         if not last_updated:
             log.info("update feed %r: feed has no last_updated, treating as updated", url)
             feed_was_updated = True
+
+            assert not db_updated, "updated must be None if last_updated is None"
+
         elif not updated:
             log.info("update feed %r: feed has no updated, treating as updated", url)
             feed_was_updated = True

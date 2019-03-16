@@ -230,7 +230,9 @@ def test_update_new_only_no_last_updated(reader):
     feed = parser.feed(1, datetime(2010, 1, 1))
 
     reader.add_feed(feed.url)
-    reader._storage.update_feed(feed.url, feed, None, None, last_updated=None)
+    # updated must be None if last_updated is None
+    reader._storage.update_feed(feed.url, feed._replace(updated=None),
+                                None, None, last_updated=None)
 
     reader.update_feeds(new_only=True)
 
