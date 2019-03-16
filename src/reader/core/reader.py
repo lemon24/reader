@@ -275,7 +275,6 @@ class Reader:
                 plugin(self, feed, entry)
 
         if not should_be_updated and (entries_updated or entries_new):
-            # FIXME: not tested (replaced with pass and no tests failed)
             self._storage.update_feed_last_updated(url, now)
 
         log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)

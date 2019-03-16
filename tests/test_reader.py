@@ -269,6 +269,30 @@ def test_update_new_only_not_modified(reader):
     assert len(list(reader.get_entries(feed=feed.url))) == 0
 
 
+def test_update_last_updated_entries_updated_feed_not_updated(reader, call_update_method):
+    """A feed's last_updated should be updated if any of its entries are,
+    even if the feed itself isn't updated.
+
+    """
+    parser = Parser()
+    reader._parse = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    reader.add_feed(feed.url)
+    reader._now = lambda: datetime(2010, 1, 1)
+    call_update_method(reader, feed.url)
+
+    feed_for_update, = reader._storage.get_feeds_for_update(url=feed.url)
+    assert feed_for_update.last_updated ==  datetime(2010, 1, 1)
+
+    parser.entry(1, 1, datetime(2010, 1, 1))
+    reader._now = lambda: datetime(2010, 1, 2)
+    call_update_method(reader, feed.url)
+
+    feed_for_update, = reader._storage.get_feeds_for_update(url=feed.url)
+    assert feed_for_update.last_updated ==  datetime(2010, 1, 2)
+
+
 def test_update_feeds_parse_error(reader):
     parser = Parser()
     reader._parse = parser
