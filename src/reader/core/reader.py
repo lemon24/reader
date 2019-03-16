@@ -205,7 +205,31 @@ class Reader:
             for e in parsed_feed.entries
         ))
 
-        new_entries = self._update_feed_inner(now, feed_for_update, parsed_feed)
+        should_update_feed, entries_to_update = self._update_feed_inner(now, feed_for_update, parsed_feed)
+
+        updated_count = 0
+        new_count = 0
+        new_entries = []
+
+        def prepare_entries_for_update():
+            nonlocal updated_count, new_count
+            for entry_new, entry, updated, last_updated in entries_to_update:
+                if entry_new:
+                    new_count += 1
+                    new_entries.append(entry)
+                else:
+                    updated_count += 1
+                yield url, entry, updated, last_updated
+
+        self._storage.add_or_update_entries(prepare_entries_for_update())
+
+        if should_update_feed:
+            self._storage.update_feed(url, parsed_feed.feed, parsed_feed.http_etag,
+                                      parsed_feed.http_last_modified, now)
+        elif new_count or updated_count:
+            self._storage.update_feed_last_updated(url, now)
+
+        log.info("update feed %r: updated (updated %d, new %d)", url, updated_count, new_count)
 
         for entry in new_entries:
             for plugin in self._post_entry_add_plugins:
@@ -249,37 +273,18 @@ class Reader:
             # https://github.com/lemon24/reader/issues/76
             log.info("update feed %r: feed not updated, updating entries anyway", url)
 
-        if should_be_updated:
-            self._storage.update_feed(url, feed, http_etag, http_last_modified, now)
-
-        entries_updated, entries_new = 0, 0
-        entries_new_list = []
-
         def filter_entries_for_update():
-            nonlocal entries_updated, entries_new
-
             last_updated = now
             for entry, entry_for_update in reversed(list(entries)):
                 assert entry.feed is None
                 entry_updated, entry_new, updated = self._should_update_entry(url, entry, stale, now, entry_for_update)
 
-                if entry_new:
-                    entries_new_list.append(entry)
                 if entry_updated or entry_new:
-                    yield url, entry, updated, last_updated
+                    yield entry_new, entry, updated, last_updated
 
-                entries_updated += entry_updated
-                entries_new += entry_new
                 last_updated += datetime.timedelta(microseconds=1)
 
-        self._storage.add_or_update_entries(filter_entries_for_update())
-
-        if not should_be_updated and (entries_updated or entries_new):
-            self._storage.update_feed_last_updated(url, now)
-
-        log.info("update feed %r: updated (updated %d, new %d)", url, entries_updated, entries_new)
-
-        return entries_new_list
+        return should_be_updated, filter_entries_for_update()
 
     def _should_update_entry(self, feed_url, entry, stale, now, entry_for_update):
         entry_exists, db_updated = entry_for_update
