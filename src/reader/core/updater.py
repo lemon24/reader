@@ -6,32 +6,33 @@ from .exceptions import NotModified
 log = logging.getLogger('reader')
 
 
-def update_feed(feed_for_update, now, parser, storage):
-    url = feed_for_update.url
-    stale = feed_for_update.stale
+def update_feed(old_feed, now, parser, storage):
+    url = old_feed.url
 
-    if stale:
-        http_etag = None
-        http_last_modified = None
-        log.info("update feed %r: feed marked as stale, ignoring http_etag and http_last_modified", url)
-    else:
-        http_etag = feed_for_update.http_etag
-        http_last_modified = feed_for_update.http_last_modified
+    if old_feed.stale:
+        # db_updated=None not ot tested (removing it causes no tests to fail).
+        #
+        # This only matters if last_updated is None *and* db_updated is
+        # not None. The way the code is, this shouldn't be possible
+        # (last_updated is always set if the feed was updated at least
+        # once, unless the database predates last_updated).
+        #
+        old_feed = old_feed._replace(updated=None, http_etag=None, http_last_modified=None)
+        log.info("update feed %r: feed marked as stale, ignoring updated, http_etag and http_last_modified", url)
 
     try:
-        parsed_feed = parser(url, http_etag, http_last_modified)
+        parsed_feed = parser(url, old_feed.http_etag, old_feed.http_last_modified)
     except NotModified:
         log.info("update feed %r: feed not modified, skipping", url)
         # The feed shouldn't be considered new anymore.
         storage.update_feed_last_updated(url, now)
         return None, ()
 
-    parsed_feed = parsed_feed._replace(entries=(
-        (e, storage.get_entry_for_update(url, e.id))
-        for e in parsed_feed.entries
-    ))
-
-    should_update_feed, entries_to_update = update_feed_inner(now, feed_for_update, parsed_feed)
+    should_update_feed, entries_to_update = update_feed_inner(
+        now, old_feed, parsed_feed.feed,
+        ((e, storage.get_entry_for_update(url, e.id))
+         for e in parsed_feed.entries),
+    )
 
     updated_count = 0
     new_count = 0
@@ -60,21 +61,8 @@ def update_feed(feed_for_update, now, parser, storage):
     return parsed_feed.feed, new_entries
 
 
-def update_feed_inner(now, feed_for_update, parsed_feed):
-    url, db_updated, _, _, stale, last_updated = feed_for_update
-    feed, entries, http_etag, http_last_modified = parsed_feed
-
-    if stale:
-        # Not tested (replaced the line with pass and no tests failed).
-        #
-        # This only matters if last_updated is None *and* db_updated is
-        # not None. The way the code is, this shouldn't be possible
-        # (last_updated is always set if the feed was updated at least
-        # once, unless the database predates last_updated). Added an
-        # assert in the "if not last_updated" block for this.
-        #
-        db_updated = None
-        log.info("update feed %r: feed marked as stale, ignoring updated", url)
+def update_feed_inner(now, old_feed, feed, entries):
+    url, db_updated, _, _, stale, last_updated = old_feed
 
     updated = feed.updated
     log.debug("update feed %r: old updated %s, new updated %s", url, db_updated, updated)
@@ -98,22 +86,23 @@ def update_feed_inner(now, feed_for_update, parsed_feed):
         # https://github.com/lemon24/reader/issues/76
         log.info("update feed %r: feed not updated, updating entries anyway", url)
 
-    def filter_entries_for_update():
-        last_updated = now
-        for entry, entry_for_update in reversed(list(entries)):
-            assert entry.feed is None
-            entry_updated, entry_new, updated = should_update_entry(url, entry, stale, now, entry_for_update)
-
-            if entry_updated or entry_new:
-                yield entry_new, entry, updated, last_updated
-
-            last_updated += datetime.timedelta(microseconds=1)
-
-    return should_be_updated, filter_entries_for_update()
+    return should_be_updated, filter_entries_for_update(url, now, entries, stale)
 
 
-def should_update_entry(feed_url, entry, stale, now, entry_for_update):
-    entry_exists, db_updated = entry_for_update
+def filter_entries_for_update(url, now, entries, stale):
+    last_updated = now
+    for entry, old_entry in reversed(list(entries)):
+        assert entry.feed is None
+        entry_updated, entry_new, updated = should_update_entry(url, entry, stale, now, old_entry)
+
+        if entry_updated or entry_new:
+            yield entry_new, entry, updated, last_updated
+
+        last_updated += datetime.timedelta(microseconds=1)
+
+
+def should_update_entry(feed_url, entry, stale, now, old_entry):
+    entry_exists, db_updated = old_entry
     updated = entry.updated
 
     if stale:
