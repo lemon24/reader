@@ -28,8 +28,9 @@ def update_feed(old_feed, now, parser, storage):
         storage.update_feed_last_updated(url, now)
         return None, ()
 
-    should_update_feed, entries_to_update = update_feed_inner(
-        now, old_feed, parsed_feed.feed,
+    update_feed = should_update_feed(now, old_feed, parsed_feed.feed)
+
+    entries_to_update = filter_entries_for_update(url, now, old_feed.stale,
         ((e, storage.get_entry_for_update(url, e.id))
          for e in parsed_feed.entries),
     )
@@ -50,7 +51,7 @@ def update_feed(old_feed, now, parser, storage):
 
     storage.add_or_update_entries(prepare_entries_for_update())
 
-    if should_update_feed:
+    if update_feed:
         storage.update_feed(url, parsed_feed.feed, parsed_feed.http_etag,
                             parsed_feed.http_last_modified, now)
     elif new_count or updated_count:
@@ -61,7 +62,7 @@ def update_feed(old_feed, now, parser, storage):
     return parsed_feed.feed, new_entries
 
 
-def update_feed_inner(now, old_feed, feed, entries):
+def should_update_feed(now, old_feed, feed):
     url, db_updated, _, _, stale, last_updated = old_feed
 
     updated = feed.updated
@@ -86,10 +87,10 @@ def update_feed_inner(now, old_feed, feed, entries):
         # https://github.com/lemon24/reader/issues/76
         log.info("update feed %r: feed not updated, updating entries anyway", url)
 
-    return should_be_updated, filter_entries_for_update(url, now, entries, stale)
+    return should_be_updated
 
 
-def filter_entries_for_update(url, now, entries, stale):
+def filter_entries_for_update(url, now, stale, entries):
     last_updated = now
     for entry, old_entry in reversed(list(entries)):
         assert entry.feed is None
