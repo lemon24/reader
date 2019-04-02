@@ -10,7 +10,7 @@ log = logging.getLogger('reader')
 
 def update_feed(old_feed, now, parser, storage):
     updater = Updater(old_feed, now)
-    updater(parser, storage)
+    updater.update(parser, storage)
     return updater.new_feed, updater.new_entries
 
 
@@ -86,15 +86,14 @@ class Updater:
         log.debug("update entry %r of feed %r: entry added/updated", new.id, self.url)
         return (0, 1, updated) if not old.exists else (1, 0, updated)
 
-    def get_entry_pairs(self, entries, storage):
+    def get_entries_to_update(self, entries, storage):
         entries = list(entries)
-        return zip(entries, storage.get_entries_for_update([
+        pairs = zip(entries, storage.get_entries_for_update([
             (self.url, e.id) for e in entries
         ]))
 
-    def get_entries_to_update(self, entries, storage):
         last_updated = self.now
-        for new_entry, old_entry in reversed(list(self.get_entry_pairs(entries, storage))):
+        for new_entry, old_entry in reversed(list(pairs)):
             assert new_entry.feed is None
             entry_updated, entry_new, updated = self.should_update_entry(new_entry, old_entry)
 
@@ -103,25 +102,18 @@ class Updater:
 
             last_updated += datetime.timedelta(microseconds=1)
 
-    def update_entries(self, entries, storage):
-        entries_to_update = self.get_entries_to_update(entries, storage)
+    def prepare_entries_for_update(self, entries_to_update):
+        self.updated_entries = []
+        self.new_entries = []
 
-        updated_entries = []
-        new_entries = []
+        for entry_new, entry, updated, last_updated in entries_to_update:
+            if entry_new:
+                self.new_entries.append(entry)
+            else:
+                self.updated_entries.append(entry)
+            yield self.url, entry, updated, last_updated
 
-        def prepare_entries_for_update():
-            for entry_new, entry, updated, last_updated in entries_to_update:
-                if entry_new:
-                    new_entries.append(entry)
-                else:
-                    updated_entries.append(entry)
-                yield self.url, entry, updated, last_updated
-
-        storage.add_or_update_entries(prepare_entries_for_update())
-
-        return updated_entries, new_entries
-
-    def __call__(self, parser, storage):
+    def update(self, parser, storage):
         try:
             parse_result = parser(self.url,
                                   self.old_feed.http_etag,
@@ -132,8 +124,13 @@ class Updater:
             storage.update_feed_last_updated(self.url, self.now)
             return None, ()
 
+        self.new_feed = parse_result.feed
+
         should_update_feed = self.should_update_feed(parse_result.feed)
-        updated_entries, new_entries = self.update_entries(parse_result.entries, storage)
+
+        entries_to_update = self.get_entries_to_update(parse_result.entries, storage)
+        entries_for_update = self.prepare_entries_for_update(entries_to_update)
+        storage.add_or_update_entries(entries_for_update)
 
         if should_update_feed:
             storage.update_feed(self.url,
@@ -141,14 +138,9 @@ class Updater:
                                 parse_result.http_etag,
                                 parse_result.http_last_modified,
                                 self.now)
-        elif new_entries or updated_entries:
+        elif self.new_entries or self.updated_entries:
             storage.update_feed_last_updated(self.url, self.now)
 
         log.info("update feed %r: updated (updated %d, new %d)",
-                 self.url, len(updated_entries), len(new_entries))
-
-        self.new_feed = parse_result.feed
-        self.new_entries = new_entries
-        self.updated_entries = updated_entries
-
+                 self.url, len(self.updated_entries), len(self.new_entries))
 
