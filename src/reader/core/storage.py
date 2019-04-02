@@ -4,6 +4,7 @@ import functools
 import logging
 import json
 from collections import namedtuple
+from itertools import chain
 
 from .db import open_db, DBError
 from .exceptions import (
@@ -120,22 +121,29 @@ class Storage:
     def get_feeds_for_update(self, url=None, new_only=False):
         return iter(list(self._get_feeds_for_update(url=url, new_only=new_only)))
 
-    def _get_entry_for_update(self, feed_url, id):
-        rv = self.db.execute("""
-            SELECT updated
-            FROM entries
-            WHERE feed = :feed_url
-                AND id = :id;
-        """, locals()).fetchone()
-        if not rv:
-            return EntryForUpdate(False, None)
-        return EntryForUpdate(True, rv[0])
-
     @wrap_storage_exceptions()
     def get_entries_for_update(self, entries):
-        # TODO: refactor into a single query
-        with self.db:
-            return iter([self._get_entry_for_update(*e) for e in entries])
+        entries = list(entries)
+        if not entries:
+            return []
+
+        values_snippet = ', '.join(['(?, ?)'] * len(entries))
+        parameters = list(chain.from_iterable(entries))
+
+        rv = self.db.execute("""
+            WITH
+                input(feed, id) AS (
+                    VALUES {values_snippet}
+                )
+                SELECT
+                    entries.id IS NOT NULL,
+                    entries.updated
+                FROM input
+                LEFT JOIN entries
+                    ON (input.id, input.feed) == (entries.id, entries.feed);
+        """.format(values_snippet=values_snippet), parameters)
+
+        return iter([EntryForUpdate._make(row) for row in rv])
 
     @wrap_storage_exceptions()
     def set_feed_user_title(self, url, title):
