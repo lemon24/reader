@@ -63,8 +63,8 @@ def get_feeds(storage, _, __):
 def get_feeds_for_update(storage, _, __):
     list(storage.get_feeds_for_update())
 
-def get_entry_for_update(storage, feed, entry):
-    storage.get_entry_for_update(feed.url, entry.id)
+def get_entries_for_update(storage, feed, entry):
+    storage.get_entries_for_update([(feed.url, entry.id)])
 
 def set_feed_user_title(storage, feed, __):
     storage.set_feed_user_title(feed.url, 'title')
@@ -97,7 +97,7 @@ def get_entries_chunk_size_1(storage, _, __):
     remove_feed,
     get_feeds,
     get_feeds_for_update,
-    get_entry_for_update,
+    get_entries_for_update,
     set_feed_user_title,
     mark_as_stale,
     mark_as_read_unread,

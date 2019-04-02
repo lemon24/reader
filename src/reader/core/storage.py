@@ -120,8 +120,7 @@ class Storage:
     def get_feeds_for_update(self, url=None, new_only=False):
         return iter(list(self._get_feeds_for_update(url=url, new_only=new_only)))
 
-    @wrap_storage_exceptions()
-    def get_entry_for_update(self, feed_url, id):
+    def _get_entry_for_update(self, feed_url, id):
         rv = self.db.execute("""
             SELECT updated
             FROM entries
@@ -131,6 +130,12 @@ class Storage:
         if not rv:
             return EntryForUpdate(False, None)
         return EntryForUpdate(True, rv[0])
+
+    @wrap_storage_exceptions()
+    def get_entries_for_update(self, entries):
+        # TODO: refactor into a single query
+        with self.db:
+            return iter([self._get_entry_for_update(*e) for e in entries])
 
     @wrap_storage_exceptions()
     def set_feed_user_title(self, url, title):

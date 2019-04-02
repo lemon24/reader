@@ -87,8 +87,10 @@ class Updater:
         return (0, 1, updated) if not old.exists else (1, 0, updated)
 
     def get_entry_pairs(self, entries, storage):
-        for entry in entries:
-            yield entry, storage.get_entry_for_update(self.url, entry.id)
+        entries = list(entries)
+        return zip(entries, storage.get_entries_for_update([
+            (self.url, e.id) for e in entries
+        ]))
 
     def get_entries_to_update(self, entries, storage):
         last_updated = self.now
