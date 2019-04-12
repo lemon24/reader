@@ -72,12 +72,20 @@ def _make_http_gzip_url(requests_mock, **_):
         return url
     return make_url
 
+def _make_http_url_missing_content_type(requests_mock, **_):
+    def make_url(feed_path):
+        url = 'http://example.com/' + feed_path.basename
+        requests_mock.get(url, text=feed_path.read())
+        return url
+    return make_url
+
 @pytest.fixture(params=[
     _make_relative_path_url,
     _make_absolute_path_url,
     _make_http_url,
     _make_https_url,
     _make_http_gzip_url,
+    _make_http_url_missing_content_type,
 ])
 def make_url(request, requests_mock):
     return request.param(requests_mock=requests_mock)

@@ -182,6 +182,13 @@ class RequestsParser:
             headers = response.headers.copy()
             headers.setdefault('content-location', response.url)
 
+            # Some feeds don't have a content type, which results in
+            # feedparser.NonXMLContentType being raised. There are valid feeds
+            # with no content type, so we set it anyway and hope feedparser
+            # fails in some other way if the feed really is broken.
+            # https://github.com/lemon24/reader/issues/108
+            headers.setdefault('content-type', 'text/xml')
+
             # with response doesn't work with requests 2.9.1
             with contextlib.closing(response):
                 result = feedparser.parse(response.raw, response_headers=headers)
