@@ -10,6 +10,8 @@ Version 0.7
 
 Unreleased
 
+* Increase timeout of the button actions from 2 to 10 seconds.
+
 
 Version 0.6
 -----------
