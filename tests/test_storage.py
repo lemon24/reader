@@ -1,9 +1,10 @@
 from datetime import datetime
 import threading
+import sqlite3
 
 import pytest
 
-from reader.core.storage import Storage
+from reader.core.storage import Storage, EntryForUpdate
 from reader import StorageError
 import reader.core.db
 
@@ -201,4 +202,59 @@ def test_update_feed_last_updated_not_found(db_path):
     storage = Storage(db_path)
     with pytest.raises(FeedNotFoundError):
         storage.update_feed_last_updated('inexistent-feed', datetime(2010, 1, 2))
+
+
+@pytest.mark.parametrize('entry_count', [
+    # We assume the query uses 2 parameters per entry (feed URL and entry ID).
+
+    # variable_number defaults to 999 when compiling SQLite from sources
+    int(999 / 2) + 1,
+
+    # variable_number defaults to 250000 in Ubuntu 18.04 -provided SQLite
+    pytest.param(int(250000 / 2) + 1, marks=pytest.mark.slow),
+])
+def test_get_entries_for_update_param_limit(entry_count):
+    """get_entries_for_update() should work even if the number of query
+    parameters goes over the variable_number SQLite run-time limit.
+
+    https://github.com/lemon24/reader/issues/109
+
+    """
+    storage = Storage(':memory:')
+
+    # shouldn't raise an exception
+    list(storage.get_entries_for_update(
+        ('feed', 'entry-{}'.format(i))
+        for i in range(entry_count)
+    ))
+
+
+class StorageNoGetEntriesForUpdateFallback(Storage):
+
+    def _get_entries_for_update_n_queries(self, _):
+        assert False, "shouldn't get called"
+
+class StorageAlwaysGetEntriesForUpdateFallback(Storage):
+
+    def _get_entries_for_update_one_query(self, _):
+        raise sqlite3.OperationalError("too many SQL variables")
+
+@pytest.mark.parametrize('storage_cls', [
+    StorageNoGetEntriesForUpdateFallback,
+    StorageAlwaysGetEntriesForUpdateFallback,
+])
+def test_get_entries_for_update(storage_cls):
+    storage = storage_cls(':memory:')
+    storage.add_feed('feed')
+    storage.add_or_update_entry(
+        'feed', Entry('one', None), datetime(2010, 1, 1), datetime(2010, 1, 2))
+
+    assert list(storage.get_entries_for_update([
+        ('feed', 'one'),
+        ('feed', 'two'),
+    ])) == [
+        EntryForUpdate(True, datetime(2010, 1, 1)),
+        EntryForUpdate(False, None),
+    ]
+
 

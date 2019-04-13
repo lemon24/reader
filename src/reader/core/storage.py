@@ -121,9 +121,22 @@ class Storage:
     def get_feeds_for_update(self, url=None, new_only=False):
         return iter(list(self._get_feeds_for_update(url=url, new_only=new_only)))
 
-    @wrap_storage_exceptions()
-    def get_entries_for_update(self, entries):
-        entries = list(entries)
+    def _get_entry_for_update(self, feed_url, id):
+        rv = self.db.execute("""
+            SELECT updated
+            FROM entries
+            WHERE feed = :feed_url
+                AND id = :id;
+        """, locals()).fetchone()
+        if not rv:
+            return EntryForUpdate(False, None)
+        return EntryForUpdate(True, rv[0])
+
+    def _get_entries_for_update_n_queries(self, entries):
+        with self.db:
+            return iter([self._get_entry_for_update(*e) for e in entries])
+
+    def _get_entries_for_update_one_query(self, entries):
         if not entries:
             return []
 
@@ -144,6 +157,16 @@ class Storage:
         """.format(values_snippet=values_snippet), parameters)
 
         return iter([EntryForUpdate._make(row) for row in rv])
+
+    @wrap_storage_exceptions()
+    def get_entries_for_update(self, entries):
+        entries = list(entries)
+        try:
+            return self._get_entries_for_update_one_query(entries)
+        except sqlite3.OperationalError as e:
+            if "too many SQL variables" not in str(e):
+                raise
+        return self._get_entries_for_update_n_queries(entries)
 
     @wrap_storage_exceptions()
     def set_feed_user_title(self, url, title):
