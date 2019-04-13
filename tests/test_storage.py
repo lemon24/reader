@@ -6,7 +6,7 @@ import pytest
 
 from reader.core.storage import Storage, EntryForUpdate
 from reader import StorageError
-import reader.core.db
+import reader.core.sqlite_utils
 
 from reader import Feed, Entry, FeedNotFoundError
 
@@ -17,10 +17,9 @@ def test_storage_errors_open(tmpdir):
         Storage(str(tmpdir))
 
 
-@pytest.mark.parametrize('db_error_cls', reader.core.db.db_errors)
+@pytest.mark.parametrize('db_error_cls', reader.core.sqlite_utils.db_errors)
 def test_db_errors(monkeypatch, db_path, db_error_cls):
-    """reader.core.db.DBError subclasses should be wrapped in StorageError."""
-
+    """...sqlite_utils.DBError subclasses should be wrapped in StorageError."""
     def open_db(*args, **kwargs):
         raise db_error_cls("whatever")
 

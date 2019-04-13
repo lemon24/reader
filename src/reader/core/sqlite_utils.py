@@ -1,29 +1,39 @@
+"""
+sqlite3 utilities. Contains no business logic.
+
+"""
+
 import sqlite3
 from contextlib import contextmanager
 
 
-# The open_db/get_version/create_db combination is intended to ease future
-# database migrations; stole it from
-# https://github.com/lemon24/boomtime/blob/master/boomtime/db.py
-
+# stolen from https://github.com/lemon24/boomtime/blob/master/boomtime/db.py
 
 @contextmanager
 def ddl_transaction(db):
     """Automatically commit/rollback transactions containing DDL statements.
+
     Usage:
+
         with ddl_transaction(db):
             db.execute(...)
             db.execute(...)
+
     Note: This does not work with executescript().
+
     Works around https://bugs.python.org/issue10740. Normally, one would
     expect to be able to use DDL statements in a transaction like so:
+
         with db:
             db.execute(ddl_statement)
             db.execute(other_statement)
+
     However, the sqlite3 transaction handling triggers an implicit commit if
     the first execute() is a DDL statement, which will prevent it from being
     rolled back if another statement following it fails.
+
     https://docs.python.org/3.5/library/sqlite3.html#controlling-transactions
+
     """
     isolation_level = db.isolation_level
     try:
@@ -108,44 +118,6 @@ class HeavyMigration:
                 raise SchemaVersionError("invalid version: {}".format(version))
 
 
-def create_db(db):
-    db.execute("""
-        CREATE TABLE feeds (
-            url TEXT PRIMARY KEY NOT NULL,
-            title TEXT,
-            link TEXT,
-            updated TIMESTAMP,
-            author TEXT,
-            user_title TEXT,
-            http_etag TEXT,
-            http_last_modified TEXT,
-            stale INTEGER,
-            last_updated TIMESTAMP,
-            added TIMESTAMP
-        );
-    """)
-    db.execute("""
-        CREATE TABLE entries (
-            id TEXT NOT NULL,
-            feed TEXT NOT NULL,
-            title TEXT,
-            link TEXT,
-            updated TIMESTAMP,
-            author TEXT,
-            published TIMESTAMP,
-            summary TEXT,
-            content TEXT,
-            enclosures TEXT,
-            read INTEGER,
-            last_updated TIMESTAMP,
-            PRIMARY KEY (id, feed),
-            FOREIGN KEY (feed) REFERENCES feeds(url)
-                ON UPDATE CASCADE
-                ON DELETE CASCADE
-        );
-    """)
-
-
 def require_sqlite_version(version_info):
     if version_info > sqlite3.sqlite_version_info:
         raise RequirementError(
@@ -172,14 +144,8 @@ def require_sqlite_compile_options(db, options):
             .format(sorted(missing)))
 
 
-def update_from_10_to_11(db):   # pragma: no cover
-    db.execute("""
-        ALTER TABLE feeds
-        ADD COLUMN added TIMESTAMP;
-    """)
-
-
-def open_db(path, *, timeout=None):
+def open_sqlite_db(path, *, create, version, migrations, timeout=None):
+    # TODO: this is business logic, make it an argument
     # row value support was added in 3.15
     require_sqlite_version((3, 15))
 
@@ -189,20 +155,16 @@ def open_db(path, *, timeout=None):
 
     db = sqlite3.connect(path, **kwargs)
 
+    # TODO: this is business logic, make it an argument
     # require the JSON1 extension
     require_sqlite_compile_options(db, ['ENABLE_JSON1'])
 
+    # TODO: this is business logic, make it an argument
     db.execute("""
             PRAGMA foreign_keys = ON;
     """)
 
-    migration = HeavyMigration(
-        create=create_db,
-        version=11,
-        migrations={
-            # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
-            10: update_from_10_to_11,
-        })
+    migration = HeavyMigration(create, version, migrations)
     migration.migrate(db)
 
     return db

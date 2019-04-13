@@ -6,7 +6,7 @@ import json
 from collections import namedtuple
 from itertools import chain
 
-from .db import open_db, DBError
+from .sqlite_utils import open_sqlite_db, DBError
 from .exceptions import (
     StorageError,
     EntryNotFoundError, FeedNotFoundError, FeedExistsError,
@@ -39,6 +39,64 @@ def wrap_storage_exceptions(*args):
         yield
     except sqlite3.OperationalError as e:
         raise StorageError("sqlite3 error") from e
+
+
+def create_db(db):
+    db.execute("""
+        CREATE TABLE feeds (
+            url TEXT PRIMARY KEY NOT NULL,
+            title TEXT,
+            link TEXT,
+            updated TIMESTAMP,
+            author TEXT,
+            user_title TEXT,
+            http_etag TEXT,
+            http_last_modified TEXT,
+            stale INTEGER,
+            last_updated TIMESTAMP,
+            added TIMESTAMP
+        );
+    """)
+    db.execute("""
+        CREATE TABLE entries (
+            id TEXT NOT NULL,
+            feed TEXT NOT NULL,
+            title TEXT,
+            link TEXT,
+            updated TIMESTAMP,
+            author TEXT,
+            published TIMESTAMP,
+            summary TEXT,
+            content TEXT,
+            enclosures TEXT,
+            read INTEGER,
+            last_updated TIMESTAMP,
+            PRIMARY KEY (id, feed),
+            FOREIGN KEY (feed) REFERENCES feeds(url)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
+        );
+    """)
+
+def update_from_10_to_11(db):   # pragma: no cover
+    db.execute("""
+        ALTER TABLE feeds
+        ADD COLUMN added TIMESTAMP;
+    """)
+
+def open_db(path, timeout):
+    return open_sqlite_db(
+        path,
+
+        create=create_db,
+        version=11,
+        migrations={
+            # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
+            10: update_from_10_to_11,
+        },
+
+        timeout=timeout,
+    )
 
 
 class Storage:
