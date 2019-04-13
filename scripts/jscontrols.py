@@ -7,7 +7,7 @@ import os.path
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../src'))
 
-from reader.app import get_flashed_messages_by_prefix, APIThing, APIError
+from reader.app.api_thing import APIThing, APIError
 
 
 app = Flask(
@@ -16,7 +16,6 @@ app = Flask(
     static_folder='../src/reader/app/static',
 )
 app.secret_key = 'secret'
-app.template_global()(get_flashed_messages_by_prefix)
 
 
 @app.route('/')
