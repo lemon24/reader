@@ -9,6 +9,7 @@ import inspect
 from functools import partial
 from fnmatch import fnmatchcase
 from collections import OrderedDict
+import sqlite3
 
 import click
 
@@ -66,7 +67,9 @@ def inject(**factories):
     return decorator
 
 
-def make_reader_with_entries(path, num_entries, num_feeds=8):
+NUM_FEEDS = 8
+
+def make_reader_with_entries(path, num_entries, num_feeds=NUM_FEEDS):
     reader = Reader(path)
     reader._parse = parser = Parser()
 
@@ -136,6 +139,48 @@ def setup_reader_with_fake_parser(num_entries):
 @inject(reader=setup_reader_with_fake_parser)
 def time_update_feeds(reader):
     reader.update_feeds()
+
+
+@contextmanager
+def setup_reader_feed_new(num_entries):
+    with setup_db() as path:
+        yield make_reader_with_entries(path, num_entries, num_feeds=1)
+
+@contextmanager
+def setup_reader_feed_old(num_entries):
+    with setup_reader_feed_new(num_entries) as reader:
+        reader.update_feeds()
+        yield reader
+
+def raise_too_many_variables(reader):
+    original = getattr(reader._storage, '_get_entries_for_update_one_query', None)
+
+    def wrapper(*args):
+        original(*args)
+        raise sqlite3.OperationalError("too many SQL variables")
+
+    reader._storage._get_entries_for_update_one_query = wrapper
+
+@contextmanager
+def setup_reader_feed_new_fallback(num_entries):
+    with setup_reader_feed_new(num_entries) as reader:
+        raise_too_many_variables(reader)
+        yield reader
+
+@contextmanager
+def setup_reader_feed_old_fallback(num_entries):
+    with setup_reader_feed_old(num_entries) as reader:
+        raise_too_many_variables(reader)
+        yield reader
+
+def _time_update_feed(reader):
+    feed_url = list(reader._parse.feeds.values())[0].url
+    reader.update_feed(feed_url)
+
+time_update_feed_new = inject(reader=setup_reader_feed_new)(_time_update_feed)
+time_update_feed_new_fallback = inject(reader=setup_reader_feed_new_fallback)(_time_update_feed)
+time_update_feed_old = inject(reader=setup_reader_feed_old)(_time_update_feed)
+time_update_feed_old_fallback = inject(reader=setup_reader_feed_old_fallback)(_time_update_feed)
 
 
 TIMINGS = OrderedDict(
