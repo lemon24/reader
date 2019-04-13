@@ -8,9 +8,14 @@ reader changelog
 Version 0.6
 -----------
 
-Unreleased
+Released 2019-04-13
 
 * Minor web application style changes to make the layout more condensed.
+* Factor out update logic into a separate interface. (`#107`_)
+* Fix update failing if the feed does not have a content type header. (`#108`_)
+
+.. _#107: https://github.com/lemon24/reader/issues/107
+.. _#108: https://github.com/lemon24/reader/issues/108
 
 
 Version 0.5
