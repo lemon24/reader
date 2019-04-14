@@ -16,7 +16,26 @@ blueprint.app_template_filter('humanize_naturaltime')(humanize.naturaltime)
 
 def get_reader():
     if not hasattr(g, 'reader'):
-        g.reader = Reader(current_app.config['READER_DB'])
+        reader = Reader(current_app.config['READER_DB'])
+
+        if current_app.config['READER_PLUGINS']:
+            try:
+                from reader.plugins import load_plugins
+            except ImportError:
+                current_app.logger.exception(
+                    "cannot import reader plugin loading machinery; "
+                    "this might be due to missing dependencies, "
+                    "use 'pip install reader[plugins]' to install them"
+                )
+                load_plugins = None
+            if load_plugins:
+                try:
+                    load_plugins(reader, current_app.config['READER_PLUGINS'])
+                except Exception as e:
+                    current_app.logger.exception(
+                        "error while loading reader plugins")
+
+        g.reader = reader
     return g.reader
 
 def close_db(error):
@@ -142,9 +161,10 @@ def update_feed_title(data):
 
 
 
-def create_app(db_path):
+def create_app(db_path, plugins=()):
     app = Flask(__name__)
     app.config['READER_DB'] = db_path
+    app.config['READER_PLUGINS'] = plugins
     app.secret_key = 'secret'
     app.teardown_appcontext(close_db)
 

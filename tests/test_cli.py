@@ -76,7 +76,7 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
     exception = Exception("create_app error")
 
     def create_app(*args):
-        assert args == (db_path, )
+        assert args == (db_path, ())
         raise exception
 
     monkeypatch.setattr('reader.app.create_app', create_app)

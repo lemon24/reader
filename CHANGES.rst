@@ -14,6 +14,7 @@ Unreleased
 * :meth:`~Reader.get_entries` now sorts entries by the import date first,
   and then by :attr:`~Entry.published`/:attr:`~Entry.updated`. (`#106`_)
 * Add ``enclosure_dedupe`` plugin (deduplicate enclosures of an entry). (`#78`_)
+* The ``serve`` command now supports loading plugins. (`#78`_)
 
 .. _#106: https://github.com/lemon24/reader/issues/106
 .. _#78: https://github.com/lemon24/reader/issues/78
