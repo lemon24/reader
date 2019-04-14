@@ -11,6 +11,10 @@ Version 0.7
 Unreleased
 
 * Increase timeout of the button actions from 2 to 10 seconds.
+* :meth:`~Reader.get_entries` now sorts entries by the import date first,
+  and then by :attr:`~Entry.published`/:attr:`~Entry.updated`. (`#106`_)
+
+.. _#106: https://github.com/lemon24/reader/issues/106
 
 
 Version 0.6

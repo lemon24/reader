@@ -398,14 +398,16 @@ class Storage:
                 LIMIT :chunk_size
             """
             if last:
-                last_entry_updated, last_feed_url, last_entry_last_updated, last_entry_id = last
+                last_entry_first_updated, last_entry_updated, last_feed_url, last_entry_last_updated, last_entry_id = last
                 where_next_snippet = """
                     AND (
+                        coalesce(entries.first_updated, entries.published, entries.updated),
                         coalesce(entries.published, entries.updated),
                         feeds.url,
                         entries.last_updated,
                         entries.id
                     ) < (
+                        :last_entry_first_updated,
                         :last_entry_updated,
                         :last_feed_url,
                         :last_entry_last_updated,
@@ -444,7 +446,8 @@ class Storage:
                 entries.content,
                 entries.enclosures,
                 entries.read,
-                entries.last_updated
+                entries.last_updated,
+                entries.first_updated
             FROM entries, feeds
             WHERE
                 feeds.url = entries.feed
@@ -453,6 +456,7 @@ class Storage:
                 {where_next_snippet}
                 {where_has_enclosures_snippet}
             ORDER BY
+                coalesce(entries.first_updated, entries.published, entries.updated) DESC,
                 coalesce(entries.published, entries.updated) DESC,
                 feeds.url DESC,
                 entries.last_updated DESC,
@@ -475,8 +479,10 @@ class Storage:
                     feed,
                 )
                 last_updated = t[16]
+                first_updated = t[17]
                 entry = Entry._make(entry)
                 yield entry, (
+                    first_updated or entry.published or entry.updated,
                     entry.published or entry.updated,
                     entry.feed.url,
                     last_updated,

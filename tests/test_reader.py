@@ -466,6 +466,7 @@ def test_mark_as_read_unread(reader, entry_arg):
 def test_get_entries_order(reader, chunk_size):
     """Entries should be sorted descending by (with decreasing priority):
 
+    * entry first updated
     * entry published
     * entry updated
     * feed URL
@@ -480,6 +481,8 @@ def test_get_entries_order(reader, chunk_size):
     parser = Parser()
     reader._parse = parser
 
+    first_update = {}
+
     one = parser.feed(1)
     two = parser.feed(2)
     reader.add_feed(two.url)
@@ -488,17 +491,20 @@ def test_get_entries_order(reader, chunk_size):
     parser.entry(2, 4, datetime(2010, 1, 4))
     two = parser.feed(2, datetime(2010, 1, 4))
     reader.update_feeds()
+    first_update[2, 1] = first_update[2, 4] = 1
 
     reader.add_feed(one.url)
 
     parser.entry(1, 1, datetime(2010, 1, 2))
     one = parser.feed(1, datetime(2010, 1, 2))
     reader.update_feeds()
+    first_update[1, 1] = 2
 
     parser.entry(2, 1, datetime(2010, 1, 5))
     parser.entry(2, 2, datetime(2010, 1, 2))
     two = parser.feed(2, datetime(2010, 1, 5))
     reader.update_feeds()
+    first_update[2, 2] = 3
 
     parser.entry(1, 2, datetime(2010, 1, 2))
     parser.entry(1, 4, datetime(2010, 1, 3))
@@ -508,9 +514,19 @@ def test_get_entries_order(reader, chunk_size):
     parser.entry(2, 5, datetime(2010, 1, 3), published=datetime(2009, 12, 20))
     two = parser.feed(2, datetime(2010, 1, 6))
     reader.update_feeds()
+    first_update[1, 2] = first_update[1, 4] = first_update[1, 3] = \
+        first_update[2, 3] = first_update[2, 5] = 4
+
+    first_update = {
+        (parser.feeds[fn].url, parser.entries[fn][en].id): t
+        for (fn, en), t in first_update.items()
+    }
 
     def sort_key(e):
-        return e.published or e.updated, e.feed.url, e.id
+        return (
+            first_update[e.feed.url, e.id],
+            e.published or e.updated, e.feed.url, e.id,
+        )
 
     expected = sorted(parser.get_tuples(), key=sort_key, reverse=True)
 
