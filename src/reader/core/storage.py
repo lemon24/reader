@@ -71,6 +71,7 @@ def create_db(db):
             enclosures TEXT,
             read INTEGER,
             last_updated TIMESTAMP,
+            first_updated TIMESTAMP,
             PRIMARY KEY (id, feed),
             FOREIGN KEY (feed) REFERENCES feeds(url)
                 ON UPDATE CASCADE
@@ -84,15 +85,22 @@ def update_from_10_to_11(db):   # pragma: no cover
         ADD COLUMN added TIMESTAMP;
     """)
 
+def update_from_11_to_12(db):   # pragma: no cover
+    db.execute("""
+        ALTER TABLE entries
+        ADD COLUMN first_updated TIMESTAMP;
+    """)
+
 def open_db(path, timeout):
     return open_sqlite_db(
         path,
 
         create=create_db,
-        version=11,
+        version=12,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             10: update_from_10_to_11,
+            11: update_from_11_to_12,
         },
 
         timeout=timeout,
