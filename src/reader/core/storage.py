@@ -353,7 +353,11 @@ class Storage:
                         WHERE id = :id AND feed = :feed_url
                     ),
                     :last_updated,
-                    :first_updated
+                    coalesce(:first_updated, (
+                        SELECT first_updated
+                        FROM entries
+                        WHERE id = :id AND feed = :feed_url
+                    ))
                 );
             """, locals())
         except sqlite3.IntegrityError as e:
