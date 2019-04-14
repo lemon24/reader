@@ -8,7 +8,7 @@ reader changelog
 Version 0.7
 -----------
 
-Unreleased
+Released 2019-04-14
 
 * Increase timeout of the button actions from 2 to 10 seconds.
 * :meth:`~Reader.get_entries` now sorts entries by the import date first,
