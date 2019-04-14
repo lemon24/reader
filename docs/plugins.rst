@@ -29,8 +29,8 @@ be separated by one space::
     READER_PLUGIN='first.plugin:entry_point second_plugin:main' \
     python -m reader some-command
 
-Currently plugins are loaded through the CLI only (they won't be loaded when
-importing :class:`Reader` or when using the web application).
+Currently plugins are loaded through the CLI and web application only
+(they won't be loaded when importing :class:`Reader`).
 
 
 Existing plugins
