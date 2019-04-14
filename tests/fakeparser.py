@@ -15,9 +15,9 @@ def _make_feed(number, updated=None, **kwargs):
         **kwargs,
     )
 
-def _make_entry(number, updated, **kwargs):
+def _make_entry(feed_number, number, updated, **kwargs):
     return Entry(
-        'http://www.example.com/entries/{}'.format(number),
+        'http://www.example.com/{}/entries/{}'.format(feed_number, number),
         updated,
         kwargs.pop('title', 'Entry #{}'.format(number)),
         kwargs.pop('link', 'http://www.example.com/entries/{}'.format(number)),
@@ -43,7 +43,7 @@ class Parser:
         return feed
 
     def entry(self, feed_number, number, updated, **kwargs):
-        entry = _make_entry(number, updated, **kwargs)
+        entry = _make_entry(feed_number, number, updated, **kwargs)
         self.entries[feed_number][number] = entry
         return entry
 
