@@ -144,9 +144,17 @@ class Reader:
             StorageError
 
         """
+
+        # global_now will be used as first_updated for all new entries.
+        # This results in the subset of new entries from this update
+        # being sorted by published/updated; if we used last_updated/now,
+        # they would be sorted by feed order first (due to now increasing
+        # for each feed) and only then by published/updated.
+        global_now = self._now()
+
         for row in self._storage.get_feeds_for_update(new_only=new_only):
             try:
-                self._update_feed(row)
+                self._update_feed(row, global_now)
             except FeedNotFoundError as e:
                 log.info("update feed %r: feed removed during update", e.url)
             except ParseError as e:
@@ -176,8 +184,9 @@ class Reader:
     def _now():
         return datetime.datetime.utcnow()
 
-    def _update_feed(self, feed_for_update):
-        feed, new_entries = update_feed(feed_for_update, self._now(), self._parse, self._storage)
+    def _update_feed(self, feed_for_update, global_now=None):
+        now = self._now()
+        feed, new_entries = update_feed(feed_for_update, now, global_now or now, self._parse, self._storage)
 
         for entry in new_entries:
             for plugin in self._post_entry_add_plugins:

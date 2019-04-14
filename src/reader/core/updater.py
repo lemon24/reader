@@ -8,8 +8,8 @@ from .exceptions import NotModified
 log = logging.getLogger('reader')
 
 
-def update_feed(old_feed, now, parser, storage):
-    updater = Updater(old_feed, now)
+def update_feed(old_feed, now, global_now, parser, storage):
+    updater = Updater(old_feed, now, global_now)
     updater.update(parser, storage)
     return updater.new_feed, updater.new_entries
 
@@ -19,6 +19,7 @@ class Updater:
 
     old_feed = attr.ib()
     now = attr.ib()
+    global_now = attr.ib()
 
     new_feed = attr.ib(default=None)
     new_entries = attr.ib(default=attr.Factory(list))
@@ -116,7 +117,7 @@ class Updater:
                 entry,
                 updated,
                 last_updated,
-                self.now if entry_new else None,
+                self.global_now if entry_new else None,
             )
 
     def update(self, parser, storage):
