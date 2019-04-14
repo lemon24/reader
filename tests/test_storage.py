@@ -79,10 +79,10 @@ def update_feed(storage, feed, entry):
     storage.update_feed(feed.url, feed, None, None, entry.updated)
 
 def add_or_update_entry(storage, feed, entry):
-    storage.add_or_update_entry(feed.url, entry, entry.updated, entry.updated)
+    storage.add_or_update_entry(feed.url, entry, entry.updated, entry.updated, None)
 
 def add_or_update_entries(storage, feed, entry):
-    storage.add_or_update_entries([(feed.url, entry, entry.updated, entry.updated)])
+    storage.add_or_update_entries([(feed.url, entry, entry.updated, entry.updated, None)])
 
 def get_entries_chunk_size_0(storage, _, __):
     list(storage.get_entries('all', None, None, chunk_size=0))
@@ -117,7 +117,7 @@ def test_errors_locked(db_path, do_stuff):
     feed = Feed('one')
     entry = Entry('entry', datetime(2010, 1, 2))
     storage.add_feed(feed.url)
-    storage.add_or_update_entry(feed.url, entry, entry.updated, entry.updated)
+    storage.add_or_update_entry(feed.url, entry, entry.updated, entry.updated, None)
 
     in_transaction = threading.Event()
     can_return_from_transaction = threading.Event()
@@ -183,9 +183,9 @@ def test_iter_locked(db_path, iter_stuff):
     feed = Feed('one')
     entry = Entry('entry', datetime(2010, 1, 2))
     storage.add_feed(feed.url)
-    storage.add_or_update_entry(feed.url, entry, entry.updated, entry.updated)
+    storage.add_or_update_entry(feed.url, entry, entry.updated, entry.updated, None)
     storage.add_feed('two')
-    storage.add_or_update_entry('two', entry, entry.updated, entry.updated)
+    storage.add_or_update_entry('two', entry, entry.updated, entry.updated, None)
 
     rv = iter_stuff(storage)
     next(rv)
@@ -246,7 +246,7 @@ def test_get_entries_for_update(storage_cls):
     storage = storage_cls(':memory:')
     storage.add_feed('feed')
     storage.add_or_update_entry(
-        'feed', Entry('one', None), datetime(2010, 1, 1), datetime(2010, 1, 2))
+        'feed', Entry('one', None), datetime(2010, 1, 1), datetime(2010, 1, 2), None)
 
     assert list(storage.get_entries_for_update([
         ('feed', 'one'),

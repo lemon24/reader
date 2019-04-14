@@ -111,7 +111,13 @@ class Updater:
                 self.new_entries.append(entry)
             else:
                 self.updated_entries.append(entry)
-            yield self.url, entry, updated, last_updated
+            yield (
+                self.url,
+                entry,
+                updated,
+                last_updated,
+                self.now if entry_new else None,
+            )
 
     def update(self, parser, storage):
         try:
