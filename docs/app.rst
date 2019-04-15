@@ -2,6 +2,11 @@
 Web application
 ===============
 
+reader comes with a minimal web application, intended to work across
+all browsers, including light-weight / text-only ones.
+
+See :ref:`deploying-app` for how to use it.
+
 
 Screenshots
 -----------

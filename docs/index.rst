@@ -2,15 +2,15 @@
 reader
 ======
 
-A minimal feed reader.
+A minimal feed reader library.
 
 
 Features
 --------
 
-* Stable and clearly documented API.
-* Excellent test coverage.
-* Minimal web interface.
+* Stand-alone library with stable, clearly documented API, and excellent test coverage.
+* Minimal web interface that works even with text-only browsers.
+* (Some) plugin support.
 
 
 Usage
@@ -40,55 +40,25 @@ Usage
     ['H.I. #108: Project Cyclops']
 
 
-API reference
--------------
-
-If you are looking for information on a specific function, class, or method,
-this part of the documentation is for you.
+Table of contents
+-----------------
 
 .. toctree::
+    :maxdepth: 2
+
     api
-
-
-Command-line interface
-----------------------
-
-.. toctree::
     cli
-
-
-Web application
----------------
-
-.. toctree::
     app
-
-
-Deployment options
-------------------
-
-.. toctree::
     deploying
-
-
-Plugins
--------
-
-.. toctree::
     plugins
 
-
-Development
------------
+Project infromation
+-------------------
 
 .. toctree::
+    :maxdepth: 2
+
     dev
-
-
-Changelog
----------
-
-.. toctree::
     changelog
 
 

@@ -1,10 +1,22 @@
 
-Web application philosophy
-==========================
+Web interface design philosophy
+-------------------------------
+
+The web interface should be as minimal as possible.
+
+The web interface should work with text-only browsers, modern browsers, and
+everything in-between. Some may be nicer to use, but all functionality should
+be available everywhere.
+
+Fast and ugly is better than slow and pretty.
 
 
 User interactions
------------------
+~~~~~~~~~~~~~~~~~
+
+.. note::
+
+    This list might lag behing reality; anyway, it all started from here.
 
 User interactions, by logical groups:
 
@@ -68,7 +80,7 @@ Controls (below), mapped to user interactions:
 
 
 Controls
---------
+~~~~~~~~
 
 There are three interaction modes, HTML-only, HTML+CSS, and HTML+CSS+JS.
 Each mode adds enhancements on top of the previous one.
@@ -97,18 +109,21 @@ a button. The checkbox and label are hidden when not hovered.
 
 
 Page structure
---------------
-
-Text TBD.
-
-
-Pages
------
+~~~~~~~~~~~~~~
 
 Text TBD.
 
 .. figure:: images/redesign-01.png
+  :width: 240px
   :alt: page structure, controls
 
   page structure, controls
+
+
+Pages
+~~~~~
+
+Text TBD.
+
+
 

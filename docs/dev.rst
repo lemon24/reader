@@ -79,9 +79,8 @@ Making a release (from ``x`` to ``y`` == ``x + 1``):
 * deactivate old versions in Read the Docs
 
 
-Web application
----------------
+.. Web application
+.. ---------------
 
-.. toctree::
-    dev-app
+.. include:: dev-app.rst
 

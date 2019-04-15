@@ -28,6 +28,8 @@ to run ``update`` once immediately after boot::
     @reboot     sleep 60; reader update -v 2>&1 >>"/tmp/$LOGNAME.reader.update.boot.log"
 
 
+.. _deploying-app:
+
 Serving the web application
 ---------------------------
 

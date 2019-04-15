@@ -1,4 +1,4 @@
-**reader** is a minimal feed reader.
+**reader** is a minimal feed reader library.
 
 [![Build Status](https://travis-ci.org/lemon24/reader.svg?branch=master)](https://travis-ci.org/lemon24/reader)
 [![Code Coverage](https://codecov.io/github/lemon24/reader/coverage.svg?branch=master)](https://codecov.io/github/lemon24/reader?branch=master)
@@ -7,9 +7,9 @@
 
 Features:
 
-* Stable and clearly documented API.
-* Excellent test coverage.
-* Minimal web interface.
+* Stand-alone library with stable, clearly documented API, and excellent test coverage.
+* Minimal web interface that works even with text-only browsers.
+* (Some) plugin support.
 
 Documentation: [reader.readthedocs.io](http://reader.readthedocs.io/)
 
