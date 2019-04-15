@@ -44,21 +44,28 @@ def wrap_storage_exceptions(*args):
 def create_db(db):
     db.execute("""
         CREATE TABLE feeds (
+
+            -- feed data
             url TEXT PRIMARY KEY NOT NULL,
             title TEXT,
             link TEXT,
             updated TIMESTAMP,
             author TEXT,
-            user_title TEXT,
+            user_title TEXT,    -- except this one, which comes from reader
             http_etag TEXT,
             http_last_modified TEXT,
+
+            -- reader data
             stale INTEGER,
             last_updated TIMESTAMP,
             added TIMESTAMP
+
         );
     """)
     db.execute("""
         CREATE TABLE entries (
+
+            -- entry data
             id TEXT NOT NULL,
             feed TEXT NOT NULL,
             title TEXT,
@@ -69,9 +76,12 @@ def create_db(db):
             summary TEXT,
             content TEXT,
             enclosures TEXT,
+
+            -- reader data
             read INTEGER,
             last_updated TIMESTAMP,
             first_updated TIMESTAMP,
+
             PRIMARY KEY (id, feed),
             FOREIGN KEY (feed) REFERENCES feeds(url)
                 ON UPDATE CASCADE
