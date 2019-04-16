@@ -101,6 +101,20 @@ class Updater:
             if entry_updated or entry_new:
                 yield entry_new, new_entry, updated, last_updated
 
+            # TODO: Find a better way to preserve feed entry order.
+            #
+            # We increment last_updated so that new entries of a feed that
+            # doesn't set updated on entries are ordered the same as they
+            # were in the feed.
+            #
+            # This seems hacky in the same way first_updated does (see the
+            # comment in Reader.udpate_feeds(). First, last_updated lies ever
+            # so slightly. Second, both Storage and Updater need to know
+            # about this.
+            #
+            # A solution would be to add another column / entry attribute,
+            # feed_order. Is last_updated needed for anything else, then?
+            #
             last_updated += datetime.timedelta(microseconds=1)
 
     def prepare_entries_for_update(self, entries_to_update):

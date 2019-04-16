@@ -145,8 +145,8 @@ def require_sqlite_compile_options(db, options):
 
 
 def open_sqlite_db(path, *, create, version, migrations, timeout=None):
-    # TODO: this is business logic, make it an argument
-    # row value support was added in 3.15
+    # TODO: This is business logic, make it an argument.
+    # Row value support was added in 3.15.
     require_sqlite_version((3, 15))
 
     kwargs = dict(detect_types=sqlite3.PARSE_DECLTYPES)
@@ -155,11 +155,11 @@ def open_sqlite_db(path, *, create, version, migrations, timeout=None):
 
     db = sqlite3.connect(path, **kwargs)
 
-    # TODO: this is business logic, make it an argument
-    # require the JSON1 extension
+    # TODO: This is business logic, make it an argument.
+    # Require the JSON1 extension.
     require_sqlite_compile_options(db, ['ENABLE_JSON1'])
 
-    # TODO: this is business logic, make it an argument
+    # TODO: This is business logic, make it an argument.
     db.execute("""
             PRAGMA foreign_keys = ON;
     """)
