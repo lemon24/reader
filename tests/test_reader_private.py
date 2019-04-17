@@ -16,7 +16,7 @@ def test_update_stale(reader, call_update_method):
     parser = ParserThatRemembers()
     parser.http_etag = 'etag'
     parser.http_last_modified = 'last-modified'
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -43,12 +43,12 @@ def test_update_stale(reader, call_update_method):
 
 
 def test_update_parse(reader, call_update_method):
-    """Updated feeds should pass caching headers back to ._parse()."""
+    """Updated feeds should pass caching headers back to ._parser()."""
 
     parser = ParserThatRemembers()
     parser.http_etag = 'etag'
     parser.http_last_modified = 'last-modified'
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -90,7 +90,7 @@ def test_entry_argument():
 
 def test_post_entry_add_plugins(reader):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     plugin_calls = []
 

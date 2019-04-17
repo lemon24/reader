@@ -9,7 +9,7 @@ from fakeparser import Parser
 
 def test_regex_mark_as_read(reader, monkeypatch, tmpdir):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
     parser.entry(1, 1, datetime(2010, 1, 1), title='match old')

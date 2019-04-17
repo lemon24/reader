@@ -66,6 +66,6 @@ def tumblr_gdpr_parse_response_plugin(session, response, request):
 
 
 def tumblr_gdpr(reader):
-    reader._parse.response_plugins.append(tumblr_gdpr_parse_response_plugin)
+    reader._parser.response_plugins.append(tumblr_gdpr_parse_response_plugin)
 
 

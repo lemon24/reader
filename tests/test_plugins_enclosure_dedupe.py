@@ -7,7 +7,7 @@ from fakeparser import Parser
 
 
 def test_enclosure_dedupe(reader):
-    reader._parse = parser = Parser()
+    reader._parser = parser = Parser()
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1))

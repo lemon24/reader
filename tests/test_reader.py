@@ -22,7 +22,7 @@ def test_update_feed_updated(reader, call_update_method):
     """
 
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     old_feed = parser.feed(1, datetime(2010, 1, 1), title='old')
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -63,7 +63,7 @@ def test_update_entry_updated(reader, call_update_method):
     """An entry should be updated only if it is newer than the stored one."""
 
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     old_entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -103,7 +103,7 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
     reader._get_entries_chunk_size = chunk_size
 
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, None, title='old')
     entry_one = parser.entry(1, 1, None, title='old')
@@ -131,7 +131,7 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
 
 @pytest.mark.slow
 def test_update_blocking(db_path, call_update_method):
-    """Calls to reader._parse() shouldn't block the underlying storage."""
+    """Calls to reader._parser() shouldn't block the underlying storage."""
 
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
@@ -139,7 +139,7 @@ def test_update_blocking(db_path, call_update_method):
     feed2 = parser.feed(2, datetime(2010, 1, 1))
 
     reader = Reader(db_path)
-    reader._parse = parser
+    reader._parser = parser
 
     reader.add_feed(feed.url)
     reader.add_feed(feed2.url)
@@ -149,7 +149,7 @@ def test_update_blocking(db_path, call_update_method):
 
     def target():
         reader = Reader(db_path)
-        reader._parse = blocking_parser
+        reader._parser = blocking_parser
         call_update_method(reader, feed.url)
 
     t = threading.Thread(target=target)
@@ -169,7 +169,7 @@ def test_update_not_modified(reader, call_update_method):
     """A feed should not be updated if it was not modified."""
 
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
@@ -179,7 +179,7 @@ def test_update_not_modified(reader, call_update_method):
     parser.entry(1, 1, datetime(2010, 1, 2))
 
     not_modified_parser = NotModifiedParser.from_parser(parser)
-    reader._parse = not_modified_parser
+    reader._parser = not_modified_parser
 
     # shouldn't raise an exception
     call_update_method(reader, feed.url)
@@ -189,7 +189,7 @@ def test_update_not_modified(reader, call_update_method):
 
 def test_update_new_only(reader):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(one.url)
@@ -225,7 +225,7 @@ def test_update_new_only_no_last_updated(reader):
 
     """
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
 
@@ -250,7 +250,7 @@ def test_update_new_only_not_modified(reader):
 
     """
     parser = NotModifiedParser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
 
@@ -260,7 +260,7 @@ def test_update_new_only_not_modified(reader):
     reader.update_feeds(new_only=True)
 
     parser = Parser.from_parser(parser)
-    reader._parse = parser
+    reader._parser = parser
 
     parser.entry(1, 1, datetime(2010, 1, 1))
     reader.update_feeds(new_only=True)
@@ -275,7 +275,7 @@ def test_update_last_updated_entries_updated_feed_not_updated(reader, call_updat
 
     """
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
@@ -295,13 +295,13 @@ def test_update_last_updated_entries_updated_feed_not_updated(reader, call_updat
 
 def test_update_feeds_parse_error(reader):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
     reader.update_feeds()
 
-    reader._parse = FailingParser()
+    reader._parser = FailingParser()
 
     # shouldn't raise an exception
     reader.update_feeds()
@@ -335,7 +335,7 @@ def test_update_feed_deleted(db_path, call_update_method,
 
     parser = Parser()
     reader = Reader(db_path)
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
@@ -364,7 +364,7 @@ def test_update_feed_deleted(db_path, call_update_method,
     t.start()
 
     try:
-        reader._parse = blocking_parser
+        reader._parser = blocking_parser
         if call_update_method.__name__ == 'call_update_feed':
             with pytest.raises(FeedNotFoundError) as excinfo:
                 call_update_method(reader, feed.url)
@@ -380,7 +380,7 @@ def test_update_feed_deleted(db_path, call_update_method,
 
 def test_update_feed(reader, feed_arg):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -409,7 +409,7 @@ def test_update_feed(reader, feed_arg):
         entry_two._replace(feed=two),
     }
 
-    reader._parse = FailingParser()
+    reader._parser = FailingParser()
 
     with pytest.raises(ParseError):
         reader.update_feed(feed_arg(one))
@@ -417,7 +417,7 @@ def test_update_feed(reader, feed_arg):
 
 def test_mark_as_read_unread(reader, entry_arg):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -479,7 +479,7 @@ def test_get_entries_order(reader, chunk_size):
     reader._get_entries_chunk_size = chunk_size
 
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     first_update = {}
 
@@ -548,7 +548,7 @@ def test_get_entries_feed_order(reader, chunk_size):
     reader._get_entries_chunk_size = chunk_size
 
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
     reader._now = lambda: datetime(2010, 1, 1)
 
     feed = parser.feed(1, datetime(2010, 1, 1))
@@ -581,7 +581,7 @@ def test_get_entries_feed_order(reader, chunk_size):
 
 def test_get_entries_which(reader):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -606,7 +606,7 @@ def test_get_entries_which(reader):
 
 def test_get_entries_feed_url(reader, feed_arg):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -631,7 +631,7 @@ def test_get_entries_feed_url(reader, feed_arg):
 
 def test_add_remove_get_feeds(reader, feed_arg):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -690,7 +690,7 @@ def test_get_feeds_order_title(reader):
 
     """
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed2 = parser.feed(2, datetime(2010, 1, 2), title='two')
     feed1 = parser.feed(1, datetime(2010, 1, 1), title='one')
@@ -722,7 +722,7 @@ def test_get_feeds_order_title_case_insensitive(reader):
 
     """
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed1 = parser.feed(1, datetime(2010, 1, 1), title='aaa')
     feed2 = parser.feed(2, datetime(2010, 1, 2), title='bbb')
@@ -749,7 +749,7 @@ def test_get_feeds_order_added(reader):
     """
 
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     reader._now = lambda: datetime(2010, 1, 1)
     feed1 = parser.feed(1, datetime(2010, 1, 2))
@@ -773,7 +773,7 @@ def test_get_feeds_order_added(reader):
 
 def test_set_feed_user_title(reader, feed_arg):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -808,7 +808,7 @@ def test_set_feed_user_title(reader, feed_arg):
 
 def test_data_roundrip(reader):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1), author='feed author')
     entry = parser.entry(1, 1, datetime(2010, 1, 1), author='entry author',
@@ -831,7 +831,7 @@ def test_data_roundrip(reader):
 
 def test_get_entries_has_enclosure(reader):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1))

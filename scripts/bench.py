@@ -71,7 +71,7 @@ NUM_FEEDS = 8
 
 def make_reader_with_entries(path, num_entries, num_feeds=NUM_FEEDS):
     reader = Reader(path)
-    reader._parse = parser = Parser()
+    reader._parser = parser = Parser()
 
     for i in range(num_feeds):
         feed = parser.feed(i, datetime(2010, 1, 1))
@@ -174,7 +174,7 @@ def setup_reader_feed_old_fallback(num_entries):
         yield reader
 
 def _time_update_feed(reader):
-    feed_url = list(reader._parse.feeds.values())[0].url
+    feed_url = list(reader._parser.feeds.values())[0].url
     reader.update_feed(feed_url)
 
 time_update_feed_new = inject(reader=setup_reader_feed_new)(_time_update_feed)

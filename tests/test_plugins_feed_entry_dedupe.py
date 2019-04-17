@@ -55,7 +55,7 @@ def test_is_duplicate(one, two, result):
 
 def test_feed_entry_dedupe(reader, monkeypatch, tmpdir):
     parser = Parser()
-    reader._parse = parser
+    reader._parser = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
     old = parser.entry(1, 1, datetime(2010, 1, 1), title='title', summary='old')

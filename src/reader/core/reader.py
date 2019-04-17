@@ -44,7 +44,7 @@ class Reader:
 
     def __init__(self, path=None):
         self._storage = Storage(path)
-        self._parse = RequestsParser()
+        self._parser = RequestsParser()
         self._post_entry_add_plugins = []
 
     def add_feed(self, feed):
@@ -199,7 +199,7 @@ class Reader:
 
     def _update_feed(self, feed_for_update, global_now=None):
         now = self._now()
-        feed, new_entries = update_feed(feed_for_update, now, global_now or now, self._parse, self._storage)
+        feed, new_entries = update_feed(feed_for_update, now, global_now or now, self._parser, self._storage)
 
         for entry in new_entries:
             for plugin in self._post_entry_add_plugins:
