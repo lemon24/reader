@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from collections import namedtuple
 from typing import Sequence, Optional
 from datetime import datetime
 
@@ -20,6 +21,9 @@ class attrs_namedtuple_compat:
 
     def _asdict(self, recurse=False):
         return attr.asdict(self, recurse=recurse, dict_factory=OrderedDict)
+
+
+# Public API
 
 
 @attr.s(slots=True, frozen=True)
@@ -115,5 +119,34 @@ class Enclosure(attrs_namedtuple_compat):
 
     #: The file length.
     length = attr.ib(type=Optional[int], default=None)
+
+
+# Private API
+# https://github.com/lemon24/reader/issues/111
+
+# TODO: Use type annotations for private API types.
+
+
+ParsedFeed = namedtuple('ParsedFeed', 'feed http_etag http_last_modified')
+
+ParseResult = namedtuple('ParseResult', 'parsed_feed entries')
+
+class ParseResult(ParseResult):
+
+    __slots__ = ()
+
+    # compatibility
+
+    @property
+    def feed(self):
+        return self.parsed_feed.feed
+
+    @property
+    def http_etag(self):
+        return self.parsed_feed.http_etag
+
+    @property
+    def http_last_modified(self):
+        return self.parsed_feed.http_last_modified
 
 
