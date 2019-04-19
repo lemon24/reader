@@ -100,7 +100,8 @@ class Updater:
             entry_updated, entry_new, updated = self.should_update_entry(new_entry, old_entry)
 
             if entry_updated or entry_new:
-                yield entry_new, new_entry, updated, last_updated
+                new_entry = new_entry._replace(updated=updated)
+                yield entry_new, new_entry, last_updated
 
             # TODO: Find a better way to preserve feed entry order.
             #
@@ -122,7 +123,7 @@ class Updater:
         self.updated_entries = []
         self.new_entries = []
 
-        for entry_new, entry, updated, last_updated in entries_to_update:
+        for entry_new, entry, last_updated in entries_to_update:
             if entry_new:
                 self.new_entries.append(entry)
             else:
@@ -130,7 +131,6 @@ class Updater:
             yield (
                 self.url,
                 entry,
-                updated,
                 last_updated,
                 self.global_now if entry_new else None,
             )
