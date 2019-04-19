@@ -1,7 +1,7 @@
 import pytest
 
 from reader.core.updater import Updater
-from reader.core.storage import FeedForUpdate
+from reader.core.types import FeedForUpdate
 
 
 def test_prepare_entries_for_update():

@@ -3,7 +3,6 @@ import contextlib
 import functools
 import logging
 import json
-from collections import namedtuple
 from itertools import chain
 
 from .sqlite_utils import open_sqlite_db, DBError
@@ -12,12 +11,9 @@ from .exceptions import (
     EntryNotFoundError, FeedNotFoundError, FeedExistsError,
 )
 from .types import Feed, Entry, Content, Enclosure
+from .types import FeedForUpdate, EntryForUpdate
 
 log = logging.getLogger('reader')
-
-
-FeedForUpdate = namedtuple('FeedForUpdate', 'url updated http_etag http_last_modified stale last_updated')
-EntryForUpdate = namedtuple('EntryForUpdate', 'exists updated')
 
 
 @contextlib.contextmanager
@@ -198,15 +194,15 @@ class Storage:
         return iter(list(self._get_feeds_for_update(url=url, new_only=new_only)))
 
     def _get_entry_for_update(self, feed_url, id):
-        rv = self.db.execute("""
+        row = self.db.execute("""
             SELECT updated
             FROM entries
             WHERE feed = :feed_url
                 AND id = :id;
         """, locals()).fetchone()
-        if not rv:
-            return EntryForUpdate(False, None)
-        return EntryForUpdate(True, rv[0])
+        if not row:
+            return None
+        return EntryForUpdate(row[0])
 
     def _get_entries_for_update_n_queries(self, entries):
         with self.db:
@@ -219,7 +215,7 @@ class Storage:
         values_snippet = ', '.join(['(?, ?)'] * len(entries))
         parameters = list(chain.from_iterable(entries))
 
-        rv = self.db.execute("""
+        rows = self.db.execute("""
             WITH
                 input(feed, id) AS (
                     VALUES {values_snippet}
@@ -232,7 +228,10 @@ class Storage:
                     ON (input.id, input.feed) == (entries.id, entries.feed);
         """.format(values_snippet=values_snippet), parameters)
 
-        return iter([EntryForUpdate._make(row) for row in rv])
+        return iter([
+            EntryForUpdate(updated) if exists else None 
+            for exists, updated in rows
+        ])
 
     @wrap_storage_exceptions()
     def get_entries_for_update(self, entries):

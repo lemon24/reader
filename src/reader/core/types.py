@@ -150,3 +150,6 @@ class ParseResult(ParseResult):
         return self.parsed_feed.http_last_modified
 
 
+FeedForUpdate = namedtuple('FeedForUpdate', 'url updated http_etag http_last_modified stale last_updated')
+
+EntryForUpdate = namedtuple('EntryForUpdate', 'updated')

@@ -4,7 +4,8 @@ import sqlite3
 
 import pytest
 
-from reader.core.storage import Storage, EntryForUpdate
+from reader.core.storage import Storage
+from reader.core.types import EntryForUpdate
 from reader import StorageError
 import reader.core.sqlite_utils
 
@@ -252,8 +253,8 @@ def test_get_entries_for_update(storage_cls):
         ('feed', 'one'),
         ('feed', 'two'),
     ])) == [
-        EntryForUpdate(True, datetime(2010, 1, 1)),
-        EntryForUpdate(False, None),
+        EntryForUpdate(datetime(2010, 1, 1)),
+        None,
     ]
 
 

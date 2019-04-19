@@ -74,18 +74,19 @@ class Updater:
 
     def should_update_entry(self, new, old):
         updated = new.updated
+        old_updated = old.updated if old else None
 
         if self.stale:
             log.debug("update entry %r of feed %r: feed marked as stale, updating anyway", new.id, self.url)
         elif not new.updated:
             log.debug("update entry %r of feed %r: has no updated, updating but not changing updated", new.id, self.url)
-            updated = old.updated or self.now
-        elif old.updated and new.updated <= old.updated:
-            log.debug("update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)", new.id, self.url, old.updated, new.updated)
+            updated = old_updated or self.now
+        elif old_updated and new.updated <= old_updated:
+            log.debug("update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)", new.id, self.url, old_updated, new.updated)
             return 0, 0, updated
 
         log.debug("update entry %r of feed %r: entry added/updated", new.id, self.url)
-        return (0, 1, updated) if not old.exists else (1, 0, updated)
+        return (0, 1, updated) if not old else (1, 0, updated)
 
     def get_entries_to_update(self, entries, storage):
         entries = list(entries)
