@@ -88,6 +88,8 @@ class Updater:
 
     def get_entries_to_update(self, entries, storage):
         entries = list(entries)
+        
+        # TODO: Split the storage call into a separate method.
         pairs = zip(entries, storage.get_entries_for_update([
             (self.url, e.id) for e in entries
         ]))
@@ -161,6 +163,7 @@ class Updater:
         if entries_to_update:
             storage.add_or_update_entries(e for e, _ in entries_to_update)
         if feed_to_update:
+            # TODO: Make storage.update_feed take an update intent (maybe).
             if feed_to_update.feed:
                 storage.update_feed(
                     feed_to_update.url,
@@ -176,6 +179,7 @@ class Updater:
                 )
 
         return UpdateResult(
+            # TODO: Do we need to return feed? Is the URL enough?
             parse_result.feed,
             (UpdatedEntry(e.entry, n) for e, n in entries_to_update),
         )
