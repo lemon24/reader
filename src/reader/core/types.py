@@ -151,5 +151,13 @@ class ParseResult(ParseResult):
 
 
 FeedForUpdate = namedtuple('FeedForUpdate', 'url updated http_etag http_last_modified stale last_updated')
-
 EntryForUpdate = namedtuple('EntryForUpdate', 'updated')
+
+
+FeedUpdateIntent = namedtuple('FeedUpdateIntent', 'url feed http_etag http_last_modified last_updated')
+EntryUpdateIntent = namedtuple('EntryUpdateIntent', 'url entry last_updated first_updated')
+
+UpdatedEntry = namedtuple('UpdatedEntry', 'entry new')
+UpdateResult = namedtuple('UpdateResult', 'feed entries')
+
+

@@ -4,14 +4,16 @@ import datetime
 import attr
 
 from .exceptions import NotModified
+from .types import FeedUpdateIntent, EntryUpdateIntent
+from .types import UpdateResult, UpdatedEntry
 
 log = logging.getLogger('reader')
 
 
 def update_feed(old_feed, now, global_now, parser, storage):
     updater = Updater(old_feed, now, global_now)
-    updater.update(parser, storage)
-    return updater.new_feed, updater.new_entries
+    result = updater.update(parser, storage)
+    return result.feed, [e.entry for e in result.entries if e.new]
 
 
 @attr.s
@@ -20,10 +22,6 @@ class Updater:
     old_feed = attr.ib()
     now = attr.ib()
     global_now = attr.ib()
-
-    new_feed = attr.ib(default=None)
-    new_entries = attr.ib(default=attr.Factory(list))
-    updated_entries = attr.ib(default=attr.Factory(list))
 
     def __attrs_post_init__(self):
         if self.old_feed.stale:
@@ -101,7 +99,12 @@ class Updater:
 
             if entry_updated or entry_new:
                 new_entry = new_entry._replace(updated=updated)
-                yield entry_new, new_entry, last_updated
+                yield EntryUpdateIntent(
+                    self.url,
+                    new_entry,
+                    last_updated,
+                    self.global_now if entry_new else None,
+                ), entry_new
 
             # TODO: Find a better way to preserve feed entry order.
             #
@@ -119,21 +122,27 @@ class Updater:
             #
             last_updated += datetime.timedelta(microseconds=1)
 
-    def prepare_entries_for_update(self, entries_to_update):
-        self.updated_entries = []
-        self.new_entries = []
+    def get_feed_to_update(self, parse_result, entries_to_update):
+        new_count = sum(bool(n) for _, n in entries_to_update)
+        updated_count = len(entries_to_update) - new_count
 
-        for entry_new, entry, last_updated in entries_to_update:
-            if entry_new:
-                self.new_entries.append(entry)
-            else:
-                self.updated_entries.append(entry)
-            yield (
+        log.info("update feed %r: updated (updated %d, new %d)",
+            self.url, updated_count, new_count)
+
+        if self.should_update_feed(parse_result.feed):
+            feed_to_update = FeedUpdateIntent(
                 self.url,
-                entry,
-                last_updated,
-                self.global_now if entry_new else None,
+                parse_result.feed,
+                parse_result.http_etag,
+                parse_result.http_last_modified,
+                self.now,
             )
+        elif new_count or updated_count:
+            feed_to_update = FeedUpdateIntent(self.url, None, None, None, self.now)
+        else:
+            feed_to_update = None
+
+        return feed_to_update, entries_to_update
 
     def update(self, parser, storage):
         try:
@@ -144,25 +153,31 @@ class Updater:
             log.info("update feed %r: feed not modified, skipping", self.url)
             # The feed shouldn't be considered new anymore.
             storage.update_feed_last_updated(self.url, self.now)
-            return None, ()
+            return UpdateResult(None, ())
 
-        self.new_feed = parse_result.feed
+        entries_to_update = list(self.get_entries_to_update(parse_result.entries, storage))
+        feed_to_update, entries_to_update = self.get_feed_to_update(parse_result, entries_to_update)
 
-        should_update_feed = self.should_update_feed(parse_result.feed)
+        if entries_to_update:
+            storage.add_or_update_entries(e for e, _ in entries_to_update)
+        if feed_to_update:
+            if feed_to_update.feed:
+                storage.update_feed(
+                    feed_to_update.url,
+                    feed_to_update.feed,
+                    feed_to_update.http_etag,
+                    feed_to_update.http_last_modified,
+                    feed_to_update.last_updated,
+                )
+            else:
+                storage.update_feed_last_updated(
+                    feed_to_update.url,
+                    feed_to_update.last_updated,
+                )
 
-        entries_to_update = self.get_entries_to_update(parse_result.entries, storage)
-        entries_for_update = self.prepare_entries_for_update(entries_to_update)
-        storage.add_or_update_entries(entries_for_update)
+        return UpdateResult(
+            parse_result.feed,
+            (UpdatedEntry(e.entry, n) for e, n in entries_to_update),
+        )
 
-        if should_update_feed:
-            storage.update_feed(self.url,
-                                parse_result.feed,
-                                parse_result.http_etag,
-                                parse_result.http_last_modified,
-                                self.now)
-        elif self.new_entries or self.updated_entries:
-            storage.update_feed_last_updated(self.url, self.now)
-
-        log.info("update feed %r: updated (updated %d, new %d)",
-                 self.url, len(self.updated_entries), len(self.new_entries))
 

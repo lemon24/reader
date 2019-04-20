@@ -4,6 +4,7 @@ from reader.core.updater import Updater
 from reader.core.types import FeedForUpdate, Entry
 
 
+@pytest.mark.xfail
 def test_prepare_entries_for_update():
     updater = Updater(FeedForUpdate('feed', None, None, None, False, None), 'now', 'global_now')
 
