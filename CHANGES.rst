@@ -5,6 +5,12 @@ reader changelog
 .. module:: reader
 
 
+Version 0.9
+-----------
+
+Unreleased
+
+
 Version 0.8
 -----------
 
