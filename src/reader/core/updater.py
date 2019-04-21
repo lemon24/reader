@@ -81,10 +81,10 @@ class Updater:
             updated = old_updated or self.now
         elif old_updated and new.updated <= old_updated:
             log.debug("update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)", new.id, self.url, old_updated, new.updated)
-            return 0, 0, updated
+            return None, False
 
         log.debug("update entry %r of feed %r: entry added/updated", new.id, self.url)
-        return (0, 1, updated) if not old else (1, 0, updated)
+        return (updated, True) if not old else (updated, False)
 
     def get_entries_to_update(self, entries, storage):
         entries = list(entries)
@@ -97,13 +97,12 @@ class Updater:
         last_updated = self.now
         for new_entry, old_entry in reversed(list(pairs)):
             assert new_entry.feed is None
-            entry_updated, entry_new, updated = self.should_update_entry(new_entry, old_entry)
+            updated, entry_new = self.should_update_entry(new_entry, old_entry)
 
-            if entry_updated or entry_new:
-                new_entry = new_entry._replace(updated=updated)
+            if updated:
                 yield EntryUpdateIntent(
                     self.url,
-                    new_entry,
+                    new_entry._replace(updated=updated),
                     last_updated,
                     self.global_now if entry_new else None,
                 ), entry_new
@@ -144,7 +143,7 @@ class Updater:
         else:
             feed_to_update = None
 
-        return feed_to_update, entries_to_update
+        return feed_to_update
 
     def update(self, parser, storage):
         try:
@@ -158,7 +157,7 @@ class Updater:
             return UpdateResult(None, ())
 
         entries_to_update = list(self.get_entries_to_update(parse_result.entries, storage))
-        feed_to_update, entries_to_update = self.get_feed_to_update(parse_result, entries_to_update)
+        feed_to_update = self.get_feed_to_update(parse_result, entries_to_update)
 
         if entries_to_update:
             storage.add_or_update_entries(e for e, _ in entries_to_update)
