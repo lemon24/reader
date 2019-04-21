@@ -40,8 +40,8 @@ environment variable.
 
 .. warning::
 
-    The web application has no authentication/authorization whatsoever; it is expected
-a server / middleware will provide that.
+    The web application has no authentication / authorization whatsoever;
+    it is expected a server / middleware will provide that.
     
 
 An example uWSGI configuration file (probably not idiomatic, from `here`_)::
