@@ -48,7 +48,7 @@ Start a local development server for the web-app::
 Building the documentation
 --------------------------
 
-The documentation is build with Sphinx::
+The documentation is built with Sphinx::
 
     make docs               # installs the dependencies for you
 
