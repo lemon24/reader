@@ -10,6 +10,8 @@ Version 0.8
 
 Unreleased
 
+* Automate part of the release process (``scripts/release.py``).
+
 
 Version 0.7
 -----------
