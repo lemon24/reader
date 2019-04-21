@@ -8,7 +8,7 @@ reader changelog
 Version 0.8
 -----------
 
-Unreleased
+2019-04-21
 
 * Make the internal APIs use explicit types instead of tuples. (`#111`_)
 * Finish updater internal API. (`#107`_)
