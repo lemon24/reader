@@ -79,6 +79,9 @@ def mark_as_read_unread(storage, feed, entry):
 def update_feed(storage, feed, entry):
     storage.update_feed(feed.url, feed, None, None, entry.updated)
 
+def update_feed_last_updated(storage, feed, entry):
+    storage.update_feed(feed.url, None, None, None, entry.updated)
+
 def add_or_update_entry(storage, feed, entry):
     storage.add_or_update_entry(feed.url, entry, entry.updated, None)
 
@@ -103,6 +106,7 @@ def get_entries_chunk_size_1(storage, _, __):
     mark_as_stale,
     mark_as_read_unread,
     update_feed,
+    update_feed_last_updated,
     add_or_update_entry,
     add_or_update_entries,
     get_entries_chunk_size_0,
@@ -201,7 +205,7 @@ def test_iter_locked(db_path, iter_stuff):
 def test_update_feed_last_updated_not_found(db_path):
     storage = Storage(db_path)
     with pytest.raises(FeedNotFoundError):
-        storage.update_feed_last_updated('inexistent-feed', datetime(2010, 1, 2))
+        storage.update_feed('inexistent-feed', None, None, None, datetime(2010, 1, 2))
 
 
 @pytest.mark.parametrize('entry_count', [

@@ -281,6 +281,16 @@ class Storage:
 
     @wrap_storage_exceptions()
     def update_feed(self, url, feed, http_etag, http_last_modified, last_updated):
+        if feed:
+            assert url == feed.url, "updating feed URL not supported"
+            self._update_feed_full(url, feed, http_etag, http_last_modified, last_updated)
+            return
+
+        assert http_etag is None, "http_etag must be none if feed is none"
+        assert http_last_modified is None, "http_last_modified must be none if feed is none"
+        self._update_feed_last_updated(url, last_updated)
+
+    def _update_feed_full(self, url, feed, http_etag, http_last_modified, last_updated):
         updated = feed.updated
         title = feed.title
         link = feed.link
@@ -305,8 +315,7 @@ class Storage:
             raise FeedNotFoundError(url)
         assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    @wrap_storage_exceptions()
-    def update_feed_last_updated(self, url, last_updated):
+    def _update_feed_last_updated(self, url, last_updated):
         with self.db:
             rows = self.db.execute("""
                 UPDATE feeds

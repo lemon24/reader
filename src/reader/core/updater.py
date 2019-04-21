@@ -154,7 +154,7 @@ class Updater:
         except NotModified:
             log.info("update feed %r: feed not modified, skipping", self.url)
             # The feed shouldn't be considered new anymore.
-            storage.update_feed_last_updated(self.url, self.now)
+            storage.update_feed(self.url, None, None, None, self.now)
             return UpdateResult(None, ())
 
         entries_to_update = list(self.get_entries_to_update(parse_result.entries, storage))
@@ -163,20 +163,7 @@ class Updater:
         if entries_to_update:
             storage.add_or_update_entries(e for e, _ in entries_to_update)
         if feed_to_update:
-            # TODO: Make storage.update_feed take an update intent (maybe).
-            if feed_to_update.feed:
-                storage.update_feed(
-                    feed_to_update.url,
-                    feed_to_update.feed,
-                    feed_to_update.http_etag,
-                    feed_to_update.http_last_modified,
-                    feed_to_update.last_updated,
-                )
-            else:
-                storage.update_feed_last_updated(
-                    feed_to_update.url,
-                    feed_to_update.last_updated,
-                )
+            storage.update_feed(*feed_to_update)
 
         return UpdateResult(
             # TODO: Do we need to return feed? Is the URL enough?
