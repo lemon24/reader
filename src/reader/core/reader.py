@@ -3,7 +3,7 @@ import datetime
 
 from .storage import Storage
 from .parser import RequestsParser
-from .updater import update_feed
+from .updater import Updater
 from .exceptions import ParseError, FeedNotFoundError
 
 log = logging.getLogger('reader')
@@ -199,11 +199,14 @@ class Reader:
 
     def _update_feed(self, feed_for_update, global_now=None):
         now = self._now()
-        feed, new_entries = update_feed(feed_for_update, now, global_now or now, self._parser, self._storage)
 
+        updater = Updater(feed_for_update, now, global_now)
+        result = updater.update(self._parser, self._storage)
+
+        new_entries = [e.entry for e in result.entries if e.new]
         for entry in new_entries:
             for plugin in self._post_entry_add_plugins:
-                plugin(self, feed, entry)
+                plugin(self, result.url, entry)
 
     def get_entries(self, which='all', feed=None, has_enclosures=None):
         """Get all or some of the entries.

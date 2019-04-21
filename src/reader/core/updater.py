@@ -10,12 +10,6 @@ from .types import UpdateResult, UpdatedEntry
 log = logging.getLogger('reader')
 
 
-def update_feed(old_feed, now, global_now, parser, storage):
-    updater = Updater(old_feed, now, global_now)
-    result = updater.update(parser, storage)
-    return result.url, [e.entry for e in result.entries if e.new]
-
-
 @attr.s
 class Updater:
 
