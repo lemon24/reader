@@ -56,7 +56,7 @@ def update_changelog_date(version, date):
     title = 'Version {}'.format(version)
     path_sub(
         r'(\n{}\n{}\n\n)(Unreleased)(\n)'.format(re.escape(title), '-' * len(title)),
-        str(date.date()),
+        'Released ' + str(date.date()),
         'CHANGES.rst',
     )
 

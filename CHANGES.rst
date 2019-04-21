@@ -14,13 +14,14 @@ Unreleased
 Version 0.8
 -----------
 
-2019-04-21
+Released 2019-04-21
 
 * Make the internal APIs use explicit types instead of tuples. (`#111`_)
 * Finish updater internal API. (`#107`_)
 * Automate part of the release process (``scripts/release.py``).
 
 .. _#111: https://github.com/lemon24/reader/issues/111
+
 
 Version 0.7
 -----------
