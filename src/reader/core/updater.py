@@ -80,14 +80,14 @@ class Updater:
         log.debug("update entry %r of feed %r: entry added/updated", new.id, self.url)
         return (updated, True) if not old else (updated, False)
 
-    def get_entries_to_update(self, entries, storage):
+    def get_entry_pairs(self, entries, storage):
         entries = list(entries)
-        
-        # TODO: Split the storage call into a separate method.
         pairs = zip(entries, storage.get_entries_for_update([
             (self.url, e.id) for e in entries
         ]))
+        return pairs
 
+    def get_entries_to_update(self, pairs):
         last_updated = self.now
         for new_entry, old_entry in reversed(list(pairs)):
             assert new_entry.feed is None
@@ -150,7 +150,8 @@ class Updater:
             storage.update_feed(self.url, None, None, None, self.now)
             return UpdateResult(None, ())
 
-        entries_to_update = list(self.get_entries_to_update(parse_result.entries, storage))
+        entries_to_update = list(self.get_entries_to_update(
+            self.get_entry_pairs(parse_result.entries, storage)))
         feed_to_update = self.get_feed_to_update(parse_result, entries_to_update)
 
         if entries_to_update:
