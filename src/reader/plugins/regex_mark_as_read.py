@@ -39,13 +39,13 @@ class RegexMarkAsReadPlugin:
     def __init__(self, config):
         self.config = config
 
-    def __call__(self, reader, feed, entry):
-        config = self.config.get(feed.url)
+    def __call__(self, reader, url, entry):
+        config = self.config.get(url)
         if not config:
             return
         for pattern in config:
             if re.search(pattern, entry.title):
-                reader.mark_as_read((feed.url, entry.id))
+                reader.mark_as_read((url, entry.id))
                 return
 
 

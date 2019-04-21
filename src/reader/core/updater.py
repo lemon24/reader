@@ -13,7 +13,7 @@ log = logging.getLogger('reader')
 def update_feed(old_feed, now, global_now, parser, storage):
     updater = Updater(old_feed, now, global_now)
     result = updater.update(parser, storage)
-    return result.feed, [e.entry for e in result.entries if e.new]
+    return result.url, [e.entry for e in result.entries if e.new]
 
 
 @attr.s
@@ -165,8 +165,7 @@ class Updater:
             storage.update_feed(*feed_to_update)
 
         return UpdateResult(
-            # TODO: Do we need to return feed? Is the URL enough?
-            parse_result.feed,
+            parse_result.feed.url if parse_result.feed else None,
             (UpdatedEntry(e.entry, n) for e, n in entries_to_update),
         )
 

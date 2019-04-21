@@ -71,22 +71,22 @@ def is_duplicate(one, two):
     return same_title and same_text
 
 
-def feed_entry_dedupe_plugin(reader, feed, entry):
+def feed_entry_dedupe_plugin(reader, url, entry):
     duplicates = [
-        e for e in reader.get_entries(feed=feed)
+        e for e in reader.get_entries(feed=url)
         if e.id != entry.id and is_duplicate(entry, e)
     ]
     if not duplicates:
         return
     if all(d.read for d in duplicates):
         log.info("%r (%s): found read duplicates, marking this as read",
-                 (feed.url, entry.id), entry.title)
-        reader.mark_as_read((feed.url, entry.id))
+                 (url, entry.id), entry.title)
+        reader.mark_as_read((url, entry.id))
     else:
         for duplicate in duplicates:
             reader.mark_as_read(duplicate)
         log.info("%r (%s): found unread duplicates, marking duplicates as read",
-                 (feed.url, entry.id), entry.title)
+                 (url, entry.id), entry.title)
 
 
 def feed_entry_dedupe(reader):

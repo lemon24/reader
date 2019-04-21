@@ -107,7 +107,7 @@ def test_post_entry_add_plugins(reader):
     reader.add_feed(feed.url)
     reader._post_entry_add_plugins.append(first_plugin)
     reader.update_feeds()
-    assert plugin_calls == [(first_plugin, feed, one)]
+    assert plugin_calls == [(first_plugin, feed.url, one)]
 
     plugin_calls[:] = []
 
@@ -117,8 +117,8 @@ def test_post_entry_add_plugins(reader):
     reader._post_entry_add_plugins.append(second_plugin)
     reader.update_feeds()
     assert plugin_calls == [
-        (first_plugin, feed, two),
-        (second_plugin, feed, two),
+        (first_plugin, feed.url, two),
+        (second_plugin, feed.url, two),
     ]
     assert set(reader.get_entries()) == {
         one._replace(feed=feed),
