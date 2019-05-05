@@ -9,6 +9,11 @@ import click
 def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
+def confirm(message, *args, **kwargs):
+    rv = click.prompt(message.format(*args, **kwargs),
+                      type=click.Choice(['y', 'n']))
+    if rv != 'y':
+        abort('aborted')
 
 def run(*args, **kwargs):
     return subprocess.run(*args, check=True, **kwargs)
@@ -77,6 +82,8 @@ def add_changelog_section(version, new_version):
 def commit(message):
     run(['git', 'commit', '-a', '-m', message])
 
+def push():
+    run(['git', 'push'])
 
 def check_uncommited():
     p = run(['git', 'status', '--untracked-files=no', '--porcelain'],
@@ -89,6 +96,11 @@ def check_unpushed():
         stdout=subprocess.PIPE, universal_newlines=True)
     if p.stdout.strip():
         abort("unpushed changes\n\n{}\n", p.stdout.strip('\n'))
+
+
+def upload_to_pypi():
+    run('twine upload dist/*', shell=True)
+
 
 @click.command()
 @click.argument('version')
@@ -104,12 +116,27 @@ def main(version, new_version, date):
 
     tox()
 
+    confirm("Push version {}?", version)
+    push()
+
+    confirm("Wait for Travis / Read the Docs builds to pass.")
+
+    confirm("Upload to PyPI?")
     build()
+    upload_to_pypi()
+
+    confirm("Create release {} in GitHub.", version)
+
+    confirm("Deactivate old versions in Read the Docs.")
 
     new_version_full = "{}.dev0".format(new_version)
     update_init_version(new_version_full)
     add_changelog_section(version, new_version)
     commit("Bump version to {}.".format(new_version_full))
+
+    confirm("Push version {}?", new_version_full)
+    push()
+
 
 
 if __name__ == '__main__':
