@@ -6,6 +6,10 @@ import datetime
 import click
 
 
+def abort(message, *args, **kwargs):
+    raise click.ClickException(message.format(*args, **kwargs))
+
+
 def run(*args, **kwargs):
     return subprocess.run(*args, check=True, **kwargs)
 
@@ -74,16 +78,32 @@ def commit(message):
     run(['git', 'commit', '-a', '-m', message])
 
 
+def check_uncommited():
+    p = run(['git', 'status', '--untracked-files=no', '--porcelain'],
+            stdout=subprocess.PIPE, universal_newlines=True)
+    if p.stdout.strip():
+        abort("uncommited changes\n\n{}\n", p.stdout.strip('\n'))
+
+def check_unpushed():
+    p = run(['git', 'log', '@{u}..', '--format=oneline'],
+        stdout=subprocess.PIPE, universal_newlines=True)
+    if p.stdout.strip():
+        abort("unpushed changes\n\n{}\n", p.stdout.strip('\n'))
+
 @click.command()
 @click.argument('version')
 @click.argument('new_version')
 @click.option('--date', type=click.DateTime(), default=str(datetime.date.today()))
 def main(version, new_version, date):
+    check_uncommited()
+    check_unpushed()
+
     update_init_version(version)
     update_changelog_date(version, date)
     commit("Release {}.".format(version))
 
     tox()
+
     build()
 
     new_version_full = "{}.dev0".format(new_version)
