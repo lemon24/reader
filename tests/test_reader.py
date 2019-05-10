@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import threading
 from enum import Enum
 
@@ -529,8 +529,13 @@ def test_get_entries_order(reader, chunk_size):
         )
 
     expected = sorted(parser.get_tuples(), key=sort_key, reverse=True)
+    rv = list(reader.get_entries())
 
-    assert list(reader.get_entries()) == expected
+    def to_str(e):
+        _, _, _, feed, _, entry = e.id.split('/')
+        return "{} {} {:%Y-%m-%d}".format(feed, entry, e.published or e.updated)
+
+    assert [to_str(e) for e in expected] == [to_str(e) for e in rv]
 
 
 @pytest.mark.parametrize('chunk_size', [
