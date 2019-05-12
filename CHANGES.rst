@@ -10,6 +10,12 @@ Version 0.9
 
 Unreleased
 
+* Improve the :meth:`~Reader.get_entries` sorting algorithm.
+  Fixes a bug introduced by `#106`_
+  (entries of new feeds would always show up at the top). (`#113`_)
+
+.. _#113: https://github.com/lemon24/reader/issues/113
+
 
 Version 0.8
 -----------

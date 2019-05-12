@@ -213,6 +213,15 @@ class Reader:
     def get_entries(self, which='all', feed=None, has_enclosures=None):
         """Get all or some of the entries.
 
+        Entries are sorted most recent first. Currently "recent" means:
+
+        * by import date if for entries published less than 3 days ago
+        * by published date otherwise (if an entry does not have
+          :attr:`~Entry.published`, :attr:`~Entry.updated` is used)
+
+        Note:
+            The algorithm for "recent" is a heuristic and may change over time.
+
         Args:
             which (str): One of ``'all'``, ``'read'``, or ``'unread'``.
             feed (str or Feed or None): Only return the entries for this feed.
@@ -220,7 +229,7 @@ class Reader:
                 have enclosures.
 
         Yields:
-            :class:`Entry`: Last added/published/updated entries first (in that order).
+            :class:`Entry`: Most recent entries first.
 
         Raises:
             FeedNotFoundError: Only if `feed` is not None.
@@ -238,6 +247,8 @@ class Reader:
             raise ValueError("has_enclosures should be one of (None, False, True)")
         chunk_size = self._get_entries_chunk_size
 
+        now = self._now()
+
         last = None
         while True:
 
@@ -245,6 +256,7 @@ class Reader:
                 which=which,
                 feed_url=feed_url,
                 has_enclosures=has_enclosures,
+                now=now,
                 chunk_size=chunk_size,
                 last=last,
             )

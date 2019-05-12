@@ -89,10 +89,10 @@ def add_or_update_entries(storage, feed, entry):
     storage.add_or_update_entries([(feed.url, entry, entry.updated, None)])
 
 def get_entries_chunk_size_0(storage, _, __):
-    list(storage.get_entries('all', None, None, chunk_size=0))
+    list(storage.get_entries('all', None, None, chunk_size=0, now=datetime(2010, 1, 1)))
 
 def get_entries_chunk_size_1(storage, _, __):
-    list(storage.get_entries('all', None, None, chunk_size=1))
+    list(storage.get_entries('all', None, None, chunk_size=1, now=datetime(2010, 1, 1)))
 
 @pytest.mark.slow
 @pytest.mark.parametrize('do_stuff', [
@@ -156,16 +156,16 @@ def iter_get_feeds_for_update(storage):
     return storage.get_feeds_for_update()
 
 def iter_get_entries_chunk_size_0(storage):
-    return storage.get_entries('all', None, None, chunk_size=0)
+    return storage.get_entries('all', None, None, chunk_size=0, now=datetime(2010, 1, 1))
 
 def iter_get_entries_chunk_size_1(storage):
-    return storage.get_entries('all', None, None, chunk_size=1)
+    return storage.get_entries('all', None, None, chunk_size=1, now=datetime(2010, 1, 1))
 
 def iter_get_entries_chunk_size_2(storage):
-    return storage.get_entries('all', None, None, chunk_size=2)
+    return storage.get_entries('all', None, None, chunk_size=2, now=datetime(2010, 1, 1))
 
 def iter_get_entries_chunk_size_3(storage):
-    return storage.get_entries('all', None, None, chunk_size=3)
+    return storage.get_entries('all', None, None, chunk_size=3, now=datetime(2010, 1, 1))
 
 @pytest.mark.slow
 @pytest.mark.parametrize('iter_stuff', [

@@ -4,6 +4,7 @@ import functools
 import logging
 import json
 from itertools import chain
+from datetime import timedelta
 
 from .sqlite_utils import open_sqlite_db, DBError
 from .exceptions import (
@@ -117,6 +118,8 @@ class Storage:
 
     open_db = staticmethod(open_db)
 
+    recent_threshold = timedelta(3)
+
     @wrap_storage_exceptions()
     def __init__(self, path=None, timeout=None):
         try:
@@ -229,7 +232,7 @@ class Storage:
         """.format(values_snippet=values_snippet), parameters)
 
         return iter([
-            EntryForUpdate(updated) if exists else None 
+            EntryForUpdate(updated) if exists else None
             for exists, updated in rows
         ])
 
@@ -394,7 +397,7 @@ class Storage:
         self.add_or_update_entries([(feed_url, entry, last_updated, first_updated)])
 
     def _get_entries(self, which, feed_url, has_enclosures,
-                     chunk_size=None, last=None):
+                     now, chunk_size=None, last=None):
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
         if which == 'all':
@@ -410,6 +413,8 @@ class Storage:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
+        # TODO: This needs some sort of query builder so badly.
+
         where_next_snippet = ''
         limit_snippet = ''
         if chunk_size:
@@ -420,7 +425,7 @@ class Storage:
                 last_entry_first_updated, last_entry_updated, last_feed_url, last_entry_last_updated, last_entry_id = last
                 where_next_snippet = """
                     AND (
-                        coalesce(entries.first_updated, entries.published, entries.updated),
+                        kinda_first_updated,
                         coalesce(entries.published, entries.updated),
                         feeds.url,
                         entries.last_updated,
@@ -447,6 +452,8 @@ class Storage:
                         OR json_array_length(entries.enclosures) = 0)
             """.format('NOT' if has_enclosures else '')
 
+        recent_threshold = now - self.recent_threshold
+
         query = """
             SELECT
                 feeds.url,
@@ -466,7 +473,14 @@ class Storage:
                 entries.enclosures,
                 entries.read,
                 entries.last_updated,
-                entries.first_updated
+                coalesce(
+                    CASE
+                    WHEN
+                            coalesce(entries.published, entries.updated) >= :recent_threshold
+
+                        THEN entries.first_updated
+                    END,
+                    entries.published, entries.updated) as kinda_first_updated
             FROM entries, feeds
             WHERE
                 feeds.url = entries.feed
@@ -475,7 +489,7 @@ class Storage:
                 {where_next_snippet}
                 {where_has_enclosures_snippet}
             ORDER BY
-                coalesce(entries.first_updated, entries.published, entries.updated) DESC,
+                kinda_first_updated DESC,
                 coalesce(entries.published, entries.updated) DESC,
                 feeds.url DESC,
                 entries.last_updated DESC,
@@ -510,10 +524,10 @@ class Storage:
 
     @wrap_storage_exceptions()
     def get_entries(self, which, feed_url, has_enclosures,
-                    chunk_size=None, last=None):
+                    now, chunk_size=None, last=None):
         rv = self._get_entries(which=which, feed_url=feed_url,
                                has_enclosures=has_enclosures,
-                               chunk_size=chunk_size, last=last)
+                               now=now, chunk_size=chunk_size, last=last)
 
         if chunk_size:
             # The list() call is here to make sure callers can't block the

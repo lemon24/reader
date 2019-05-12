@@ -8,6 +8,8 @@ from reader import Reader
 from reader import Feed, Entry, Content, Enclosure
 from reader import FeedExistsError, FeedNotFoundError, ParseError, EntryNotFoundError, StorageError
 
+from reader.core.storage import Storage
+
 from fakeparser import Parser, BlockingParser, FailingParser, NotModifiedParser
 
 from utils import make_url_base
@@ -469,15 +471,53 @@ class FakeNow:
         return self.now
 
 
+GET_ENTRIES_ORDER_DATA = {
+    'all_newer_than_threshold': (timedelta(100), [
+        '1 3 2010-01-04',
+        '1 4 2010-01-03',
+        '2 3 2010-01-02',
+        '1 2 2010-01-02',
+        '2 5 2009-12-20',
+        '2 2 2010-01-02',
+        '1 1 2010-01-02',
+        '2 1 2010-01-05',
+        '2 4 2010-01-04',
+    ]),
+    'all_older_than_threshold': (timedelta(0), [
+        '2 1 2010-01-05',
+        '2 4 2010-01-04',
+        '1 3 2010-01-04',
+        '1 4 2010-01-03',
+        '2 3 2010-01-02',
+        '2 2 2010-01-02',
+        '1 2 2010-01-02',
+        '1 1 2010-01-02',
+        '2 5 2009-12-20',
+    ]),
+    'some_older_than_threshold': (Storage.recent_threshold, [
+        '1 3 2010-01-04',
+        '1 4 2010-01-03',
+        '2 1 2010-01-05',
+        '2 4 2010-01-04',
+        # published or updated >= timedelta(3)
+        '2 3 2010-01-02',
+        '2 2 2010-01-02',
+        '1 2 2010-01-02',
+        '1 1 2010-01-02',
+        '2 5 2009-12-20',
+    ]),
+}
+
+@pytest.mark.parametrize('order_data_key', GET_ENTRIES_ORDER_DATA)
 @pytest.mark.parametrize('chunk_size', [
     Reader._get_entries_chunk_size,     # the default
     1, 2, 3, 8,                         # rough result size for this test
     0,                                  # unchunked query
 ])
-def test_get_entries_order(reader, chunk_size):
+def test_get_entries_order(reader, chunk_size, order_data_key):
     """Entries should be sorted descending by (with decreasing priority):
 
-    * entry first updated
+    * entry first updated (only if newer than _storage.recent_threshold)
     * entry published
     * entry updated
     * feed URL
@@ -485,8 +525,13 @@ def test_get_entries_order(reader, chunk_size):
     * entry id
 
     https://github.com/lemon24/reader/issues/97
+    https://github.com/lemon24/reader/issues/106
+    https://github.com/lemon24/reader/issues/113
 
     """
+
+    # TODO: Break this into smaller tests; working with it for #113 was a pain.
+
     reader._get_entries_chunk_size = chunk_size
 
     parser = Parser()
@@ -500,17 +545,20 @@ def test_get_entries_order(reader, chunk_size):
     parser.entry(2, 1, datetime(2010, 1, 1), published=datetime(2010, 1, 1))
     parser.entry(2, 4, datetime(2010, 1, 4))
     two = parser.feed(2, datetime(2010, 1, 4))
+    reader._now.now = datetime(2010, 1, 2)
     reader.update_feeds()
 
     reader.add_feed(one.url)
 
     parser.entry(1, 1, datetime(2010, 1, 2))
     one = parser.feed(1, datetime(2010, 1, 2))
+    reader._now.now = datetime(2010, 1, 3)
     reader.update_feeds()
 
     parser.entry(2, 1, datetime(2010, 1, 5))
     parser.entry(2, 2, datetime(2010, 1, 2))
     two = parser.feed(2, datetime(2010, 1, 5))
+    reader._now.now = datetime(2010, 1, 4)
     reader.update_feeds()
 
     parser.entry(1, 2, datetime(2010, 1, 2))
@@ -520,27 +568,19 @@ def test_get_entries_order(reader, chunk_size):
     parser.entry(2, 3, datetime(2010, 1, 2))
     parser.entry(2, 5, datetime(2010, 1, 3), published=datetime(2009, 12, 20))
     two = parser.feed(2, datetime(2010, 1, 6))
+    reader._now.now = datetime(2010, 1, 5)
     reader.update_feeds()
 
-    reader._now.now = datetime(2010, 1, 7)
+    recent_threshold, expected = GET_ENTRIES_ORDER_DATA[order_data_key]
+
+    reader._storage.recent_threshold = recent_threshold
+    reader._now.now = datetime(2010, 1, 6)
 
     def to_str(e):
         _, _, _, feed, _, entry = e.id.split('/')
         return "{} {} {:%Y-%m-%d}".format(feed, entry, e.published or e.updated)
 
-    rv = [to_str(e) for e in reader.get_entries()]
-
-    assert rv == [
-        '1 3 2010-01-04',
-        '1 4 2010-01-03',
-        '2 3 2010-01-02',
-        '1 2 2010-01-02',
-        '2 5 2009-12-20',
-        '2 2 2010-01-02',
-        '1 1 2010-01-02',
-        '2 1 2010-01-05',
-        '2 4 2010-01-04',
-    ]
+    assert [to_str(e) for e in reader.get_entries()] == expected
 
 
 @pytest.mark.parametrize('chunk_size', [
