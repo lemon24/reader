@@ -8,7 +8,7 @@ reader changelog
 Version 0.9
 -----------
 
-Unreleased
+Released 2019-05-12
 
 * Improve the :meth:`~Reader.get_entries` sorting algorithm.
   Fixes a bug introduced by `#106`_
