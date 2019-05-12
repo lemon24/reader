@@ -458,6 +458,17 @@ def test_mark_as_read_unread(reader, entry_arg):
     assert not entry.read
 
 
+class FakeNow:
+
+    def __init__(self, start, step):
+        self.now = start
+        self.step = step
+
+    def __call__(self):
+        self.now += self.step
+        return self.now
+
+
 @pytest.mark.parametrize('chunk_size', [
     Reader._get_entries_chunk_size,     # the default
     1, 2, 3, 8,                         # rough result size for this test
@@ -480,8 +491,7 @@ def test_get_entries_order(reader, chunk_size):
 
     parser = Parser()
     reader._parser = parser
-
-    first_update = {}
+    reader._now = FakeNow(datetime(2010, 1, 1), timedelta(microseconds=1))
 
     one = parser.feed(1)
     two = parser.feed(2)
@@ -491,20 +501,17 @@ def test_get_entries_order(reader, chunk_size):
     parser.entry(2, 4, datetime(2010, 1, 4))
     two = parser.feed(2, datetime(2010, 1, 4))
     reader.update_feeds()
-    first_update[2, 1] = first_update[2, 4] = 1
 
     reader.add_feed(one.url)
 
     parser.entry(1, 1, datetime(2010, 1, 2))
     one = parser.feed(1, datetime(2010, 1, 2))
     reader.update_feeds()
-    first_update[1, 1] = 2
 
     parser.entry(2, 1, datetime(2010, 1, 5))
     parser.entry(2, 2, datetime(2010, 1, 2))
     two = parser.feed(2, datetime(2010, 1, 5))
     reader.update_feeds()
-    first_update[2, 2] = 3
 
     parser.entry(1, 2, datetime(2010, 1, 2))
     parser.entry(1, 4, datetime(2010, 1, 3))
@@ -514,28 +521,26 @@ def test_get_entries_order(reader, chunk_size):
     parser.entry(2, 5, datetime(2010, 1, 3), published=datetime(2009, 12, 20))
     two = parser.feed(2, datetime(2010, 1, 6))
     reader.update_feeds()
-    first_update[1, 2] = first_update[1, 4] = first_update[1, 3] = \
-        first_update[2, 3] = first_update[2, 5] = 4
 
-    first_update = {
-        (parser.feeds[fn].url, parser.entries[fn][en].id): t
-        for (fn, en), t in first_update.items()
-    }
-
-    def sort_key(e):
-        return (
-            first_update[e.feed.url, e.id],
-            e.published or e.updated, e.feed.url, e.id,
-        )
-
-    expected = sorted(parser.get_tuples(), key=sort_key, reverse=True)
-    rv = list(reader.get_entries())
+    reader._now.now = datetime(2010, 1, 7)
 
     def to_str(e):
         _, _, _, feed, _, entry = e.id.split('/')
         return "{} {} {:%Y-%m-%d}".format(feed, entry, e.published or e.updated)
 
-    assert [to_str(e) for e in expected] == [to_str(e) for e in rv]
+    rv = [to_str(e) for e in reader.get_entries()]
+
+    assert rv == [
+        '1 3 2010-01-04',
+        '1 4 2010-01-03',
+        '2 3 2010-01-02',
+        '1 2 2010-01-02',
+        '2 5 2009-12-20',
+        '2 2 2010-01-02',
+        '1 1 2010-01-02',
+        '2 1 2010-01-05',
+        '2 4 2010-01-04',
+    ]
 
 
 @pytest.mark.parametrize('chunk_size', [
