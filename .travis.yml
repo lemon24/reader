@@ -9,6 +9,11 @@ python:
     - "3.8-dev"
     - "pypy3.5"
 
+matrix:
+    allow_failures:
+        # https://travis-ci.org/lemon24/reader/jobs/534208497
+        - python: "3.8-dev"
+
 install:
     - scripts/build-sqlite.sh $HOME
     - make install-dev
