@@ -8,7 +8,7 @@ with open('src/reader/__init__.py', 'rb') as f:
     version = str(ast.literal_eval(_version_re.search(
         f.read().decode('utf-8')).group(1)))
 
-with open('README.md') as f:
+with open('README.rst') as f:
     long_description = f.read()
 
 setup(
@@ -59,7 +59,7 @@ setup(
     },
     description="A minimal feed reader.",
     long_description=long_description,
-    long_description_content_type="text/markdown",
+    long_description_content_type="text/x-rst",
     classifiers=[
         "License :: OSI Approved :: BSD License",
         "Programming Language :: Python",
