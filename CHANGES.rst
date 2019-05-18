@@ -8,7 +8,7 @@ reader changelog
 Version 0.10
 ------------
 
-Unreleased
+Released 2019-05-18
 
 * Unify plugin loading and error handling code. (`#112`_)
 * Minor improvements to CLI error reporting.
