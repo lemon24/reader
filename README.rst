@@ -26,6 +26,9 @@ Features:
 
 * Stand-alone library with stable, clearly documented API, and excellent test coverage.
 * Minimal web interface that works even with text-only browsers.
+
+  * ... with automatic tag fixing for MP3 enclosures (e.g. podcasts).
+
 * (Some) plugin support.
 
 .. end-features
