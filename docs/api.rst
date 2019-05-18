@@ -63,12 +63,22 @@ All exceptions that :class:`Reader` explicitly raises inherit from :exc:`ReaderE
 .. autoexception:: EntryError
     :members:
 
-    Subclass of :exc:`FeedError`.
+    Subclass of :exc:`ReaderError`.
 
 .. autoexception:: EntryNotFoundError
     :members:
 
     Subclass of :exc:`EntryError`.
+
+.. autoexception:: MetadataError
+    :members:
+
+    Subclass of :exc:`ReaderError`.
+
+.. autoexception:: MetadataNotFound
+    :members:
+
+    Subclass of :exc:`MetadataError`.
 
 .. autoexception:: StorageError
     :members:

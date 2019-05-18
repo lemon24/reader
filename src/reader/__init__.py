@@ -48,6 +48,7 @@ from .core.exceptions import (
     ReaderError,
     FeedError, FeedExistsError, FeedNotFoundError, ParseError,
     EntryError, EntryNotFoundError,
+    MetadataError, MetadataNotFound,
     StorageError,
 )
 

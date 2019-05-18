@@ -49,6 +49,22 @@ class EntryNotFoundError(EntryError):
     """Entry not found."""
 
 
+class MetadataError(ReaderError):
+    """A feed metadata error occured."""
+
+    def __init__(self, url, key):
+        super().__init__(url, key)
+
+        #: The feed URL.
+        self.url = url
+
+        #: The metadata key.
+        self.key = key
+
+class MetadataNotFound(MetadataError):
+    """Feed metadata not found."""
+
+
 class StorageError(ReaderError):
     """An exception was raised by the underlying storage.
 
