@@ -61,7 +61,7 @@ class MetadataError(ReaderError):
         #: The metadata key.
         self.key = key
 
-class MetadataNotFound(MetadataError):
+class MetadataNotFoundError(MetadataError):
     """Feed metadata not found."""
 
 

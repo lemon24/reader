@@ -9,7 +9,7 @@ from reader.core.types import EntryForUpdate
 from reader import StorageError
 import reader.core.sqlite_utils
 
-from reader import Feed, Entry, FeedNotFoundError
+from reader import Feed, Entry, FeedNotFoundError, MetadataNotFoundError
 
 
 def test_storage_errors_open(tmpdir):
@@ -94,6 +94,15 @@ def get_entries_chunk_size_0(storage, _, __):
 def get_entries_chunk_size_1(storage, _, __):
     list(storage.get_entries('all', None, None, chunk_size=1, now=datetime(2010, 1, 1)))
 
+def iter_feed_metadata(storage, feed, __):
+    list(storage.iter_feed_metadata(feed.url))
+
+def set_feed_metadata(storage, feed, __):
+    storage.set_feed_metadata(feed.url, 'key', 'value')
+
+def delete_feed_metadata(storage, feed, __):
+    storage.delete_feed_metadata(feed.url, 'key')
+
 @pytest.mark.slow
 @pytest.mark.parametrize('do_stuff', [
     init,
@@ -111,6 +120,9 @@ def get_entries_chunk_size_1(storage, _, __):
     add_or_update_entries,
     get_entries_chunk_size_0,
     get_entries_chunk_size_1,
+    iter_feed_metadata,
+    set_feed_metadata,
+    delete_feed_metadata,
 ])
 def test_errors_locked(db_path, do_stuff):
     """All methods should raise StorageError when the database is locked.
@@ -167,6 +179,9 @@ def iter_get_entries_chunk_size_2(storage):
 def iter_get_entries_chunk_size_3(storage):
     return storage.get_entries('all', None, None, chunk_size=3, now=datetime(2010, 1, 1))
 
+def iter_iter_feed_metadata(storage):
+    return storage.iter_feed_metadata('two')
+
 @pytest.mark.slow
 @pytest.mark.parametrize('iter_stuff', [
     iter_get_feeds,
@@ -191,6 +206,9 @@ def test_iter_locked(db_path, iter_stuff):
     storage.add_or_update_entry(feed.url, entry, entry.updated, None)
     storage.add_feed('two')
     storage.add_or_update_entry('two', entry, entry.updated, None)
+    storage.set_feed_metadata('two', '1', 1)
+    storage.set_feed_metadata('two', '2', 2)
+
 
     rv = iter_stuff(storage)
     next(rv)
@@ -261,4 +279,38 @@ def test_get_entries_for_update(storage_cls):
         None,
     ]
 
+
+@pytest.fixture
+def storage():
+    return Storage(':memory:')
+
+
+def test_metadata(storage):
+    assert set(storage.iter_feed_metadata('one')) == set()
+    assert set(storage.iter_feed_metadata('one', 'key')) == set()
+
+    with pytest.raises(FeedNotFoundError):
+        storage.set_feed_metadata('one', 'key', 'value')
+
+    with pytest.raises(MetadataNotFoundError):
+        storage.delete_feed_metadata('one', 'key')
+
+    storage.add_feed('one')
+    storage.set_feed_metadata('one', 'key', 'value')
+
+    assert set(storage.iter_feed_metadata('one')) == {('key', 'value')}
+    assert set(storage.iter_feed_metadata('one', 'key')) == {('key', 'value')}
+    assert set(storage.iter_feed_metadata('one', 'second')) == set()
+
+    storage.add_feed('two')
+    storage.set_feed_metadata('two', '2', 2)
+    storage.set_feed_metadata('one', 'second', 1)
+
+    assert set(storage.iter_feed_metadata('one')) == {('key', 'value'), ('second', 1)}
+    assert set(storage.iter_feed_metadata('one', 'key')) == {('key', 'value')}
+    assert set(storage.iter_feed_metadata('one', 'second')) == {('second', 1)}
+
+    storage.delete_feed_metadata('one', 'key')
+
+    assert set(storage.iter_feed_metadata('one')) == {('second', 1)}
 

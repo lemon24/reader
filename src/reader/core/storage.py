@@ -10,6 +10,7 @@ from .sqlite_utils import open_sqlite_db, DBError
 from .exceptions import (
     StorageError,
     EntryNotFoundError, FeedNotFoundError, FeedExistsError,
+    MetadataNotFoundError,
 )
 from .types import Feed, Entry, Content, Enclosure
 from .types import FeedForUpdate, EntryForUpdate
@@ -556,4 +557,52 @@ class Storage:
             rv = iter(list(rv))
 
         return rv
+
+    def _iter_feed_metadata(self, feed_url, key):
+        where_url_snippet = "WHERE feed = :feed_url"
+        if key is not None:
+            where_url_snippet += " AND key = :key"
+
+        cursor = self.db.execute("""
+            SELECT key, value FROM feed_metadata
+            {where_url_snippet};
+        """.format(**locals()), locals())
+
+        for key, value in cursor:
+            yield key, json.loads(value)
+
+    @wrap_storage_exceptions()
+    def iter_feed_metadata(self, feed_url, key=None):
+        return iter(list(self._iter_feed_metadata(feed_url, key)))
+
+    @wrap_storage_exceptions()
+    def set_feed_metadata(self, feed_url, key, value):
+        value = json.dumps(value)
+        with self.db:
+            try:
+                self.db.execute("""
+                    INSERT OR REPLACE INTO feed_metadata (
+                        feed,
+                        key,
+                        value
+                    ) VALUES (
+                        :feed_url,
+                        :key,
+                        :value
+                    );
+                """, locals())
+            except sqlite3.IntegrityError as e:
+                raise FeedNotFoundError(feed_url)
+
+    @wrap_storage_exceptions()
+    def delete_feed_metadata(self, feed_url, key):
+         with self.db:
+            rows = self.db.execute("""
+                DELETE FROM feed_metadata
+                WHERE feed = :feed_url AND key = :key;
+            """, locals())
+            if rows.rowcount == 0:
+                raise MetadataNotFoundError(feed_url, key)
+            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+
 

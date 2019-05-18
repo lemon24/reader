@@ -75,7 +75,7 @@ All exceptions that :class:`Reader` explicitly raises inherit from :exc:`ReaderE
 
     Subclass of :exc:`ReaderError`.
 
-.. autoexception:: MetadataNotFound
+.. autoexception:: MetadataNotFoundError
     :members:
 
     Subclass of :exc:`MetadataError`.
