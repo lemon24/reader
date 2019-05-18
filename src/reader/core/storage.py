@@ -85,6 +85,21 @@ def create_db(db):
                 ON DELETE CASCADE
         );
     """)
+    create_feed_metadata(db)
+
+def create_feed_metadata(db):
+    db.execute("""
+        CREATE TABLE feed_metadata (
+            feed TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+
+            PRIMARY KEY (feed, key),
+            FOREIGN KEY (feed) REFERENCES feeds(url)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
+        );
+    """)
 
 def update_from_10_to_11(db):   # pragma: no cover
     db.execute("""
@@ -98,16 +113,20 @@ def update_from_11_to_12(db):   # pragma: no cover
         ADD COLUMN first_updated TIMESTAMP;
     """)
 
+def update_from_12_to_13(db):   # pragma: no cover
+    create_feed_metadata(db)
+
 def open_db(path, timeout):
     return open_sqlite_db(
         path,
 
         create=create_db,
-        version=12,
+        version=13,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             10: update_from_10_to_11,
             11: update_from_11_to_12,
+            12: update_from_12_to_13,
         },
 
         timeout=timeout,
