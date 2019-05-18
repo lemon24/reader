@@ -1,22 +1,17 @@
 import os.path
 import os
 import logging
+import traceback
+import sys
 
 import click
 
-from . import Reader
-
+from . import Reader, StorageError
+from .plugins import Loader, LoaderError
 
 APP_NAME = 'reader'
 DB_ENVVAR = '{}_DB'.format(APP_NAME.upper())
 PLUGIN_ENVVAR = '{}_PLUGIN'.format(APP_NAME.upper())
-
-LOAD_PLUGINS_DEPENDENCIES_TEXT = """\
-This might be due to missing dependencies. The plugin loading is
-optional, use the 'plugins' extra to install its dependencies:
-
-    pip install reader[plugins]
-"""
 
 
 def get_default_db_path(create_dir=False):
@@ -27,6 +22,9 @@ def get_default_db_path(create_dir=False):
     return db_path
 
 
+def format_tb(e):
+    return ''.join(traceback.format_exception(type(e), e, e.__traceback__))
+
 def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
@@ -34,19 +32,16 @@ def abort(message, *args, **kwargs):
 def make_reader(db_path, plugins):
     try:
         reader = Reader(db_path)
+    except StorageError as e:
+        abort("{}: {}: {}", db_path, e, e.__cause__)
     except Exception as e:
-        abort("{}: {}", db_path, e)
+        abort("unexpected error; original traceback follows\n\n{}", format_tb(e))
 
-    if plugins:
-        try:
-            from .plugins import load_plugins
-        except ImportError as e:
-            abort("{}\n\n{}", e, LOAD_PLUGINS_DEPENDENCIES_TEXT)
-
-        try:
-            load_plugins(reader, plugins)
-        except Exception as e:
-            abort("while loading plugins: {}".format(e))
+    try:
+        loader = Loader(plugins)
+        loader.load_plugins(reader)
+    except LoaderError as e:
+        abort("{}; original traceback follows\n\n{}", e, format_tb(e.__cause__ or e))
 
     return reader
 

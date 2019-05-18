@@ -7,6 +7,7 @@ import humanize
 
 from reader import Reader, ReaderError
 from .api_thing import APIThing, APIError
+from reader.plugins import Loader, LoaderError
 
 
 blueprint = Blueprint('reader', __name__)
@@ -17,24 +18,7 @@ blueprint.app_template_filter('humanize_naturaltime')(humanize.naturaltime)
 def get_reader():
     if not hasattr(g, 'reader'):
         reader = Reader(current_app.config['READER_DB'])
-
-        if current_app.config['READER_PLUGINS']:
-            try:
-                from reader.plugins import load_plugins
-            except ImportError:
-                current_app.logger.exception(
-                    "cannot import reader plugin loading machinery; "
-                    "this might be due to missing dependencies, "
-                    "use 'pip install reader[plugins]' to install them"
-                )
-                load_plugins = None
-            if load_plugins:
-                try:
-                    load_plugins(reader, current_app.config['READER_PLUGINS'])
-                except Exception as e:
-                    current_app.logger.exception(
-                        "error while loading reader plugins")
-
+        current_app.reader_load_plugins(reader)
         g.reader = reader
     return g.reader
 
@@ -160,11 +144,24 @@ def update_feed_title(data):
     get_reader().set_feed_user_title(feed_url, feed_title)
 
 
+class FlaskPluginLoader(Loader):
+
+    def handle_error(self, exception, cause):
+        current_app.logger.exception(
+            "%s; original traceback follows",
+            exception, exc_info=cause or exception)
+
 
 def create_app(db_path, plugins=()):
     app = Flask(__name__)
     app.config['READER_DB'] = db_path
-    app.config['READER_PLUGINS'] = plugins
+
+    try:
+        app.reader_load_plugins = FlaskPluginLoader(plugins).load_plugins
+    except LoaderError as e:
+        app.logger.exception("%s; original traceback follows", e, exc_info=e.__cause__ or e)
+        app.reader_load_plugins = lambda reader: reader
+
     app.secret_key = 'secret'
     app.teardown_appcontext(close_db)
 

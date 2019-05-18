@@ -10,6 +10,11 @@ Version 0.10
 
 Unreleased
 
+* Unify plugin loading code and error handling. (`#112`_)
+* Minor improvements to CLI error reporting.
+
+.. _#112: https://github.com/lemon24/reader/issues/112
+
 
 Version 0.9
 -----------
