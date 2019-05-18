@@ -6,12 +6,12 @@ import sys
 
 import click
 
+import reader
 from . import Reader, StorageError
 from .plugins import Loader, LoaderError
 
-APP_NAME = 'reader'
-DB_ENVVAR = '{}_DB'.format(APP_NAME.upper())
-PLUGIN_ENVVAR = '{}_PLUGIN'.format(APP_NAME.upper())
+
+APP_NAME = reader.__name__
 
 
 def get_default_db_path(create_dir=False):
@@ -61,10 +61,10 @@ def setup_logging(verbose):
 
 
 @click.group()
-@click.option('--db', type=click.Path(dir_okay=False), envvar=DB_ENVVAR,
+@click.option('--db', type=click.Path(dir_okay=False), envvar=reader._DB_ENVVAR,
     help="Path to the reader database. Defaults to {}."
          .format(get_default_db_path()))
-@click.option('--plugin', multiple=True, envvar=PLUGIN_ENVVAR,
+@click.option('--plugin', multiple=True, envvar=reader._PLUGIN_ENVVAR,
     help="Import path to a plug-in. Can be passed multiple times.")
 @click.pass_context
 def cli(ctx, db, plugin):

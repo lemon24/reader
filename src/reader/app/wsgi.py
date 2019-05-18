@@ -10,11 +10,12 @@ To run a local development server:
 
 import os
 
+import reader
 from reader.app import create_app
 
 app = create_app(
-    os.environ['READER_DB'],
-    os.environ.get('READER_PLUGIN', '').split(),
+    os.environ[reader._DB_ENVVAR],
+    os.environ.get(reader._PLUGIN_ENVVAR, '').split(),
 )
 app.config['TRAP_BAD_REQUEST_ERRORS'] = bool(os.environ.get('FLASK_TRAP_BAD_REQUEST_ERRORS', ''))
 

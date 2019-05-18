@@ -51,3 +51,10 @@ from .core.exceptions import (
     StorageError,
 )
 
+
+# For internal use only.
+
+_DB_ENVVAR = 'READER_DB'
+_PLUGIN_ENVVAR = 'READER_PLUGIN'
+
+
