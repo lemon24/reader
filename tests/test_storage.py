@@ -285,7 +285,7 @@ def storage():
     return Storage(':memory:')
 
 
-def test_metadata(storage):
+def test_feed_metadata(storage):
     assert set(storage.iter_feed_metadata('one')) == set()
     assert set(storage.iter_feed_metadata('one', 'key')) == set()
 
@@ -297,6 +297,9 @@ def test_metadata(storage):
 
     storage.add_feed('one')
     storage.set_feed_metadata('one', 'key', 'value')
+
+    with pytest.raises(TypeError):
+        storage.set_feed_metadata('one', 'two', None)
 
     assert set(storage.iter_feed_metadata('one')) == {('key', 'value')}
     assert set(storage.iter_feed_metadata('one', 'key')) == {('key', 'value')}

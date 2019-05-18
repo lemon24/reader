@@ -10,6 +10,10 @@ Version 0.11
 
 Unreleased
 
+* Support storing per-feed metadata. (`#114`_)
+
+.. _#114: https://github.com/lemon24/reader/issues/114
+
 
 Version 0.10
 ------------

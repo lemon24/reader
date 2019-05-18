@@ -4,7 +4,7 @@ import datetime
 from .storage import Storage
 from .parser import RequestsParser
 from .updater import Updater
-from .exceptions import ParseError, FeedNotFoundError
+from .exceptions import ParseError, FeedNotFoundError, MetadataNotFoundError
 
 log = logging.getLogger('reader')
 
@@ -309,4 +309,83 @@ class Reader:
         """
         feed_url, entry_id = entry_argument(entry)
         self._storage.mark_as_read_unread(feed_url, entry_id, 0)
+
+    def iter_feed_metadata(self, feed):
+        """Get all the metadata values for a feed.
+
+        Args:
+            feed (str or Feed): The feed URL.
+
+        Yields:
+            tupe(str, JSONType): (key, value) pairs, in undefined order.
+            JSONType is whatever :py:func:`json.dumps` accepts.
+
+        Raises:
+            StorageError
+
+        """
+        feed_url = feed_argument(feed)
+        return self._storage.iter_feed_metadata(feed_url)
+
+    def get_feed_metadata(self, feed, key):
+        """Get metadata for a feed.
+
+        Args:
+            feed (str or Feed): The feed URL.
+            key (str): The key of the metadata to retrieve.
+
+        Returns:
+            JSONType or None: The metadata value if it exits, None if it doesn't.
+            JSONType is whatever :py:func:`json.dumps` accepts.
+
+        Raises:
+            StorageError
+
+        """
+        feed_url = feed_argument(feed)
+        pairs = list(self._storage.iter_feed_metadata(feed_url, key))
+
+        if len(pairs) == 0:
+            # TODO: Maybe raise MetadataNotFoundError? Maybe with a default=?
+            return None
+        elif len(pairs) == 1:
+            assert pairs[0][0] == key
+            return pairs[0][1]
+        else:
+            assert False, "shouldn't get here"  # pragma: no cover
+
+    def set_feed_metadata(self, feed, key, value):
+        """Set metadata for a feed.
+
+        Args:
+            feed (str or Feed): The feed URL.
+            key (str): The key of the metadata to set.
+            value (JSONType): The value of the metadata to set.
+                JSONType is whatever :py:func:`json.dumps` accepts,
+                except None.
+
+        Raises:
+            :py:exc:`TypeError`: If the value is invalid.
+            FeedNotFoundError
+            StorageError
+
+        """
+        feed_url = feed_argument(feed)
+        self._storage.set_feed_metadata(feed_url, key, value)
+
+    def delete_feed_metadata(self, feed, key):
+        """Delete metadata for a feed.
+
+        Args:
+            feed (str or Feed): The feed URL.
+            key (str): The key of the metadata to delete.
+
+        Raises:
+            MetadataNotFoundError
+            StorageError
+
+        """
+        feed_url = feed_argument(feed)
+        self._storage.delete_feed_metadata(feed_url, key)
+
 

@@ -6,7 +6,11 @@ import pytest
 
 from reader import Reader
 from reader import Feed, Entry, Content, Enclosure
-from reader import FeedExistsError, FeedNotFoundError, ParseError, EntryNotFoundError, StorageError
+from reader import (
+    FeedExistsError, FeedNotFoundError, ParseError, EntryNotFoundError,
+    MetadataNotFoundError,
+    StorageError,
+)
 
 from reader.core.storage import Storage
 
@@ -923,4 +927,34 @@ def test_integration(reader, feed_type, data_dir):
 
     assert feed == expected['feed']
     assert entries == {e._replace(feed=feed) for e in expected['entries']}
+
+
+def test_feed_metadata(reader):
+    with pytest.raises(FeedNotFoundError):
+        reader.set_feed_metadata('one', 'key', 'value')
+
+    with pytest.raises(MetadataNotFoundError):
+        reader.delete_feed_metadata('one', 'key')
+
+    reader.add_feed('feed')
+
+    with pytest.raises(TypeError):
+        reader.set_feed_metadata('one', 'key', None)
+
+    assert set(reader.iter_feed_metadata('feed')) == set()
+    assert reader.get_feed_metadata('feed', 'key') == None
+
+    with pytest.raises(MetadataNotFoundError):
+        reader.delete_feed_metadata('one', 'key')
+
+    reader.set_feed_metadata('feed', 'key', 'value')
+
+    assert set(reader.iter_feed_metadata('feed')) == {('key', 'value')}
+    assert reader.get_feed_metadata('feed', 'key') == 'value'
+
+    reader.delete_feed_metadata('feed', 'key')
+
+    assert set(reader.iter_feed_metadata('feed')) == set()
+    assert reader.get_feed_metadata('feed', 'key') == None
+
 
