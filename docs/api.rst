@@ -7,7 +7,7 @@ API
 This part of the documentation covers all the interfaces of reader.
 
 
-Reader Object
+Reader object
 -------------
 
 All of reader's functionality can be accessed through a :class:`Reader` instance.
@@ -16,7 +16,7 @@ All of reader's functionality can be accessed through a :class:`Reader` instance
     :members:
 
 
-Data Objects
+Data objects
 ------------
 
 .. autoclass:: Feed
