@@ -28,6 +28,14 @@ def entry_argument(entry):
         raise ValueError('entry')
 
 
+class _Missing:
+
+    def __repr__(self):
+        return "no value"
+
+_missing = _Missing()
+
+
 class Reader:
 
     """A feed reader.
@@ -327,12 +335,13 @@ class Reader:
         feed_url = feed_argument(feed)
         return self._storage.iter_feed_metadata(feed_url)
 
-    def get_feed_metadata(self, feed, key):
+    def get_feed_metadata(self, feed, key, default=_missing):
         """Get metadata for a feed.
 
         Args:
             feed (str or Feed): The feed URL.
             key (str): The key of the metadata to retrieve.
+            default: Returned if given and no metadata exists for `key`.
 
         Returns:
             JSONType: The metadata value.
@@ -347,7 +356,9 @@ class Reader:
         pairs = list(self._storage.iter_feed_metadata(feed_url, key))
 
         if len(pairs) == 0:
-            raise MetadataNotFoundError(feed_url, key)
+            if default is _missing:
+                raise MetadataNotFoundError(feed_url, key)
+            return default
         elif len(pairs) == 1:
             assert pairs[0][0] == key
             return pairs[0][1]

@@ -941,6 +941,8 @@ def test_feed_metadata(reader):
     assert set(reader.iter_feed_metadata('feed')) == set()
     with pytest.raises(MetadataNotFoundError):
         reader.get_feed_metadata('feed', 'key')
+    assert reader.get_feed_metadata('feed', 'key', None) is None
+    assert reader.get_feed_metadata('feed', 'key', default=0) == 0
 
     with pytest.raises(MetadataNotFoundError):
         reader.delete_feed_metadata('one', 'key')
