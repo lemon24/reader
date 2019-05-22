@@ -317,7 +317,7 @@ class Reader:
             feed (str or Feed): The feed URL.
 
         Yields:
-            tupe(str, JSONType): (key, value) pairs, in undefined order.
+            tuple(str, JSONType): Key-value pairs, in undefined order.
             JSONType is whatever :py:func:`json.dumps` accepts.
 
         Raises:
@@ -335,10 +335,11 @@ class Reader:
             key (str): The key of the metadata to retrieve.
 
         Returns:
-            JSONType or None: The metadata value if it exits, None if it doesn't.
+            JSONType: The metadata value.
             JSONType is whatever :py:func:`json.dumps` accepts.
 
         Raises:
+            MetadataNotFoundError
             StorageError
 
         """
@@ -346,8 +347,7 @@ class Reader:
         pairs = list(self._storage.iter_feed_metadata(feed_url, key))
 
         if len(pairs) == 0:
-            # TODO: Maybe raise MetadataNotFoundError? Maybe with a default=?
-            return None
+            raise MetadataNotFoundError(feed_url, key)
         elif len(pairs) == 1:
             assert pairs[0][0] == key
             return pairs[0][1]
@@ -361,11 +361,9 @@ class Reader:
             feed (str or Feed): The feed URL.
             key (str): The key of the metadata to set.
             value (JSONType): The value of the metadata to set.
-                JSONType is whatever :py:func:`json.dumps` accepts,
-                except None.
+                JSONType is whatever :py:func:`json.dumps` accepts.
 
         Raises:
-            :py:exc:`TypeError`: If the value is invalid.
             FeedNotFoundError
             StorageError
 

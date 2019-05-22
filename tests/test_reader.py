@@ -938,11 +938,9 @@ def test_feed_metadata(reader):
 
     reader.add_feed('feed')
 
-    with pytest.raises(TypeError):
-        reader.set_feed_metadata('one', 'key', None)
-
     assert set(reader.iter_feed_metadata('feed')) == set()
-    assert reader.get_feed_metadata('feed', 'key') == None
+    with pytest.raises(MetadataNotFoundError):
+        reader.get_feed_metadata('feed', 'key')
 
     with pytest.raises(MetadataNotFoundError):
         reader.delete_feed_metadata('one', 'key')
@@ -955,6 +953,7 @@ def test_feed_metadata(reader):
     reader.delete_feed_metadata('feed', 'key')
 
     assert set(reader.iter_feed_metadata('feed')) == set()
-    assert reader.get_feed_metadata('feed', 'key') == None
+    with pytest.raises(MetadataNotFoundError):
+        reader.get_feed_metadata('feed', 'key')
 
 

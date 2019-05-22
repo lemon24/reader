@@ -298,9 +298,6 @@ def test_feed_metadata(storage):
     storage.add_feed('one')
     storage.set_feed_metadata('one', 'key', 'value')
 
-    with pytest.raises(TypeError):
-        storage.set_feed_metadata('one', 'two', None)
-
     assert set(storage.iter_feed_metadata('one')) == {('key', 'value')}
     assert set(storage.iter_feed_metadata('one', 'key')) == {('key', 'value')}
     assert set(storage.iter_feed_metadata('one', 'second')) == set()

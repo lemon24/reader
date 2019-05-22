@@ -577,9 +577,6 @@ class Storage:
 
     @wrap_storage_exceptions()
     def set_feed_metadata(self, feed_url, key, value):
-        if value is None:
-            raise TypeError("value cannot be None")
-
         value = json.dumps(value)
 
         with self.db:
