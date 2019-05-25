@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 
 from reader import FeedNotFoundError, Feed, Entry
-from reader.core.reader import feed_argument, entry_argument
+from reader.core.reader import feed_argument, entry_argument, _missing
 
 from fakeparser import ParserThatRemembers, Parser
 
@@ -124,4 +124,8 @@ def test_post_entry_add_plugins(reader):
         one._replace(feed=feed),
         two._replace(feed=feed),
     }
+
+
+def test_missing():
+    assert repr(_missing) == 'no value'
 
