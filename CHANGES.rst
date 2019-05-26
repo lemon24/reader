@@ -11,6 +11,10 @@ Version 0.11
 Unreleased
 
 * Support storing per-feed metadata. (`#114`_)
+* Add feed metadata page to the web app. (`#114`_)
+* The ``regex_mark_as_read`` plugin is now configurable via feed metadata;
+  drop support for the ``READER_PLUGIN_REGEX_MARK_AS_READ_CONFIG`` file.
+  (`#114`_)
 
 .. _#114: https://github.com/lemon24/reader/issues/114
 
