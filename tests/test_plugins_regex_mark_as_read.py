@@ -17,10 +17,8 @@ def test_regex_mark_as_read(reader, monkeypatch, tmpdir):
     reader.add_feed(one.url)
     reader.update_feeds()
 
-    config = tmpdir.join('config.json')
-    with config.open('w') as f:
-        json.dump({one.url: ['^match']}, f)
-    monkeypatch.setitem(os.environ, 'READER_PLUGIN_REGEX_MARK_AS_READ_CONFIG', str(config))
+    reader.set_feed_metadata(one, 'regex-mark-as-read', {'patterns': ['^match']})
+
     regex_mark_as_read(reader)
 
     one = parser.feed(1, datetime(2010, 1, 2))
