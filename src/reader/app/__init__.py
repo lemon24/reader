@@ -70,6 +70,20 @@ def feeds():
     return stream_template('feeds.html', feeds=feeds)
 
 
+@blueprint.route('/metadata')
+def metadata():
+    reader = get_reader()
+
+    feed_url = request.args['feed']
+    feed = reader.get_feed(feed_url)
+    if not feed:
+        abort(404)
+
+    metadata = reader.iter_feed_metadata(feed_url)
+
+    return stream_template('metadata.html', feed=feed, metadata=metadata)
+
+
 form_api = APIThing(blueprint, '/form-api', 'form_api')
 
 
@@ -142,6 +156,33 @@ def update_feed_title(data):
     feed_url = data['feed-url']
     feed_title = data['feed-title'].strip() or None
     get_reader().set_feed_user_title(feed_url, feed_title)
+
+
+@form_api
+@readererror_to_apierror()
+def add_metadata(data):
+    feed_url = data['feed-url']
+    key = data['key']
+    get_reader().set_feed_metadata(feed_url, key, None)
+
+@form_api
+@readererror_to_apierror()
+def update_metadata(data):
+    feed_url = data['feed-url']
+    key = data['key']
+    try:
+        value = json.loads(data['value'])
+    except json.JSONDecodeError as e:
+        raise APIError("invalid JSON: {}".format(e), (feed_url, key))
+    get_reader().set_feed_metadata(feed_url, key, value)
+
+@form_api
+@readererror_to_apierror()
+def delete_metadata(data):
+    feed_url = data['feed-url']
+    key = data['key']
+    get_reader().delete_feed_metadata(feed_url, key)
+
 
 
 class FlaskPluginLoader(Loader):

@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+
+{% import "macros.html" as macros %}
+
+{% block page_title %}Metadata for {{ macros.feed_title(feed) }}{% endblock %}
+{% block main_title %}Metadata for {{ macros.feed_title(feed) }}{% endblock %}
+
+
+{% block body %}
+
+
+<div>
+<form action="{{ url_for('.form_api') }}" method="post">
+<input type="text" name="key" placeholder="key" autocomplete="off">
+<button type="submit" name="action" value="add-metadata" autocomplete="off">add</button>
+<input type="hidden" name='feed-url' value='{{ feed.url }}'>
+<input type="hidden" name='next' value='{{ url_for('.metadata', **request.args) }}'>
+</form>
+
+<ul class="controls">
+
+{% for message in get_flashed_messages_by_prefix(
+    ('add-metadata', feed.url),
+) %}
+<li class="error">{{ message }}
+{% endfor %}
+
+</ul>
+
+</div>
+
+
+{% for key, value in metadata | sort %}
+<div id="metadata-{{ loop.index }}" class="metadata">
+
+<h2>{{ key or '""' }}</h2>
+
+<ul class="controls">
+
+{% for message in get_flashed_messages_by_prefix(
+    ('update-metadata', feed.url, key),
+) %}
+<li class="error">{{ message }}
+{% endfor %}
+
+</ul>
+
+<form action="{{ url_for('.form_api') }}" method="post">
+<textarea name="value">{{ value | tojson }}</textarea>
+<p>
+<button type="submit" name="action" value="update-metadata" autocomplete="off">update</button>
+<button type="submit" name="action" value="delete-metadata" autocomplete="off">delete</button>
+</p>
+<input type="hidden" name='key' value='{{ key }}'>
+<input type="hidden" name='feed-url' value='{{ feed.url }}'>
+<input type="hidden" name='next' value='{{ url_for('.metadata', **request.args) }}#metadata-{{ loop.index }}'>
+</form>
+
+</div>
+
+{% else %}
+<p>no metadata for this feed</p>
+{% endfor %}
+
+{% endblock %}
+

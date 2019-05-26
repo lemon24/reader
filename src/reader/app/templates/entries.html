@@ -37,6 +37,9 @@
 
 {{ macros.text_input_button('.form_api', 'update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true, next=next, context={'feed-url': feed.url}) }}
 
+<li>
+<a href="{{ url_for('.metadata', feed=feed.url) }}">update metadata</a>
+
 {% endif %}
 
 {% for message in get_flashed_messages_by_prefix(
