@@ -34,7 +34,7 @@ Table of contents
     plugins
 
 
-Project infromation
+Project information
 -------------------
 
 .. toctree::
