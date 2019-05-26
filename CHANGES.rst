@@ -8,7 +8,7 @@ reader changelog
 Version 0.11
 ------------
 
-Unreleased
+Released 2019-05-26
 
 * Support storing per-feed metadata. (`#114`_)
 * Add feed metadata page to the web app. (`#114`_)
