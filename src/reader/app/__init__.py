@@ -2,7 +2,7 @@ import json
 import contextlib
 
 from flask import Flask, Blueprint, current_app, g, request, abort
-from flask import Response, stream_with_context
+from flask import Response, stream_with_context, get_flashed_messages
 import humanize
 
 from reader import Reader, ReaderError
@@ -58,6 +58,12 @@ def entries():
     if feed_url:
         entries_data = [e.id for e in entries]
 
+    # Ensure flashed messages get removed from the session,
+    # otherwise they keep adding up and never disappear.
+    # Assumes the template will call get_flashed_messages() at some point.
+    # https://github.com/lemon24/reader/issues/81
+    get_flashed_messages()
+
     return stream_template('entries.html', entries=entries, feed=feed, entries_data=entries_data)
 
 
@@ -67,6 +73,11 @@ def feeds():
     assert sort in ('title', 'added')
 
     feeds = get_reader().get_feeds(sort=sort)
+
+    # Ensure flashed messages get removed from the session.
+    # https://github.com/lemon24/reader/issues/81
+    get_flashed_messages()
+
     return stream_template('feeds.html', feeds=feeds)
 
 
@@ -80,6 +91,10 @@ def metadata():
         abort(404)
 
     metadata = reader.iter_feed_metadata(feed_url)
+
+    # Ensure flashed messages get removed from the session.
+    # https://github.com/lemon24/reader/issues/81
+    get_flashed_messages()
 
     return stream_template('metadata.html', feed=feed, metadata=metadata)
 
