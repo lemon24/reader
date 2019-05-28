@@ -115,6 +115,9 @@ ul.controls .collapsible {
         display: initial;
     }
 
+    .metadata textarea {
+        width: 99%;
+    }
 }
 
 

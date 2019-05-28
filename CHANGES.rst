@@ -11,6 +11,7 @@ Version 0.12
 Unreleased
 
 * Fix flashed messages never disappearing. (`#81`_)
+* Minor metadata page UI improvements.
 
 .. _#81: https://github.com/lemon24/reader/issues/81
 
