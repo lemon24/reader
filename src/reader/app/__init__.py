@@ -96,7 +96,12 @@ def metadata():
     # https://github.com/lemon24/reader/issues/81
     get_flashed_messages()
 
-    return stream_template('metadata.html', feed=feed, metadata=metadata)
+    return stream_template(
+        'metadata.html',
+        feed=feed,
+        metadata=metadata,
+        to_pretty_json=lambda t: json.dumps(t, sort_keys=True, indent=4),
+    )
 
 
 form_api = APIThing(blueprint, '/form-api', 'form_api')
