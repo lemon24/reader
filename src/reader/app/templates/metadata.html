@@ -46,7 +46,7 @@
 </ul>
 
 <form action="{{ url_for('.form_api') }}" method="post">
-<textarea name="value" rows="12" cols="80">{{ to_pretty_json(value) }}</textarea>
+<textarea name="value" rows="12" cols="60">{{ to_pretty_json(value) }}</textarea>
 <p>
 <button type="submit" name="action" value="update-metadata" autocomplete="off">update</button>
 <button type="submit" name="action" value="delete-metadata" autocomplete="off">delete</button>
