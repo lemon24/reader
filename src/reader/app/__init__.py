@@ -55,7 +55,7 @@ def entries():
 
     entries = reader.get_entries(which=show, feed=feed_url, has_enclosures=has_enclosures)
 
-    limit = request.args.get('limit')
+    limit = request.args.get('limit', type=int)
     if limit:
         entries = itertools.islice(entries, limit)
 
