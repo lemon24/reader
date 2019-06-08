@@ -174,8 +174,13 @@ def test_limit(db_path, browser):
     reader.update_feeds()
 
     browser.open('http://app/')
-    assert len(browser.get_current_page().select('.entry')) == 2
+    entries = browser.get_current_page().select('.entry')
+    assert len(entries) == 2
+    assert '#2' in str(entries[0])
+    assert '#1' in str(entries[1])
 
     browser.open('http://app/', params={'limit': 1})
-    assert len(browser.get_current_page().select('.entry')) == 1
+    entries = browser.get_current_page().select('.entry')
+    assert len(entries) == 1
+    assert '#2' in str(entries[0])
 
