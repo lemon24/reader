@@ -1,5 +1,6 @@
 import json
 import contextlib
+import itertools
 
 from flask import Flask, Blueprint, current_app, g, request, abort
 from flask import Response, stream_with_context, get_flashed_messages
@@ -52,7 +53,13 @@ def entries():
         if not feed:
             abort(404)
 
-    entries = list(reader.get_entries(which=show, feed=feed_url, has_enclosures=has_enclosures))
+    entries = reader.get_entries(which=show, feed=feed_url, has_enclosures=has_enclosures)
+
+    limit = request.args.get('limit', type=int)
+    if limit:
+        entries = itertools.islice(entries, limit)
+
+    entries = list(entries)
 
     entries_data = None
     if feed_url:

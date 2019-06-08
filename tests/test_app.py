@@ -159,3 +159,28 @@ def test_delete_feed_from_entries_page_redirects(db_path, browser):
     assert browser.get_url() == 'http://app/'
     assert len(browser.get_current_page().select('.entry')) == 0
 
+
+@pytest.mark.slow
+def test_limit(db_path, browser):
+    parser = Parser()
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.entry(1, 1, datetime(2010, 1, 1))
+    two = parser.entry(1, 2, datetime(2010, 1, 2))
+
+    reader = Reader(db_path)
+    reader._parser = parser
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    browser.open('http://app/')
+    entries = browser.get_current_page().select('.entry')
+    assert len(entries) == 2
+    assert '#2' in str(entries[0])
+    assert '#1' in str(entries[1])
+
+    browser.open('http://app/', params={'limit': 1})
+    entries = browser.get_current_page().select('.entry')
+    assert len(entries) == 1
+    assert '#2' in str(entries[0])
+
