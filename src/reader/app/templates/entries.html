@@ -134,5 +134,22 @@ untitled
 <p>no {% if current_what != 'all' %}{{ current_what }} {% endif %}entries for this feed</p>
 {% endfor %}
 
+
+{% set limit = request.args.get('limit') | int %}
+{% if limit -%}
+{%- set args = request.args.copy() -%}
+{%- set _ = args.poplist('limit') -%}
+
+<p>
+showing only the first {{ limit }} entries;
+<a href='
+    {{- url_for('.entries', **args) -}}
+    {%- if entries %}#entry-{{ entries | length }}{% endif -%}
+'>show all entries</a>
+</p>
+
+{%- endif %}
+
+
 {% endblock %}
 
