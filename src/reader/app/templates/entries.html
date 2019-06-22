@@ -24,6 +24,11 @@
 ], none, '.entries', 'has enclosures') }}
 
 {% if feed %}
+
+<li>
+    {% if feed.link %}<a href="{{ feed.link }}">site</a>{% endif %}
+    <a href="{{ feed.url }}">feed</a>
+
 {% set next = url_for('.entries', **request.args) %}
 
 {% if current_what != 'read' %}

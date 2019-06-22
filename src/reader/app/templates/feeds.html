@@ -30,7 +30,9 @@
 
 <ul class="controls">
 
-<li>{% if feed.link %}<a href="{{ feed.link }}">site</a>{% else %}no site{% endif %}
+<li>
+    {% if feed.link %}<a href="{{ feed.link }}">site</a>{% else %}no site{% endif %}
+    <a href="{{ feed.url }}">feed</a>
 
 {% set next = url_for('.feeds', **request.args) + '#feed-' + ((loop.index if not loop.last else loop.index - 1) | string) %}
 {% set context = {'feed-url': feed.url, 'target': feed.url} %}
