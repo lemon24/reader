@@ -48,4 +48,3 @@ Lightweight browsers
     :width: 240px
 
     Dillo
-

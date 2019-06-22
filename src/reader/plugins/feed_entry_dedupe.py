@@ -17,7 +17,7 @@ To load::
 Implemented for https://github.com/lemon24/reader/issues/79.
 
 .. todo::
-    
+
     Some possible optimizations:
 
     1.  Do this once per feed (now it's one ``get_entries(feed=...)`` per entry).

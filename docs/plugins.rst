@@ -40,4 +40,3 @@ Existing plugins
 .. automodule:: reader.plugins.feed_entry_dedupe
 .. automodule:: reader.plugins.enclosure_dedupe
 .. automodule:: reader.plugins.tumblr_gdpr
-

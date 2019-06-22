@@ -52,4 +52,3 @@ Reference
 .. click:: reader.cli:cli
     :prog: reader
     :show-nested:
-

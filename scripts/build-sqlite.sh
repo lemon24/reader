@@ -25,4 +25,3 @@ if [ ! -e $build_dir/sqlite/libsqlite3.so.0 ]; then
 else
     echo "using existing sqlite"
 fi
-

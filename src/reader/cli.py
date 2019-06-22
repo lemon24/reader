@@ -93,9 +93,7 @@ def cli(ctx, db, plugin):
 @click.option('-v', '--verbose', count=True)
 @click.pass_obj
 def add(kwargs, url, update, verbose):
-    """Add a new feed.
-    
-    """
+    """Add a new feed."""
     setup_logging(verbose)
     reader = make_reader(**kwargs)
     reader.add_feed(url)
@@ -108,9 +106,7 @@ def add(kwargs, url, update, verbose):
 @click.option('-v', '--verbose', count=True)
 @click.pass_obj
 def remove(kwargs, url, verbose):
-    """Remove an existing feed.
-    
-    """
+    """Remove an existing feed."""
     setup_logging(verbose)
     reader = make_reader(**kwargs)
     reader.remove_feed(url)
@@ -125,9 +121,9 @@ def remove(kwargs, url, verbose):
 @click.pass_obj
 def update(kwargs, url, new_only, verbose):
     """Update one or all feeds.
-    
+
     If URL is not given, update all the feeds.
-    
+
     """
     setup_logging(verbose)
     reader = make_reader(**kwargs)
@@ -146,9 +142,7 @@ def list():
 @list.command()
 @click.pass_obj
 def feeds(kwargs):
-    """List all the feeds.
-    
-    """
+    """List all the feeds."""
     reader = make_reader(**kwargs)
     for feed in reader.get_feeds():
         click.echo(feed.url)
@@ -158,11 +152,11 @@ def feeds(kwargs):
 @click.pass_obj
 def entries(kwargs):
     """List all the entries.
-    
+
     Outputs one line per entry in the following format:
-    
+
         <feed URL> <entry link or id>
-    
+
     """
     reader = make_reader(**kwargs)
     for entry in reader.get_entries():

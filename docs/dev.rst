@@ -83,4 +83,3 @@ Making a release (from ``x`` to ``y`` == ``x + 1``; ``scripts/release.py`` alrea
 .. ---------------
 
 .. include:: dev-app.rst
-

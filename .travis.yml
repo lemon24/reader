@@ -33,4 +33,3 @@ cache:
 
 after_success:
     - codecov
-

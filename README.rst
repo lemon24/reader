@@ -67,4 +67,3 @@ Usage:
     ['H.I. #108: Project Cyclops']
 
 .. end-usage
-

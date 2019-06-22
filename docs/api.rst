@@ -84,4 +84,3 @@ All exceptions that :class:`Reader` explicitly raises inherit from :exc:`ReaderE
     :members:
 
     Subclass of :exc:`ReaderError`.
-

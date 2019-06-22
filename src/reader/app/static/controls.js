@@ -298,4 +298,3 @@ function extract_form_data(form) {
 function update_object(self, other) {
     for (var attrname in other) { self[attrname] = other[attrname]; }
 }
-

@@ -35,14 +35,14 @@ Serving the web application
 
 reader exposes a standard WSGI application as ``reader.app.wsgi:app``.
 See the `Flask documentation`_ for more details on how to deploy it.
-The path to the reader database can be configured through the ``READER_DB`` 
+The path to the reader database can be configured through the ``READER_DB``
 environment variable.
 
 .. warning::
 
     The web application has no authentication / authorization whatsoever;
     it is expected a server / middleware will provide that.
-    
+
 
 An example uWSGI configuration file (probably not idiomatic, from `here`_)::
 
@@ -62,7 +62,7 @@ If running on a personal computer, you can use cron to run ``serve`` at boot::
 
     @reboot     sleep 60; reader serve -p 8080 2>&1 ) >>"/tmp/$LOGNAME.reader.serve.boot.log"
 
-    
+
 .. _here: https://github.com/lemon24/owncloud/blob/936b0aa6015eb8b4a42e37ff7dc8df2bae87263d/reader.yaml#L79
 .. _Flask documentation: http://flask.pocoo.org/docs/1.0/deploying/
 .. _Werkzeug's development server: http://werkzeug.pocoo.org/docs/0.14/serving/#werkzeug.serving.run_simple
