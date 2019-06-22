@@ -9,7 +9,7 @@ reader changelog
 Version 0.12
 ------------
 
-Unreleased
+Released 2019-06-22
 
 * Fix flashed messages never disappearing. (`#81`_)
 * Minor metadata page UI improvements.
