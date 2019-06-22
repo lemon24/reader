@@ -3,6 +3,7 @@ reader changelog
 ================
 
 .. module:: reader
+  :noindex:
 
 
 Version 0.12

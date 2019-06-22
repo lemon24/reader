@@ -3,6 +3,7 @@ Plugins
 =======
 
 .. module:: reader
+  :noindex:
 
 .. note::
 
