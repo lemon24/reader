@@ -17,6 +17,21 @@ Development should follow a problem-solution_ approach.
 .. _problem-solution: https://hintjens.gitbooks.io/scalable-c/content/chapter1.html#problem-what-do-we-do-next
 
 
+Style guide
+-----------
+
+reader uses the `Black <https://black.readthedocs.io/en/stable/>`_ style.
+
+You should enforce it by using `pre-commit <https://pre-commit.com/>`_.
+To install it into your git hooks, run::
+
+    pip install pre-commit  # pip install '.[dev]' already does it for you
+    pre-commit install
+
+Every time you clone the repo, running ``pre-commit install`` should always be
+the first thing you do.
+
+
 Testing
 -------
 
@@ -58,6 +73,7 @@ or, using Sphinx's Makefile directly::
     make -C docs html
 
 The built HTML docs should be in ``./docs/_build/html/``.
+
 
 Making a release
 ----------------

@@ -15,6 +15,7 @@ Unreleased
 * Allow limiting the number of entries on the entries page
   via the ``limit`` URL parameter.
 * Add link to the feed on the entries and feeds pages. (`#118`_)
+* Use Black and pre-commit to enforce style.
 
 .. _#81: https://github.com/lemon24/reader/issues/81
 .. _#118: https://github.com/lemon24/reader/issues/118

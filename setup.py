@@ -45,6 +45,8 @@ setup(
             'sphinx-click',
             # release
             'twine',
+            # ...
+            'pre-commit',
         ],
         'docs': ['sphinx', 'sphinx_rtd_theme', 'click>=5', 'sphinx-click'],
     },
