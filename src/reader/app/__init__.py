@@ -1,14 +1,24 @@
-import json
 import contextlib
 import itertools
+import json
 
-from flask import Flask, Blueprint, current_app, g, request, abort
-from flask import Response, stream_with_context, get_flashed_messages
 import humanize
+from flask import abort
+from flask import Blueprint
+from flask import current_app
+from flask import Flask
+from flask import g
+from flask import get_flashed_messages
+from flask import request
+from flask import Response
+from flask import stream_with_context
 
-from reader import Reader, ReaderError
-from .api_thing import APIThing, APIError
-from reader.plugins import Loader, LoaderError
+from .api_thing import APIError
+from .api_thing import APIThing
+from reader import Reader
+from reader import ReaderError
+from reader.plugins import Loader
+from reader.plugins import LoaderError
 
 
 blueprint = Blueprint('reader', __name__)

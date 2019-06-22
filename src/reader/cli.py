@@ -1,14 +1,15 @@
-import os.path
-import os
 import logging
-import traceback
+import os.path
 import sys
+import traceback
 
 import click
 
 import reader
-from . import Reader, StorageError
-from .plugins import Loader, LoaderError
+from . import Reader
+from . import StorageError
+from .plugins import Loader
+from .plugins import LoaderError
 
 
 APP_NAME = reader.__name__

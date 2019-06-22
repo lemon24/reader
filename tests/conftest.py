@@ -1,5 +1,5 @@
-import pytest
 import py.path
+import pytest
 
 from reader import Reader
 

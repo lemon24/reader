@@ -6,11 +6,15 @@ Contains no business logic.
 See scripts/jscontrols.py for a minimal usage example.
 
 """
+from urllib.parse import urljoin
+from urllib.parse import urlparse
 
-from urllib.parse import urlparse, urljoin
-
-from flask import request, redirect, jsonify, flash, get_flashed_messages
 import werkzeug
+from flask import flash
+from flask import get_flashed_messages
+from flask import jsonify
+from flask import redirect
+from flask import request
 
 
 def is_safe_url(target):

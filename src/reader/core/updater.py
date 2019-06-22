@@ -1,11 +1,13 @@
-import logging
 import datetime
+import logging
 
 import attr
 
 from .exceptions import NotModified
-from .types import FeedUpdateIntent, EntryUpdateIntent
-from .types import UpdateResult, UpdatedEntry
+from .types import EntryUpdateIntent
+from .types import FeedUpdateIntent
+from .types import UpdatedEntry
+from .types import UpdateResult
 
 log = logging.getLogger('reader')
 

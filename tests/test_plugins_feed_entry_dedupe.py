@@ -1,11 +1,13 @@
 from datetime import datetime
 
 import pytest
-
-from reader.plugins.feed_entry_dedupe import feed_entry_dedupe, normalize, is_duplicate
-from reader import Entry, Content
-
 from fakeparser import Parser
+
+from reader import Content
+from reader import Entry
+from reader.plugins.feed_entry_dedupe import feed_entry_dedupe
+from reader.plugins.feed_entry_dedupe import is_duplicate
+from reader.plugins.feed_entry_dedupe import normalize
 
 
 def test_normalize():

@@ -1,11 +1,15 @@
 from datetime import datetime
 
 import pytest
+from fakeparser import Parser
+from fakeparser import ParserThatRemembers
 
-from reader import FeedNotFoundError, Feed, Entry
-from reader.core.reader import feed_argument, entry_argument, _missing
-
-from fakeparser import ParserThatRemembers, Parser
+from reader import Entry
+from reader import Feed
+from reader import FeedNotFoundError
+from reader.core.reader import _missing
+from reader.core.reader import entry_argument
+from reader.core.reader import feed_argument
 
 
 def test_update_stale(reader, call_update_method):

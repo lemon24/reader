@@ -1,9 +1,12 @@
-from collections import OrderedDict
 import threading
+from collections import OrderedDict
 
-from reader import Feed, Entry, ParseError
+from reader import Entry
+from reader import Feed
+from reader import ParseError
 from reader.core.exceptions import NotModified
-from reader.core.types import ParsedFeed, ParseResult
+from reader.core.types import ParsedFeed
+from reader.core.types import ParseResult
 
 
 def _make_feed(number, updated=None, **kwargs):

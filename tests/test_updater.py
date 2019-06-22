@@ -1,7 +1,8 @@
 import pytest
 
+from reader.core.types import Entry
+from reader.core.types import FeedForUpdate
 from reader.core.updater import Updater
-from reader.core.types import FeedForUpdate, Entry
 
 
 @pytest.mark.xfail

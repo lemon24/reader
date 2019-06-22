@@ -1,9 +1,9 @@
 from datetime import datetime
 
-from reader.plugins.enclosure_dedupe import enclosure_dedupe
-from reader import Enclosure
-
 from fakeparser import Parser
+
+from reader import Enclosure
+from reader.plugins.enclosure_dedupe import enclosure_dedupe
 
 
 def test_enclosure_dedupe(reader):

@@ -1,15 +1,17 @@
-from datetime import datetime
-import threading
 import sqlite3
+import threading
+from datetime import datetime
 
 import pytest
 
+import reader.core.sqlite_utils
+from reader import Entry
+from reader import Feed
+from reader import FeedNotFoundError
+from reader import MetadataNotFoundError
+from reader import StorageError
 from reader.core.storage import Storage
 from reader.core.types import EntryForUpdate
-from reader import StorageError
-import reader.core.sqlite_utils
-
-from reader import Feed, Entry, FeedNotFoundError, MetadataNotFoundError
 
 
 def test_storage_errors_open(tmpdir):

@@ -1,12 +1,13 @@
 import warnings
 
-import pytest
 import feedparser
+import pytest
 from utils import make_url_base
 
 from reader import Feed
+from reader.core.exceptions import NotModified
+from reader.core.exceptions import ParseError
 from reader.core.parser import RequestsParser
-from reader.core.exceptions import ParseError, NotModified
 
 
 @pytest.fixture

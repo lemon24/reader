@@ -1,6 +1,9 @@
 import datetime
 
-from reader import Feed, Entry, Content, Enclosure
+from reader import Content
+from reader import Enclosure
+from reader import Entry
+from reader import Feed
 
 
 feed = Feed(

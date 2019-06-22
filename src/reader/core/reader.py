@@ -1,10 +1,12 @@
-import logging
 import datetime
+import logging
 
-from .storage import Storage
+from .exceptions import FeedNotFoundError
+from .exceptions import MetadataNotFoundError
+from .exceptions import ParseError
 from .parser import RequestsParser
+from .storage import Storage
 from .updater import Updater
-from .exceptions import ParseError, FeedNotFoundError, MetadataNotFoundError
 
 log = logging.getLogger('reader')
 

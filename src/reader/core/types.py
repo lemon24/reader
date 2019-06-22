@@ -1,7 +1,8 @@
-from collections import OrderedDict
 from collections import namedtuple
-from typing import Sequence, Optional
+from collections import OrderedDict
 from datetime import datetime
+from typing import Optional
+from typing import Sequence
 
 import attr
 

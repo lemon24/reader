@@ -1,7 +1,11 @@
 import tempfile
 from urllib.parse import urlparse
 
-from flask import Blueprint, Response, stream_with_context, url_for, request
+from flask import Blueprint
+from flask import request
+from flask import Response
+from flask import stream_with_context
+from flask import url_for
 
 
 enclosure_tags_blueprint = Blueprint('enclosure_tags', __name__)

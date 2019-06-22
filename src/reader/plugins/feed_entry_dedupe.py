@@ -27,9 +27,8 @@ Implemented for https://github.com/lemon24/reader/issues/79.
         and Storage support).
 
 """
-
-import re
 import logging
+import re
 
 log = logging.getLogger('reader.plugins.feed_entry_dedupe')
 

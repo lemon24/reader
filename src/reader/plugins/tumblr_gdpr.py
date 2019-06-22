@@ -18,7 +18,6 @@ To load::
 Implemented for https://github.com/lemon24/reader/issues/67.
 
 """
-
 import re
 
 

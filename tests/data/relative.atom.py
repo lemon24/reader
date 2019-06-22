@@ -1,6 +1,9 @@
 import datetime
 
-from reader import Feed, Entry, Content, Enclosure
+from reader import Content
+from reader import Enclosure
+from reader import Entry
+from reader import Feed
 
 
 feed = Feed(url='{}relative.atom'.format(url_base), link='{}file.html'.format(rel_base))

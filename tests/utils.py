@@ -1,5 +1,5 @@
-from urllib.parse import urlparse
 import posixpath
+from urllib.parse import urlparse
 
 
 def make_url_base(feed_url):

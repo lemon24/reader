@@ -1,15 +1,18 @@
-from datetime import datetime, timedelta
-import tempfile
-import sys
-import os.path
-import timeit
-import cProfile, pstats
-from contextlib import contextmanager, ExitStack
+import cProfile
 import inspect
-from functools import partial
-from fnmatch import fnmatchcase
-from collections import OrderedDict
+import os.path
+import pstats
 import sqlite3
+import sys
+import tempfile
+import timeit
+from collections import OrderedDict
+from contextlib import contextmanager
+from contextlib import ExitStack
+from datetime import datetime
+from datetime import timedelta
+from fnmatch import fnmatchcase
+from functools import partial
 
 import click
 

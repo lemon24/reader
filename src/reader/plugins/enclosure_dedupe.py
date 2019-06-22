@@ -16,7 +16,6 @@ Implemented for https://github.com/lemon24/reader/issues/78.
     There should be a hook for this.
 
 """
-
 import functools
 from collections import OrderedDict
 

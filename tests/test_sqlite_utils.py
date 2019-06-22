@@ -3,12 +3,11 @@ import sqlite3
 import pytest
 
 from reader.core.sqlite_utils import ddl_transaction
-from reader.core.sqlite_utils import HeavyMigration, SchemaVersionError
+from reader.core.sqlite_utils import HeavyMigration
+from reader.core.sqlite_utils import require_sqlite_compile_options
+from reader.core.sqlite_utils import require_sqlite_version
 from reader.core.sqlite_utils import RequirementError
-from reader.core.sqlite_utils import (
-    require_sqlite_version,
-    require_sqlite_compile_options,
-)
+from reader.core.sqlite_utils import SchemaVersionError
 
 
 class WeirdError(Exception):

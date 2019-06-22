@@ -1,21 +1,24 @@
-import sqlite3
 import contextlib
 import functools
-import logging
 import json
-from itertools import chain
+import logging
+import sqlite3
 from datetime import timedelta
+from itertools import chain
 
-from .sqlite_utils import open_sqlite_db, DBError
-from .exceptions import (
-    StorageError,
-    EntryNotFoundError,
-    FeedNotFoundError,
-    FeedExistsError,
-    MetadataNotFoundError,
-)
-from .types import Feed, Entry, Content, Enclosure
-from .types import FeedForUpdate, EntryForUpdate
+from .exceptions import EntryNotFoundError
+from .exceptions import FeedExistsError
+from .exceptions import FeedNotFoundError
+from .exceptions import MetadataNotFoundError
+from .exceptions import StorageError
+from .sqlite_utils import DBError
+from .sqlite_utils import open_sqlite_db
+from .types import Content
+from .types import Enclosure
+from .types import Entry
+from .types import EntryForUpdate
+from .types import Feed
+from .types import FeedForUpdate
 
 log = logging.getLogger('reader')
 

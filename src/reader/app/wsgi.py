@@ -7,7 +7,6 @@ To run a local development server:
     READER_DB=db.sqlite flask run -h 0.0.0.0 -p 8000
 
 """
-
 import os
 
 import reader

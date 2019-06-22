@@ -1,11 +1,10 @@
-import pytest
 import py.path
+import pytest
 from click.testing import CliRunner
-
 from utils import make_url_base
 
-from reader.cli import cli
 from reader import Reader
+from reader.cli import cli
 
 
 @pytest.mark.slow

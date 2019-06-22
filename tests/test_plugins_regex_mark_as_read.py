@@ -1,10 +1,10 @@
-import os
 import json
+import os
 from datetime import datetime
 
-from reader.plugins.regex_mark_as_read import regex_mark_as_read
-
 from fakeparser import Parser
+
+from reader.plugins.regex_mark_as_read import regex_mark_as_read
 
 
 def test_regex_mark_as_read(reader, monkeypatch, tmpdir):

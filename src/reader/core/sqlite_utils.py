@@ -2,7 +2,6 @@
 sqlite3 utilities. Contains no business logic.
 
 """
-
 import sqlite3
 from contextlib import contextmanager
 

@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
-import pytest
 import attr
+import pytest
 
 from reader.core.types import attrs_namedtuple_compat
 

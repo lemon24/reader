@@ -1,14 +1,13 @@
 from datetime import datetime
 
+import mechanicalsoup
 import pytest
 import requests
 import wsgiadapter
-import mechanicalsoup
+from fakeparser import Parser
 
 from reader import Reader
 from reader.app import create_app
-
-from fakeparser import Parser
 
 
 @pytest.fixture

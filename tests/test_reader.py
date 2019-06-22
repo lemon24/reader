@@ -1,25 +1,27 @@
-from datetime import datetime, timedelta
 import threading
+from datetime import datetime
+from datetime import timedelta
 from enum import Enum
 
 import pytest
-
-from reader import Reader
-from reader import Feed, Entry, Content, Enclosure
-from reader import (
-    FeedExistsError,
-    FeedNotFoundError,
-    ParseError,
-    EntryNotFoundError,
-    MetadataNotFoundError,
-    StorageError,
-)
-
-from reader.core.storage import Storage
-
-from fakeparser import Parser, BlockingParser, FailingParser, NotModifiedParser
-
+from fakeparser import BlockingParser
+from fakeparser import FailingParser
+from fakeparser import NotModifiedParser
+from fakeparser import Parser
 from utils import make_url_base
+
+from reader import Content
+from reader import Enclosure
+from reader import Entry
+from reader import EntryNotFoundError
+from reader import Feed
+from reader import FeedExistsError
+from reader import FeedNotFoundError
+from reader import MetadataNotFoundError
+from reader import ParseError
+from reader import Reader
+from reader import StorageError
+from reader.core.storage import Storage
 
 
 def test_update_feed_updated(reader, call_update_method):

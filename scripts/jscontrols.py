@@ -1,8 +1,12 @@
-from flask import Flask, request, redirect, flash, jsonify
-import werkzeug
-
-import sys
 import os.path
+import sys
+
+import werkzeug
+from flask import flash
+from flask import Flask
+from flask import jsonify
+from flask import redirect
+from flask import request
 
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../src'))
