@@ -52,18 +52,17 @@ class Loader:
             try:
                 plugin = import_string(name)
             except ImportError as e:
-                self.handle_error(LoaderError(
-                    "could not import plugin {}".format(name)
-                ), e)
+                self.handle_error(
+                    LoaderError("could not import plugin {}".format(name)), e
+                )
                 continue
 
             try:
                 plugin(target)
             except Exception as e:
-                self.handle_error(LoaderError(
-                    "while installing plugin {}".format(name)
-                ), e)
+                self.handle_error(
+                    LoaderError("while installing plugin {}".format(name)), e
+                )
 
     def handle_error(self, exception, cause):
         raise exception from cause
-

@@ -9,6 +9,7 @@ from contextlib import contextmanager
 
 # stolen from https://github.com/lemon24/boomtime/blob/master/boomtime/db.py
 
+
 @contextmanager
 def ddl_transaction(db):
     """Automatically commit/rollback transactions containing DDL statements.
@@ -55,17 +56,19 @@ class DBError(Exception):
     def __str__(self):
         return "{}: {}".format(self.display_name, super().__str__())
 
+
 class SchemaVersionError(DBError):
     display_name = "schema version error"
 
+
 class RequirementError(DBError):
     display_name = "database requirement error"
+
 
 db_errors = [DBError, SchemaVersionError, RequirementError]
 
 
 class HeavyMigration:
-
     def __init__(self, create, version, migrations):
         self.create = create
         self.version = version
@@ -73,11 +76,16 @@ class HeavyMigration:
 
     @staticmethod
     def get_version(db):
-        version_exists = db.execute("""
+        version_exists = (
+            db.execute(
+                """
             SELECT name
             FROM sqlite_master
             WHERE type = 'table' AND name = 'version';
-        """).fetchone() is not None
+        """
+            ).fetchone()
+            is not None
+        )
         if not version_exists:
             return None
         version, = db.execute("SELECT MAX(version) FROM version;").fetchone()
@@ -89,12 +97,14 @@ class HeavyMigration:
 
             if version is None:
                 self.create(db)
-                db.execute("""
+                db.execute(
+                    """
                     CREATE TABLE version (
                         version INTEGER NOT NULL
                     );
-                """)
-                db.execute("INSERT INTO version VALUES (?);", (self.version, ))
+                """
+                )
+                db.execute("INSERT INTO version VALUES (?);", (self.version,))
 
             elif version < self.version:
                 if not self.migrations.get(version):
@@ -106,12 +116,16 @@ class HeavyMigration:
                     if migration is None:
                         raise SchemaVersionError(
                             "no migration from {} to {}; expected migrations for all versions "
-                            "later than {}".format(from_version, to_version, version))
+                            "later than {}".format(from_version, to_version, version)
+                        )
 
-                    db.execute("""
+                    db.execute(
+                        """
                         UPDATE version
                         SET version = :to_version;
-                    """, locals())
+                    """,
+                        locals(),
+                    )
                     migration(db)
 
             elif version != self.version:
@@ -123,8 +137,9 @@ def require_sqlite_version(version_info):
         raise RequirementError(
             "at least SQLite version {} required, {} installed".format(
                 '.'.join(str(i) for i in version_info),
-                '.'.join(str(i) for i in sqlite3.sqlite_version_info)
-            ))
+                '.'.join(str(i) for i in sqlite3.sqlite_version_info),
+            )
+        )
 
 
 def get_db_compile_options(db):
@@ -140,8 +155,8 @@ def require_sqlite_compile_options(db, options):
     missing = set(options).difference(get_db_compile_options(db))
     if missing:
         raise RequirementError(
-            "required SQLite compile options missing: {}"
-            .format(sorted(missing)))
+            "required SQLite compile options missing: {}".format(sorted(missing))
+        )
 
 
 def open_sqlite_db(path, *, create, version, migrations, timeout=None):
@@ -160,12 +175,13 @@ def open_sqlite_db(path, *, create, version, migrations, timeout=None):
     require_sqlite_compile_options(db, ['ENABLE_JSON1'])
 
     # TODO: This is business logic, make it an argument.
-    db.execute("""
+    db.execute(
+        """
             PRAGMA foreign_keys = ON;
-    """)
+    """
+    )
 
     migration = HeavyMigration(create, version, migrations)
     migration.migrate(db)
 
     return db
-

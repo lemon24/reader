@@ -21,10 +21,13 @@ def parse():
 def _make_relative_path_url(**_):
     return lambda feed_path: feed_path.relto(feed_path.join('../..'))
 
+
 make_relative_path_url = pytest.fixture(_make_relative_path_url)
+
 
 def _make_absolute_path_url(**_):
     return lambda feed_path: str(feed_path)
+
 
 def _make_http_url(requests_mock, **_):
     def make_url(feed_path):
@@ -36,9 +39,12 @@ def _make_http_url(requests_mock, **_):
             headers['Content-Type'] = 'application/atom+xml'
         requests_mock.get(url, text=feed_path.read(), headers=headers)
         return url
+
     return make_url
 
+
 make_http_url = pytest.fixture(_make_http_url)
+
 
 def _make_https_url(requests_mock, **_):
     def make_url(feed_path):
@@ -50,7 +56,9 @@ def _make_https_url(requests_mock, **_):
             headers['Content-Type'] = 'application/atom+xml'
         requests_mock.get(url, text=feed_path.read(), headers=headers)
         return url
+
     return make_url
+
 
 def _make_http_gzip_url(requests_mock, **_):
     def make_url(feed_path):
@@ -63,6 +71,7 @@ def _make_http_gzip_url(requests_mock, **_):
         headers['Content-Encoding'] = 'gzip'
 
         import io, gzip
+
         compressed_file = io.BytesIO()
         gz = gzip.GzipFile(fileobj=compressed_file, mode='wb')
         gz.write(feed_path.read_binary())
@@ -70,23 +79,29 @@ def _make_http_gzip_url(requests_mock, **_):
 
         requests_mock.get(url, content=compressed_file.getvalue(), headers=headers)
         return url
+
     return make_url
+
 
 def _make_http_url_missing_content_type(requests_mock, **_):
     def make_url(feed_path):
         url = 'http://example.com/' + feed_path.basename
         requests_mock.get(url, text=feed_path.read())
         return url
+
     return make_url
 
-@pytest.fixture(params=[
-    _make_relative_path_url,
-    _make_absolute_path_url,
-    _make_http_url,
-    _make_https_url,
-    _make_http_gzip_url,
-    _make_http_url_missing_content_type,
-])
+
+@pytest.fixture(
+    params=[
+        _make_relative_path_url,
+        _make_absolute_path_url,
+        _make_http_url,
+        _make_https_url,
+        _make_http_gzip_url,
+        _make_http_url_missing_content_type,
+    ]
+)
 def make_url(request, requests_mock):
     return request.param(requests_mock=requests_mock)
 
@@ -115,6 +130,7 @@ def test_parse_error(monkeypatch, parse, data_dir):
 
     feedparser_exception = Exception("whatever")
     old_feedparser_parse = feedparser.parse
+
     def feedparser_parse(*args, **kwargs):
         rv = old_feedparser_parse(*args, **kwargs)
         rv['bozo'] = 1
@@ -133,6 +149,7 @@ def test_parse_character_encoding_override(monkeypatch, parse, data_dir):
     """parse() should not reraise feedparser.CharacterEncodingOverride."""
 
     old_feedparser_parse = feedparser.parse
+
     def feedparser_parse(*args, **kwargs):
         rv = old_feedparser_parse(*args, **kwargs)
         rv['bozo'] = 1
@@ -151,7 +168,9 @@ def make_http_url_304(requests_mock):
         url = 'http://example.com/' + feed_path.basename
         requests_mock.get(url, status_code=304)
         return url
+
     yield make_url
+
 
 def test_parse_not_modified(monkeypatch, parse, make_http_url_304, data_dir):
     """parse() should raise NotModified for unchanged feeds."""
@@ -171,14 +190,20 @@ def make_http_get_headers_url(requests_mock):
             headers['Content-Type'] = 'application/x-rss+xml'
         elif feed_path.ext == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
+
         def callback(request, context):
             make_url.request_headers = request.headers
             return feed_path.read()
+
         requests_mock.get(url, text=callback, headers=headers)
         return url
+
     yield make_url
 
-def test_parse_sends_etag_last_modified(monkeypatch, parse, make_http_get_headers_url, data_dir):
+
+def test_parse_sends_etag_last_modified(
+    monkeypatch, parse, make_http_get_headers_url, data_dir
+):
     feed_url = make_http_get_headers_url(data_dir.join('full.atom'))
     parse(feed_url, 'etag', 'last_modified')
 
@@ -192,23 +217,25 @@ def test_parse_sends_etag_last_modified(monkeypatch, parse, make_http_get_header
 def make_http_etag_last_modified_url(requests_mock):
     def make_url(feed_path):
         url = 'http://example.com/' + feed_path.basename
-        headers = {
-            'ETag': make_url.etag,
-            'Last-Modified': make_url.last_modified,
-        }
+        headers = {'ETag': make_url.etag, 'Last-Modified': make_url.last_modified}
         if feed_path.ext == '.rss':
             headers['Content-Type'] = 'application/x-rss+xml'
         elif feed_path.ext == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
         requests_mock.get(url, text=feed_path.read(), headers=headers)
         return url
+
     yield make_url
 
-def test_parse_returns_etag_last_modified(monkeypatch, parse,
-                                          make_http_etag_last_modified_url,
-                                          make_http_url,
-                                          make_relative_path_url,
-                                          data_dir):
+
+def test_parse_returns_etag_last_modified(
+    monkeypatch,
+    parse,
+    make_http_etag_last_modified_url,
+    make_http_url,
+    make_relative_path_url,
+    data_dir,
+):
     monkeypatch.chdir(data_dir.dirname)
 
     make_http_etag_last_modified_url.etag = 'etag'
@@ -242,6 +269,7 @@ def test_parse_local_timezone(monkeypatch, request, parse, tz, data_dir):
     exec(feed_path.new(ext='.atom.py').read(), expected)
 
     import time
+
     request.addfinalizer(time.tzset)
     monkeypatch.setenv('TZ', tz)
     time.tzset()
@@ -280,14 +308,15 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
 
 def test_parse_requests_exception(monkeypatch, parse):
     exc = Exception('exc')
+
     def raise_exc():
         raise exc
 
     import requests
+
     monkeypatch.setattr(requests, 'Session', raise_exc)
 
     with pytest.raises(ParseError) as excinfo:
         parse('http://example.com')
 
     assert excinfo.value.__cause__ is exc
-

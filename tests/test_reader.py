@@ -7,7 +7,10 @@ import pytest
 from reader import Reader
 from reader import Feed, Entry, Content, Enclosure
 from reader import (
-    FeedExistsError, FeedNotFoundError, ParseError, EntryNotFoundError,
+    FeedExistsError,
+    FeedNotFoundError,
+    ParseError,
+    EntryNotFoundError,
     MetadataNotFoundError,
     StorageError,
 )
@@ -119,7 +122,7 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
 
     assert set(reader.get_feeds()) == {feed}
     assert set(reader.get_entries()) == {
-        entry_one._replace(feed=feed, updated=datetime(2010, 1, 1)),
+        entry_one._replace(feed=feed, updated=datetime(2010, 1, 1))
     }
 
     feed = parser.feed(1, None, title='new')
@@ -211,9 +214,7 @@ def test_update_new_only(reader):
     reader.update_feeds(new_only=True)
 
     assert len(set(reader.get_feeds())) == 2
-    assert set(reader.get_entries()) == {
-        entry_two._replace(feed=two),
-    }
+    assert set(reader.get_entries()) == {entry_two._replace(feed=two)}
 
     reader.update_feeds()
 
@@ -237,8 +238,9 @@ def test_update_new_only_no_last_updated(reader):
 
     reader.add_feed(feed.url)
     # updated must be None if last_updated is None
-    reader._storage.update_feed(feed.url, feed._replace(updated=None),
-                                None, None, last_updated=None)
+    reader._storage.update_feed(
+        feed.url, feed._replace(updated=None), None, None, last_updated=None
+    )
 
     reader.update_feeds(new_only=True)
 
@@ -275,7 +277,9 @@ def test_update_new_only_not_modified(reader):
     assert len(list(reader.get_entries(feed=feed.url))) == 0
 
 
-def test_update_last_updated_entries_updated_feed_not_updated(reader, call_update_method):
+def test_update_last_updated_entries_updated_feed_not_updated(
+    reader, call_update_method
+):
     """A feed's last_updated should be updated if any of its entries are,
     even if the feed itself isn't updated.
 
@@ -289,14 +293,14 @@ def test_update_last_updated_entries_updated_feed_not_updated(reader, call_updat
     call_update_method(reader, feed.url)
 
     feed_for_update, = reader._storage.get_feeds_for_update(url=feed.url)
-    assert feed_for_update.last_updated ==  datetime(2010, 1, 1)
+    assert feed_for_update.last_updated == datetime(2010, 1, 1)
 
     parser.entry(1, 1, datetime(2010, 1, 1))
     reader._now = lambda: datetime(2010, 1, 2)
     call_update_method(reader, feed.url)
 
     feed_for_update, = reader._storage.get_feeds_for_update(url=feed.url)
-    assert feed_for_update.last_updated ==  datetime(2010, 1, 2)
+    assert feed_for_update.last_updated == datetime(2010, 1, 2)
 
 
 def test_update_feeds_parse_error(reader):
@@ -317,6 +321,7 @@ class FeedAction(Enum):
     none = object()
     update = object()
 
+
 class EntryAction(Enum):
     none = object()
     insert = object()
@@ -324,14 +329,16 @@ class EntryAction(Enum):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('feed_action, entry_action', [
-    (f, e)
-    for f in FeedAction
-    for e in EntryAction
-    if (f, e) != (FeedAction.none, EntryAction.none)
-])
-def test_update_feed_deleted(db_path, call_update_method,
-                             feed_action, entry_action):
+@pytest.mark.parametrize(
+    'feed_action, entry_action',
+    [
+        (f, e)
+        for f in FeedAction
+        for e in EntryAction
+        if (f, e) != (FeedAction.none, EntryAction.none)
+    ],
+)
+def test_update_feed_deleted(db_path, call_update_method, feed_action, entry_action):
     """reader.update_feed should raise FeedNotFoundError if the feed is
     deleted during parsing.
 
@@ -465,7 +472,6 @@ def test_mark_as_read_unread(reader, entry_arg):
 
 
 class FakeNow:
-
     def __init__(self, start, step):
         self.now = start
         self.step = step
@@ -476,48 +482,67 @@ class FakeNow:
 
 
 GET_ENTRIES_ORDER_DATA = {
-    'all_newer_than_threshold': (timedelta(100), [
-        '1 3 2010-01-04',
-        '1 4 2010-01-03',
-        '2 3 2010-01-02',
-        '1 2 2010-01-02',
-        '2 5 2009-12-20',
-        '2 2 2010-01-02',
-        '1 1 2010-01-02',
-        '2 1 2010-01-05',
-        '2 4 2010-01-04',
-    ]),
-    'all_older_than_threshold': (timedelta(0), [
-        '2 1 2010-01-05',
-        '2 4 2010-01-04',
-        '1 3 2010-01-04',
-        '1 4 2010-01-03',
-        '2 3 2010-01-02',
-        '2 2 2010-01-02',
-        '1 2 2010-01-02',
-        '1 1 2010-01-02',
-        '2 5 2009-12-20',
-    ]),
-    'some_older_than_threshold': (Storage.recent_threshold, [
-        '1 3 2010-01-04',
-        '1 4 2010-01-03',
-        '2 1 2010-01-05',
-        '2 4 2010-01-04',
-        # published or updated >= timedelta(3)
-        '2 3 2010-01-02',
-        '2 2 2010-01-02',
-        '1 2 2010-01-02',
-        '1 1 2010-01-02',
-        '2 5 2009-12-20',
-    ]),
+    'all_newer_than_threshold': (
+        timedelta(100),
+        [
+            '1 3 2010-01-04',
+            '1 4 2010-01-03',
+            '2 3 2010-01-02',
+            '1 2 2010-01-02',
+            '2 5 2009-12-20',
+            '2 2 2010-01-02',
+            '1 1 2010-01-02',
+            '2 1 2010-01-05',
+            '2 4 2010-01-04',
+        ],
+    ),
+    'all_older_than_threshold': (
+        timedelta(0),
+        [
+            '2 1 2010-01-05',
+            '2 4 2010-01-04',
+            '1 3 2010-01-04',
+            '1 4 2010-01-03',
+            '2 3 2010-01-02',
+            '2 2 2010-01-02',
+            '1 2 2010-01-02',
+            '1 1 2010-01-02',
+            '2 5 2009-12-20',
+        ],
+    ),
+    'some_older_than_threshold': (
+        Storage.recent_threshold,
+        [
+            '1 3 2010-01-04',
+            '1 4 2010-01-03',
+            '2 1 2010-01-05',
+            '2 4 2010-01-04',
+            # published or updated >= timedelta(3)
+            '2 3 2010-01-02',
+            '2 2 2010-01-02',
+            '1 2 2010-01-02',
+            '1 1 2010-01-02',
+            '2 5 2009-12-20',
+        ],
+    ),
 }
 
+
 @pytest.mark.parametrize('order_data_key', GET_ENTRIES_ORDER_DATA)
-@pytest.mark.parametrize('chunk_size', [
-    Reader._get_entries_chunk_size,     # the default
-    1, 2, 3, 8,                         # rough result size for this test
-    0,                                  # unchunked query
-])
+@pytest.mark.parametrize(
+    'chunk_size',
+    [
+        # the default
+        Reader._get_entries_chunk_size,
+        # rough result size for this test
+        1,
+        2,
+        3,
+        8,
+        # unchunked query
+        0,
+    ],
+)
 def test_get_entries_order(reader, chunk_size, order_data_key):
     """Entries should be sorted descending by (with decreasing priority):
 
@@ -587,11 +612,20 @@ def test_get_entries_order(reader, chunk_size, order_data_key):
     assert [to_str(e) for e in reader.get_entries()] == expected
 
 
-@pytest.mark.parametrize('chunk_size', [
-    Reader._get_entries_chunk_size,     # the default
-    1, 2, 3, 8,                         # rough result size for this test
-    0,                                  # unchunked query
-])
+@pytest.mark.parametrize(
+    'chunk_size',
+    [
+        # the default
+        Reader._get_entries_chunk_size,
+        # rough result size for this test
+        1,
+        2,
+        3,
+        8,
+        # unchunked query
+        0,
+    ],
+)
 def test_get_entries_feed_order(reader, chunk_size):
     """All other things being equal, get_entries() should yield entries
     in the order they appear in the feed.
@@ -759,13 +793,19 @@ def test_get_feeds_order_title(reader):
     reader.add_feed(feed5.url)
 
     assert list(reader.get_feeds()) == [
-        Feed(f.url, None, None, None, None) for f in (feed1, feed2, feed3, feed4, feed5)]
+        Feed(f.url, None, None, None, None) for f in (feed1, feed2, feed3, feed4, feed5)
+    ]
 
     reader.update_feeds()
     reader.set_feed_user_title(feed5, 'five')
 
     assert list(reader.get_feeds()) == [
-        feed4, feed5._replace(user_title='five'), feed1, feed3, feed2]
+        feed4,
+        feed5._replace(user_title='five'),
+        feed1,
+        feed3,
+        feed2,
+    ]
 
 
 def test_get_feeds_order_title_case_insensitive(reader):
@@ -818,7 +858,8 @@ def test_get_feeds_order_added(reader):
     reader.add_feed(feed3.url)
 
     assert list(reader.get_feeds(sort='added')) == [
-        Feed(f.url, None, None, None, None) for f in [feed2, feed1, feed3]]
+        Feed(f.url, None, None, None, None) for f in [feed2, feed1, feed3]
+    ]
 
     reader.update_feeds()
 
@@ -865,16 +906,14 @@ def test_data_roundrip(reader):
     reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1), author='feed author')
-    entry = parser.entry(1, 1, datetime(2010, 1, 1), author='entry author',
+    entry = parser.entry(
+        1,
+        1,
+        datetime(2010, 1, 1),
+        author='entry author',
         summary='summary',
-        content=(
-            Content('value3', 'type', 'en'),
-            Content('value2'),
-        ),
-        enclosures=(
-            Enclosure('http://e1', 'type', 1000),
-            Enclosure('http://e2'),
-        ),
+        content=(Content('value3', 'type', 'en'), Content('value2')),
+        enclosures=(Enclosure('http://e1', 'type', 1000), Enclosure('http://e2')),
     )
 
     reader.add_feed(feed.url)
@@ -890,8 +929,8 @@ def test_get_entries_has_enclosure(reader):
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1))
     two = parser.entry(1, 2, datetime(2010, 1, 1), enclosures=())
-    three = parser.entry(1, 3, datetime(2010, 1, 1),
-        enclosures=(Enclosure('http://e2'), ),
+    three = parser.entry(
+        1, 3, datetime(2010, 1, 1), enclosures=(Enclosure('http://e2'),)
     )
 
     reader.add_feed(feed.url)
@@ -957,5 +996,3 @@ def test_feed_metadata(reader):
     assert set(reader.iter_feed_metadata('feed')) == set()
     with pytest.raises(MetadataNotFoundError):
         reader.get_feed_metadata('feed', 'key')
-
-

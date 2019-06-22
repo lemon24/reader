@@ -70,6 +70,7 @@ def test_feed_argument():
     with pytest.raises(ValueError):
         feed_argument(1)
 
+
 def test_entry_argument():
     feed = Feed('url')
     entry = Entry('entry', 'updated', feed=feed)
@@ -128,4 +129,3 @@ def test_post_entry_add_plugins(reader):
 
 def test_missing():
     assert repr(_missing) == 'no value'
-

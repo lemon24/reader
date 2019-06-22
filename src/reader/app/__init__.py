@@ -23,6 +23,7 @@ def get_reader():
         g.reader = reader
     return g.reader
 
+
 def close_db(error):
     if hasattr(g, 'reader'):
         # TODO: Expose "closing" the storage in the Reader API.
@@ -53,7 +54,9 @@ def entries():
         if not feed:
             abort(404)
 
-    entries = reader.get_entries(which=show, feed=feed_url, has_enclosures=has_enclosures)
+    entries = reader.get_entries(
+        which=show, feed=feed_url, has_enclosures=has_enclosures
+    )
 
     limit = request.args.get('limit', type=int)
     if limit:
@@ -71,7 +74,9 @@ def entries():
     # https://github.com/lemon24/reader/issues/81
     get_flashed_messages()
 
-    return stream_template('entries.html', entries=entries, feed=feed, entries_data=entries_data)
+    return stream_template(
+        'entries.html', entries=entries, feed=feed, entries_data=entries_data
+    )
 
 
 @blueprint.route('/feeds')
@@ -121,9 +126,9 @@ def readererror_to_apierror(*args):
     except ReaderError as e:
         category = None
         if hasattr(e, 'url'):
-            category = (e.url, )
+            category = (e.url,)
             if hasattr(e, 'id'):
-                category += (e.id, )
+                category += (e.id,)
         raise APIError(str(e), category)
 
 
@@ -192,6 +197,7 @@ def add_metadata(data):
     key = data['key']
     get_reader().set_feed_metadata(feed_url, key, None)
 
+
 @form_api
 @readererror_to_apierror()
 def update_metadata(data):
@@ -203,6 +209,7 @@ def update_metadata(data):
         raise APIError("invalid JSON: {}".format(e), (feed_url, key))
     get_reader().set_feed_metadata(feed_url, key, value)
 
+
 @form_api
 @readererror_to_apierror()
 def delete_metadata(data):
@@ -211,13 +218,11 @@ def delete_metadata(data):
     get_reader().delete_feed_metadata(feed_url, key)
 
 
-
 class FlaskPluginLoader(Loader):
-
     def handle_error(self, exception, cause):
         current_app.logger.exception(
-            "%s; original traceback follows",
-            exception, exc_info=cause or exception)
+            "%s; original traceback follows", exception, exc_info=cause or exception
+        )
 
 
 def create_app(db_path, plugins=()):
@@ -227,16 +232,20 @@ def create_app(db_path, plugins=()):
     try:
         app.reader_load_plugins = FlaskPluginLoader(plugins).load_plugins
     except LoaderError as e:
-        app.logger.exception("%s; original traceback follows", e, exc_info=e.__cause__ or e)
+        app.logger.exception(
+            "%s; original traceback follows", e, exc_info=e.__cause__ or e
+        )
         app.reader_load_plugins = lambda reader: reader
 
     app.secret_key = 'secret'
     app.teardown_appcontext(close_db)
 
     from .enclosure_tags import enclosure_tags_blueprint, enclosure_tags_filter
+
     try:
         import mutagen
         import requests
+
         app.register_blueprint(enclosure_tags_blueprint)
     except ImportError:
         pass
@@ -244,4 +253,3 @@ def create_app(db_path, plugins=()):
 
     app.register_blueprint(blueprint)
     return app
-

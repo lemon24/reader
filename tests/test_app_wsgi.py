@@ -16,4 +16,3 @@ def test_app_wsgi(monkeypatch, db_path):
 
     with app.app_context():
         assert get_reader()._dummy_was_here
-

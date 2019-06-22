@@ -37,4 +37,3 @@ entries = [
         title='Example entry, again',
     ),
 ]
-

@@ -26,8 +26,13 @@ class Updater:
             # (last_updated is always set if the feed was updated at least
             # once, unless the database predates last_updated).
             #
-            self.old_feed = self.old_feed._replace(updated=None, http_etag=None, http_last_modified=None)
-            log.info("update feed %r: feed marked as stale, ignoring updated, http_etag and http_last_modified", self.url)
+            self.old_feed = self.old_feed._replace(
+                updated=None, http_etag=None, http_last_modified=None
+            )
+            log.info(
+                "update feed %r: feed marked as stale, ignoring updated, http_etag and http_last_modified",
+                self.url,
+            )
 
     @property
     def url(self):
@@ -39,28 +44,40 @@ class Updater:
 
     def should_update_feed(self, new):
         old = self.old_feed
-        log.debug("update feed %r: old updated %s, new updated %s", self.url, old.updated, new.updated)
+        log.debug(
+            "update feed %r: old updated %s, new updated %s",
+            self.url,
+            old.updated,
+            new.updated,
+        )
 
         if not old.last_updated:
-            log.info("update feed %r: feed has no last_updated, treating as updated", self.url)
+            log.info(
+                "update feed %r: feed has no last_updated, treating as updated",
+                self.url,
+            )
             feed_was_updated = True
 
             assert not old.updated, "updated must be None if last_updated is None"
 
         elif not new.updated:
-            log.info("update feed %r: feed has no updated, treating as updated", self.url)
+            log.info(
+                "update feed %r: feed has no updated, treating as updated", self.url
+            )
             feed_was_updated = True
         else:
-            feed_was_updated = not(new.updated
-                                   and old.updated
-                                   and new.updated <= old.updated)
+            feed_was_updated = not (
+                new.updated and old.updated and new.updated <= old.updated
+            )
 
         should_be_updated = self.stale or feed_was_updated
 
         if not should_be_updated:
             # Some feeds have entries newer than the feed.
             # https://github.com/lemon24/reader/issues/76
-            log.info("update feed %r: feed not updated, updating entries anyway", self.url)
+            log.info(
+                "update feed %r: feed not updated, updating entries anyway", self.url
+            )
 
         return should_be_updated
 
@@ -69,12 +86,26 @@ class Updater:
         old_updated = old.updated if old else None
 
         if self.stale:
-            log.debug("update entry %r of feed %r: feed marked as stale, updating anyway", new.id, self.url)
+            log.debug(
+                "update entry %r of feed %r: feed marked as stale, updating anyway",
+                new.id,
+                self.url,
+            )
         elif not new.updated:
-            log.debug("update entry %r of feed %r: has no updated, updating but not changing updated", new.id, self.url)
+            log.debug(
+                "update entry %r of feed %r: has no updated, updating but not changing updated",
+                new.id,
+                self.url,
+            )
             updated = old_updated or self.now
         elif old_updated and new.updated <= old_updated:
-            log.debug("update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)", new.id, self.url, old_updated, new.updated)
+            log.debug(
+                "update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)",
+                new.id,
+                self.url,
+                old_updated,
+                new.updated,
+            )
             return None, False
 
         log.debug("update entry %r of feed %r: entry added/updated", new.id, self.url)
@@ -82,9 +113,9 @@ class Updater:
 
     def get_entry_pairs(self, entries, storage):
         entries = list(entries)
-        pairs = zip(entries, storage.get_entries_for_update([
-            (self.url, e.id) for e in entries
-        ]))
+        pairs = zip(
+            entries, storage.get_entries_for_update([(self.url, e.id) for e in entries])
+        )
         return pairs
 
     def get_entries_to_update(self, pairs):
@@ -121,8 +152,12 @@ class Updater:
         new_count = sum(bool(n) for _, n in entries_to_update)
         updated_count = len(entries_to_update) - new_count
 
-        log.info("update feed %r: updated (updated %d, new %d)",
-            self.url, updated_count, new_count)
+        log.info(
+            "update feed %r: updated (updated %d, new %d)",
+            self.url,
+            updated_count,
+            new_count,
+        )
 
         if self.should_update_feed(parse_result.feed):
             feed_to_update = FeedUpdateIntent(
@@ -141,17 +176,20 @@ class Updater:
 
     def update(self, parser, storage):
         try:
-            parse_result = parser(self.url,
-                                  self.old_feed.http_etag,
-                                  self.old_feed.http_last_modified)
+            parse_result = parser(
+                self.url, self.old_feed.http_etag, self.old_feed.http_last_modified
+            )
         except NotModified:
             log.info("update feed %r: feed not modified, skipping", self.url)
             # The feed shouldn't be considered new anymore.
             storage.update_feed(self.url, None, None, None, self.now)
             return UpdateResult(None, ())
 
-        entries_to_update = list(self.get_entries_to_update(
-            self.get_entry_pairs(parse_result.entries, storage)))
+        entries_to_update = list(
+            self.get_entries_to_update(
+                self.get_entry_pairs(parse_result.entries, storage)
+            )
+        )
         feed_to_update = self.get_feed_to_update(parse_result, entries_to_update)
 
         if entries_to_update:
@@ -163,5 +201,3 @@ class Updater:
             parse_result.feed.url if parse_result.feed else None,
             (UpdatedEntry(e.entry, n) for e, n in entries_to_update),
         )
-
-

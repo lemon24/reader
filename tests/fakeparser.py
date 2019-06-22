@@ -15,6 +15,7 @@ def _make_feed(number, updated=None, **kwargs):
         **kwargs,
     )
 
+
 def _make_entry(feed_number, number, updated, **kwargs):
     return Entry(
         'http://www.example.com/{}/entries/{}'.format(feed_number, number),
@@ -24,8 +25,8 @@ def _make_entry(feed_number, number, updated, **kwargs):
         **kwargs,
     )
 
-class Parser:
 
+class Parser:
     def __init__(self, feeds=None, entries=None):
         self.feeds = feeds or {}
         self.entries = entries or {}
@@ -66,7 +67,6 @@ class Parser:
 
 
 class BlockingParser(Parser):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.in_parser = threading.Event()
@@ -79,19 +79,16 @@ class BlockingParser(Parser):
 
 
 class FailingParser(Parser):
-
     def __call__(self, *args, **kwargs):
         raise ParseError(None)
 
 
 class NotModifiedParser(Parser):
-
     def __call__(self, *args, **kwargs):
         raise NotModified(None)
 
 
 class ParserThatRemembers(Parser):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.calls = []
@@ -99,4 +96,3 @@ class ParserThatRemembers(Parser):
     def __call__(self, url, http_etag, http_last_modified):
         self.calls.append((url, http_etag, http_last_modified))
         return super().__call__(url, http_etag, http_last_modified)
-

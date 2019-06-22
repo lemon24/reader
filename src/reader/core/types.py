@@ -7,13 +7,14 @@ import attr
 
 
 class attrs_namedtuple_compat:
-
     @classmethod
     def _make(cls, iterable):
         iterable = tuple(iterable)
         attrs_len = len(attr.fields(cls))
         if len(iterable) != attrs_len:
-            raise TypeError('Expected %d arguments, got %d' % (attrs_len, len(iterable)))
+            raise TypeError(
+                'Expected %d arguments, got %d' % (attrs_len, len(iterable))
+            )
         return cls(*iterable)
 
     def _replace(self, **kwargs):
@@ -131,6 +132,7 @@ ParsedFeed = namedtuple('ParsedFeed', 'feed http_etag http_last_modified')
 
 ParseResult = namedtuple('ParseResult', 'parsed_feed entries')
 
+
 class ParseResult(ParseResult):
 
     __slots__ = ()
@@ -150,14 +152,18 @@ class ParseResult(ParseResult):
         return self.parsed_feed.http_last_modified
 
 
-FeedForUpdate = namedtuple('FeedForUpdate', 'url updated http_etag http_last_modified stale last_updated')
+FeedForUpdate = namedtuple(
+    'FeedForUpdate', 'url updated http_etag http_last_modified stale last_updated'
+)
 EntryForUpdate = namedtuple('EntryForUpdate', 'updated')
 
 
-FeedUpdateIntent = namedtuple('FeedUpdateIntent', 'url feed http_etag http_last_modified last_updated')
-EntryUpdateIntent = namedtuple('EntryUpdateIntent', 'url entry last_updated first_updated')
+FeedUpdateIntent = namedtuple(
+    'FeedUpdateIntent', 'url feed http_etag http_last_modified last_updated'
+)
+EntryUpdateIntent = namedtuple(
+    'EntryUpdateIntent', 'url entry last_updated first_updated'
+)
 
 UpdatedEntry = namedtuple('UpdatedEntry', 'entry new')
 UpdateResult = namedtuple('UpdateResult', 'url entries')
-
-

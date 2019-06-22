@@ -38,6 +38,7 @@ XML_TAG_RE = re.compile(r'<[^<]+?>', re.I)
 XML_ENTITY_RE = re.compile(r'&[^\s;]+?;', re.I)
 WHITESPACE_RE = re.compile(r'\s+')
 
+
 def normalize(text):
     text = XML_TAG_RE.sub(' ', text)
     text = XML_ENTITY_RE.sub(' ', text)
@@ -47,11 +48,7 @@ def normalize(text):
 
 
 def first_content(entry):
-    return next((
-        c.value
-        for c in (entry.content or ())
-        if c.type == 'text/html'
-    ), None)
+    return next((c.value for c in (entry.content or ()) if c.type == 'text/html'), None)
 
 
 def is_duplicate(one, two):
@@ -73,23 +70,28 @@ def is_duplicate(one, two):
 
 def feed_entry_dedupe_plugin(reader, url, entry):
     duplicates = [
-        e for e in reader.get_entries(feed=url)
+        e
+        for e in reader.get_entries(feed=url)
         if e.id != entry.id and is_duplicate(entry, e)
     ]
     if not duplicates:
         return
     if all(d.read for d in duplicates):
-        log.info("%r (%s): found read duplicates, marking this as read",
-                 (url, entry.id), entry.title)
+        log.info(
+            "%r (%s): found read duplicates, marking this as read",
+            (url, entry.id),
+            entry.title,
+        )
         reader.mark_as_read((url, entry.id))
     else:
         for duplicate in duplicates:
             reader.mark_as_read(duplicate)
-        log.info("%r (%s): found unread duplicates, marking duplicates as read",
-                 (url, entry.id), entry.title)
+        log.info(
+            "%r (%s): found unread duplicates, marking duplicates as read",
+            (url, entry.id),
+            entry.title,
+        )
 
 
 def feed_entry_dedupe(reader):
     reader._post_entry_add_plugins.append(feed_entry_dedupe_plugin)
-
-

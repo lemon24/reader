@@ -71,7 +71,9 @@ def test_mark_all_as_read_unread(db_path, browser):
 
     form = browser.select_form('#update-entries form.action-mark-all-as-read')
     form.set_checkbox({'really-mark-all-as-read': True})
-    response = browser.submit_selected(form.form.find('button', text='mark all as read'))
+    response = browser.submit_selected(
+        form.form.find('button', text='mark all as read')
+    )
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.entry')) == 0
 
@@ -81,7 +83,9 @@ def test_mark_all_as_read_unread(db_path, browser):
 
     form = browser.select_form('#update-entries form.action-mark-all-as-unread')
     form.set_checkbox({'really-mark-all-as-unread': True})
-    response = browser.submit_selected(form.form.find('button', text='mark all as unread'))
+    response = browser.submit_selected(
+        form.form.find('button', text='mark all as unread')
+    )
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.entry')) == 0
 
@@ -183,4 +187,3 @@ def test_limit(db_path, browser):
     entries = browser.get_current_page().select('.entry')
     assert len(entries) == 1
     assert '#2' in str(entries[0])
-

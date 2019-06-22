@@ -9,7 +9,9 @@ from datetime import timedelta
 from .sqlite_utils import open_sqlite_db, DBError
 from .exceptions import (
     StorageError,
-    EntryNotFoundError, FeedNotFoundError, FeedExistsError,
+    EntryNotFoundError,
+    FeedNotFoundError,
+    FeedExistsError,
     MetadataNotFoundError,
 )
 from .types import Feed, Entry, Content, Enclosure
@@ -40,7 +42,8 @@ def wrap_storage_exceptions(*args):
 
 
 def create_db(db):
-    db.execute("""
+    db.execute(
+        """
         CREATE TABLE feeds (
 
             -- feed data
@@ -59,8 +62,10 @@ def create_db(db):
             added TIMESTAMP
 
         );
-    """)
-    db.execute("""
+    """
+    )
+    db.execute(
+        """
         CREATE TABLE entries (
 
             -- entry data
@@ -85,11 +90,14 @@ def create_db(db):
                 ON UPDATE CASCADE
                 ON DELETE CASCADE
         );
-    """)
+    """
+    )
     create_feed_metadata(db)
 
+
 def create_feed_metadata(db):
-    db.execute("""
+    db.execute(
+        """
         CREATE TABLE feed_metadata (
             feed TEXT NOT NULL,
             key TEXT NOT NULL,
@@ -100,27 +108,35 @@ def create_feed_metadata(db):
                 ON UPDATE CASCADE
                 ON DELETE CASCADE
         );
-    """)
+    """
+    )
 
-def update_from_10_to_11(db):   # pragma: no cover
-    db.execute("""
+
+def update_from_10_to_11(db):  # pragma: no cover
+    db.execute(
+        """
         ALTER TABLE feeds
         ADD COLUMN added TIMESTAMP;
-    """)
+    """
+    )
 
-def update_from_11_to_12(db):   # pragma: no cover
-    db.execute("""
+
+def update_from_11_to_12(db):  # pragma: no cover
+    db.execute(
+        """
         ALTER TABLE entries
         ADD COLUMN first_updated TIMESTAMP;
-    """)
+    """
+    )
 
-def update_from_12_to_13(db):   # pragma: no cover
+
+def update_from_12_to_13(db):  # pragma: no cover
     create_feed_metadata(db)
+
 
 def open_db(path, timeout):
     return open_sqlite_db(
         path,
-
         create=create_db,
         version=13,
         migrations={
@@ -129,7 +145,6 @@ def open_db(path, timeout):
             11: update_from_11_to_12,
             12: update_from_12_to_13,
         },
-
         timeout=timeout,
     )
 
@@ -152,20 +167,26 @@ class Storage:
     def add_feed(self, url, added=None):
         with self.db:
             try:
-                self.db.execute("""
+                self.db.execute(
+                    """
                     INSERT INTO feeds (url, added)
                     VALUES (:url, :added);
-                """, locals())
+                """,
+                    locals(),
+                )
             except sqlite3.IntegrityError:
                 raise FeedExistsError(url)
 
     @wrap_storage_exceptions()
     def remove_feed(self, url):
         with self.db:
-            rows = self.db.execute("""
+            rows = self.db.execute(
+                """
                 DELETE FROM feeds
                 WHERE url = :url;
-            """, locals())
+            """,
+                locals(),
+            )
             if rows.rowcount == 0:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
@@ -180,13 +201,18 @@ class Storage:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
-        cursor = self.db.execute("""
+        cursor = self.db.execute(
+            """
             SELECT url, updated, title, link, author, user_title FROM feeds
             {where_url_snippet}
             ORDER BY
                 {order_by_snippet},
                 feeds.url;
-        """.format(**locals()), locals())
+        """.format(
+                **locals()
+            ),
+            locals(),
+        )
 
         for row in cursor:
             yield Feed._make(row)
@@ -202,13 +228,18 @@ class Storage:
             where_snippet = ''
         where_url_snippet = '' if not url else " AND url = :url"
         where_new_only_snippet = '' if not new_only else " AND last_updated is NULL"
-        cursor = self.db.execute("""
+        cursor = self.db.execute(
+            """
             SELECT url, updated, http_etag, http_last_modified, stale, last_updated FROM feeds
             {where_snippet}
             {where_url_snippet}
             {where_new_only_snippet}
             ORDER BY feeds.url;
-        """.format(**locals()), locals())
+        """.format(
+                **locals()
+            ),
+            locals(),
+        )
         for row in cursor:
             yield FeedForUpdate._make(row)
 
@@ -217,12 +248,15 @@ class Storage:
         return iter(list(self._get_feeds_for_update(url=url, new_only=new_only)))
 
     def _get_entry_for_update(self, feed_url, id):
-        row = self.db.execute("""
+        row = self.db.execute(
+            """
             SELECT updated
             FROM entries
             WHERE feed = :feed_url
                 AND id = :id;
-        """, locals()).fetchone()
+        """,
+            locals(),
+        ).fetchone()
         if not row:
             return None
         return EntryForUpdate(row[0])
@@ -238,7 +272,8 @@ class Storage:
         values_snippet = ', '.join(['(?, ?)'] * len(entries))
         parameters = list(chain.from_iterable(entries))
 
-        rows = self.db.execute("""
+        rows = self.db.execute(
+            """
             WITH
                 input(feed, id) AS (
                     VALUES {values_snippet}
@@ -249,12 +284,15 @@ class Storage:
                 FROM input
                 LEFT JOIN entries
                     ON (input.id, input.feed) == (entries.id, entries.feed);
-        """.format(values_snippet=values_snippet), parameters)
+        """.format(
+                values_snippet=values_snippet
+            ),
+            parameters,
+        )
 
-        return iter([
-            EntryForUpdate(updated) if exists else None
-            for exists, updated in rows
-        ])
+        return iter(
+            [EntryForUpdate(updated) if exists else None for exists, updated in rows]
+        )
 
     @wrap_storage_exceptions()
     def get_entries_for_update(self, entries):
@@ -269,11 +307,14 @@ class Storage:
     @wrap_storage_exceptions()
     def set_feed_user_title(self, url, title):
         with self.db:
-            rows = self.db.execute("""
+            rows = self.db.execute(
+                """
                 UPDATE feeds
                 SET user_title = :title
                 WHERE url = :url;
-            """, locals())
+            """,
+                locals(),
+            )
             if rows.rowcount == 0:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
@@ -281,11 +322,14 @@ class Storage:
     @wrap_storage_exceptions()
     def mark_as_stale(self, url):
         with self.db:
-            rows = self.db.execute("""
+            rows = self.db.execute(
+                """
                 UPDATE feeds
                 SET stale = 1
                 WHERE url = :url;
-            """, locals())
+            """,
+                locals(),
+            )
             if rows.rowcount == 0:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
@@ -293,11 +337,14 @@ class Storage:
     @wrap_storage_exceptions()
     def mark_as_read_unread(self, feed_url, entry_id, read):
         with self.db:
-            rows = self.db.execute("""
+            rows = self.db.execute(
+                """
                 UPDATE entries
                 SET read = :read
                 WHERE feed = :feed_url AND id = :entry_id;
-            """, locals())
+            """,
+                locals(),
+            )
             if rows.rowcount == 0:
                 raise EntryNotFoundError(feed_url, entry_id)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
@@ -306,11 +353,15 @@ class Storage:
     def update_feed(self, url, feed, http_etag, http_last_modified, last_updated):
         if feed:
             assert url == feed.url, "updating feed URL not supported"
-            self._update_feed_full(url, feed, http_etag, http_last_modified, last_updated)
+            self._update_feed_full(
+                url, feed, http_etag, http_last_modified, last_updated
+            )
             return
 
         assert http_etag is None, "http_etag must be none if feed is none"
-        assert http_last_modified is None, "http_last_modified must be none if feed is none"
+        assert (
+            http_last_modified is None
+        ), "http_last_modified must be none if feed is none"
         self._update_feed_last_updated(url, last_updated)
 
     def _update_feed_full(self, url, feed, http_etag, http_last_modified, last_updated):
@@ -320,7 +371,8 @@ class Storage:
         author = feed.author
 
         with self.db:
-            rows = self.db.execute("""
+            rows = self.db.execute(
+                """
                 UPDATE feeds
                 SET
                     title = :title,
@@ -332,7 +384,9 @@ class Storage:
                     stale = NULL,
                     last_updated = :last_updated
                 WHERE url = :url;
-            """, locals())
+            """,
+                locals(),
+            )
 
         if rows.rowcount == 0:
             raise FeedNotFoundError(url)
@@ -340,12 +394,15 @@ class Storage:
 
     def _update_feed_last_updated(self, url, last_updated):
         with self.db:
-            rows = self.db.execute("""
+            rows = self.db.execute(
+                """
                 UPDATE feeds
                 SET
                     last_updated = :last_updated
                 WHERE url = :url;
-            """, locals())
+            """,
+                locals(),
+            )
 
         if rows.rowcount == 0:
             raise FeedNotFoundError(url)
@@ -359,11 +416,18 @@ class Storage:
         link = entry.link
         author = entry.author
         summary = entry.summary
-        content = json.dumps([t._asdict() for t in entry.content]) if entry.content else None
-        enclosures = json.dumps([t._asdict() for t in entry.enclosures]) if entry.enclosures else None
+        content = (
+            json.dumps([t._asdict() for t in entry.content]) if entry.content else None
+        )
+        enclosures = (
+            json.dumps([t._asdict() for t in entry.enclosures])
+            if entry.enclosures
+            else None
+        )
 
         try:
-            self.db.execute("""
+            self.db.execute(
+                """
                 INSERT OR REPLACE INTO entries (
                     id,
                     feed,
@@ -401,9 +465,16 @@ class Storage:
                         WHERE id = :id AND feed = :feed_url
                     ))
                 );
-            """, locals())
+            """,
+                locals(),
+            )
         except sqlite3.IntegrityError as e:
-            log.debug("add_entry %r of feed %r: got IntegrityError", entry.id, feed_url, exc_info=True)
+            log.debug(
+                "add_entry %r of feed %r: got IntegrityError",
+                entry.id,
+                feed_url,
+                exc_info=True,
+            )
             raise FeedNotFoundError(feed_url)
 
     @wrap_storage_exceptions()
@@ -416,8 +487,9 @@ class Storage:
         # this is only for convenience (it's called from tests)
         self.add_or_update_entries([(feed_url, entry, last_updated, first_updated)])
 
-    def _get_entries(self, which, feed_url, has_enclosures,
-                     now, chunk_size=None, last=None):
+    def _get_entries(
+        self, which, feed_url, has_enclosures, now, chunk_size=None, last=None
+    ):
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
         if which == 'all':
@@ -442,7 +514,9 @@ class Storage:
                 LIMIT :chunk_size
             """
             if last:
-                last_entry_first_updated, last_entry_updated, last_feed_url, last_entry_last_updated, last_entry_id = last
+                last_entry_first_updated, last_entry_updated, last_feed_url, last_entry_last_updated, last_entry_id = (
+                    last
+                )
                 where_next_snippet = """
                     AND (
                         kinda_first_updated,
@@ -470,7 +544,9 @@ class Storage:
             where_has_enclosures_snippet = """
                 AND {} (json_array_length(entries.enclosures) IS NULL
                         OR json_array_length(entries.enclosures) = 0)
-            """.format('NOT' if has_enclosures else '')
+            """.format(
+                'NOT' if has_enclosures else ''
+            )
 
         recent_threshold = now - self.recent_threshold
 
@@ -516,7 +592,9 @@ class Storage:
                 entries.id DESC
             {limit_snippet}
             ;
-        """.format(**locals())
+        """.format(
+            **locals()
+        )
 
         log.debug("_get_entries query\n%s\n", query)
 
@@ -543,11 +621,17 @@ class Storage:
                 )
 
     @wrap_storage_exceptions()
-    def get_entries(self, which, feed_url, has_enclosures,
-                    now, chunk_size=None, last=None):
-        rv = self._get_entries(which=which, feed_url=feed_url,
-                               has_enclosures=has_enclosures,
-                               now=now, chunk_size=chunk_size, last=last)
+    def get_entries(
+        self, which, feed_url, has_enclosures, now, chunk_size=None, last=None
+    ):
+        rv = self._get_entries(
+            which=which,
+            feed_url=feed_url,
+            has_enclosures=has_enclosures,
+            now=now,
+            chunk_size=chunk_size,
+            last=last,
+        )
 
         if chunk_size:
             # The list() call is here to make sure callers can't block the
@@ -563,10 +647,15 @@ class Storage:
         if key is not None:
             where_url_snippet += " AND key = :key"
 
-        cursor = self.db.execute("""
+        cursor = self.db.execute(
+            """
             SELECT key, value FROM feed_metadata
             {where_url_snippet};
-        """.format(**locals()), locals())
+        """.format(
+                **locals()
+            ),
+            locals(),
+        )
 
         for key, value in cursor:
             yield key, json.loads(value)
@@ -581,7 +670,8 @@ class Storage:
 
         with self.db:
             try:
-                self.db.execute("""
+                self.db.execute(
+                    """
                     INSERT OR REPLACE INTO feed_metadata (
                         feed,
                         key,
@@ -591,19 +681,22 @@ class Storage:
                         :key,
                         :value
                     );
-                """, locals())
+                """,
+                    locals(),
+                )
             except sqlite3.IntegrityError as e:
                 raise FeedNotFoundError(feed_url)
 
     @wrap_storage_exceptions()
     def delete_feed_metadata(self, feed_url, key):
-         with self.db:
-            rows = self.db.execute("""
+        with self.db:
+            rows = self.db.execute(
+                """
                 DELETE FROM feed_metadata
                 WHERE feed = :feed_url AND key = :key;
-            """, locals())
+            """,
+                locals(),
+            )
             if rows.rowcount == 0:
                 raise MetadataNotFoundError(feed_url, key)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
-
-

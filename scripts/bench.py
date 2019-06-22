@@ -26,10 +26,12 @@ from reader.app import create_app, get_reader
 def get_params(fn):
     rv = []
     for param in inspect.signature(fn).parameters.values():
-        assert param.kind == param.POSITIONAL_OR_KEYWORD, (
-            f"parameter {param.name} of {fn.__name__} is variable")
+        assert (
+            param.kind == param.POSITIONAL_OR_KEYWORD
+        ), f"parameter {param.name} of {fn.__name__} is variable"
         rv.append(param.name)
     return rv
+
 
 def inject(**factories):
     params = {p for cm in factories.values() for p in get_params(cm)}
@@ -43,7 +45,8 @@ def inject(**factories):
                 if kw not in params:
                     raise TypeError(
                         f"{fn.__name__}({', '.join(sorted(params))}) "
-                        f"got an unexpected keyword argument {kw!r}")
+                        f"got an unexpected keyword argument {kw!r}"
+                    )
 
             with ExitStack() as stack:
                 fn_kwargs = {}
@@ -69,6 +72,7 @@ def inject(**factories):
 
 NUM_FEEDS = 8
 
+
 def make_reader_with_entries(path, num_entries, num_feeds=NUM_FEEDS):
     reader = Reader(path)
     reader._parser = parser = Parser()
@@ -82,6 +86,7 @@ def make_reader_with_entries(path, num_entries, num_feeds=NUM_FEEDS):
 
     return reader
 
+
 def make_test_client(path):
     app = create_app(path)
     client = app.test_client()
@@ -93,7 +98,8 @@ def make_test_client(path):
 @contextmanager
 def setup_db():
     with tempfile.TemporaryDirectory() as tmpdir:
-       yield os.path.join(tmpdir, 'db.sqlite')
+        yield os.path.join(tmpdir, 'db.sqlite')
+
 
 @contextmanager
 def setup_db_with_entries(num_entries):
@@ -101,10 +107,12 @@ def setup_db_with_entries(num_entries):
         make_reader_with_entries(path, num_entries).update_feeds()
         yield path
 
+
 @contextmanager
 def setup_reader_with_entries(num_entries):
     with setup_db_with_entries(num_entries) as path:
         yield Reader(path)
+
 
 @contextmanager
 def setup_client_with_entries(num_entries):
@@ -117,10 +125,12 @@ def time_get_entries(reader):
     for _ in reader.get_entries(which='all'):
         pass
 
+
 @inject(client=setup_client_with_entries)
 def time_show(client):
     for _ in client.get('/?show=all').response:
         pass
+
 
 @inject(client=setup_client_with_entries)
 def time_show_100k(client):
@@ -136,6 +146,7 @@ def setup_reader_with_fake_parser(num_entries):
     with setup_db() as path:
         yield make_reader_with_entries(path, num_entries)
 
+
 @inject(reader=setup_reader_with_fake_parser)
 def time_update_feeds(reader):
     reader.update_feeds()
@@ -146,11 +157,13 @@ def setup_reader_feed_new(num_entries):
     with setup_db() as path:
         yield make_reader_with_entries(path, num_entries, num_feeds=1)
 
+
 @contextmanager
 def setup_reader_feed_old(num_entries):
     with setup_reader_feed_new(num_entries) as reader:
         reader.update_feeds()
         yield reader
+
 
 def raise_too_many_variables(reader):
     original = getattr(reader._storage, '_get_entries_for_update_one_query', None)
@@ -161,11 +174,13 @@ def raise_too_many_variables(reader):
 
     reader._storage._get_entries_for_update_one_query = wrapper
 
+
 @contextmanager
 def setup_reader_feed_new_fallback(num_entries):
     with setup_reader_feed_new(num_entries) as reader:
         raise_too_many_variables(reader)
         yield reader
+
 
 @contextmanager
 def setup_reader_feed_old_fallback(num_entries):
@@ -173,14 +188,20 @@ def setup_reader_feed_old_fallback(num_entries):
         raise_too_many_variables(reader)
         yield reader
 
+
 def _time_update_feed(reader):
     feed_url = list(reader._parser.feeds.values())[0].url
     reader.update_feed(feed_url)
 
+
 time_update_feed_new = inject(reader=setup_reader_feed_new)(_time_update_feed)
-time_update_feed_new_fallback = inject(reader=setup_reader_feed_new_fallback)(_time_update_feed)
+time_update_feed_new_fallback = inject(reader=setup_reader_feed_new_fallback)(
+    _time_update_feed
+)
 time_update_feed_old = inject(reader=setup_reader_feed_old)(_time_update_feed)
-time_update_feed_old_fallback = inject(reader=setup_reader_feed_old_fallback)(_time_update_feed)
+time_update_feed_old_fallback = inject(reader=setup_reader_feed_old_fallback)(
+    _time_update_feed
+)
 
 
 TIMINGS = OrderedDict(
@@ -188,10 +209,10 @@ TIMINGS = OrderedDict(
     for tn, t in sorted(globals().items())
     if tn.startswith('time_')
 )
-TIMINGS_PARAMS_LIST = [(2**i,) for i in range(5, 12)]
+TIMINGS_PARAMS_LIST = [(2 ** i,) for i in range(5, 12)]
 TIMINGS_NUMBER = 4
-PROFILE_PARAMS = (2**11, )
-IDS = ('num_entries', )
+PROFILE_PARAMS = (2 ** 11,)
+IDS = ('num_entries',)
 
 
 @click.group()
@@ -211,11 +232,7 @@ def time(which):
     if not which:
         which = ['*']
 
-    names = [
-        name
-        for name in TIMINGS
-        if any(fnmatchcase(name, w) for w in which)
-    ]
+    names = [name for name in TIMINGS if any(fnmatchcase(name, w) for w in which)]
 
     extra = ['number'] + list(IDS)
     header = ' '.join(extra + names)
@@ -241,11 +258,7 @@ def time(which):
 @cli.command()
 @click.argument('which', nargs=-1)
 def profile(which):
-    names = [
-        name
-        for name in TIMINGS
-        if any(fnmatchcase(name, w) for w in which)
-    ]
+    names = [name for name in TIMINGS if any(fnmatchcase(name, w) for w in which)]
     params = PROFILE_PARAMS
 
     for name in names:

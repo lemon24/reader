@@ -9,28 +9,30 @@ import click
 def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
+
 def confirm(message, *args, **kwargs):
-    rv = click.prompt(message.format(*args, **kwargs),
-                      type=click.Choice(['y', 'n']))
+    rv = click.prompt(message.format(*args, **kwargs), type=click.Choice(['y', 'n']))
     if rv != 'y':
         abort('aborted')
 
+
 def run(*args, **kwargs):
     return subprocess.run(*args, check=True, **kwargs)
+
 
 def run_no_venv(*args, **kwargs):
     env = os.environ.copy()
     virtual_env = env.pop('VIRTUAL_ENV', None)
     if virtual_env:
         env['PATH'] = ':'.join(
-            p for p in env['PATH'].split(':')
-            if not p.startswith(virtual_env)
+            p for p in env['PATH'].split(':') if not p.startswith(virtual_env)
         )
     return run(*args, env=env, **kwargs)
 
 
 def tox():
     run_no_venv('tox', shell=True)
+
 
 def build():
     run('rm -rf dist/', shell=True)
@@ -43,6 +45,7 @@ def path_sub(pattern, repl, path):
         text = f.read()
 
     sub_count = 0
+
     def update(match):
         nonlocal sub_count
         sub_count += 1
@@ -58,8 +61,10 @@ def path_sub(pattern, repl, path):
 
 INIT_VERSION_RE = r'(\n__version__ = )(.*?)(\n)'
 
+
 def update_init_version(version):
     path_sub(INIT_VERSION_RE, repr(version), 'src/reader/__init__.py')
+
 
 def update_changelog_date(version, date):
     title = 'Version {}'.format(version)
@@ -68,6 +73,7 @@ def update_changelog_date(version, date):
         'Released ' + str(date.date()),
         'CHANGES.rst',
     )
+
 
 def add_changelog_section(version, new_version):
     title = 'Version {}'.format(version)
@@ -82,18 +88,27 @@ def add_changelog_section(version, new_version):
 def commit(message):
     run(['git', 'commit', '-a', '-m', message])
 
+
 def push():
     run(['git', 'push'])
 
+
 def check_uncommited():
-    p = run(['git', 'status', '--untracked-files=no', '--porcelain'],
-            stdout=subprocess.PIPE, universal_newlines=True)
+    p = run(
+        ['git', 'status', '--untracked-files=no', '--porcelain'],
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
     if p.stdout.strip():
         abort("uncommited changes\n\n{}\n", p.stdout.strip('\n'))
 
+
 def check_unpushed():
-    p = run(['git', 'log', '@{u}..', '--format=oneline'],
-        stdout=subprocess.PIPE, universal_newlines=True)
+    p = run(
+        ['git', 'log', '@{u}..', '--format=oneline'],
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
     if p.stdout.strip():
         abort("unpushed changes\n\n{}\n", p.stdout.strip('\n'))
 
@@ -138,7 +153,5 @@ def main(version, new_version, date):
     push()
 
 
-
 if __name__ == '__main__':
     main()
-

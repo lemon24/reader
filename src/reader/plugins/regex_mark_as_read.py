@@ -44,5 +44,3 @@ def plugin(reader, url, entry):
 
 def regex_mark_as_read(reader):
     reader._post_entry_add_plugins.append(plugin)
-
-

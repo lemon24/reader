@@ -36,5 +36,3 @@ def enclosure_dedupe(reader):
             yield entry
 
     reader.get_entries = get_entries
-
-

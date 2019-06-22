@@ -7,7 +7,6 @@ from flask import Blueprint, Response, stream_with_context, url_for, request
 enclosure_tags_blueprint = Blueprint('enclosure_tags', __name__)
 
 
-
 ALL_TAGS = ('album', 'title', 'artist')
 SET_ONLY_IF_MISSING_TAGS = {'artist'}
 
@@ -49,7 +48,7 @@ def enclosure_tags(filename):
 
         try:
             while True:
-                data = tmp.read(2**20)
+                data = tmp.read(2 ** 20)
                 if not data:
                     break
                 yield data
@@ -64,10 +63,7 @@ def enclosure_tags(filename):
         if name in req.headers:
             headers[name] = req.headers[name]
 
-    return Response(
-        stream_with_context(chunks(req)),
-        headers=headers,
-    )
+    return Response(stream_with_context(chunks(req)), headers=headers)
 
 
 def enclosure_tags_filter(enclosure, entry):
@@ -87,5 +83,3 @@ def enclosure_tags_filter(enclosure, entry):
             args['artist'] = entry.author or entry.feed.author
         return url_for('enclosure_tags.enclosure_tags', **args)
     return enclosure.href
-
-

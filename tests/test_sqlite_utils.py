@@ -5,24 +5,32 @@ import pytest
 from reader.core.sqlite_utils import ddl_transaction
 from reader.core.sqlite_utils import HeavyMigration, SchemaVersionError
 from reader.core.sqlite_utils import RequirementError
-from reader.core.sqlite_utils import require_sqlite_version, require_sqlite_compile_options
+from reader.core.sqlite_utils import (
+    require_sqlite_version,
+    require_sqlite_compile_options,
+)
 
 
-class WeirdError(Exception): pass
+class WeirdError(Exception):
+    pass
 
 
 def create_db_1(db):
     db.execute("CREATE TABLE t (one INTEGER);")
 
+
 def create_db_2(db):
     db.execute("CREATE TABLE t (one INTEGER, two INTEGER);")
+
 
 def create_db_2_error(db):
     create_db_2(db)
     raise WeirdError('create')
 
+
 def update_from_1_to_2(db):
     db.execute("ALTER TABLE t ADD COLUMN two INTEGER;")
+
 
 def update_from_1_to_2_error(db):
     update_from_1_to_2(db)
@@ -37,15 +45,17 @@ def test_migration_create():
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one', 'two']
 
+
 def test_migration_create_error():
     db = sqlite3.connect(':memory:')
     migration = HeavyMigration(create_db_2_error, 2, {})
     # should call migration.create but not migration.migrations[1]
     with pytest.raises(WeirdError) as excinfo:
         migration.migrate(db)
-    assert excinfo.value.args == ('create', )
+    assert excinfo.value.args == ('create',)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == []
+
 
 def test_migration_update():
     db = sqlite3.connect(':memory:')
@@ -57,6 +67,7 @@ def test_migration_update():
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one', 'two']
 
+
 def test_migration_no_update():
     db = sqlite3.connect(':memory:')
     migration = HeavyMigration(create_db_2, 2, {})
@@ -67,6 +78,7 @@ def test_migration_no_update():
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one', 'two']
 
+
 def test_migration_update_error():
     db = sqlite3.connect(':memory:')
     migration = HeavyMigration(create_db_1, 1, {})
@@ -75,9 +87,10 @@ def test_migration_update_error():
     # should call migration.migrations[1] but not migration.create
     with pytest.raises(WeirdError) as excinfo:
         migration.migrate(db)
-    assert excinfo.value.args == ('update', )
+    assert excinfo.value.args == ('update',)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one']
+
 
 def test_migration_unsupported_old_version():
     db = sqlite3.connect(':memory:')
@@ -89,6 +102,7 @@ def test_migration_unsupported_old_version():
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one']
 
+
 def test_migration_unsupported_intermediary_version():
     db = sqlite3.connect(':memory:')
     migration = HeavyMigration(create_db_1, 1, {})
@@ -98,6 +112,7 @@ def test_migration_unsupported_intermediary_version():
         migration.migrate(db)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one']
+
 
 def test_migration_invalid_version():
     db = sqlite3.connect(':memory:')
@@ -122,7 +137,6 @@ def test_require_sqlite_version(monkeypatch):
 
 
 class MockCursor:
-
     def __init__(self):
         self._execute_args = None
         self._fetchall_rv = None
@@ -136,8 +150,8 @@ class MockCursor:
     def close(self):
         pass
 
-class MockConnection:
 
+class MockConnection:
     def __init__(self):
         self._cursor = MockCursor()
 
@@ -147,7 +161,7 @@ class MockConnection:
 
 def test_require_sqlite_compile_options():
     db = MockConnection()
-    db._cursor._fetchall_rv = [('ONE', ), ('TWO', )]
+    db._cursor._fetchall_rv = [('ONE',), ('TWO',)]
 
     with pytest.raises(RequirementError):
         require_sqlite_compile_options(db, ['THREE'])
@@ -157,5 +171,3 @@ def test_require_sqlite_compile_options():
     # shouldn't raise an exception
     require_sqlite_compile_options(db, ['ONE'])
     require_sqlite_compile_options(db, ['ONE', 'TWO'])
-
-

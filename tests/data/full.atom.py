@@ -29,9 +29,17 @@ entries = [
         enclosures=(
             # the text/html type comes from feedparser
             Enclosure(href='http://example.org/enclosure', type='text/html'),
-            Enclosure(href='http://example.org/enclosure-with-type', type='text/whatever'),
-            Enclosure(href='http://example.org/enclosure-with-length', type='text/html', length=1000),
-            Enclosure(href='http://example.org/enclosure-with-bad-length', type='text/html'),
+            Enclosure(
+                href='http://example.org/enclosure-with-type', type='text/whatever'
+            ),
+            Enclosure(
+                href='http://example.org/enclosure-with-length',
+                type='text/html',
+                length=1000,
+            ),
+            Enclosure(
+                href='http://example.org/enclosure-with-bad-length', type='text/html'
+            ),
         ),
     ),
     Entry(
@@ -42,4 +50,3 @@ entries = [
         link='urn:uuid:00000000-cfb8-4ebb-aaaa-00000000000',
     ),
 ]
-

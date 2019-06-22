@@ -5,8 +5,9 @@ from setuptools import setup, find_packages
 _version_re = re.compile(r'__version__\s+=\s+(.*)')
 
 with open('src/reader/__init__.py', 'rb') as f:
-    version = str(ast.literal_eval(_version_re.search(
-        f.read().decode('utf-8')).group(1)))
+    version = str(
+        ast.literal_eval(_version_re.search(f.read().decode('utf-8')).group(1))
+    )
 
 with open('README.rst') as f:
     long_description = f.read()
@@ -20,11 +21,7 @@ setup(
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
     include_package_data=True,
-    install_requires=[
-        'attrs>=17.1',
-        'feedparser>=5',
-        'requests',
-    ],
+    install_requires=['attrs>=17.1', 'feedparser>=5', 'requests'],
     extras_require={
         'cli': ['click>=5'],
         'web-app': ['flask>=0.10', 'humanize'],
@@ -39,23 +36,15 @@ setup(
             'requests-mock',
             'mechanicalsoup',
             'requests-wsgi-adapter',
-
             # docs
             'sphinx',
             'sphinx_rtd_theme',
             'click>=5',
             'sphinx-click',
-
             # release
             'twine',
-
         ],
-        'docs': [
-            'sphinx',
-            'sphinx_rtd_theme',
-            'click>=5',
-            'sphinx-click',
-        ],
+        'docs': ['sphinx', 'sphinx_rtd_theme', 'click>=5', 'sphinx-click'],
     },
     description="A minimal feed reader.",
     long_description=long_description,
@@ -67,4 +56,3 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
 )
-

@@ -47,8 +47,7 @@ def test_cli(db_path, data_dir):
     assert result.exit_code == 0
     assert [l.split() for l in result.output.splitlines()] == [
         [feed_path, e.link or e.id]
-        for e in
-        sorted(expected['entries'], key=lambda e: e.updated, reverse=True)
+        for e in sorted(expected['entries'], key=lambda e: e.updated, reverse=True)
     ]
 
 
@@ -56,16 +55,27 @@ def raise_exception_plugin(reader):
     assert isinstance(reader, Reader)
     raise Exception("plug-in error")
 
+
 @pytest.mark.slow
 def test_cli_plugin(db_path, monkeypatch):
     import sys
 
-    monkeypatch.setattr(sys, 'path', [str(py.path.local(__file__).dirpath())] + sys.path)
+    monkeypatch.setattr(
+        sys, 'path', [str(py.path.local(__file__).dirpath())] + sys.path
+    )
 
     runner = CliRunner()
-    result = runner.invoke(cli, ['--db', db_path,
-                                 '--plugin', 'test_cli:raise_exception_plugin',
-                                 'list', 'feeds'])
+    result = runner.invoke(
+        cli,
+        [
+            '--db',
+            db_path,
+            '--plugin',
+            'test_cli:raise_exception_plugin',
+            'list',
+            'feeds',
+        ],
+    )
     assert result.exit_code != 0
     assert "plug-in error" in result.output
 
@@ -86,4 +96,3 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
 
     assert result.exit_code != 0
     assert result.exception == exception
-

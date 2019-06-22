@@ -25,6 +25,7 @@ def get_default_db_path(create_dir=False):
 def format_tb(e):
     return ''.join(traceback.format_exception(type(e), e, e.__traceback__))
 
+
 def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
@@ -55,17 +56,26 @@ def setup_logging(verbose):
         level = logging.DEBUG
     logging.getLogger('reader').setLevel(level)
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s %(levelname)-7s %(message)s', '%Y-%m-%dT%H:%M:%S')
+    formatter = logging.Formatter(
+        '%(asctime)s %(levelname)-7s %(message)s', '%Y-%m-%dT%H:%M:%S'
+    )
     handler.setFormatter(formatter)
     logging.getLogger('reader').addHandler(handler)
 
 
 @click.group()
-@click.option('--db', type=click.Path(dir_okay=False), envvar=reader._DB_ENVVAR,
-    help="Path to the reader database. Defaults to {}."
-         .format(get_default_db_path()))
-@click.option('--plugin', multiple=True, envvar=reader._PLUGIN_ENVVAR,
-    help="Import path to a plug-in. Can be passed multiple times.")
+@click.option(
+    '--db',
+    type=click.Path(dir_okay=False),
+    envvar=reader._DB_ENVVAR,
+    help="Path to the reader database. Defaults to {}.".format(get_default_db_path()),
+)
+@click.option(
+    '--plugin',
+    multiple=True,
+    envvar=reader._PLUGIN_ENVVAR,
+    help="Import path to a plug-in. Can be passed multiple times.",
+)
 @click.pass_context
 def cli(ctx, db, plugin):
     if db is None:
@@ -78,8 +88,7 @@ def cli(ctx, db, plugin):
 
 @cli.command()
 @click.argument('url')
-@click.option('--update/--no-update',
-    help="Update the feed after adding it.")
+@click.option('--update/--no-update', help="Update the feed after adding it.")
 @click.option('-v', '--verbose', count=True)
 @click.pass_obj
 def add(kwargs, url, update, verbose):
@@ -108,8 +117,9 @@ def remove(kwargs, url, verbose):
 
 @cli.command()
 @click.argument('url', required=False)
-@click.option('--new-only/--no-new-only',
-    help="Only update new (never updated before) feeds.")
+@click.option(
+    '--new-only/--no-new-only', help="Only update new (never updated before) feeds."
+)
 @click.option('-v', '--verbose', count=True)
 @click.pass_obj
 def update(kwargs, url, new_only, verbose):
@@ -160,6 +170,7 @@ def entries(kwargs):
 
 try:
     from reader.app.cli import serve
+
     cli.add_command(serve)
 except ImportError:
     pass

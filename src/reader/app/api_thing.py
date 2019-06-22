@@ -33,34 +33,33 @@ def get_flashed_messages_by_prefix(*prefixes):
     for pair in messages:
         category, message = pair
         if not isinstance(category, tuple):
-            category = (category, )
+            category = (category,)
         for prefix in prefixes:
             if not isinstance(prefix, tuple):
-                prefix = (prefix, )
-            category_prefix = category[:len(prefix)]
+                prefix = (prefix,)
+            category_prefix = category[: len(prefix)]
             if category_prefix == prefix:
                 rv.append(message)
     return rv
 
 
 class APIError(Exception):
-
     def __init__(self, message, category=None):
         super().__init__(message)
         self.message = message
         if category is not None:
             if not isinstance(category, tuple):
-                category = (category, )
+                category = (category,)
         self.category = category
 
 
 class APIThing:
-
     def __init__(self, app_or_blueprint, rule, endpoint):
         self.actions = {}
         self.really = {}
         app_or_blueprint.add_url_rule(
-            rule, endpoint, methods=['POST'], view_func=self.dispatch)
+            rule, endpoint, methods=['POST'], view_func=self.dispatch
+        )
         (
             getattr(app_or_blueprint, 'add_app_template_global', None)
             or app_or_blueprint.add_template_global
@@ -82,16 +81,16 @@ class APIThing:
                 really = request.form.get('really')
             target = request.form.get('target')
             if really != 'really':
-                category = (action, )
+                category = (action,)
                 if target is not None:
-                    category += (target, )
+                    category += (target,)
                 flash("{}: really not checked".format(action), category)
                 return redirect_to_referrer()
         try:
             rv = func(request.form)
             flash(rv)
         except APIError as e:
-            category = (action, )
+            category = (action,)
             if e.category:
                 category += e.category
             flash("{}: {}".format(action, e), category)
@@ -109,7 +108,7 @@ class APIThing:
             rv = func(data)
             rv = {'ok': rv}
         except APIError as e:
-            category = (action, )
+            category = (action,)
             if e.category:
                 category += e.category
             rv = {'err': e.message}
@@ -124,7 +123,6 @@ class APIThing:
         return "bad content type", 400
 
     def __call__(self, func=None, *, really=False):
-
         def register(f):
             self.actions[f.__name__.replace('_', '-')] = f
             self.really[f] = really
@@ -133,5 +131,3 @@ class APIThing:
         if func is None:
             return register
         return register(func)
-
-

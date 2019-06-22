@@ -1,4 +1,3 @@
-
 class ReaderError(Exception):
     """Base for all public exceptions."""
 
@@ -45,6 +44,7 @@ class EntryError(ReaderError):
         #: The entry id.
         self.id = id
 
+
 class EntryNotFoundError(EntryError):
     """Entry not found."""
 
@@ -61,6 +61,7 @@ class MetadataError(ReaderError):
         #: The metadata key.
         self.key = key
 
+
 class MetadataNotFoundError(MetadataError):
     """Feed metadata not found."""
 
@@ -71,4 +72,3 @@ class StorageError(ReaderError):
     The original exception should be chained to this one (e.__cause__).
 
     """
-

@@ -24,6 +24,7 @@ log = logging.getLogger('reader')
 def _datetime_from_timetuple(tt):
     return datetime.datetime.utcfromtimestamp(calendar.timegm(tt)) if tt else None
 
+
 def _get_updated_published(thing, is_rss):
     # feed.get and entry.get don't work for updated due historical reasons;
     # from the docs: "As of version 5.1.1, if this key [.updated] doesn't
@@ -39,7 +40,7 @@ def _get_updated_published(thing, is_rss):
         published = _datetime_from_timetuple(thing.published_parsed)
 
     if published and not updated and is_rss:
-            updated, published = published, None
+        updated, published = published, None
 
     return updated, published
 
@@ -106,7 +107,6 @@ def _process_feed(url, d):
 
 
 class RequestsParser:
-
     def __init__(self):
         self.response_plugins = []
         self._verify = True
@@ -147,10 +147,7 @@ class RequestsParser:
 
         """
 
-        headers = {
-            'Accept': feedparser_http.ACCEPT_HEADER,
-            'A-IM': 'feed',
-        }
+        headers = {'Accept': feedparser_http.ACCEPT_HEADER, 'A-IM': 'feed'}
         if http_etag:
             headers['If-None-Match'] = http_etag
         if http_last_modified:
@@ -160,8 +157,9 @@ class RequestsParser:
 
         try:
             session = requests.Session()
-            response = session.send(session.prepare_request(request),
-                                    stream=True, verify=self._verify)
+            response = session.send(
+                session.prepare_request(request), stream=True, verify=self._verify
+            )
 
             for plugin in self.response_plugins:
                 rv = plugin(session, response, request)
@@ -170,8 +168,9 @@ class RequestsParser:
                 assert isinstance(rv, requests.Request)
                 response.close()
                 request = rv
-                response = session.send(session.prepare_request(request),
-                                        stream=True, verify=self._verify)
+                response = session.send(
+                    session.prepare_request(request), stream=True, verify=self._verify
+                )
 
             # Should we raise_for_status()? feedparser.parse() isn't.
             # Should we check the status on the feedparser.parse() result?
@@ -201,5 +200,3 @@ class RequestsParser:
 
         feed, entries = _process_feed(url, result)
         return ParseResult(ParsedFeed(feed, http_etag, http_last_modified), entries)
-
-

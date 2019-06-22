@@ -17,6 +17,7 @@ def feed_argument(feed):
             return feed
         raise ValueError('feed')
 
+
 def entry_argument(entry):
     try:
         return entry.feed.url, entry.id
@@ -29,9 +30,9 @@ def entry_argument(entry):
 
 
 class _Missing:
-
     def __repr__(self):
         return "no value"
+
 
 _missing = _Missing()
 
@@ -179,7 +180,11 @@ class Reader:
             except FeedNotFoundError as e:
                 log.info("update feed %r: feed removed during update", e.url)
             except ParseError as e:
-                log.exception("update feed %r: error while getting/parsing feed, skipping; exception: %r", e.url, e.__cause__)
+                log.exception(
+                    "update feed %r: error while getting/parsing feed, skipping; exception: %r",
+                    e.url,
+                    e.__cause__,
+                )
 
     def update_feed(self, feed):
         """Update a single feed.
@@ -396,5 +401,3 @@ class Reader:
         """
         feed_url = feed_argument(feed)
         self._storage.delete_feed_metadata(feed_url, key)
-
-

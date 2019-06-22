@@ -46,9 +46,14 @@ from .core.types import Feed, Entry, Content, Enclosure
 
 from .core.exceptions import (
     ReaderError,
-    FeedError, FeedExistsError, FeedNotFoundError, ParseError,
-    EntryError, EntryNotFoundError,
-    MetadataError, MetadataNotFoundError,
+    FeedError,
+    FeedExistsError,
+    FeedNotFoundError,
+    ParseError,
+    EntryError,
+    EntryNotFoundError,
+    MetadataError,
+    MetadataNotFoundError,
     StorageError,
 )
 
@@ -57,5 +62,3 @@ from .core.exceptions import (
 
 _DB_ENVVAR = 'READER_DB'
 _PLUGIN_ENVVAR = 'READER_PLUGIN'
-
-

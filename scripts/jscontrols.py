@@ -27,17 +27,21 @@ def root():
 
 form = APIThing(app, '/form', 'form')
 
+
 @form
 def simple(data):
     return 'simple'
+
 
 @form
 def simple_next(data):
     return 'simple-next: %s' % data['next']
 
+
 @form(really=True)
 def confirm(data):
     return 'confirm'
+
 
 @form
 def text(data):
@@ -45,5 +49,3 @@ def text(data):
     if text.startswith('err'):
         raise APIError(text, 'category')
     return 'text: %s' % text
-
-
