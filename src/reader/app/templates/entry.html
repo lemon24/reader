@@ -1,0 +1,72 @@
+{% extends "layout.html" %}
+
+{% import "macros.html" as macros %}
+
+{% block page_title %}Entry: {{ entry.title or entry.link or entry.id }}{% endblock %}
+{% block main_title %}Entry: <a href="{{ entry.link }}">{{ entry.title or entry.link or entry.id }}</a>{% endblock %}
+
+
+{% block body %}
+{% set feed = entry.feed %}
+
+<div class="entry">
+
+
+<ul class="controls">
+
+<li><a href="{{ url_for('.entries', feed=feed.url) }}">{{ macros.feed_title(feed) }}</a>
+<li>
+    {%- set published = entry.published or entry.updated -%}
+    <span title="{{ published }}">{{ published | humanize_naturaltime }}</span>
+
+{% set next = url_for('.entry', **request.args) %}
+{% set context = {'feed-url': feed.url, 'entry-id': entry.id} %}
+
+{% if entry.read %}
+{{ macros.simple_button('.form_api', 'mark-as-unread', 'mark as unread', leave_disabled=true, next=next, context=context) }}
+{% else %}
+{{ macros.simple_button('.form_api', 'mark-as-read', 'mark as read', leave_disabled=true, next=next, context=context) }}
+{% endif %}
+
+{% for message in get_flashed_messages_by_prefix(
+    ('mark-as-read', feed.url, entry.id),
+    ('mark-as-unread', feed.url, entry.id),
+) %}
+<li class="error">{{ message }}
+{% endfor %}
+
+</ul>
+
+
+{# TODO: Also show summary. #}
+{# TODO: This allows iframes to show; is it safe? #}
+{# TODO: This should be styled somehow. #}
+{# TODO: h1 inside article is as big as the h1 in the header. #}
+
+{% set content = none %}
+{% if entry.content %}
+    {% set content = (
+        ( entry.content | selectattr('type', 'equalto', 'text/html') | first )
+        or
+        ( entry.content | selectattr('type', 'equalto', 'text/xhtml') | first )
+        or
+        ( entry.content | selectattr('type', 'equalto', 'text/plain') | first )
+    ) %}
+    {% if content %}
+        {% set content = content.value %}
+    {% endif %}
+{% elif entry.summary %}
+    {% set content = entry.summary %}
+{% endif %}
+
+{% if content %}
+<article>
+{{ content | safe }}
+</article>
+{% else %}
+<p>no content</p>
+{% endif %}
+
+
+</div>
+{% endblock %}

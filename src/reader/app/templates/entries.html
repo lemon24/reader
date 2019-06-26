@@ -102,9 +102,9 @@ untitled
 </ul>
 
 
-
+{% set content = none %}
 {% if entry.summary %}
-<p>{{ entry.summary | striptags | truncate }}</p>
+{% set content = entry.summary %}
 {% elif entry.content %}
     {% set content = (
         ( entry.content | selectattr('type', 'equalto', 'text/html') | first )
@@ -114,8 +114,15 @@ untitled
         ( entry.content | selectattr('type', 'equalto', 'text/plain') | first )
     ) %}
     {% if content %}
-    <p>{{ content.value | striptags | truncate }}</p>
+        {% set content = content.value %}
     {% endif %}
+{% endif %}
+
+{% if content %}
+<p>
+    {{ content | striptags | truncate }}
+    <a href="{{ url_for('.entry', feed=entry.feed.url, entry=entry.id) }}">more</a>
+</p>
 {% endif %}
 
 

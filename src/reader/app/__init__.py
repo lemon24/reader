@@ -9,6 +9,7 @@ from flask import current_app
 from flask import Flask
 from flask import g
 from flask import get_flashed_messages
+from flask import render_template
 from flask import request
 from flask import Response
 from flask import stream_with_context
@@ -124,6 +125,26 @@ def metadata():
         metadata=metadata,
         to_pretty_json=lambda t: json.dumps(t, sort_keys=True, indent=4),
     )
+
+
+@blueprint.route('/entry')
+def entry():
+    reader = get_reader()
+
+    feed_url = request.args['feed']
+    entry_id = request.args['entry']
+
+    entries = [
+        e
+        for e in reader.get_entries(feed=feed_url)
+        if e.id == entry_id and e.feed.url == feed_url
+    ]
+    if not entries:
+        abort(404)
+    assert len(entries) == 1, "got more than 1 entry: {}".format((feed_url, entry_id))
+    entry, = entries
+
+    return render_template('entry.html', entry=entry)
 
 
 form_api = APIThing(blueprint, '/form-api', 'form_api')

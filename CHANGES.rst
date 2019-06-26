@@ -11,6 +11,10 @@ Version 0.13
 
 Unreleased
 
+* Add entry page. (`#117`_)
+
+.. _#117: https://github.com/lemon24/reader/issues/117
+
 
 Version 0.12
 ------------
