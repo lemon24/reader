@@ -134,7 +134,7 @@ def entry():
     feed_url = request.args['feed']
     entry_id = request.args['entry']
 
-    entry = reader.get_entry((feed_url, entry_id))
+    entry = reader.get_entry((feed_url, entry_id), default=None)
     if not entry:
         abort(404)
 
