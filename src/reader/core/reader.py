@@ -108,23 +108,27 @@ class Reader:
             raise ValueError("sort should be one of ('title', 'added')")
         return self._storage.get_feeds(sort=sort)
 
-    def get_feed(self, feed):
+    def get_feed(self, feed, default=_missing):
         """Get a feed.
 
         Arguments:
             feed (str or Feed): The feed URL.
+            default: Returned if given and the feed does not exist.
 
         Returns:
-            Feed or None: The feed if it exists, None if it doesn't.
+            Feed: The feed.
 
         Raises:
+            FeedNotFoundError
             StorageError
 
         """
         url = feed_argument(feed)
         feeds = list(self._storage.get_feeds(url=url))
         if len(feeds) == 0:
-            return None
+            if default is _missing:
+                raise FeedNotFoundError(url)
+            return default
         elif len(feeds) == 1:
             return feeds[0]
         else:

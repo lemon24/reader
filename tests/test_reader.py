@@ -729,7 +729,10 @@ def test_add_remove_get_feeds(reader, feed_arg):
     entry_two = parser.entry(2, 2, datetime(2010, 2, 1))
 
     assert set(reader.get_feeds()) == set()
-    assert reader.get_feed(feed_arg(one)) == None
+    with pytest.raises(FeedNotFoundError):
+        assert reader.get_feed(feed_arg(one))
+    assert reader.get_feed(feed_arg(one), None) == None
+    assert reader.get_feed(feed_arg(one), default=1) == 1
     assert set(reader.get_entries()) == set()
 
     with pytest.raises(FeedNotFoundError):
@@ -758,7 +761,7 @@ def test_add_remove_get_feeds(reader, feed_arg):
 
     reader.remove_feed(feed_arg(one))
     assert set(reader.get_feeds()) == {two}
-    assert reader.get_feed(feed_arg(one)) == None
+    assert reader.get_feed(feed_arg(one), None) == None
     assert set(reader.get_entries()) == {entry_two}
 
     with pytest.raises(FeedNotFoundError):

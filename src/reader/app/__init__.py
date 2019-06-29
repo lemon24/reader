@@ -61,7 +61,7 @@ def entries():
     feed_url = request.args.get('feed')
     feed = None
     if feed_url:
-        feed = reader.get_feed(feed_url)
+        feed = reader.get_feed(feed_url, None)
         if not feed:
             abort(404)
 
@@ -109,7 +109,7 @@ def metadata():
     reader = get_reader()
 
     feed_url = request.args['feed']
-    feed = reader.get_feed(feed_url)
+    feed = reader.get_feed(feed_url, None)
     if not feed:
         abort(404)
 
