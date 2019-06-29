@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
 from .exceptions import ParseError
@@ -300,6 +301,37 @@ class Reader:
 
             entries = (e for e, _ in entries)
             yield from entries
+
+    def get_entry(self, entry, default=_missing):
+        """Get an entry.
+
+        Args:
+            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+
+        Returns:
+            Entry: The entry.
+
+        Raises:
+            EntryNotFoundError
+            StorageError
+
+        """
+        feed_url, entry_id = entry_argument(entry)
+
+        entries = [
+            e
+            for e in self.get_entries(feed=feed_url)
+            if e.id == entry_id and e.feed.url == feed_url
+        ]
+
+        if len(entries) == 0:
+            if default is _missing:
+                raise EntryNotFoundError(feed_url, entry_id)
+            return default
+        elif len(entries) == 1:
+            return entries[0]
+        else:
+            assert False, "shouldn't get here"  # pragma: no cover
 
     def mark_as_read(self, entry):
         """Mark an entry as read.

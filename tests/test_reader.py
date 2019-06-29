@@ -1001,3 +1001,21 @@ def test_feed_metadata(reader):
     assert set(reader.iter_feed_metadata('feed')) == set()
     with pytest.raises(MetadataNotFoundError):
         reader.get_feed_metadata('feed', 'key')
+
+
+def test_get_entry(reader):
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+    reader.add_feed(feed.url)
+
+    with pytest.raises(EntryNotFoundError):
+        reader.get_entry((feed.url, entry.id))
+    assert reader.get_entry((feed.url, entry.id), None) == None
+    assert reader.get_entry(entry._replace(feed=feed), default=1) == 1
+
+    reader.update_feeds()
+
+    assert reader.get_entry(entry._replace(feed=feed)) == entry._replace(feed=feed)

@@ -134,15 +134,9 @@ def entry():
     feed_url = request.args['feed']
     entry_id = request.args['entry']
 
-    entries = [
-        e
-        for e in reader.get_entries(feed=feed_url)
-        if e.id == entry_id and e.feed.url == feed_url
-    ]
-    if not entries:
+    entry = reader.get_entry((feed_url, entry_id))
+    if not entry:
         abort(404)
-    assert len(entries) == 1, "got more than 1 entry: {}".format((feed_url, entry_id))
-    entry, = entries
 
     return render_template('entry.html', entry=entry)
 

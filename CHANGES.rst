@@ -14,8 +14,10 @@ Unreleased
 * Add entry page. (`#117`_)
 * :meth:`~Reader.get_feed` now raises :exc:`FeedNotFoundError` if the feed
   does not exist; use ``get_feed(..., default=None)`` for the old behavior.
+* Add :meth:`~Reader.get_entry`. (`#120`_)
 
 .. _#117: https://github.com/lemon24/reader/issues/117
+.. _#120: https://github.com/lemon24/reader/issues/120
 
 
 Version 0.12
