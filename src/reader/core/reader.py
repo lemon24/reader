@@ -317,19 +317,18 @@ class Reader:
 
         """
         feed_url, entry_id = entry_argument(entry)
+        now = self._now()
 
-        entries = [
-            e
-            for e in self.get_entries(feed=feed_url)
-            if e.id == entry_id and e.feed.url == feed_url
-        ]
+        entries = list(
+            self._storage.get_entries(now=now, feed_url=feed_url, entry_id=entry_id)
+        )
 
         if len(entries) == 0:
             if default is _missing:
                 raise EntryNotFoundError(feed_url, entry_id)
             return default
         elif len(entries) == 1:
-            return entries[0]
+            return entries[0][0]
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 

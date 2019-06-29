@@ -491,7 +491,7 @@ class Storage:
         self.add_or_update_entries([(feed_url, entry, last_updated, first_updated)])
 
     def _get_entries(
-        self, which, feed_url, has_enclosures, now, chunk_size=None, last=None
+        self, which, feed_url, has_enclosures, now, chunk_size, last, entry_id
     ):
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
@@ -537,10 +537,15 @@ class Storage:
                 """
 
         where_feed_snippet = ''
+        where_entry_snippet = ''
         if feed_url:
             where_feed_snippet = """
                 AND feeds.url = :feed_url
             """
+            if entry_id:
+                where_entry_snippet = """
+                    AND entries.id = :entry_id
+                """
 
         where_has_enclosures_snippet = ''
         if has_enclosures is not None:
@@ -585,6 +590,7 @@ class Storage:
                 feeds.url = entries.feed
                 {where_read_snippet}
                 {where_feed_snippet}
+                {where_entry_snippet}
                 {where_next_snippet}
                 {where_has_enclosures_snippet}
             ORDER BY
@@ -625,7 +631,14 @@ class Storage:
 
     @wrap_storage_exceptions()
     def get_entries(
-        self, which, feed_url, has_enclosures, now, chunk_size=None, last=None
+        self,
+        which='all',
+        feed_url=None,
+        has_enclosures=None,
+        now=None,
+        chunk_size=None,
+        last=None,
+        entry_id=None,
     ):
         rv = self._get_entries(
             which=which,
@@ -634,6 +647,7 @@ class Storage:
             now=now,
             chunk_size=chunk_size,
             last=last,
+            entry_id=entry_id,
         )
 
         if chunk_size:
