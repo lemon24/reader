@@ -523,7 +523,7 @@ class Storage:
                 where_next_snippet = """
                     AND (
                         kinda_first_updated,
-                        coalesce(entries.published, entries.updated),
+                        kinda_published,
                         feeds.url,
                         entries.last_updated,
                         entries.id
@@ -580,11 +580,12 @@ class Storage:
                 coalesce(
                     CASE
                     WHEN
-                            coalesce(entries.published, entries.updated) >= :recent_threshold
-
+                        coalesce(entries.published, entries.updated) >= :recent_threshold
                         THEN entries.first_updated
                     END,
-                    entries.published, entries.updated) as kinda_first_updated
+                    entries.published, entries.updated
+                ) as kinda_first_updated,
+                coalesce(entries.published, entries.updated) as kinda_published
             FROM entries, feeds
             WHERE
                 feeds.url = entries.feed
@@ -595,7 +596,7 @@ class Storage:
                 {where_has_enclosures_snippet}
             ORDER BY
                 kinda_first_updated DESC,
-                coalesce(entries.published, entries.updated) DESC,
+                kinda_published DESC,
                 feeds.url DESC,
                 entries.last_updated DESC,
                 entries.id DESC
