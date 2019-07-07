@@ -490,8 +490,8 @@ class Storage:
         # this is only for convenience (it's called from tests)
         self.add_or_update_entries([(feed_url, entry, last_updated, first_updated)])
 
-    def _get_entries(
-        self, which, feed_url, has_enclosures, now, chunk_size, last, entry_id
+    def _make_get_entries_query(
+        self, which, feed_url, has_enclosures, chunk_size, last, entry_id
     ):
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
@@ -517,9 +517,6 @@ class Storage:
                 LIMIT :chunk_size
             """
             if last:
-                last_entry_first_updated, last_entry_updated, last_feed_url, last_entry_last_updated, last_entry_id = (
-                    last
-                )
                 where_next_snippet = """
                     AND (
                         kinda_first_updated,
@@ -555,8 +552,6 @@ class Storage:
             """.format(
                 'NOT' if has_enclosures else ''
             )
-
-        recent_threshold = now - self.recent_threshold
 
         query = """
             SELECT
@@ -607,6 +602,21 @@ class Storage:
         )
 
         log.debug("_get_entries query\n%s\n", query)
+
+        return query
+
+    def _get_entries(
+        self, which, feed_url, has_enclosures, now, chunk_size, last, entry_id
+    ):
+        query = self._make_get_entries_query(
+            which, feed_url, has_enclosures, chunk_size, last, entry_id
+        )
+
+        recent_threshold = now - self.recent_threshold
+        if last:
+            last_entry_first_updated, last_entry_updated, last_feed_url, last_entry_last_updated, last_entry_id = (
+                last
+            )
 
         with wrap_storage_exceptions():
             cursor = self.db.execute(query, locals())
