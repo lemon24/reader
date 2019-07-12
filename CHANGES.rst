@@ -9,7 +9,7 @@ reader changelog
 Version 0.13
 ------------
 
-Unreleased
+Released 2019-07-12
 
 * Add entry page. (`#117`_)
 * :meth:`~Reader.get_feed` now raises :exc:`FeedNotFoundError` if the feed
