@@ -43,9 +43,14 @@ right: 0;
 </div>
 
 
-
-
-
 <h1>{% block main_title %}{% endblock %}</h1>
 
 {% block body %}{% endblock %}
+
+
+<div class='footer'>
+<p>
+page generated in about {{ g.request_time() | round(3, 'ceil') }} seconds
+by reader.app {{ g.reader_version }}
+</p>
+</div>

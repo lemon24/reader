@@ -1,6 +1,7 @@
 import contextlib
 import itertools
 import json
+import time
 
 import humanize
 from flask import abort
@@ -14,6 +15,7 @@ from flask import request
 from flask import Response
 from flask import stream_with_context
 
+import reader
 from .api_thing import APIError
 from .api_thing import APIThing
 from reader import Reader
@@ -46,6 +48,17 @@ def stream_template(template_name_or_list, **kwargs):
     stream = template.stream(**kwargs)
     stream.enable_buffering(50)
     return Response(stream_with_context(stream))
+
+
+@blueprint.before_app_request
+def add_request_time():
+    start = time.monotonic()
+    g.request_time = lambda: time.monotonic() - start
+
+
+@blueprint.before_app_request
+def add_reader_version():
+    g.reader_version = reader.__version__
 
 
 @blueprint.route('/')

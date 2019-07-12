@@ -128,6 +128,12 @@ ul.controls .collapsible {
 }
 
 
+.footer {
+    margin-top: 4rem;
+    opacity: 0.25;
+}
+
+
 /* BEGIN Skeleton
 
 Using a stripped down version of https://github.com/dhg/Skeleton/
