@@ -3,6 +3,7 @@ import functools
 import json
 import logging
 import sqlite3
+from datetime import datetime
 from datetime import timedelta
 from itertools import chain
 
@@ -45,6 +46,7 @@ def wrap_storage_exceptions(*args):
 
 
 def create_db(db):
+    # TODO: Add NOT NULL where applicable.
     db.execute(
         """
         CREATE TABLE feeds (
@@ -87,6 +89,7 @@ def create_db(db):
             read INTEGER,
             last_updated TIMESTAMP,
             first_updated TIMESTAMP,
+            feed_order INTEGER NOT NULL,
 
             PRIMARY KEY (id, feed),
             FOREIGN KEY (feed) REFERENCES feeds(url)
@@ -137,16 +140,43 @@ def update_from_12_to_13(db):  # pragma: no cover
     create_feed_metadata(db)
 
 
+def datetime_to_us(value):
+    if not isinstance(value, bytes):
+        value = value.encode('utf-8')
+    dt = sqlite3.converters['TIMESTAMP'](value)
+    rv = int((dt - datetime(1970, 1, 1)).total_seconds() * 10 ** 6)
+    return rv
+
+
+def update_from_13_to_14(db):  # pragma: no cover
+    db.execute(
+        """
+        ALTER TABLE entries
+        ADD COLUMN feed_order INTEGER;
+    """
+    )
+    db.create_function('_datetime_to_us', 1, datetime_to_us)
+    db.execute(
+        """
+        UPDATE entries
+        SET feed_order = (
+            SELECT _datetime_to_us(MAX(last_updated)) FROM entries
+        ) - _datetime_to_us(last_updated);
+    """
+    )
+
+
 def open_db(path, timeout):
     return open_sqlite_db(
         path,
         create=create_db,
-        version=13,
+        version=14,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             10: update_from_10_to_11,
             11: update_from_11_to_12,
             12: update_from_12_to_13,
+            13: update_from_13_to_14,
         },
         timeout=timeout,
     )
@@ -411,7 +441,9 @@ class Storage:
             raise FeedNotFoundError(url)
         assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    def _add_or_update_entry(self, feed_url, entry, last_updated, first_updated):
+    def _add_or_update_entry(
+        self, feed_url, entry, last_updated, first_updated, feed_order
+    ):
         updated = entry.updated
         published = entry.published
         id = entry.id
@@ -444,7 +476,8 @@ class Storage:
                     enclosures,
                     read,
                     last_updated,
-                    first_updated
+                    first_updated,
+                    feed_order
                 ) VALUES (
                     :id,
                     :feed_url,
@@ -466,7 +499,8 @@ class Storage:
                         SELECT first_updated
                         FROM entries
                         WHERE id = :id AND feed = :feed_url
-                    ))
+                    )),
+                    :feed_order
                 );
             """,
                 locals(),
@@ -486,9 +520,13 @@ class Storage:
             for t in entry_tuples:
                 self._add_or_update_entry(*t)
 
-    def add_or_update_entry(self, feed_url, entry, last_updated, first_updated):
+    def add_or_update_entry(
+        self, feed_url, entry, last_updated, first_updated, feed_order
+    ):
         # this is only for convenience (it's called from tests)
-        self.add_or_update_entries([(feed_url, entry, last_updated, first_updated)])
+        self.add_or_update_entries(
+            [(feed_url, entry, last_updated, first_updated, feed_order)]
+        )
 
     def _make_get_entries_query(
         self, which, feed_url, has_enclosures, chunk_size, last, entry_id

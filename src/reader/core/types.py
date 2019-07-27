@@ -163,7 +163,7 @@ FeedUpdateIntent = namedtuple(
     'FeedUpdateIntent', 'url feed http_etag http_last_modified last_updated'
 )
 EntryUpdateIntent = namedtuple(
-    'EntryUpdateIntent', 'url entry last_updated first_updated'
+    'EntryUpdateIntent', 'url entry last_updated first_updated feed_order'
 )
 
 UpdatedEntry = namedtuple('UpdatedEntry', 'entry new')

@@ -97,11 +97,11 @@ def update_feed_last_updated(storage, feed, entry):
 
 
 def add_or_update_entry(storage, feed, entry):
-    storage.add_or_update_entry(feed.url, entry, entry.updated, None)
+    storage.add_or_update_entry(feed.url, entry, entry.updated, None, 0)
 
 
 def add_or_update_entries(storage, feed, entry):
-    storage.add_or_update_entries([(feed.url, entry, entry.updated, None)])
+    storage.add_or_update_entries([(feed.url, entry, entry.updated, None, 0)])
 
 
 def get_entries_chunk_size_0(storage, _, __):
@@ -158,7 +158,7 @@ def test_errors_locked(db_path, do_stuff):
     feed = Feed('one')
     entry = Entry('entry', datetime(2010, 1, 2))
     storage.add_feed(feed.url)
-    storage.add_or_update_entry(feed.url, entry, entry.updated, None)
+    storage.add_or_update_entry(feed.url, entry, entry.updated, None, 0)
 
     in_transaction = threading.Event()
     can_return_from_transaction = threading.Event()
@@ -246,9 +246,9 @@ def test_iter_locked(db_path, iter_stuff):
     feed = Feed('one')
     entry = Entry('entry', datetime(2010, 1, 2))
     storage.add_feed(feed.url)
-    storage.add_or_update_entry(feed.url, entry, entry.updated, None)
+    storage.add_or_update_entry(feed.url, entry, entry.updated, None, 0)
     storage.add_feed('two')
-    storage.add_or_update_entry('two', entry, entry.updated, None)
+    storage.add_or_update_entry('two', entry, entry.updated, None, 0)
     storage.set_feed_metadata('two', '1', 1)
     storage.set_feed_metadata('two', '2', 2)
 
@@ -314,7 +314,7 @@ def test_get_entries_for_update(storage_cls):
     storage = storage_cls(':memory:')
     storage.add_feed('feed')
     storage.add_or_update_entry(
-        'feed', Entry('one', datetime(2010, 1, 1)), datetime(2010, 1, 2), None
+        'feed', Entry('one', datetime(2010, 1, 1)), datetime(2010, 1, 2), None, 0
     )
 
     assert list(storage.get_entries_for_update([('feed', 'one'), ('feed', 'two')])) == [

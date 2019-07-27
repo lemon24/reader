@@ -122,7 +122,7 @@ class Updater:
 
     def get_entries_to_update(self, pairs):
         last_updated = self.now
-        for new_entry, old_entry in reversed(list(pairs)):
+        for feed_order, (new_entry, old_entry) in reversed(list(enumerate(pairs))):
             assert new_entry.feed is None
             updated, entry_new = self.should_update_entry(new_entry, old_entry)
 
@@ -132,6 +132,7 @@ class Updater:
                     new_entry._replace(updated=updated),
                     last_updated,
                     self.global_now if entry_new else None,
+                    feed_order,
                 ), entry_new
 
             # TODO: Find a better way to preserve feed entry order.
