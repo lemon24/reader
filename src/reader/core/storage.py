@@ -141,6 +141,8 @@ def update_from_12_to_13(db):  # pragma: no cover
 
 
 def datetime_to_us(value):
+    if not value:
+        return None
     if not isinstance(value, bytes):
         value = value.encode('utf-8')
     dt = sqlite3.converters['TIMESTAMP'](value)
