@@ -11,6 +11,10 @@ Version 0.14
 
 Unreleased
 
+* Improve entry ordering implementation. (`#110`_)
+
+.. _#110: https://github.com/lemon24/reader/issues/110
+
 
 Version 0.13
 ------------
