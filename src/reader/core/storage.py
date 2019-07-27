@@ -140,7 +140,7 @@ def update_from_12_to_13(db):  # pragma: no cover
     create_feed_metadata(db)
 
 
-def datetime_to_us(value):
+def _datetime_to_us(value):  # pragma: no cover
     if not value:
         return None
     if not isinstance(value, bytes):
@@ -157,7 +157,7 @@ def update_from_13_to_14(db):  # pragma: no cover
         ADD COLUMN feed_order INTEGER;
     """
     )
-    db.create_function('_datetime_to_us', 1, datetime_to_us)
+    db.create_function('_datetime_to_us', 1, _datetime_to_us)
     db.execute(
         """
         UPDATE entries
