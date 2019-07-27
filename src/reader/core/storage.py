@@ -561,12 +561,14 @@ class Storage:
                         kinda_published,
                         feeds.url,
                         entries.last_updated,
+                        negative_feed_order,
                         entries.id
                     ) < (
                         :last_entry_first_updated,
                         :last_entry_updated,
                         :last_feed_url,
                         :last_entry_last_updated,
+                        :last_negative_feed_order,
                         :last_entry_id
                     )
                 """
@@ -618,7 +620,8 @@ class Storage:
                     END,
                     entries.published, entries.updated
                 ) as kinda_first_updated,
-                coalesce(entries.published, entries.updated) as kinda_published
+                coalesce(entries.published, entries.updated) as kinda_published,
+                - entries.feed_order as negative_feed_order
             FROM entries, feeds
             WHERE
                 feeds.url = entries.feed
@@ -632,6 +635,7 @@ class Storage:
                 kinda_published DESC,
                 feeds.url DESC,
                 entries.last_updated DESC,
+                negative_feed_order DESC,
                 entries.id DESC
             {limit_snippet}
             ;
@@ -652,7 +656,7 @@ class Storage:
 
         recent_threshold = now - self.recent_threshold
         if last:
-            last_entry_first_updated, last_entry_updated, last_feed_url, last_entry_last_updated, last_entry_id = (
+            last_entry_first_updated, last_entry_updated, last_feed_url, last_entry_last_updated, last_negative_feed_order, last_entry_id = (
                 last
             )
 
@@ -669,12 +673,14 @@ class Storage:
                 )
                 last_updated = t[16]
                 first_updated = t[17]
+                negative_feed_order = t[19]
                 entry = Entry._make(entry)
                 yield entry, (
                     first_updated or entry.published or entry.updated,
                     entry.published or entry.updated,
                     entry.feed.url,
                     last_updated,
+                    negative_feed_order,
                     entry.id,
                 )
 
