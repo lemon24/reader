@@ -161,9 +161,11 @@ def update_from_13_to_14(db):  # pragma: no cover
     db.execute(
         """
         UPDATE entries
-        SET feed_order = (
-            SELECT _datetime_to_us(MAX(last_updated)) FROM entries
-        ) - _datetime_to_us(last_updated);
+        SET feed_order = COALESCE(
+            (SELECT _datetime_to_us(MAX(last_updated)) FROM entries)
+                - _datetime_to_us(last_updated),
+            0
+        );
     """
     )
 
