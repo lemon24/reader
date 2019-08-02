@@ -127,6 +127,7 @@ class Enclosure(attrs_namedtuple_compat):
 # https://github.com/lemon24/reader/issues/111
 
 # TODO: Use type annotations for private API types.
+# TODO: After deprecating 3.6, use typing.NamedTuple instead.
 
 
 ParsedFeed = namedtuple('ParsedFeed', 'feed http_etag http_last_modified')
@@ -156,15 +157,34 @@ class ParseResult(ParseResult):
 FeedForUpdate = namedtuple(
     'FeedForUpdate', 'url updated http_etag http_last_modified stale last_updated'
 )
+
 EntryForUpdate = namedtuple('EntryForUpdate', 'updated')
 
 
 FeedUpdateIntent = namedtuple(
     'FeedUpdateIntent', 'url feed http_etag http_last_modified last_updated'
 )
+
 EntryUpdateIntent = namedtuple(
-    'EntryUpdateIntent', 'url entry last_updated first_updated feed_order'
+    'EntryUpdateIntent', 'url entry last_updated first_updated_epoch feed_order'
 )
+EntryUpdateIntent.__doc__ = """\
+An entry with additional data to be passed to Storage when updating a feed.
+
+Attributes:
+    url (str): The feed URL.
+    entry (Entry): The entry.
+    last_updated (datetime):
+        The time at the start of updating this feed (start of update_feed
+        in update_feed, the start of each feed update in update_feeds).
+    first_updated_epoch (datetime or None):
+        The time at the start of updating this batch of feeds (start of
+        update_feed in update_feed, start of update_feeds in update_feeds);
+        None if the entry already exists.
+    feed_order (int): The index of the entry in the feed (zero-based).
+
+"""
 
 UpdatedEntry = namedtuple('UpdatedEntry', 'entry new')
+
 UpdateResult = namedtuple('UpdateResult', 'url entries')
