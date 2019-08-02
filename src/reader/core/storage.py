@@ -46,7 +46,12 @@ def wrap_storage_exceptions(*args):
 
 
 def create_db(db):
-    # TODO: Add NOT NULL where applicable.
+    create_feeds(db)
+    create_entries(db)
+    create_feed_metadata(db)
+
+
+def create_feeds(db):
     db.execute(
         """
         CREATE TABLE feeds (
@@ -69,9 +74,13 @@ def create_db(db):
         );
     """
     )
+
+
+def create_entries(db, name='entries'):
+    # TODO: Add NOT NULL where applicable.
     db.execute(
         """
-        CREATE TABLE entries (
+        CREATE TABLE {name} (
 
             -- entry data
             id TEXT NOT NULL,
@@ -88,7 +97,7 @@ def create_db(db):
             -- reader data
             read INTEGER,
             last_updated TIMESTAMP,
-            first_updated TIMESTAMP,
+            first_updated_epoch TIMESTAMP,
             feed_order INTEGER NOT NULL,
 
             PRIMARY KEY (id, feed),
@@ -96,9 +105,10 @@ def create_db(db):
                 ON UPDATE CASCADE
                 ON DELETE CASCADE
         );
-    """
+    """.format(
+            name=name
+        )
     )
-    create_feed_metadata(db)
 
 
 def create_feed_metadata(db):
@@ -168,17 +178,64 @@ def update_from_13_to_14(db):  # pragma: no cover
     )
 
 
+def update_from_14_to_15(db):  # pragma: no cover
+    # https://sqlite.org/lang_altertable.html#otheralter
+    db.execute("PRAGMA foreign_keys = OFF;")
+    create_entries(db, 'new_entries')
+    db.execute(
+        """
+        INSERT INTO new_entries (
+            id,
+            feed,
+            title,
+            link,
+            updated,
+            author,
+            published,
+            summary,
+            content,
+            enclosures,
+            read,
+            last_updated,
+            first_updated_epoch,
+            feed_order
+        )
+        SELECT
+            id,
+            feed,
+            title,
+            link,
+            updated,
+            author,
+            published,
+            summary,
+            content,
+            enclosures,
+            read,
+            last_updated,
+            first_updated,
+            feed_order
+        FROM entries;
+    """
+    )
+    db.execute("DROP TABLE entries;")
+    db.execute("ALTER TABLE new_entries RENAME TO entries;")
+    db.execute("PRAGMA foreign_key_check;")
+    db.execute("PRAGMA foreign_keys = ON;")
+
+
 def open_db(path, timeout):
     return open_sqlite_db(
         path,
         create=create_db,
-        version=14,
+        version=15,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             10: update_from_10_to_11,
             11: update_from_11_to_12,
             12: update_from_12_to_13,
             13: update_from_13_to_14,
+            14: update_from_14_to_15,
         },
         timeout=timeout,
     )
@@ -444,7 +501,7 @@ class Storage:
         assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     def _add_or_update_entry(
-        self, feed_url, entry, last_updated, first_updated, feed_order
+        self, feed_url, entry, last_updated, first_updated_epoch, feed_order
     ):
         updated = entry.updated
         published = entry.published
@@ -478,7 +535,7 @@ class Storage:
                     enclosures,
                     read,
                     last_updated,
-                    first_updated,
+                    first_updated_epoch,
                     feed_order
                 ) VALUES (
                     :id,
@@ -497,8 +554,8 @@ class Storage:
                         WHERE id = :id AND feed = :feed_url
                     ),
                     :last_updated,
-                    coalesce(:first_updated, (
-                        SELECT first_updated
+                    coalesce(:first_updated_epoch, (
+                        SELECT first_updated_epoch
                         FROM entries
                         WHERE id = :id AND feed = :feed_url
                     )),
@@ -523,11 +580,11 @@ class Storage:
                 self._add_or_update_entry(*t)
 
     def add_or_update_entry(
-        self, feed_url, entry, last_updated, first_updated, feed_order
+        self, feed_url, entry, last_updated, first_updated_epoch, feed_order
     ):
         # this is only for convenience (it's called from tests)
         self.add_or_update_entries(
-            [(feed_url, entry, last_updated, first_updated, feed_order)]
+            [(feed_url, entry, last_updated, first_updated_epoch, feed_order)]
         )
 
     def _make_get_entries_query(
@@ -618,7 +675,7 @@ class Storage:
                     CASE
                     WHEN
                         coalesce(entries.published, entries.updated) >= :recent_threshold
-                        THEN entries.first_updated
+                        THEN entries.first_updated_epoch
                     END,
                     entries.published, entries.updated
                 ) as kinda_first_updated,
@@ -674,11 +731,11 @@ class Storage:
                     feed,
                 )
                 last_updated = t[16]
-                first_updated = t[17]
+                first_updated_epoch = t[17]
                 negative_feed_order = t[19]
                 entry = Entry._make(entry)
                 yield entry, (
-                    first_updated or entry.published or entry.updated,
+                    first_updated_epoch or entry.published or entry.updated,
                     entry.published or entry.updated,
                     entry.feed.url,
                     last_updated,

@@ -161,23 +161,15 @@ class Reader:
 
         """
 
-        # TODO: Find a better way to order/group entries from the same update.
+        # global_now is used as first_updated_epoch for all new entries,
+        # so that the subset of new entries from an update appears before
+        # all others and the entries in it are sorted by published/updated;
+        # if we used last_updated (now) for this, they would be sorted
+        # by feed order first (due to now increasing for each feed).
         #
-        # global_now is used as first_updated for all new entries, so that the
-        # subset of new entries from an update appears before all others and
-        # the entries in it are sorted by published/updated; if we used
-        # last_updated (now) for this, they would be sorted by feed order
-        # first (due to now increasing for each feed).
-        #
-        # It feels to me that relying on first_updated for ordering is
-        # a design flaw; e.g. a side effect of this is that for the second
-        # of two new feeds updated in the same update_feeds() call,
-        # first_updated != last_updated. Also, I don't like that knowledge
-        # of first_updated being used in this way is spread over Reader,
-        # Storage, and Updater.
-        #
-        # On the other hand, maybe using it like this is fine, and it's
-        # the name that's the problem ("first_updated_epoch"?).
+        # A side effect of relying first_updated_epoch for ordering is that
+        # for the second of two new feeds updated in the same update_feeds()
+        # call, first_updated_epoch != last_updated.
         #
         global_now = self._now()
 
