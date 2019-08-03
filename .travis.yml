@@ -1,21 +1,22 @@
-dist: xenial
+dist: bionic
 
 language: python
 
 python:
-    - "3.5"
     - "3.6"
     - "3.7"
     - "3.8-dev"
-    - "pypy3.5"
+    - "nightly"
+    # TODO: Build for pypy3.6 when it's released.
+    #- "pypy3.6"
 
 matrix:
     allow_failures:
         # https://travis-ci.org/lemon24/reader/jobs/534208497
         - python: "3.8-dev"
+        - python: "nightly"
 
 install:
-    - scripts/build-sqlite.sh $HOME
     - make install-dev
     - pip install codecov
 
@@ -23,13 +24,6 @@ script: make coverage
 
 notifications:
     email: false
-
-env:
-    - LD_LIBRARY_PATH=$HOME/sqlite
-
-cache:
-    directories:
-        - $HOME/sqlite
 
 after_success:
     - codecov
