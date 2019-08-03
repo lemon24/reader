@@ -23,6 +23,7 @@ setup(
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
     include_package_data=True,
+    python_requires='>=3.6',
     install_requires=['attrs>=17.1', 'feedparser>=5', 'requests'],
     extras_require={
         'cli': ['click>=5'],
