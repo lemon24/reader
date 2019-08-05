@@ -1,6 +1,6 @@
-from collections import namedtuple
 from collections import OrderedDict
 from datetime import datetime
+from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
 
@@ -126,18 +126,18 @@ class Enclosure(attrs_namedtuple_compat):
 # Private API
 # https://github.com/lemon24/reader/issues/111
 
-# TODO: Use type annotations for private API types.
-# TODO: After deprecating 3.6, use typing.NamedTuple instead.
+
+class ParsedFeed(NamedTuple):
+
+    feed: Feed
+    http_etag: Optional[str]
+    http_last_modified: Optional[str]
 
 
-ParsedFeed = namedtuple('ParsedFeed', 'feed http_etag http_last_modified')
+class ParseResult(NamedTuple):
 
-ParseResult = namedtuple('ParseResult', 'parsed_feed entries')
-
-
-class ParseResult(ParseResult):
-
-    __slots__ = ()
+    parsed_feed: ParsedFeed
+    entries: Sequence[Entry]
 
     # compatibility
 
@@ -154,37 +154,62 @@ class ParseResult(ParseResult):
         return self.parsed_feed.http_last_modified
 
 
-FeedForUpdate = namedtuple(
-    'FeedForUpdate', 'url updated http_etag http_last_modified stale last_updated'
-)
+class FeedForUpdate(NamedTuple):
 
-EntryForUpdate = namedtuple('EntryForUpdate', 'updated')
+    url: str
+    updated: datetime
+    http_etag: Optional[str]
+    http_last_modified: Optional[str]
+    stale: bool
+    last_updated: datetime
 
 
-FeedUpdateIntent = namedtuple(
-    'FeedUpdateIntent', 'url feed http_etag http_last_modified last_updated'
-)
+class EntryForUpdate(NamedTuple):
 
-EntryUpdateIntent = namedtuple(
-    'EntryUpdateIntent', 'url entry last_updated first_updated_epoch feed_order'
-)
-EntryUpdateIntent.__doc__ = """\
-An entry with additional data to be passed to Storage when updating a feed.
+    updated: datetime
 
-Attributes:
-    url (str): The feed URL.
-    entry (Entry): The entry.
-    last_updated (datetime):
-        The time at the start of updating this feed (start of update_feed
-        in update_feed, the start of each feed update in update_feeds).
-    first_updated_epoch (datetime or None):
-        The time at the start of updating this batch of feeds (start of
-        update_feed in update_feed, start of update_feeds in update_feeds);
-        None if the entry already exists.
-    feed_order (int): The index of the entry in the feed (zero-based).
 
-"""
+class FeedUpdateIntent(NamedTuple):
 
-UpdatedEntry = namedtuple('UpdatedEntry', 'entry new')
+    url: str
+    feed: Feed
+    http_etag: Optional[str]
+    http_last_modified: Optional[str]
+    last_updated: datetime
 
-UpdateResult = namedtuple('UpdateResult', 'url entries')
+
+class EntryUpdateIntent(NamedTuple):
+    """An entry with additional data to be passed to Storage
+    when updating a feed.
+
+    """
+
+    #: The feed URL.
+    url: str
+
+    #: The entry.
+    entry: Entry
+
+    #: The time at the start of updating this feed (start of update_feed
+    #: in update_feed, the start of each feed update in update_feeds).
+    last_updated: datetime
+
+    #: The time at the start of updating this batch of feeds (start of
+    #: update_feed in update_feed, start of update_feeds in update_feeds);
+    #: None if the entry already exists.
+    first_updated_epoch: Optional[datetime]
+
+    #: The index of the entry in the feed (zero-based).
+    feed_order: int
+
+
+class UpdatedEntry(NamedTuple):
+
+    entry: Entry
+    new: bool
+
+
+class UpdateResult(NamedTuple):
+
+    url: str
+    entries: Sequence[UpdatedEntry]
