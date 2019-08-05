@@ -11,9 +11,11 @@ Version 0.14
 
 Unreleased
 
+* Drop Python 3.5 support. (`#124`_)
 * Improve entry ordering implementation. (`#110`_)
 
 .. _#110: https://github.com/lemon24/reader/issues/110
+.. _#124: https://github.com/lemon24/reader/issues/124
 
 
 Version 0.13
