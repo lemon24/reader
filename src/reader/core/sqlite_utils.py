@@ -21,16 +21,29 @@ def ddl_transaction(db):
 
     Note: This does not work with executescript().
 
-    Works around https://bugs.python.org/issue10740. Normally, one would
-    expect to be able to use DDL statements in a transaction like so:
+    Normally, one would expect to be able to use DDL statements in a
+    transaction like so:
 
         with db:
             db.execute(ddl_statement)
             db.execute(other_statement)
 
-    However, the sqlite3 transaction handling triggers an implicit commit if
-    the first execute() is a DDL statement, which will prevent it from being
-    rolled back if another statement following it fails.
+    Initially, this worked around https://bugs.python.org/issue10740;
+    the sqlite3 transaction handling would trigger an implicit commit
+    if the first execute() was a DDL statement, which prevented it from
+    being rolled back if there was an exception after it.
+
+    This was fixed in Python 3.6, but there are still some cases that behave
+    in the same way, e.g.:
+
+        db = sqlite3.connect(':memory:')
+        try:
+            with db:
+                db.execute("create table t (a, b);")
+                1 / 0
+        except ZeroDivisionError:
+            pass
+        # table t exists even if it shouldn't
 
     https://docs.python.org/3.5/library/sqlite3.html#controlling-transactions
 

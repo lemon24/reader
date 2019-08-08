@@ -10,6 +10,51 @@ from reader.core.sqlite_utils import RequirementError
 from reader.core.sqlite_utils import SchemaVersionError
 
 
+def dummy_ddl_transaction(db):
+    """Just use a regular transaction."""
+    return db
+
+
+@pytest.mark.parametrize('ddl_transaction', [dummy_ddl_transaction, ddl_transaction])
+def test_ddl_transaction_create_and_insert(ddl_transaction):
+    db = sqlite3.connect(':memory:')
+
+    with db:
+        db.execute("create table t (a, b);")
+        db.execute("insert into t values (1, 2);")
+
+    assert list(db.execute("select * from t order by a;")) == [(1, 2)]
+
+    with pytest.raises(ZeroDivisionError):
+        with ddl_transaction(db):
+            db.execute("insert into t values (3, 4);")
+            db.execute("alter table t add column c;")
+            1 / 0
+
+    assert list(db.execute("select * from t order by a;")) == [(1, 2)]
+
+
+@pytest.mark.parametrize(
+    'ddl_transaction',
+    [
+        # still fails, even on Python 3.6+
+        pytest.param(dummy_ddl_transaction, marks=pytest.mark.xfail(strict=True)),
+        ddl_transaction,
+    ],
+)
+def test_ddl_transaction_create_only(ddl_transaction):
+    db = sqlite3.connect(':memory:')
+
+    assert len(list(db.execute("PRAGMA table_info(t);"))) == 0
+
+    with pytest.raises(ZeroDivisionError):
+        with ddl_transaction(db):
+            db.execute("create table t (a, b);")
+            1 / 0
+
+    assert len(list(db.execute("PRAGMA table_info(t);"))) == 0
+
+
 class WeirdError(Exception):
     pass
 
