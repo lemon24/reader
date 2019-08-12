@@ -9,7 +9,7 @@ reader changelog
 Version 0.14
 ------------
 
-Unreleased
+Released 2019-08-12
 
 * Drop Python 3.5 support. (`#124`_)
 * Improve entry ordering implementation. (`#110`_)
