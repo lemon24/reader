@@ -132,6 +132,10 @@ ul.controls .collapsible {
     white-space: pre-wrap;
 }
 
+.entry article img {
+    max-width: 100%;
+    height: auto;
+}
 
 .footer {
     margin-top: 4rem;
