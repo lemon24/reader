@@ -11,6 +11,10 @@ Version 0.15
 
 Unreleased
 
+* Improve rendering for text/plain entry content. (`#117`_)
+
+.. _#117: https://github.com/lemon24/reader/issues/117
+
 
 Version 0.14
 ------------

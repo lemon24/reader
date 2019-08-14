@@ -39,32 +39,20 @@
 
 
 {# TODO: Also show summary. #}
-{# TODO: text/plain loses formatting. #}
 {# TODO: This allows iframes to show; is it safe? #}
 {# TODO: This should be styled somehow. #}
 {# TODO: h1 inside article is as big as the h1 in the header. #}
 {# TODO: Images are too wide. #}
 
 
-{% set content = none %}
-{% if entry.content %}
-    {% set content = (
-        ( entry.content | selectattr('type', 'equalto', 'text/html') | first )
-        or
-        ( entry.content | selectattr('type', 'equalto', 'text/xhtml') | first )
-        or
-        ( entry.content | selectattr('type', 'equalto', 'text/plain') | first )
-    ) %}
-    {% if content %}
-        {% set content = content.value %}
-    {% endif %}
-{% elif entry.summary %}
+{% set content = macros.entry_content(entry) | trim %}
+{% if not content and entry.summary %}
     {% set content = entry.summary %}
 {% endif %}
 
 {% if content %}
 <article>
-{{ content | safe }}
+{{ content }}
 </article>
 {% else %}
 <p>no content</p>

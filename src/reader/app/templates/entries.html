@@ -105,17 +105,8 @@ untitled
 {% set content = none %}
 {% if entry.summary %}
 {% set content = entry.summary %}
-{% elif entry.content %}
-    {% set content = (
-        ( entry.content | selectattr('type', 'equalto', 'text/html') | first )
-        or
-        ( entry.content | selectattr('type', 'equalto', 'text/xhtml') | first )
-        or
-        ( entry.content | selectattr('type', 'equalto', 'text/plain') | first )
-    ) %}
-    {% if content %}
-        {% set content = content.value %}
-    {% endif %}
+{% else %}
+    {% set content = macros.entry_content(entry) | trim %}
 {% endif %}
 
 {% if content %}

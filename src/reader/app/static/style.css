@@ -128,6 +128,11 @@ ul.controls .collapsible {
 }
 
 
+.entry article pre.plaintext {
+    white-space: pre-wrap;
+}
+
+
 .footer {
     margin-top: 4rem;
     opacity: 0.25;

@@ -16,6 +16,24 @@
 {% endmacro %}
 
 
+{% macro entry_content(entry) %}
+{%- set content = (
+    ( entry.content | selectattr('type', 'equalto', 'text/html') | first )
+    or
+    ( entry.content | selectattr('type', 'equalto', 'text/xhtml') | first )
+    or
+    ( entry.content | selectattr('type', 'equalto', 'text/plain') | first )
+) -%}
+{%- if content -%}
+    {%- if content.type == 'text/plain' -%}
+        <pre class='plaintext'>{{ content.value }}</pre>
+    {%- else -%}
+        {{ content.value | safe }}
+    {%- endif -%}
+{%- endif -%}
+{% endmacro %}
+
+
 {% macro text_input_button(form_view, action, label, name, placeholder, leave_disabled=false, next=none, context=none) -%}
 <li class="collapsible" data-button-type="text-input" data-callback="function callback(data) {
 
