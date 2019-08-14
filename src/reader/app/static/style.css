@@ -128,14 +128,20 @@ ul.controls .collapsible {
 }
 
 
-.entry article pre.plaintext {
-    white-space: pre-wrap;
-}
-
 .entry article img {
     max-width: 100%;
     height: auto;
 }
+
+.entry article pre {
+    overflow-x: auto;
+}
+
+
+.entry article pre.plaintext {
+    white-space: pre-wrap;
+}
+
 
 .footer {
     margin-top: 4rem;

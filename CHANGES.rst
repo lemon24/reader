@@ -11,9 +11,11 @@ Version 0.15
 
 Unreleased
 
-* Improve rendering for text/plain entry content. (`#117`_)
+* Improve entry page rendering for text/plain content. (`#117`_)
+* Improve entry page rendering for images and code blocks. (`#126`_)
 
 .. _#117: https://github.com/lemon24/reader/issues/117
+.. _#126: https://github.com/lemon24/reader/issues/126
 
 
 Version 0.14
