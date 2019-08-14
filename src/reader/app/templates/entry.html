@@ -52,7 +52,7 @@
 
 {% if content %}
 <article>
-{{ content }}
+{{ content | safe }}
 </article>
 {% else %}
 <p>no content</p>
