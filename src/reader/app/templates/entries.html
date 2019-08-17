@@ -117,19 +117,8 @@ untitled
 {% endif %}
 
 
-{% if entry.enclosures %}
-<ul>
+{{ macros.entry_enclosures(entry) }}
 
-{% for enclosure in entry.enclosures %}
-
-<li>
-<a href="{{ enclosure.href }}">{{ enclosure.href.split('/')[-1].split('?')[0] }}</a>
-<small><a href="{{ enclosure | enclosure_tags(entry) }}">with tags</a> {{ enclosure.type }}</small>
-</li>
-
-{% endfor %}
-</ul>
-{% endif %}
 
 </div>
 

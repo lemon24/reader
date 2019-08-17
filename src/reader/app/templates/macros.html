@@ -34,6 +34,23 @@
 {% endmacro %}
 
 
+{% macro entry_enclosures(entry) %}
+{% if entry.enclosures %}
+<ul>
+
+{% for enclosure in entry.enclosures %}
+
+<li>
+<a href="{{ enclosure.href }}">{{ enclosure.href.split('/')[-1].split('?')[0] }}</a>
+<small><a href="{{ enclosure | enclosure_tags(entry) }}">with tags</a> {{ enclosure.type }}</small>
+</li>
+
+{% endfor %}
+</ul>
+{% endif %}
+{% endmacro %}
+
+
 {% macro text_input_button(form_view, action, label, name, placeholder, leave_disabled=false, next=none, context=none) -%}
 <li class="collapsible" data-button-type="text-input" data-callback="function callback(data) {
 
