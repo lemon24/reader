@@ -16,6 +16,16 @@
 {% endmacro %}
 
 
+{% macro entry_controls_meta(entry) %}
+<li>
+    {% if entry.author %} by {{ entry.author }}{% endif %}
+    in <a href="{{ url_for('.entries', feed=entry.feed.url) }}">{{ feed_title(entry.feed) }}</a>
+<li>
+    {%- set published = entry.published or entry.updated -%}
+    <span title="{{ published }}">{{ published | humanize_naturaltime }}</span>
+{% endmacro %}
+
+
 {% macro entry_content(entry) %}
 {%- set content = (
     ( entry.content | selectattr('type', 'equalto', 'text/html') | first )

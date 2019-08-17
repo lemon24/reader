@@ -14,10 +14,12 @@ Unreleased
 * Improve entry page rendering for text/plain content. (`#117`_)
 * Improve entry page rendering for images and code blocks. (`#126`_)
 * Show enclosures on the entry page. (`#128`_)
+* Show the entry author. (`#129`_)
 
 .. _#117: https://github.com/lemon24/reader/issues/117
 .. _#126: https://github.com/lemon24/reader/issues/126
 .. _#128: https://github.com/lemon24/reader/issues/128
+.. _#129: https://github.com/lemon24/reader/issues/129
 
 
 Version 0.14
