@@ -79,7 +79,7 @@ untitled
 <ul class="controls">
 
 <li>
-    in <a href="{{ url_for('.entries', feed=entry.feed.url) }}">{{ macros.feed_title(entry.feed) }}</a>
+    <a href="{{ url_for('.entries', feed=entry.feed.url) }}">{{ macros.feed_title(entry.feed) }}</a>
 <li>
     {%- set published = entry.published or entry.updated -%}
     <span title="{{ published }}">{{ published | humanize_naturaltime }}</span>
