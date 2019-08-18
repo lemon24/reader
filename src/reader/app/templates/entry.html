@@ -14,7 +14,12 @@
 
 <ul class="controls">
 
-{{ macros.entry_controls_meta(entry) }}
+<li>
+    {% if entry.author %} by {{ entry.author }}{% endif %}
+    in <a href="{{ url_for('.entries', feed=entry.feed.url) }}">{{ macros.feed_title(entry.feed) }}</a>
+<li>
+    {%- set published = entry.published or entry.updated -%}
+    <span title="{{ published }}">{{ published | humanize_naturaltime }}</span>
 
 {% set next = url_for('.entry', **request.args) %}
 {% set context = {'feed-url': feed.url, 'entry-id': entry.id} %}

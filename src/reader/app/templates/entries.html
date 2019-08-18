@@ -78,7 +78,11 @@ untitled
 
 <ul class="controls">
 
-{{ macros.entry_controls_meta(entry) }}
+<li>
+    in <a href="{{ url_for('.entries', feed=entry.feed.url) }}">{{ macros.feed_title(entry.feed) }}</a>
+<li>
+    {%- set published = entry.published or entry.updated -%}
+    <span title="{{ published }}">{{ published | humanize_naturaltime }}</span>
 
 {% set next = url_for('.entries', **request.args) + '#entry-' + ((loop.index if not loop.last else loop.index - 1) | string) %}
 {% set context = {'feed-url': feed.url, 'entry-id': entry.id} %}
