@@ -120,15 +120,16 @@ class HeavyMigration:
 
             elif version < self.version:
                 if not self.migrations.get(version):
-                    raise SchemaVersionError("unsupported version: {}".format(version))
+                    raise SchemaVersionError(f"unsupported version: {version}")
 
                 for from_version in range(version, self.version):
                     to_version = from_version + 1
                     migration = self.migrations.get(from_version)
                     if migration is None:
                         raise SchemaVersionError(
-                            "no migration from {} to {}; expected migrations for all versions "
-                            "later than {}".format(from_version, to_version, version)
+                            f"no migration from {from_version} to {to_version}; "
+                            f"expected migrations for all versions "
+                            f"later than {version}"
                         )
 
                     db.execute(
@@ -141,7 +142,7 @@ class HeavyMigration:
                     migration(db)
 
             elif version != self.version:
-                raise SchemaVersionError("invalid version: {}".format(version))
+                raise SchemaVersionError(f"invalid version: {version}")
 
 
 def require_sqlite_version(version_info):
@@ -167,7 +168,7 @@ def require_sqlite_compile_options(db, options):
     missing = set(options).difference(get_db_compile_options(db))
     if missing:
         raise RequirementError(
-            "required SQLite compile options missing: {}".format(sorted(missing))
+            f"required SQLite compile options missing: {sorted(missing)}"
         )
 
 

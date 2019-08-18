@@ -79,7 +79,7 @@ def create_feeds(db):
 def create_entries(db, name='entries'):
     # TODO: Add NOT NULL where applicable.
     db.execute(
-        """
+        f"""
         CREATE TABLE {name} (
 
             -- entry data
@@ -105,9 +105,7 @@ def create_entries(db, name='entries'):
                 ON UPDATE CASCADE
                 ON DELETE CASCADE
         );
-    """.format(
-            name=name
-        )
+    """
     )
 
 
@@ -296,15 +294,13 @@ class Storage:
             assert False, "shouldn't get here"  # pragma: no cover
 
         cursor = self.db.execute(
-            """
+            f"""
             SELECT url, updated, title, link, author, user_title FROM feeds
             {where_url_snippet}
             ORDER BY
                 {order_by_snippet},
                 feeds.url;
-        """.format(
-                **locals()
-            ),
+        """,
             locals(),
         )
 
@@ -323,15 +319,13 @@ class Storage:
         where_url_snippet = '' if not url else " AND url = :url"
         where_new_only_snippet = '' if not new_only else " AND last_updated is NULL"
         cursor = self.db.execute(
-            """
+            f"""
             SELECT url, updated, http_etag, http_last_modified, stale, last_updated FROM feeds
             {where_snippet}
             {where_url_snippet}
             {where_new_only_snippet}
             ORDER BY feeds.url;
-        """.format(
-                **locals()
-            ),
+        """,
             locals(),
         )
         for row in cursor:
@@ -367,7 +361,7 @@ class Storage:
         parameters = list(chain.from_iterable(entries))
 
         rows = self.db.execute(
-            """
+            f"""
             WITH
                 input(feed, id) AS (
                     VALUES {values_snippet}
@@ -378,9 +372,7 @@ class Storage:
                 FROM input
                 LEFT JOIN entries
                     ON (input.id, input.feed) == (entries.id, entries.feed);
-        """.format(
-                values_snippet=values_snippet
-            ),
+        """,
             parameters,
         )
 
@@ -647,14 +639,13 @@ class Storage:
 
         where_has_enclosures_snippet = ''
         if has_enclosures is not None:
-            where_has_enclosures_snippet = """
-                AND {} (json_array_length(entries.enclosures) IS NULL
+            where_has_enclosures_snippet = f"""
+                AND {'NOT' if has_enclosures else ''}
+                    (json_array_length(entries.enclosures) IS NULL
                         OR json_array_length(entries.enclosures) = 0)
-            """.format(
-                'NOT' if has_enclosures else ''
-            )
+            """
 
-        query = """
+        query = f"""
             SELECT
                 feeds.url,
                 feeds.updated,
@@ -700,9 +691,7 @@ class Storage:
                 entries.id DESC
             {limit_snippet}
             ;
-        """.format(
-            **locals()
-        )
+        """
 
         log.debug("_get_entries query\n%s\n", query)
 
@@ -781,12 +770,10 @@ class Storage:
             where_url_snippet += " AND key = :key"
 
         cursor = self.db.execute(
-            """
+            f"""
             SELECT key, value FROM feed_metadata
             {where_url_snippet};
-        """.format(
-                **locals()
-            ),
+        """,
             locals(),
         )
 
