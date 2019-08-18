@@ -6,11 +6,11 @@ import logging
 import time
 import urllib.parse
 
-import feedparser
+import feedparser  # type: ignore
 import requests
 
 try:
-    import feedparser.http as feedparser_http
+    import feedparser.http as feedparser_http  # type: ignore
 except ImportError:
     feedparser_http = feedparser
 
