@@ -1,5 +1,13 @@
 import datetime
 import logging
+from typing import Callable
+from typing import Collection
+from typing import Iterable
+from typing import Optional
+from typing import overload
+from typing import Tuple
+from typing import TypeVar
+from typing import Union
 
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
@@ -7,6 +15,9 @@ from .exceptions import MetadataNotFoundError
 from .exceptions import ParseError
 from .parser import RequestsParser
 from .storage import Storage
+from .types import Entry
+from .types import Feed
+from .types import JSONType
 from .updater import Updater
 
 log = logging.getLogger('reader')
@@ -40,6 +51,11 @@ class _Missing:
 _missing = _Missing()
 
 
+_T = TypeVar('_T')
+
+_PostEntryAddPluginType = Callable[['Reader', str, Entry], None]
+
+
 class Reader:
 
     """A feed reader.
@@ -54,12 +70,12 @@ class Reader:
 
     _get_entries_chunk_size = 2 ** 8
 
-    def __init__(self, path=None):
+    def __init__(self, path: str = None):
         self._storage = Storage(path)
         self._parser = RequestsParser()
-        self._post_entry_add_plugins = []
+        self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
 
-    def add_feed(self, feed):
+    def add_feed(self, feed: Union[str, Feed]):
         """Add a new feed.
 
         Args:
@@ -74,7 +90,7 @@ class Reader:
         now = self._now()
         return self._storage.add_feed(url, now)
 
-    def remove_feed(self, feed):
+    def remove_feed(self, feed: Union[str, Feed]):
         """Remove a feed.
 
         Also removes all of the feed's entries.
@@ -90,7 +106,7 @@ class Reader:
         url = feed_argument(feed)
         return self._storage.remove_feed(url)
 
-    def get_feeds(self, sort='title'):
+    def get_feeds(self, sort: str = 'title') -> Iterable[Feed]:
         """Get all the feeds.
 
         Args:
@@ -109,7 +125,17 @@ class Reader:
             raise ValueError("sort should be one of ('title', 'added')")
         return self._storage.get_feeds(sort=sort)
 
-    def get_feed(self, feed, default=_missing):
+    @overload
+    def get_feed(self, feed: Union[str, Feed]) -> Feed:
+        ...
+
+    @overload
+    def get_feed(self, feed: Union[str, Feed], default: _T) -> Union[Feed, _T]:
+        ...
+
+    def get_feed(
+        self, feed: Union[str, Feed], default: Union[_Missing, _T] = _missing
+    ) -> Union[Feed, _T]:
         """Get a feed.
 
         Arguments:
@@ -127,7 +153,9 @@ class Reader:
         url = feed_argument(feed)
         feeds = list(self._storage.get_feeds(url=url))
         if len(feeds) == 0:
-            if default is _missing:
+            # Using isinstance to let mypy know we're never returning _missing;
+            # "default is _missing" does not work.
+            if isinstance(default, _Missing):
                 raise FeedNotFoundError(url)
             return default
         elif len(feeds) == 1:
@@ -135,7 +163,7 @@ class Reader:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
-    def set_feed_user_title(self, feed, title):
+    def set_feed_user_title(self, feed: Union[str, Feed], title: Optional[str]):
         """Set a user-defined title for a feed.
 
         Args:
@@ -150,7 +178,7 @@ class Reader:
         url = feed_argument(feed)
         return self._storage.set_feed_user_title(url, title)
 
-    def update_feeds(self, new_only=False):
+    def update_feeds(self, new_only: bool = False):
         """Update all the feeds.
 
         Args:
@@ -185,7 +213,7 @@ class Reader:
                     e.__cause__,
                 )
 
-    def update_feed(self, feed):
+    def update_feed(self, feed: Union[str, Feed]):
         """Update a single feed.
 
         Args:
@@ -222,7 +250,12 @@ class Reader:
             for plugin in self._post_entry_add_plugins:
                 plugin(self, url, entry)
 
-    def get_entries(self, which='all', feed=None, has_enclosures=None):
+    def get_entries(
+        self,
+        which: str = 'all',
+        feed: Optional[Union[str, Feed]] = None,
+        has_enclosures: Optional[bool] = None,
+    ) -> Iterable[Entry]:
         """Get all or some of the entries.
 
         Entries are sorted most recent first. Currently "recent" means:
@@ -294,7 +327,21 @@ class Reader:
             entries = (e for e, _ in entries)
             yield from entries
 
-    def get_entry(self, entry, default=_missing):
+    @overload
+    def get_entry(self, entry: Union[Tuple[str, str], Entry]) -> Entry:
+        ...
+
+    @overload
+    def get_entry(
+        self, entry: Union[Tuple[str, str], Entry], default: _T
+    ) -> Union[Entry, _T]:
+        ...
+
+    def get_entry(
+        self,
+        entry: Union[Tuple[str, str], Entry],
+        default: Union[_Missing, _T] = _missing,
+    ) -> Union[Entry, _T]:
         """Get an entry.
 
         Args:
@@ -316,7 +363,9 @@ class Reader:
         )
 
         if len(entries) == 0:
-            if default is _missing:
+            # Using isinstance to let mypy know we're never returning _missing;
+            # "default is _missing" does not work.
+            if isinstance(default, _Missing):
                 raise EntryNotFoundError(feed_url, entry_id)
             return default
         elif len(entries) == 1:
@@ -324,7 +373,7 @@ class Reader:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
-    def mark_as_read(self, entry):
+    def mark_as_read(self, entry: Union[Tuple[str, str], Entry]):
         """Mark an entry as read.
 
         Args:
@@ -338,7 +387,7 @@ class Reader:
         feed_url, entry_id = entry_argument(entry)
         self._storage.mark_as_read_unread(feed_url, entry_id, 1)
 
-    def mark_as_unread(self, entry):
+    def mark_as_unread(self, entry: Union[Tuple[str, str], Entry]):
         """Mark an entry as unread.
 
         Args:
@@ -352,7 +401,9 @@ class Reader:
         feed_url, entry_id = entry_argument(entry)
         self._storage.mark_as_read_unread(feed_url, entry_id, 0)
 
-    def iter_feed_metadata(self, feed):
+    def iter_feed_metadata(
+        self, feed: Union[str, Feed]
+    ) -> Iterable[Tuple[str, JSONType]]:
         """Get all the metadata values for a feed.
 
         Args:
@@ -369,7 +420,19 @@ class Reader:
         feed_url = feed_argument(feed)
         return self._storage.iter_feed_metadata(feed_url)
 
-    def get_feed_metadata(self, feed, key, default=_missing):
+    @overload
+    def get_feed_metadata(self, feed: Union[str, Feed], key: str) -> JSONType:
+        ...
+
+    @overload
+    def get_feed_metadata(
+        self, feed: Union[str, Feed], key: str, default: _T
+    ) -> Union[JSONType, _T]:
+        ...
+
+    def get_feed_metadata(
+        self, feed: Union[str, Feed], key: str, default: Union[_Missing, _T] = _missing
+    ) -> Union[JSONType, _T]:
         """Get metadata for a feed.
 
         Args:
@@ -390,7 +453,9 @@ class Reader:
         pairs = list(self._storage.iter_feed_metadata(feed_url, key))
 
         if len(pairs) == 0:
-            if default is _missing:
+            # Using isinstance to let mypy know we're never returning _missing;
+            # "default is _missing" does not work.
+            if isinstance(default, _Missing):
                 raise MetadataNotFoundError(feed_url, key)
             return default
         elif len(pairs) == 1:
@@ -399,7 +464,7 @@ class Reader:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
-    def set_feed_metadata(self, feed, key, value):
+    def set_feed_metadata(self, feed: Union[str, Feed], key: str, value: JSONType):
         """Set metadata for a feed.
 
         Args:
@@ -416,7 +481,7 @@ class Reader:
         feed_url = feed_argument(feed)
         self._storage.set_feed_metadata(feed_url, key, value)
 
-    def delete_feed_metadata(self, feed, key):
+    def delete_feed_metadata(self, feed: Union[str, Feed], key: str):
         """Delete metadata for a feed.
 
         Args:
