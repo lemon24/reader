@@ -126,11 +126,13 @@ class Reader:
         return self._storage.get_feeds(sort=sort)
 
     @overload
-    def get_feed(self, feed: Union[str, Feed]) -> Feed:
+    def get_feed(self, feed: Union[str, Feed]) -> Feed:  # pragma: no cover
         ...
 
     @overload
-    def get_feed(self, feed: Union[str, Feed], default: _T) -> Union[Feed, _T]:
+    def get_feed(
+        self, feed: Union[str, Feed], default: _T
+    ) -> Union[Feed, _T]:  # pragma: no cover
         ...
 
     def get_feed(
@@ -328,13 +330,15 @@ class Reader:
             yield from entries
 
     @overload
-    def get_entry(self, entry: Union[Tuple[str, str], Entry]) -> Entry:
+    def get_entry(
+        self, entry: Union[Tuple[str, str], Entry]
+    ) -> Entry:  # pragma: no cover
         ...
 
     @overload
     def get_entry(
         self, entry: Union[Tuple[str, str], Entry], default: _T
-    ) -> Union[Entry, _T]:
+    ) -> Union[Entry, _T]:  # pragma: no cover
         ...
 
     def get_entry(
@@ -421,13 +425,15 @@ class Reader:
         return self._storage.iter_feed_metadata(feed_url)
 
     @overload
-    def get_feed_metadata(self, feed: Union[str, Feed], key: str) -> JSONType:
+    def get_feed_metadata(
+        self, feed: Union[str, Feed], key: str
+    ) -> JSONType:  # pragma: no cover
         ...
 
     @overload
     def get_feed_metadata(
         self, feed: Union[str, Feed], key: str, default: _T
-    ) -> Union[JSONType, _T]:
+    ) -> Union[JSONType, _T]:  # pragma: no cover
         ...
 
     def get_feed_metadata(
