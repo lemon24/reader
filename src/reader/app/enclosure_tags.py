@@ -44,7 +44,7 @@ def enclosure_tags(filename):
         yield ''
 
         tmp = tempfile.TemporaryFile()
-        for chunk in req.iter_content(chunk_size=None):
+        for chunk in req.iter_content(chunk_size=2 ** 20):
             tmp.write(chunk)
         tmp.seek(0)
 
