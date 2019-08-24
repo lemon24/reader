@@ -9,7 +9,7 @@ reader changelog
 Version 0.15
 ------------
 
-Unreleased
+Released 2019-08-24
 
 * Improve entry page rendering for text/plain content. (`#117`_)
 * Improve entry page rendering for images and code blocks. (`#126`_)
