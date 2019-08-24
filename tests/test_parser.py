@@ -7,12 +7,12 @@ from utils import make_url_base
 from reader import Feed
 from reader.core.exceptions import NotModified
 from reader.core.exceptions import ParseError
-from reader.core.parser import RequestsParser
+from reader.core.parser import Parser
 
 
 @pytest.fixture
 def parse():
-    parse = RequestsParser()
+    parse = Parser()
     parse._verify = False
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -297,7 +297,7 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
         request.url = request.url.replace('empty', 'full')
         return request
 
-    parse = RequestsParser()
+    parse = Parser()
     parse.response_plugins.append(do_nothing_plugin)
     parse.response_plugins.append(rewrite_to_empty_plugin)
 

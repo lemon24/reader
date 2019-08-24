@@ -13,7 +13,7 @@ from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
 from .exceptions import ParseError
-from .parser import RequestsParser
+from .parser import Parser
 from .storage import Storage
 from .types import Entry
 from .types import Feed
@@ -72,7 +72,7 @@ class Reader:
 
     def __init__(self, path: str = None):
         self._storage = Storage(path)
-        self._parser = RequestsParser()
+        self._parser = Parser()
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
 
     def add_feed(self, feed: Union[str, Feed]):

@@ -106,7 +106,7 @@ def _process_feed(url, d):
     return feed, entries
 
 
-class RequestsParser:
+class Parser:
     def __init__(self):
         self.response_plugins = []
         self._verify = True
