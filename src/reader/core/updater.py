@@ -1,23 +1,31 @@
-import datetime
 import logging
+from datetime import datetime
+from typing import TYPE_CHECKING
 
 import attr
 
 from .exceptions import NotModified
+from .types import EntryForUpdate
 from .types import EntryUpdateIntent
+from .types import FeedForUpdate
 from .types import FeedUpdateIntent
 from .types import UpdatedEntry
 from .types import UpdateResult
 
+if TYPE_CHECKING:  # pragma: no cover
+    from .storage import Storage
+    from .parser import Parser
+
+
 log = logging.getLogger('reader')
 
 
-@attr.s
+@attr.s(auto_attribs=True)
 class Updater:
 
-    old_feed = attr.ib()
-    now = attr.ib()
-    global_now = attr.ib()
+    old_feed: FeedForUpdate
+    now: datetime
+    global_now: datetime
 
     def __attrs_post_init__(self):
         if self.old_feed.stale:
@@ -161,7 +169,7 @@ class Updater:
 
         return feed_to_update
 
-    def update(self, parser, storage):
+    def update(self, parser: 'Parser', storage: 'Storage') -> UpdateResult:
         try:
             parse_result = parser(
                 self.url, self.old_feed.http_etag, self.old_feed.http_last_modified
@@ -170,7 +178,7 @@ class Updater:
             log.info("update feed %r: feed not modified, skipping", self.url)
             # The feed shouldn't be considered new anymore.
             storage.update_feed(self.url, None, None, None, self.now)
-            return UpdateResult(None, ())
+            return UpdateResult(())
 
         entries_to_update = list(
             self.get_entries_to_update(
@@ -184,7 +192,7 @@ class Updater:
         if feed_to_update:
             storage.update_feed(*feed_to_update)
 
-        return UpdateResult(
-            parse_result.feed.url if parse_result.feed else None,
-            (UpdatedEntry(e.entry, n) for e, n in entries_to_update),
-        )
+        # if self.url != parse_result.feed.url, the feed was redirected.
+        # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
+
+        return UpdateResult((UpdatedEntry(e.entry, n) for e, n in entries_to_update))

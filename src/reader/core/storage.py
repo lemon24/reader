@@ -450,7 +450,7 @@ class Storage:
     def update_feed(
         self,
         url: str,
-        feed: Feed,
+        feed: Optional[Feed],
         http_etag: Optional[str],
         http_last_modified: Optional[str],
         last_updated: datetime,

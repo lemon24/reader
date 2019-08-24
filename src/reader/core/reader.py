@@ -245,12 +245,11 @@ class Reader:
         updater = Updater(feed_for_update, now, global_now)
         result = updater.update(self._parser, self._storage)
 
-        url = result.url or feed_for_update.url
         new_entries = [e.entry for e in result.entries if e.new]
 
         for entry in new_entries:
             for plugin in self._post_entry_add_plugins:
-                plugin(self, url, entry)
+                plugin(self, feed_for_update.url, entry)
 
     def get_entries(
         self,

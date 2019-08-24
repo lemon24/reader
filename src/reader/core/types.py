@@ -219,8 +219,8 @@ class UpdatedEntry(NamedTuple):
 
 class UpdateResult(NamedTuple):
 
-    url: str
-    entries: Sequence[UpdatedEntry]
+    #: The entries that were updated.
+    entries: Iterable[UpdatedEntry]
 
 
 # https://github.com/python/typing/issues/182

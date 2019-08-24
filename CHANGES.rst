@@ -16,12 +16,14 @@ Unreleased
 * Show enclosures on the entry page. (`#128`_)
 * Show the entry author. (`#129`_)
 * Fix bug causing the enclosure tag proxy to use too much memory. (`#133`_)
+* Start using mypy on the core modules. (`#132`_)
 
 .. _#117: https://github.com/lemon24/reader/issues/117
 .. _#126: https://github.com/lemon24/reader/issues/126
 .. _#128: https://github.com/lemon24/reader/issues/128
 .. _#129: https://github.com/lemon24/reader/issues/129
 .. _#133: https://github.com/lemon24/reader/issues/133
+.. _#132: https://github.com/lemon24/reader/issues/132
 
 
 Version 0.14
