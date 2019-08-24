@@ -1,31 +1,55 @@
 import calendar
 import contextlib
-import datetime
-import functools
 import logging
 import time
 import urllib.parse
+from datetime import datetime
+from typing import Any
+from typing import Callable
+from typing import Collection
+from typing import Iterable
+from typing import Optional
+from typing import overload
+from typing import Tuple
 
 import feedparser  # type: ignore
 import requests
+
+from .exceptions import NotModified
+from .exceptions import ParseError
+from .types import Content
+from .types import Enclosure
+from .types import Entry
+from .types import Feed
+from .types import ParsedFeed
+from .types import ParseResult
 
 try:
     import feedparser.http as feedparser_http  # type: ignore
 except ImportError:
     feedparser_http = feedparser
 
-from .types import Feed, Entry, Content, Enclosure
-from .types import ParsedFeed, ParseResult
-from .exceptions import ParseError, NotModified
 
 log = logging.getLogger('reader')
 
 
-def _datetime_from_timetuple(tt):
-    return datetime.datetime.utcfromtimestamp(calendar.timegm(tt)) if tt else None
+@overload
+def _datetime_from_timetuple(tt: None) -> None:
+    ...
 
 
-def _get_updated_published(thing, is_rss):
+@overload
+def _datetime_from_timetuple(tt: time.struct_time) -> datetime:
+    ...
+
+
+def _datetime_from_timetuple(tt: Optional[time.struct_time]) -> Optional[datetime]:
+    return datetime.utcfromtimestamp(calendar.timegm(tt)) if tt else None
+
+
+def _get_updated_published(
+    thing: Any, is_rss: bool
+) -> Tuple[Optional[datetime], Optional[datetime]]:
     # feed.get and entry.get don't work for updated due historical reasons;
     # from the docs: "As of version 5.1.1, if this key [.updated] doesn't
     # exist but [thing].published does, the value of [thing].published
@@ -45,7 +69,7 @@ def _get_updated_published(thing, is_rss):
     return updated, published
 
 
-def _make_entry(entry, is_rss):
+def _make_entry(entry: Any, is_rss: bool) -> Entry:
     assert entry.id
     updated, published = _get_updated_published(entry, is_rss)
 
@@ -53,7 +77,6 @@ def _make_entry(entry, is_rss):
     for data in entry.get('content', ()):
         data = {k: v for k, v in data.items() if k in ('value', 'type', 'language')}
         content.append(Content(**data))
-    content = tuple(content)
 
     enclosures = []
     for data in entry.get('enclosures', ()):
@@ -64,7 +87,6 @@ def _make_entry(entry, is_rss):
             except (TypeError, ValueError):
                 del data['length']
         enclosures.append(Enclosure(**data))
-    enclosures = tuple(enclosures)
 
     return Entry(
         entry.id,
@@ -74,14 +96,14 @@ def _make_entry(entry, is_rss):
         entry.get('author'),
         published,
         entry.get('summary'),
-        content,
-        enclosures,
+        tuple(content),
+        tuple(enclosures),
         False,
         None,
     )
 
 
-def _process_feed(url, d):
+def _process_feed(url: str, d: Any) -> Tuple[Feed, Iterable[Entry]]:
 
     if d.get('bozo'):
         exception = d.get('bozo_exception')
@@ -106,12 +128,22 @@ def _process_feed(url, d):
     return feed, entries
 
 
-class Parser:
-    def __init__(self):
-        self.response_plugins = []
-        self._verify = True
+_ResponsePlugin = Callable[
+    [requests.Session, requests.Response, requests.Request], Optional[requests.Request]
+]
 
-    def __call__(self, url, http_etag=None, http_last_modified=None):
+
+class Parser:
+    def __init__(self) -> None:
+        self.response_plugins: Collection[_ResponsePlugin] = []
+        self._verify: bool = True
+
+    def __call__(
+        self,
+        url: str,
+        http_etag: Optional[str] = None,
+        http_last_modified: Optional[str] = None,
+    ) -> ParseResult:
         url_split = urllib.parse.urlparse(url)
 
         if url_split.scheme in ('http', 'https'):
@@ -119,13 +151,18 @@ class Parser:
 
         return self._parse_file(url)
 
-    def _parse_file(self, path):
+    def _parse_file(self, path: str) -> ParseResult:
         # TODO: What about untrusted input?
         result = feedparser.parse(path)
         feed, entries = _process_feed(path, result)
         return ParseResult(ParsedFeed(feed, None, None), entries)
 
-    def _parse_http(self, url, http_etag, http_last_modified):
+    def _parse_http(
+        self,
+        url: str,
+        http_etag: Optional[str] = None,
+        http_last_modified: Optional[str] = None,
+    ) -> ParseResult:
         """
         Following the implementation in:
         https://github.com/kurtmckee/feedparser/blob/develop/feedparser/http.py

@@ -2,6 +2,7 @@ from collections import OrderedDict
 from datetime import datetime
 from typing import Any
 from typing import Dict
+from typing import Iterable
 from typing import List
 from typing import NamedTuple
 from typing import Optional
@@ -64,8 +65,11 @@ class Entry(attrs_namedtuple_compat):
     #: Entry identifier.
     id: str
 
+    # Entries returned by the parser always have updated set.
+    # I tried modeling this through typing, but it's too complicated.
+
     #: The date the entry was last updated.
-    updated: datetime
+    updated: Optional[datetime]
 
     #: The title of the entry.
     title: Optional[str] = None
@@ -141,7 +145,7 @@ class ParsedFeed(NamedTuple):
 class ParseResult(NamedTuple):
 
     parsed_feed: ParsedFeed
-    entries: Sequence[Entry]
+    entries: Iterable[Entry]
 
     # compatibility
 
