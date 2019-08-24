@@ -256,7 +256,7 @@ class Storage:
         self.path = path
 
     @wrap_storage_exceptions()
-    def add_feed(self, url, added=None):
+    def add_feed(self, url, added):
         with self.db:
             try:
                 self.db.execute(

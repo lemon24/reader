@@ -57,7 +57,7 @@ def init(storage, _, __):
 
 
 def add_feed(storage, feed, __):
-    storage.add_feed(feed.url + '_')
+    storage.add_feed(feed.url + '_', None)
 
 
 def remove_feed(storage, feed, __):
@@ -157,7 +157,7 @@ def test_errors_locked(db_path, do_stuff):
 
     feed = Feed('one')
     entry = Entry('entry', datetime(2010, 1, 2))
-    storage.add_feed(feed.url)
+    storage.add_feed(feed.url, None)
     storage.add_or_update_entry(feed.url, entry, entry.updated, None, 0)
 
     in_transaction = threading.Event()
@@ -244,10 +244,10 @@ def test_iter_locked(db_path, iter_stuff):
     storage = Storage(db_path)
 
     feed = Feed('one')
-    entry = Entry('entry', datetime(2010, 1, 2))
-    storage.add_feed(feed.url)
+    entry = Entry('entry', None)
+    storage.add_feed(feed.url, datetime(2010, 1, 2))
     storage.add_or_update_entry(feed.url, entry, entry.updated, None, 0)
-    storage.add_feed('two')
+    storage.add_feed('two', None)
     storage.add_or_update_entry('two', entry, entry.updated, None, 0)
     storage.set_feed_metadata('two', '1', 1)
     storage.set_feed_metadata('two', '2', 2)
@@ -312,7 +312,7 @@ class StorageAlwaysGetEntriesForUpdateFallback(Storage):
 )
 def test_get_entries_for_update(storage_cls):
     storage = storage_cls(':memory:')
-    storage.add_feed('feed')
+    storage.add_feed('feed', None)
     storage.add_or_update_entry(
         'feed', Entry('one', datetime(2010, 1, 1)), datetime(2010, 1, 2), None, 0
     )
@@ -338,14 +338,14 @@ def test_feed_metadata(storage):
     with pytest.raises(MetadataNotFoundError):
         storage.delete_feed_metadata('one', 'key')
 
-    storage.add_feed('one')
+    storage.add_feed('one', None)
     storage.set_feed_metadata('one', 'key', 'value')
 
     assert set(storage.iter_feed_metadata('one')) == {('key', 'value')}
     assert set(storage.iter_feed_metadata('one', 'key')) == {('key', 'value')}
     assert set(storage.iter_feed_metadata('one', 'second')) == set()
 
-    storage.add_feed('two')
+    storage.add_feed('two', None)
     storage.set_feed_metadata('two', '2', 2)
     storage.set_feed_metadata('one', 'second', 1)
 
