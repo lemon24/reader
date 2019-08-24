@@ -34,12 +34,12 @@ log = logging.getLogger('reader')
 
 
 @overload
-def _datetime_from_timetuple(tt: None) -> None:
+def _datetime_from_timetuple(tt: None) -> None:  # pragma: no cover
     ...
 
 
 @overload
-def _datetime_from_timetuple(tt: time.struct_time) -> datetime:
+def _datetime_from_timetuple(tt: time.struct_time) -> datetime:  # pragma: no cover
     ...
 
 
