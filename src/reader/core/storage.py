@@ -6,6 +6,9 @@ import sqlite3
 from datetime import datetime
 from datetime import timedelta
 from itertools import chain
+from typing import Iterable
+from typing import Optional
+from typing import Tuple
 
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
@@ -18,14 +21,16 @@ from .types import Content
 from .types import Enclosure
 from .types import Entry
 from .types import EntryForUpdate
+from .types import EntryUpdateIntent
 from .types import Feed
 from .types import FeedForUpdate
+from .types import JSONType
 
 log = logging.getLogger('reader')
 
 
 @contextlib.contextmanager
-def wrap_storage_exceptions(*args):
+def wrap_storage_exceptions():
     """Wrap sqlite3 exceptions in StorageError.
 
     Only wraps exceptions that are unlikely to be programming errors (bugs),
@@ -256,7 +261,7 @@ class Storage:
         self.path = path
 
     @wrap_storage_exceptions()
-    def add_feed(self, url, added):
+    def add_feed(self, url: str, added: datetime) -> None:
         with self.db:
             try:
                 self.db.execute(
@@ -270,7 +275,7 @@ class Storage:
                 raise FeedExistsError(url)
 
     @wrap_storage_exceptions()
-    def remove_feed(self, url):
+    def remove_feed(self, url: str):
         with self.db:
             rows = self.db.execute(
                 """
@@ -308,7 +313,9 @@ class Storage:
             yield Feed._make(row)
 
     @wrap_storage_exceptions()
-    def get_feeds(self, url=None, sort='title'):
+    def get_feeds(
+        self, url: Optional[str] = None, sort: str = 'title'
+    ) -> Iterable[Feed]:
         return iter(list(self._get_feeds(url=url, sort=sort)))
 
     def _get_feeds_for_update(self, url=None, new_only=False):
@@ -332,7 +339,9 @@ class Storage:
             yield FeedForUpdate._make(row)
 
     @wrap_storage_exceptions()
-    def get_feeds_for_update(self, url=None, new_only=False):
+    def get_feeds_for_update(
+        self, url: Optional[str] = None, new_only: bool = False
+    ) -> Iterable[FeedForUpdate]:
         return iter(list(self._get_feeds_for_update(url=url, new_only=new_only)))
 
     def _get_entry_for_update(self, feed_url, id):
@@ -381,7 +390,9 @@ class Storage:
         )
 
     @wrap_storage_exceptions()
-    def get_entries_for_update(self, entries):
+    def get_entries_for_update(
+        self, entries: Iterable[Tuple[str, str]]
+    ) -> Iterable[EntryForUpdate]:
         entries = list(entries)
         try:
             return self._get_entries_for_update_one_query(entries)
@@ -391,7 +402,7 @@ class Storage:
         return self._get_entries_for_update_n_queries(entries)
 
     @wrap_storage_exceptions()
-    def set_feed_user_title(self, url, title):
+    def set_feed_user_title(self, url: str, title: Optional[str]) -> None:
         with self.db:
             rows = self.db.execute(
                 """
@@ -406,7 +417,7 @@ class Storage:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     @wrap_storage_exceptions()
-    def mark_as_stale(self, url):
+    def mark_as_stale(self, url: str) -> None:
         with self.db:
             rows = self.db.execute(
                 """
@@ -421,7 +432,7 @@ class Storage:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     @wrap_storage_exceptions()
-    def mark_as_read_unread(self, feed_url, entry_id, read):
+    def mark_as_read_unread(self, feed_url: str, entry_id: str, read: bool) -> None:
         with self.db:
             rows = self.db.execute(
                 """
@@ -436,7 +447,14 @@ class Storage:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     @wrap_storage_exceptions()
-    def update_feed(self, url, feed, http_etag, http_last_modified, last_updated):
+    def update_feed(
+        self,
+        url: str,
+        feed: Feed,
+        http_etag: Optional[str],
+        http_last_modified: Optional[str],
+        last_updated: datetime,
+    ):
         if feed:
             assert url == feed.url, "updating feed URL not supported"
             self._update_feed_full(
@@ -568,7 +586,7 @@ class Storage:
             raise FeedNotFoundError(feed_url)
 
     @wrap_storage_exceptions()
-    def add_or_update_entries(self, entry_tuples):
+    def add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
         with self.db:
             for t in entry_tuples:
                 self._add_or_update_entry(*t)
@@ -737,13 +755,13 @@ class Storage:
     @wrap_storage_exceptions()
     def get_entries(
         self,
-        which='all',
-        feed_url=None,
-        has_enclosures=None,
-        now=None,
-        chunk_size=None,
+        which: str = 'all',
+        feed_url: Optional[str] = None,
+        has_enclosures: Optional[bool] = None,
+        now: datetime = None,
+        chunk_size: Optional[int] = None,
         last=None,
-        entry_id=None,
+        entry_id: Optional[str] = None,
     ):
         rv = self._get_entries(
             which=which,
@@ -781,12 +799,14 @@ class Storage:
             yield key, json.loads(value)
 
     @wrap_storage_exceptions()
-    def iter_feed_metadata(self, feed_url, key=None):
+    def iter_feed_metadata(
+        self, feed_url: str, key: Optional[str] = None
+    ) -> Iterable[Tuple[str, JSONType]]:
         return iter(list(self._iter_feed_metadata(feed_url, key)))
 
     @wrap_storage_exceptions()
-    def set_feed_metadata(self, feed_url, key, value):
-        value = json.dumps(value)
+    def set_feed_metadata(self, feed_url: str, key: str, value: JSONType) -> None:
+        value_json = json.dumps(value)
 
         with self.db:
             try:
@@ -799,7 +819,7 @@ class Storage:
                     ) VALUES (
                         :feed_url,
                         :key,
-                        :value
+                        :value_json
                     );
                 """,
                     locals(),
@@ -808,7 +828,7 @@ class Storage:
                 raise FeedNotFoundError(feed_url)
 
     @wrap_storage_exceptions()
-    def delete_feed_metadata(self, feed_url, key):
+    def delete_feed_metadata(self, feed_url: str, key: str) -> None:
         with self.db:
             rows = self.db.execute(
                 """

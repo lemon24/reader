@@ -389,7 +389,7 @@ class Reader:
 
         """
         feed_url, entry_id = entry_argument(entry)
-        self._storage.mark_as_read_unread(feed_url, entry_id, 1)
+        self._storage.mark_as_read_unread(feed_url, entry_id, True)
 
     def mark_as_unread(self, entry: Union[Tuple[str, str], Entry]):
         """Mark an entry as unread.
@@ -403,7 +403,7 @@ class Reader:
 
         """
         feed_url, entry_id = entry_argument(entry)
-        self._storage.mark_as_read_unread(feed_url, entry_id, 0)
+        self._storage.mark_as_read_unread(feed_url, entry_id, False)
 
     def iter_feed_metadata(
         self, feed: Union[str, Feed]
