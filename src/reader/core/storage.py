@@ -101,6 +101,7 @@ def create_entries(db, name='entries'):
 
             -- reader data
             read INTEGER,
+            important INTEGER,
             last_updated TIMESTAMP,
             first_updated_epoch TIMESTAMP,
             feed_order INTEGER NOT NULL,
@@ -229,11 +230,20 @@ def update_from_14_to_15(db):  # pragma: no cover
     db.execute("PRAGMA foreign_keys = ON;")
 
 
+def update_from_15_to_16(db):  # pragma: no cover
+    db.execute(
+        """
+            ALTER TABLE entries
+            ADD COLUMN important INTEGER;
+        """
+    )
+
+
 def open_db(path, timeout):
     return open_sqlite_db(
         path,
         create=create_db,
-        version=15,
+        version=16,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             10: update_from_10_to_11,
@@ -241,6 +251,7 @@ def open_db(path, timeout):
             12: update_from_12_to_13,
             13: update_from_13_to_14,
             14: update_from_14_to_15,
+            15: update_from_15_to_16,
         },
         timeout=timeout,
     )
