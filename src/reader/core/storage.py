@@ -811,12 +811,12 @@ class Storage:
     @wrap_storage_exceptions()
     def get_entries(
         self,
+        *,
         which: str = 'all',
         feed_url: Optional[str] = None,
         has_enclosures: Optional[bool] = None,
         important: Optional[bool] = None,
-        # TODO: now should be required.
-        now: datetime = None,
+        now: datetime,
         chunk_size: Optional[int] = None,
         last=None,
         entry_id: Optional[str] = None,
