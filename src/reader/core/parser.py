@@ -99,6 +99,7 @@ def _make_entry(entry: Any, is_rss: bool) -> Entry:
         tuple(content),
         tuple(enclosures),
         False,
+        False,
         None,
     )
 

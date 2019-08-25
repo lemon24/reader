@@ -6,6 +6,7 @@ import pytest
 
 import reader.core.sqlite_utils
 from reader import Entry
+from reader import EntryNotFoundError
 from reader import Feed
 from reader import FeedNotFoundError
 from reader import MetadataNotFoundError
@@ -356,3 +357,107 @@ def test_feed_metadata(storage):
     storage.delete_feed_metadata('one', 'key')
 
     assert set(storage.iter_feed_metadata('one')) == {('second', 1)}
+
+
+def test_entry_remains_read_after_update(storage_with_two_entries):
+    storage = storage_with_two_entries
+    storage.mark_as_read_unread('feed', 'one', True)
+
+    storage.add_or_update_entry(
+        'feed',
+        Entry('one', datetime(2010, 1, 1)),
+        datetime(2010, 1, 2),
+        datetime(2010, 1, 2),
+        0,
+    )
+
+    assert {
+        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), which='read')
+    } == {'one'}
+
+
+@pytest.fixture
+def storage_with_two_entries(storage):
+    storage.add_feed('feed', None)
+    storage.add_or_update_entry(
+        'feed',
+        Entry('one', datetime(2010, 1, 1)),
+        datetime(2010, 1, 2),
+        datetime(2010, 1, 2),
+        0,
+    )
+    storage.add_or_update_entry(
+        'feed',
+        Entry('two', datetime(2010, 1, 1)),
+        datetime(2010, 1, 2),
+        datetime(2010, 1, 2),
+        1,
+    )
+    return storage
+
+
+def test_important_unimportant_by_default(storage_with_two_entries):
+    storage = storage_with_two_entries
+    assert {
+        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), important=False)
+    } == {'one', 'two'}
+
+
+def test_important_get_entries(storage_with_two_entries):
+    storage = storage_with_two_entries
+    storage.mark_as_important_unimportant('feed', 'one', True)
+
+    assert {e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1))} == {
+        'one',
+        'two',
+    }
+    assert {
+        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), important=None)
+    } == {'one', 'two'}
+    assert {
+        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), important=True)
+    } == {'one'}
+    assert {
+        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), important=False)
+    } == {'two'}
+
+
+def test_important_entry_remains_important_after_update(storage_with_two_entries):
+    storage = storage_with_two_entries
+    storage.mark_as_important_unimportant('feed', 'one', True)
+
+    storage.add_or_update_entry(
+        'feed',
+        Entry('one', datetime(2010, 1, 1)),
+        datetime(2010, 1, 2),
+        datetime(2010, 1, 2),
+        0,
+    )
+
+    assert {
+        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), important=True)
+    } == {'one'}
+
+
+def test_important_entry_important(storage_with_two_entries):
+    storage = storage_with_two_entries
+    storage.mark_as_important_unimportant('feed', 'one', True)
+
+    assert {
+        e.id: e.important for e, _ in storage.get_entries(now=datetime(2010, 1, 1))
+    } == {'one': True, 'two': False}
+
+
+def test_important_mark_as_unimportant(storage_with_two_entries):
+    storage = storage_with_two_entries
+    storage.mark_as_important_unimportant('feed', 'one', True)
+    storage.mark_as_important_unimportant('feed', 'one', False)
+
+    assert {
+        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), important=True)
+    } == set()
+
+
+def test_important_mark_entry_not_found(storage):
+    with pytest.raises(EntryNotFoundError):
+        storage.mark_as_important_unimportant('feed', 'one', True)

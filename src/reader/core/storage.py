@@ -458,6 +458,23 @@ class Storage:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     @wrap_storage_exceptions()
+    def mark_as_important_unimportant(
+        self, feed_url: str, entry_id: str, important: bool
+    ) -> None:
+        with self.db:
+            rows = self.db.execute(
+                """
+                UPDATE entries
+                SET important = :important
+                WHERE feed = :feed_url AND id = :entry_id;
+            """,
+                locals(),
+            )
+            if rows.rowcount == 0:
+                raise EntryNotFoundError(feed_url, entry_id)
+            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+
+    @wrap_storage_exceptions()
     def update_feed(
         self,
         url: str,
@@ -557,6 +574,7 @@ class Storage:
                     content,
                     enclosures,
                     read,
+                    important,
                     last_updated,
                     first_updated_epoch,
                     feed_order
@@ -575,6 +593,11 @@ class Storage:
                         SELECT read
                         FROM entries
                         WHERE id = :id AND feed = :feed_url
+                    ),
+                    (
+                       SELECT important
+                       FROM entries
+                       WHERE id = :id AND feed = :feed_url
                     ),
                     :last_updated,
                     coalesce(:first_updated_epoch, (
@@ -611,7 +634,7 @@ class Storage:
         )
 
     def _make_get_entries_query(
-        self, which, feed_url, has_enclosures, chunk_size, last, entry_id
+        self, which, feed_url, has_enclosures, important, chunk_size, last, entry_id
     ):
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
@@ -674,6 +697,17 @@ class Storage:
                         OR json_array_length(entries.enclosures) = 0)
             """
 
+        if important is None:
+            where_important_snippet = ''
+        elif not important:
+            where_important_snippet = """
+                AND (entries.important IS NULL OR entries.important != 1)
+            """
+        else:
+            where_important_snippet = """
+                AND entries.important = 1
+            """
+
         query = f"""
             SELECT
                 feeds.url,
@@ -692,6 +726,7 @@ class Storage:
                 entries.content,
                 entries.enclosures,
                 entries.read,
+                entries.important,
                 entries.last_updated,
                 coalesce(
                     CASE
@@ -711,6 +746,7 @@ class Storage:
                 {where_entry_snippet}
                 {where_next_snippet}
                 {where_has_enclosures_snippet}
+                {where_important_snippet}
             ORDER BY
                 kinda_first_updated DESC,
                 kinda_published DESC,
@@ -727,10 +763,18 @@ class Storage:
         return query
 
     def _get_entries(
-        self, which, feed_url, has_enclosures, now, chunk_size, last, entry_id
+        self,
+        which,
+        feed_url,
+        has_enclosures,
+        important,
+        now,
+        chunk_size,
+        last,
+        entry_id,
     ):
         query = self._make_get_entries_query(
-            which, feed_url, has_enclosures, chunk_size, last, entry_id
+            which, feed_url, has_enclosures, important, chunk_size, last, entry_id
         )
 
         recent_threshold = now - self.recent_threshold
@@ -748,11 +792,12 @@ class Storage:
                     tuple(Content(**d) for d in json.loads(t[13])) if t[13] else (),
                     tuple(Enclosure(**d) for d in json.loads(t[14])) if t[14] else (),
                     t[15] == 1,
+                    t[16] == 1,
                     feed,
                 )
-                last_updated = t[16]
-                first_updated_epoch = t[17]
-                negative_feed_order = t[19]
+                last_updated = t[17]
+                first_updated_epoch = t[18]
+                negative_feed_order = t[20]
                 entry = Entry._make(entry)
                 yield entry, (
                     first_updated_epoch or entry.published or entry.updated,
@@ -769,6 +814,8 @@ class Storage:
         which: str = 'all',
         feed_url: Optional[str] = None,
         has_enclosures: Optional[bool] = None,
+        important: Optional[bool] = None,
+        # TODO: now should be required.
         now: datetime = None,
         chunk_size: Optional[int] = None,
         last=None,
@@ -778,6 +825,7 @@ class Storage:
             which=which,
             feed_url=feed_url,
             has_enclosures=has_enclosures,
+            important=important,
             now=now,
             chunk_size=chunk_size,
             last=last,

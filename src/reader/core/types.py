@@ -97,6 +97,9 @@ class Entry(attrs_namedtuple_compat):
     #: Whether the entry was read or not.
     read: bool = False
 
+    #: Whether the entry is important or not.
+    important: bool = False
+
     #: The entry's feed.
     feed: Optional[Feed] = None
 
