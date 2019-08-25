@@ -315,8 +315,7 @@ class Reader:
             # Currently not exposed through the public API.
             #
             if not chunk_size:
-                entries = (e for e, _ in entries)
-                yield from entries
+                yield from (e for e, _ in entries)
                 return
 
             entries = list(entries)
@@ -325,8 +324,7 @@ class Reader:
 
             _, last = entries[-1]
 
-            entries = (e for e, _ in entries)
-            yield from entries
+            yield from (e for e, _ in entries)
 
     @overload
     def get_entry(

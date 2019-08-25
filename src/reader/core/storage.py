@@ -6,6 +6,7 @@ import sqlite3
 from datetime import datetime
 from datetime import timedelta
 from itertools import chain
+from typing import Any
 from typing import Iterable
 from typing import Optional
 from typing import Tuple
@@ -633,6 +634,8 @@ class Storage:
             [(feed_url, entry, last_updated, first_updated_epoch, feed_order)]
         )
 
+    _EntryLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
+
     @wrap_storage_exceptions()
     def get_entries(
         self,
@@ -643,9 +646,9 @@ class Storage:
         important: Optional[bool] = None,
         now: datetime,
         chunk_size: Optional[int] = None,
-        last=None,
+        last: _EntryLast = None,
         entry_id: Optional[str] = None,
-    ):
+    ) -> Iterable[Tuple[Entry, _EntryLast]]:
         rv = self._get_entries(
             which=which,
             feed_url=feed_url,
@@ -668,15 +671,16 @@ class Storage:
 
     def _get_entries(
         self,
-        which,
-        feed_url,
-        has_enclosures,
-        important,
-        now,
-        chunk_size,
-        last,
-        entry_id,
-    ):
+        *,
+        which: str = 'all',
+        feed_url: Optional[str] = None,
+        has_enclosures: Optional[bool] = None,
+        important: Optional[bool] = None,
+        now: datetime,
+        chunk_size: Optional[int] = None,
+        last: _EntryLast = None,
+        entry_id: Optional[str] = None,
+    ) -> Iterable[Tuple[Entry, _EntryLast]]:
         query = self._make_get_entries_query(
             which, feed_url, has_enclosures, important, chunk_size, last, entry_id
         )
@@ -713,8 +717,15 @@ class Storage:
                 )
 
     def _make_get_entries_query(
-        self, which, feed_url, has_enclosures, important, chunk_size, last, entry_id
-    ):
+        self,
+        which: str = 'all',
+        feed_url: Optional[str] = None,
+        has_enclosures: Optional[bool] = None,
+        important: Optional[bool] = None,
+        chunk_size: Optional[int] = None,
+        last: _EntryLast = None,
+        entry_id: Optional[str] = None,
+    ) -> str:
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
         if which == 'all':
