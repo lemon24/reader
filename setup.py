@@ -54,6 +54,11 @@ setup(
     description="A minimal feed reader.",
     long_description=long_description,
     long_description_content_type="text/x-rst",
+    project_urls={
+        "Documentation": "https://reader.readthedocs.io/",
+        "Code": "https://github.com/lemon24/reader",
+        "Issue tracker": "https://github.com/lemon24/reader/issues",
+    },
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
