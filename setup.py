@@ -51,7 +51,7 @@ setup(
         ],
         'docs': ['sphinx', 'sphinx_rtd_theme', 'click>=5', 'sphinx-click'],
     },
-    description="A minimal feed reader.",
+    description="A minimal feed reader library.",
     long_description=long_description,
     long_description_content_type="text/x-rst",
     project_urls={
