@@ -106,7 +106,7 @@ class Reader:
         url = feed_argument(feed)
         return self._storage.remove_feed(url)
 
-    def get_feeds(self, sort: str = 'title') -> Iterable[Feed]:
+    def get_feeds(self, *, sort: str = 'title') -> Iterable[Feed]:
         """Get all the feeds.
 
         Args:
@@ -253,6 +253,7 @@ class Reader:
 
     def get_entries(
         self,
+        *,
         which: str = 'all',
         feed: Optional[Union[str, Feed]] = None,
         has_enclosures: Optional[bool] = None,

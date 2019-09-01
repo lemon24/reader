@@ -12,6 +12,8 @@ Version 0.16
 Unreleased
 
 * Allow marking entries as important. (`#127`_)
+* Make :meth:`~Reader.get_entries` and :meth:`~Reader.get_feeds` take only
+  keyword arguments.
 
 .. _#127: https://github.com/lemon24/reader/issues/127
 
