@@ -11,6 +11,10 @@ Version 0.16
 
 Unreleased
 
+* Allow marking entries as important. (`#127`_)
+
+.. _#127: https://github.com/lemon24/reader/issues/127
+
 
 Version 0.15
 ------------

@@ -431,6 +431,8 @@ def test_update_feed(reader, feed_arg):
 
 
 def test_mark_as_read_unread(reader, entry_arg):
+    # TODO: Test read/unread the same way important/unimportant are (or the other way around).
+
     parser = Parser()
     reader._parser = parser
 
@@ -1019,3 +1021,66 @@ def test_get_entry(reader):
     reader.update_feeds()
 
     assert reader.get_entry(entry._replace(feed=feed)) == entry._replace(feed=feed)
+
+
+class FakeStorage:
+    def __init__(self, exc=None):
+        self.calls = []
+        self.exc = exc
+
+    def mark_as_important_unimportant(self, feed_url, entry_id, important):
+        self.calls.append(
+            ('mark_as_important_unimportant', feed_url, entry_id, important)
+        )
+        if self.exc:
+            raise self.exc
+
+    def get_entries(self, **kwargs):
+        # FIXME: This is a bad way of mocking get_entries.
+        self.calls.append(('get_entries', kwargs))
+        if self.exc:
+            raise self.exc
+        return ()
+
+
+# TODO: Test important/unimportant the same way read/unread are (or the other way around).
+
+
+def test_mark_as_important(reader, entry_arg):
+
+    reader._storage = FakeStorage()
+    entry = Entry('entry', None, feed=Feed('feed'))
+    reader.mark_as_important(entry_arg(entry))
+    assert reader._storage.calls == [
+        ('mark_as_important_unimportant', 'feed', 'entry', True)
+    ]
+
+
+def test_mark_as_unimportant(reader, entry_arg):
+    reader._storage = FakeStorage()
+    entry = Entry('entry', None, feed=Feed('feed'))
+    reader.mark_as_unimportant(entry_arg(entry))
+    assert reader._storage.calls == [
+        ('mark_as_important_unimportant', 'feed', 'entry', False)
+    ]
+
+
+@pytest.mark.parametrize(
+    'exc', [EntryNotFoundError('feed', 'entry'), StorageError('whatever')]
+)
+@pytest.mark.parametrize('meth', ['mark_as_important', 'mark_as_unimportant'])
+def test_mark_as_important_unimportant_error(reader, exc, meth):
+    reader._storage = FakeStorage(exc=exc)
+    with pytest.raises(Exception) as excinfo:
+        getattr(reader, meth)(('feed', 'entry'))
+    assert excinfo.value is exc
+
+
+@pytest.mark.parametrize('important', [None, True, False])
+def test_get_entries_important(reader, important):
+    reader._storage = FakeStorage()
+    list(reader.get_entries(important=important))
+
+    (call, kwargs), = reader._storage.calls
+    assert call == 'get_entries'
+    assert kwargs['important'] == important

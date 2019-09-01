@@ -256,6 +256,7 @@ class Reader:
         which: str = 'all',
         feed: Optional[Union[str, Feed]] = None,
         has_enclosures: Optional[bool] = None,
+        important: Optional[bool] = None,
     ) -> Iterable[Entry]:
         """Get all or some of the entries.
 
@@ -273,6 +274,7 @@ class Reader:
             feed (str or Feed or None): Only return the entries for this feed.
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
+            important (bool or None): Only return (un)important entries.
 
         Yields:
             :class:`Entry`: Most recent entries first.
@@ -302,6 +304,7 @@ class Reader:
                 which=which,
                 feed_url=feed_url,
                 has_enclosures=has_enclosures,
+                important=important,
                 now=now,
                 chunk_size=chunk_size,
                 last=last,
@@ -401,6 +404,34 @@ class Reader:
         """
         feed_url, entry_id = entry_argument(entry)
         self._storage.mark_as_read_unread(feed_url, entry_id, False)
+
+    def mark_as_important(self, entry: Union[Tuple[str, str], Entry]):
+        """Mark an entry as important.
+
+        Args:
+            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+
+        Raises:
+            EntryNotFoundError
+            StorageError
+
+        """
+        feed_url, entry_id = entry_argument(entry)
+        self._storage.mark_as_important_unimportant(feed_url, entry_id, True)
+
+    def mark_as_unimportant(self, entry: Union[Tuple[str, str], Entry]):
+        """Mark an entry as unimportant.
+
+        Args:
+            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+
+        Raises:
+            EntryNotFoundError
+            StorageError
+
+        """
+        feed_url, entry_id = entry_argument(entry)
+        self._storage.mark_as_important_unimportant(feed_url, entry_id, False)
 
     def iter_feed_metadata(
         self, feed: Union[str, Feed]
