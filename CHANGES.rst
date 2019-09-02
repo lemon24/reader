@@ -9,7 +9,7 @@ reader changelog
 Version 0.16
 ------------
 
-Unreleased
+Released 2019-09-02
 
 * Allow marking entries as important. (`#127`_)
 * :meth:`~Reader.get_entries` and :meth:`~Reader.get_feeds` now take only
