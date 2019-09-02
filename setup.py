@@ -66,7 +66,6 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: End Users/Desktop',
         'License :: OSI Approved :: BSD License',
-        'Multimedia :: Sound/Audio',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
