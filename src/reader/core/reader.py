@@ -299,7 +299,7 @@ class Reader:
         if has_enclosures not in (None, False, True):
             raise ValueError("has_enclosures should be one of (None, False, True)")
 
-        if which is not _missing:
+        if not isinstance(which, _Missing):
             warnings.warn(
                 "The which= Reader.get_entries() argument was deprecated in "
                 "reader 0.16 and will be removed in reader 0.17. "
