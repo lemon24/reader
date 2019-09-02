@@ -364,7 +364,7 @@ def test_entry_remains_read_after_update(storage_with_two_entries):
     )
 
     assert {
-        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), which='read')
+        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), read=True)
     } == {'one'}
 
 

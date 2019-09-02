@@ -640,20 +640,20 @@ class Storage:
     def get_entries(
         self,
         *,
-        which: str = 'all',
         feed_url: Optional[str] = None,
-        has_enclosures: Optional[bool] = None,
+        read: Optional[bool] = None,
         important: Optional[bool] = None,
+        has_enclosures: Optional[bool] = None,
         now: datetime,
         chunk_size: Optional[int] = None,
         last: _EntryLast = None,
         entry_id: Optional[str] = None,
     ) -> Iterable[Tuple[Entry, _EntryLast]]:
         rv = self._get_entries(
-            which=which,
             feed_url=feed_url,
-            has_enclosures=has_enclosures,
+            read=read,
             important=important,
+            has_enclosures=has_enclosures,
             now=now,
             chunk_size=chunk_size,
             last=last,
@@ -672,17 +672,17 @@ class Storage:
     def _get_entries(
         self,
         *,
-        which: str = 'all',
         feed_url: Optional[str] = None,
-        has_enclosures: Optional[bool] = None,
+        read: Optional[bool] = None,
         important: Optional[bool] = None,
+        has_enclosures: Optional[bool] = None,
         now: datetime,
         chunk_size: Optional[int] = None,
         last: _EntryLast = None,
         entry_id: Optional[str] = None,
     ) -> Iterable[Tuple[Entry, _EntryLast]]:
         query = self._make_get_entries_query(
-            which, feed_url, has_enclosures, important, chunk_size, last, entry_id
+            feed_url, read, important, has_enclosures, chunk_size, last, entry_id
         )
 
         recent_threshold = now - self.recent_threshold
@@ -718,28 +718,26 @@ class Storage:
 
     def _make_get_entries_query(
         self,
-        which: str = 'all',
         feed_url: Optional[str] = None,
-        has_enclosures: Optional[bool] = None,
+        read: Optional[bool] = None,
         important: Optional[bool] = None,
+        has_enclosures: Optional[bool] = None,
         chunk_size: Optional[int] = None,
         last: _EntryLast = None,
         entry_id: Optional[str] = None,
     ) -> str:
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
-        if which == 'all':
+        if read is None:
             where_read_snippet = ''
-        elif which == 'unread':
+        elif not read:
             where_read_snippet = """
                 AND (entries.read IS NULL OR entries.read != 1)
             """
-        elif which == 'read':
+        else:
             where_read_snippet = """
                 AND entries.read = 1
             """
-        else:
-            assert False, "shouldn't get here"  # pragma: no cover
 
         # TODO: This needs some sort of query builder so badly.
 

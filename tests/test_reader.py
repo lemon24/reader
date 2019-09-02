@@ -671,7 +671,7 @@ def test_get_entries_feed_order(reader, chunk_size):
     assert have == expected
 
 
-def test_get_entries_which(reader):
+def test_get_entries_read(reader):
     parser = Parser()
     reader._parser = parser
 
@@ -688,12 +688,12 @@ def test_get_entries_which(reader):
     entry_two = entry_two._replace(feed=feed)
 
     assert set(reader.get_entries()) == {entry_one, entry_two}
-    assert set(reader.get_entries(which='all')) == {entry_one, entry_two}
-    assert set(reader.get_entries(which='read')) == {entry_one}
-    assert set(reader.get_entries(which='unread')) == {entry_two}
+    assert set(reader.get_entries(read=None)) == {entry_one, entry_two}
+    assert set(reader.get_entries(read=True)) == {entry_one}
+    assert set(reader.get_entries(read=False)) == {entry_two}
 
     with pytest.raises(ValueError):
-        set(reader.get_entries(which='bad which'))
+        set(reader.get_entries(read='bad read'))
 
 
 def test_get_entries_feed_url(reader, feed_arg):
@@ -1084,3 +1084,25 @@ def test_get_entries_important(reader, important):
     (call, kwargs), = reader._storage.calls
     assert call == 'get_entries'
     assert kwargs['important'] == important
+
+    with pytest.raises(ValueError):
+        set(reader.get_entries(important='bad important'))
+
+
+def test_get_entries_which(reader):
+    # TODO: Remove this test in 0.17 (when which= gets removed).
+
+    reader._storage = FakeStorage()
+
+    with pytest.deprecated_call():
+        list(reader.get_entries(which='all'))
+        list(reader.get_entries(which='read'))
+        list(reader.get_entries(which='unread'))
+
+    assert reader._storage.calls[0][1]['read'] == None
+    assert reader._storage.calls[1][1]['read'] == True
+    assert reader._storage.calls[2][1]['read'] == False
+
+    with pytest.deprecated_call():
+        with pytest.raises(ValueError):
+            list(reader.get_entries(which='bad which'))

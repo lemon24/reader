@@ -64,7 +64,7 @@ def add_reader_version():
 @blueprint.route('/')
 def entries():
     show = request.args.get('show', 'unread')
-    assert show in ('all', 'read', 'unread')
+    read = {'all': None, 'unread': False, 'read': True}[show]
 
     has_enclosures = request.args.get('has-enclosures')
     has_enclosures = {None: None, 'no': False, 'yes': True}[has_enclosures]
@@ -82,7 +82,7 @@ def entries():
             abort(404)
 
     entries = reader.get_entries(
-        which=show, feed=feed_url, has_enclosures=has_enclosures, important=important
+        read=read, feed=feed_url, has_enclosures=has_enclosures, important=important
     )
 
     limit = request.args.get('limit', type=int)

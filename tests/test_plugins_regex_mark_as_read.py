@@ -32,6 +32,6 @@ def test_regex_mark_as_read(reader, monkeypatch, tmpdir):
     reader.update_feeds()
 
     assert len(list(reader.get_entries())) == 4
-    assert set(reader.get_entries(which='read')) == {
+    assert set(reader.get_entries(read=True)) == {
         match_new._replace(feed=one, read=True)
     }

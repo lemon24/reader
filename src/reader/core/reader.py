@@ -1,5 +1,6 @@
 import datetime
 import logging
+import warnings
 from typing import Callable
 from typing import Collection
 from typing import Iterable
@@ -254,10 +255,11 @@ class Reader:
     def get_entries(
         self,
         *,
-        which: str = 'all',
         feed: Optional[Union[str, Feed]] = None,
-        has_enclosures: Optional[bool] = None,
+        read: Optional[bool] = None,
         important: Optional[bool] = None,
+        has_enclosures: Optional[bool] = None,
+        which: Union[_Missing, str] = _missing,
     ) -> Iterable[Entry]:
         """Get all or some of the entries.
 
@@ -271,11 +273,11 @@ class Reader:
             The algorithm for "recent" is a heuristic and may change over time.
 
         Args:
-            which (str): One of ``'all'``, ``'read'``, or ``'unread'``.
             feed (str or Feed or None): Only return the entries for this feed.
+            read (bool or None): Only return (un)read entries.
+            important (bool or None): Only return (un)important entries.
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
-            important (bool or None): Only return (un)important entries.
 
         Yields:
             :class:`Entry`: Most recent entries first.
@@ -290,10 +292,26 @@ class Reader:
         # https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
 
         feed_url = feed_argument(feed) if feed is not None else None
-        if which not in ('all', 'unread', 'read'):
-            raise ValueError("which should be one of ('all', 'read', 'unread')")
+        if read not in (None, False, True):
+            raise ValueError("read should be one of (None, False, True)")
+        if important not in (None, False, True):
+            raise ValueError("important should be one of (None, False, True)")
         if has_enclosures not in (None, False, True):
             raise ValueError("has_enclosures should be one of (None, False, True)")
+
+        if which is not _missing:
+            warnings.warn(
+                "The which= Reader.get_entries() argument was deprecated in "
+                "reader 0.16 and will be removed in reader 0.17. "
+                "Use read=None/True/False instead.",
+                DeprecationWarning,
+            )
+            # TODO: Remove which in 0.17.
+            try:
+                read = {'all': None, 'read': True, 'unread': False}[which]
+            except KeyError:
+                raise ValueError("which should be one of ('all', 'read', 'unread')")
+
         chunk_size = self._get_entries_chunk_size
 
         now = self._now()
@@ -302,10 +320,10 @@ class Reader:
         while True:
 
             entries = self._storage.get_entries(
-                which=which,
                 feed_url=feed_url,
-                has_enclosures=has_enclosures,
+                read=read,
                 important=important,
+                has_enclosures=has_enclosures,
                 now=now,
                 chunk_size=chunk_size,
                 last=last,
