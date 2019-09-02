@@ -14,8 +14,11 @@ Unreleased
 * Allow marking entries as important. (`#127`_)
 * :meth:`~Reader.get_entries` and :meth:`~Reader.get_feeds` now take only
   keyword arguments.
+* :meth:`~Reader.get_entries` argument ``which`` is now deprecated in favor
+  of ``read``. (`#136`_)
 
 .. _#127: https://github.com/lemon24/reader/issues/127
+.. _#136: https://github.com/lemon24/reader/issues/136
 
 
 Version 0.15
