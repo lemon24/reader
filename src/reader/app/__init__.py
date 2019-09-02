@@ -69,6 +69,9 @@ def entries():
     has_enclosures = request.args.get('has-enclosures')
     has_enclosures = {None: None, 'no': False, 'yes': True}[has_enclosures]
 
+    important = request.args.get('important')
+    important = {None: None, 'no': False, 'yes': True}[important]
+
     reader = get_reader()
 
     feed_url = request.args.get('feed')
@@ -79,7 +82,7 @@ def entries():
             abort(404)
 
     entries = reader.get_entries(
-        which=show, feed=feed_url, has_enclosures=has_enclosures
+        which=show, feed=feed_url, has_enclosures=has_enclosures, important=important
     )
 
     limit = request.args.get('limit', type=int)
@@ -202,6 +205,22 @@ def mark_all_as_unread(data):
     entry_id = json.loads(data['entry-id'])
     for entry_id in entry_id:
         get_reader().mark_as_unread((feed_url, entry_id))
+
+
+@form_api
+@readererror_to_apierror()
+def mark_as_important(data):
+    feed_url = data['feed-url']
+    entry_id = data['entry-id']
+    get_reader().mark_as_important((feed_url, entry_id))
+
+
+@form_api
+@readererror_to_apierror()
+def mark_as_unimportant(data):
+    feed_url = data['feed-url']
+    entry_id = data['entry-id']
+    get_reader().mark_as_unimportant((feed_url, entry_id))
 
 
 @form_api(really=True)

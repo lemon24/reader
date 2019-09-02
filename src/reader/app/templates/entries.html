@@ -23,6 +23,12 @@
     (none, "don't care"),
 ], none, '.entries', 'has enclosures') }}
 
+{{ macros.radio_links('important', [
+    ('yes', none),
+    ('no', none),
+    (none, "don't care"),
+], none, '.entries', 'important') }}
+
 {% if feed %}
 
 <li>
@@ -93,9 +99,17 @@ untitled
 {{ macros.simple_button('.form_api', 'mark-as-read', 'mark as read', leave_disabled=true, next=next, context=context) }}
 {% endif %}
 
+{% if entry.important %}
+{{ macros.simple_button('.form_api', 'mark-as-unimportant', 'mark as unimportant', leave_disabled=true, next=next, context=context) }}
+{% else %}
+{{ macros.simple_button('.form_api', 'mark-as-important', 'mark as important', leave_disabled=true, next=next, context=context) }}
+{% endif %}
+
 {% for message in get_flashed_messages_by_prefix(
     ('mark-as-read', feed.url, entry.id),
     ('mark-as-unread', feed.url, entry.id),
+    ('mark-as-important', feed.url, entry.id),
+    ('mark-as-unimportant', feed.url, entry.id),
 ) %}
 <li class="error">{{ message }}
 {% endfor %}
