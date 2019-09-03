@@ -369,6 +369,7 @@ class Reader:
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+            default: Returned if given and the entry does not exist.
 
         Returns:
             Entry: The entry.
