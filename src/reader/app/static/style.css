@@ -94,7 +94,8 @@ ul.controls .collapsible {
     body { }
 
     ul.controls li {
-        display: block;
+        display: inline-block;
+        padding-right: .5em;
     }
 
     ul.controls .collapsible:hover,
