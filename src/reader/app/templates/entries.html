@@ -38,10 +38,10 @@
 {% set next = url_for('.entries', **request.args) %}
 
 {% if current_what != 'read' %}
-{{- macros.confirm_button('.form_api', 'mark-all-as-read', 'mark all as read', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
+{{- macros.confirm_button('.form_api', 'mark-all-as-read', 'all read', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
 {% endif %}
 {% if current_what != 'unread' %}
-{{- macros.confirm_button('.form_api', 'mark-all-as-unread', 'mark all as unread', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
+{{- macros.confirm_button('.form_api', 'mark-all-as-unread', 'all unread', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
 {% endif %}
 
 {{ macros.confirm_button('.form_api', 'delete-feed', 'delete feed', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
@@ -94,15 +94,15 @@ untitled
 {% set context = {'feed-url': feed.url, 'entry-id': entry.id} %}
 
 {% if entry.read %}
-{{ macros.simple_button('.form_api', 'mark-as-unread', 'mark as unread', leave_disabled=true, next=next, context=context) }}
+{{ macros.simple_button('.form_api', 'mark-as-unread', 'unread', leave_disabled=true, next=next, context=context) }}
 {% else %}
-{{ macros.simple_button('.form_api', 'mark-as-read', 'mark as read', leave_disabled=true, next=next, context=context) }}
+{{ macros.simple_button('.form_api', 'mark-as-read', 'read', leave_disabled=true, next=next, context=context) }}
 {% endif %}
 
 {% if entry.important %}
-{{ macros.simple_button('.form_api', 'mark-as-unimportant', 'mark as unimportant', leave_disabled=true, next=next, context=context) }}
+{{ macros.simple_button('.form_api', 'mark-as-unimportant', 'unimportant', leave_disabled=true, next=next, context=context) }}
 {% else %}
-{{ macros.simple_button('.form_api', 'mark-as-important', 'mark as important', leave_disabled=true, next=next, context=context) }}
+{{ macros.simple_button('.form_api', 'mark-as-important', 'important', leave_disabled=true, next=next, context=context) }}
 {% endif %}
 
 {% for message in get_flashed_messages_by_prefix(
