@@ -39,6 +39,7 @@ setup(
             'requests-mock',
             'mechanicalsoup',
             'requests-wsgi-adapter',
+            'mypy',
             # docs
             'sphinx',
             'sphinx_rtd_theme',
