@@ -125,7 +125,7 @@ def setup_client_with_entries(num_entries):
 
 @inject(reader=setup_reader_with_entries)
 def time_get_entries(reader):
-    for _ in reader.get_entries(which='all'):
+    for _ in reader.get_entries():
         pass
 
 

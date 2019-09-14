@@ -11,6 +11,10 @@ Version 0.17
 
 Unreleased
 
+* Remove the ``which`` argument of :meth:`~Reader.get_entries`. (`#136`_)
+
+.. _#136: https://github.com/lemon24/reader/issues/136
+
 
 Version 0.16
 ------------

@@ -61,9 +61,9 @@ Usage:
     >>>
     >>> reader.mark_as_read(entries[0])
     >>>
-    >>> [e.title for e in reader.get_entries(which='unread')]
+    >>> [e.title for e in reader.get_entries(read=False)]
     ['H.I. #107: One Year of Weird', 'H.I. #106: Water on Mars', ...]
-    >>> [e.title for e in reader.get_entries(which='read')]
+    >>> [e.title for e in reader.get_entries(read=True)]
     ['H.I. #108: Project Cyclops']
 
 .. end-usage

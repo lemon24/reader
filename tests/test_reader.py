@@ -1087,22 +1087,3 @@ def test_get_entries_important(reader, important):
 
     with pytest.raises(ValueError):
         set(reader.get_entries(important='bad important'))
-
-
-def test_get_entries_which(reader):
-    # TODO: Remove this test in 0.17 (when which= gets removed).
-
-    reader._storage = FakeStorage()
-
-    with pytest.deprecated_call():
-        list(reader.get_entries(which='all'))
-        list(reader.get_entries(which='read'))
-        list(reader.get_entries(which='unread'))
-
-    assert reader._storage.calls[0][1]['read'] == None
-    assert reader._storage.calls[1][1]['read'] == True
-    assert reader._storage.calls[2][1]['read'] == False
-
-    with pytest.deprecated_call():
-        with pytest.raises(ValueError):
-            list(reader.get_entries(which='bad which'))

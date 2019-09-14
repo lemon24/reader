@@ -31,7 +31,7 @@ Mark the first entry as read::
 
 Print the titles of the unread entries::
 
-    for e in reader.get_entries(which='unread'):
+    for e in reader.get_entries(read=False):
         print(e.title)
 
 

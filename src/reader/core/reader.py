@@ -259,7 +259,6 @@ class Reader:
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,
-        which: Union[_Missing, str] = _missing,
     ) -> Iterable[Entry]:
         """Get all or some of the entries.
 
@@ -298,19 +297,6 @@ class Reader:
             raise ValueError("important should be one of (None, False, True)")
         if has_enclosures not in (None, False, True):
             raise ValueError("has_enclosures should be one of (None, False, True)")
-
-        if not isinstance(which, _Missing):
-            warnings.warn(
-                "The which= Reader.get_entries() argument was deprecated in "
-                "reader 0.16 and will be removed in reader 0.17. "
-                "Use read=None/True/False instead.",
-                DeprecationWarning,
-            )
-            # TODO: Remove which in 0.17.
-            try:
-                read = {'all': None, 'read': True, 'unread': False}[which]
-            except KeyError:
-                raise ValueError("which should be one of ('all', 'read', 'unread')")
 
         chunk_size = self._get_entries_chunk_size
 
