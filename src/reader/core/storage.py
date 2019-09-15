@@ -73,7 +73,7 @@ def create_feeds(db):
             http_last_modified TEXT,
 
             -- reader data
-            stale INTEGER,
+            stale INTEGER NOT NULL DEFAULT 0,
             last_updated TIMESTAMP,  -- null if the feed was never updated
             added TIMESTAMP NOT NULL
 
@@ -519,7 +519,7 @@ class Storage:
                     author = :author,
                     http_etag = :http_etag,
                     http_last_modified = :http_last_modified,
-                    stale = NULL,
+                    stale = 0,
                     last_updated = :last_updated
                 WHERE url = :url;
             """,
