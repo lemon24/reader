@@ -243,6 +243,9 @@ class Reader:
     def _update_feed(self, feed_for_update, global_now=None):
         now = self._now()
 
+        if not global_now:
+            global_now = now
+
         updater = Updater(feed_for_update, now, global_now)
         result = updater.update(self._parser, self._storage)
 

@@ -93,7 +93,7 @@ def create_entries(db, name='entries'):
             feed TEXT NOT NULL,
             title TEXT,
             link TEXT,
-            updated TIMESTAMP,
+            updated TIMESTAMP NOT NULL,
             author TEXT,
             published TIMESTAMP,
             summary TEXT,
@@ -101,10 +101,10 @@ def create_entries(db, name='entries'):
             enclosures TEXT,
 
             -- reader data
-            read INTEGER,
-            important INTEGER,
-            last_updated TIMESTAMP,
-            first_updated_epoch TIMESTAMP,
+            read INTEGER NOT NULL DEFAULT 0,
+            important INTEGER NOT NULL DEFAULT 0,
+            last_updated TIMESTAMP NOT NULL,
+            first_updated_epoch TIMESTAMP NOT NULL,
             feed_order INTEGER NOT NULL,
 
             PRIMARY KEY (id, feed),
@@ -289,6 +289,7 @@ class Storage:
                     locals(),
                 )
             except sqlite3.IntegrityError:
+                # FIXME: Match the error string.
                 raise FeedExistsError(url)
 
     @wrap_storage_exceptions()
@@ -617,6 +618,7 @@ class Storage:
                 locals(),
             )
         except sqlite3.IntegrityError as e:
+            # FIXME: Match the error string.
             log.debug(
                 "add_entry %r of feed %r: got IntegrityError",
                 entry.id,
@@ -890,6 +892,7 @@ class Storage:
                     locals(),
                 )
             except sqlite3.IntegrityError as e:
+                # FIXME: Match the error string.
                 raise FeedNotFoundError(feed_url)
 
     @wrap_storage_exceptions()
