@@ -12,8 +12,10 @@ Version 0.17
 Unreleased
 
 * Remove the ``which`` argument of :meth:`~Reader.get_entries`. (`#136`_)
+* Make the database schema more strict regarding nulls. (`#138`_)
 
 .. _#136: https://github.com/lemon24/reader/issues/136
+.. _#138: https://github.com/lemon24/reader/issues/138
 
 
 Version 0.16
