@@ -124,8 +124,44 @@ def setup_client_with_entries(num_entries):
 
 
 @inject(reader=setup_reader_with_entries)
-def time_get_entries(reader):
+def time_get_entries_all(reader):
     for _ in reader.get_entries():
+        pass
+
+
+@inject(reader=setup_reader_with_entries)
+def time_get_entries_read(reader):
+    for _ in reader.get_entries(read=True):
+        pass
+
+
+@inject(reader=setup_reader_with_entries)
+def time_get_entries_unread(reader):
+    for _ in reader.get_entries(read=False):
+        pass
+
+
+@inject(reader=setup_reader_with_entries)
+def time_get_entries_important(reader):
+    for _ in reader.get_entries(important=True):
+        pass
+
+
+@inject(reader=setup_reader_with_entries)
+def time_get_entries_unimportant(reader):
+    for _ in reader.get_entries(important=False):
+        pass
+
+
+@inject(reader=setup_reader_with_entries)
+def time_get_entries_enclosures(reader):
+    for _ in reader.get_entries(has_enclosures=True):
+        pass
+
+
+@inject(reader=setup_reader_with_entries)
+def time_get_entries_no_enclosures(reader):
+    for _ in reader.get_entries(has_enclosures=False):
         pass
 
 
