@@ -728,28 +728,25 @@ class Storage:
     ) -> str:
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
-        if read is None:
-            where_read_snippet = ''
-        elif not read:
-            where_read_snippet = """
-                AND (entries.read IS NULL OR entries.read != 1)
-            """
-        else:
-            where_read_snippet = """
-                AND entries.read = 1
-            """
+        where_snippets = []
+
+        if read is not None:
+            if not read:
+                where_snippets.append("(entries.read IS NULL OR entries.read != 1)")
+            else:
+                where_snippets.append("entries.read = 1")
 
         # TODO: This needs some sort of query builder so badly.
 
-        where_next_snippet = ''
         limit_snippet = ''
         if chunk_size:
             limit_snippet = """
                 LIMIT :chunk_size
             """
             if last:
-                where_next_snippet = """
-                    AND (
+                where_snippets.append(
+                    """
+                    (
                         kinda_first_updated,
                         kinda_published,
                         feeds.url,
@@ -765,36 +762,36 @@ class Storage:
                         :last_entry_id
                     )
                 """
+                )
 
-        where_feed_snippet = ''
-        where_entry_snippet = ''
         if feed_url:
-            where_feed_snippet = """
-                AND feeds.url = :feed_url
-            """
+            where_snippets.append("feeds.url = :feed_url")
             if entry_id:
-                where_entry_snippet = """
-                    AND entries.id = :entry_id
-                """
+                where_snippets.append("entries.id = :entry_id")
 
-        where_has_enclosures_snippet = ''
         if has_enclosures is not None:
-            where_has_enclosures_snippet = f"""
-                AND {'NOT' if has_enclosures else ''}
+            where_snippets.append(
+                f"""
+                {'NOT' if has_enclosures else ''}
                     (json_array_length(entries.enclosures) IS NULL
                         OR json_array_length(entries.enclosures) = 0)
             """
+            )
 
-        if important is None:
-            where_important_snippet = ''
-        elif not important:
-            where_important_snippet = """
-                AND (entries.important IS NULL OR entries.important != 1)
-            """
+        if important is not None:
+            if not important:
+                where_snippets.append(
+                    "(entries.important IS NULL OR entries.important != 1)"
+                )
+            else:
+                where_snippets.append("entries.important = 1")
+
+        if any(where_snippets):
+            where_keyword = 'WHERE'
+            where_snippet = '\n                AND '.join(where_snippets)
         else:
-            where_important_snippet = """
-                AND entries.important = 1
-            """
+            where_keyword = ''
+            where_snippet = ''
 
         query = f"""
             SELECT
@@ -826,15 +823,10 @@ class Storage:
                 ) as kinda_first_updated,
                 coalesce(entries.published, entries.updated) as kinda_published,
                 - entries.feed_order as negative_feed_order
-            FROM entries, feeds
-            WHERE
-                feeds.url = entries.feed
-                {where_read_snippet}
-                {where_feed_snippet}
-                {where_entry_snippet}
-                {where_next_snippet}
-                {where_has_enclosures_snippet}
-                {where_important_snippet}
+            FROM entries
+            JOIN feeds ON feeds.url = entries.feed
+            {where_keyword}
+                {where_snippet}
             ORDER BY
                 kinda_first_updated DESC,
                 kinda_published DESC,
