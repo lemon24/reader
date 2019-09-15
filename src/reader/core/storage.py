@@ -186,8 +186,8 @@ def update_from_13_to_14(db):  # pragma: no cover
 
 
 def update_from_14_to_15(db):  # pragma: no cover
+    # Assumes foreign key checks have already been disabled.
     # https://sqlite.org/lang_altertable.html#otheralter
-    db.execute("PRAGMA foreign_keys = OFF;")
     create_entries(db, 'new_entries')
     db.execute(
         """
@@ -227,8 +227,6 @@ def update_from_14_to_15(db):  # pragma: no cover
     )
     db.execute("DROP TABLE entries;")
     db.execute("ALTER TABLE new_entries RENAME TO entries;")
-    db.execute("PRAGMA foreign_key_check;")
-    db.execute("PRAGMA foreign_keys = ON;")
 
 
 def update_from_15_to_16(db):  # pragma: no cover
