@@ -57,10 +57,10 @@ def create_db(db):
     create_feed_metadata(db)
 
 
-def create_feeds(db):
+def create_feeds(db, name='feeds'):
     db.execute(
-        """
-        CREATE TABLE feeds (
+        f"""
+        CREATE TABLE {name} (
 
             -- feed data
             url TEXT PRIMARY KEY NOT NULL,
@@ -241,7 +241,108 @@ def update_from_15_to_16(db):  # pragma: no cover
 
 
 def update_from_16_to_17(db):  # pragma: no cover
-    raise NotImplementedError
+    # Clean up data in-place.
+
+    db.execute(
+        """
+        UPDATE feeds
+        SET
+            stale = COALESCE(stale, 0),
+            added = COALESCE(added, '1970-01-01 00:00:00.000000')
+        ;
+    """
+    )
+    db.execute(
+        """
+        UPDATE entries
+        SET
+            read = COALESCE(read, 0),
+            important = COALESCE(important, 0),
+            last_updated = COALESCE(last_updated, '1970-01-01 00:00:00.000000'),
+            first_updated_epoch = COALESCE(first_updated_epoch, '1970-01-01 00:00:00.000000')
+        ;
+    """
+    )
+
+    # Re-create tables with the new constraints;
+    # assumes foreign key checks have already been disabled.
+    # https://sqlite.org/lang_altertable.html#otheralter
+
+    create_feeds(db, 'new_feeds')
+    db.execute(
+        """
+        INSERT INTO new_feeds (
+            url,
+            title,
+            link,
+            updated,
+            author,
+            user_title,
+            http_etag,
+            http_last_modified,
+            stale,
+            last_updated,
+            added
+        )
+        SELECT
+            url,
+            title,
+            link,
+            updated,
+            author,
+            user_title,
+            http_etag,
+            http_last_modified,
+            stale,
+            last_updated,
+            added
+        FROM feeds;
+    """
+    )
+    db.execute("DROP TABLE feeds;")
+    db.execute("ALTER TABLE new_feeds RENAME TO feeds;")
+
+    create_entries(db, 'new_entries')
+    db.execute(
+        """
+        INSERT INTO new_entries (
+            id,
+            feed,
+            title,
+            link,
+            updated,
+            author,
+            published,
+            summary,
+            content,
+            enclosures,
+            read,
+            important,
+            last_updated,
+            first_updated_epoch,
+            feed_order
+        )
+        SELECT
+            id,
+            feed,
+            title,
+            link,
+            updated,
+            author,
+            published,
+            summary,
+            content,
+            enclosures,
+            read,
+            important,
+            last_updated,
+            first_updated_epoch,
+            feed_order
+        FROM entries;
+    """
+    )
+    db.execute("DROP TABLE entries;")
+    db.execute("ALTER TABLE new_entries RENAME TO entries;")
 
 
 def open_db(path, timeout):
