@@ -842,7 +842,7 @@ def test_get_feeds_order_added(reader):
     """When sort='added', feeds should be sorted by (with decreasing
     priority):
 
-    * feed added, descending (feeds that don't have it should appear last)
+    * feed added, descending
     * feed URL
 
     https://github.com/lemon24/reader/issues/98
@@ -860,7 +860,7 @@ def test_get_feeds_order_added(reader):
     feed2 = parser.feed(2, datetime(2010, 1, 1))
     reader.add_feed(feed2.url)
 
-    reader._now = lambda: None
+    reader._now = lambda: datetime(2009, 12, 31)
     feed3 = parser.feed(3, datetime(2010, 1, 3))
     reader.add_feed(feed3.url)
 

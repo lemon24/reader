@@ -68,14 +68,14 @@ def create_feeds(db):
             link TEXT,
             updated TIMESTAMP,
             author TEXT,
-            user_title TEXT,    -- except this one, which comes from reader
+            user_title TEXT,  -- except this one, which comes from reader
             http_etag TEXT,
             http_last_modified TEXT,
 
             -- reader data
             stale INTEGER,
-            last_updated TIMESTAMP,
-            added TIMESTAMP
+            last_updated TIMESTAMP,  -- null if the feed was never updated
+            added TIMESTAMP NOT NULL
 
         );
     """
@@ -240,11 +240,15 @@ def update_from_15_to_16(db):  # pragma: no cover
     )
 
 
+def update_from_16_to_17(db):  # pragma: no cover
+    raise NotImplementedError
+
+
 def open_db(path, timeout):
     return open_sqlite_db(
         path,
         create=create_db,
-        version=16,
+        version=17,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             10: update_from_10_to_11,
@@ -253,6 +257,7 @@ def open_db(path, timeout):
             13: update_from_13_to_14,
             14: update_from_14_to_15,
             15: update_from_15_to_16,
+            16: update_from_16_to_17,
         },
         timeout=timeout,
     )
