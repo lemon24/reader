@@ -4,6 +4,7 @@ import pytest
 
 from reader.core.sqlite_utils import ddl_transaction
 from reader.core.sqlite_utils import HeavyMigration
+from reader.core.sqlite_utils import IntegrityError
 from reader.core.sqlite_utils import require_sqlite_compile_options
 from reader.core.sqlite_utils import require_sqlite_version
 from reader.core.sqlite_utils import RequirementError
@@ -167,6 +168,26 @@ def test_migration_invalid_version():
         migration.migrate(db)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one', 'two']
+
+
+def test_migration_integrity_error():
+    def create_db(db):
+        db.execute("CREATE TABLE t (one INTEGER PRIMARY KEY);")
+        db.execute(
+            "CREATE TABLE u (two INTEGER NOT NULL, FOREIGN KEY (two) REFERENCES t(one));"
+        )
+
+    def update_from_1_to_2(db):
+        db.execute("INSERT INTO u VALUES (1);")
+
+    db = sqlite3.connect(':memory:')
+    db.execute("PRAGMA foreign_keys = ON;")
+
+    migration = HeavyMigration(create_db, 1, {})
+    migration.migrate(db)
+    migration = HeavyMigration(create_db, 2, {1: update_from_1_to_2})
+    with pytest.raises(IntegrityError):
+        migration.migrate(db)
 
 
 def test_require_sqlite_version(monkeypatch):

@@ -73,6 +73,10 @@ class SchemaVersionError(DBError):
     display_name = "schema version error"
 
 
+class IntegrityError(DBError):
+    display_name = "integrity error"
+
+
 class RequirementError(DBError):
     display_name = "database requirement error"
 
@@ -104,45 +108,74 @@ class HeavyMigration:
         return version
 
     def migrate(self, db):
-        with ddl_transaction(db):
-            version = self.get_version(db)
+        # We disable foreign key checks in case any of the migrations
+        # want to change the schema in ways not supported by ALTER[1].
+        #
+        # We have to do this because[2]:
+        #
+        # > It is not possible to enable or disable foreign key constraints
+        # > in the middle of a multi-statement transaction [...]. Attempting
+        # > to do so does not return an error; it simply has no effect.
+        #
+        # Note that we still do a manual check after each migration runs.
+        #
+        # [1]: https://sqlite.org/lang_altertable.html#otheralter
+        # [2]: https://sqlite.org/foreignkeys.html#fk_enable
 
-            if version is None:
-                self.create(db)
-                db.execute(
-                    """
-                    CREATE TABLE version (
-                        version INTEGER NOT NULL
-                    );
-                """
-                )
-                db.execute("INSERT INTO version VALUES (?);", (self.version,))
+        # TODO: Maybe only do this if they're already on?
+        db.execute("PRAGMA foreign_keys = OFF;")
 
-            elif version < self.version:
-                if not self.migrations.get(version):
-                    raise SchemaVersionError(f"unsupported version: {version}")
+        try:
+            with ddl_transaction(db):
+                version = self.get_version(db)
 
-                for from_version in range(version, self.version):
-                    to_version = from_version + 1
-                    migration = self.migrations.get(from_version)
-                    if migration is None:
-                        raise SchemaVersionError(
-                            f"no migration from {from_version} to {to_version}; "
-                            f"expected migrations for all versions "
-                            f"later than {version}"
-                        )
-
+                if version is None:
+                    self.create(db)
                     db.execute(
                         """
-                        UPDATE version
-                        SET version = :to_version;
-                    """,
-                        locals(),
+                        CREATE TABLE version (
+                            version INTEGER NOT NULL
+                        );
+                    """
                     )
-                    migration(db)
+                    db.execute("INSERT INTO version VALUES (?);", (self.version,))
 
-            elif version != self.version:
-                raise SchemaVersionError(f"invalid version: {version}")
+                elif version < self.version:
+                    if not self.migrations.get(version):
+                        raise SchemaVersionError(f"unsupported version: {version}")
+
+                    for from_version in range(version, self.version):
+                        to_version = from_version + 1
+                        migration = self.migrations.get(from_version)
+                        if migration is None:
+                            raise SchemaVersionError(
+                                f"no migration from {from_version} to {to_version}; "
+                                f"expected migrations for all versions "
+                                f"later than {version}"
+                            )
+
+                        db.execute(
+                            """
+                            UPDATE version
+                            SET version = :to_version;
+                        """,
+                            locals(),
+                        )
+                        migration(db)
+
+                        failed_checks = list(db.execute("PRAGMA foreign_key_check;"))
+                        if failed_checks:
+                            # TODO: More details regarding what failed.
+                            raise IntegrityError(
+                                f"after migrating to version {to_version}: "
+                                "FOREIGN KEY constraint failed"
+                            )
+
+                elif version != self.version:
+                    raise SchemaVersionError(f"invalid version: {version}")
+
+        finally:
+            db.execute("PRAGMA foreign_keys = ON;")
 
 
 def require_sqlite_version(version_info):
