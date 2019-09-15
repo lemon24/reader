@@ -837,10 +837,7 @@ class Storage:
         where_snippets = []
 
         if read is not None:
-            if not read:
-                where_snippets.append("(entries.read IS NULL OR entries.read != 1)")
-            else:
-                where_snippets.append("entries.read = 1")
+            where_snippets.append(f"{'' if read else 'NOT'} entries.read")
 
         # TODO: This needs some sort of query builder so badly.
 
@@ -885,12 +882,7 @@ class Storage:
             )
 
         if important is not None:
-            if not important:
-                where_snippets.append(
-                    "(entries.important IS NULL OR entries.important != 1)"
-                )
-            else:
-                where_snippets.append("entries.important = 1")
+            where_snippets.append(f"{'' if important else 'NOT'} entries.important")
 
         if any(where_snippets):
             where_keyword = 'WHERE'
