@@ -165,6 +165,13 @@ def time_get_entries_no_enclosures(reader):
         pass
 
 
+@inject(reader=setup_reader_with_entries)
+def time_get_entries_feed(reader):
+    feed = next(reader.get_feeds())
+    for _ in reader.get_entries(feed=feed):
+        pass
+
+
 @inject(client=setup_client_with_entries)
 def time_show(client):
     for _ in client.get('/?show=all').response:
@@ -278,7 +285,7 @@ def time(which):
     print(header)
 
     extra_fmt = ['{{:>{}}}'.format(len(e)) for e in extra]
-    names_fmt = ['{{:>{}.2f}}'.format(len(n)) for n in names]
+    names_fmt = ['{{:>{}.3f}}'.format(len(n)) for n in names]
     row_fmt = ' '.join(extra_fmt + names_fmt)
 
     number = TIMINGS_NUMBER
