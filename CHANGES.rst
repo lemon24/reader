@@ -13,9 +13,11 @@ Unreleased
 
 * Remove the ``which`` argument of :meth:`~Reader.get_entries`. (`#136`_)
 * Make the database schema more strict regarding nulls. (`#138`_)
+* Tests are now run in a random order. (`#142`_)
 
 .. _#136: https://github.com/lemon24/reader/issues/136
 .. _#138: https://github.com/lemon24/reader/issues/138
+.. _#142: https://github.com/lemon24/reader/issues/142
 
 
 Version 0.16
