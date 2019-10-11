@@ -216,18 +216,19 @@ def open_sqlite_db(path, *, create, version, migrations, timeout=None):
 
     db = sqlite3.connect(path, **kwargs)
 
-    # TODO: This is business logic, make it an argument.
-    # Require the JSON1 extension.
-    require_sqlite_compile_options(db, ['ENABLE_JSON1'])
+    try:
+        # TODO: This is business logic, make it an argument.
+        # Require the JSON1 extension.
+        require_sqlite_compile_options(db, ['ENABLE_JSON1'])
 
-    # TODO: This is business logic, make it an argument.
-    db.execute(
-        """
-            PRAGMA foreign_keys = ON;
-    """
-    )
+        # TODO: This is business logic, make it an argument.
+        db.execute("PRAGMA foreign_keys = ON;")
 
-    migration = HeavyMigration(create, version, migrations)
-    migration.migrate(db)
+        migration = HeavyMigration(create, version, migrations)
+        migration.migrate(db)
 
-    return db
+        return db
+
+    except:
+        db.close()
+        raise
