@@ -14,10 +14,13 @@ Unreleased
 * Remove the ``which`` argument of :meth:`~Reader.get_entries`. (`#136`_)
 * Make the database schema more strict regarding nulls. (`#138`_)
 * Tests are now run in a random order. (`#142`_)
+* The resources associated with a reader can now be released explicitly
+  by calling its :meth:`~Reader.close()` method. (`#139`_)
 
 .. _#136: https://github.com/lemon24/reader/issues/136
 .. _#138: https://github.com/lemon24/reader/issues/138
 .. _#142: https://github.com/lemon24/reader/issues/142
+.. _#139: https://github.com/lemon24/reader/issues/139
 
 
 Version 0.16

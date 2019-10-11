@@ -48,7 +48,11 @@ def wrap_storage_exceptions():
     try:
         yield
     except sqlite3.OperationalError as e:
-        raise StorageError("sqlite3 error") from e
+        raise StorageError(f"sqlite3 error: {e}") from e
+    except sqlite3.ProgrammingError as e:
+        if "cannot operate on a closed database" in str(e).lower():
+            raise StorageError(f"sqlite3 error: {e}") from e
+        raise
 
 
 def create_db(db):
@@ -375,6 +379,9 @@ class Storage:
         except DBError as e:
             raise StorageError(str(e)) from e
         self.path = path
+
+    def close(self) -> None:
+        self.db.close()
 
     @wrap_storage_exceptions()
     def add_feed(self, url: str, added: datetime) -> None:

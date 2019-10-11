@@ -39,8 +39,7 @@ def get_reader():
 
 def close_db(error):
     if hasattr(g, 'reader'):
-        # TODO: Expose "closing" the storage in the Reader API.
-        g.reader._storage.db.close()
+        g.reader.close()
 
 
 def stream_template(template_name_or_list, **kwargs):

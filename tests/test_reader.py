@@ -1028,6 +1028,9 @@ class FakeStorage:
         self.calls = []
         self.exc = exc
 
+    def close(self):
+        self.calls.append(('close',))
+
     def mark_as_important_unimportant(self, feed_url, entry_id, important):
         self.calls.append(
             ('mark_as_important_unimportant', feed_url, entry_id, important)
@@ -1087,3 +1090,18 @@ def test_get_entries_important(reader, important):
 
     with pytest.raises(ValueError):
         set(reader.get_entries(important='bad important'))
+
+
+def test_close(reader):
+    reader._storage = FakeStorage()
+    reader.close()
+    assert reader._storage.calls == [('close',)]
+
+
+def test_closed(reader):
+    reader.close()
+    # TODO: Maybe parametrize with all the methods.
+    with pytest.raises(StorageError):
+        reader.add_feed('one')
+    with pytest.raises(StorageError):
+        list(reader.get_entries())

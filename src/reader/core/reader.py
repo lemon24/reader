@@ -76,6 +76,17 @@ class Reader:
         self._parser = Parser()
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
 
+    def close(self) -> None:
+        """Close this :class:`Reader`.
+
+        Releases any underlying resources associated with the reader.
+
+        The reader becomes unusable from this point forward;
+        a :exc:`ReaderError` will be raised if any other method is called.
+
+        """
+        self._storage.close()
+
     def add_feed(self, feed: Union[str, Feed]):
         """Add a new feed.
 

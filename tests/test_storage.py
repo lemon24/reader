@@ -12,7 +12,31 @@ from reader import FeedNotFoundError
 from reader import MetadataNotFoundError
 from reader import StorageError
 from reader.core.storage import Storage
+from reader.core.storage import wrap_storage_exceptions
 from reader.core.types import EntryForUpdate
+
+
+def test_wrap_storage_exceptions():
+    db = sqlite3.connect('file::memory:?mode=ro', uri=True)
+
+    with pytest.raises(StorageError):
+        with wrap_storage_exceptions():
+            # should raise OperationalError: unable to open database file
+            db.execute('create table t (a)')
+
+    # non- "cannot operate on a closed database" ProgrammingError
+    with pytest.raises(sqlite3.Error):
+        with wrap_storage_exceptions():
+            db.execute('values (:a)', {})
+
+    # works now
+    db.execute('values (1)')
+
+    # doesn't after closing
+    db.close()
+    with pytest.raises(StorageError):
+        with wrap_storage_exceptions():
+            db.execute('values (1)')
 
 
 def test_storage_errors_open(tmpdir):
@@ -51,6 +75,17 @@ def test_timeout(monkeypatch, db_path):
     Storage(db_path, timeout)
 
     assert open_db.timeout is timeout
+
+
+def test_close():
+    storage = Storage(':memory:')
+
+    storage.db.execute('values (1)')
+
+    storage.close()
+
+    with pytest.raises(sqlite3.ProgrammingError):
+        storage.db.execute('values (1)')
 
 
 def init(storage, _, __):
