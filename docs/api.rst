@@ -12,7 +12,9 @@ Reader object
 
 All of reader's functionality can be accessed through a :class:`Reader` instance.
 
-.. autoclass:: Reader
+.. autofunction:: make_reader
+
+.. autoclass:: Reader(...)
     :members:
 
 

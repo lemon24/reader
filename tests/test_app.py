@@ -6,7 +6,7 @@ import requests
 import wsgiadapter
 from fakeparser import Parser
 
-from reader import Reader
+from reader import make_reader
 from reader.app import create_app
 
 
@@ -25,7 +25,7 @@ def test_mark_as_read_unread(db_path, browser):
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
-    reader = Reader(db_path)
+    reader = make_reader(db_path)
     reader._parser = parser
 
     reader.add_feed(feed.url)
@@ -59,7 +59,7 @@ def test_mark_all_as_read_unread(db_path, browser):
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
-    reader = Reader(db_path)
+    reader = make_reader(db_path)
     reader._parser = parser
 
     reader.add_feed(feed.url)
@@ -99,7 +99,7 @@ def test_add_delete_feed(db_path, browser):
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
-    reader = Reader(db_path)
+    reader = make_reader(db_path)
     reader._parser = parser
 
     browser.open('http://app/')
@@ -148,7 +148,7 @@ def test_delete_feed_from_entries_page_redirects(db_path, browser):
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
-    reader = Reader(db_path)
+    reader = make_reader(db_path)
     reader._parser = parser
 
     reader.add_feed(feed.url)
@@ -170,7 +170,7 @@ def test_limit(db_path, browser):
     one = parser.entry(1, 1, datetime(2010, 1, 1))
     two = parser.entry(1, 2, datetime(2010, 1, 2))
 
-    reader = Reader(db_path)
+    reader = make_reader(db_path)
     reader._parser = parser
 
     reader.add_feed(feed.url)

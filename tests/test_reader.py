@@ -17,6 +17,7 @@ from reader import EntryNotFoundError
 from reader import Feed
 from reader import FeedExistsError
 from reader import FeedNotFoundError
+from reader import make_reader
 from reader import MetadataNotFoundError
 from reader import ParseError
 from reader import Reader
@@ -149,7 +150,7 @@ def test_update_blocking(db_path, call_update_method):
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
     feed2 = parser.feed(2, datetime(2010, 1, 1))
 
-    reader = Reader(db_path)
+    reader = make_reader(db_path)
     reader._parser = parser
 
     reader.add_feed(feed.url)
@@ -159,7 +160,7 @@ def test_update_blocking(db_path, call_update_method):
     blocking_parser = BlockingParser.from_parser(parser)
 
     def target():
-        reader = Reader(db_path)
+        reader = make_reader(db_path)
         reader._parser = blocking_parser
         call_update_method(reader, feed.url)
 
@@ -349,7 +350,7 @@ def test_update_feed_deleted(db_path, call_update_method, feed_action, entry_act
     """
 
     parser = Parser()
-    reader = Reader(db_path)
+    reader = make_reader(db_path)
     reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
@@ -370,7 +371,7 @@ def test_update_feed_deleted(db_path, call_update_method, feed_action, entry_act
     def target():
         try:
             blocking_parser.in_parser.wait()
-            reader = Reader(db_path)
+            reader = make_reader(db_path)
             reader.remove_feed(feed.url)
         finally:
             blocking_parser.can_return_from_parser.set()
@@ -1105,3 +1106,8 @@ def test_closed(reader):
         reader.add_feed('one')
     with pytest.raises(StorageError):
         list(reader.get_entries())
+
+
+def test_direct_instantiation():
+    with pytest.deprecated_call():
+        Reader(':memory:')

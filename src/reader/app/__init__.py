@@ -18,7 +18,7 @@ from flask import stream_with_context
 import reader
 from .api_thing import APIError
 from .api_thing import APIThing
-from reader import Reader
+from reader import make_reader
 from reader import ReaderError
 from reader.plugins import Loader
 from reader.plugins import LoaderError
@@ -31,7 +31,7 @@ blueprint.app_template_filter('humanize_naturaltime')(humanize.naturaltime)
 
 def get_reader():
     if not hasattr(g, 'reader'):
-        reader = Reader(current_app.config['READER_DB'])
+        reader = make_reader(current_app.config['READER_DB'])
         current_app.reader_load_plugins(reader)
         g.reader = reader
     return g.reader

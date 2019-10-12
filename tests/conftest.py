@@ -1,7 +1,7 @@
 import py.path
 import pytest
 
-from reader import Reader
+from reader import make_reader
 
 
 def pytest_addoption(parser):
@@ -22,7 +22,7 @@ def pytest_collection_modifyitems(config, items):
 
 @pytest.fixture
 def reader():
-    return Reader(':memory:')
+    return make_reader(':memory:')
 
 
 def call_update_feeds(reader, _):

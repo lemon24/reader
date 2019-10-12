@@ -11,7 +11,7 @@ Here is small example of using reader.
 
 Create a Reader object::
 
-    reader = Reader('db.sqlite')
+    reader = make_reader('db.sqlite')
 
 Add a feed::
 
@@ -40,7 +40,7 @@ Print the titles of the unread entries::
 __version__ = '0.17.dev0'
 
 
-from .core.reader import Reader
+from .core.reader import Reader, make_reader
 
 from .core.types import Feed, Entry, Content, Enclosure
 

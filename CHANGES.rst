@@ -12,10 +12,12 @@ Version 0.17
 Unreleased
 
 * Remove the ``which`` argument of :meth:`~Reader.get_entries`. (`#136`_)
-* Make the database schema more strict regarding nulls. (`#138`_)
-* Tests are now run in a random order. (`#142`_)
+* :class:`Reader` objects should now be created using :func:`make_reader`.
+  Instantiating Reader directly will raise a deprecation warning.
 * The resources associated with a reader can now be released explicitly
   by calling its :meth:`~Reader.close()` method. (`#139`_)
+* Make the database schema more strict regarding nulls. (`#138`_)
+* Tests are now run in a random order. (`#142`_)
 
 .. _#136: https://github.com/lemon24/reader/issues/136
 .. _#138: https://github.com/lemon24/reader/issues/138

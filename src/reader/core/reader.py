@@ -57,24 +57,41 @@ _T = TypeVar('_T')
 _PostEntryAddPluginType = Callable[['Reader', str, Entry], None]
 
 
-class Reader:
-
-    """A feed reader.
+def make_reader(url: str = None) -> 'Reader':
+    """Return a new :class:`Reader`.
 
     Args:
-        path (str): Path to the reader database.
+        url (str): Path to the reader database.
 
     Raises:
         StorageError
 
     """
+    return Reader(url, called_directly=False)
+
+
+class Reader:
+
+    """A feed reader.
+
+    Reader objects should be created using :func:`make_reader`; the Reader
+    constructor is not stable yet and may change without any notice.
+
+    """
 
     _get_entries_chunk_size = 2 ** 8
 
-    def __init__(self, path: str = None):
+    def __init__(self, path: str = None, called_directly: bool = True):
         self._storage = Storage(path)
         self._parser = Parser()
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
+
+        if called_directly:
+            warnings.warn(
+                "Reader objects should be created using make_reader(); the Reader "
+                "constructor is not stable yet and may change without any notice.",
+                DeprecationWarning,
+            )
 
     def close(self) -> None:
         """Close this :class:`Reader`.

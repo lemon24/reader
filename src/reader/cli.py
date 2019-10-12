@@ -6,7 +6,7 @@ import traceback
 import click
 
 import reader
-from . import Reader
+from . import make_reader
 from . import StorageError
 from .plugins import Loader
 from .plugins import LoaderError
@@ -31,9 +31,9 @@ def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
 
-def make_reader(db_path, plugins):
+def make_reader_with_plugins(db_path, plugins):
     try:
-        reader = Reader(db_path)
+        reader = make_reader(db_path)
     except StorageError as e:
         abort("{}: {}: {}", db_path, e, e.__cause__)
     except Exception as e:
@@ -95,7 +95,7 @@ def cli(ctx, db, plugin):
 def add(kwargs, url, update, verbose):
     """Add a new feed."""
     setup_logging(verbose)
-    reader = make_reader(**kwargs)
+    reader = make_reader_with_plugins(**kwargs)
     reader.add_feed(url)
     if update:
         reader.update_feed(url)
@@ -108,7 +108,7 @@ def add(kwargs, url, update, verbose):
 def remove(kwargs, url, verbose):
     """Remove an existing feed."""
     setup_logging(verbose)
-    reader = make_reader(**kwargs)
+    reader = make_reader_with_plugins(**kwargs)
     reader.remove_feed(url)
 
 
@@ -126,7 +126,7 @@ def update(kwargs, url, new_only, verbose):
 
     """
     setup_logging(verbose)
-    reader = make_reader(**kwargs)
+    reader = make_reader_with_plugins(**kwargs)
     if url:
         reader.update_feed(url)
     else:
@@ -143,7 +143,7 @@ def list():
 @click.pass_obj
 def feeds(kwargs):
     """List all the feeds."""
-    reader = make_reader(**kwargs)
+    reader = make_reader_with_plugins(**kwargs)
     for feed in reader.get_feeds():
         click.echo(feed.url)
 
@@ -158,7 +158,7 @@ def entries(kwargs):
         <feed URL> <entry link or id>
 
     """
-    reader = make_reader(**kwargs)
+    reader = make_reader_with_plugins(**kwargs)
     for entry in reader.get_entries():
         click.echo("{} {}".format(entry.feed.url, entry.link or entry.id))
 
