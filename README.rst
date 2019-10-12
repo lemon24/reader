@@ -49,9 +49,9 @@ Usage:
 
 .. code-block:: python
 
-    >>> from reader import Reader
+    >>> from reader import make_reader
     >>>
-    >>> reader = Reader('db.sqlite')
+    >>> reader = make_reader('db.sqlite')
     >>> reader.add_feed('http://www.hellointernet.fm/podcast?format=rss')
     >>> reader.update_feeds()
     >>>
