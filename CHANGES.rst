@@ -9,7 +9,7 @@ reader changelog
 Version 0.17
 ------------
 
-Unreleased
+Released 2019-10-12
 
 * Remove the ``which`` argument of :meth:`~Reader.get_entries`. (`#136`_)
 * :class:`Reader` objects should now be created using :func:`make_reader`.
