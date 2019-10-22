@@ -11,7 +11,7 @@ Version 0.18
 
 Unreleased
 
-* Support Python 3.8 and PyPy 3.6.
+* Support Python 3.8.
 
 
 Version 0.17
