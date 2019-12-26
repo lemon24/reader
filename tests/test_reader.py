@@ -555,9 +555,9 @@ def test_get_entries_order(reader, chunk_size, order_data_key):
     """Entries should be sorted descending by (with decreasing priority):
 
     * entry first updated (only if newer than _storage.recent_threshold)
-    * entry published
-    * entry updated
+    * entry published (or entry updated if published is none)
     * feed URL
+    * entry last updated
     * order of entry in feed
     * entry id
 
