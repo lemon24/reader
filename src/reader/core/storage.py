@@ -370,7 +370,7 @@ class Storage:
 
     open_db = staticmethod(open_db)
 
-    recent_threshold = timedelta(3)
+    recent_threshold = timedelta(7)
 
     @wrap_storage_exceptions()
     def __init__(self, path=None, timeout=None):

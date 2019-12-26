@@ -486,6 +486,9 @@ class FakeNow:
         return self.now
 
 
+# use the pre-#141 threshold to avoid updating GET_ENTRIES_ORDER_DATA
+GET_ENTRIES_ORDER_RECENT_THRESHOLD = timedelta(3)
+
 GET_ENTRIES_ORDER_DATA = {
     'all_newer_than_threshold': (
         timedelta(100),
@@ -516,7 +519,7 @@ GET_ENTRIES_ORDER_DATA = {
         ],
     ),
     'some_older_than_threshold': (
-        Storage.recent_threshold,
+        GET_ENTRIES_ORDER_RECENT_THRESHOLD,
         [
             '1 3 2010-01-04',
             '1 4 2010-01-03',
@@ -567,6 +570,7 @@ def test_get_entries_order(reader, chunk_size, order_data_key):
     # TODO: Break this into smaller tests; working with it for #113 was a pain.
 
     reader._get_entries_chunk_size = chunk_size
+    reader._storage.recent_threshold = GET_ENTRIES_ORDER_RECENT_THRESHOLD
 
     parser = Parser()
     reader._parser = parser

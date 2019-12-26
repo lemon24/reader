@@ -295,7 +295,7 @@ class Reader:
 
         Entries are sorted most recent first. Currently "recent" means:
 
-        * by import date for entries published less than 3 days ago
+        * by import date for entries published less than 7 days ago
         * by published date otherwise (if an entry does not have
           :attr:`~Entry.published`, :attr:`~Entry.updated` is used)
 
