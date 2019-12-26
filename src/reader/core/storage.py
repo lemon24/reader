@@ -428,6 +428,7 @@ class Storage:
             {where_url_snippet}
             ORDER BY
                 {order_by_snippet},
+                -- to make sure the order is deterministic
                 feeds.url;
         """,
             locals(),
@@ -938,6 +939,9 @@ class Storage:
                 feeds.url DESC,
                 entries.last_updated DESC,
                 negative_feed_order DESC,
+                -- to make sure the order is deterministic;
+                -- it's unlikely it'll be used, since the probability of a feed
+                -- being updated twice during the same millisecond is very low
                 entries.id DESC
             {limit_snippet}
             ;
