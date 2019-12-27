@@ -8,14 +8,22 @@ from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from typing import Type
+from typing import TypeVar
 from typing import Union
 
 import attr
 
 
+_T = TypeVar('_T')
+
+
 class attrs_namedtuple_compat:
+
+    """Add namedtuple-like methods to an attrs-made object."""
+
     @classmethod
-    def _make(cls, iterable):
+    def _make(cls: Type[_T], iterable: Iterable[Any]) -> _T:
         iterable = tuple(iterable)
         attrs_len = len(attr.fields(cls))
         if len(iterable) != attrs_len:
@@ -24,10 +32,10 @@ class attrs_namedtuple_compat:
             )
         return cls(*iterable)
 
-    def _replace(self, **kwargs):
+    def _replace(self: _T, **kwargs: Any) -> _T:
         return attr.evolve(self, **kwargs)
 
-    def _asdict(self, recurse=False):
+    def _asdict(self, recurse: bool = False) -> Dict[str, Any]:
         return attr.asdict(self, recurse=recurse, dict_factory=OrderedDict)
 
 
@@ -158,15 +166,15 @@ class ParseResult(NamedTuple):
     # compatibility
 
     @property
-    def feed(self):
+    def feed(self) -> Feed:
         return self.parsed_feed.feed
 
     @property
-    def http_etag(self):
+    def http_etag(self) -> Optional[str]:
         return self.parsed_feed.http_etag
 
     @property
-    def http_last_modified(self):
+    def http_last_modified(self) -> Optional[str]:
         return self.parsed_feed.http_last_modified
 
 

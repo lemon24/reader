@@ -5,7 +5,7 @@ class ReaderError(Exception):
 class FeedError(ReaderError):
     """A feed error occured."""
 
-    def __init__(self, url):
+    def __init__(self, url: str) -> None:
         super().__init__(url)
 
         #: The feed URL.
@@ -35,7 +35,7 @@ class NotModified(FeedError):
 class EntryError(ReaderError):
     """An entry error occured."""
 
-    def __init__(self, url, id):
+    def __init__(self, url: str, id: str) -> None:
         super().__init__(url, id)
 
         #: The feed URL.
@@ -52,7 +52,7 @@ class EntryNotFoundError(EntryError):
 class MetadataError(ReaderError):
     """A feed metadata error occured."""
 
-    def __init__(self, url, key):
+    def __init__(self, url: str, key: str) -> None:
         super().__init__(url, key)
 
         #: The feed URL.
