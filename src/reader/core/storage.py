@@ -373,7 +373,7 @@ class Storage:
     recent_threshold = timedelta(7)
 
     @wrap_storage_exceptions()
-    def __init__(self, path=None, timeout=None):
+    def __init__(self, path, timeout=None):
         try:
             self.db = self.open_db(path, timeout=timeout)
         except DBError as e:

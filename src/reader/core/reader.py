@@ -19,6 +19,7 @@ from .storage import Storage
 from .types import Entry
 from .types import EntryInput
 from .types import Feed
+from .types import FeedForUpdate
 from .types import FeedInput
 from .types import JSONType
 from .updater import Updater
@@ -49,7 +50,7 @@ def entry_argument(entry: EntryInput) -> Tuple[str, str]:
 
 
 class _Missing:
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "no value"
 
 
@@ -61,7 +62,7 @@ _T = TypeVar('_T')
 _PostEntryAddPluginType = Callable[['Reader', str, Entry], None]
 
 
-def make_reader(url: str = None) -> 'Reader':
+def make_reader(url: str) -> 'Reader':
     """Return a new :class:`Reader`.
 
     Args:
@@ -85,7 +86,7 @@ class Reader:
 
     _get_entries_chunk_size = 2 ** 8
 
-    def __init__(self, path: str = None, called_directly: bool = True):
+    def __init__(self, path: str, called_directly: bool = True):
         self._storage = Storage(path)
         self._parser = Parser()
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
@@ -108,7 +109,7 @@ class Reader:
         """
         self._storage.close()
 
-    def add_feed(self, feed: FeedInput):
+    def add_feed(self, feed: FeedInput) -> None:
         """Add a new feed.
 
         Args:
@@ -123,7 +124,7 @@ class Reader:
         now = self._now()
         return self._storage.add_feed(url, now)
 
-    def remove_feed(self, feed: FeedInput):
+    def remove_feed(self, feed: FeedInput) -> None:
         """Remove a feed.
 
         Also removes all of the feed's entries.
@@ -198,7 +199,7 @@ class Reader:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
-    def set_feed_user_title(self, feed: FeedInput, title: Optional[str]):
+    def set_feed_user_title(self, feed: FeedInput, title: Optional[str]) -> None:
         """Set a user-defined title for a feed.
 
         Args:
@@ -213,7 +214,7 @@ class Reader:
         url = feed_argument(feed)
         return self._storage.set_feed_user_title(url, title)
 
-    def update_feeds(self, new_only: bool = False):
+    def update_feeds(self, new_only: bool = False) -> None:
         """Update all the feeds.
 
         Args:
@@ -248,7 +249,7 @@ class Reader:
                     e.__cause__,
                 )
 
-    def update_feed(self, feed: FeedInput):
+    def update_feed(self, feed: FeedInput) -> None:
         """Update a single feed.
 
         Args:
@@ -269,10 +270,14 @@ class Reader:
             assert False, "shouldn't get here"  # pragma: no cover
 
     @staticmethod
-    def _now():
+    def _now() -> datetime.datetime:
         return datetime.datetime.utcnow()
 
-    def _update_feed(self, feed_for_update, global_now=None):
+    def _update_feed(
+        self,
+        feed_for_update: FeedForUpdate,
+        global_now: Optional[datetime.datetime] = None,
+    ) -> None:
         now = self._now()
 
         if not global_now:
@@ -414,7 +419,7 @@ class Reader:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
-    def mark_as_read(self, entry: EntryInput):
+    def mark_as_read(self, entry: EntryInput) -> None:
         """Mark an entry as read.
 
         Args:
@@ -428,7 +433,7 @@ class Reader:
         feed_url, entry_id = entry_argument(entry)
         self._storage.mark_as_read_unread(feed_url, entry_id, True)
 
-    def mark_as_unread(self, entry: EntryInput):
+    def mark_as_unread(self, entry: EntryInput) -> None:
         """Mark an entry as unread.
 
         Args:
@@ -442,7 +447,7 @@ class Reader:
         feed_url, entry_id = entry_argument(entry)
         self._storage.mark_as_read_unread(feed_url, entry_id, False)
 
-    def mark_as_important(self, entry: EntryInput):
+    def mark_as_important(self, entry: EntryInput) -> None:
         """Mark an entry as important.
 
         Args:
@@ -456,7 +461,7 @@ class Reader:
         feed_url, entry_id = entry_argument(entry)
         self._storage.mark_as_important_unimportant(feed_url, entry_id, True)
 
-    def mark_as_unimportant(self, entry: EntryInput):
+    def mark_as_unimportant(self, entry: EntryInput) -> None:
         """Mark an entry as unimportant.
 
         Args:
@@ -533,7 +538,7 @@ class Reader:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
-    def set_feed_metadata(self, feed: FeedInput, key: str, value: JSONType):
+    def set_feed_metadata(self, feed: FeedInput, key: str, value: JSONType) -> None:
         """Set metadata for a feed.
 
         Args:
@@ -550,7 +555,7 @@ class Reader:
         feed_url = feed_argument(feed)
         self._storage.set_feed_metadata(feed_url, key, value)
 
-    def delete_feed_metadata(self, feed: FeedInput, key: str):
+    def delete_feed_metadata(self, feed: FeedInput, key: str) -> None:
         """Delete metadata for a feed.
 
         Args:
