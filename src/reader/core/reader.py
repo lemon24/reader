@@ -122,7 +122,7 @@ class Reader:
         """
         url = feed_argument(feed)
         now = self._now()
-        return self._storage.add_feed(url, now)
+        self._storage.add_feed(url, now)
 
     def remove_feed(self, feed: FeedInput) -> None:
         """Remove a feed.
@@ -138,7 +138,7 @@ class Reader:
 
         """
         url = feed_argument(feed)
-        return self._storage.remove_feed(url)
+        self._storage.remove_feed(url)
 
     def get_feeds(self, *, sort: str = 'title') -> Iterable[Feed]:
         """Get all the feeds.

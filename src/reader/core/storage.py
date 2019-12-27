@@ -347,7 +347,7 @@ def update_from_16_to_17(db):  # pragma: no cover
     db.execute("ALTER TABLE new_entries RENAME TO entries;")
 
 
-def open_db(path, timeout):
+def open_db(path: str, timeout: Optional[float]):
     return open_sqlite_db(
         path,
         create=create_db,
@@ -373,7 +373,7 @@ class Storage:
     recent_threshold = timedelta(7)
 
     @wrap_storage_exceptions()
-    def __init__(self, path, timeout=None):
+    def __init__(self, path: str, timeout: Optional[float] = None):
         try:
             self.db = self.open_db(path, timeout=timeout)
         except DBError as e:
@@ -399,7 +399,7 @@ class Storage:
                 raise FeedExistsError(url)
 
     @wrap_storage_exceptions()
-    def remove_feed(self, url: str):
+    def remove_feed(self, url: str) -> None:
         with self.db:
             rows = self.db.execute(
                 """
