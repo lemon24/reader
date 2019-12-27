@@ -26,24 +26,26 @@ from .updater import Updater
 log = logging.getLogger('reader')
 
 
-def feed_argument(feed):
-    try:
+def feed_argument(feed: FeedInput) -> str:
+    # Giving away some duck typing for type checking (catching AttributeError
+    # is not enough for mypy, see https://github.com/python/mypy/issues/8056).
+    if isinstance(feed, Feed):
         return feed.url
-    except AttributeError:
-        if isinstance(feed, str):
-            return feed
-        raise ValueError('feed')
+    if isinstance(feed, str):
+        return feed
+    raise ValueError('feed')
 
 
-def entry_argument(entry):
-    try:
-        return entry.feed.url, entry.id
-    except AttributeError:
-        if isinstance(entry, tuple) and len(entry) == 2:
-            feed_url, entry_id = entry
-            if isinstance(feed_url, str) and isinstance(entry_id, str):
-                return entry
-        raise ValueError('entry')
+def entry_argument(entry: EntryInput) -> Tuple[str, str]:
+    # Giving away some duck typing for type checking.
+    if isinstance(entry, Entry):
+        if isinstance(entry.feed, Feed):
+            return entry.feed.url, entry.id
+    if isinstance(entry, tuple) and len(entry) == 2:
+        feed_url, entry_id = entry
+        if isinstance(feed_url, str) and isinstance(entry_id, str):
+            return entry
+    raise ValueError('entry')
 
 
 class _Missing:
