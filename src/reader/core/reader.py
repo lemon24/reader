@@ -17,7 +17,9 @@ from .exceptions import ParseError
 from .parser import Parser
 from .storage import Storage
 from .types import Entry
+from .types import EntryInput
 from .types import Feed
+from .types import FeedInput
 from .types import JSONType
 from .updater import Updater
 
@@ -104,7 +106,7 @@ class Reader:
         """
         self._storage.close()
 
-    def add_feed(self, feed: Union[str, Feed]):
+    def add_feed(self, feed: FeedInput):
         """Add a new feed.
 
         Args:
@@ -119,7 +121,7 @@ class Reader:
         now = self._now()
         return self._storage.add_feed(url, now)
 
-    def remove_feed(self, feed: Union[str, Feed]):
+    def remove_feed(self, feed: FeedInput):
         """Remove a feed.
 
         Also removes all of the feed's entries.
@@ -155,17 +157,17 @@ class Reader:
         return self._storage.get_feeds(sort=sort)
 
     @overload
-    def get_feed(self, feed: Union[str, Feed]) -> Feed:  # pragma: no cover
+    def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
         ...
 
     @overload
     def get_feed(
-        self, feed: Union[str, Feed], default: _T
+        self, feed: FeedInput, default: _T
     ) -> Union[Feed, _T]:  # pragma: no cover
         ...
 
     def get_feed(
-        self, feed: Union[str, Feed], default: Union[_Missing, _T] = _missing
+        self, feed: FeedInput, default: Union[_Missing, _T] = _missing
     ) -> Union[Feed, _T]:
         """Get a feed.
 
@@ -194,7 +196,7 @@ class Reader:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
-    def set_feed_user_title(self, feed: Union[str, Feed], title: Optional[str]):
+    def set_feed_user_title(self, feed: FeedInput, title: Optional[str]):
         """Set a user-defined title for a feed.
 
         Args:
@@ -244,7 +246,7 @@ class Reader:
                     e.__cause__,
                 )
 
-    def update_feed(self, feed: Union[str, Feed]):
+    def update_feed(self, feed: FeedInput):
         """Update a single feed.
 
         Args:
@@ -286,7 +288,7 @@ class Reader:
     def get_entries(
         self,
         *,
-        feed: Optional[Union[str, Feed]] = None,
+        feed: Optional[FeedInput] = None,
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,
@@ -366,21 +368,17 @@ class Reader:
             yield from (e for e, _ in entries)
 
     @overload
-    def get_entry(
-        self, entry: Union[Tuple[str, str], Entry]
-    ) -> Entry:  # pragma: no cover
+    def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover
         ...
 
     @overload
     def get_entry(
-        self, entry: Union[Tuple[str, str], Entry], default: _T
+        self, entry: EntryInput, default: _T
     ) -> Union[Entry, _T]:  # pragma: no cover
         ...
 
     def get_entry(
-        self,
-        entry: Union[Tuple[str, str], Entry],
-        default: Union[_Missing, _T] = _missing,
+        self, entry: EntryInput, default: Union[_Missing, _T] = _missing
     ) -> Union[Entry, _T]:
         """Get an entry.
 
@@ -414,7 +412,7 @@ class Reader:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
-    def mark_as_read(self, entry: Union[Tuple[str, str], Entry]):
+    def mark_as_read(self, entry: EntryInput):
         """Mark an entry as read.
 
         Args:
@@ -428,7 +426,7 @@ class Reader:
         feed_url, entry_id = entry_argument(entry)
         self._storage.mark_as_read_unread(feed_url, entry_id, True)
 
-    def mark_as_unread(self, entry: Union[Tuple[str, str], Entry]):
+    def mark_as_unread(self, entry: EntryInput):
         """Mark an entry as unread.
 
         Args:
@@ -442,7 +440,7 @@ class Reader:
         feed_url, entry_id = entry_argument(entry)
         self._storage.mark_as_read_unread(feed_url, entry_id, False)
 
-    def mark_as_important(self, entry: Union[Tuple[str, str], Entry]):
+    def mark_as_important(self, entry: EntryInput):
         """Mark an entry as important.
 
         Args:
@@ -456,7 +454,7 @@ class Reader:
         feed_url, entry_id = entry_argument(entry)
         self._storage.mark_as_important_unimportant(feed_url, entry_id, True)
 
-    def mark_as_unimportant(self, entry: Union[Tuple[str, str], Entry]):
+    def mark_as_unimportant(self, entry: EntryInput):
         """Mark an entry as unimportant.
 
         Args:
@@ -470,9 +468,7 @@ class Reader:
         feed_url, entry_id = entry_argument(entry)
         self._storage.mark_as_important_unimportant(feed_url, entry_id, False)
 
-    def iter_feed_metadata(
-        self, feed: Union[str, Feed]
-    ) -> Iterable[Tuple[str, JSONType]]:
+    def iter_feed_metadata(self, feed: FeedInput) -> Iterable[Tuple[str, JSONType]]:
         """Get all the metadata values for a feed.
 
         Args:
@@ -491,18 +487,18 @@ class Reader:
 
     @overload
     def get_feed_metadata(
-        self, feed: Union[str, Feed], key: str
+        self, feed: FeedInput, key: str
     ) -> JSONType:  # pragma: no cover
         ...
 
     @overload
     def get_feed_metadata(
-        self, feed: Union[str, Feed], key: str, default: _T
+        self, feed: FeedInput, key: str, default: _T
     ) -> Union[JSONType, _T]:  # pragma: no cover
         ...
 
     def get_feed_metadata(
-        self, feed: Union[str, Feed], key: str, default: Union[_Missing, _T] = _missing
+        self, feed: FeedInput, key: str, default: Union[_Missing, _T] = _missing
     ) -> Union[JSONType, _T]:
         """Get metadata for a feed.
 
@@ -535,7 +531,7 @@ class Reader:
         else:
             assert False, "shouldn't get here"  # pragma: no cover
 
-    def set_feed_metadata(self, feed: Union[str, Feed], key: str, value: JSONType):
+    def set_feed_metadata(self, feed: FeedInput, key: str, value: JSONType):
         """Set metadata for a feed.
 
         Args:
@@ -552,7 +548,7 @@ class Reader:
         feed_url = feed_argument(feed)
         self._storage.set_feed_metadata(feed_url, key, value)
 
-    def delete_feed_metadata(self, feed: Union[str, Feed], key: str):
+    def delete_feed_metadata(self, feed: FeedInput, key: str):
         """Delete metadata for a feed.
 
         Args:

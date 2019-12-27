@@ -7,6 +7,7 @@ from typing import List
 from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
+from typing import Tuple
 from typing import Union
 
 import attr
@@ -132,6 +133,10 @@ class Enclosure(attrs_namedtuple_compat):
 
     #: The file length.
     length: Optional[int] = None
+
+
+FeedInput = Union[str, Feed]
+EntryInput = Union[Tuple[str, str], Entry]
 
 
 # Private API
