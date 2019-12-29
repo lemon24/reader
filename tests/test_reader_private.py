@@ -82,6 +82,8 @@ def test_entry_argument():
     assert entry_argument(entry) == entry_tuple
     assert entry_argument(entry_tuple) == entry_tuple
     with pytest.raises(ValueError):
+        entry_argument(entry._replace(feed=None))
+    with pytest.raises(ValueError):
         entry_argument(1)
     with pytest.raises(ValueError):
         entry_argument('ab')
