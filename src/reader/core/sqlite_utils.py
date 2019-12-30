@@ -10,8 +10,7 @@ from typing import Iterator
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-
-from typing_extensions import TypedDict
+from typing import TYPE_CHECKING
 
 
 # stolen from https://github.com/lemon24/boomtime/blob/master/boomtime/db.py
@@ -221,14 +220,17 @@ def require_sqlite_compile_options(
         )
 
 
-# Be explicit about the types of the sqlite3.connect kwargs,
-# otherwise we get stuff like:
-#
-#   Argument 2 to "connect" has incompatible type "**Dict[str, int]"; expected "..."
-#
-_SqliteOptions = TypedDict(
-    "_SqliteOptions", {"detect_types": int, "timeout": float}, total=False
-)
+if TYPE_CHECKING:  # pragma: no cover
+    from typing_extensions import TypedDict
+
+    # Be explicit about the types of the sqlite3.connect kwargs,
+    # otherwise we get stuff like:
+    #
+    #   Argument 2 to "connect" has incompatible type "**Dict[str, int]"; expected "..."
+    #
+    _SqliteOptions = TypedDict(
+        "_SqliteOptions", {"detect_types": int, "timeout": float}, total=False
+    )
 
 
 def open_sqlite_db(
@@ -243,7 +245,7 @@ def open_sqlite_db(
     # Row value support was added in 3.15.
     require_sqlite_version((3, 15))
 
-    kwargs: _SqliteOptions = dict(detect_types=sqlite3.PARSE_DECLTYPES)
+    kwargs: '_SqliteOptions' = dict(detect_types=sqlite3.PARSE_DECLTYPES)
     if timeout is not None:
         kwargs["timeout"] = timeout
 

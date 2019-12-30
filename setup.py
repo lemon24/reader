@@ -40,6 +40,7 @@ setup(
             'mechanicalsoup',
             'requests-wsgi-adapter',
             'mypy',
+            'typing_extensions',
             'pytest-randomly',
             # docs
             'sphinx',
