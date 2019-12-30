@@ -53,6 +53,10 @@ Run tests with coverage and generate an HTML report (in ``./htmlcov``)::
 
     make coverage           # installs the dependencies for you
 
+Run the type checker::
+
+    make typing             # installs the dependencies for you
+
 Start a local development server for the web-app::
 
     FLASK_DEBUG=1 FLASK_TRAP_BAD_REQUEST_ERRORS=1 \

@@ -15,6 +15,9 @@ coverage: clean-pyc install-dev
 
 cov: coverage
 
+typing: clean-pyc install-dev
+	mypy --strict src/reader/core
+
 test-all: install-dev
 	tox
 

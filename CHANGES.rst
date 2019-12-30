@@ -14,8 +14,10 @@ Unreleased
 * Support Python 3.8.
 * Increase the :meth:`~Reader.get_entries` recent threshold from 3 to 7 days.
   (`#141`_)
+* Enforce type checking for the core modules. (`#132`_)
 
 .. _#141: https://github.com/lemon24/reader/issues/141
+.. _#132: https://github.com/lemon24/reader/issues/132
 
 
 Version 0.17

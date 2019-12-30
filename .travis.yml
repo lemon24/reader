@@ -20,7 +20,7 @@ install:
     - make install-dev
     - pip install codecov
 
-script: make coverage
+script: make coverage typing
 
 notifications:
     email: false
