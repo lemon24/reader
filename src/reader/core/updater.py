@@ -1,14 +1,21 @@
 import logging
 from datetime import datetime
+from typing import Iterable
+from typing import Optional
+from typing import Sequence
+from typing import Tuple
 from typing import TYPE_CHECKING
 
 import attr
 
 from .exceptions import NotModified
+from .types import Entry
 from .types import EntryForUpdate
 from .types import EntryUpdateIntent
+from .types import Feed
 from .types import FeedForUpdate
 from .types import FeedUpdateIntent
+from .types import ParseResult
 from .types import UpdatedEntry
 from .types import UpdateResult
 
@@ -17,7 +24,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .parser import Parser
 
 
-log = logging.getLogger('reader')
+log = logging.getLogger("reader")
 
 
 @attr.s(auto_attribs=True)
@@ -27,7 +34,7 @@ class Updater:
     now: datetime
     global_now: datetime
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(self) -> None:
         if self.old_feed.stale:
             # db_updated=None not ot tested (removing it causes no tests to fail).
             #
@@ -45,14 +52,14 @@ class Updater:
             )
 
     @property
-    def url(self):
+    def url(self) -> str:
         return self.old_feed.url
 
     @property
-    def stale(self):
+    def stale(self) -> bool:
         return self.old_feed.stale
 
-    def should_update_feed(self, new):
+    def should_update_feed(self, new: Feed) -> bool:
         old = self.old_feed
         log.debug(
             "update feed %r: old updated %s, new updated %s",
@@ -91,7 +98,9 @@ class Updater:
 
         return should_be_updated
 
-    def should_update_entry(self, new, old):
+    def should_update_entry(
+        self, new: Entry, old: Optional[EntryForUpdate]
+    ) -> Tuple[Optional[datetime], bool]:
         updated = new.updated
         old_updated = old.updated if old else None
 
@@ -121,14 +130,18 @@ class Updater:
         log.debug("update entry %r of feed %r: entry added/updated", new.id, self.url)
         return (updated, True) if not old else (updated, False)
 
-    def get_entry_pairs(self, entries, storage):
+    def get_entry_pairs(
+        self, entries: Iterable[Entry], storage: "Storage"
+    ) -> Iterable[Tuple[Entry, Optional[EntryForUpdate]]]:
         entries = list(entries)
         pairs = zip(
             entries, storage.get_entries_for_update([(self.url, e.id) for e in entries])
         )
         return pairs
 
-    def get_entries_to_update(self, pairs):
+    def get_entries_to_update(
+        self, pairs: Iterable[Tuple[Entry, Optional[EntryForUpdate]]]
+    ) -> Iterable[Tuple[EntryUpdateIntent, bool]]:
         last_updated = self.now
         for feed_order, (new_entry, old_entry) in reversed(list(enumerate(pairs))):
             assert new_entry.feed is None
@@ -143,7 +156,11 @@ class Updater:
                     feed_order,
                 ), entry_new
 
-    def get_feed_to_update(self, parse_result, entries_to_update):
+    def get_feed_to_update(
+        self,
+        parse_result: ParseResult,
+        entries_to_update: Sequence[Tuple[EntryUpdateIntent, bool]],
+    ) -> Optional[FeedUpdateIntent]:
         new_count = sum(bool(n) for _, n in entries_to_update)
         updated_count = len(entries_to_update) - new_count
 
@@ -154,6 +171,7 @@ class Updater:
             new_count,
         )
 
+        feed_to_update: Optional[FeedUpdateIntent]
         if self.should_update_feed(parse_result.feed):
             feed_to_update = FeedUpdateIntent(
                 self.url,
@@ -169,7 +187,7 @@ class Updater:
 
         return feed_to_update
 
-    def update(self, parser: 'Parser', storage: 'Storage') -> UpdateResult:
+    def update(self, parser: "Parser", storage: "Storage") -> UpdateResult:
         try:
             parse_result = parser(
                 self.url, self.old_feed.http_etag, self.old_feed.http_last_modified

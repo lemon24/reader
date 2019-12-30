@@ -181,7 +181,7 @@ class ParseResult(NamedTuple):
 class FeedForUpdate(NamedTuple):
 
     url: str
-    updated: datetime
+    updated: Optional[datetime]
     http_etag: Optional[str]
     http_last_modified: Optional[str]
     stale: bool
@@ -196,7 +196,7 @@ class EntryForUpdate(NamedTuple):
 class FeedUpdateIntent(NamedTuple):
 
     url: str
-    feed: Feed
+    feed: Optional[Feed]
     http_etag: Optional[str]
     http_last_modified: Optional[str]
     last_updated: datetime
