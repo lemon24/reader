@@ -4,13 +4,21 @@ sqlite3 utilities. Contains no business logic.
 """
 import sqlite3
 from contextlib import contextmanager
+from typing import Callable
+from typing import Dict
+from typing import Iterator
+from typing import Optional
+from typing import Sequence
+from typing import Tuple
+
+from typing_extensions import TypedDict
 
 
 # stolen from https://github.com/lemon24/boomtime/blob/master/boomtime/db.py
 
 
 @contextmanager
-def ddl_transaction(db):
+def ddl_transaction(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
     """Automatically commit/rollback transactions containing DDL statements.
 
     Usage:
@@ -65,7 +73,7 @@ class DBError(Exception):
 
     display_name = "database error"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "{}: {}".format(self.display_name, super().__str__())
 
 
@@ -85,13 +93,18 @@ db_errors = [DBError, SchemaVersionError, RequirementError]
 
 
 class HeavyMigration:
-    def __init__(self, create, version, migrations):
+    def __init__(
+        self,
+        create: Callable[[sqlite3.Connection], None],
+        version: int,
+        migrations: Dict[int, Callable[[sqlite3.Connection], None]],
+    ):
         self.create = create
         self.version = version
         self.migrations = migrations
 
     @staticmethod
-    def get_version(db):
+    def get_version(db: sqlite3.Connection) -> Optional[int]:
         version_exists = (
             db.execute(
                 """
@@ -104,10 +117,11 @@ class HeavyMigration:
         )
         if not version_exists:
             return None
-        version, = db.execute("SELECT MAX(version) FROM version;").fetchone()
+        (version,) = db.execute("SELECT MAX(version) FROM version;").fetchone()
+        assert isinstance(version, int)
         return version
 
-    def migrate(self, db):
+    def migrate(self, db: sqlite3.Connection) -> None:
         # We disable foreign key checks in case any of the migrations
         # want to change the schema in ways not supported by ALTER[1].
         #
@@ -178,17 +192,17 @@ class HeavyMigration:
             db.execute("PRAGMA foreign_keys = ON;")
 
 
-def require_sqlite_version(version_info):
+def require_sqlite_version(version_info: Tuple[int, ...]) -> None:
     if version_info > sqlite3.sqlite_version_info:
         raise RequirementError(
             "at least SQLite version {} required, {} installed".format(
-                '.'.join(str(i) for i in version_info),
-                '.'.join(str(i) for i in sqlite3.sqlite_version_info),
+                ".".join(str(i) for i in version_info),
+                ".".join(str(i) for i in sqlite3.sqlite_version_info),
             )
         )
 
 
-def get_db_compile_options(db):
+def get_db_compile_options(db: sqlite3.Connection) -> Sequence[str]:
     cursor = db.cursor()
     try:
         cursor.execute("PRAGMA compile_options;")
@@ -197,7 +211,9 @@ def get_db_compile_options(db):
         cursor.close()
 
 
-def require_sqlite_compile_options(db, options):
+def require_sqlite_compile_options(
+    db: sqlite3.Connection, options: Sequence[str]
+) -> None:
     missing = set(options).difference(get_db_compile_options(db))
     if missing:
         raise RequirementError(
@@ -205,21 +221,38 @@ def require_sqlite_compile_options(db, options):
         )
 
 
-def open_sqlite_db(path, *, create, version, migrations, timeout=None):
+# Be explicit about the types of the sqlite3.connect kwargs,
+# otherwise we get stuff like:
+#
+#   Argument 2 to "connect" has incompatible type "**Dict[str, int]"; expected "..."
+#
+_SqliteOptions = TypedDict(
+    "_SqliteOptions", {"detect_types": int, "timeout": float}, total=False
+)
+
+
+def open_sqlite_db(
+    path: str,
+    *,
+    create: Callable[[sqlite3.Connection], None],
+    version: int,
+    migrations: Dict[int, Callable[[sqlite3.Connection], None]],
+    timeout: Optional[float] = None,
+) -> sqlite3.Connection:
     # TODO: This is business logic, make it an argument.
     # Row value support was added in 3.15.
     require_sqlite_version((3, 15))
 
-    kwargs = dict(detect_types=sqlite3.PARSE_DECLTYPES)
+    kwargs: _SqliteOptions = dict(detect_types=sqlite3.PARSE_DECLTYPES)
     if timeout is not None:
-        kwargs['timeout'] = timeout
+        kwargs["timeout"] = timeout
 
     db = sqlite3.connect(path, **kwargs)
 
     try:
         # TODO: This is business logic, make it an argument.
         # Require the JSON1 extension.
-        require_sqlite_compile_options(db, ['ENABLE_JSON1'])
+        require_sqlite_compile_options(db, ["ENABLE_JSON1"])
 
         # TODO: This is business logic, make it an argument.
         db.execute("PRAGMA foreign_keys = ON;")
