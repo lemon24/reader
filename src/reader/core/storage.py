@@ -8,8 +8,11 @@ from datetime import timedelta
 from itertools import chain
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Optional
+from typing import Sequence
 from typing import Tuple
+from typing import Union
 
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
@@ -27,11 +30,12 @@ from .types import Feed
 from .types import FeedForUpdate
 from .types import JSONType
 
+
 log = logging.getLogger('reader')
 
 
 @contextlib.contextmanager
-def wrap_storage_exceptions():
+def wrap_storage_exceptions() -> Iterator[None]:
     """Wrap sqlite3 exceptions in StorageError.
 
     Only wraps exceptions that are unlikely to be programming errors (bugs),
@@ -55,13 +59,13 @@ def wrap_storage_exceptions():
         raise
 
 
-def create_db(db):
+def create_db(db: sqlite3.Connection) -> None:
     create_feeds(db)
     create_entries(db)
     create_feed_metadata(db)
 
 
-def create_feeds(db, name='feeds'):
+def create_feeds(db: sqlite3.Connection, name: str = 'feeds') -> None:
     db.execute(
         f"""
         CREATE TABLE {name} (
@@ -86,7 +90,7 @@ def create_feeds(db, name='feeds'):
     )
 
 
-def create_entries(db, name='entries'):
+def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
     # TODO: Add NOT NULL where applicable.
     db.execute(
         f"""
@@ -120,7 +124,7 @@ def create_entries(db, name='entries'):
     )
 
 
-def create_feed_metadata(db):
+def create_feed_metadata(db: sqlite3.Connection) -> None:
     db.execute(
         """
         CREATE TABLE feed_metadata (
@@ -137,7 +141,7 @@ def create_feed_metadata(db):
     )
 
 
-def update_from_10_to_11(db):  # pragma: no cover
+def update_from_10_to_11(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute(
         """
         ALTER TABLE feeds
@@ -146,7 +150,7 @@ def update_from_10_to_11(db):  # pragma: no cover
     )
 
 
-def update_from_11_to_12(db):  # pragma: no cover
+def update_from_11_to_12(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute(
         """
         ALTER TABLE entries
@@ -155,11 +159,13 @@ def update_from_11_to_12(db):  # pragma: no cover
     )
 
 
-def update_from_12_to_13(db):  # pragma: no cover
+def update_from_12_to_13(db: sqlite3.Connection) -> None:  # pragma: no cover
     create_feed_metadata(db)
 
 
-def _datetime_to_us(value):  # pragma: no cover
+def _datetime_to_us(
+    value: Optional[Union[str, bytes]]
+) -> Optional[int]:  # pragma: no cover
     if not value:
         return None
     if not isinstance(value, bytes):
@@ -169,7 +175,7 @@ def _datetime_to_us(value):  # pragma: no cover
     return rv
 
 
-def update_from_13_to_14(db):  # pragma: no cover
+def update_from_13_to_14(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute(
         """
         ALTER TABLE entries
@@ -189,7 +195,7 @@ def update_from_13_to_14(db):  # pragma: no cover
     )
 
 
-def update_from_14_to_15(db):  # pragma: no cover
+def update_from_14_to_15(db: sqlite3.Connection) -> None:  # pragma: no cover
     # Assumes foreign key checks have already been disabled.
     # https://sqlite.org/lang_altertable.html#otheralter
     create_entries(db, 'new_entries')
@@ -233,7 +239,7 @@ def update_from_14_to_15(db):  # pragma: no cover
     db.execute("ALTER TABLE new_entries RENAME TO entries;")
 
 
-def update_from_15_to_16(db):  # pragma: no cover
+def update_from_15_to_16(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute(
         """
             ALTER TABLE entries
@@ -242,7 +248,7 @@ def update_from_15_to_16(db):  # pragma: no cover
     )
 
 
-def update_from_16_to_17(db):  # pragma: no cover
+def update_from_16_to_17(db: sqlite3.Connection) -> None:  # pragma: no cover
     # Clean up data in-place.
 
     db.execute(
@@ -347,7 +353,7 @@ def update_from_16_to_17(db):  # pragma: no cover
     db.execute("ALTER TABLE new_entries RENAME TO entries;")
 
 
-def open_db(path: str, timeout: Optional[float]):
+def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
     return open_sqlite_db(
         path,
         create=create_db,
@@ -412,7 +418,9 @@ class Storage:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    def _get_feeds(self, url=None, sort='title'):
+    def _get_feeds(
+        self, url: Optional[str] = None, sort: str = 'title'
+    ) -> Iterable[Feed]:
         where_url_snippet = '' if not url else "WHERE url = :url"
 
         if sort == 'title':
@@ -443,7 +451,9 @@ class Storage:
     ) -> Iterable[Feed]:
         return iter(list(self._get_feeds(url=url, sort=sort)))
 
-    def _get_feeds_for_update(self, url=None, new_only=False):
+    def _get_feeds_for_update(
+        self, url: Optional[str] = None, new_only: bool = False
+    ) -> Iterable[FeedForUpdate]:
         if url or new_only:
             where_snippet = "WHERE 1"
         else:
@@ -469,7 +479,7 @@ class Storage:
     ) -> Iterable[FeedForUpdate]:
         return iter(list(self._get_feeds_for_update(url=url, new_only=new_only)))
 
-    def _get_entry_for_update(self, feed_url, id):
+    def _get_entry_for_update(self, feed_url: str, id: str) -> Optional[EntryForUpdate]:
         row = self.db.execute(
             """
             SELECT updated
@@ -483,11 +493,15 @@ class Storage:
             return None
         return EntryForUpdate(row[0])
 
-    def _get_entries_for_update_n_queries(self, entries):
+    def _get_entries_for_update_n_queries(
+        self, entries: Sequence[Tuple[str, str]]
+    ) -> Iterable[Optional[EntryForUpdate]]:
         with self.db:
             return iter([self._get_entry_for_update(*e) for e in entries])
 
-    def _get_entries_for_update_one_query(self, entries):
+    def _get_entries_for_update_one_query(
+        self, entries: Sequence[Tuple[str, str]]
+    ) -> Iterable[Optional[EntryForUpdate]]:
         if not entries:
             return []
 
@@ -517,7 +531,7 @@ class Storage:
     @wrap_storage_exceptions()
     def get_entries_for_update(
         self, entries: Iterable[Tuple[str, str]]
-    ) -> Iterable[EntryForUpdate]:
+    ) -> Iterable[Optional[EntryForUpdate]]:
         entries = list(entries)
         try:
             return self._get_entries_for_update_one_query(entries)
@@ -596,7 +610,7 @@ class Storage:
         http_etag: Optional[str],
         http_last_modified: Optional[str],
         last_updated: datetime,
-    ):
+    ) -> None:
         if feed:
             assert url == feed.url, "updating feed URL not supported"
             self._update_feed_full(
@@ -610,7 +624,14 @@ class Storage:
         ), "http_last_modified must be none if feed is none"
         self._update_feed_last_updated(url, last_updated)
 
-    def _update_feed_full(self, url, feed, http_etag, http_last_modified, last_updated):
+    def _update_feed_full(
+        self,
+        url: str,
+        feed: Feed,
+        http_etag: Optional[str],
+        http_last_modified: Optional[str],
+        last_updated: datetime,
+    ) -> None:
         updated = feed.updated
         title = feed.title
         link = feed.link
@@ -638,7 +659,7 @@ class Storage:
             raise FeedNotFoundError(url)
         assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    def _update_feed_last_updated(self, url, last_updated):
+    def _update_feed_last_updated(self, url: str, last_updated: datetime) -> None:
         with self.db:
             rows = self.db.execute(
                 """
@@ -655,8 +676,13 @@ class Storage:
         assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     def _add_or_update_entry(
-        self, feed_url, entry, last_updated, first_updated_epoch, feed_order
-    ):
+        self,
+        feed_url: str,
+        entry: Entry,
+        last_updated: datetime,
+        first_updated_epoch: Optional[datetime],
+        feed_order: int,
+    ) -> None:
         updated = entry.updated
         published = entry.published
         id = entry.id
@@ -741,11 +767,20 @@ class Storage:
                 self._add_or_update_entry(*t)
 
     def add_or_update_entry(
-        self, feed_url, entry, last_updated, first_updated_epoch, feed_order
-    ):
-        # this is only for convenience (it's called from tests)
+        self,
+        feed_url: str,
+        entry: Entry,
+        last_updated: datetime,
+        first_updated_epoch: Optional[datetime],
+        feed_order: int,
+    ) -> None:
+        # TODO: delete this method, it's for convenience (it's only called from tests)
         self.add_or_update_entries(
-            [(feed_url, entry, last_updated, first_updated_epoch, feed_order)]
+            [
+                EntryUpdateIntent(
+                    feed_url, entry, last_updated, first_updated_epoch, feed_order
+                )
+            ]
         )
 
     _EntryLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
@@ -951,7 +986,9 @@ class Storage:
 
         return query
 
-    def _iter_feed_metadata(self, feed_url, key):
+    def _iter_feed_metadata(
+        self, feed_url: str, key: Optional[str]
+    ) -> Iterable[Tuple[str, JSONType]]:
         where_url_snippet = "WHERE feed = :feed_url"
         if key is not None:
             where_url_snippet += " AND key = :key"
@@ -964,8 +1001,8 @@ class Storage:
             locals(),
         )
 
-        for key, value in cursor:
-            yield key, json.loads(value)
+        for mkey, value in cursor:
+            yield mkey, json.loads(value)
 
     @wrap_storage_exceptions()
     def iter_feed_metadata(
