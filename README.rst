@@ -11,7 +11,7 @@
   :target: https://codecov.io/github/lemon24/reader?branch=master
   :alt: code coverage
 
-.. |documentation-status| image:: https://readthedocs.org/projects/pip/badge/?version=latest&style=flat
+.. |documentation-status| image:: https://readthedocs.org/projects/reader/badge/?version=latest&style=flat
   :target: https://reader.readthedocs.io/en/latest/?badge=latest
   :alt: documentation status
 
