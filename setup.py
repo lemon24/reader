@@ -33,15 +33,17 @@ setup(
         'dev': [
             # tests
             'pytest>=4',
+            'pytest-randomly',
             'coverage',
             'pytest-cov',
             'tox',
             'requests-mock',
             'mechanicalsoup',
             'requests-wsgi-adapter',
-            'mypy',
+            # mypy is not working on pypy as of January 2020
+            # https://github.com/python/typed_ast/issues/97#issuecomment-484335190
+            'mypy; implementation_name!="pypy"',
             'typing_extensions',
-            'pytest-randomly',
             # docs
             'sphinx',
             'sphinx_rtd_theme',
