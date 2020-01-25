@@ -1,12 +1,11 @@
 import logging
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
 from typing import TYPE_CHECKING
-
-import attr
 
 from .exceptions import NotModified
 from .types import Entry
@@ -27,14 +26,14 @@ if TYPE_CHECKING:  # pragma: no cover
 log = logging.getLogger("reader")
 
 
-@attr.s(auto_attribs=True)
+@dataclass
 class Updater:
 
     old_feed: FeedForUpdate
     now: datetime
     global_now: datetime
 
-    def __attrs_post_init__(self) -> None:
+    def __post_init__(self) -> None:
         if self.old_feed.stale:
             # db_updated=None not ot tested (removing it causes no tests to fail).
             #
