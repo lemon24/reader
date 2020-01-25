@@ -13,7 +13,7 @@ python:
 matrix:
     allow_failures:
         - python: "nightly"
-        # not working: https://travis-ci.org/lemon24/reader/jobs/601123429
+        # not working: https://github.com/lemon24/reader/issues/148
         - python: "pypy3"
 
 install:
