@@ -15,8 +15,10 @@ coverage: clean-pyc install-dev
 
 cov: coverage
 
+# mypy is not working on pypy as of January 2020
+# https://github.com/python/typed_ast/issues/97#issuecomment-484335190
 typing: clean-pyc install-dev
-	mypy --strict src/reader/core
+	test $$( python -c 'import sys; print(sys.implementation.name)' ) != pypy && mypy --strict src/reader/core
 
 test-all: install-dev
 	tox
