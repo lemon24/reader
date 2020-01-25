@@ -15,9 +15,11 @@ Unreleased
 * Increase the :meth:`~Reader.get_entries` recent threshold from 3 to 7 days.
   (`#141`_)
 * Enforce type checking for the core modules. (`#132`_)
+* Use dataclasses for the data objects instead of attrs. (`#137`_)
 
 .. _#141: https://github.com/lemon24/reader/issues/141
 .. _#132: https://github.com/lemon24/reader/issues/132
+.. _#137: https://github.com/lemon24/reader/issues/137
 
 
 Version 0.17

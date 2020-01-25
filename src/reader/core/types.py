@@ -1,4 +1,5 @@
-from collections import OrderedDict
+import dataclasses
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from typing import Dict
@@ -12,38 +13,34 @@ from typing import Type
 from typing import TypeVar
 from typing import Union
 
-import attr
-
 
 _T = TypeVar('_T')
 
 
-class attrs_namedtuple_compat:
+class _namedtuple_compat:
 
-    """Add namedtuple-like methods to an attrs-made object."""
+    """Add namedtuple-like methods to a dataclass."""
 
     @classmethod
     def _make(cls: Type[_T], iterable: Iterable[Any]) -> _T:
         iterable = tuple(iterable)
-        attrs_len = len(attr.fields(cls))
+        attrs_len = len(dataclasses.fields(cls))
         if len(iterable) != attrs_len:
             raise TypeError(
                 'Expected %d arguments, got %d' % (attrs_len, len(iterable))
             )
         return cls(*iterable)
 
-    def _replace(self: _T, **kwargs: Any) -> _T:
-        return attr.evolve(self, **kwargs)
+    _replace = dataclasses.replace
 
-    def _asdict(self, recurse: bool = False) -> Dict[str, Any]:
-        return attr.asdict(self, recurse=recurse, dict_factory=OrderedDict)
+    _asdict = dataclasses.asdict
 
 
 # Public API
 
 
-@attr.s(slots=True, frozen=True, auto_attribs=True)
-class Feed(attrs_namedtuple_compat):
+@dataclass(frozen=True)
+class Feed(_namedtuple_compat):
 
     """Data type representing a feed."""
 
@@ -66,8 +63,8 @@ class Feed(attrs_namedtuple_compat):
     user_title: Optional[str] = None
 
 
-@attr.s(slots=True, frozen=True, auto_attribs=True)
-class Entry(attrs_namedtuple_compat):
+@dataclass(frozen=True)
+class Entry(_namedtuple_compat):
 
     """Data type representing an entry."""
 
@@ -113,8 +110,8 @@ class Entry(attrs_namedtuple_compat):
     feed: Optional[Feed] = None
 
 
-@attr.s(slots=True, frozen=True, auto_attribs=True)
-class Content(attrs_namedtuple_compat):
+@dataclass(frozen=True)
+class Content(_namedtuple_compat):
 
     """Data type representing a piece of content."""
 
@@ -128,8 +125,8 @@ class Content(attrs_namedtuple_compat):
     language: Optional[str] = None
 
 
-@attr.s(slots=True, frozen=True, auto_attribs=True)
-class Enclosure(attrs_namedtuple_compat):
+@dataclass(frozen=True)
+class Enclosure(_namedtuple_compat):
 
     """Data type representing an external file."""
 

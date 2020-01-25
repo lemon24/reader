@@ -1,16 +1,15 @@
-from collections import OrderedDict
+from dataclasses import dataclass
 
-import attr
 import pytest
 
-from reader.core.types import attrs_namedtuple_compat
+from reader.core.types import _namedtuple_compat
 
 
-def test_attrs_namedtuple_compat():
-    @attr.s(slots=True, frozen=True)
-    class Object(attrs_namedtuple_compat):
-        one = attr.ib()
-        two = attr.ib(default=None)
+def test_namedtuple_compat():
+    @dataclass(frozen=True)
+    class Object(_namedtuple_compat):
+        one: int
+        two: int = None
 
     assert Object._make((1, 2)) == Object(1, 2)
     with pytest.raises(TypeError):
@@ -20,4 +19,4 @@ def test_attrs_namedtuple_compat():
 
     assert Object(1, 1)._replace(two=2) == Object(1, 2)
 
-    assert Object(1, 2)._asdict() == OrderedDict([['one', 1], ['two', 2]])
+    assert Object(1, 2)._asdict() == {'one': 1, 'two': 2}

@@ -24,7 +24,7 @@ setup(
     package_dir={'': 'src'},
     include_package_data=True,
     python_requires='>=3.6',
-    install_requires=['attrs>=17.3', 'feedparser>=5', 'requests'],
+    install_requires=['dataclasses; python_version<"3.7"', 'feedparser>=5', 'requests'],
     extras_require={
         'cli': ['click>=5'],
         'web-app': ['flask>=0.10', 'humanize'],
