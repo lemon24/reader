@@ -9,7 +9,7 @@ reader changelog
 Version 0.18
 ------------
 
-Unreleased
+Released 2020-01-26
 
 * Support Python 3.8.
 * Increase the :meth:`~Reader.get_entries` recent threshold from 3 to 7 days.
