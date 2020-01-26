@@ -1,4 +1,5 @@
 import sqlite3
+import sys
 
 import pytest
 
@@ -16,7 +17,17 @@ def dummy_ddl_transaction(db):
     return db
 
 
-@pytest.mark.parametrize('ddl_transaction', [dummy_ddl_transaction, ddl_transaction])
+@pytest.mark.parametrize(
+    'ddl_transaction',
+    [
+        # fails, but only on PyPy 3.6, not on CPython
+        pytest.param(
+            dummy_ddl_transaction,
+            marks=pytest.mark.xfail("sys.implementation.name == 'pypy'", strict=True),
+        ),
+        ddl_transaction,
+    ],
+)
 def test_ddl_transaction_create_and_insert(ddl_transaction):
     db = sqlite3.connect(':memory:')
 
