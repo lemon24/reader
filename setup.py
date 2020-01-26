@@ -31,8 +31,10 @@ setup(
         'enclosure-tags': ['requests', 'mutagen'],
         'plugins': ['setuptools>=40'],
         'dev': [
-            # tests
-            'pytest>=4',
+            # !=5.3.4 because of
+            # https://github.com/pytest-dev/pytest/issues/6517
+            # TODO: remove !=5.3.4 once a newer version is published
+            'pytest>=4,!=5.3.4',
             'pytest-randomly',
             'coverage',
             'pytest-cov',
