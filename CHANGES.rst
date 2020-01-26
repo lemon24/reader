@@ -11,6 +11,8 @@ Version 0.19
 
 Unreleased
 
+* Support PyPy 3.6.
+
 
 Version 0.18
 ------------
