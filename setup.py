@@ -52,6 +52,8 @@ setup(
             'click>=5',
             'sphinx-click',
             # release
+            'setuptools',
+            'wheel',
             'twine',
             # ...
             'pre-commit',
