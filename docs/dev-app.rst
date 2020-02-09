@@ -10,6 +10,9 @@ be available everywhere.
 
 Fast and ugly is better than slow and pretty.
 
+It should be possible to build a decent web interface (at least for reader)
+using only HTML forms with a few JavaScript enhancements added on top.
+
 
 User interactions
 ~~~~~~~~~~~~~~~~~
