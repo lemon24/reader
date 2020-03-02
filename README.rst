@@ -1,7 +1,7 @@
 **reader** is a minimal feed reader library.
 
 
-|build-status| |code-coverage| |documentation-status| |pypi-status|
+|build-status| |code-coverage| |documentation-status| |pypi-status| |code-style|
 
 .. |build-status| image:: https://travis-ci.org/lemon24/reader.svg?branch=master
   :target: https://travis-ci.org/lemon24/reader
@@ -18,6 +18,10 @@
 .. |pypi-status| image:: https://img.shields.io/pypi/v/reader.svg
   :target: https://pypi.python.org/pypi/reader
   :alt: PyPI status
+
+.. |code-style| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
+    :alt: code style: black
 
 
 Features:
