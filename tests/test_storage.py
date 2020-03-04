@@ -13,6 +13,7 @@ from reader import MetadataNotFoundError
 from reader import StorageError
 from reader.core.storage import Storage
 from reader.core.storage import wrap_storage_exceptions
+from reader.core.types import EntryFilterOptions
 from reader.core.types import EntryForUpdate
 
 
@@ -405,7 +406,10 @@ def test_entry_remains_read_after_update(storage_with_two_entries):
     )
 
     assert {
-        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), read=True)
+        e.id
+        for e, _ in storage.get_entries(
+            datetime(2010, 1, 1), EntryFilterOptions(read=True)
+        )
     } == {'one'}
 
 
@@ -432,7 +436,10 @@ def storage_with_two_entries(storage):
 def test_important_unimportant_by_default(storage_with_two_entries):
     storage = storage_with_two_entries
     assert {
-        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), important=False)
+        e.id
+        for e, _ in storage.get_entries(
+            datetime(2010, 1, 1), EntryFilterOptions(important=False)
+        )
     } == {'one', 'two'}
 
 
@@ -445,13 +452,22 @@ def test_important_get_entries(storage_with_two_entries):
         'two',
     }
     assert {
-        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), important=None)
+        e.id
+        for e, _ in storage.get_entries(
+            datetime(2010, 1, 1), EntryFilterOptions(important=None)
+        )
     } == {'one', 'two'}
     assert {
-        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), important=True)
+        e.id
+        for e, _ in storage.get_entries(
+            datetime(2010, 1, 1), EntryFilterOptions(important=True)
+        )
     } == {'one'}
     assert {
-        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), important=False)
+        e.id
+        for e, _ in storage.get_entries(
+            datetime(2010, 1, 1), EntryFilterOptions(important=False)
+        )
     } == {'two'}
 
 
@@ -468,7 +484,10 @@ def test_important_entry_remains_important_after_update(storage_with_two_entries
     )
 
     assert {
-        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), important=True)
+        e.id
+        for e, _ in storage.get_entries(
+            datetime(2010, 1, 1), EntryFilterOptions(important=True)
+        )
     } == {'one'}
 
 
@@ -477,7 +496,7 @@ def test_important_entry_important(storage_with_two_entries):
     storage.mark_as_important_unimportant('feed', 'one', True)
 
     assert {
-        e.id: e.important for e, _ in storage.get_entries(now=datetime(2010, 1, 1))
+        e.id: e.important for e, _ in storage.get_entries(datetime(2010, 1, 1))
     } == {'one': True, 'two': False}
 
 
@@ -487,7 +506,10 @@ def test_important_mark_as_unimportant(storage_with_two_entries):
     storage.mark_as_important_unimportant('feed', 'one', False)
 
     assert {
-        e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1), important=True)
+        e.id
+        for e, _ in storage.get_entries(
+            datetime(2010, 1, 1), EntryFilterOptions(important=True)
+        )
     } == set()
 
 

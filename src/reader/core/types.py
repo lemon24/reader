@@ -239,3 +239,15 @@ class UpdateResult(NamedTuple):
 # https://github.com/python/typing/issues/182
 JSONValue = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
 JSONType = Union[Dict[str, JSONValue], List[JSONValue]]
+
+
+# TODO: this should probably be in storage.py
+class EntryFilterOptions(NamedTuple):
+
+    """Options for filtering the results of the "get entry" storage methods."""
+
+    feed_url: Optional[str] = None
+    entry_id: Optional[str] = None
+    read: Optional[bool] = None
+    important: Optional[bool] = None
+    has_enclosures: Optional[bool] = None

@@ -17,6 +17,7 @@ from .exceptions import ParseError
 from .parser import Parser
 from .storage import Storage
 from .types import Entry
+from .types import EntryFilterOptions
 from .types import EntryInput
 from .types import Feed
 from .types import FeedForUpdate
@@ -346,11 +347,13 @@ class Reader:
         while True:
 
             entries = self._storage.get_entries(
-                feed_url=feed_url,
-                read=read,
-                important=important,
-                has_enclosures=has_enclosures,
                 now=now,
+                filter_options=EntryFilterOptions(
+                    feed_url=feed_url,
+                    read=read,
+                    important=important,
+                    has_enclosures=has_enclosures,
+                ),
                 chunk_size=chunk_size,
                 last=last,
             )
@@ -405,7 +408,10 @@ class Reader:
         now = self._now()
 
         entries = list(
-            self._storage.get_entries(now=now, feed_url=feed_url, entry_id=entry_id)
+            self._storage.get_entries(
+                now=now,
+                filter_options=EntryFilterOptions(feed_url=feed_url, entry_id=entry_id),
+            )
         )
 
         if len(entries) == 0:

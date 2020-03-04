@@ -27,6 +27,7 @@ from .sqlite_utils import open_sqlite_db
 from .types import Content
 from .types import Enclosure
 from .types import Entry
+from .types import EntryFilterOptions
 from .types import EntryForUpdate
 from .types import EntryUpdateIntent
 from .types import Feed
@@ -801,25 +802,14 @@ class Storage:
     @wrap_storage_exceptions()
     def get_entries(
         self,
-        *,
-        feed_url: Optional[str] = None,
-        read: Optional[bool] = None,
-        important: Optional[bool] = None,
-        has_enclosures: Optional[bool] = None,
         now: datetime,
+        filter_options: EntryFilterOptions = EntryFilterOptions(),
+        *,
         chunk_size: Optional[int] = None,
         last: _EntryLast = None,
-        entry_id: Optional[str] = None,
     ) -> Iterable[Tuple[Entry, _EntryLast]]:
         rv = self._get_entries(
-            feed_url=feed_url,
-            read=read,
-            important=important,
-            has_enclosures=has_enclosures,
-            now=now,
-            chunk_size=chunk_size,
-            last=last,
-            entry_id=entry_id,
+            now=now, filter_options=filter_options, chunk_size=chunk_size, last=last
         )
 
         # Equivalent to using @returns_iter_list, except when we don't have
@@ -832,19 +822,15 @@ class Storage:
 
     def _get_entries(
         self,
-        *,
-        feed_url: Optional[str] = None,
-        read: Optional[bool] = None,
-        important: Optional[bool] = None,
-        has_enclosures: Optional[bool] = None,
         now: datetime,
+        filter_options: EntryFilterOptions,
+        *,
         chunk_size: Optional[int] = None,
         last: _EntryLast = None,
-        entry_id: Optional[str] = None,
     ) -> Iterable[Tuple[Entry, _EntryLast]]:
-        query = self._make_get_entries_query(
-            feed_url, read, important, has_enclosures, chunk_size, last, entry_id
-        )
+        query = self._make_get_entries_query(filter_options, chunk_size, last)
+
+        feed_url, entry_id, read, important, has_enclosures = filter_options
 
         recent_threshold = now - self.recent_threshold
         if last:
@@ -879,15 +865,13 @@ class Storage:
 
     def _make_get_entries_query(
         self,
-        feed_url: Optional[str] = None,
-        read: Optional[bool] = None,
-        important: Optional[bool] = None,
-        has_enclosures: Optional[bool] = None,
+        filter_options: EntryFilterOptions,
         chunk_size: Optional[int] = None,
         last: _EntryLast = None,
-        entry_id: Optional[str] = None,
     ) -> str:
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
+
+        feed_url, entry_id, read, important, has_enclosures = filter_options
 
         where_snippets = []
 

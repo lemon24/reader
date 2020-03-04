@@ -1091,7 +1091,7 @@ def test_get_entries_important(reader, important):
 
     (call, kwargs), = reader._storage.calls
     assert call == 'get_entries'
-    assert kwargs['important'] == important
+    assert kwargs['filter_options'].important == important
 
     with pytest.raises(ValueError):
         set(reader.get_entries(important='bad important'))
