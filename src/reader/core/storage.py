@@ -496,26 +496,22 @@ class Storage:
         for row in cursor:
             yield FeedForUpdate._make(row)
 
-    def _get_entry_for_update(self, feed_url: str, id: str) -> Optional[EntryForUpdate]:
-        row = self.db.execute(
-            """
-            SELECT updated
-            FROM entries
-            WHERE feed = :feed_url
-                AND id = :id;
-        """,
-            locals(),
-        ).fetchone()
-        if not row:
-            return None
-        return EntryForUpdate(row[0])
-
     @returns_iter_list
     def _get_entries_for_update_n_queries(
         self, entries: Sequence[Tuple[str, str]]
     ) -> Iterable[Optional[EntryForUpdate]]:
         with self.db:
-            return (self._get_entry_for_update(*e) for e in entries)
+            for feed_url, id in entries:
+                row = self.db.execute(
+                    """
+                    SELECT updated
+                    FROM entries
+                    WHERE feed = :feed_url
+                        AND id = :id;
+                    """,
+                    locals(),
+                ).fetchone()
+                yield EntryForUpdate(row[0]) if row else None
 
     @returns_iter_list
     def _get_entries_for_update_one_query(
