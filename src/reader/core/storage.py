@@ -7,11 +7,14 @@ from datetime import datetime
 from datetime import timedelta
 from itertools import chain
 from typing import Any
+from typing import Callable
+from typing import cast
 from typing import Iterable
 from typing import Iterator
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from typing import TypeVar
 from typing import Union
 
 from .exceptions import EntryNotFoundError
@@ -57,6 +60,28 @@ def wrap_storage_exceptions() -> Iterator[None]:
         if "cannot operate on a closed database" in str(e).lower():
             raise StorageError(f"sqlite3 error: {e}") from e
         raise
+
+
+FuncType = Callable[..., Any]
+F = TypeVar('F', bound=FuncType)
+
+
+def returns_iter_list(fn: F) -> F:
+    """Call iter(list(...)) on the return value of fn.
+
+    The list() call makes sure callers can't block the storage
+    if they keep the result around and don't iterate over it.
+
+    The iter() call makes sure callers don't expect the
+    result to be anything more than an iterable.
+
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):  # type: ignore
+        return iter(list(fn(*args, **kwargs)))
+
+    return cast(F, wrapper)
 
 
 def create_db(db: sqlite3.Connection) -> None:
@@ -418,7 +443,9 @@ class Storage:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    def _get_feeds(
+    @wrap_storage_exceptions()
+    @returns_iter_list
+    def get_feeds(
         self, url: Optional[str] = None, sort: str = 'title'
     ) -> Iterable[Feed]:
         where_url_snippet = '' if not url else "WHERE url = :url"
@@ -446,12 +473,8 @@ class Storage:
             yield Feed._make(row)
 
     @wrap_storage_exceptions()
-    def get_feeds(
-        self, url: Optional[str] = None, sort: str = 'title'
-    ) -> Iterable[Feed]:
-        return iter(list(self._get_feeds(url=url, sort=sort)))
-
-    def _get_feeds_for_update(
+    @returns_iter_list
+    def get_feeds_for_update(
         self, url: Optional[str] = None, new_only: bool = False
     ) -> Iterable[FeedForUpdate]:
         if url or new_only:
@@ -473,12 +496,6 @@ class Storage:
         for row in cursor:
             yield FeedForUpdate._make(row)
 
-    @wrap_storage_exceptions()
-    def get_feeds_for_update(
-        self, url: Optional[str] = None, new_only: bool = False
-    ) -> Iterable[FeedForUpdate]:
-        return iter(list(self._get_feeds_for_update(url=url, new_only=new_only)))
-
     def _get_entry_for_update(self, feed_url: str, id: str) -> Optional[EntryForUpdate]:
         row = self.db.execute(
             """
@@ -493,12 +510,14 @@ class Storage:
             return None
         return EntryForUpdate(row[0])
 
+    @returns_iter_list
     def _get_entries_for_update_n_queries(
         self, entries: Sequence[Tuple[str, str]]
     ) -> Iterable[Optional[EntryForUpdate]]:
         with self.db:
-            return iter([self._get_entry_for_update(*e) for e in entries])
+            return (self._get_entry_for_update(*e) for e in entries)
 
+    @returns_iter_list
     def _get_entries_for_update_one_query(
         self, entries: Sequence[Tuple[str, str]]
     ) -> Iterable[Optional[EntryForUpdate]]:
@@ -524,9 +543,7 @@ class Storage:
             parameters,
         )
 
-        return iter(
-            [EntryForUpdate(updated) if exists else None for exists, updated in rows]
-        )
+        return (EntryForUpdate(updated) if exists else None for exists, updated in rows)
 
     @wrap_storage_exceptions()
     def get_entries_for_update(
@@ -809,11 +826,10 @@ class Storage:
             entry_id=entry_id,
         )
 
+        # Equivalent to using @returns_iter_list, except when we don't have
+        # a chunk_size (which disables pagination, but can block the database).
+        # TODO: If we don't expose chunk_size, why have this special case?
         if chunk_size:
-            # The list() call is here to make sure callers can't block the
-            # storage if they keep the result around and don't iterate over it.
-            # The iter() call is here to make sure callers don't expect the
-            # result to be anything more than an iterable.
             rv = iter(list(rv))
 
         return rv
@@ -986,8 +1002,10 @@ class Storage:
 
         return query
 
-    def _iter_feed_metadata(
-        self, feed_url: str, key: Optional[str]
+    @wrap_storage_exceptions()
+    @returns_iter_list
+    def iter_feed_metadata(
+        self, feed_url: str, key: Optional[str] = None
     ) -> Iterable[Tuple[str, JSONType]]:
         where_url_snippet = "WHERE feed = :feed_url"
         if key is not None:
@@ -1003,12 +1021,6 @@ class Storage:
 
         for mkey, value in cursor:
             yield mkey, json.loads(value)
-
-    @wrap_storage_exceptions()
-    def iter_feed_metadata(
-        self, feed_url: str, key: Optional[str] = None
-    ) -> Iterable[Tuple[str, JSONType]]:
-        return iter(list(self._iter_feed_metadata(feed_url, key)))
 
     @wrap_storage_exceptions()
     def set_feed_metadata(self, feed_url: str, key: str, value: JSONType) -> None:
