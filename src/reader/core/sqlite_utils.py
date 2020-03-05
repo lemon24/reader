@@ -15,7 +15,7 @@ from typing import Tuple
 # TODO: remove this once we drop support for Python 3.7
 if sys.version_info >= (3, 8):  # pragma: no cover
     from typing import TypedDict
-else:
+else:  # pragma: no cover
     from typing_extensions import TypedDict
 
 
