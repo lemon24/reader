@@ -80,6 +80,8 @@ class Entry(_namedtuple_compat):
 
     # Entries returned by the parser always have updated set.
     # I tried modeling this through typing, but it's too complicated.
+    # TODO: Make typing enforce updated is always set.
+    # TODO: When can be Entry.updated be None anyway?
 
     #: The date the entry was last updated.
     updated: Optional[datetime]
@@ -147,7 +149,12 @@ class Enclosure(_namedtuple_compat):
     length: Optional[int] = None
 
 
-# Semi-public (typing support)
+# Semi-public API (typing support)
+
+
+# https://github.com/python/typing/issues/182
+JSONValue = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
+JSONType = Union[Dict[str, JSONValue], List[JSONValue]]
 
 
 # Using protocols here so we have both duck typing and type checking.
@@ -214,7 +221,7 @@ class ParseResult(NamedTuple):
     parsed_feed: ParsedFeed
     entries: Iterable[Entry]
 
-    # compatibility
+    # compatibility / convenience
 
     @property
     def feed(self) -> Feed:
@@ -231,33 +238,49 @@ class ParseResult(NamedTuple):
 
 class FeedForUpdate(NamedTuple):
 
+    """Update-relevant information about an exiting feed, from Storage."""
+
     url: str
+
+    #: The date the feed was last updated, according to the feed.
     updated: Optional[datetime]
+
     http_etag: Optional[str]
     http_last_modified: Optional[str]
+
+    #: Whether the next update should update *all* entries,
+    #: regardless of their .updated.
     stale: bool
-    last_updated: datetime
+
+    #: The date the feed was last updated, according to reader; none if never.
+    last_updated: Optional[datetime]
 
 
 class EntryForUpdate(NamedTuple):
 
+    """Update-relevant information about an exiting entry, from Storage."""
+
+    #: The date the entry was last updated, according to the entry.
     updated: datetime
 
 
 class FeedUpdateIntent(NamedTuple):
 
+    """Data to be passed to Storage when updating a feed."""
+
     url: str
+
+    #: The time at the start of updating this feed.
     last_updated: datetime
+
     feed: Optional[Feed] = None
     http_etag: Optional[str] = None
     http_last_modified: Optional[str] = None
 
 
 class EntryUpdateIntent(NamedTuple):
-    """An entry with additional data to be passed to Storage
-    when updating a feed.
 
-    """
+    """Data to be passed to Storage when updating a feed."""
 
     #: The feed URL.
     url: str
@@ -288,11 +311,6 @@ class UpdateResult(NamedTuple):
 
     #: The entries that were updated.
     entries: Iterable[UpdatedEntry]
-
-
-# https://github.com/python/typing/issues/182
-JSONValue = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
-JSONType = Union[Dict[str, JSONValue], List[JSONValue]]
 
 
 # TODO: these should probably be in storage.py (along with some of the above)
