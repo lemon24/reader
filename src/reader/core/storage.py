@@ -547,6 +547,9 @@ class Storage:
     def get_entries_for_update(
         self, entries: Iterable[Tuple[str, str]]
     ) -> Iterable[Optional[EntryForUpdate]]:
+        # The reason there are two implementations for this method:
+        # https://github.com/lemon24/reader/issues/109
+
         entries = list(entries)
         try:
             return self._get_entries_for_update_one_query(entries)
