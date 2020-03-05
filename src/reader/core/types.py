@@ -140,8 +140,33 @@ class Enclosure(_namedtuple_compat):
     length: Optional[int] = None
 
 
+# Typing support
+
+
 FeedInput = Union[str, Feed]
 EntryInput = Union[Tuple[str, str], Entry]
+
+
+def feed_argument(feed: FeedInput) -> str:
+    # Giving away some duck typing for type checking (catching AttributeError
+    # is not enough for mypy, see https://github.com/python/mypy/issues/8056).
+    if isinstance(feed, Feed):
+        return feed.url
+    if isinstance(feed, str):
+        return feed
+    raise ValueError('feed')
+
+
+def entry_argument(entry: EntryInput) -> Tuple[str, str]:
+    # Giving away some duck typing for type checking.
+    if isinstance(entry, Entry):
+        if isinstance(entry.feed, Feed):
+            return entry.feed.url, entry.id
+    if isinstance(entry, tuple) and len(entry) == 2:
+        feed_url, entry_id = entry
+        if isinstance(feed_url, str) and isinstance(entry_id, str):
+            return entry
+    raise ValueError('entry')
 
 
 # Private API

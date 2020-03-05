@@ -8,8 +8,6 @@ from reader import Entry
 from reader import Feed
 from reader import FeedNotFoundError
 from reader.core.reader import _missing
-from reader.core.reader import entry_argument
-from reader.core.reader import feed_argument
 
 
 def test_update_stale(reader, call_update_method):
@@ -65,34 +63,6 @@ def test_update_parse(reader, call_update_method):
     parser.calls[:] = []
     call_update_method(reader, feed.url)
     assert parser.calls == [(feed.url, 'etag', 'last-modified')]
-
-
-def test_feed_argument():
-    feed = Feed('url')
-    assert feed_argument(feed) == feed.url
-    assert feed_argument(feed.url) == feed.url
-    with pytest.raises(ValueError):
-        feed_argument(1)
-
-
-def test_entry_argument():
-    feed = Feed('url')
-    entry = Entry('entry', 'updated', feed=feed)
-    entry_tuple = feed.url, entry.id
-    assert entry_argument(entry) == entry_tuple
-    assert entry_argument(entry_tuple) == entry_tuple
-    with pytest.raises(ValueError):
-        entry_argument(entry._replace(feed=None))
-    with pytest.raises(ValueError):
-        entry_argument(1)
-    with pytest.raises(ValueError):
-        entry_argument('ab')
-    with pytest.raises(ValueError):
-        entry_argument((1, 'b'))
-    with pytest.raises(ValueError):
-        entry_argument(('a', 2))
-    with pytest.raises(ValueError):
-        entry_argument(('a', 'b', 'c'))
 
 
 def test_post_entry_add_plugins(reader):
