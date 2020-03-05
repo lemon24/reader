@@ -15,6 +15,7 @@ from reader.core.storage import Storage
 from reader.core.storage import wrap_storage_exceptions
 from reader.core.types import EntryFilterOptions
 from reader.core.types import EntryForUpdate
+from reader.core.types import EntryUpdateIntent
 from reader.core.types import FeedUpdateIntent
 
 
@@ -135,7 +136,9 @@ def update_feed_last_updated(storage, feed, entry):
 
 
 def add_or_update_entry(storage, feed, entry):
-    storage.add_or_update_entry(feed.url, entry, entry.updated, datetime(2010, 1, 1), 0)
+    storage.add_or_update_entry(
+        EntryUpdateIntent(feed.url, entry, entry.updated, datetime(2010, 1, 1), 0)
+    )
 
 
 def add_or_update_entries(storage, feed, entry):
@@ -198,7 +201,9 @@ def test_errors_locked(db_path, do_stuff):
     feed = Feed('one')
     entry = Entry('entry', datetime(2010, 1, 2))
     storage.add_feed(feed.url, datetime(2010, 1, 1))
-    storage.add_or_update_entry(feed.url, entry, entry.updated, datetime(2010, 1, 1), 0)
+    storage.add_or_update_entry(
+        EntryUpdateIntent(feed.url, entry, entry.updated, datetime(2010, 1, 1), 0)
+    )
 
     in_transaction = threading.Event()
     can_return_from_transaction = threading.Event()
@@ -278,9 +283,13 @@ def test_iter_locked(db_path, iter_stuff):
     feed = Feed('one')
     entry = Entry('entry', datetime(2010, 1, 1))
     storage.add_feed(feed.url, datetime(2010, 1, 2))
-    storage.add_or_update_entry(feed.url, entry, entry.updated, datetime(2010, 1, 1), 0)
+    storage.add_or_update_entry(
+        EntryUpdateIntent(feed.url, entry, entry.updated, datetime(2010, 1, 1), 0)
+    )
     storage.add_feed('two', datetime(2010, 1, 1))
-    storage.add_or_update_entry('two', entry, entry.updated, datetime(2010, 1, 1), 0)
+    storage.add_or_update_entry(
+        EntryUpdateIntent('two', entry, entry.updated, datetime(2010, 1, 1), 0)
+    )
     storage.set_feed_metadata('two', '1', 1)
     storage.set_feed_metadata('two', '2', 2)
 
@@ -346,11 +355,13 @@ def test_get_entries_for_update(storage_cls):
     storage = storage_cls(':memory:')
     storage.add_feed('feed', datetime(2010, 1, 1))
     storage.add_or_update_entry(
-        'feed',
-        Entry('one', datetime(2010, 1, 1)),
-        datetime(2010, 1, 2),
-        datetime(2010, 1, 1),
-        0,
+        EntryUpdateIntent(
+            'feed',
+            Entry('one', datetime(2010, 1, 1)),
+            datetime(2010, 1, 2),
+            datetime(2010, 1, 1),
+            0,
+        )
     )
 
     assert list(storage.get_entries_for_update([('feed', 'one'), ('feed', 'two')])) == [
@@ -399,11 +410,13 @@ def test_entry_remains_read_after_update(storage_with_two_entries):
     storage.mark_as_read_unread('feed', 'one', True)
 
     storage.add_or_update_entry(
-        'feed',
-        Entry('one', datetime(2010, 1, 1)),
-        datetime(2010, 1, 2),
-        datetime(2010, 1, 2),
-        0,
+        EntryUpdateIntent(
+            'feed',
+            Entry('one', datetime(2010, 1, 1)),
+            datetime(2010, 1, 2),
+            datetime(2010, 1, 2),
+            0,
+        )
     )
 
     assert {
@@ -418,18 +431,22 @@ def test_entry_remains_read_after_update(storage_with_two_entries):
 def storage_with_two_entries(storage):
     storage.add_feed('feed', datetime(2010, 1, 1))
     storage.add_or_update_entry(
-        'feed',
-        Entry('one', datetime(2010, 1, 1)),
-        datetime(2010, 1, 2),
-        datetime(2010, 1, 2),
-        0,
+        EntryUpdateIntent(
+            'feed',
+            Entry('one', datetime(2010, 1, 1)),
+            datetime(2010, 1, 2),
+            datetime(2010, 1, 2),
+            0,
+        )
     )
     storage.add_or_update_entry(
-        'feed',
-        Entry('two', datetime(2010, 1, 1)),
-        datetime(2010, 1, 2),
-        datetime(2010, 1, 2),
-        1,
+        EntryUpdateIntent(
+            'feed',
+            Entry('two', datetime(2010, 1, 1)),
+            datetime(2010, 1, 2),
+            datetime(2010, 1, 2),
+            1,
+        )
     )
     return storage
 
@@ -477,11 +494,13 @@ def test_important_entry_remains_important_after_update(storage_with_two_entries
     storage.mark_as_important_unimportant('feed', 'one', True)
 
     storage.add_or_update_entry(
-        'feed',
-        Entry('one', datetime(2010, 1, 1)),
-        datetime(2010, 1, 2),
-        datetime(2010, 1, 2),
-        0,
+        EntryUpdateIntent(
+            'feed',
+            Entry('one', datetime(2010, 1, 1)),
+            datetime(2010, 1, 2),
+            datetime(2010, 1, 2),
+            0,
+        )
     )
 
     assert {

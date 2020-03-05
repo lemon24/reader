@@ -685,14 +685,9 @@ class Storage:
             raise FeedNotFoundError(url)
         assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    def _add_or_update_entry(
-        self,
-        feed_url: str,
-        entry: Entry,
-        last_updated: datetime,
-        first_updated_epoch: Optional[datetime],
-        feed_order: int,
-    ) -> None:
+    def _add_or_update_entry(self, intent: EntryUpdateIntent) -> None:
+        feed_url, entry, last_updated, first_updated_epoch, feed_order = intent
+
         updated = entry.updated
         published = entry.published
         id = entry.id
@@ -774,24 +769,11 @@ class Storage:
     def add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
         with self.db:
             for t in entry_tuples:
-                self._add_or_update_entry(*t)
+                self._add_or_update_entry(t)
 
-    def add_or_update_entry(
-        self,
-        feed_url: str,
-        entry: Entry,
-        last_updated: datetime,
-        first_updated_epoch: Optional[datetime],
-        feed_order: int,
-    ) -> None:
-        # TODO: delete this method, it's for convenience (it's only called from tests)
-        self.add_or_update_entries(
-            [
-                EntryUpdateIntent(
-                    feed_url, entry, last_updated, first_updated_epoch, feed_order
-                )
-            ]
-        )
+    def add_or_update_entry(self, intent: EntryUpdateIntent) -> None:
+        # TODO: this method is for testing convenience only, maybe delete it?
+        self.add_or_update_entries([intent])
 
     _EntryLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
 
