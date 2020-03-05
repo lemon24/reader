@@ -161,18 +161,18 @@ class FeedLike(Protocol):
     # We don't use "url: str" because we don't care if url is writable.
 
     @property
-    def url(self) -> str:
+    def url(self) -> str:  # pragma: no cover
         ...
 
 
 @runtime_checkable
 class EntryLike(Protocol):
     @property
-    def id(self) -> str:
+    def id(self) -> str:  # pragma: no cover
         ...
 
     @property
-    def feed(self) -> FeedLike:
+    def feed(self) -> FeedLike:  # pragma: no cover
         ...
 
 
