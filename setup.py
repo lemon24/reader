@@ -24,15 +24,21 @@ setup(
     package_dir={'': 'src'},
     include_package_data=True,
     python_requires='>=3.6',
-    install_requires=['dataclasses; python_version<"3.7"', 'feedparser>=5', 'requests'],
+    install_requires=[
+        'dataclasses; python_version<"3.7"',
+        # needed on for pre-3.8 so we can get TypedDict and Protocol
+        # TODO: remove this once we drop support for Python 3.7
+        'typing_extensions; python_version<"3.8"',
+        'feedparser>=5',
+        'requests',
+    ],
     extras_require={
         'cli': ['click>=5'],
         'web-app': ['flask>=0.10', 'humanize'],
         'enclosure-tags': ['requests', 'mutagen'],
         'plugins': ['setuptools>=40'],
         'dev': [
-            # !=5.3.4 because of
-            # https://github.com/pytest-dev/pytest/issues/6517
+            # !=5.3.4 because of https://github.com/pytest-dev/pytest/issues/6517
             # TODO: remove !=5.3.4 once a newer version is published
             'pytest>=4,!=5.3.4',
             'pytest-randomly',
@@ -45,7 +51,6 @@ setup(
             # mypy is not working on pypy as of January 2020
             # https://github.com/python/typed_ast/issues/97#issuecomment-484335190
             'mypy; implementation_name!="pypy"',
-            'typing_extensions',
             # docs
             'sphinx',
             'sphinx_rtd_theme',

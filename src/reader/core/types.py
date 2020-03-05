@@ -241,7 +241,9 @@ JSONValue = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
 JSONType = Union[Dict[str, JSONValue], List[JSONValue]]
 
 
-# TODO: this should probably be in storage.py
+# TODO: these should probably be in storage.py (along with some of the above)
+
+
 class EntryFilterOptions(NamedTuple):
 
     """Options for filtering the results of the "get entry" storage methods."""

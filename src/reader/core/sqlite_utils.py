@@ -3,6 +3,7 @@ sqlite3 utilities. Contains no business logic.
 
 """
 import sqlite3
+import sys
 from contextlib import contextmanager
 from typing import Callable
 from typing import Dict
@@ -10,10 +11,15 @@ from typing import Iterator
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import TYPE_CHECKING
+
+# TODO: remove this once we drop support for Python 3.7
+if sys.version_info >= (3, 8):  # pragma: no cover
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 
-# stolen from https://github.com/lemon24/boomtime/blob/master/boomtime/db.py
+# initialy from https://github.com/lemon24/boomtime/blob/master/boomtime/db.py
 
 
 @contextmanager
@@ -220,17 +226,14 @@ def require_sqlite_compile_options(
         )
 
 
-if TYPE_CHECKING:  # pragma: no cover
-    from typing_extensions import TypedDict
-
-    # Be explicit about the types of the sqlite3.connect kwargs,
-    # otherwise we get stuff like:
-    #
-    #   Argument 2 to "connect" has incompatible type "**Dict[str, int]"; expected "..."
-    #
-    _SqliteOptions = TypedDict(
-        "_SqliteOptions", {"detect_types": int, "timeout": float}, total=False
-    )
+# Be explicit about the types of the sqlite3.connect kwargs,
+# otherwise we get stuff like:
+#
+#   Argument 2 to "connect" has incompatible type "**Dict[str, int]"; expected "..."
+#
+_SqliteOptions = TypedDict(
+    "_SqliteOptions", {"detect_types": int, "timeout": float}, total=False
+)
 
 
 def open_sqlite_db(
