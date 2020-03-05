@@ -247,10 +247,10 @@ class EntryForUpdate(NamedTuple):
 class FeedUpdateIntent(NamedTuple):
 
     url: str
-    feed: Optional[Feed]
-    http_etag: Optional[str]
-    http_last_modified: Optional[str]
     last_updated: datetime
+    feed: Optional[Feed] = None
+    http_etag: Optional[str] = None
+    http_last_modified: Optional[str] = None
 
 
 class EntryUpdateIntent(NamedTuple):

@@ -15,6 +15,7 @@ from reader.core.storage import Storage
 from reader.core.storage import wrap_storage_exceptions
 from reader.core.types import EntryFilterOptions
 from reader.core.types import EntryForUpdate
+from reader.core.types import FeedUpdateIntent
 
 
 def test_wrap_storage_exceptions():
@@ -126,11 +127,11 @@ def mark_as_read_unread(storage, feed, entry):
 
 
 def update_feed(storage, feed, entry):
-    storage.update_feed(feed.url, feed, None, None, entry.updated)
+    storage.update_feed(FeedUpdateIntent(feed.url, entry.updated, feed=feed))
 
 
 def update_feed_last_updated(storage, feed, entry):
-    storage.update_feed(feed.url, None, None, None, entry.updated)
+    storage.update_feed(FeedUpdateIntent(feed.url, entry.updated))
 
 
 def add_or_update_entry(storage, feed, entry):
@@ -296,7 +297,7 @@ def test_iter_locked(db_path, iter_stuff):
 def test_update_feed_last_updated_not_found(db_path):
     storage = Storage(db_path)
     with pytest.raises(FeedNotFoundError):
-        storage.update_feed('inexistent-feed', None, None, None, datetime(2010, 1, 2))
+        storage.update_feed(FeedUpdateIntent('inexistent-feed', datetime(2010, 1, 2)))
 
 
 @pytest.mark.parametrize(

@@ -174,13 +174,13 @@ class Updater:
         if self.should_update_feed(parse_result.feed):
             feed_to_update = FeedUpdateIntent(
                 self.url,
+                self.now,
                 parse_result.feed,
                 parse_result.http_etag,
                 parse_result.http_last_modified,
-                self.now,
             )
         elif new_count or updated_count:
-            feed_to_update = FeedUpdateIntent(self.url, None, None, None, self.now)
+            feed_to_update = FeedUpdateIntent(self.url, self.now)
         else:
             feed_to_update = None
 
@@ -194,7 +194,7 @@ class Updater:
         except NotModified:
             log.info("update feed %r: feed not modified, skipping", self.url)
             # The feed shouldn't be considered new anymore.
-            storage.update_feed(self.url, None, None, None, self.now)
+            storage.update_feed(FeedUpdateIntent(self.url, self.now))
             return UpdateResult(())
 
         entries_to_update = list(
@@ -207,7 +207,7 @@ class Updater:
         if entries_to_update:
             storage.add_or_update_entries(e for e, _ in entries_to_update)
         if feed_to_update:
-            storage.update_feed(*feed_to_update)
+            storage.update_feed(feed_to_update)
 
         # if self.url != parse_result.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).

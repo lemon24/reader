@@ -32,6 +32,7 @@ from .types import EntryForUpdate
 from .types import EntryUpdateIntent
 from .types import Feed
 from .types import FeedForUpdate
+from .types import FeedUpdateIntent
 from .types import JSONType
 
 
@@ -617,19 +618,15 @@ class Storage:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     @wrap_storage_exceptions()
-    def update_feed(
-        self,
-        url: str,
-        feed: Optional[Feed],
-        http_etag: Optional[str],
-        http_last_modified: Optional[str],
-        last_updated: datetime,
-    ) -> None:
+    def update_feed(self, intent: FeedUpdateIntent) -> None:
+        url, last_updated, feed, http_etag, http_last_modified = intent
+
         if feed:
+            # TODO support updating feed URL
+            # https://github.com/lemon24/reader/issues/149
             assert url == feed.url, "updating feed URL not supported"
-            self._update_feed_full(
-                url, feed, http_etag, http_last_modified, last_updated
-            )
+
+            self._update_feed_full(intent)
             return
 
         assert http_etag is None, "http_etag must be none if feed is none"
@@ -638,14 +635,10 @@ class Storage:
         ), "http_last_modified must be none if feed is none"
         self._update_feed_last_updated(url, last_updated)
 
-    def _update_feed_full(
-        self,
-        url: str,
-        feed: Feed,
-        http_etag: Optional[str],
-        http_last_modified: Optional[str],
-        last_updated: datetime,
-    ) -> None:
+    def _update_feed_full(self, intent: FeedUpdateIntent) -> None:
+        url, last_updated, feed, http_etag, http_last_modified = intent
+
+        assert feed is not None
         updated = feed.updated
         title = feed.title
         link = feed.link
