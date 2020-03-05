@@ -1,4 +1,5 @@
 import dataclasses
+import sys
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -12,6 +13,12 @@ from typing import Tuple
 from typing import Type
 from typing import TypeVar
 from typing import Union
+
+# TODO: remove this once we drop support for Python 3.7
+if sys.version_info >= (3, 8):  # pragma: no cover
+    from typing import Protocol, runtime_checkable
+else:
+    from typing_extensions import Protocol, runtime_checkable
 
 
 _T = TypeVar('_T')
@@ -140,17 +147,41 @@ class Enclosure(_namedtuple_compat):
     length: Optional[int] = None
 
 
-# Typing support
+# Semi-public (typing support)
 
 
-FeedInput = Union[str, Feed]
-EntryInput = Union[Tuple[str, str], Entry]
+# Using protocols here so we have both duck typing and type checking.
+# Simply catching AttributeError (e.g. on feed.url) is not enough for mypy,
+# see https://github.com/python/mypy/issues/8056.
+
+
+@runtime_checkable
+class FeedLike(Protocol):
+
+    # We don't use "url: str" because we don't care if url is writable.
+
+    @property
+    def url(self) -> str:
+        ...
+
+
+@runtime_checkable
+class EntryLike(Protocol):
+    @property
+    def id(self) -> str:
+        ...
+
+    @property
+    def feed(self) -> FeedLike:
+        ...
+
+
+FeedInput = Union[str, FeedLike]
+EntryInput = Union[Tuple[str, str], EntryLike]
 
 
 def feed_argument(feed: FeedInput) -> str:
-    # Giving away some duck typing for type checking (catching AttributeError
-    # is not enough for mypy, see https://github.com/python/mypy/issues/8056).
-    if isinstance(feed, Feed):
+    if isinstance(feed, FeedLike):
         return feed.url
     if isinstance(feed, str):
         return feed
@@ -158,10 +189,8 @@ def feed_argument(feed: FeedInput) -> str:
 
 
 def entry_argument(entry: EntryInput) -> Tuple[str, str]:
-    # Giving away some duck typing for type checking.
-    if isinstance(entry, Entry):
-        if isinstance(entry.feed, Feed):
-            return entry.feed.url, entry.id
+    if isinstance(entry, EntryLike):
+        return feed_argument(entry.feed), entry.id
     if isinstance(entry, tuple) and len(entry) == 2:
         feed_url, entry_id = entry
         if isinstance(feed_url, str) and isinstance(entry_id, str):
