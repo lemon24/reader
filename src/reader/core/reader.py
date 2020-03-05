@@ -24,6 +24,7 @@ from .types import Feed
 from .types import feed_argument
 from .types import FeedForUpdate
 from .types import FeedInput
+from .types import FeedSortOrder
 from .types import JSONType
 from .updater import Updater
 
@@ -121,7 +122,7 @@ class Reader:
         url = feed_argument(feed)
         self._storage.remove_feed(url)
 
-    def get_feeds(self, *, sort: str = 'title') -> Iterable[Feed]:
+    def get_feeds(self, *, sort: FeedSortOrder = 'title') -> Iterable[Feed]:
         """Get all the feeds.
 
         Args:

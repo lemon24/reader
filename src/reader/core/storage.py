@@ -32,6 +32,7 @@ from .types import EntryForUpdate
 from .types import EntryUpdateIntent
 from .types import Feed
 from .types import FeedForUpdate
+from .types import FeedSortOrder
 from .types import FeedUpdateIntent
 from .types import JSONType
 
@@ -448,7 +449,7 @@ class Storage:
     @wrap_storage_exceptions()
     @returns_iter_list
     def get_feeds(
-        self, url: Optional[str] = None, sort: str = 'title'
+        self, url: Optional[str] = None, sort: FeedSortOrder = 'title'
     ) -> Iterable[Feed]:
         where_url_snippet = '' if not url else "WHERE url = :url"
 
