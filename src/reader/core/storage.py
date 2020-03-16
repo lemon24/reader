@@ -23,6 +23,7 @@ from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
 from .exceptions import StorageError
 from .sqlite_utils import DBError
+from .sqlite_utils import ddl_transaction
 from .sqlite_utils import open_sqlite_db
 from .types import Content
 from .types import Enclosure
@@ -1028,7 +1029,18 @@ class Storage:
         raise NotImplementedError
 
     def is_search_enabled(self) -> bool:
-        raise NotImplementedError
+        # TODO: similar to HeavyMigration.get_version(); pull into table_exists()
+        search_table_exists = (
+            self.db.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'entries_search';
+                """
+            ).fetchone()
+            is not None
+        )
+        return search_table_exists
 
     def update_search(self) -> None:
         raise NotImplementedError

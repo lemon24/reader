@@ -122,6 +122,7 @@ class HeavyMigration:
         )
         if not version_exists:
             return None
+        # TODO: this assignment should fail with DBError
         (version,) = db.execute("SELECT MAX(version) FROM version;").fetchone()
         assert isinstance(version, int)
         return version
