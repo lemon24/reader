@@ -20,6 +20,7 @@ from .types import Entry
 from .types import entry_argument
 from .types import EntryFilterOptions
 from .types import EntryInput
+from .types import EntrySearchResult
 from .types import Feed
 from .types import feed_argument
 from .types import FeedForUpdate
@@ -27,6 +28,7 @@ from .types import FeedInput
 from .types import FeedSortOrder
 from .types import JSONType
 from .updater import Updater
+
 
 log = logging.getLogger('reader')
 
@@ -70,6 +72,10 @@ class Reader:
 
     def __init__(self, path: str, called_directly: bool = True):
         self._storage = Storage(path)
+
+        # TODO: explain how search could be a different object
+        self._search = self._storage
+
         self._parser = Parser()
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
 
@@ -308,10 +314,12 @@ class Reader:
             StorageError
 
         """
+        # TODO: does this ever raise FeedNotFoundError? I don't think so
 
         # If we ever implement pagination, consider following the guidance in
         # https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
 
+        # TODO: this validation should be shared
         feed_url = feed_argument(feed) if feed is not None else None
         if read not in (None, False, True):
             raise ValueError("read should be one of (None, False, True)")
@@ -329,6 +337,7 @@ class Reader:
 
             entries = self._storage.get_entries(
                 now=now,
+                # TODO: don't construct this every time we go through the loop
                 filter_options=EntryFilterOptions(
                     feed_url=feed_url,
                     read=read,
@@ -556,3 +565,108 @@ class Reader:
         """
         feed_url = feed_argument(feed)
         self._storage.delete_feed_metadata(feed_url, key)
+
+    def enable_search(self) -> None:
+        """Enable full-text search.
+
+        Raises:
+            TODO: StorageError and/or some search-related exception?
+
+        """
+        return self._search.enable_search()
+
+    def disable_search(self) -> None:
+        """Disable full-text search.
+
+        Raises:
+            TODO: StorageError and/or some search-related exception?
+
+        """
+        return self._search.disable_search()
+
+    def is_search_enabled(self) -> bool:
+        """Check if full-text search is enabled.
+
+        Returns:
+            bool: Whether search is enabled or not.
+
+        Raises:
+            TODO: StorageError and/or some search-related exception?
+
+        """
+        return self._search.is_search_enabled()
+
+    def update_search(self) -> None:
+        """Update the full-text search index.
+
+        Raises:
+            SearchNotEnabledError
+            TODO: StorageError and/or some search-related exception?
+
+        """
+        return self._search.update_search()
+
+    def search_entries(
+        self,
+        query: str,
+        *,
+        feed: Optional[FeedInput] = None,
+        entry: Optional[EntryInput] = None,
+        read: Optional[bool] = None,
+        important: Optional[bool] = None,
+        has_enclosures: Optional[bool] = None,
+        # TODO: remove no cover
+    ) -> Iterable[EntrySearchResult]:  # pragma: no cover
+        """Search through the entries.
+
+        Entries are sorted best-match first.
+
+        TODO: Mention the query string format is storage-dependent.
+
+        TODO: Explain the query string format briefly, and the available columns.
+
+        Args:
+            query (str): The search query string.
+            feed (str or Feed or None): Only search the entries for this feed.
+            entry (tuple(str, str) or Entry or None): Only search for this entry.
+            read (bool or None): Only search (un)read entries.
+            important (bool or None): Only search (un)important entries.
+            has_enclosures (bool or None): Only search entries that (don't)
+                have enclosures.
+
+        Yields:
+            :class:`EntrySearchResult`: Best-match entries first.
+
+        Raises:
+            SearchNotEnabledError
+            TODO: StorageError and/or some search-related exception?
+
+        """
+
+        # TODO: re-use the validation from get_entries
+
+        feed_url = feed_argument(feed) if feed is not None else None
+
+        # TODO: should we allow specifying both feed and entry?
+        if entry is None:
+            entry_id = None
+        else:
+            feed_url, entry_id = entry_argument(entry)
+
+        if read not in (None, False, True):
+            raise ValueError("read should be one of (None, False, True)")
+        if important not in (None, False, True):
+            raise ValueError("important should be one of (None, False, True)")
+        if has_enclosures not in (None, False, True):
+            raise ValueError("has_enclosures should be one of (None, False, True)")
+
+        filter_options = EntryFilterOptions(
+            feed_url=feed_url,
+            entry_id=entry_id,
+            read=read,
+            important=important,
+            has_enclosures=has_enclosures,
+        )
+
+        # TODO: handle pagination etc.
+        return [rv for rv, _ in self._search.search_entries(query, filter_options)]

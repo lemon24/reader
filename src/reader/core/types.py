@@ -149,6 +149,15 @@ class Enclosure(_namedtuple_compat):
     length: Optional[int] = None
 
 
+@dataclass(frozen=True)
+class EntrySearchResult(_namedtuple_compat):
+
+    """Data type representing the result of an entry search."""
+
+    # TODO: Actual fields.
+    # TODO: Is this the right name?
+
+
 # Semi-public API (typing support)
 
 

@@ -29,6 +29,7 @@ from .types import Enclosure
 from .types import Entry
 from .types import EntryFilterOptions
 from .types import EntryForUpdate
+from .types import EntrySearchResult
 from .types import EntryUpdateIntent
 from .types import Feed
 from .types import FeedForUpdate
@@ -776,6 +777,7 @@ class Storage:
         # TODO: this method is for testing convenience only, maybe delete it?
         self.add_or_update_entries([intent])
 
+    # TODO: rename to _GetEntriesLast, maybe
     _EntryLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
 
     @wrap_storage_exceptions()
@@ -1018,3 +1020,27 @@ class Storage:
             if rows.rowcount == 0:
                 raise MetadataNotFoundError(feed_url, key)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
+
+    def enable_search(self) -> None:
+        raise NotImplementedError
+
+    def disable_search(self) -> None:
+        raise NotImplementedError
+
+    def is_search_enabled(self) -> bool:
+        raise NotImplementedError
+
+    def update_search(self) -> None:
+        raise NotImplementedError
+
+    _SearchEntriesLast = Optional[Tuple[()]]
+
+    def search_entries(
+        self,
+        query: str,
+        filter_options: EntryFilterOptions = EntryFilterOptions(),
+        *,
+        chunk_size: Optional[int] = None,
+        last: _SearchEntriesLast = None,
+    ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
+        raise NotImplementedError

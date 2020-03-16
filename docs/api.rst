@@ -12,6 +12,10 @@ Reader object
 
 All of reader's functionality can be accessed through a :class:`Reader` instance.
 
+.. todo::
+
+    Split this sub-sections.
+
 .. autofunction:: make_reader
 
 .. autoclass:: Reader(...)
@@ -31,6 +35,9 @@ Data objects
     :members:
 
 .. autoclass:: Enclosure
+    :members:
+
+.. autoclass:: EntrySearchResult
     :members:
 
 
