@@ -1023,7 +1023,108 @@ class Storage:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     def enable_search(self) -> None:
-        raise NotImplementedError
+        with ddl_transaction(self.db) as db:
+
+            # The column names matter, as they can be used in column filters;
+            # https://www.sqlite.org/fts5.html#fts5_column_filters
+            db.execute(
+                """
+                CREATE VIRTUAL TABLE entries_search USING fts5(
+                    _id UNINDEXED,
+                    _feed UNINDEXED,
+                    _content_path UNINDEXED,
+                    title,  -- entries.title
+                    text,  -- entries.summary or one of entries.content
+                    feed,  -- feeds.title
+                    tokenize = "porter unicode61 remove_diacritics 1 tokenchars '_'"
+                );
+                """
+            )
+            # TODO: we still need to tune the rank weights, these are just guesses
+            db.execute(
+                """
+                INSERT INTO entries_search(entries_search, rank)
+                VALUES ('rank', 'bm25(1, 1, 1, 4, 1, 2)');
+                """
+            )
+
+            db.execute(
+                """
+                CREATE TABLE entries_search_sync_state (
+                    id TEXT NOT NULL,
+                    feed TEXT NOT NULL,
+                    to_update INTEGER NOT NULL DEFAULT 1,
+                    to_delete INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY (id, feed)
+                );
+                """
+            )
+            db.execute(
+                """
+                INSERT INTO entries_search_sync_state
+                SELECT id, feed, 1, 0
+                FROM entries;
+                """
+            )
+
+            # TODO: use "UPDATE OF ... ON" instead
+            # TODO: only run UPDATE triggers if the values are actually different
+            # TODO: what happens if the feed ID changes?
+            # TODO: better trigger names?
+
+            db.execute(
+                """
+                CREATE TRIGGER entries_search_entries_insert
+                AFTER INSERT ON entries
+                BEGIN
+                    INSERT INTO entries_search_sync_state
+                    VALUES (new.id, new.feed, 1, 0);
+                END;
+                """
+            )
+            db.execute(
+                """
+                CREATE TRIGGER entries_search_entries_update
+                AFTER UPDATE ON entries
+                BEGIN
+                    UPDATE entries_search_sync_state
+                    SET to_update = 1
+                    WHERE (new.id, new.feed) = (
+                        entries_search_sync_state.id,
+                        entries_search_sync_state.feed
+                    );
+                END;
+                """
+            )
+            db.execute(
+                """
+                CREATE TRIGGER entries_search_entries_delete
+                AFTER DELETE ON entries
+                BEGIN
+                    UPDATE entries_search_sync_state
+                    SET to_delete = 1
+                    WHERE (old.id, old.feed) = (
+                        entries_search_sync_state.id,
+                        entries_search_sync_state.feed
+                    );
+                END;
+                """
+            )
+
+            # No need to do anything for added feeds, since they don't have
+            # any entries. No need to do anything for deleted feeds, since
+            # the entries delete trigger will take care of its entries.
+            db.execute(
+                """
+                CREATE TRIGGER entries_search_feeds_update
+                AFTER UPDATE ON feeds
+                BEGIN
+                    UPDATE entries_search_sync_state
+                    SET to_update = 1
+                    WHERE new.url = entries_search_sync_state.feed;
+                END;
+                """
+            )
 
     def disable_search(self) -> None:
         raise NotImplementedError
