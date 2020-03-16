@@ -1154,7 +1154,105 @@ class Storage:
         return search_table_exists
 
     def update_search(self) -> None:
-        raise NotImplementedError
+        self.db.create_function('strip_html', 1, strip_html)
+
+        with self.db as db:
+            db.execute(
+                """
+                -- SQLite doesn't support DELETE-FROM-JOIN
+                DELETE FROM entries_search
+                WHERE
+                    (_id, _feed) IN (
+                        SELECT id, feed
+                        FROM entries_search_sync_state
+                        WHERE to_update OR to_delete
+                    )
+                ;
+                """
+            )
+            db.execute(
+                """
+                DELETE FROM entries_search_sync_state
+                WHERE to_delete;
+                """
+            )
+            db.execute(
+                """
+                WITH
+
+                from_summary AS (
+                    SELECT
+                        entries.id,
+                        entries.feed,
+                        'summary',
+                        strip_html(entries.title),
+                        strip_html(entries.summary)
+                    FROM entries_search_sync_state
+                    JOIN entries USING (id, feed)
+                    WHERE
+                        entries_search_sync_state.to_update
+                        AND NOT (summary IS NULL OR summary = '')
+                ),
+
+                from_content AS (
+                    SELECT
+                        entries.id,
+                        entries.feed,
+                        'content.' || json_each.key,
+                        strip_html(entries.title),
+                        strip_html(json_extract(json_each.value, '$.value'))
+                    FROM entries_search_sync_state
+                    JOIN entries USING (id, feed)
+                    JOIN json_each(entries.content)
+                    WHERE
+                        entries_search_sync_state.to_update
+                        AND json_valid(content) and json_array_length(content) > 0
+                ),
+
+                from_default AS (
+                    SELECT
+                        entries.id,
+                        entries.feed,
+                        NULL,
+                        strip_html(entries.title),
+                        NULL
+                    FROM entries_search_sync_state
+                    JOIN entries USING (id, feed)
+                    WHERE
+                        entries_search_sync_state.to_update
+                        AND (summary IS NULL OR summary = '')
+                        AND (not json_valid(content) OR json_array_length(content) = 0)
+                ),
+
+                union_all(id, feed, content_path, title, content_text) AS (
+                    SELECT * FROM from_summary
+                    UNION
+                    SELECT * FROM from_content
+                    UNION
+                    SELECT * FROM from_default
+                )
+
+                INSERT INTO entries_search
+
+                SELECT
+                    union_all.id,
+                    union_all.feed as feed,
+                    union_all.content_path,
+                    union_all.title,
+                    union_all.content_text,
+                    strip_html(coalesce(feeds.user_title, feeds.title))
+                FROM union_all
+                JOIN feeds ON feeds.url = union_all.feed;
+
+                """
+            )
+            db.execute(
+                """
+                UPDATE entries_search_sync_state
+                SET to_update = 0
+                WHERE to_update;
+            """
+            )
 
     _SearchEntriesLast = Optional[Tuple[()]]
 
@@ -1167,3 +1265,17 @@ class Storage:
         last: _SearchEntriesLast = None,
     ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
         raise NotImplementedError
+
+
+def strip_html(text: Any) -> Any:
+    return text
+    # TODO: type annotations for pass-through types, although typeshed kinda gives up on types returned by SQLite; https://github.com/python/typeshed/blob/c50fce6ef3111bba4d0b46e3c1f8e846d05cf0c3/stdlib/2and3/sqlite3/dbapi2.pyi#L185
+    # TODO: actually implement this
+    # TODO: cache
+    """
+    if not isinstance(text, str):
+        return text
+    # TODO: remove script, style etc
+    # TODO: allow different parsers than lxml?
+    return bs4.BeautifulSoup(text, features='lxml').get_text(separator='\n')
+    """
