@@ -1023,6 +1023,8 @@ class Storage:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     def enable_search(self) -> None:
+        # TODO: enable_search should not fail if already enabled
+
         with ddl_transaction(self.db) as db:
 
             # The column names matter, as they can be used in column filters;
@@ -1127,7 +1129,15 @@ class Storage:
             )
 
     def disable_search(self) -> None:
-        raise NotImplementedError
+        # TODO: disable_search should not fail if already disabled
+
+        with ddl_transaction(self.db) as db:
+            db.execute("DROP TABLE entries_search;")
+            db.execute("DROP TABLE entries_search_sync_state;")
+            db.execute("DROP TRIGGER entries_search_entries_insert;")
+            db.execute("DROP TRIGGER entries_search_entries_update;")
+            db.execute("DROP TRIGGER entries_search_entries_delete;")
+            db.execute("DROP TRIGGER entries_search_feeds_update;")
 
     def is_search_enabled(self) -> bool:
         # TODO: similar to HeavyMigration.get_version(); pull into table_exists()
