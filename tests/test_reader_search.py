@@ -25,7 +25,6 @@ def test_enable_search(reader):
     assert reader.is_search_enabled()
 
 
-@pytest.mark.xfail(strict=True, reason="TODO: shouldn't fail")
 def test_enable_search_already_enabled(reader):
     reader.enable_search()
     reader.enable_search()
@@ -38,7 +37,6 @@ def test_disable_search(reader):
     assert not reader.is_search_enabled()
 
 
-@pytest.mark.xfail(strict=True, reason="TODO: shouldn't fail")
 def test_disable_search_already_disabled(reader):
     reader.disable_search()
 
@@ -188,4 +186,5 @@ def test_search_entries_order_weights(reader):
 # TODO: test_search_entries_has_enclosure (filtering)
 # TODO: test_search_entries_important (filtering)
 # TODO: test blocking
+# TODO: test storageerror (search error?)
 # TODO: parametrize chunk_size

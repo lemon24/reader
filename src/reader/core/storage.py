@@ -1023,15 +1023,13 @@ class Storage:
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
     def enable_search(self) -> None:
-        # TODO: enable_search should not fail if already enabled
-
         with ddl_transaction(self.db) as db:
 
             # The column names matter, as they can be used in column filters;
             # https://www.sqlite.org/fts5.html#fts5_column_filters
             db.execute(
                 """
-                CREATE VIRTUAL TABLE entries_search USING fts5(
+                CREATE VIRTUAL TABLE IF NOT EXISTS entries_search USING fts5(
                     _id UNINDEXED,
                     _feed UNINDEXED,
                     _content_path UNINDEXED,
@@ -1052,7 +1050,7 @@ class Storage:
 
             db.execute(
                 """
-                CREATE TABLE entries_search_sync_state (
+                CREATE TABLE IF NOT EXISTS entries_search_sync_state (
                     id TEXT NOT NULL,
                     feed TEXT NOT NULL,
                     to_update INTEGER NOT NULL DEFAULT 1,
@@ -1076,7 +1074,7 @@ class Storage:
 
             db.execute(
                 """
-                CREATE TRIGGER entries_search_entries_insert
+                CREATE TRIGGER IF NOT EXISTS entries_search_entries_insert
                 AFTER INSERT ON entries
                 BEGIN
                     INSERT INTO entries_search_sync_state
@@ -1086,7 +1084,7 @@ class Storage:
             )
             db.execute(
                 """
-                CREATE TRIGGER entries_search_entries_update
+                CREATE TRIGGER IF NOT EXISTS entries_search_entries_update
                 AFTER UPDATE ON entries
                 BEGIN
                     UPDATE entries_search_sync_state
@@ -1100,7 +1098,7 @@ class Storage:
             )
             db.execute(
                 """
-                CREATE TRIGGER entries_search_entries_delete
+                CREATE TRIGGER IF NOT EXISTS entries_search_entries_delete
                 AFTER DELETE ON entries
                 BEGIN
                     UPDATE entries_search_sync_state
@@ -1118,7 +1116,7 @@ class Storage:
             # the entries delete trigger will take care of its entries.
             db.execute(
                 """
-                CREATE TRIGGER entries_search_feeds_update
+                CREATE TRIGGER IF NOT EXISTS entries_search_feeds_update
                 AFTER UPDATE ON feeds
                 BEGIN
                     UPDATE entries_search_sync_state
@@ -1129,15 +1127,13 @@ class Storage:
             )
 
     def disable_search(self) -> None:
-        # TODO: disable_search should not fail if already disabled
-
         with ddl_transaction(self.db) as db:
-            db.execute("DROP TABLE entries_search;")
-            db.execute("DROP TABLE entries_search_sync_state;")
-            db.execute("DROP TRIGGER entries_search_entries_insert;")
-            db.execute("DROP TRIGGER entries_search_entries_update;")
-            db.execute("DROP TRIGGER entries_search_entries_delete;")
-            db.execute("DROP TRIGGER entries_search_feeds_update;")
+            db.execute("DROP TABLE IF EXISTS entries_search;")
+            db.execute("DROP TABLE IF EXISTS entries_search_sync_state;")
+            db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert;")
+            db.execute("DROP TRIGGER IF EXISTS entries_search_entries_update;")
+            db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
+            db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")
 
     def is_search_enabled(self) -> bool:
         # TODO: similar to HeavyMigration.get_version(); pull into table_exists()
