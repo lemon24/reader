@@ -781,7 +781,6 @@ class Storage:
     # TODO: rename to _GetEntriesLast, maybe
     _EntryLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
 
-    @wrap_storage_exceptions()
     def get_entries(
         self,
         now: datetime,
@@ -1262,24 +1261,42 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
+        rv = self._search_entries(
+            query=query, filter_options=filter_options, chunk_size=chunk_size, last=last
+        )
+
+        # See comment in get_entries() for why we're doing this.
+        if chunk_size:
+            rv = iter(list(rv))
+
+        return rv
+
+    def _search_entries(
+        self,
+        query: str,
+        filter_options: EntryFilterOptions = EntryFilterOptions(),
+        *,
+        chunk_size: Optional[int] = None,
+        last: _SearchEntriesLast = None,
+    ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
         sql_query = self._make_search_entries_query(filter_options, chunk_size, last)
 
         feed_url, entry_id, read, important, has_enclosures = filter_options
 
         # TODO: filtering
-        # TODO: pagination
-        # TODO: iter(list(...))
         # TODO: lots of get_entries duplication
 
         if last:
-            # TODO: set locals
-            pass
+            last = last_rank, last_feed_url, last_entry_id = last
 
         with wrap_storage_exceptions():
             cursor = self.db.execute(sql_query, locals())
             for t in cursor:
-                result = EntrySearchResult(t[0], t[1], t[3])
-                yield result, None
+                rv_entry_id, rv_feed_url, rv_rank, rv_title, *_ = t
+
+                result = EntrySearchResult(rv_entry_id, rv_feed_url, rv_title)
+
+                yield result, (rv_rank, rv_feed_url, rv_entry_id)
 
     def _make_search_entries_query(
         self,
@@ -1287,6 +1304,37 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> str:
+
+        # TODO: should not duplicate _make_get_entries_query
+
+        where_snippets = []
+
+        limit_snippet = ''
+        if chunk_size:
+            limit_snippet = """
+                LIMIT :chunk_size
+                """
+            if last:
+                where_snippets.append(
+                    """
+                    (
+                        rank,
+                        entries.feed,
+                        entries.id
+                    ) > (
+                        :last_rank,
+                        :last_feed_url,
+                        :last_entry_id
+                    )
+                    """
+                )
+
+        if any(where_snippets):
+            where_keyword = 'WHERE'
+            where_snippet = '\n                AND '.join(where_snippets)
+        else:
+            where_keyword = ''
+            where_snippet = ''
 
         query = f"""
 
@@ -1319,12 +1367,16 @@ class Storage:
                 json_group_array(json(search.text)) as text
             FROM entries
             JOIN search ON (entries.id, entries.feed) = (search._id, search._feed)
+            {where_keyword}
+                {where_snippet}
             GROUP BY entries.id, entries.feed
             ORDER BY rank, entries.id, entries.feed
-
+            {limit_snippet}
             ;
 
         """
+
+        log.debug("_search_entries query\n%s\n", query)
 
         return query
 

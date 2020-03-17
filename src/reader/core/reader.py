@@ -668,5 +668,29 @@ class Reader:
             has_enclosures=has_enclosures,
         )
 
-        # TODO: handle pagination etc.
-        return [rv for rv, _ in self._search.search_entries(query, filter_options)]
+        # TODO: this whole logic is duplicated from get_entries
+
+        chunk_size = self._get_entries_chunk_size
+
+        last = None
+        while True:
+
+            results = self._search.search_entries(
+                query=query,
+                filter_options=filter_options,
+                chunk_size=chunk_size,
+                last=last,
+            )
+
+            # See comment in get_entries() for why we're doing this.
+            if not chunk_size:
+                yield from (r for r, _ in results)
+                return
+
+            results = list(results)
+            if not results:
+                break
+
+            _, last = results[-1]
+
+            yield from (r for r, _ in results)
