@@ -1,5 +1,9 @@
-import pytest
+from datetime import datetime
 
+import pytest
+from fakeparser import Parser
+
+from reader import EntrySearchResult
 from reader import ReaderError
 from reader.core.storage import strip_html
 
@@ -63,4 +67,24 @@ def test_strip_html():
     # TODO: more better tests once implemented
 
 
-# TODO: actual tests
+def test_search_entries_basic(reader):
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
+    two = parser.entry(1, 2, datetime(2010, 1, 1), title='two')
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    reader.enable_search()
+    reader.update_search()
+
+    set(reader.search_entries('zero')) == set()
+    set(reader.search_entries('one')) == {
+        EntrySearchResult(one.id, feed.url, one.title)
+    }
+    set(reader.search_entries('two')) == {
+        EntrySearchResult(two.id, feed.url, two.title)
+    }

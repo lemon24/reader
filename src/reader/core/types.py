@@ -154,8 +154,14 @@ class EntrySearchResult(_namedtuple_compat):
 
     """Data type representing the result of an entry search."""
 
-    # TODO: Actual fields.
-    # TODO: Is this the right name?
+    id: str
+
+    # TODO: is this the right way to expose the feed?
+    feed: str
+
+    title: Optional[str]
+
+    # TODO: more fields
 
 
 # Semi-public API (typing support)

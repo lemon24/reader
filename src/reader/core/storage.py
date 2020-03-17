@@ -1036,7 +1036,7 @@ class Storage:
                     _feed UNINDEXED,
                     _content_path UNINDEXED,
                     title,  -- entries.title
-                    text,  -- entries.summary or one of entries.content
+                    text,  -- entries.summary or one of entries.content; TODO: better name?
                     feed,  -- feeds.title
                     tokenize = "porter unicode61 remove_diacritics 1 tokenchars '_'"
                 );
@@ -1254,7 +1254,7 @@ class Storage:
             """
             )
 
-    _SearchEntriesLast = Optional[Tuple[()]]
+    _SearchEntriesLast = Optional[Tuple[Any, Any, Any]]
 
     def search_entries(
         self,
@@ -1264,7 +1264,71 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
-        raise NotImplementedError
+        sql_query = self._make_search_entries_query(filter_options, chunk_size, last)
+
+        feed_url, entry_id, read, important, has_enclosures = filter_options
+
+        # TODO: filtering
+        # TODO: pagination
+        # TODO: iter(list(...))
+        # TODO: lots of get_entries duplication
+
+        if last:
+            # TODO: set locals
+            pass
+
+        with wrap_storage_exceptions():
+            cursor = self.db.execute(sql_query, locals())
+            for t in cursor:
+                result = EntrySearchResult(t[0], t[1], t[3])
+                yield result, None
+
+    def _make_search_entries_query(
+        self,
+        filter_options: EntryFilterOptions = EntryFilterOptions(),
+        chunk_size: Optional[int] = None,
+        last: _SearchEntriesLast = None,
+    ) -> str:
+
+        query = f"""
+
+            WITH search AS (
+                SELECT
+                    _id,
+                    _feed,
+                    rank,
+                    highlight(entries_search, 3, '>>>', '<<<') as title,
+                    highlight(entries_search, 5, '>>>', '<<<') as feed,
+                    json_object(
+                        'content_path', _content_path,
+                        'rank', rank,
+                        'text', snippet(entries_search, 4, '>>>', '<<<', '...', 12)
+                    ) as text
+                FROM entries_search
+                WHERE entries_search MATCH :query
+
+                -- https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html
+                -- rule 14 of https://www.sqlite.org/optoverview.html#subquery_flattening
+                LIMIT -1 OFFSET 0
+            )
+
+            SELECT
+                entries.id,
+                entries.feed,
+                min(search.rank) as rank,
+                search.title,
+                search.feed,
+                json_group_array(json(search.text)) as text
+            FROM entries
+            JOIN search ON (entries.id, entries.feed) = (search._id, search._feed)
+            GROUP BY entries.id, entries.feed
+            ORDER BY rank, entries.id, entries.feed
+
+            ;
+
+        """
+
+        return query
 
 
 def strip_html(text: Any) -> Any:
