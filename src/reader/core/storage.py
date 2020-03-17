@@ -1154,6 +1154,8 @@ class Storage:
         return search_table_exists
 
     def update_search(self) -> None:
+        # TODO: do we search through all content types?
+
         self.db.create_function('strip_html', 1, strip_html)
 
         with self.db as db:
