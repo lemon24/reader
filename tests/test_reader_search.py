@@ -5,15 +5,9 @@ from fakeparser import Parser
 
 from reader import Content
 from reader import EntrySearchResult
+from reader import Reader
 from reader import ReaderError
 from reader.core.storage import strip_html
-
-
-def test_nothing_is_actually_working_searchwise(reader):
-    with pytest.raises(Exception):
-        reader.update_search()
-    with pytest.raises(Exception):
-        list(reader.search_entries('one'))
 
 
 def test_search_disabled_by_default(reader):
@@ -46,10 +40,23 @@ def test_update_search(reader):
     reader.update_search()
 
 
-@pytest.mark.xfail(strict=True, reason="TODO: should fail")
+@pytest.mark.xfail(
+    strict=True, reason="TODO: should fail with some kind of SearchError"
+)
 def test_update_search_fails_if_not_enabled(reader):
     with pytest.raises(ReaderError):
         reader.update_search()
+
+
+@pytest.mark.xfail(
+    strict=True, reason="TODO: should fail with some kind of SearchError"
+)
+def test_search_entries_fails_if_not_enabled(reader):
+    class SearchError(Exception):
+        pass
+
+    with pytest.raises(SearchError):
+        list(reader.search_entries('one'))
 
 
 def test_strip_html():
@@ -140,10 +147,27 @@ def test_search_entries_order_title_content_beats_title(reader):
     ]
 
 
-def test_search_entries_order_weights(reader):
+@pytest.mark.parametrize(
+    'chunk_size',
+    [
+        # the default
+        Reader._get_entries_chunk_size,
+        # rough result size for this test
+        1,
+        2,
+        3,
+        8,
+        # unchunked query
+        0,
+    ],
+)
+def test_search_entries_order_weights(reader, chunk_size):
     """entry title beats feed title beats entry content/summary."""
 
-    # TODO: change once we finish tuning the weights (it should fail)
+    # TODO: may need fixing once we finish tuning the weights (it should fail)
+
+    # TODO: rename Reader._get_entries_chunk_size to something more generic
+    reader._get_entries_chunk_size = chunk_size
 
     parser = Parser()
     reader._parser = parser
@@ -158,6 +182,7 @@ def test_search_entries_order_weights(reader):
     entry_six = parser.entry(
         2, 6, datetime(2010, 1, 1), summary='one', content=[Content('one')]
     )
+    entry_seven = parser.entry(2, 7, datetime(2010, 1, 1), title="does not match")
 
     reader.add_feed(feed_one.url)
     reader.add_feed(feed_two.url)
@@ -170,12 +195,12 @@ def test_search_entries_order_weights(reader):
     assert rv[:2] == [(entry_two.id, feed_two.url), (entry_one.id, feed_one.url)]
 
     # TODO: how do we check these have the same exact rank?
-    assert set(rv[2:]) == {
+    assert sorted(rv[2:]) == [
         (entry_three.id, feed_two.url),
         (entry_four.id, feed_two.url),
         (entry_five.id, feed_two.url),
         (entry_six.id, feed_two.url),
-    }
+    ]
 
 
 # END order tests
@@ -187,4 +212,3 @@ def test_search_entries_order_weights(reader):
 # TODO: test_search_entries_important (filtering)
 # TODO: test blocking
 # TODO: test storageerror (search error?)
-# TODO: parametrize chunk_size
