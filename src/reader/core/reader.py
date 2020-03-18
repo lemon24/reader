@@ -611,6 +611,7 @@ class Reader:
         query: str,
         *,
         feed: Optional[FeedInput] = None,
+        # TODO: breaks symmetry with get_entries/get_entry; this ok?
         entry: Optional[EntryInput] = None,
         read: Optional[bool] = None,
         important: Optional[bool] = None,

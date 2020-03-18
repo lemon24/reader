@@ -718,6 +718,7 @@ def test_get_entries_feed_url(reader, feed_arg):
     entry_two = entry_two._replace(feed=two)
 
     assert set(reader.get_entries()) == {entry_one, entry_two}
+    assert set(reader.get_entries(feed=None)) == {entry_one, entry_two}
     assert set(reader.get_entries(feed=feed_arg(one))) == {entry_one}
     assert set(reader.get_entries(feed=feed_arg(two))) == {entry_two}
 
@@ -1011,7 +1012,7 @@ def test_feed_metadata(reader):
         reader.get_feed_metadata('feed', 'key')
 
 
-def test_get_entry(reader):
+def test_get_entry(reader, entry_arg):
     parser = Parser()
     reader._parser = parser
 
@@ -1020,13 +1021,14 @@ def test_get_entry(reader):
     reader.add_feed(feed.url)
 
     with pytest.raises(EntryNotFoundError):
-        reader.get_entry((feed.url, entry.id))
-    assert reader.get_entry((feed.url, entry.id), None) == None
-    assert reader.get_entry(entry._replace(feed=feed), default=1) == 1
+        reader.get_entry(entry_arg(entry._replace(feed=feed)))
+    assert reader.get_entry(entry_arg(entry._replace(feed=feed)), None) == None
+    assert reader.get_entry(entry_arg(entry._replace(feed=feed)), default=1) == 1
 
     reader.update_feeds()
 
-    assert reader.get_entry(entry._replace(feed=feed)) == entry._replace(feed=feed)
+    entry = entry._replace(feed=feed)
+    assert reader.get_entry(entry_arg(entry)) == entry
 
 
 class FakeStorage:

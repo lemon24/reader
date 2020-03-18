@@ -1283,8 +1283,7 @@ class Storage:
 
         feed_url, entry_id, read, important, has_enclosures = filter_options
 
-        # TODO: filtering
-        # TODO: lots of get_entries duplication
+        # TODO: lots of get_entries duplication, should be reduced
 
         if last:
             last = last_rank, last_feed_url, last_entry_id = last
@@ -1304,10 +1303,14 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> str:
-
         # TODO: should not duplicate _make_get_entries_query
 
+        feed_url, entry_id, read, important, has_enclosures = filter_options
+
         where_snippets = []
+
+        if read is not None:
+            where_snippets.append(f"{'' if read else 'NOT'} entries.read")
 
         limit_snippet = ''
         if chunk_size:
@@ -1328,6 +1331,23 @@ class Storage:
                     )
                     """
                 )
+
+        if feed_url:
+            where_snippets.append("entries.feed = :feed_url")
+            if entry_id:
+                where_snippets.append("entries.id = :entry_id")
+
+        if has_enclosures is not None:
+            where_snippets.append(
+                f"""
+                {'NOT' if has_enclosures else ''}
+                    (json_array_length(entries.enclosures) IS NULL
+                        OR json_array_length(entries.enclosures) = 0)
+            """
+            )
+
+        if important is not None:
+            where_snippets.append(f"{'' if important else 'NOT'} entries.important")
 
         if any(where_snippets):
             where_keyword = 'WHERE'
