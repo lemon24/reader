@@ -147,6 +147,8 @@ class Reader:
             raise ValueError("sort should be one of ('title', 'added')")
         return self._storage.get_feeds(sort=sort)
 
+    # TODO: get_feed can be written as next(get_feeds(feed), 'default'); get rid of it
+
     @overload
     def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
         ...
@@ -366,6 +368,8 @@ class Reader:
             _, last = entries[-1]
 
             yield from (e for e, _ in entries)
+
+    # TODO: get_entry can be written as next(get_entries(entry=...), 'default'); get rid of it
 
     @overload
     def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover
