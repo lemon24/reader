@@ -76,3 +76,7 @@ class StorageError(ReaderError):
 
 class SearchError(ReaderError):
     """A search-related exception."""
+
+
+class SearchNotEnabledError(SearchError):
+    """A search-related method was called when search was not enabled."""

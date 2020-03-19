@@ -23,6 +23,7 @@ from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
 from .exceptions import SearchError
+from .exceptions import SearchNotEnabledError
 from .exceptions import StorageError
 from .sqlite_utils import DBError
 from .sqlite_utils import ddl_transaction
@@ -1185,6 +1186,14 @@ class Search:
 
     @wrap_storage_exceptions(SearchError)
     def update(self) -> None:
+        try:
+            return self._update()
+        except sqlite3.OperationalError as e:
+            if 'no such table' in str(e).lower():
+                raise SearchNotEnabledError() from e
+            raise
+
+    def _update(self) -> None:
         # TODO: do we search through all content types?
 
         self.storage.db.create_function('strip_html', 1, strip_html)
@@ -1297,6 +1306,7 @@ class Search:
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
+
         rv = self._search_entries(
             query=query, filter_options=filter_options, chunk_size=chunk_size, last=last
         )
@@ -1325,7 +1335,13 @@ class Search:
             last = last_rank, last_feed_url, last_entry_id = last
 
         with wrap_storage_exceptions(SearchError):
-            cursor = self.storage.db.execute(sql_query, locals())
+            try:
+                cursor = self.storage.db.execute(sql_query, locals())
+            except sqlite3.OperationalError as e:
+                if 'no such table' in str(e).lower():
+                    raise SearchNotEnabledError() from e
+                raise
+
             for t in cursor:
                 rv_entry_id, rv_feed_url, rv_rank, rv_title, *_ = t
 

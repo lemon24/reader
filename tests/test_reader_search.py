@@ -8,6 +8,7 @@ from reader import Enclosure
 from reader import EntrySearchResult
 from reader import Reader
 from reader import ReaderError
+from reader import SearchNotEnabledError
 from reader.core.storage import strip_html
 
 
@@ -41,21 +42,11 @@ def test_update_search(reader):
     reader.update_search()
 
 
-class SearchNotEnabledError(Exception):
-    pass
-
-
-@pytest.mark.xfail(
-    strict=True, reason="TODO: should fail with some kind of SearchNotEnabledError"
-)
 def test_update_search_fails_if_not_enabled(reader):
     with pytest.raises(SearchNotEnabledError):
         reader.update_search()
 
 
-@pytest.mark.xfail(
-    strict=True, reason="TODO: should fail with some kind of SearchNotEnabledError"
-)
 def test_search_entries_fails_if_not_enabled(reader):
     with pytest.raises(SearchNotEnabledError):
         list(reader.search_entries('one'))
