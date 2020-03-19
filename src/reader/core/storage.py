@@ -414,6 +414,19 @@ class Storage:
             self.db = self.open_db(path, timeout=timeout)
         except DBError as e:
             raise StorageError(str(e)) from e
+
+        # TODO: If migrations happened, Storage-coupled Search needs to be notified.
+        #
+        # Even better, Search's migration should happen within the same
+        # ddl_transaction open_db uses.
+        #
+        # Note that simply calling search.disable() and then search.enable() +
+        # search.update() will probably not do the right thing, since
+        # ddl_transaction is not reentrant.
+        #
+        # Also see "How does this interact with migrations?" in
+        # https://github.com/lemon24/reader/issues/122#issuecomment-591302580
+
         self.path = path
 
     def close(self) -> None:
@@ -1021,8 +1034,25 @@ class Storage:
                 raise MetadataNotFoundError(feed_url, key)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
 
-    def enable_search(self) -> None:
-        with ddl_transaction(self.db) as db:
+
+class Search:
+
+    """SQLite-storage-bound search provider.
+
+    This is a separate class because conceptually search is not coupled to
+    storage (and future search providers may not be).
+
+    See "Do we want to support external search providers in the future?" in
+    https://github.com/lemon24/reader/issues/122#issuecomment-591302580
+    for details.
+
+    """
+
+    def __init__(self, storage: Storage):
+        self.storage = storage
+
+    def enable(self) -> None:
+        with ddl_transaction(self.storage.db) as db:
 
             # The column names matter, as they can be used in column filters;
             # https://www.sqlite.org/fts5.html#fts5_column_filters
@@ -1125,8 +1155,8 @@ class Storage:
                 """
             )
 
-    def disable_search(self) -> None:
-        with ddl_transaction(self.db) as db:
+    def disable(self) -> None:
+        with ddl_transaction(self.storage.db) as db:
             db.execute("DROP TABLE IF EXISTS entries_search;")
             db.execute("DROP TABLE IF EXISTS entries_search_sync_state;")
             db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert;")
@@ -1134,10 +1164,10 @@ class Storage:
             db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
             db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")
 
-    def is_search_enabled(self) -> bool:
+    def is_enabled(self) -> bool:
         # TODO: similar to HeavyMigration.get_version(); pull into table_exists()
         search_table_exists = (
-            self.db.execute(
+            self.storage.db.execute(
                 """
                 SELECT name
                 FROM sqlite_master
@@ -1148,12 +1178,12 @@ class Storage:
         )
         return search_table_exists
 
-    def update_search(self) -> None:
+    def update(self) -> None:
         # TODO: do we search through all content types?
 
-        self.db.create_function('strip_html', 1, strip_html)
+        self.storage.db.create_function('strip_html', 1, strip_html)
 
-        with self.db as db:
+        with self.storage.db as db:
             db.execute(
                 """
                 -- SQLite doesn't support DELETE-FROM-JOIN
@@ -1289,7 +1319,7 @@ class Storage:
             last = last_rank, last_feed_url, last_entry_id = last
 
         with wrap_storage_exceptions():
-            cursor = self.db.execute(sql_query, locals())
+            cursor = self.storage.db.execute(sql_query, locals())
             for t in cursor:
                 rv_entry_id, rv_feed_url, rv_rank, rv_title, *_ = t
 

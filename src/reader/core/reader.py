@@ -15,6 +15,7 @@ from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
 from .exceptions import ParseError
 from .parser import Parser
+from .storage import Search
 from .storage import Storage
 from .types import Entry
 from .types import entry_argument
@@ -73,8 +74,11 @@ class Reader:
     def __init__(self, path: str, called_directly: bool = True):
         self._storage = Storage(path)
 
-        # TODO: explain how search could be a different object
-        self._search = self._storage
+        # For now, we're using a storage-bound search provider.
+        # If we ever implement an external search provider,
+        # we'll probably need to do the wiring differently.
+        # See the Search docstring for details.
+        self._search = Search(self._storage)
 
         self._parser = Parser()
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
@@ -578,7 +582,7 @@ class Reader:
             StorageError
 
         """
-        return self._search.enable_search()
+        return self._search.enable()
 
     def disable_search(self) -> None:
         """Disable full-text search.
@@ -587,7 +591,7 @@ class Reader:
             SearchError
 
         """
-        return self._search.disable_search()
+        return self._search.disable()
 
     def is_search_enabled(self) -> bool:
         """Check if full-text search is enabled.
@@ -599,7 +603,7 @@ class Reader:
             SearchError
 
         """
-        return self._search.is_search_enabled()
+        return self._search.is_enabled()
 
     def update_search(self) -> None:
         """Update the full-text search index.
@@ -610,7 +614,7 @@ class Reader:
             StorageError
 
         """
-        return self._search.update_search()
+        return self._search.update()
 
     def search_entries(
         self,
