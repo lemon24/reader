@@ -10,7 +10,9 @@ from reader import EntryNotFoundError
 from reader import Feed
 from reader import FeedNotFoundError
 from reader import MetadataNotFoundError
+from reader import SearchError
 from reader import StorageError
+from reader.core.storage import Search
 from reader.core.storage import Storage
 from reader.core.storage import wrap_storage_exceptions
 from reader.core.types import EntryFilterOptions
@@ -167,32 +169,73 @@ def delete_feed_metadata(storage, feed, __):
     storage.delete_feed_metadata(feed.url, 'key')
 
 
+def enable_search(storage, _, __):
+    Search(storage).enable()
+
+
+def disable_search(storage, _, __):
+    Search(storage).disable()
+
+
+def is_search_enabled(storage, _, __):
+    Search(storage).is_enabled()
+
+
+def update_search(storage, _, __):
+    Search(storage).update()
+
+
+def search_entries_chunk_size_0(storage, _, __):
+    list(Search(storage).search_entries('entry', chunk_size=0))
+
+
+def search_entries_chunk_size_1(storage, _, __):
+    list(Search(storage).search_entries('entry', chunk_size=1))
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
-    'do_stuff',
+    'pre_stuff, do_stuff, exc_type',
     [
-        init,
-        add_feed,
-        remove_feed,
-        get_feeds,
-        get_feeds_for_update,
-        get_entries_for_update,
-        set_feed_user_title,
-        mark_as_stale,
-        mark_as_read_unread,
-        update_feed,
-        update_feed_last_updated,
-        add_or_update_entry,
-        add_or_update_entries,
-        get_entries_chunk_size_0,
-        get_entries_chunk_size_1,
-        iter_feed_metadata,
-        set_feed_metadata,
-        delete_feed_metadata,
+        (None, do_stuff, StorageError)
+        for do_stuff in [
+            init,
+            add_feed,
+            remove_feed,
+            get_feeds,
+            get_feeds_for_update,
+            get_entries_for_update,
+            set_feed_user_title,
+            mark_as_stale,
+            mark_as_read_unread,
+            update_feed,
+            update_feed_last_updated,
+            add_or_update_entry,
+            add_or_update_entries,
+            get_entries_chunk_size_0,
+            get_entries_chunk_size_1,
+            iter_feed_metadata,
+            set_feed_metadata,
+            delete_feed_metadata,
+        ]
+    ]
+    + [
+        (None, do_stuff, SearchError)
+        for do_stuff in [enable_search, disable_search, is_search_enabled]
+    ]
+    + [
+        (enable_search, do_stuff, SearchError)
+        for do_stuff in [
+            update_search,
+            search_entries_chunk_size_0,
+            search_entries_chunk_size_1,
+        ]
     ],
 )
-def test_errors_locked(db_path, do_stuff):
-    """All methods should raise StorageError when the database is locked.
+def test_errors_locked(db_path, pre_stuff, do_stuff, exc_type):
+    """All Storage methods should raise StorageError when the database is locked.
+
+    All Search methods should raise SearchError when the database is locked.
 
     """
     storage = Storage(db_path)
@@ -216,13 +259,16 @@ def test_errors_locked(db_path, do_stuff):
         can_return_from_transaction.wait()
         storage.db.execute("ROLLBACK;")
 
+    if pre_stuff:
+        pre_stuff(storage, feed, entry)
+
     thread = threading.Thread(target=target)
     thread.start()
 
     in_transaction.wait()
 
     try:
-        with pytest.raises(StorageError) as excinfo:
+        with pytest.raises(exc_type) as excinfo:
             do_stuff(storage, feed, entry)
         assert 'locked' in str(excinfo.value.__cause__)
     finally:
@@ -258,6 +304,22 @@ def iter_iter_feed_metadata(storage):
     return storage.iter_feed_metadata('two')
 
 
+def iter_search_entries_chunk_size_0(storage):
+    return Search(storage).search_entries('entry', chunk_size=0)
+
+
+def iter_search_entries_chunk_size_1(storage):
+    return Search(storage).search_entries('entry', chunk_size=1)
+
+
+def iter_search_entries_chunk_size_2(storage):
+    return Search(storage).search_entries('entry', chunk_size=2)
+
+
+def iter_search_entries_chunk_size_3(storage):
+    return Search(storage).search_entries('entry', chunk_size=3)
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     'iter_stuff',
@@ -271,6 +333,13 @@ def iter_iter_feed_metadata(storage):
         iter_get_entries_chunk_size_1,
         iter_get_entries_chunk_size_2,
         iter_get_entries_chunk_size_3,
+        pytest.param(
+            iter_search_entries_chunk_size_0,
+            marks=pytest.mark.xfail(raises=StorageError, strict=True),
+        ),
+        iter_search_entries_chunk_size_1,
+        iter_search_entries_chunk_size_2,
+        iter_search_entries_chunk_size_3,
     ],
 )
 def test_iter_locked(db_path, iter_stuff):
@@ -281,7 +350,7 @@ def test_iter_locked(db_path, iter_stuff):
     storage = Storage(db_path)
 
     feed = Feed('one')
-    entry = Entry('entry', datetime(2010, 1, 1))
+    entry = Entry('entry', datetime(2010, 1, 1), title='entry')
     storage.add_feed(feed.url, datetime(2010, 1, 2))
     storage.add_or_update_entry(
         EntryUpdateIntent(feed.url, entry, entry.updated, datetime(2010, 1, 1), 0)
@@ -292,6 +361,10 @@ def test_iter_locked(db_path, iter_stuff):
     )
     storage.set_feed_metadata('two', '1', 1)
     storage.set_feed_metadata('two', '2', 2)
+
+    search = Search(storage)
+    search.enable()
+    search.update()
 
     rv = iter_stuff(storage)
     next(rv)

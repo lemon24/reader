@@ -14,6 +14,7 @@ from typing import Iterator
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from typing import Type
 from typing import TypeVar
 from typing import Union
 
@@ -21,6 +22,7 @@ from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
+from .exceptions import SearchError
 from .exceptions import StorageError
 from .sqlite_utils import DBError
 from .sqlite_utils import ddl_transaction
@@ -43,7 +45,7 @@ log = logging.getLogger('reader')
 
 
 @contextlib.contextmanager
-def wrap_storage_exceptions() -> Iterator[None]:
+def wrap_storage_exceptions(exc_type: Type[Exception] = StorageError) -> Iterator[None]:
     """Wrap sqlite3 exceptions in StorageError.
 
     Only wraps exceptions that are unlikely to be programming errors (bugs),
@@ -60,10 +62,10 @@ def wrap_storage_exceptions() -> Iterator[None]:
     try:
         yield
     except sqlite3.OperationalError as e:
-        raise StorageError(f"sqlite3 error: {e}") from e
+        raise exc_type(f"sqlite3 error: {e}") from e
     except sqlite3.ProgrammingError as e:
         if "cannot operate on a closed database" in str(e).lower():
-            raise StorageError(f"sqlite3 error: {e}") from e
+            raise exc_type(f"sqlite3 error: {e}") from e
         raise
 
 
@@ -1051,6 +1053,7 @@ class Search:
     def __init__(self, storage: Storage):
         self.storage = storage
 
+    @wrap_storage_exceptions(SearchError)
     def enable(self) -> None:
         with ddl_transaction(self.storage.db) as db:
 
@@ -1155,6 +1158,7 @@ class Search:
                 """
             )
 
+    @wrap_storage_exceptions(SearchError)
     def disable(self) -> None:
         with ddl_transaction(self.storage.db) as db:
             db.execute("DROP TABLE IF EXISTS entries_search;")
@@ -1164,6 +1168,7 @@ class Search:
             db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
             db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")
 
+    @wrap_storage_exceptions(SearchError)
     def is_enabled(self) -> bool:
         # TODO: similar to HeavyMigration.get_version(); pull into table_exists()
         search_table_exists = (
@@ -1178,6 +1183,7 @@ class Search:
         )
         return search_table_exists
 
+    @wrap_storage_exceptions(SearchError)
     def update(self) -> None:
         # TODO: do we search through all content types?
 
@@ -1318,7 +1324,7 @@ class Search:
         if last:
             last = last_rank, last_feed_url, last_entry_id = last
 
-        with wrap_storage_exceptions():
+        with wrap_storage_exceptions(SearchError):
             cursor = self.storage.db.execute(sql_query, locals())
             for t in cursor:
                 rv_entry_id, rv_feed_url, rv_rank, rv_title, *_ = t

@@ -55,6 +55,7 @@ from .core.exceptions import (
     MetadataError,
     MetadataNotFoundError,
     StorageError,
+    SearchError,
 )
 
 

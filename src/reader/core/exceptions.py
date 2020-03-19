@@ -72,3 +72,7 @@ class StorageError(ReaderError):
     The original exception should be chained to this one (e.__cause__).
 
     """
+
+
+class SearchError(ReaderError):
+    """A search-related exception."""

@@ -41,22 +41,23 @@ def test_update_search(reader):
     reader.update_search()
 
 
+class SearchNotEnabledError(Exception):
+    pass
+
+
 @pytest.mark.xfail(
-    strict=True, reason="TODO: should fail with some kind of SearchError"
+    strict=True, reason="TODO: should fail with some kind of SearchNotEnabledError"
 )
 def test_update_search_fails_if_not_enabled(reader):
-    with pytest.raises(ReaderError):
+    with pytest.raises(SearchNotEnabledError):
         reader.update_search()
 
 
 @pytest.mark.xfail(
-    strict=True, reason="TODO: should fail with some kind of SearchError"
+    strict=True, reason="TODO: should fail with some kind of SearchNotEnabledError"
 )
 def test_search_entries_fails_if_not_enabled(reader):
-    class SearchError(Exception):
-        pass
-
-    with pytest.raises(SearchError):
+    with pytest.raises(SearchNotEnabledError):
         list(reader.search_entries('one'))
 
 
@@ -349,5 +350,4 @@ def test_search_entries_entry(reader, entry_arg):
 # END filtering tests
 
 
-# TODO: test blocking
-# TODO: test storageerror (search error?)
+# TODO: test syntax errors
