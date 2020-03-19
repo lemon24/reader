@@ -574,7 +574,8 @@ class Reader:
         """Enable full-text search.
 
         Raises:
-            TODO: StorageError and/or some search-related exception?
+            SearchError
+            StorageError
 
         """
         return self._search.enable_search()
@@ -583,7 +584,7 @@ class Reader:
         """Disable full-text search.
 
         Raises:
-            TODO: StorageError and/or some search-related exception?
+            SearchError
 
         """
         return self._search.disable_search()
@@ -595,7 +596,7 @@ class Reader:
             bool: Whether search is enabled or not.
 
         Raises:
-            TODO: StorageError and/or some search-related exception?
+            SearchError
 
         """
         return self._search.is_search_enabled()
@@ -605,7 +606,8 @@ class Reader:
 
         Raises:
             SearchNotEnabledError
-            TODO: StorageError and/or some search-related exception?
+            SearchError
+            StorageError
 
         """
         return self._search.update_search()
@@ -615,13 +617,12 @@ class Reader:
         query: str,
         *,
         feed: Optional[FeedInput] = None,
-        # TODO: breaks symmetry with get_entries/get_entry; this ok?
+        # TODO: breaks symmetry with get_entries/get_entry; this ok? update: yes, need to fix get_entries
         entry: Optional[EntryInput] = None,
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,
-        # TODO: remove no cover
-    ) -> Iterable[EntrySearchResult]:  # pragma: no cover
+    ) -> Iterable[EntrySearchResult]:
         """Search through the entries.
 
         Entries are sorted best-match first.
@@ -644,7 +645,8 @@ class Reader:
 
         Raises:
             SearchNotEnabledError
-            TODO: StorageError and/or some search-related exception?
+            SearchError
+            StorageError
 
         """
 
