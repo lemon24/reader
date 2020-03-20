@@ -37,6 +37,7 @@ setup(
         'web-app': ['flask>=0.10', 'humanize'],
         'enclosure-tags': ['requests', 'mutagen'],
         'plugins': ['setuptools>=40'],
+        'search': ['beautifulsoup4'],
         'dev': [
             # !=5.3.4 because of https://github.com/pytest-dev/pytest/issues/6517
             # TODO: remove !=5.3.4 once a newer version is published
@@ -48,6 +49,9 @@ setup(
             'requests-mock',
             'mechanicalsoup',
             'requests-wsgi-adapter',
+            # We want to test all known Beautiful Soup parsers.
+            'lxml',
+            'html5lib',
             # mypy is not working on pypy as of January 2020
             # https://github.com/python/typed_ast/issues/97#issuecomment-484335190
             'mypy; implementation_name!="pypy"',

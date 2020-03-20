@@ -3,7 +3,7 @@
 all: test
 
 install-dev:
-	pip install -q -e '.[cli,web-app,enclosure-tags,plugins,dev]'
+	pip install -q -e '.[cli,web-app,enclosure-tags,plugins,search,dev]'
 
 test: clean-pyc install-dev
 	pytest -v --runslow

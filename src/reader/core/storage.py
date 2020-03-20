@@ -18,6 +18,11 @@ from typing import Type
 from typing import TypeVar
 from typing import Union
 
+try:
+    import bs4  # type: ignore
+except ImportError:  # pragma: no cover
+    bs4 = None
+
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
@@ -1196,6 +1201,8 @@ class Search:
 
     def _update(self) -> None:
         # TODO: do we search through all content types?
+        # TODO: should raise some kind of custom exception if bs4 is not available,
+        # otherwise we get only SearchError: sqlite3 error: user-defined function raised exception (alternatively, check on exception, and warn on other methods)
 
         self.storage.db.create_function('strip_html', 1, strip_html)
 
@@ -1472,15 +1479,30 @@ class Search:
         return query
 
 
-def strip_html(text: Any) -> Any:
-    return text
-    # TODO: type annotations for pass-through types, although typeshed kinda gives up on types returned by SQLite; https://github.com/python/typeshed/blob/c50fce6ef3111bba4d0b46e3c1f8e846d05cf0c3/stdlib/2and3/sqlite3/dbapi2.pyi#L185
-    # TODO: actually implement this
-    # TODO: cache
-    """
+_SqliteType = TypeVar('_SqliteType', None, int, float, str, bytes)
+
+
+@functools.lru_cache()
+def strip_html(text: _SqliteType, features: Optional[str] = None) -> _SqliteType:
     if not isinstance(text, str):
         return text
-    # TODO: remove script, style etc
-    # TODO: allow different parsers than lxml?
-    return bs4.BeautifulSoup(text, features='lxml').get_text(separator='\n')
-    """
+
+    # Not specifiying a parser explicitly will raise a warning;
+    # we don't care for now (it should do its best).
+    # TODO: Expose BeautifulSoup(features=...) when we have a config system.
+    soup = bs4.BeautifulSoup(text, features=features)
+
+    # <script>, <noscript> and <style> don't contain things relevant to search.
+    # <title> probably does, but its content should already be in the entry title.
+    #
+    # Although <head> is supposed to contain machine-readable content, Firefox
+    # shows any free-floating text it contains, so we should keep it around.
+    #
+    for e in soup.select('script, noscript, style, title'):
+        e.replace_with('\n')
+
+    # TODO: Remove this assert once bs4 gets type annotations.
+    rv = soup.get_text(separator='\n')
+    assert isinstance(rv, str)
+
+    return rv
