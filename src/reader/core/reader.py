@@ -15,7 +15,7 @@ from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
 from .exceptions import ParseError
 from .parser import Parser
-from .storage import Search
+from .search import Search
 from .storage import Storage
 from .types import Entry
 from .types import entry_argument

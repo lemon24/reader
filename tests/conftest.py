@@ -2,6 +2,7 @@ import py.path
 import pytest
 
 from reader import make_reader
+from reader.core.storage import Storage
 
 
 def pytest_addoption(parser):
@@ -23,6 +24,11 @@ def pytest_collection_modifyitems(config, items):
 @pytest.fixture
 def reader():
     return make_reader(':memory:')
+
+
+@pytest.fixture
+def storage():
+    return Storage(':memory:')
 
 
 def call_update_feeds(reader, _):
