@@ -135,9 +135,9 @@ class Search:
                 """
             )
 
-            # FIXME: use "UPDATE OF ... ON" instead
-            # FIXME: only run UPDATE triggers if the values are actually different
-            # FIXME: what happens if the feed ID changes?
+            # TODO: use "UPDATE OF ... ON" instead (needs tests)
+            # TODO: only run UPDATE triggers if the values are actually different (needs tests)
+            # TODO: what happens if the feed ID changes? can't happen yet; also see https://github.com/lemon24/reader/issues/149
 
             db.execute(
                 """
