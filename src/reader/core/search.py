@@ -36,6 +36,7 @@ def strip_html(text: _SqliteType, features: Optional[str] = None) -> _SqliteType
     # Not specifiying a parser explicitly will raise a warning;
     # we don't care for now (it should do its best).
     # TODO: Expose BeautifulSoup(features=...) when we have a config system.
+    # FIXME: Suppress warnings until then.
     soup = bs4.BeautifulSoup(text, features=features)
 
     # <script>, <noscript> and <style> don't contain things relevant to search.
@@ -83,13 +84,13 @@ class Search:
                     _feed UNINDEXED,
                     _content_path UNINDEXED,
                     title,  -- entries.title
-                    text,  -- entries.summary or one of entries.content; TODO: better name?
+                    text,  -- entries.summary or one of entries.content; FIXME: better name?
                     feed,  -- feeds.title
                     tokenize = "porter unicode61 remove_diacritics 1 tokenchars '_'"
                 );
                 """
             )
-            # TODO: we still need to tune the rank weights, these are just guesses
+            # FIXME: we still need to tune the rank weights, these are just guesses
             db.execute(
                 """
                 INSERT INTO entries_search(entries_search, rank)
@@ -116,10 +117,9 @@ class Search:
                 """
             )
 
-            # TODO: use "UPDATE OF ... ON" instead
-            # TODO: only run UPDATE triggers if the values are actually different
-            # TODO: what happens if the feed ID changes?
-            # TODO: better trigger names?
+            # FIXME: use "UPDATE OF ... ON" instead
+            # FIXME: only run UPDATE triggers if the values are actually different
+            # FIXME: what happens if the feed ID changes?
 
             db.execute(
                 """
@@ -210,8 +210,8 @@ class Search:
             raise
 
     def _update(self) -> None:
-        # TODO: do we search through all content types?
-        # TODO: should raise some kind of custom exception if bs4 is not available,
+        # FIXME: do we search through all content types?
+        # FIXME: should raise some kind of custom exception if bs4 is not available,
         # otherwise we get only SearchError: sqlite3 error: user-defined function raised exception (alternatively, check on exception, and warn on other methods)
 
         self.storage.db.create_function('strip_html', 1, strip_html)

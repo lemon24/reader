@@ -156,12 +156,12 @@ class EntrySearchResult(_namedtuple_compat):
 
     id: str
 
-    # TODO: is this the right way to expose the feed?
+    # FIXME: is this the right way to expose the feed?
     feed: str
 
     title: Optional[str]
 
-    # TODO: more fields
+    # FIXME: entry search result fields
 
 
 # Semi-public API (typing support)

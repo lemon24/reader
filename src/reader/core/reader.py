@@ -577,7 +577,7 @@ class Reader:
     def enable_search(self) -> None:
         """Enable full-text search.
 
-        TODO: what if already enabled?
+        FIXME: what if already enabled?
 
         Raises:
             SearchError
@@ -589,7 +589,7 @@ class Reader:
     def disable_search(self) -> None:
         """Disable full-text search.
 
-        TODO: what if already disabled?
+        FIXME: what if already disabled?
 
         Raises:
             SearchError
@@ -612,7 +612,7 @@ class Reader:
     def update_search(self) -> None:
         """Update the full-text search index.
 
-        TODO: what if disabled?
+        FIXME: what if disabled?
 
         Raises:
             SearchNotEnabledError
@@ -627,7 +627,6 @@ class Reader:
         query: str,
         *,
         feed: Optional[FeedInput] = None,
-        # TODO: breaks symmetry with get_entries/get_entry; this ok? update: yes, need to fix get_entries
         entry: Optional[EntryInput] = None,
         read: Optional[bool] = None,
         important: Optional[bool] = None,
@@ -637,11 +636,11 @@ class Reader:
 
         Entries are sorted best-match first.
 
-        TODO: Mention the query string format is storage-dependent.
+        FIXME: Mention the query string format is storage-dependent.
 
-        TODO: Explain the query string format briefly, and the available columns.
+        FIXME: Explain the query string format briefly, and the available columns.
 
-        TODO: what if disabled?
+        FIXME: what if disabled?
 
         Args:
             query (str): The search query string.

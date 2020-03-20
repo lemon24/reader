@@ -59,7 +59,7 @@ def test_search_entries_basic(reader):
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
     two = parser.entry(1, 2, datetime(2010, 1, 1), title='two')
 
-    # TODO: a few more, with summary and content(s)
+    # FIXME: a few more, with summary and content(s)
 
     reader.add_feed(feed.url)
     reader.update_feeds()
