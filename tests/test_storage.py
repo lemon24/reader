@@ -9,6 +9,7 @@ from reader import Entry
 from reader import EntryNotFoundError
 from reader import Feed
 from reader import FeedNotFoundError
+from reader import InvalidSearchQueryError
 from reader import MetadataNotFoundError
 from reader import SearchError
 from reader import StorageError
@@ -609,3 +610,13 @@ def test_important_mark_as_unimportant(storage_with_two_entries):
 def test_important_mark_entry_not_found(storage):
     with pytest.raises(EntryNotFoundError):
         storage.mark_as_important_unimportant('feed', 'one', True)
+
+
+@pytest.mark.parametrize('query', ['\x00', '"', '*', 'O:', '*p'])
+def test_invalid_search_query_error(storage, query):
+    # We're not testing this in test_reader_search.py because
+    # the invalid query strings are search-provider-dependent.
+    search = Search(storage)
+    search.enable()
+    with pytest.raises(InvalidSearchQueryError):
+        next(search.search_entries(query))

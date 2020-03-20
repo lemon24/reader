@@ -339,6 +339,3 @@ def test_search_entries_entry(reader, entry_arg):
 
 
 # END filtering tests
-
-
-# TODO: test syntax errors

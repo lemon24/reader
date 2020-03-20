@@ -101,3 +101,7 @@ All exceptions that :class:`Reader` explicitly raises inherit from :exc:`ReaderE
 .. autoexception:: :exc:`SearchNotEnabledError`
 
     Subclass of :exc:`SearchError`.
+
+.. autoexception:: :exc:`InvalidSearchQueryError`
+
+    Subclass of :exc:`SearchError`.

@@ -21,6 +21,7 @@ from typing import Union
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
+from .exceptions import InvalidSearchQueryError
 from .exceptions import MetadataNotFoundError
 from .exceptions import SearchError
 from .exceptions import SearchNotEnabledError
@@ -1317,6 +1318,14 @@ class Search:
 
         return rv
 
+    _query_error_message_fragments = [
+        "fts5: syntax error near",
+        "unknown special query",
+        "no such column",
+        "no such cursor",
+        "unterminated string",
+    ]
+
     def _search_entries(
         self,
         query: str,
@@ -1338,8 +1347,18 @@ class Search:
             try:
                 cursor = self.storage.db.execute(sql_query, locals())
             except sqlite3.OperationalError as e:
-                if 'no such table' in str(e).lower():
+                msg_lower = str(e).lower()
+
+                if 'no such table' in msg_lower:
                     raise SearchNotEnabledError() from e
+
+                is_query_error = any(
+                    fragment in msg_lower
+                    for fragment in self._query_error_message_fragments
+                )
+                if is_query_error:
+                    raise InvalidSearchQueryError(str(e)) from e
+
                 raise
 
             for t in cursor:

@@ -57,6 +57,7 @@ from .core.exceptions import (
     StorageError,
     SearchError,
     SearchNotEnabledError,
+    InvalidSearchQueryError,
 )
 
 

@@ -577,6 +577,8 @@ class Reader:
     def enable_search(self) -> None:
         """Enable full-text search.
 
+        TODO: what if already enabled?
+
         Raises:
             SearchError
             StorageError
@@ -586,6 +588,8 @@ class Reader:
 
     def disable_search(self) -> None:
         """Disable full-text search.
+
+        TODO: what if already disabled?
 
         Raises:
             SearchError
@@ -607,6 +611,8 @@ class Reader:
 
     def update_search(self) -> None:
         """Update the full-text search index.
+
+        TODO: what if disabled?
 
         Raises:
             SearchNotEnabledError
@@ -635,6 +641,8 @@ class Reader:
 
         TODO: Explain the query string format briefly, and the available columns.
 
+        TODO: what if disabled?
+
         Args:
             query (str): The search query string.
             feed (str or Feed or None): Only search the entries for this feed.
@@ -649,6 +657,7 @@ class Reader:
 
         Raises:
             SearchNotEnabledError
+            InvalidSearchQueryError
             SearchError
             StorageError
 

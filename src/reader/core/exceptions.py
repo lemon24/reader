@@ -75,8 +75,17 @@ class StorageError(ReaderError):
 
 
 class SearchError(ReaderError):
-    """A search-related exception."""
+    """A search-related exception.
+
+    If caused by an exception raised by the underlying search provider,
+    the original exception should be chained to this one (e.__cause__).
+
+    """
 
 
 class SearchNotEnabledError(SearchError):
     """A search-related method was called when search was not enabled."""
+
+
+class InvalidSearchQueryError(SearchError):
+    """The search query provided was somehow invalid."""
