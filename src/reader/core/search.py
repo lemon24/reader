@@ -2,6 +2,7 @@ import functools
 import json
 import logging
 import sqlite3
+import warnings
 from typing import Any
 from typing import Iterable
 from typing import Optional
@@ -25,6 +26,27 @@ from .storage import Storage, wrap_storage_exceptions
 log = logging.getLogger('reader')
 
 
+# BeautifulSoup warns if not giving it a parser explicitly; full text:
+#
+#   No parser was explicitly specified, so I'm using the best available
+#   HTML parser for this system ("..."). This usually isn't a problem,
+#   but if you run this code on another system, or in a different virtual
+#   environment, it may use a different parser and behave differently.
+#
+# We are ok with any parser, and with how BeautifulSoup picks the best one if
+# available. Explicitly using generic features (e.g. `('html', 'fast')`,
+# the default) instead of a specific parser still warns.
+#
+# Currently there's no way to allow users to pick a parser, and we don't want
+# to force a specific parser, so there's no point in warning.
+#
+# TODO: Expose BeautifulSoup(features=...) when we have a config system.
+#
+warnings.filterwarnings(
+    'ignore', message='No parser was explicitly specified', module='reader.core.search'
+)
+
+
 _SqliteType = TypeVar('_SqliteType', None, int, float, str, bytes)
 
 
@@ -33,10 +55,6 @@ def strip_html(text: _SqliteType, features: Optional[str] = None) -> _SqliteType
     if not isinstance(text, str):
         return text
 
-    # Not specifiying a parser explicitly will raise a warning;
-    # we don't care for now (it should do its best).
-    # TODO: Expose BeautifulSoup(features=...) when we have a config system.
-    # FIXME: Suppress warnings until then.
     soup = bs4.BeautifulSoup(text, features=features)
 
     # <script>, <noscript> and <style> don't contain things relevant to search.
