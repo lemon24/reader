@@ -102,7 +102,7 @@ class Search:
                     _feed UNINDEXED,
                     _content_path UNINDEXED,
                     title,  -- entries.title
-                    text,  -- entries.summary or one of entries.content; FIXME: better name?
+                    content,  -- entries.summary or one of entries.content
                     feed,  -- feeds.title
                     tokenize = "porter unicode61 remove_diacritics 1 tokenchars '_'"
                 );
@@ -490,7 +490,7 @@ class Search:
                 min(search.rank) as rank,
                 search.title,
                 search.feed,
-                json_group_array(json(search.text)) as text
+                json_group_array(json(search.text)) as content
             FROM entries
             JOIN search ON (entries.id, entries.feed) = (search._id, search._feed)
             {where_keyword}

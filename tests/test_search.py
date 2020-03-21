@@ -160,3 +160,6 @@ def test_invalid_search_query_error(storage, query):
     search.enable()
     with pytest.raises(InvalidSearchQueryError):
         next(search.search_entries(query))
+
+
+# TODO: test FTS5 column names
