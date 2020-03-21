@@ -9,10 +9,14 @@ from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
+# Only Search.update() has a reason to fail if bs4 is missing.
 try:
     import bs4  # type: ignore
-except ImportError:  # pragma: no cover
+
+    bs4_import_error = None
+except ImportError as e:  # pragma: no cover
     bs4 = None
+    bs4_import_error = e
 
 from .exceptions import InvalidSearchQueryError
 from .exceptions import SearchError
@@ -228,8 +232,14 @@ class Search:
             raise
 
     def _update(self) -> None:
-        # FIXME: should raise some kind of custom exception if bs4 is not available,
-        # otherwise we get only SearchError: sqlite3 error: user-defined function raised exception (alternatively, check on exception, and warn on other methods)
+        # If bs4 is not available, we raise an exception here, otherwise
+        # we get just a "user-defined function raised exception" SearchError.
+        if not bs4:
+            raise SearchError(
+                "could not import search dependencies; "
+                "use the 'search' extra to install them; "
+                f"original import error: {bs4_import_error}"
+            ) from bs4_import_error
 
         self.storage.db.create_function('strip_html', 1, strip_html)
 

@@ -7,6 +7,18 @@ from reader.core.search import Search
 from reader.core.search import strip_html
 
 
+def test_bs4_import_error(storage, monkeypatch):
+    search = Search(storage)
+    search.enable()
+    monkeypatch.setattr('reader.core.search.bs4', None)
+    monkeypatch.setattr('reader.core.search.bs4_import_error', ImportError('reason'))
+
+    with pytest.raises(SearchError) as excinfo:
+        search.update()
+    assert 'search dependencies' in str(excinfo.value)
+    assert 'reason' in str(excinfo.value)
+
+
 STRIP_HTML_DATA = [(i, i) for i in [None, 10, 11.2, b'aabb', b'aa<br>bb']] + [
     ('aabb', 'aabb'),
     ('aa<br>bb', 'aa\nbb'),
