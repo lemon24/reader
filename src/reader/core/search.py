@@ -228,7 +228,6 @@ class Search:
             raise
 
     def _update(self) -> None:
-        # FIXME: do we search through all content types?
         # FIXME: should raise some kind of custom exception if bs4 is not available,
         # otherwise we get only SearchError: sqlite3 error: user-defined function raised exception (alternatively, check on exception, and warn on other methods)
 
@@ -285,6 +284,13 @@ class Search:
                     WHERE
                         entries_search_sync_state.to_update
                         AND json_valid(content) and json_array_length(content) > 0
+                        -- TODO: test the right content types get indexed
+                        AND (
+                            json_extract(json_each.value, '$.type') is NULL
+                            OR lower(json_extract(json_each.value, '$.type')) in (
+                                'text/html', 'text/xhtml', 'text/plain'
+                            )
+                        )
                 ),
 
                 from_default AS (
