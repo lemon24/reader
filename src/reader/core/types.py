@@ -115,6 +115,8 @@ class Entry(_namedtuple_compat):
     #: Whether the entry is important or not.
     important: bool = False
 
+    # TODO: Entries returned by get_entries() always have feed set; model it through typing.
+
     #: The entry's feed.
     feed: Optional[Feed] = None
 

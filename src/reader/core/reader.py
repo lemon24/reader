@@ -577,7 +577,7 @@ class Reader:
     def enable_search(self) -> None:
         """Enable full-text search.
 
-        FIXME: what if already enabled?
+        Calling this method if search is already enabled is a no-op.
 
         Raises:
             SearchError
@@ -589,7 +589,7 @@ class Reader:
     def disable_search(self) -> None:
         """Disable full-text search.
 
-        FIXME: what if already disabled?
+        Calling this method if search is already disabled is a no-op.
 
         Raises:
             SearchError
@@ -612,7 +612,7 @@ class Reader:
     def update_search(self) -> None:
         """Update the full-text search index.
 
-        FIXME: what if disabled?
+        Search must be enabled to call this method.
 
         Raises:
             SearchNotEnabledError
@@ -632,20 +632,40 @@ class Reader:
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,
     ) -> Iterable[EntrySearchResult]:
-        """Search through the entries.
+        """Get entries matching a full-text search query, sorted by relevance.
 
-        Entries are sorted best-match first.
+        Note:
+            The query syntax is dependent on the search provider.
 
-        FIXME: Mention the query string format is storage-dependent.
+            The default (and for now, only) search provider is SQLite FTS5.
+            You can find more details on its query syntax here:
+            https://www.sqlite.org/fts5.html#full_text_query_syntax
 
-        FIXME: Explain the query string format briefly, and the available columns.
+            The columns available in queries are:
 
-        FIXME: what if disabled?
+            * ``title``: the entry title
+            * ``feed``: the feed title
+            * ``content``: the entry main text content;
+              this includes the summary and the value of contents that have
+              text/(x)html, text/plain or missing content types
+
+            Query examples:
+
+            * ``hello internet``: entries that match "hello" and "internet"
+            * ``hello NOT internet``: entries that match "hello" but do not
+              match "internet"
+            * ``hello feed: cortex``: entries that match "hello" anywhere,
+              and their feed title matches "cortex"
+            * ``hello NOT feed: internet``: entries that match "hello" anywhere,
+              and their feed title does not match "internet"
+
+        Search must be enabled to call this method.
 
         Args:
-            query (str): The search query string.
+            query (str): The search query.
             feed (str or Feed or None): Only search the entries for this feed.
-            entry (tuple(str, str) or Entry or None): Only search for this entry.
+            entry (tuple(str, str) or Entry or None):
+                Only search for the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only search (un)read entries.
             important (bool or None): Only search (un)important entries.
             has_enclosures (bool or None): Only search entries that (don't)

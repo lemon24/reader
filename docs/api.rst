@@ -14,7 +14,7 @@ All of reader's functionality can be accessed through a :class:`Reader` instance
 
 .. todo::
 
-    Split this sub-sections.
+    Split this into sub-sections.
 
 .. autofunction:: make_reader
 
@@ -98,10 +98,10 @@ All exceptions that :class:`Reader` explicitly raises inherit from :exc:`ReaderE
 
     Subclass of :exc:`ReaderError`.
 
-.. autoexception:: :exc:`SearchNotEnabledError`
+.. autoexception:: SearchNotEnabledError
 
     Subclass of :exc:`SearchError`.
 
-.. autoexception:: :exc:`InvalidSearchQueryError`
+.. autoexception:: InvalidSearchQueryError
 
     Subclass of :exc:`SearchError`.
