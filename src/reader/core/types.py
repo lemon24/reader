@@ -30,6 +30,8 @@ class _namedtuple_compat:
 
     """Add namedtuple-like methods to a dataclass."""
 
+    # TODO: can we get rid of _namedtuple_compat?
+
     @classmethod
     def _make(cls: Type[_T], iterable: Iterable[Any]) -> _T:
         iterable = tuple(iterable)
