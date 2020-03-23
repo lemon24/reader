@@ -111,7 +111,8 @@ class Search:
                     feed,  -- feeds.title or feed.user_title
                     _id UNINDEXED,
                     _feed UNINDEXED,
-                    _content_path UNINDEXED,
+                    _content_path UNINDEXED,  -- TODO: maybe optimize this to a number
+                    _is_feed_user_title UNINDEXED,
                     tokenize = "porter unicode61 remove_diacritics 1 tokenchars '_'"
                 );
                 """
@@ -338,7 +339,8 @@ class Search:
                     strip_html(coalesce(feeds.user_title, feeds.title)),
                     union_all.id,
                     union_all.feed as feed,
-                    union_all.content_path
+                    union_all.content_path,
+                    feeds.user_title IS NOT NULL
                 FROM union_all
                 JOIN feeds ON feeds.url = union_all.feed;
 
