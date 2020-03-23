@@ -499,12 +499,12 @@ class Search:
                     _id,
                     _feed,
                     rank,
-                    highlight(entries_search, 1, '>>>', '<<<') as title,
-                    highlight(entries_search, 3, '>>>', '<<<') as feed,
+                    highlight(entries_search, 0, '>>>', '<<<') as title,
+                    highlight(entries_search, 2, '>>>', '<<<') as feed,
                     json_object(
                         'content_path', _content_path,
                         'rank', rank,
-                        'text', snippet(entries_search, 2, '>>>', '<<<', '...', 12)
+                        'text', snippet(entries_search, 1, '>>>', '<<<', '...', 12)
                     ) as text
                 FROM entries_search
                 WHERE entries_search MATCH :query

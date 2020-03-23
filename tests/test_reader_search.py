@@ -79,6 +79,18 @@ def test_search_entries_basic(reader):
         EntrySearchResult(two.id, feed.url, {'.title': HighlightedString(two.title)})
     ]
 
+    """
+    print(list(reader.search_entries('one')) )
+    print(one)
+
+    result in
+
+    [EntrySearchResult(id='http://www.example.com/1/entries/1', feed='feed-1.xml', metadata={'.title': HighlightedString(value='>>>one<<<', highlights=())}, content=mappingproxy({}))]
+    Entry(id='http://www.example.com/1/entries/1', updated=datetime.datetime(2010, 1, 1, 0, 0), title='one', link='http://www.example.com/entries/1', author=None, published=None, summary=None, content=(), enclosures=(), read=False, important=False, feed=None)
+
+    FIXME: what the hell are we testing here, those things should not be equal
+    """
+
 
 # TODO: fix duplication in these order tests
 # BEGIN order tests
