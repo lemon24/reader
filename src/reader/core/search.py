@@ -99,15 +99,19 @@ class Search:
 
             # The column names matter, as they can be used in column filters;
             # https://www.sqlite.org/fts5.html#fts5_column_filters
+            #
+            # We put the unindexed stuff at the end to avoid having to adjust
+            # stuff depended on the column index if we add new columns.
+            #
             db.execute(
                 """
                 CREATE VIRTUAL TABLE IF NOT EXISTS entries_search USING fts5(
+                    title,  -- entries.title
+                    content,  -- entries.summary or one of entries.content
+                    feed,  -- feeds.title or feed.user_title
                     _id UNINDEXED,
                     _feed UNINDEXED,
                     _content_path UNINDEXED,
-                    title,  -- entries.title
-                    content,  -- entries.summary or one of entries.content
-                    feed,  -- feeds.title
                     tokenize = "porter unicode61 remove_diacritics 1 tokenchars '_'"
                 );
                 """
@@ -116,7 +120,7 @@ class Search:
             db.execute(
                 """
                 INSERT INTO entries_search(entries_search, rank)
-                VALUES ('rank', 'bm25(1, 1, 1, 4, 1, 2)');
+                VALUES ('rank', 'bm25(4, 1, 2)');
                 """
             )
 
@@ -329,12 +333,12 @@ class Search:
                 INSERT INTO entries_search
 
                 SELECT
-                    union_all.id,
-                    union_all.feed as feed,
-                    union_all.content_path,
                     union_all.title,
                     union_all.content_text,
-                    strip_html(coalesce(feeds.user_title, feeds.title))
+                    strip_html(coalesce(feeds.user_title, feeds.title)),
+                    union_all.id,
+                    union_all.feed as feed,
+                    union_all.content_path
                 FROM union_all
                 JOIN feeds ON feeds.url = union_all.feed;
 
@@ -485,12 +489,12 @@ class Search:
                     _id,
                     _feed,
                     rank,
-                    highlight(entries_search, 3, '>>>', '<<<') as title,
-                    highlight(entries_search, 5, '>>>', '<<<') as feed,
+                    highlight(entries_search, 1, '>>>', '<<<') as title,
+                    highlight(entries_search, 3, '>>>', '<<<') as feed,
                     json_object(
                         'content_path', _content_path,
                         'rank', rank,
-                        'text', snippet(entries_search, 4, '>>>', '<<<', '...', 12)
+                        'text', snippet(entries_search, 2, '>>>', '<<<', '...', 12)
                     ) as text
                 FROM entries_search
                 WHERE entries_search MATCH :query
