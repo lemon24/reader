@@ -23,7 +23,7 @@ from .exceptions import SearchError
 from .exceptions import SearchNotEnabledError
 
 from .sqlite_utils import ddl_transaction
-from .types import EntrySearchResult, EntryFilterOptions
+from .types import EntrySearchResult, EntryFilterOptions, HighlightedString
 from .storage import Storage, wrap_storage_exceptions
 
 
@@ -421,7 +421,15 @@ class Search:
             for t in cursor:
                 rv_entry_id, rv_feed_url, rv_rank, rv_title, *_ = t
 
-                result = EntrySearchResult(rv_entry_id, rv_feed_url, rv_title)
+                result = EntrySearchResult(
+                    rv_entry_id,
+                    rv_feed_url,
+                    # TODO: wrap these dicts in types.MappingProxyType to make them read-only
+                    # FIXME: actually set highlights for HighlightedString
+                    # FIXME: return the feed title too
+                    {'.title': HighlightedString(rv_title)},
+                    # FIXME: actually return the content
+                )
 
                 yield result, (rv_rank, rv_feed_url, rv_entry_id)
 

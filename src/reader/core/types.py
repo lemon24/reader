@@ -2,10 +2,12 @@ import dataclasses
 import sys
 from dataclasses import dataclass
 from datetime import datetime
+from types import MappingProxyType
 from typing import Any
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Mapping
 from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
@@ -152,18 +154,41 @@ class Enclosure(_namedtuple_compat):
 
 
 @dataclass(frozen=True)
-class EntrySearchResult(_namedtuple_compat):
+class HighlightedString:
 
-    """Data type representing the result of an entry search."""
+    value: str
+    highlights: Sequence[slice] = ()
 
+
+@dataclass(frozen=True)
+class EntrySearchResult:
+
+    """Data type representing the result of an entry search.
+
+    .. todo::
+
+        Explain what .metadata and .content are keyed by.
+
+    """
+
+    # FIXME: don't like the names of id/feed; they don't resemble anything;
+    # like this, an EntrySearchResult is a valid entry_argument, though
+
+    #: The entry id.
     id: str
 
-    # FIXME: is this the right way to expose the feed?
+    #: The feed URL.
     feed: str
 
-    title: Optional[str]
+    #: Matching entry metadata, in arbitrary order.
+    #: Currently entry.title and entry.feed.user_title/.title.
+    metadata: Mapping[str, HighlightedString] = MappingProxyType({})
 
-    # FIXME: entry search result fields
+    #: Matching entry content, sorted by relevance.
+    #: Content is any of entry.summary and entry.content[].value.
+    content: Mapping[str, HighlightedString] = MappingProxyType({})
+
+    # TODO: entry: Optional[Entry]; model it through typing if possible
 
 
 # Semi-public API (typing support)

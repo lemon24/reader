@@ -6,6 +6,7 @@ from fakeparser import Parser
 from reader import Content
 from reader import Enclosure
 from reader import EntrySearchResult
+from reader import HighlightedString
 from reader import Reader
 from reader import ReaderError
 from reader import SearchNotEnabledError
@@ -72,10 +73,10 @@ def test_search_entries_basic(reader):
 
     list(reader.search_entries('zero')) == []
     list(reader.search_entries('one')) == [
-        EntrySearchResult(one.id, feed.url, one.title)
+        EntrySearchResult(one.id, feed.url, {'.title': HighlightedString(one.title)})
     ]
     list(reader.search_entries('two')) == [
-        EntrySearchResult(two.id, feed.url, two.title)
+        EntrySearchResult(two.id, feed.url, {'.title': HighlightedString(two.title)})
     ]
 
 

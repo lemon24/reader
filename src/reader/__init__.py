@@ -42,7 +42,14 @@ __version__ = '0.19.dev0'
 
 from .core.reader import Reader, make_reader
 
-from .core.types import Feed, Entry, Content, Enclosure, EntrySearchResult
+from .core.types import (
+    Feed,
+    Entry,
+    Content,
+    Enclosure,
+    EntrySearchResult,
+    HighlightedString,
+)
 
 from .core.exceptions import (
     ReaderError,
