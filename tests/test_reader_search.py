@@ -58,9 +58,15 @@ def test_search_entries_basic(reader):
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
-    two = parser.entry(1, 2, datetime(2010, 1, 1), title='two')
-
-    # FIXME: a few more, with summary and content(s)
+    two = parser.entry(1, 2, datetime(2010, 1, 1), title='two', summary='summary')
+    three = parser.entry(
+        1,
+        3,
+        datetime(2010, 1, 1),
+        title='shall not be named',
+        summary='does not match',
+        content=[Content('three content')],
+    )
 
     reader.add_feed(feed.url)
     reader.update_feeds()
@@ -73,10 +79,73 @@ def test_search_entries_basic(reader):
 
     assert list(reader.search_entries('zero')) == []
     assert list(reader.search_entries('one')) == [
-        EntrySearchResult(one.id, feed.url, {'.title': HighlightedString('>>>one<<<')})
+        EntrySearchResult(
+            one.id,
+            feed.url,
+            {
+                '.title': HighlightedString('>>>one<<<'),
+                '.feed.title': HighlightedString(feed.title),
+            },
+        )
     ]
     assert list(reader.search_entries('two')) == [
-        EntrySearchResult(two.id, feed.url, {'.title': HighlightedString('>>>two<<<')})
+        EntrySearchResult(
+            two.id,
+            feed.url,
+            {
+                '.title': HighlightedString('>>>two<<<'),
+                '.feed.title': HighlightedString(feed.title),
+            },
+            {'.summary': HighlightedString('summary')},
+        )
+    ]
+    assert list(reader.search_entries('three')) == [
+        EntrySearchResult(
+            three.id,
+            feed.url,
+            {
+                '.title': HighlightedString(three.title),
+                '.feed.title': HighlightedString(feed.title),
+            },
+            {'.content[0].value': HighlightedString('>>>three<<< content')},
+        )
+    ]
+
+    # TODO: fix inconsistent naming
+
+    feed_two = parser.feed(2, datetime(2010, 1, 1))
+    feed_two_entry = parser.entry(2, 1, datetime(2010, 1, 1), title=None)
+    feed_three = parser.feed(3, datetime(2010, 1, 1), title=None)
+    feed_three_entry = parser.entry(3, 1, datetime(2010, 1, 1), title='entry summary')
+
+    reader.add_feed(feed_two.url)
+    reader.add_feed(feed_three)
+    reader.set_feed_user_title(feed_two, 'a summary of things')
+
+    reader.update_feeds()
+    reader.update_search()
+
+    # TODO: we're also testing for order here, and maybe we shouldn't
+    assert list(reader.search_entries('summary')) == [
+        EntrySearchResult(
+            feed_three_entry.id,
+            feed_three.url,
+            {'.title': HighlightedString('entry >>>summary<<<')},
+        ),
+        EntrySearchResult(
+            feed_two_entry.id,
+            feed_two.url,
+            {'.feed.user_title': HighlightedString('a >>>summary<<< of things')},
+        ),
+        EntrySearchResult(
+            two.id,
+            feed.url,
+            {
+                '.title': HighlightedString(two.title),
+                '.feed.title': HighlightedString(feed.title),
+            },
+            {'.summary': HighlightedString('>>>summary<<<')},
+        ),
     ]
 
 
@@ -124,6 +193,29 @@ def test_search_entries_order_title_content_beats_title(reader):
         (three.id, feed.url),
         (one.id, feed.url),
     ]
+
+
+@pytest.mark.xfail(reason="FIXME: we get more than one result")
+def test_search_entries_order_content(reader):
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.entry(
+        1,
+        1,
+        datetime(2010, 1, 1),
+        summary='word word',
+        content=[Content('word'), Content('does not match'), Content('word word word')],
+    )
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+    reader.enable_search()
+    reader.update_search()
+
+    # there should be exactly one result
+    rv, = reader.search_entries('word')
 
 
 @pytest.mark.parametrize(

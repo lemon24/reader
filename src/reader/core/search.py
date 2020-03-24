@@ -3,9 +3,11 @@ import json
 import logging
 import sqlite3
 import warnings
+from types import MappingProxyType
 from typing import Any
 from typing import Iterable
 from typing import Optional
+from typing import OrderedDict
 from typing import Tuple
 from typing import TypeVar
 
@@ -276,7 +278,7 @@ class Search:
                     SELECT
                         entries.id,
                         entries.feed,
-                        'summary',
+                        '.summary',
                         strip_html(entries.title),
                         strip_html(entries.summary)
                     FROM entries_search_sync_state
@@ -290,7 +292,7 @@ class Search:
                     SELECT
                         entries.id,
                         entries.feed,
-                        'content.' || json_each.key,
+                        '.content[' || json_each.key || '].value',
                         strip_html(entries.title),
                         strip_html(json_extract(json_each.value, '$.value'))
                     FROM entries_search_sync_state
@@ -419,19 +421,35 @@ class Search:
                 raise
 
             for t in cursor:
-                rv_entry_id, rv_feed_url, rv_rank, rv_title, *_ = t
+                rv_entry_id, rv_feed_url, rank, title, feed_title, is_feed_user_title, content = (
+                    t
+                )
+                content = json.loads(content)
+
+                metadata = {}
+                if title:
+                    metadata['.title'] = HighlightedString(title)
+                if feed_title:
+                    metadata[
+                        '.feed.title' if not is_feed_user_title else '.feed.user_title'
+                    ] = HighlightedString(feed_title)
 
                 result = EntrySearchResult(
                     rv_entry_id,
                     rv_feed_url,
-                    # TODO: wrap these dicts in types.MappingProxyType to make them read-only
                     # FIXME: actually set highlights for HighlightedString
                     # FIXME: return the feed title too
-                    {'.title': HighlightedString(rv_title)},
-                    # FIXME: actually return the content
+                    MappingProxyType(metadata),
+                    MappingProxyType(
+                        OrderedDict[str, HighlightedString](
+                            (c['path'], HighlightedString(c['value']))
+                            for c in content
+                            if c['path']
+                        )
+                    ),
                 )
 
-                yield result, (rv_rank, rv_feed_url, rv_entry_id)
+                yield result, (rank, rv_feed_url, rv_entry_id)
 
     def _make_search_entries_query(
         self,
@@ -499,15 +517,16 @@ class Search:
                     _id,
                     _feed,
                     rank,
-                    highlight(entries_search, 0, '>>>', '<<<') as title,
-                    highlight(entries_search, 2, '>>>', '<<<') as feed,
+                    highlight(entries_search, 0, '>>>', '<<<') AS title,
+                    highlight(entries_search, 2, '>>>', '<<<') AS feed,
+                    _is_feed_user_title AS is_feed_user_title,
                     json_object(
-                        'content_path', _content_path,
-                        'rank', rank,
-                        'text', snippet(entries_search, 1, '>>>', '<<<', '...', 12)
-                    ) as text
+                        'path', _content_path,
+                        'value', snippet(entries_search, 1, '>>>', '<<<', '...', 12)
+                    ) AS content
                 FROM entries_search
                 WHERE entries_search MATCH :query
+                ORDER BY rank
 
                 -- https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html
                 -- rule 14 of https://www.sqlite.org/optoverview.html#subquery_flattening
@@ -517,10 +536,11 @@ class Search:
             SELECT
                 entries.id,
                 entries.feed,
-                min(search.rank) as rank,
+                min(search.rank) as rank,  -- used for pagination
                 search.title,
                 search.feed,
-                json_group_array(json(search.text)) as content
+                search.is_feed_user_title,
+                json_group_array(json(search.content))
             FROM entries
             JOIN search ON (entries.id, entries.feed) = (search._id, search._feed)
             {where_keyword}
