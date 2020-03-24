@@ -195,7 +195,6 @@ def test_search_entries_order_title_content_beats_title(reader):
     ]
 
 
-@pytest.mark.xfail(reason="FIXME: we get more than one result")
 def test_search_entries_order_content(reader):
     parser = Parser()
     reader._parser = parser
@@ -216,6 +215,8 @@ def test_search_entries_order_content(reader):
 
     # there should be exactly one result
     rv, = reader.search_entries('word')
+
+    assert list(rv.content) == ['.content[2].value', '.summary', '.content[0].value']
 
 
 @pytest.mark.parametrize(

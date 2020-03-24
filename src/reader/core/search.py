@@ -402,6 +402,10 @@ class Search:
         if last:
             last = last_rank, last_feed_url, last_entry_id = last
 
+        clean_locals = dict(locals())
+        clean_locals.pop('sql_query')
+        log.debug("_search_entries locals\n%r\n", clean_locals)
+
         with wrap_storage_exceptions(SearchError):
             try:
                 cursor = self.storage.db.execute(sql_query, locals())
@@ -424,6 +428,7 @@ class Search:
                 rv_entry_id, rv_feed_url, rank, title, feed_title, is_feed_user_title, content = (
                     t
                 )
+
                 content = json.loads(content)
 
                 metadata = {}
@@ -449,7 +454,10 @@ class Search:
                     ),
                 )
 
-                yield result, (rank, rv_feed_url, rv_entry_id)
+                rv_last = (rank, rv_feed_url, rv_entry_id)
+                log.debug("_search_entries rv_last\n%r\n", rv_last)
+
+                yield result, rv_last
 
     def _make_search_entries_query(
         self,
@@ -461,10 +469,10 @@ class Search:
 
         feed_url, entry_id, read, important, has_enclosures = filter_options
 
-        where_snippets = []
+        having_snippets = []
 
         if read is not None:
-            where_snippets.append(f"{'' if read else 'NOT'} entries.read")
+            having_snippets.append(f"{'' if read else 'NOT'} entries.read")
 
         limit_snippet = ''
         if chunk_size:
@@ -472,7 +480,7 @@ class Search:
                 LIMIT :chunk_size
                 """
             if last:
-                where_snippets.append(
+                having_snippets.append(
                     """
                     (
                         rank,
@@ -487,12 +495,12 @@ class Search:
                 )
 
         if feed_url:
-            where_snippets.append("entries.feed = :feed_url")
+            having_snippets.append("entries.feed = :feed_url")
             if entry_id:
-                where_snippets.append("entries.id = :entry_id")
+                having_snippets.append("entries.id = :entry_id")
 
         if has_enclosures is not None:
-            where_snippets.append(
+            having_snippets.append(
                 f"""
                 {'NOT' if has_enclosures else ''}
                     (json_array_length(entries.enclosures) IS NULL
@@ -501,14 +509,14 @@ class Search:
             )
 
         if important is not None:
-            where_snippets.append(f"{'' if important else 'NOT'} entries.important")
+            having_snippets.append(f"{'' if important else 'NOT'} entries.important")
 
-        if any(where_snippets):
-            where_keyword = 'WHERE'
-            where_snippet = '\n                AND '.join(where_snippets)
+        if any(having_snippets):
+            having_keyword = 'HAVING'
+            having_snippet = '\n                AND '.join(having_snippets)
         else:
-            where_keyword = ''
-            where_snippet = ''
+            having_keyword = ''
+            having_snippet = ''
 
         query = f"""
 
@@ -543,9 +551,10 @@ class Search:
                 json_group_array(json(search.content))
             FROM entries
             JOIN search ON (entries.id, entries.feed) = (search._id, search._feed)
-            {where_keyword}
-                {where_snippet}
+
             GROUP BY entries.id, entries.feed
+            {having_keyword}
+                {having_snippet}
             ORDER BY rank, entries.id, entries.feed
             {limit_snippet}
             ;
