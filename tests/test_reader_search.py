@@ -67,29 +67,17 @@ def test_search_entries_basic(reader):
 
     reader.enable_search()
 
-    list(reader.search_entries('one')) == []
+    assert list(reader.search_entries('one')) == []
 
     reader.update_search()
 
-    list(reader.search_entries('zero')) == []
-    list(reader.search_entries('one')) == [
-        EntrySearchResult(one.id, feed.url, {'.title': HighlightedString(one.title)})
+    assert list(reader.search_entries('zero')) == []
+    assert list(reader.search_entries('one')) == [
+        EntrySearchResult(one.id, feed.url, {'.title': HighlightedString('>>>one<<<')})
     ]
-    list(reader.search_entries('two')) == [
-        EntrySearchResult(two.id, feed.url, {'.title': HighlightedString(two.title)})
+    assert list(reader.search_entries('two')) == [
+        EntrySearchResult(two.id, feed.url, {'.title': HighlightedString('>>>two<<<')})
     ]
-
-    """
-    print(list(reader.search_entries('one')) )
-    print(one)
-
-    result in
-
-    [EntrySearchResult(id='http://www.example.com/1/entries/1', feed='feed-1.xml', metadata={'.title': HighlightedString(value='>>>one<<<', highlights=())}, content=mappingproxy({}))]
-    Entry(id='http://www.example.com/1/entries/1', updated=datetime.datetime(2010, 1, 1, 0, 0), title='one', link='http://www.example.com/entries/1', author=None, published=None, summary=None, content=(), enclosures=(), read=False, important=False, feed=None)
-
-    FIXME: what the hell are we testing here, those things should not be equal
-    """
 
 
 # TODO: fix duplication in these order tests
@@ -110,7 +98,7 @@ def test_search_entries_order_title_summary_beats_title(reader):
     reader.enable_search()
     reader.update_search()
 
-    [(e.id, e.feed) for e in reader.search_entries('one')] == [
+    assert [(e.id, e.feed) for e in reader.search_entries('one')] == [
         (three.id, feed.url),
         (one.id, feed.url),
     ]
@@ -132,7 +120,7 @@ def test_search_entries_order_title_content_beats_title(reader):
     reader.enable_search()
     reader.update_search()
 
-    [(e.id, e.feed) for e in reader.search_entries('one')] == [
+    assert [(e.id, e.feed) for e in reader.search_entries('one')] == [
         (three.id, feed.url),
         (one.id, feed.url),
     ]
