@@ -3,11 +3,12 @@ import json
 import logging
 import sqlite3
 import warnings
+from collections import OrderedDict
 from types import MappingProxyType
 from typing import Any
+from typing import Dict
 from typing import Iterable
 from typing import Optional
-from typing import OrderedDict
 from typing import Tuple
 from typing import TypeVar
 
@@ -428,7 +429,6 @@ class Search:
                 rv_entry_id, rv_feed_url, rank, title, feed_title, is_feed_user_title, content = (
                     t
                 )
-
                 content = json.loads(content)
 
                 metadata = {}
@@ -439,19 +439,19 @@ class Search:
                         '.feed.title' if not is_feed_user_title else '.feed.user_title'
                     ] = HighlightedString(feed_title)
 
+                rv_content: Dict[str, HighlightedString] = OrderedDict(
+                    (c['path'], HighlightedString(c['value']))
+                    for c in content
+                    if c['path']
+                )
+
                 result = EntrySearchResult(
                     rv_entry_id,
                     rv_feed_url,
                     # FIXME: actually set highlights for HighlightedString
                     # FIXME: return the feed title too
                     MappingProxyType(metadata),
-                    MappingProxyType(
-                        OrderedDict[str, HighlightedString](
-                            (c['path'], HighlightedString(c['value']))
-                            for c in content
-                            if c['path']
-                        )
-                    ),
+                    MappingProxyType(rv_content),
                 )
 
                 rv_last = (rank, rv_feed_url, rv_entry_id)

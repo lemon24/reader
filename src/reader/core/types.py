@@ -16,6 +16,7 @@ from typing import Type
 from typing import TypeVar
 from typing import Union
 
+# TODO: move this logic to _compat
 # TODO: remove this once we drop support for Python 3.7
 if sys.version_info >= (3, 8):  # pragma: no cover
     from typing import Protocol, runtime_checkable, Literal
