@@ -1,5 +1,9 @@
-import pytest
+from datetime import datetime
 
+import pytest
+from fakeparser import Parser
+
+from reader import Content
 from reader import HighlightedString
 from reader import InvalidSearchQueryError
 from reader import SearchError
@@ -203,3 +207,30 @@ def test_extract_highlights(input, value, highlights):
 def test_extract_highlights_errors(input):
     with pytest.raises(ValueError):
         extract_highlights(input, '>', '<')
+
+
+@pytest.mark.xfail(
+    reason="FIXME: implement workaround for the sqlite3 json_extract bug"
+)
+def test_sqlite3_json_extract_bug(reader):
+    """Test we're working around:
+
+    https://bugs.python.org/issue38749
+    https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg117549.html
+
+    """
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.entry(
+        1, 1, datetime(2010, 1, 1), title='one', content=[Content('content 🤩 content')]
+    )
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+    reader.enable_search()
+    reader.update_search()
+
+    rv, = reader.search_entries('one')
+    assert rv.content['.content[0].value']
