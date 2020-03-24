@@ -52,6 +52,7 @@ log = logging.getLogger('reader')
 #
 # TODO: Expose BeautifulSoup(features=...) when we have a config system.
 #
+# FIXME: this doesn't actually work
 warnings.filterwarnings(
     'ignore', message='No parser was explicitly specified', module='reader.core.search'
 )
@@ -613,3 +614,28 @@ def extract_highlights(text: str, before: str, after: str) -> HighlightedString:
         raise ValueError("highlight is never closed")
 
     return HighlightedString(''.join(parts), tuple(slices))
+
+
+"""
+FIXME:
+
+>>> list((e.metadata, e.content) for e in reader.search_entries('beautiful'))[:3]
+
+Traceback (most recent call last):
+  File "<ipython-input-8-b0515886fcc1>", line 1, in <module>
+    list((e.metadata, e.content) for e in reader.search_entries('beautiful'))[:3]
+  File "<ipython-input-8-b0515886fcc1>", line 1, in <genexpr>
+    list((e.metadata, e.content) for e in reader.search_entries('beautiful'))[:3]
+  File "/Users/lemon/code/reader/src/reader/core/reader.py", line 721, in search_entries
+    last=last,
+  File "/Users/lemon/code/reader/src/reader/core/search.py", line 380, in search_entries
+    if chunk_size:
+  File "/Users/lemon/code/reader/src/reader/core/search.py", line 458, in _search_entries
+    (c['path'], extract_highlights(c['value'], before_mark, after_mark))
+  File "/Users/lemon/code/reader/src/reader/core/search.py", line 459, in <genexpr>
+    for c in content
+  File "/Users/lemon/code/reader/src/reader/core/search.py", line 595, in extract_highlights
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.7/lib/python3.7/re.py", line 213, in split
+    return _compile(pattern, flags).split(string, maxsplit)
+TypeError: expected string or bytes-like object
+"""

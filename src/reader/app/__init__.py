@@ -10,10 +10,12 @@ from flask import current_app
 from flask import Flask
 from flask import g
 from flask import get_flashed_messages
+from flask import redirect
 from flask import render_template
 from flask import request
 from flask import Response
 from flask import stream_with_context
+from flask import url_for
 
 import reader
 from .api_thing import APIError
@@ -80,7 +82,22 @@ def entries():
         if not feed:
             abort(404)
 
-    entries = reader.get_entries(
+    args = request.args.copy()
+    query = args.pop('q', None)
+    if query is None:
+        get_entries = reader.get_entries
+    elif not query:
+        # if the query is '', it's not a search
+        return redirect(url_for('.entries', **args))
+    else:
+
+        def get_entries(**kwargs):
+            for sr in reader.search_entries(query, **kwargs):
+                yield reader.get_entry(sr)
+
+    # TODO: render the actual search result, not the entry
+
+    entries = get_entries(
         read=read, feed=feed_url, has_enclosures=has_enclosures, important=important
     )
 

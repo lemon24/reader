@@ -2,8 +2,21 @@
 
 {% import "macros.html" as macros %}
 
-{% block page_title %}{% if feed %}Entries for {{ macros.feed_title(feed) }}{% else %}Entries{% endif %}{% endblock %}
-{% block main_title %}{% if feed %}Entries for {{ macros.feed_title(feed) }}{% else %}Entries{% endif %}{% endblock %}
+
+{% macro make_title() %}
+    {% if not request.args.q %}
+        Entries{% if feed %} for{% endif %}
+    {% else %}
+        Search for <em>{{ request.args.q }}</em>{% if feed %} in{% endif %}
+    {% endif %}
+    {% if feed %}
+        {{ macros.feed_title(feed) }}
+    {% endif %}
+{% endmacro %}
+
+
+{% block page_title %}{{ make_title() | striptags }}{% endblock %}
+{% block main_title %}{{ make_title() }}{% endblock %}
 
 
 {% block body %}
@@ -28,6 +41,18 @@
     ('no', none),
     (none, "don't care"),
 ], none, '.entries', 'important') }}
+
+<li>
+    <form action="{{ url_for('.entries') }}" method="get" class="search">
+        {# TODO: is there a better way to clear the search than searching for ''? #}
+        <input type="search" name="q" placeholder="search" value="{{ request.args.q }}">
+        <input type="submit" value="search">
+        {% for arg in ('show', 'has-enclosures', 'important', 'feed') -%}
+            {% if request.args[arg] -%}
+            <input type="hidden" name="{{ arg }}" value="{{ request.args[arg] }}">
+            {%- endif %}
+        {% endfor %}
+    </form>
 
 {% if feed %}
 
