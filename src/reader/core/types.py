@@ -159,8 +159,14 @@ class Enclosure(_namedtuple_compat):
 @dataclass(frozen=True)
 class HighlightedString:
 
-    value: str
+    #: The string value.
+    value: str = ''
+
+    #: Highlighted parts.
     highlights: Sequence[slice] = ()
+
+    # TODO: better docs
+    # TODO: show if we're at the start/end of the value
 
 
 @dataclass(frozen=True)

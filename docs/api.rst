@@ -40,6 +40,9 @@ Data objects
 .. autoclass:: EntrySearchResult
     :members:
 
+.. autoclass:: HighlightedString
+    :members:
+
 
 Exceptions
 ----------

@@ -1,7 +1,10 @@
 import functools
 import json
 import logging
+import random
+import re
 import sqlite3
+import string
 import warnings
 from collections import OrderedDict
 from types import MappingProxyType
@@ -403,6 +406,15 @@ class Search:
         if last:
             last = last_rank, last_feed_url, last_entry_id = last
 
+        random_mark = ''.join(
+            random.choices(string.ascii_letters + string.digits, k=20)
+        )
+        before_mark = f'>>>{random_mark}>>>'
+        after_mark = f'<<<{random_mark}<<<'
+
+        # 255 letters / 4.7 letters per word (average in English)
+        snippet_tokens = 54
+
         clean_locals = dict(locals())
         clean_locals.pop('sql_query')
         log.debug("_search_entries locals\n%r\n", clean_locals)
@@ -433,14 +445,16 @@ class Search:
 
                 metadata = {}
                 if title:
-                    metadata['.title'] = HighlightedString(title)
+                    metadata['.title'] = extract_highlights(
+                        title, before_mark, after_mark
+                    )
                 if feed_title:
                     metadata[
                         '.feed.title' if not is_feed_user_title else '.feed.user_title'
-                    ] = HighlightedString(feed_title)
+                    ] = extract_highlights(feed_title, before_mark, after_mark)
 
                 rv_content: Dict[str, HighlightedString] = OrderedDict(
-                    (c['path'], HighlightedString(c['value']))
+                    (c['path'], extract_highlights(c['value'], before_mark, after_mark))
                     for c in content
                     if c['path']
                 )
@@ -448,8 +462,6 @@ class Search:
                 result = EntrySearchResult(
                     rv_entry_id,
                     rv_feed_url,
-                    # FIXME: actually set highlights for HighlightedString
-                    # FIXME: return the feed title too
                     MappingProxyType(metadata),
                     MappingProxyType(rv_content),
                 )
@@ -525,12 +537,12 @@ class Search:
                     _id,
                     _feed,
                     rank,
-                    highlight(entries_search, 0, '>>>', '<<<') AS title,
-                    highlight(entries_search, 2, '>>>', '<<<') AS feed,
+                    snippet(entries_search, 0, :before_mark, :after_mark, '...', :snippet_tokens) AS title,
+                    snippet(entries_search, 2, :before_mark, :after_mark, '...', :snippet_tokens) AS feed,
                     _is_feed_user_title AS is_feed_user_title,
                     json_object(
                         'path', _content_path,
-                        'value', snippet(entries_search, 1, '>>>', '<<<', '...', 12)
+                        'value', snippet(entries_search, 1, :before_mark, :after_mark, '...', :snippet_tokens)
                     ) AS content
                 FROM entries_search
                 WHERE entries_search MATCH :query
@@ -564,3 +576,40 @@ class Search:
         log.debug("_search_entries query\n%s\n", query)
 
         return query
+
+
+def extract_highlights(text: str, before: str, after: str) -> HighlightedString:
+    """
+    >>> extract_highlights( '>one< two >three< four', '>', '<')
+    HighlightedString(value='one two three four', highlights=[slice(0, 3, None), slice(8, 13, None)])
+
+    """
+    pattern = f"({'|'.join(re.escape(s) for s in (before, after))})"
+
+    parts = []
+    slices = []
+
+    index = 0
+    start = None
+
+    for part in re.split(pattern, text):
+        if part == before:
+            if start is not None:
+                raise ValueError("highlight start marker in highlight")
+            start = index
+            continue
+
+        if part == after:
+            if start is None:
+                raise ValueError("unmatched highlight end marker")
+            slices.append(slice(start, index))
+            start = None
+            continue
+
+        parts.append(part)
+        index += len(part)
+
+    if start is not None:
+        raise ValueError("highlight is never closed")
+
+    return HighlightedString(''.join(parts), tuple(slices))

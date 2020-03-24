@@ -77,13 +77,15 @@ def test_search_entries_basic(reader):
 
     reader.update_search()
 
+    # TODO: the asserts below look parametrizable
+
     assert list(reader.search_entries('zero')) == []
     assert list(reader.search_entries('one')) == [
         EntrySearchResult(
             one.id,
             feed.url,
             {
-                '.title': HighlightedString('>>>one<<<'),
+                '.title': HighlightedString(one.title, (slice(0, 3),)),
                 '.feed.title': HighlightedString(feed.title),
             },
         )
@@ -93,7 +95,7 @@ def test_search_entries_basic(reader):
             two.id,
             feed.url,
             {
-                '.title': HighlightedString('>>>two<<<'),
+                '.title': HighlightedString(two.title, (slice(0, 3),)),
                 '.feed.title': HighlightedString(feed.title),
             },
             {'.summary': HighlightedString('summary')},
@@ -107,7 +109,11 @@ def test_search_entries_basic(reader):
                 '.title': HighlightedString(three.title),
                 '.feed.title': HighlightedString(feed.title),
             },
-            {'.content[0].value': HighlightedString('>>>three<<< content')},
+            {
+                '.content[0].value': HighlightedString(
+                    three.content[0].value, (slice(0, 5),)
+                )
+            },
         )
     ]
 
@@ -123,6 +129,8 @@ def test_search_entries_basic(reader):
     reader.set_feed_user_title(feed_two, 'a summary of things')
 
     reader.update_feeds()
+    feed_two_entry = reader.get_entry((feed_two.url, feed_two_entry.id))
+
     reader.update_search()
 
     # TODO: we're also testing for order here, and maybe we shouldn't
@@ -130,12 +138,16 @@ def test_search_entries_basic(reader):
         EntrySearchResult(
             feed_three_entry.id,
             feed_three.url,
-            {'.title': HighlightedString('entry >>>summary<<<')},
+            {'.title': HighlightedString(feed_three_entry.title, (slice(6, 13),))},
         ),
         EntrySearchResult(
             feed_two_entry.id,
             feed_two.url,
-            {'.feed.user_title': HighlightedString('a >>>summary<<< of things')},
+            {
+                '.feed.user_title': HighlightedString(
+                    feed_two_entry.feed.user_title, (slice(2, 9),)
+                )
+            },
         ),
         EntrySearchResult(
             two.id,
@@ -144,7 +156,7 @@ def test_search_entries_basic(reader):
                 '.title': HighlightedString(two.title),
                 '.feed.title': HighlightedString(feed.title),
             },
-            {'.summary': HighlightedString('>>>summary<<<')},
+            {'.summary': HighlightedString(two.summary, (slice(0, 7),))},
         ),
     ]
 

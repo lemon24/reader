@@ -1,8 +1,10 @@
 import pytest
 
+from reader import HighlightedString
 from reader import InvalidSearchQueryError
 from reader import SearchError
 from reader import StorageError
+from reader.core.search import extract_highlights
 from reader.core.search import Search
 from reader.core.search import strip_html
 
@@ -175,3 +177,29 @@ def test_invalid_search_query_error(storage, query):
 
 
 # TODO: test FTS5 column names
+
+
+@pytest.mark.parametrize(
+    'input, value, highlights',
+    [
+        ('', '', []),
+        (' one ', ' one ', []),
+        ('\t >one\n< ', '\t one\n ', ['one\n']),
+        ('>one< two >three< four', 'one two three four', ['one', 'three']),
+        ('one >two< three >four<', 'one two three four', ['two', 'four']),
+    ],
+)
+def test_extract_highlights(input, value, highlights):
+    string = extract_highlights(input, '>', '<')
+    assert string.value == value
+    for hl in string.highlights:
+        assert hl.start is not None
+        assert hl.stop is not None
+        assert hl.step is None
+    assert [string.value[hl] for hl in string.highlights] == highlights
+
+
+@pytest.mark.parametrize('input', ['>one', '>one >two<<', '<two', 'one>', 'two<'])
+def test_extract_highlights_errors(input):
+    with pytest.raises(ValueError):
+        extract_highlights(input, '>', '<')
