@@ -96,6 +96,7 @@ def entries():
                 yield reader.get_entry(sr)
 
     # TODO: render the actual search result, not the entry
+    # TODO: catch and flash syntax errors
 
     entries = get_entries(
         read=read, feed=feed_url, has_enclosures=has_enclosures, important=important

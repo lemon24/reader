@@ -136,7 +136,6 @@ def update(kwargs, url, new_only, verbose):
 @cli.group()
 def list():
     """List feeds or entries."""
-    pass
 
 
 @list.command()
@@ -160,6 +159,60 @@ def entries(kwargs):
     """
     reader = make_reader_with_plugins(**kwargs)
     for entry in reader.get_entries():
+        click.echo("{} {}".format(entry.feed.url, entry.link or entry.id))
+
+
+@cli.group()
+def search():
+    """Do various things related to search."""
+
+
+@search.command('status')
+@click.pass_obj
+def search_status(kwargs):
+    """Check search status."""
+    reader = make_reader_with_plugins(**kwargs)
+    click.echo(f"search: {'enabled' if reader.is_search_enabled() else 'disabled'}")
+
+
+@search.command('enable')
+@click.pass_obj
+def search_enable(kwargs):
+    """Enable search."""
+    reader = make_reader_with_plugins(**kwargs)
+    reader.enable_search()
+
+
+@search.command('disable')
+@click.pass_obj
+def search_disable(kwargs):
+    """Disable search."""
+    reader = make_reader_with_plugins(**kwargs)
+    reader.disable_search()
+
+
+@search.command('update')
+@click.pass_obj
+def search_update(kwargs):
+    """Update the search index."""
+    reader = make_reader_with_plugins(**kwargs)
+    reader.update_search()
+
+
+@search.command('entries')
+@click.argument('query')
+@click.pass_obj
+def search_entries(kwargs, query):
+    """Search entries.
+
+    Outputs one line per entry in the following format:
+
+        <feed URL> <entry link or id>
+
+    """
+    reader = make_reader_with_plugins(**kwargs)
+    for rv in reader.search_entries(query):
+        entry = reader.get_entry(rv)
         click.echo("{} {}".format(entry.feed.url, entry.link or entry.id))
 
 

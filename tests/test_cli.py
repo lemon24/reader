@@ -49,6 +49,58 @@ def test_cli(db_path, data_dir):
         for e in sorted(expected['entries'], key=lambda e: e.updated, reverse=True)
     ]
 
+    result = runner.invoke(cli, ['--db', db_path, 'search', 'status'])
+    assert result.exit_code == 0
+    assert 'search: disabled' in result.output
+
+    result = runner.invoke(cli, ['--db', db_path, 'search', 'update'])
+    assert result.exit_code != 0
+
+    result = runner.invoke(cli, ['--db', db_path, 'search', 'entries', 'amok'])
+    assert result.exit_code != 0
+
+    result = runner.invoke(cli, ['--db', db_path, 'search', 'enable'])
+    assert result.exit_code == 0
+    assert result.output == ''
+
+    result = runner.invoke(cli, ['--db', db_path, 'search', 'status'])
+    assert result.exit_code == 0
+    assert 'search: enabled' in result.output
+
+    result = runner.invoke(cli, ['--db', db_path, 'search', 'entries', 'amok'])
+    assert result.exit_code == 0
+    assert result.output == ''
+
+    result = runner.invoke(cli, ['--db', db_path, 'search', 'update'])
+    assert result.exit_code == 0
+    assert result.output == ''
+
+    result = runner.invoke(cli, ['--db', db_path, 'search', 'entries', 'amok'])
+    assert result.exit_code == 0
+    assert {tuple(l.split()) for l in result.output.splitlines()} == {
+        (feed_path, e.link or e.id) for e in expected['entries']
+    }
+
+    result = runner.invoke(cli, ['--db', db_path, 'search', 'entries', 'again'])
+    assert result.exit_code == 0
+    assert {tuple(l.split()) for l in result.output.splitlines()} == {
+        (feed_path, e.link or e.id)
+        for e in expected['entries']
+        if 'again' in e.title.lower()
+    }
+
+    result = runner.invoke(cli, ['--db', db_path, 'search', 'entries', 'nope'])
+    assert result.exit_code == 0
+    assert {tuple(l.split()) for l in result.output.splitlines()} == set()
+
+    result = runner.invoke(cli, ['--db', db_path, 'search', 'disable'])
+    assert result.exit_code == 0
+    assert result.output == ''
+
+    result = runner.invoke(cli, ['--db', db_path, 'search', 'status'])
+    assert result.exit_code == 0
+    assert 'search: disabled' in result.output
+
 
 def raise_exception_plugin(reader):
     assert isinstance(reader, Reader)
