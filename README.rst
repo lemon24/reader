@@ -74,5 +74,16 @@ Usage:
     ['H.I. #107: One Year of Weird', 'H.I. #106: Water on Mars', ...]
     >>> [e.title for e in reader.get_entries(read=True)]
     ['H.I. #108: Project Cyclops']
+    >>>
+    >>> reader.enable_search()
+    >>> reader.update_search()
+    >>>
+    >>> for e in list(reader.search_entries('year'))[:3]:
+    ...     title = e.metadata.get('.title')
+    ...     print(title.value, title.highlights)
+    ...
+    H.I. #107: One Year of Weird (slice(15, 19, None),)
+    H.I. #52: 20,000 Years of Torment (slice(17, 22, None),)
+    H.I. #83: The Best Kind of Prison ()
 
 .. end-usage
