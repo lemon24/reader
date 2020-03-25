@@ -6,6 +6,12 @@ reader changelog
   :noindex:
 
 
+Version 0.20
+------------
+
+Unreleased
+
+
 Version 0.19
 ------------
 
