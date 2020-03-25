@@ -186,3 +186,30 @@ def test_limit(db_path, browser):
     entries = browser.get_current_page().select('.entry')
     assert len(entries) == 1
     assert '#2' in str(entries[0])
+
+
+@pytest.mark.slow
+def test_search(db_path, browser):
+    parser = Parser()
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
+    two = parser.entry(1, 2, datetime(2010, 1, 2), title='two')
+
+    reader = make_reader(db_path)
+    reader._parser = parser
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+    reader.enable_search()
+    reader.update_search()
+
+    browser.open('http://app/', params={'q': 'feed'})
+    entries = browser.get_current_page().select('.entry')
+    assert len(entries) == 2
+    assert 'one' in str(entries[0]) or 'one' in str(entries[1])
+    assert 'two' in str(entries[0]) or 'two' in str(entries[1])
+
+    browser.open('http://app/', params={'q': 'one'})
+    entries = browser.get_current_page().select('.entry')
+    assert len(entries) == 1
+    assert 'one' in str(entries[0])
