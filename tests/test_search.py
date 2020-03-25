@@ -209,14 +209,10 @@ def test_extract_highlights_errors(input):
         extract_highlights(input, '>', '<')
 
 
-@pytest.mark.xfail(
-    reason="FIXME: implement workaround for the sqlite3 json_extract bug"
-)
-def test_sqlite3_json_extract_bug(reader):
-    """Test we're working around:
+def test_sqlite3_json_extract_non_bmp_character_bug_workaround(reader):
+    """Test we're working around https://bugs.python.org/issue38749
 
-    https://bugs.python.org/issue38749
-    https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg117549.html
+    See the reader.core.search.json_object_get docstring for details.
 
     """
     parser = Parser()
@@ -233,4 +229,4 @@ def test_sqlite3_json_extract_bug(reader):
     reader.update_search()
 
     rv, = reader.search_entries('one')
-    assert rv.content['.content[0].value']
+    assert rv.content['.content[0].value'].value == one.content[0].value

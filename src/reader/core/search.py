@@ -253,7 +253,9 @@ class Search:
                 f"original import error: {bs4_import_error}"
             ) from bs4_import_error
 
+        # TODO: what happens if we define the same function many times on the same connection?
         self.storage.db.create_function('strip_html', 1, strip_html)
+        self.storage.db.create_function('json_object_get', 2, json_object_get)
 
         with self.storage.db as db:
             db.execute(
@@ -299,7 +301,7 @@ class Search:
                         entries.feed,
                         '.content[' || json_each.key || '].value',
                         strip_html(entries.title),
-                        strip_html(json_extract(json_each.value, '$.value'))
+                        strip_html(json_object_get(json_each.value, 'value'))
                     FROM entries_search_sync_state
                     JOIN entries USING (id, feed)
                     JOIN json_each(entries.content)
@@ -308,8 +310,8 @@ class Search:
                         AND json_valid(content) and json_array_length(content) > 0
                         -- TODO: test the right content types get indexed
                         AND (
-                            json_extract(json_each.value, '$.type') is NULL
-                            OR lower(json_extract(json_each.value, '$.type')) in (
+                            json_object_get(json_each.value, 'type') is NULL
+                            OR lower(json_object_get(json_each.value, 'type')) in (
                                 'text/html', 'text/xhtml', 'text/plain'
                             )
                         )
@@ -585,8 +587,6 @@ def extract_highlights(text: str, before: str, after: str) -> HighlightedString:
     HighlightedString(value='one two three four', highlights=[slice(0, 3, None), slice(8, 13, None)])
 
     """
-    print('---', repr(text))
-
     pattern = f"({'|'.join(re.escape(s) for s in (before, after))})"
 
     parts = []
@@ -616,3 +616,39 @@ def extract_highlights(text: str, before: str, after: str) -> HighlightedString:
         raise ValueError("highlight is never closed")
 
     return HighlightedString(''.join(parts), tuple(slices))
+
+
+def json_object_get(object_str: str, key: str) -> Any:
+    """Extract a key from a string containing a JSON object.
+
+    >>> json_object_get('{"k": "v"}', 'k')
+    'v'
+
+    Because of a bug in SQLite[1][2], json_extract fails for strings
+    containing non-BMP characters (e.g. some emojis).
+
+    However, when the result of json_extract is passed to a user-defined
+    function, instead of failing, the function silently gets passed NULL:
+
+    % cat bug.py
+    import sqlite3, json
+    db = sqlite3.connect(":memory:")
+    db.create_function("udf", 1, lambda x: x)
+    json_string = json.dumps("🤩")
+    print(*db.execute("select udf(json_extract(?, '$'));", (json_string,)))
+    print(*db.execute("select json_extract(?, '$');", (json_string,)))
+    % python bug.py
+    (None,)
+    Traceback (most recent call last):
+      File "bug.py", line 6, in <module>
+        print(*db.execute("select json_extract(?, '$');", (json_string,)))
+    sqlite3.OperationalError: Could not decode to UTF-8 column 'json_extract(?, '$')' with text '������'
+
+    To work around this, we define json_object_get(value, key), equivalent
+    to json_extract(value, '$.' || key), which covers our use case.
+
+    [1]: https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg117549.html
+    [2]: https://bugs.python.org/issue38749
+
+    """
+    return json.loads(object_str)[key]
