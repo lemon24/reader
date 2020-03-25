@@ -9,7 +9,7 @@ reader changelog
 Version 0.19
 ------------
 
-Unreleased
+Released 2020-03-25
 
 * Support PyPy 3.6.
 * Allow :doc:`searching for entries <fts>`. (`#122`_)
