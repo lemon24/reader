@@ -28,6 +28,9 @@ to run ``update`` once immediately after boot::
     @reboot     sleep 60; reader update -v 2>&1 >>"/tmp/$LOGNAME.reader.update.boot.log"
 
 
+FIXME: Mention updating search.
+
+
 .. _deploying-app:
 
 Serving the web application

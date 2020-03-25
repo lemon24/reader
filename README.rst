@@ -37,6 +37,7 @@ Features:
 
   * ... with automatic tag fixing for MP3 enclosures (e.g. podcasts).
 
+* Full-text search.
 * (Some) plugin support.
 
 .. end-features

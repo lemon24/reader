@@ -30,6 +30,7 @@ Table of contents
     api
     cli
     app
+    fts
     deploying
     plugins
 

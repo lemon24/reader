@@ -97,6 +97,7 @@ def entries():
 
     # TODO: render the actual search result, not the entry
     # TODO: catch and flash syntax errors
+    # TODO: don't show search box if search is not enabled
 
     entries = get_entries(
         read=read, feed=feed_url, has_enclosures=has_enclosures, important=important
