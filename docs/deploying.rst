@@ -5,6 +5,8 @@ Deployment
 For reader to actually be useful as a feed reader, feeds need to get updated
 and the web application needs to be served.
 
+If full-text search is enabled, the search index needs to be updated.
+
 
 Updating feeds
 --------------
@@ -15,20 +17,18 @@ supported by the the server, feeds will only be downloaded if they changed.
 
 To avoid waiting too much for a new feed to be updated, you can run
 ``update --new-only`` more often (e.g. every minute); this will update
-only newly-added feeds.
+only newly-added feeds. This is also a good time to update the search index.
 
 You can achieve this using cron::
 
     42 * * * *  reader update -v 2>&1 >>"/tmp/$LOGNAME.reader.update.hourly.log"
-    * * * * *   reader update -v --new-only 2>&1 >>"/tmp/$LOGNAME.reader.update.new.log"
+    * * * * *   reader update -v --new-only 2>&1 >>"/tmp/$LOGNAME.reader.update.new.log"; reader search update 2>&1 >>"/tmp/$LOGNAME.reader.search.update.log"
+
 
 If you are running reader on a personal computer, it might also be convenient
 to run ``update`` once immediately after boot::
 
     @reboot     sleep 60; reader update -v 2>&1 >>"/tmp/$LOGNAME.reader.update.boot.log"
-
-
-FIXME: Mention updating search.
 
 
 .. _deploying-app:

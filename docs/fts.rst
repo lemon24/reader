@@ -23,5 +23,4 @@ Since search adds some overhead, it needs to be enabled before being used by cal
 
 Also, once search is enabled, the search index is not updated automatically when feeds/entries change; :meth:`~Reader.update_search()` can be called regularly to keep it in sync.
 
-
-FIXME: Link to the CLI command.
+Enabling, disabling and updating the search index can also be done via the ``reader search`` :doc:`subcommand <cli>`.

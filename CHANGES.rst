@@ -12,8 +12,11 @@ Version 0.19
 Unreleased
 
 * Support PyPy 3.6.
+* Allow :doc:`searching for entries <fts>`. (`#122`_)
 * Stricter type checking for the core modules.
 * Various changes to the storage internal API.
+
+.. _#122: https://github.com/lemon24/reader/issues/122
 
 
 Version 0.18
