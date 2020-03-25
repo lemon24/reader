@@ -52,6 +52,21 @@ def test_search_entries_fails_if_not_enabled(reader):
         list(reader.search_entries('one'))
 
 
+@pytest.mark.xfail(reason="FIXME: bug")
+def test_enable_twice(reader):
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    reader.enable_search()
+    reader.enable_search()
+
+
 def test_search_entries_basic(reader):
     parser = Parser()
     reader._parser = parser
