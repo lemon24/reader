@@ -26,9 +26,7 @@ setup(
     python_requires='>=3.6',
     install_requires=[
         'dataclasses; python_version<"3.7"',
-        # needed on for pre-3.8 so we can get TypedDict and Protocol
-        # TODO: remove this once we drop support for Python 3.7
-        'typing_extensions; python_version<"3.8"',
+        'typing_extensions',
         'feedparser>=5',
         'requests',
     ],

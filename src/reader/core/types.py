@@ -1,5 +1,4 @@
 import dataclasses
-import sys
 from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
@@ -16,12 +15,9 @@ from typing import Type
 from typing import TypeVar
 from typing import Union
 
-# TODO: move this logic to _compat
-# TODO: remove this once we drop support for Python 3.7
-if sys.version_info >= (3, 8):  # pragma: no cover
-    from typing import Protocol, runtime_checkable, Literal
-else:  # pragma: no cover
-    from typing_extensions import Protocol, runtime_checkable, Literal
+from typing_extensions import Literal
+from typing_extensions import Protocol
+from typing_extensions import runtime_checkable
 
 
 _T = TypeVar('_T')
