@@ -3,6 +3,7 @@ import threading
 from datetime import datetime
 
 import pytest
+from utils import rename_argument
 
 import reader.core.sqlite_utils
 from reader import Entry
@@ -467,8 +468,8 @@ def storage_with_two_entries(storage):
     return storage
 
 
-def test_important_unimportant_by_default(storage_with_two_entries):
-    storage = storage_with_two_entries
+@rename_argument('storage', 'storage_with_two_entries')
+def test_important_unimportant_by_default(storage):
     assert {
         e.id
         for e, _ in storage.get_entries(
@@ -477,8 +478,8 @@ def test_important_unimportant_by_default(storage_with_two_entries):
     } == {'one', 'two'}
 
 
-def test_important_get_entries(storage_with_two_entries):
-    storage = storage_with_two_entries
+@rename_argument('storage', 'storage_with_two_entries')
+def test_important_get_entries(storage):
     storage.mark_as_important_unimportant('feed', 'one', True)
 
     assert {e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1))} == {
@@ -505,8 +506,8 @@ def test_important_get_entries(storage_with_two_entries):
     } == {'two'}
 
 
-def test_important_entry_remains_important_after_update(storage_with_two_entries):
-    storage = storage_with_two_entries
+@rename_argument('storage', 'storage_with_two_entries')
+def test_important_entry_remains_important_after_update(storage):
     storage.mark_as_important_unimportant('feed', 'one', True)
 
     storage.add_or_update_entry(
@@ -527,8 +528,8 @@ def test_important_entry_remains_important_after_update(storage_with_two_entries
     } == {'one'}
 
 
-def test_important_entry_important(storage_with_two_entries):
-    storage = storage_with_two_entries
+@rename_argument('storage', 'storage_with_two_entries')
+def test_important_entry_important(storage):
     storage.mark_as_important_unimportant('feed', 'one', True)
 
     assert {
@@ -536,8 +537,8 @@ def test_important_entry_important(storage_with_two_entries):
     } == {'one': True, 'two': False}
 
 
-def test_important_mark_as_unimportant(storage_with_two_entries):
-    storage = storage_with_two_entries
+@rename_argument('storage', 'storage_with_two_entries')
+def test_important_mark_as_unimportant(storage):
     storage.mark_as_important_unimportant('feed', 'one', True)
     storage.mark_as_important_unimportant('feed', 'one', False)
 
