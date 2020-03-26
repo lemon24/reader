@@ -268,6 +268,6 @@ def open_sqlite_db(
 
         return db
 
-    except:
+    except BaseException:
         db.close()
         raise

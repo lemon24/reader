@@ -115,7 +115,7 @@ class APIThing:
             category = (action,)
             if e.category:
                 category += e.category
-            rv = {'err': e.message}
+            rv = {'err': str(e)}
 
         return jsonify(rv)
 

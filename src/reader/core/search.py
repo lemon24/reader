@@ -30,7 +30,7 @@ from .exceptions import SearchNotEnabledError
 
 from .sqlite_utils import ddl_transaction
 from .types import EntrySearchResult, EntryFilterOptions, HighlightedString
-from .storage import Storage, wrap_storage_exceptions
+from .storage import Storage, wrap_storage_exceptions, DEFAULT_FILTER_OPTIONS
 
 
 log = logging.getLogger('reader')
@@ -101,7 +101,7 @@ class Search:
         self.storage = storage
 
     @wrap_storage_exceptions(SearchError)
-    def enable(self):
+    def enable(self) -> None:
         try:
             self._enable()
         except sqlite3.OperationalError as e:
@@ -159,9 +159,12 @@ class Search:
                 """
             )
 
-            # TODO: use "UPDATE OF ... ON" instead (needs tests)
-            # TODO: only run UPDATE triggers if the values are actually different (needs tests)
-            # TODO: what happens if the feed ID changes? can't happen yet; also see https://github.com/lemon24/reader/issues/149
+            # TODO: use "UPDATE OF ... ON" instead;
+            # how do we test it?
+            # TODO: only run UPDATE triggers if the values are actually different;
+            # how do we test it?
+            # TODO: what happens if the feed ID changes? can't happen yet;
+            # also see https://github.com/lemon24/reader/issues/149
 
             db.execute(
                 """
@@ -261,7 +264,7 @@ class Search:
                 f"original import error: {bs4_import_error}"
             ) from bs4_import_error
 
-        # TODO: what happens if we define the same function many times on the same connection?
+        # TODO: is it ok to define the same function many times on the same connection?
         self.storage.db.create_function('strip_html', 1, strip_html)
         self.storage.db.create_function('json_object_get', 2, json_object_get)
 
@@ -376,7 +379,7 @@ class Search:
     def search_entries(
         self,
         query: str,
-        filter_options: EntryFilterOptions = EntryFilterOptions(),
+        filter_options: EntryFilterOptions = DEFAULT_FILTER_OPTIONS,
         *,
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
@@ -403,7 +406,7 @@ class Search:
     def _search_entries(
         self,
         query: str,
-        filter_options: EntryFilterOptions = EntryFilterOptions(),
+        filter_options: EntryFilterOptions,
         *,
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
@@ -490,7 +493,7 @@ class Search:
 
     def _make_search_entries_query(
         self,
-        filter_options: EntryFilterOptions = EntryFilterOptions(),
+        filter_options: EntryFilterOptions,
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> str:
@@ -554,19 +557,28 @@ class Search:
                     _id,
                     _feed,
                     rank,
-                    snippet(entries_search, 0, :before_mark, :after_mark, '...', :snippet_tokens) AS title,
-                    snippet(entries_search, 2, :before_mark, :after_mark, '...', :snippet_tokens) AS feed,
+                    snippet(
+                        entries_search, 0, :before_mark, :after_mark, '...',
+                        :snippet_tokens
+                    ) AS title,
+                    snippet(
+                        entries_search, 2, :before_mark, :after_mark, '...',
+                        :snippet_tokens
+                    ) AS feed,
                     _is_feed_user_title AS is_feed_user_title,
                     json_object(
                         'path', _content_path,
-                        'value', snippet(entries_search, 1, :before_mark, :after_mark, '...', :snippet_tokens)
+                        'value', snippet(
+                            entries_search, 1,
+                            :before_mark, :after_mark, '...', :snippet_tokens
+                        )
                     ) AS content
                 FROM entries_search
                 WHERE entries_search MATCH :query
                 ORDER BY rank
 
-                -- https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html
-                -- rule 14 of https://www.sqlite.org/optoverview.html#subquery_flattening
+                -- https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html  # noqa
+                -- rule 14 https://www.sqlite.org/optoverview.html#subquery_flattening  # noqa
                 LIMIT -1 OFFSET 0
             )
 
@@ -598,7 +610,7 @@ class Search:
 def extract_highlights(text: str, before: str, after: str) -> HighlightedString:
     """
     >>> extract_highlights( '>one< two >three< four', '>', '<')
-    HighlightedString(value='one two three four', highlights=[slice(0, 3, None), slice(8, 13, None)])
+    HighlightedString(value='one two three four', highlights=[slice(0, 3, None), slice(8, 13, None)])  # noqa
 
     """
     pattern = f"({'|'.join(re.escape(s) for s in (before, after))})"
@@ -656,12 +668,12 @@ def json_object_get(object_str: str, key: str) -> Any:
     Traceback (most recent call last):
       File "bug.py", line 6, in <module>
         print(*db.execute("select json_extract(?, '$');", (json_string,)))
-    sqlite3.OperationalError: Could not decode to UTF-8 column 'json_extract(?, '$')' with text '������'
+    sqlite3.OperationalError: Could not decode to UTF-8 column 'json_extract(?, '$')' with text '������'  # noqa
 
     To work around this, we define json_object_get(value, key), equivalent
     to json_extract(value, '$.' || key), which covers our use case.
 
-    [1]: https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg117549.html
+    [1]: https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg117549.html  # noqa
     [2]: https://bugs.python.org/issue38749
 
     """

@@ -27,7 +27,6 @@ Implemented for https://github.com/lemon24/reader/issues/79.
         and Storage support).
 
 """
-import os
 import re
 
 

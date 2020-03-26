@@ -196,7 +196,7 @@ class Parser:
         try:
             session = requests.Session()
             # TODO: remove "type: ignore" once Session.send() gets annotations
-            # https://github.com/python/typeshed/blob/f5a1925e765b92dd1b12ae10cf8bff21c225648f/third_party/2and3/requests/sessions.pyi#L105
+            # noqa https://github.com/python/typeshed/blob/f5a1925e765b92dd1b12ae10cf8bff21c225648f/third_party/2and3/requests/sessions.pyi#L105
             response = session.send(  # type: ignore
                 session.prepare_request(request), stream=True, verify=self._verify
             )

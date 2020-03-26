@@ -46,7 +46,8 @@ class Updater:
                 updated=None, http_etag=None, http_last_modified=None
             )
             log.info(
-                "update feed %r: feed marked as stale, ignoring updated, http_etag and http_last_modified",
+                "update feed %r: feed marked as stale, "
+                "ignoring updated, http_etag and http_last_modified",
                 self.url,
             )
 
@@ -111,14 +112,16 @@ class Updater:
             )
         elif not new.updated:
             log.debug(
-                "update entry %r of feed %r: has no updated, updating but not changing updated",
+                "update entry %r of feed %r: has no updated, "
+                "updating but not changing updated",
                 new.id,
                 self.url,
             )
             updated = old_updated or self.now
         elif old_updated and new.updated <= old_updated:
             log.debug(
-                "update entry %r of feed %r: entry not updated, skipping (old updated %s, new updated %s)",
+                "update entry %r of feed %r: entry not updated, "
+                "skipping (old updated %s, new updated %s)",
                 new.id,
                 self.url,
                 old_updated,

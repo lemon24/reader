@@ -191,7 +191,7 @@ class Reader:
         elif len(feeds) == 1:
             return feeds[0]
         else:
-            assert False, "shouldn't get here"  # pragma: no cover
+            assert False, "shouldn't get here"  # noqa: B011; pragma: no cover
 
     def set_feed_user_title(self, feed: FeedInput, title: Optional[str]) -> None:
         """Set a user-defined title for a feed.
@@ -238,7 +238,8 @@ class Reader:
                 log.info("update feed %r: feed removed during update", e.url)
             except ParseError as e:
                 log.exception(
-                    "update feed %r: error while getting/parsing feed, skipping; exception: %r",
+                    "update feed %r: error while getting/parsing feed, "
+                    "skipping; exception: %r",
                     e.url,
                     e.__cause__,
                 )
@@ -261,7 +262,7 @@ class Reader:
         elif len(rows) == 1:
             self._update_feed(rows[0])
         else:
-            assert False, "shouldn't get here"  # pragma: no cover
+            assert False, "shouldn't get here"  # noqa: B011; pragma: no cover
 
     @staticmethod
     def _now() -> datetime.datetime:
@@ -323,7 +324,7 @@ class Reader:
         # TODO: does this ever raise FeedNotFoundError? I don't think so
 
         # If we ever implement pagination, consider following the guidance in
-        # https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
+        # noqa https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
 
         # TODO: this validation should be shared
         feed_url = feed_argument(feed) if feed is not None else None
@@ -373,7 +374,7 @@ class Reader:
 
             yield from (e for e, _ in entries)
 
-    # TODO: get_entry can be written as next(get_entries(entry=...), 'default'); get rid of it
+    # TODO: maybe remove in favor of next(get_entries(entry=...), 'default')
 
     @overload
     def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover
@@ -421,7 +422,7 @@ class Reader:
         elif len(entries) == 1:
             return entries[0][0]
         else:
-            assert False, "shouldn't get here"  # pragma: no cover
+            assert False, "shouldn't get here"  # noqa: B011; pragma: no cover
 
     def mark_as_read(self, entry: EntryInput) -> None:
         """Mark an entry as read.
@@ -540,7 +541,7 @@ class Reader:
             assert pairs[0][0] == key
             return pairs[0][1]
         else:
-            assert False, "shouldn't get here"  # pragma: no cover
+            assert False, "shouldn't get here"  # noqa: B011; pragma: no cover
 
     def set_feed_metadata(self, feed: FeedInput, key: str, value: JSONType) -> None:
         """Set metadata for a feed.

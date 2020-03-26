@@ -72,8 +72,8 @@ def enclosure_tags(filename):
 
 def enclosure_tags_filter(enclosure, entry):
     try:
-        import mutagen
-        import requests
+        import mutagen  # noqa: F401
+        import requests  # noqa: F401
     except ImportError:
         return enclosure.href
     filename = urlparse(enclosure.href).path.split('/')[-1]

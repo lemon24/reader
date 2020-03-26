@@ -296,7 +296,10 @@ def update_from_16_to_17(db: sqlite3.Connection) -> None:  # pragma: no cover
             read = COALESCE(read, 0),
             important = COALESCE(important, 0),
             last_updated = COALESCE(last_updated, '1970-01-01 00:00:00.000000'),
-            first_updated_epoch = COALESCE(first_updated_epoch, '1970-01-01 00:00:00.000000')
+            first_updated_epoch = COALESCE(
+                first_updated_epoch,
+                '1970-01-01 00:00:00.000000'
+            )
         ;
     """
     )
@@ -401,6 +404,9 @@ def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
     )
 
 
+DEFAULT_FILTER_OPTIONS = EntryFilterOptions()
+
+
 class Storage:
 
     open_db = staticmethod(open_db)
@@ -472,7 +478,7 @@ class Storage:
         elif sort == 'added':
             order_by_snippet = "feeds.added DESC"
         else:
-            assert False, "shouldn't get here"  # pragma: no cover
+            assert False, "shouldn't get here"  # noqa: B011; pragma: no cover
 
         cursor = self.db.execute(
             f"""
@@ -502,7 +508,14 @@ class Storage:
         where_new_only_snippet = '' if not new_only else " AND last_updated is NULL"
         cursor = self.db.execute(
             f"""
-            SELECT url, updated, http_etag, http_last_modified, stale, last_updated FROM feeds
+            SELECT
+                url,
+                updated,
+                http_etag,
+                http_last_modified,
+                stale,
+                last_updated
+            FROM feeds
             {where_snippet}
             {where_url_snippet}
             {where_new_only_snippet}
@@ -518,7 +531,7 @@ class Storage:
         self, entries: Sequence[Tuple[str, str]]
     ) -> Iterable[Optional[EntryForUpdate]]:
         with self.db:
-            for feed_url, id in entries:
+            for feed_url, id in entries:  # noqa: B007
                 row = self.db.execute(
                     """
                     SELECT updated
@@ -770,7 +783,7 @@ class Storage:
             """,
                 locals(),
             )
-        except sqlite3.IntegrityError as e:
+        except sqlite3.IntegrityError:
             # FIXME: Match the error string.
             log.debug(
                 "add_entry %r of feed %r: got IntegrityError",
@@ -796,7 +809,7 @@ class Storage:
     def get_entries(
         self,
         now: datetime,
-        filter_options: EntryFilterOptions = EntryFilterOptions(),
+        filter_options: EntryFilterOptions = DEFAULT_FILTER_OPTIONS,
         *,
         chunk_size: Optional[int] = None,
         last: _EntryLast = None,
@@ -951,7 +964,8 @@ class Storage:
                 coalesce(
                     CASE
                     WHEN
-                        coalesce(entries.published, entries.updated) >= :recent_threshold
+                        coalesce(entries.published, entries.updated)
+                            >= :recent_threshold
                         THEN entries.first_updated_epoch
                     END,
                     entries.published, entries.updated
@@ -1020,7 +1034,7 @@ class Storage:
                 """,
                     locals(),
                 )
-            except sqlite3.IntegrityError as e:
+            except sqlite3.IntegrityError:
                 # FIXME: Match the error string.
                 raise FeedNotFoundError(feed_url)
 
