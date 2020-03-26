@@ -228,5 +228,5 @@ def test_sqlite3_json_extract_non_bmp_character_bug_workaround(reader):
     reader.enable_search()
     reader.update_search()
 
-    rv, = reader.search_entries('one')
+    (rv,) = reader.search_entries('one')
     assert rv.content['.content[0].value'].value == one.content[0].value

@@ -827,9 +827,14 @@ class Storage:
 
         recent_threshold = now - self.recent_threshold
         if last:
-            last_entry_first_updated, last_entry_updated, last_feed_url, last_entry_last_updated, last_negative_feed_order, last_entry_id = (
-                last
-            )
+            (
+                last_entry_first_updated,
+                last_entry_updated,
+                last_feed_url,
+                last_entry_last_updated,
+                last_negative_feed_order,
+                last_entry_id,
+            ) = last
 
         with wrap_storage_exceptions():
             cursor = self.db.execute(query, locals())

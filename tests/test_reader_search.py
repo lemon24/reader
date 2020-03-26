@@ -252,7 +252,7 @@ def test_search_entries_order_content(reader):
     reader.update_search()
 
     # there should be exactly one result
-    rv, = reader.search_entries('word')
+    (rv,) = reader.search_entries('word')
 
     assert list(rv.content) == ['.content[2].value', '.summary', '.content[0].value']
 

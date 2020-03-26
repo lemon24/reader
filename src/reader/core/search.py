@@ -449,9 +449,15 @@ class Search:
                 raise
 
             for t in cursor:
-                rv_entry_id, rv_feed_url, rank, title, feed_title, is_feed_user_title, content = (
-                    t
-                )
+                (
+                    rv_entry_id,
+                    rv_feed_url,
+                    rank,
+                    title,
+                    feed_title,
+                    is_feed_user_title,
+                    content,
+                ) = t
                 content = json.loads(content)
 
                 metadata = {}

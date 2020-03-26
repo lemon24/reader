@@ -296,14 +296,14 @@ def test_update_last_updated_entries_updated_feed_not_updated(
     reader._now = lambda: datetime(2010, 1, 1)
     call_update_method(reader, feed.url)
 
-    feed_for_update, = reader._storage.get_feeds_for_update(url=feed.url)
+    (feed_for_update,) = reader._storage.get_feeds_for_update(url=feed.url)
     assert feed_for_update.last_updated == datetime(2010, 1, 1)
 
     parser.entry(1, 1, datetime(2010, 1, 1))
     reader._now = lambda: datetime(2010, 1, 2)
     call_update_method(reader, feed.url)
 
-    feed_for_update, = reader._storage.get_feeds_for_update(url=feed.url)
+    (feed_for_update,) = reader._storage.get_feeds_for_update(url=feed.url)
     assert feed_for_update.last_updated == datetime(2010, 1, 2)
 
 
@@ -457,23 +457,23 @@ def test_mark_as_read_unread(reader, entry_arg):
 
     reader.update_feeds()
 
-    entry, = list(reader.get_entries())
+    (entry,) = list(reader.get_entries())
     assert not entry.read
 
     reader.mark_as_read(entry_arg(entry_with_feed))
-    entry, = list(reader.get_entries())
+    (entry,) = list(reader.get_entries())
     assert entry.read
 
     reader.mark_as_read(entry_arg(entry_with_feed))
-    entry, = list(reader.get_entries())
+    (entry,) = list(reader.get_entries())
     assert entry.read
 
     reader.mark_as_unread(entry_arg(entry_with_feed))
-    entry, = list(reader.get_entries())
+    (entry,) = list(reader.get_entries())
     assert not entry.read
 
     reader.mark_as_unread(entry_arg(entry_with_feed))
-    entry, = list(reader.get_entries())
+    (entry,) = list(reader.get_entries())
     assert not entry.read
 
 
@@ -971,7 +971,7 @@ def test_integration(reader, feed_type, data_dir):
     reader.add_feed(feed_url)
     reader.update_feeds()
 
-    feed, = reader.get_feeds()
+    (feed,) = reader.get_feeds()
     entries = set(reader.get_entries())
 
     url_base, rel_base = make_url_base(feed_url)
@@ -1092,7 +1092,7 @@ def test_get_entries_important(reader, important):
     reader._storage = FakeStorage()
     list(reader.get_entries(important=important))
 
-    (call, kwargs), = reader._storage.calls
+    ((call, kwargs),) = reader._storage.calls
     assert call == 'get_entries'
     assert kwargs['filter_options'].important == important
 
