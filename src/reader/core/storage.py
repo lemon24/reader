@@ -407,6 +407,10 @@ def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
 DEFAULT_FILTER_OPTIONS = EntryFilterOptions()
 
 
+# TODO: rename to _GetEntriesLast, maybe
+_EntryLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
+
+
 class Storage:
 
     open_db = staticmethod(open_db)
@@ -802,9 +806,6 @@ class Storage:
     def add_or_update_entry(self, intent: EntryUpdateIntent) -> None:
         # TODO: this method is for testing convenience only, maybe delete it?
         self.add_or_update_entries([intent])
-
-    # TODO: rename to _GetEntriesLast, maybe
-    _EntryLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
 
     def get_entries(
         self,

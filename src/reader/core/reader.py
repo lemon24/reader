@@ -324,7 +324,7 @@ class Reader:
         # TODO: does this ever raise FeedNotFoundError? I don't think so
 
         # If we ever implement pagination, consider following the guidance in
-        # noqa https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
+        # https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
 
         # TODO: this validation should be shared
         feed_url = feed_argument(feed) if feed is not None else None

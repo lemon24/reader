@@ -84,6 +84,9 @@ def strip_html(text: _SqliteType, features: Optional[str] = None) -> _SqliteType
     return rv
 
 
+_SearchEntriesLast = Optional[Tuple[Any, Any, Any]]
+
+
 class Search:
 
     """SQLite-storage-bound search provider.
@@ -374,8 +377,6 @@ class Search:
             """
             )
 
-    _SearchEntriesLast = Optional[Tuple[Any, Any, Any]]
-
     def search_entries(
         self,
         query: str,
@@ -577,8 +578,8 @@ class Search:
                 WHERE entries_search MATCH :query
                 ORDER BY rank
 
-                -- https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html  # noqa
-                -- rule 14 https://www.sqlite.org/optoverview.html#subquery_flattening  # noqa
+                -- https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html
+                -- rule 14 https://www.sqlite.org/optoverview.html#subquery_flattening
                 LIMIT -1 OFFSET 0
             )
 
@@ -610,7 +611,7 @@ class Search:
 def extract_highlights(text: str, before: str, after: str) -> HighlightedString:
     """
     >>> extract_highlights( '>one< two >three< four', '>', '<')
-    HighlightedString(value='one two three four', highlights=[slice(0, 3, None), slice(8, 13, None)])  # noqa
+    HighlightedString(value='one two three four', highlights=[slice(0, 3, None), slice(8, 13, None)])
 
     """
     pattern = f"({'|'.join(re.escape(s) for s in (before, after))})"
@@ -668,12 +669,12 @@ def json_object_get(object_str: str, key: str) -> Any:
     Traceback (most recent call last):
       File "bug.py", line 6, in <module>
         print(*db.execute("select json_extract(?, '$');", (json_string,)))
-    sqlite3.OperationalError: Could not decode to UTF-8 column 'json_extract(?, '$')' with text '������'  # noqa
+    sqlite3.OperationalError: Could not decode to UTF-8 column 'json_extract(?, '$')' with text '������'
 
     To work around this, we define json_object_get(value, key), equivalent
     to json_extract(value, '$.' || key), which covers our use case.
 
-    [1]: https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg117549.html  # noqa
+    [1]: https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg117549.html
     [2]: https://bugs.python.org/issue38749
 
     """
