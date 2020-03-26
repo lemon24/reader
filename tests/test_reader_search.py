@@ -2,6 +2,7 @@ from datetime import datetime
 
 import pytest
 from fakeparser import Parser
+from utils import rename_argument
 
 from reader import Content
 from reader import Enclosure
@@ -10,6 +11,23 @@ from reader import HighlightedString
 from reader import Reader
 from reader import ReaderError
 from reader import SearchNotEnabledError
+
+
+@pytest.fixture(params=[False, True], ids=['without_entries', 'with_entries'])
+def reader_without_and_with_entries(request, reader):
+    if not request.param:
+        return reader
+
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    return reader
 
 
 def test_search_disabled_by_default(reader):
@@ -21,7 +39,10 @@ def test_enable_search(reader):
     assert reader.is_search_enabled()
 
 
+@rename_argument('reader', 'reader_without_and_with_entries')
 def test_enable_search_already_enabled(reader):
+    if list(reader.get_entries()):
+        pytest.xfail(reason="FIXME: bug")
     reader.enable_search()
     reader.enable_search()
 
@@ -50,21 +71,6 @@ def test_update_search_fails_if_not_enabled(reader):
 def test_search_entries_fails_if_not_enabled(reader):
     with pytest.raises(SearchNotEnabledError):
         list(reader.search_entries('one'))
-
-
-@pytest.mark.xfail(reason="FIXME: bug")
-def test_enable_twice(reader):
-    parser = Parser()
-    reader._parser = parser
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
-
-    reader.add_feed(feed.url)
-    reader.update_feeds()
-
-    reader.enable_search()
-    reader.enable_search()
 
 
 def test_search_entries_basic(reader):
