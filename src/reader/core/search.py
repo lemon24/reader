@@ -106,8 +106,8 @@ class Search:
             self._enable()
         except sqlite3.OperationalError as e:
             if "table entries_search already exists" in str(e).lower():
-                pass
-            return
+                return
+            raise
 
     def _enable(self) -> None:
         with ddl_transaction(self.storage.db) as db:
