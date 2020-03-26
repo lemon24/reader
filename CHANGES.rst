@@ -11,6 +11,9 @@ Version 0.20
 
 Unreleased
 
+* Fix bug in :meth:`~Reader.enable_search()` that caused it to fail
+  if search was already enabled and the reader had any entries.
+
 
 Version 0.19
 ------------

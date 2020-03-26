@@ -41,8 +41,6 @@ def test_enable_search(reader):
 
 @rename_argument('reader', 'reader_without_and_with_entries')
 def test_enable_search_already_enabled(reader):
-    if list(reader.get_entries()):
-        pytest.xfail(reason="FIXME: bug")
     reader.enable_search()
     reader.enable_search()
 
