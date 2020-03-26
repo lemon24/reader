@@ -14,7 +14,11 @@ repos:
       - id: black
         args: ["-S"]
 
-  # TODO: Use flake8 + bugbear.
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 3.7.9
+    hooks:
+      - id: flake8
+        additional_dependencies: [flake8-bugbear]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.5.0
