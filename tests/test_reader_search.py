@@ -30,10 +30,12 @@ def reader_without_and_with_entries(request, reader):
     return reader
 
 
+@rename_argument('reader', 'reader_without_and_with_entries')
 def test_search_disabled_by_default(reader):
     assert not reader.is_search_enabled()
 
 
+@rename_argument('reader', 'reader_without_and_with_entries')
 def test_enable_search(reader):
     reader.enable_search()
     assert reader.is_search_enabled()
@@ -45,6 +47,7 @@ def test_enable_search_already_enabled(reader):
     reader.enable_search()
 
 
+@rename_argument('reader', 'reader_without_and_with_entries')
 def test_disable_search(reader):
     reader.enable_search()
     assert reader.is_search_enabled()
@@ -52,20 +55,24 @@ def test_disable_search(reader):
     assert not reader.is_search_enabled()
 
 
+@rename_argument('reader', 'reader_without_and_with_entries')
 def test_disable_search_already_disabled(reader):
     reader.disable_search()
 
 
+@rename_argument('reader', 'reader_without_and_with_entries')
 def test_update_search(reader):
     reader.enable_search()
     reader.update_search()
 
 
+@rename_argument('reader', 'reader_without_and_with_entries')
 def test_update_search_fails_if_not_enabled(reader):
     with pytest.raises(SearchNotEnabledError):
         reader.update_search()
 
 
+@rename_argument('reader', 'reader_without_and_with_entries')
 def test_search_entries_fails_if_not_enabled(reader):
     with pytest.raises(SearchNotEnabledError):
         list(reader.search_entries('one'))
