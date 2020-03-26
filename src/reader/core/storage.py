@@ -482,7 +482,7 @@ class Storage:
         elif sort == 'added':
             order_by_snippet = "feeds.added DESC"
         else:
-            assert False, "shouldn't get here"  # noqa: B011; pragma: no cover
+            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
         cursor = self.db.execute(
             f"""

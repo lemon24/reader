@@ -191,7 +191,7 @@ class Reader:
         elif len(feeds) == 1:
             return feeds[0]
         else:
-            assert False, "shouldn't get here"  # noqa: B011; pragma: no cover
+            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
     def set_feed_user_title(self, feed: FeedInput, title: Optional[str]) -> None:
         """Set a user-defined title for a feed.
@@ -262,7 +262,7 @@ class Reader:
         elif len(rows) == 1:
             self._update_feed(rows[0])
         else:
-            assert False, "shouldn't get here"  # noqa: B011; pragma: no cover
+            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
     @staticmethod
     def _now() -> datetime.datetime:
@@ -422,7 +422,7 @@ class Reader:
         elif len(entries) == 1:
             return entries[0][0]
         else:
-            assert False, "shouldn't get here"  # noqa: B011; pragma: no cover
+            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
     def mark_as_read(self, entry: EntryInput) -> None:
         """Mark an entry as read.
@@ -541,7 +541,7 @@ class Reader:
             assert pairs[0][0] == key
             return pairs[0][1]
         else:
-            assert False, "shouldn't get here"  # noqa: B011; pragma: no cover
+            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
     def set_feed_metadata(self, feed: FeedInput, key: str, value: JSONType) -> None:
         """Set metadata for a feed.

@@ -202,10 +202,11 @@ def make_http_get_headers_url(requests_mock):
     yield make_url
 
 
+@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse_sends_etag_last_modified(
-    monkeypatch, parse, make_http_get_headers_url, data_dir
+    monkeypatch, parse, make_http_get_headers_url, data_dir, feed_type,
 ):
-    feed_url = make_http_get_headers_url(data_dir.join('full.atom'))
+    feed_url = make_http_get_headers_url(data_dir.join('full.' + feed_type))
     parse(feed_url, 'etag', 'last_modified')
 
     headers = make_http_get_headers_url.request_headers
@@ -229,6 +230,7 @@ def make_http_etag_last_modified_url(requests_mock):
     yield make_url
 
 
+@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse_returns_etag_last_modified(
     monkeypatch,
     parse,
@@ -236,13 +238,14 @@ def test_parse_returns_etag_last_modified(
     make_http_url,
     make_relative_path_url,
     data_dir,
+    feed_type,
 ):
     monkeypatch.chdir(data_dir.dirname)
 
     make_http_etag_last_modified_url.etag = 'etag'
     make_http_etag_last_modified_url.last_modified = 'last_modified'
 
-    feed_url = make_http_etag_last_modified_url(data_dir.join('full.atom'))
+    feed_url = make_http_etag_last_modified_url(data_dir.join('full.' + feed_type))
     (_, etag, last_modified), _ = parse(feed_url)
 
     assert etag == 'etag'
@@ -253,7 +256,7 @@ def test_parse_returns_etag_last_modified(
 
     assert etag == last_modified == None
 
-    feed_url = make_relative_path_url(data_dir.join('full.atom'))
+    feed_url = make_relative_path_url(data_dir.join('full.' + feed_type))
     (_, etag, last_modified), _ = parse(feed_url)
 
     assert etag == last_modified == None

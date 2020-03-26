@@ -62,12 +62,6 @@ class Parser:
             self.entries[feed_number].values(),
         )
 
-    def get_tuples(self):
-        for feed_number, entries in self.entries.items():
-            feed = self.feeds[feed_number]
-            for entry in entries.values():
-                yield entry._replace(feed=feed)
-
 
 class BlockingParser(Parser):
     def __init__(self, *args, **kwargs):

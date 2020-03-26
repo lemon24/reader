@@ -281,6 +281,7 @@ def iter_iter_feed_metadata(storage):
         iter_get_entries_chunk_size_1,
         iter_get_entries_chunk_size_2,
         iter_get_entries_chunk_size_3,
+        iter_iter_feed_metadata,
     ],
 )
 def test_iter_locked(db_path, iter_stuff):
