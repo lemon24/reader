@@ -291,6 +291,7 @@ class Reader:
         self,
         *,
         feed: Optional[FeedInput] = None,
+        entry: Optional[EntryInput] = None,
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,
@@ -308,6 +309,8 @@ class Reader:
 
         Args:
             feed (str or Feed or None): Only return the entries for this feed.
+            entry (tuple(str, str) or Entry or None):
+                Only get the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only return (un)read entries.
             important (bool or None): Only return (un)important entries.
             has_enclosures (bool or None): Only return entries that (don't)
@@ -317,17 +320,22 @@ class Reader:
             :class:`Entry`: Most recent entries first.
 
         Raises:
-            FeedNotFoundError: Only if `feed` is not None.
             StorageError
 
         """
-        # TODO: does this ever raise FeedNotFoundError? I don't think so
 
         # If we ever implement pagination, consider following the guidance in
         # https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
 
         # TODO: this validation should be shared
         feed_url = feed_argument(feed) if feed is not None else None
+
+        # TODO: should we allow specifying both feed and entry?
+        if entry is None:
+            entry_id = None
+        else:
+            feed_url, entry_id = entry_argument(entry)
+
         if read not in (None, False, True):
             raise ValueError("read should be one of (None, False, True)")
         if important not in (None, False, True):
@@ -347,6 +355,7 @@ class Reader:
                 # TODO: don't construct this every time we go through the loop
                 filter_options=EntryFilterOptions(
                     feed_url=feed_url,
+                    entry_id=entry_id,
                     read=read,
                     important=important,
                     has_enclosures=has_enclosures,

@@ -728,6 +728,31 @@ def test_get_entries_feed_url(reader, feed_arg):
     # TODO: How do we test the combination between which and feed_url?
 
 
+def test_get_entries_entry(reader, entry_arg):
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.entry(1, 1, datetime(2010, 1, 1))
+    two = parser.entry(1, 2, datetime(2010, 2, 1))
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    one = one._replace(feed=feed)
+    two = two._replace(feed=feed)
+
+    def get(**kwargs):
+        return {(e.id, e.feed.url) for e in reader.get_entries(**kwargs)}
+
+    assert get() == {(one.id, feed.url), (two.id, feed.url)}
+    assert get(entry=None) == {(one.id, feed.url), (two.id, feed.url)}
+    assert get(entry=entry_arg(one)) == {(one.id, feed.url)}
+    assert get(entry=entry_arg(two)) == {(two.id, feed.url)}
+
+    # TODO: Should this raise an exception?
+    assert get(entry=('does not', 'exist')) == set()
+
+
 def test_add_remove_get_feeds(reader, feed_arg):
     parser = Parser()
     reader._parser = parser
