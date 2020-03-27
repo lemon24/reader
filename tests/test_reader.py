@@ -1071,9 +1071,9 @@ class FakeStorage:
         if self.exc:
             raise self.exc
 
-    def get_entries(self, **kwargs):
-        # FIXME: This is a bad way of mocking get_entries.
-        self.calls.append(('get_entries', kwargs))
+    def get_entries(self, *args):
+        # FIXME: This is still a bad way of mocking get_entries.
+        self.calls.append(('get_entries', args))
         if self.exc:
             raise self.exc
         return ()
@@ -1117,9 +1117,9 @@ def test_get_entries_important(reader, important):
     reader._storage = FakeStorage()
     list(reader.get_entries(important=important))
 
-    ((call, kwargs),) = reader._storage.calls
+    ((call, args),) = reader._storage.calls
     assert call == 'get_entries'
-    assert kwargs['filter_options'].important == important
+    assert args[1].important == important
 
     with pytest.raises(ValueError):
         set(reader.get_entries(important='bad important'))

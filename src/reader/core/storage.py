@@ -811,7 +811,6 @@ class Storage:
         self,
         now: datetime,
         filter_options: EntryFilterOptions = DEFAULT_FILTER_OPTIONS,
-        *,
         chunk_size: Optional[int] = None,
         last: _EntryLast = None,
     ) -> Iterable[Tuple[Entry, _EntryLast]]:
@@ -831,7 +830,6 @@ class Storage:
         self,
         now: datetime,
         filter_options: EntryFilterOptions,
-        *,
         chunk_size: Optional[int] = None,
         last: _EntryLast = None,
     ) -> Iterable[Tuple[Entry, _EntryLast]]:

@@ -1,6 +1,7 @@
 import datetime
 import logging
 import warnings
+from functools import partial
 from typing import Callable
 from typing import Collection
 from typing import Iterable
@@ -43,6 +44,7 @@ _missing = _Missing()
 
 
 _T = TypeVar('_T')
+_U = TypeVar('_U')
 
 _PostEntryAddPluginType = Callable[['Reader', str, Entry], None]
 
@@ -330,39 +332,10 @@ class Reader:
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures
         )
-
-        chunk_size = self._get_entries_chunk_size
-
-        now = self._now()
-
-        last = None
-        while True:
-
-            entries = self._storage.get_entries(
-                now=now,
-                filter_options=filter_options,
-                chunk_size=chunk_size,
-                last=last,
-            )
-
-            # When chunk_size is 0, don't chunk the query.
-            #
-            # This will ensure there are no missing/duplicated entries, but
-            # will block database writes until the whole generator is consumed.
-            #
-            # Currently not exposed through the public API.
-            #
-            if not chunk_size:
-                yield from (e for e, _ in entries)
-                return
-
-            entries = list(entries)
-            if not entries:
-                break
-
-            _, last = entries[-1]
-
-            yield from (e for e, _ in entries)
+        yield from join_paginated_iter(
+            partial(self._storage.get_entries, self._now(), filter_options),
+            self._get_entries_chunk_size,
+        )
 
     # TODO: maybe remove in favor of next(get_entries(entry=...), 'default')
 
@@ -672,34 +645,43 @@ class Reader:
             StorageError
 
         """
-
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures
         )
+        yield from join_paginated_iter(
+            partial(self._search.search_entries, query, filter_options),
+            self._get_entries_chunk_size,
+        )
 
-        # TODO: this whole logic is duplicated from get_entries
 
-        chunk_size = self._get_entries_chunk_size
+def join_paginated_iter(
+    get_things: Callable[[int, Optional[_T]], Iterable[Tuple[_U, _T]]], chunk_size: int,
+) -> Iterable[_U]:
+    # At the moment get_things must take positional arguments.
+    # We could make it work with kwargs by using protocols,
+    # but mypy gets confused about partials with kwargs.
+    # https://github.com/python/mypy/issues/1484
 
-        last = None
-        while True:
+    last = None
+    while True:
 
-            results = self._search.search_entries(
-                query=query,
-                filter_options=filter_options,
-                chunk_size=chunk_size,
-                last=last,
-            )
+        things = get_things(chunk_size, last)
 
-            # See comment in get_entries() for why we're doing this.
-            if not chunk_size:
-                yield from (r for r, _ in results)
-                return
+        # When chunk_size is 0, don't chunk the query.
+        #
+        # This will ensure there are no missing/duplicated entries, but
+        # will block database writes until the whole generator is consumed.
+        #
+        # Currently not exposed through the public API.
+        #
+        if not chunk_size:
+            yield from (t for t, _ in things)
+            return
 
-            results = list(results)
-            if not results:
-                break
+        things = list(things)
+        if not things:
+            break
 
-            _, last = results[-1]
+        _, last = things[-1]
 
-            yield from (r for r, _ in results)
+        yield from (t for t, _ in things)

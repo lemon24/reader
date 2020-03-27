@@ -381,7 +381,6 @@ class Search:
         self,
         query: str,
         filter_options: EntryFilterOptions = DEFAULT_FILTER_OPTIONS,
-        *,
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
@@ -408,7 +407,6 @@ class Search:
         self,
         query: str,
         filter_options: EntryFilterOptions,
-        *,
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
