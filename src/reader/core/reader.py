@@ -343,6 +343,14 @@ class Reader:
         if has_enclosures not in (None, False, True):
             raise ValueError("has_enclosures should be one of (None, False, True)")
 
+        filter_options = EntryFilterOptions(
+            feed_url=feed_url,
+            entry_id=entry_id,
+            read=read,
+            important=important,
+            has_enclosures=has_enclosures,
+        )
+
         chunk_size = self._get_entries_chunk_size
 
         now = self._now()
@@ -352,14 +360,7 @@ class Reader:
 
             entries = self._storage.get_entries(
                 now=now,
-                # TODO: don't construct this every time we go through the loop
-                filter_options=EntryFilterOptions(
-                    feed_url=feed_url,
-                    entry_id=entry_id,
-                    read=read,
-                    important=important,
-                    has_enclosures=has_enclosures,
-                ),
+                filter_options=filter_options,
                 chunk_size=chunk_size,
                 last=last,
             )
