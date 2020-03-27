@@ -327,28 +327,8 @@ class Reader:
         # If we ever implement pagination, consider following the guidance in
         # https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
 
-        # TODO: this validation should be shared
-        feed_url = feed_argument(feed) if feed is not None else None
-
-        # TODO: should we allow specifying both feed and entry?
-        if entry is None:
-            entry_id = None
-        else:
-            feed_url, entry_id = entry_argument(entry)
-
-        if read not in (None, False, True):
-            raise ValueError("read should be one of (None, False, True)")
-        if important not in (None, False, True):
-            raise ValueError("important should be one of (None, False, True)")
-        if has_enclosures not in (None, False, True):
-            raise ValueError("has_enclosures should be one of (None, False, True)")
-
-        filter_options = EntryFilterOptions(
-            feed_url=feed_url,
-            entry_id=entry_id,
-            read=read,
-            important=important,
-            has_enclosures=has_enclosures,
+        filter_options = EntryFilterOptions.from_args(
+            feed, entry, read, important, has_enclosures
         )
 
         chunk_size = self._get_entries_chunk_size
@@ -693,29 +673,8 @@ class Reader:
 
         """
 
-        # TODO: re-use the validation from get_entries
-
-        feed_url = feed_argument(feed) if feed is not None else None
-
-        # TODO: should we allow specifying both feed and entry?
-        if entry is None:
-            entry_id = None
-        else:
-            feed_url, entry_id = entry_argument(entry)
-
-        if read not in (None, False, True):
-            raise ValueError("read should be one of (None, False, True)")
-        if important not in (None, False, True):
-            raise ValueError("important should be one of (None, False, True)")
-        if has_enclosures not in (None, False, True):
-            raise ValueError("has_enclosures should be one of (None, False, True)")
-
-        filter_options = EntryFilterOptions(
-            feed_url=feed_url,
-            entry_id=entry_id,
-            read=read,
-            important=important,
-            has_enclosures=has_enclosures,
+        filter_options = EntryFilterOptions.from_args(
+            feed, entry, read, important, has_enclosures
         )
 
         # TODO: this whole logic is duplicated from get_entries

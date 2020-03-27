@@ -367,6 +367,9 @@ class UpdateResult(NamedTuple):
 # TODO: these should probably be in storage.py (along with some of the above)
 
 
+_EFO = TypeVar('_EFO', bound='EntryFilterOptions')
+
+
 class EntryFilterOptions(NamedTuple):
 
     """Options for filtering the results of the "get entry" storage methods."""
@@ -376,3 +379,29 @@ class EntryFilterOptions(NamedTuple):
     read: Optional[bool] = None
     important: Optional[bool] = None
     has_enclosures: Optional[bool] = None
+
+    @classmethod
+    def from_args(
+        cls: Type[_EFO],
+        feed: Optional[FeedInput] = None,
+        entry: Optional[EntryInput] = None,
+        read: Optional[bool] = None,
+        important: Optional[bool] = None,
+        has_enclosures: Optional[bool] = None,
+    ) -> _EFO:
+        feed_url = feed_argument(feed) if feed is not None else None
+
+        # TODO: should we allow specifying both feed and entry?
+        if entry is None:
+            entry_id = None
+        else:
+            feed_url, entry_id = entry_argument(entry)
+
+        if read not in (None, False, True):
+            raise ValueError("read should be one of (None, False, True)")
+        if important not in (None, False, True):
+            raise ValueError("important should be one of (None, False, True)")
+        if has_enclosures not in (None, False, True):
+            raise ValueError("has_enclosures should be one of (None, False, True)")
+
+        return cls(feed_url, entry_id, read, important, has_enclosures)
