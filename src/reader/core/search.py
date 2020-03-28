@@ -235,7 +235,6 @@ class Search:
 
     @wrap_storage_exceptions(SearchError)
     def is_enabled(self) -> bool:
-        # TODO: similar to HeavyMigration.get_version(); pull into table_exists()
         search_table_exists = (
             self.storage.db.execute(
                 """

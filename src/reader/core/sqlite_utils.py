@@ -105,20 +105,13 @@ class HeavyMigration:
 
     @staticmethod
     def get_version(db: sqlite3.Connection) -> Optional[int]:
-        version_exists = (
-            db.execute(
-                """
-            SELECT name
-            FROM sqlite_master
-            WHERE type = 'table' AND name = 'version';
-        """
-            ).fetchone()
-            is not None
-        )
-        if not version_exists:
-            return None
-        # TODO: this assignment should fail with DBError
-        (version,) = db.execute("SELECT MAX(version) FROM version;").fetchone()
+        try:
+            # TODO: this assignment should fail with DBError
+            (version,) = db.execute("SELECT MAX(version) FROM version;").fetchone()
+        except sqlite3.OperationalError as e:
+            if "no such table" in str(e).lower():
+                return None
+            raise
         assert isinstance(version, int)
         return version
 
