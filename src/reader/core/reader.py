@@ -48,7 +48,9 @@ _U = TypeVar('_U')
 
 
 def zero_or_one(
-    it: Iterable[_U], default: Union[_Missing, _T], make_exc: Callable[[], Exception],
+    it: Iterable[_U],
+    make_exc: Callable[[], Exception],
+    default: Union[_Missing, _T] = _missing,
 ) -> Union[_U, _T]:
     things = list(it)
     if len(things) == 0:
@@ -207,8 +209,8 @@ class Reader:
         """
         return zero_or_one(
             self.get_feeds(feed=feed),
-            default,
             lambda: FeedNotFoundError(feed_argument(feed)),
+            default,
         )
 
     def set_feed_user_title(self, feed: FeedInput, title: Optional[str]) -> None:
@@ -276,9 +278,7 @@ class Reader:
         url = feed_argument(feed)
         self._update_feed(
             zero_or_one(
-                self._storage.get_feeds_for_update(url),
-                _missing,
-                lambda: FeedNotFoundError(url),
+                self._storage.get_feeds_for_update(url), lambda: FeedNotFoundError(url),
             )
         )
 
@@ -385,8 +385,8 @@ class Reader:
         """
         return zero_or_one(
             self.get_entries(entry=entry),
-            default,
             lambda: EntryNotFoundError(*entry_argument(entry)),
+            default,
         )
 
     def mark_as_read(self, entry: EntryInput) -> None:
@@ -501,8 +501,8 @@ class Reader:
         """
         return zero_or_one(
             (v for _, v in self.iter_feed_metadata(feed, key=key)),
-            default,
             lambda: MetadataNotFoundError(feed_argument(feed), key),
+            default,
         )
 
     def set_feed_metadata(self, feed: FeedInput, key: str, value: JSONType) -> None:
