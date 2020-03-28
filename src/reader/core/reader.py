@@ -46,6 +46,21 @@ _missing = _Missing()
 _T = TypeVar('_T')
 _U = TypeVar('_U')
 
+
+def zero_or_one(
+    it: Iterable[_U], default: Union[_Missing, _T], make_exc: Callable[[], Exception],
+) -> Union[_U, _T]:
+    things = list(it)
+    if len(things) == 0:
+        if isinstance(default, _Missing):
+            raise make_exc()
+        return default
+    elif len(things) == 1:
+        return things[0]
+    else:
+        assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+
+
 _PostEntryAddPluginType = Callable[['Reader', str, Entry], None]
 
 
@@ -153,7 +168,7 @@ class Reader:
             raise ValueError("sort should be one of ('title', 'added')")
         return self._storage.get_feeds(sort=sort)
 
-    # TODO: get_feed can be written as next(get_feeds(feed), 'default'); get rid of it
+    # TODO: do we really need default?
 
     @overload
     def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
@@ -183,17 +198,9 @@ class Reader:
 
         """
         url = feed_argument(feed)
-        feeds = list(self._storage.get_feeds(url=url))
-        if len(feeds) == 0:
-            # Using isinstance to let mypy know we're never returning _missing;
-            # "default is _missing" does not work.
-            if isinstance(default, _Missing):
-                raise FeedNotFoundError(url)
-            return default
-        elif len(feeds) == 1:
-            return feeds[0]
-        else:
-            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+        return zero_or_one(
+            self._storage.get_feeds(url=url), default, lambda: FeedNotFoundError(url),
+        )
 
     def set_feed_user_title(self, feed: FeedInput, title: Optional[str]) -> None:
         """Set a user-defined title for a feed.
@@ -337,7 +344,7 @@ class Reader:
             self._get_entries_chunk_size,
         )
 
-    # TODO: maybe remove in favor of next(get_entries(entry=...), 'default')
+    # TODO: do we really need default?
 
     @overload
     def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover
@@ -366,26 +373,11 @@ class Reader:
             StorageError
 
         """
-        feed_url, entry_id = entry_argument(entry)
-        now = self._now()
-
-        entries = list(
-            self._storage.get_entries(
-                now=now,
-                filter_options=EntryFilterOptions(feed_url=feed_url, entry_id=entry_id),
-            )
+        return zero_or_one(
+            self.get_entries(entry=entry),
+            default,
+            lambda: EntryNotFoundError(*entry_argument(entry)),
         )
-
-        if len(entries) == 0:
-            # Using isinstance to let mypy know we're never returning _missing;
-            # "default is _missing" does not work.
-            if isinstance(default, _Missing):
-                raise EntryNotFoundError(feed_url, entry_id)
-            return default
-        elif len(entries) == 1:
-            return entries[0][0]
-        else:
-            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
     def mark_as_read(self, entry: EntryInput) -> None:
         """Mark an entry as read.
@@ -492,19 +484,11 @@ class Reader:
 
         """
         feed_url = feed_argument(feed)
-        pairs = list(self._storage.iter_feed_metadata(feed_url, key))
-
-        if len(pairs) == 0:
-            # Using isinstance to let mypy know we're never returning _missing;
-            # "default is _missing" does not work.
-            if isinstance(default, _Missing):
-                raise MetadataNotFoundError(feed_url, key)
-            return default
-        elif len(pairs) == 1:
-            assert pairs[0][0] == key
-            return pairs[0][1]
-        else:
-            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+        return zero_or_one(
+            (v for _, v in self._storage.iter_feed_metadata(feed_url, key)),
+            default,
+            lambda: MetadataNotFoundError(feed_url, key),
+        )
 
     def set_feed_metadata(self, feed: FeedInput, key: str, value: JSONType) -> None:
         """Set metadata for a feed.
