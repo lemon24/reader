@@ -149,10 +149,13 @@ class Reader:
         url = feed_argument(feed)
         self._storage.remove_feed(url)
 
-    def get_feeds(self, *, sort: FeedSortOrder = 'title') -> Iterable[Feed]:
-        """Get all the feeds.
+    def get_feeds(
+        self, *, feed: Optional[FeedInput] = None, sort: FeedSortOrder = 'title'
+    ) -> Iterable[Feed]:
+        """Get all or some of the feeds.
 
         Args:
+            feed (str or Feed or None): Only return the feed with this URL.
             sort (str): How to order feeds; one of ``'title'`` (by
                 :attr:`~Feed.user_title` or :attr:`~Feed.title`, case
                 insensitive; default), or ``'added'`` (last added first).
@@ -164,11 +167,10 @@ class Reader:
             StorageError
 
         """
+        url = feed_argument(feed) if feed else None
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
-        return self._storage.get_feeds(sort=sort)
-
-    # TODO: do we really need default?
+        return self._storage.get_feeds(url=url, sort=sort)
 
     @overload
     def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
@@ -197,9 +199,10 @@ class Reader:
             StorageError
 
         """
-        url = feed_argument(feed)
         return zero_or_one(
-            self._storage.get_feeds(url=url), default, lambda: FeedNotFoundError(url),
+            self.get_feeds(feed=feed),
+            default,
+            lambda: FeedNotFoundError(feed_argument(feed)),
         )
 
     def set_feed_user_title(self, feed: FeedInput, title: Optional[str]) -> None:
@@ -319,7 +322,7 @@ class Reader:
         Args:
             feed (str or Feed or None): Only return the entries for this feed.
             entry (tuple(str, str) or Entry or None):
-                Only get the entry with this (feed URL, entry id) tuple.
+                Only return the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only return (un)read entries.
             important (bool or None): Only return (un)important entries.
             has_enclosures (bool or None): Only return entries that (don't)
@@ -343,8 +346,6 @@ class Reader:
             partial(self._storage.get_entries, self._now(), filter_options),
             self._get_entries_chunk_size,
         )
-
-    # TODO: do we really need default?
 
     @overload
     def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover

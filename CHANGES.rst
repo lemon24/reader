@@ -15,6 +15,7 @@ Unreleased
   if search was already enabled and the reader had any entries.
 * Add an ``entry`` argument to :meth:`~Reader.get_entries`,
   for symmetry with :meth:`~Reader.search_entries`.
+* Add a ``feed`` argument to :meth:`~Reader.get_feeds`.
 
 
 Version 0.19
