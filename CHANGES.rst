@@ -16,6 +16,7 @@ Unreleased
 * Add an ``entry`` argument to :meth:`~Reader.get_entries`,
   for symmetry with :meth:`~Reader.search_entries`.
 * Add a ``feed`` argument to :meth:`~Reader.get_feeds`.
+* Add a ``key`` argument to :meth:`~Reader.get_feed_metadata`.
 
 
 Version 0.19

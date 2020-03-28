@@ -190,7 +190,7 @@ class Reader:
     ) -> Union[Feed, _T]:
         """Get a feed.
 
-        Equivalent to ``next(iter(reader.get_feeds(feed=feed)), default)``,
+        Like ``next(iter(reader.get_feeds(feed=feed)), default)``,
         but raises a custom exception instead of :exc:`StopIteration`.
 
         Arguments:
@@ -368,7 +368,7 @@ class Reader:
     ) -> Union[Entry, _T]:
         """Get an entry.
 
-        Equivalent to ``next(iter(reader.get_entries(entry=entry)), default)``,
+        Like ``next(iter(reader.get_entries(entry=entry)), default)``,
         but raises a custom exception instead of :exc:`StopIteration`.
 
         Args:
@@ -445,11 +445,14 @@ class Reader:
         feed_url, entry_id = entry_argument(entry)
         self._storage.mark_as_important_unimportant(feed_url, entry_id, False)
 
-    def iter_feed_metadata(self, feed: FeedInput) -> Iterable[Tuple[str, JSONType]]:
-        """Get all the metadata values for a feed.
+    def iter_feed_metadata(
+        self, feed: FeedInput, *, key: Optional[str] = None,
+    ) -> Iterable[Tuple[str, JSONType]]:
+        """Get all or some of the metadata values for a feed.
 
         Args:
             feed (str or Feed): The feed URL.
+            key (str or None): Only return the metadata for this key.
 
         Yields:
             tuple(str, JSONType): Key-value pairs, in undefined order.
@@ -460,7 +463,7 @@ class Reader:
 
         """
         feed_url = feed_argument(feed)
-        return self._storage.iter_feed_metadata(feed_url)
+        return self._storage.iter_feed_metadata(feed_url, key)
 
     @overload
     def get_feed_metadata(
@@ -479,6 +482,9 @@ class Reader:
     ) -> Union[JSONType, _T]:
         """Get metadata for a feed.
 
+        Like ``next(iter(reader.get_feed_metadata(feed, key=key)), default)``,
+        but raises a custom exception instead of :exc:`StopIteration`.
+
         Args:
             feed (str or Feed): The feed URL.
             key (str): The key of the metadata to retrieve.
@@ -493,11 +499,10 @@ class Reader:
             StorageError
 
         """
-        feed_url = feed_argument(feed)
         return zero_or_one(
-            (v for _, v in self._storage.iter_feed_metadata(feed_url, key)),
+            (v for _, v in self.iter_feed_metadata(feed, key=key)),
             default,
-            lambda: MetadataNotFoundError(feed_url, key),
+            lambda: MetadataNotFoundError(feed_argument(feed), key),
         )
 
     def set_feed_metadata(self, feed: FeedInput, key: str, value: JSONType) -> None:
