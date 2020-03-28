@@ -274,13 +274,13 @@ class Reader:
 
         """
         url = feed_argument(feed)
-        rows = list(self._storage.get_feeds_for_update(url))
-        if len(rows) == 0:
-            raise FeedNotFoundError(url)
-        elif len(rows) == 1:
-            self._update_feed(rows[0])
-        else:
-            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+        self._update_feed(
+            zero_or_one(
+                self._storage.get_feeds_for_update(url),
+                _missing,
+                lambda: FeedNotFoundError(url),
+            )
+        )
 
     @staticmethod
     def _now() -> datetime.datetime:
