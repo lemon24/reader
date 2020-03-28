@@ -25,6 +25,7 @@ from .exceptions import MetadataNotFoundError
 from .exceptions import StorageError
 from .sqlite_utils import DBError
 from .sqlite_utils import open_sqlite_db
+from .sqlite_utils import rowcount_exactly_one
 from .types import Content
 from .types import Enclosure
 from .types import Entry
@@ -39,6 +40,9 @@ from .types import JSONType
 
 
 log = logging.getLogger('reader')
+
+
+# TODO: move wrap_storage_exceptions to sqlite_utils
 
 
 @contextlib.contextmanager
@@ -68,6 +72,9 @@ def wrap_storage_exceptions(exc_type: Type[Exception] = StorageError) -> Iterato
 
 FuncType = Callable[..., Any]
 F = TypeVar('F', bound=FuncType)
+
+
+# TODO: move returns_iter_list to utils
 
 
 def returns_iter_list(fn: F) -> F:
@@ -455,10 +462,8 @@ class Storage:
     @wrap_storage_exceptions()
     def remove_feed(self, url: str) -> None:
         with self.db:
-            rows = self.db.execute("DELETE FROM feeds WHERE url = :url;", locals())
-            if rows.rowcount == 0:
-                raise FeedNotFoundError(url)
-            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+            cursor = self.db.execute("DELETE FROM feeds WHERE url = :url;", locals())
+        rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     @wrap_storage_exceptions()
     @returns_iter_list
@@ -583,27 +588,23 @@ class Storage:
     @wrap_storage_exceptions()
     def set_feed_user_title(self, url: str, title: Optional[str]) -> None:
         with self.db:
-            rows = self.db.execute(
+            cursor = self.db.execute(
                 "UPDATE feeds SET user_title = :title WHERE url = :url;", locals(),
             )
-            if rows.rowcount == 0:
-                raise FeedNotFoundError(url)
-            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+        rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     @wrap_storage_exceptions()
     def mark_as_stale(self, url: str) -> None:
         with self.db:
-            rows = self.db.execute(
+            cursor = self.db.execute(
                 "UPDATE feeds SET stale = 1 WHERE url = :url;", locals(),
             )
-            if rows.rowcount == 0:
-                raise FeedNotFoundError(url)
-            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+            rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     @wrap_storage_exceptions()
     def mark_as_read_unread(self, feed_url: str, entry_id: str, read: bool) -> None:
         with self.db:
-            rows = self.db.execute(
+            cursor = self.db.execute(
                 """
                 UPDATE entries
                 SET read = :read
@@ -611,16 +612,14 @@ class Storage:
                 """,
                 locals(),
             )
-            if rows.rowcount == 0:
-                raise EntryNotFoundError(feed_url, entry_id)
-            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+        rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
     @wrap_storage_exceptions()
     def mark_as_important_unimportant(
         self, feed_url: str, entry_id: str, important: bool
     ) -> None:
         with self.db:
-            rows = self.db.execute(
+            cursor = self.db.execute(
                 """
                 UPDATE entries
                 SET important = :important
@@ -628,9 +627,7 @@ class Storage:
                 """,
                 locals(),
             )
-            if rows.rowcount == 0:
-                raise EntryNotFoundError(feed_url, entry_id)
-            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+        rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
     @wrap_storage_exceptions()
     def update_feed(self, intent: FeedUpdateIntent) -> None:
@@ -660,7 +657,7 @@ class Storage:
         author = feed.author
 
         with self.db:
-            rows = self.db.execute(
+            cursor = self.db.execute(
                 """
                 UPDATE feeds
                 SET
@@ -677,13 +674,11 @@ class Storage:
                 locals(),
             )
 
-        if rows.rowcount == 0:
-            raise FeedNotFoundError(url)
-        assert rows.rowcount == 1, "shouldn't have more than 1 row"
+        rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     def _update_feed_last_updated(self, url: str, last_updated: datetime) -> None:
         with self.db:
-            rows = self.db.execute(
+            cursor = self.db.execute(
                 """
                 UPDATE feeds
                 SET
@@ -692,10 +687,7 @@ class Storage:
                 """,
                 locals(),
             )
-
-        if rows.rowcount == 0:
-            raise FeedNotFoundError(url)
-        assert rows.rowcount == 1, "shouldn't have more than 1 row"
+        rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     def _add_or_update_entry(self, intent: EntryUpdateIntent) -> None:
         feed_url, entry, last_updated, first_updated_epoch, feed_order = intent
@@ -1018,13 +1010,11 @@ class Storage:
     @wrap_storage_exceptions()
     def delete_feed_metadata(self, feed_url: str, key: str) -> None:
         with self.db:
-            rows = self.db.execute(
+            cursor = self.db.execute(
                 """
                 DELETE FROM feed_metadata
                 WHERE feed = :feed_url AND key = :key;
                 """,
                 locals(),
             )
-            if rows.rowcount == 0:
-                raise MetadataNotFoundError(feed_url, key)
-            assert rows.rowcount == 1, "shouldn't have more than 1 row"
+        rowcount_exactly_one(cursor, lambda: MetadataNotFoundError(feed_url, key))

@@ -14,9 +14,6 @@ from typing import Tuple
 from typing_extensions import TypedDict
 
 
-# initialy from https://github.com/lemon24/boomtime/blob/master/boomtime/db.py
-
-
 @contextmanager
 def ddl_transaction(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
     """Automatically commit/rollback transactions containing DDL statements.
@@ -56,6 +53,7 @@ def ddl_transaction(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
     https://docs.python.org/3.5/library/sqlite3.html#controlling-transactions
 
     """
+    # initialy from https://github.com/lemon24/boomtime/blob/master/boomtime/db.py
     isolation_level = db.isolation_level
     try:
         db.isolation_level = None
@@ -249,3 +247,11 @@ def open_sqlite_db(
     except BaseException:
         db.close()
         raise
+
+
+def rowcount_exactly_one(
+    cursor: sqlite3.Cursor, make_exc: Callable[[], Exception]
+) -> None:
+    if cursor.rowcount == 0:
+        raise make_exc()
+    assert cursor.rowcount == 1, "shouldn't have more than 1 row"
