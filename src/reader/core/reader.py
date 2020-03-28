@@ -115,6 +115,9 @@ class Reader:
         The reader becomes unusable from this point forward;
         a :exc:`ReaderError` will be raised if any other method is called.
 
+        Raises:
+            ReaderError
+
         """
         self._storage.close()
 
@@ -186,6 +189,9 @@ class Reader:
         self, feed: FeedInput, default: Union[_Missing, _T] = _missing
     ) -> Union[Feed, _T]:
         """Get a feed.
+
+        Equivalent to ``next(iter(reader.get_feeds(feed=feed)), default)``,
+        but raises a custom exception instead of :exc:`StopIteration`.
 
         Arguments:
             feed (str or Feed): The feed URL.
@@ -361,6 +367,9 @@ class Reader:
         self, entry: EntryInput, default: Union[_Missing, _T] = _missing
     ) -> Union[Entry, _T]:
         """Get an entry.
+
+        Equivalent to ``next(iter(reader.get_entries(entry=entry)), default)``,
+        but raises a custom exception instead of :exc:`StopIteration`.
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
