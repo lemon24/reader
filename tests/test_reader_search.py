@@ -261,7 +261,7 @@ def test_search_entries_order_content(reader):
     'chunk_size',
     [
         # the default
-        Reader._get_entries_chunk_size,
+        Reader._pagination_chunk_size,
         # rough result size for this test
         1,
         2,
@@ -276,8 +276,7 @@ def test_search_entries_order_weights(reader, chunk_size):
 
     # TODO: may need fixing once we finish tuning the weights (it should fail)
 
-    # TODO: rename Reader._get_entries_chunk_size to something more generic
-    reader._get_entries_chunk_size = chunk_size
+    reader._pagination_chunk_size = chunk_size
 
     parser = Parser()
     reader._parser = parser

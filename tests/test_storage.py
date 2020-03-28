@@ -248,19 +248,19 @@ def iter_get_feeds_for_update(storage):
     return storage.get_feeds_for_update()
 
 
-def iter_get_entries_chunk_size_0(storage):
+def iter_pagination_chunk_size_0(storage):
     return storage.get_entries(chunk_size=0, now=datetime(2010, 1, 1))
 
 
-def iter_get_entries_chunk_size_1(storage):
+def iter_pagination_chunk_size_1(storage):
     return storage.get_entries(chunk_size=1, now=datetime(2010, 1, 1))
 
 
-def iter_get_entries_chunk_size_2(storage):
+def iter_pagination_chunk_size_2(storage):
     return storage.get_entries(chunk_size=2, now=datetime(2010, 1, 1))
 
 
-def iter_get_entries_chunk_size_3(storage):
+def iter_pagination_chunk_size_3(storage):
     return storage.get_entries(chunk_size=3, now=datetime(2010, 1, 1))
 
 
@@ -275,12 +275,12 @@ def iter_iter_feed_metadata(storage):
         iter_get_feeds,
         iter_get_feeds_for_update,
         pytest.param(
-            iter_get_entries_chunk_size_0,
+            iter_pagination_chunk_size_0,
             marks=pytest.mark.xfail(raises=StorageError, strict=True),
         ),
-        iter_get_entries_chunk_size_1,
-        iter_get_entries_chunk_size_2,
-        iter_get_entries_chunk_size_3,
+        iter_pagination_chunk_size_1,
+        iter_pagination_chunk_size_2,
+        iter_pagination_chunk_size_3,
         iter_iter_feed_metadata,
     ],
 )

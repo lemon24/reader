@@ -98,7 +98,7 @@ def test_update_entry_updated(reader, call_update_method):
     assert set(reader.get_entries()) == {new_entry._replace(feed=feed)}
 
 
-@pytest.mark.parametrize('chunk_size', [Reader._get_entries_chunk_size, 1])
+@pytest.mark.parametrize('chunk_size', [Reader._pagination_chunk_size, 1])
 def test_update_no_updated(reader, chunk_size, call_update_method):
     """If a feed has updated == None, it should be treated as updated.
 
@@ -113,7 +113,7 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
     https://github.com/lemon24/reader/issues/88
 
     """
-    reader._get_entries_chunk_size = chunk_size
+    reader._pagination_chunk_size = chunk_size
 
     parser = Parser()
     reader._parser = parser
@@ -542,7 +542,7 @@ GET_ENTRIES_ORDER_DATA = {
     'chunk_size',
     [
         # the default
-        Reader._get_entries_chunk_size,
+        Reader._pagination_chunk_size,
         # rough result size for this test
         1,
         2,
@@ -570,7 +570,7 @@ def test_get_entries_order(reader, chunk_size, order_data_key):
 
     # TODO: Break this into smaller tests; working with it for #113 was a pain.
 
-    reader._get_entries_chunk_size = chunk_size
+    reader._pagination_chunk_size = chunk_size
     reader._storage.recent_threshold = GET_ENTRIES_ORDER_RECENT_THRESHOLD
 
     parser = Parser()
@@ -626,7 +626,7 @@ def test_get_entries_order(reader, chunk_size, order_data_key):
     'chunk_size',
     [
         # the default
-        Reader._get_entries_chunk_size,
+        Reader._pagination_chunk_size,
         # rough result size for this test
         1,
         2,
@@ -643,7 +643,7 @@ def test_get_entries_feed_order(reader, chunk_size):
     https://github.com/lemon24/reader/issues/87
 
     """
-    reader._get_entries_chunk_size = chunk_size
+    reader._pagination_chunk_size = chunk_size
 
     parser = Parser()
     reader._parser = parser

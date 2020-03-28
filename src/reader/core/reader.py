@@ -86,7 +86,7 @@ class Reader:
 
     """
 
-    _get_entries_chunk_size = 2 ** 8
+    _pagination_chunk_size = 2 ** 8
 
     def __init__(self, path: str, called_directly: bool = True):
         self._storage = Storage(path)
@@ -350,7 +350,7 @@ class Reader:
         )
         yield from join_paginated_iter(
             partial(self._storage.get_entries, self._now(), filter_options),
-            self._get_entries_chunk_size,
+            self._pagination_chunk_size,
         )
 
     @overload
@@ -649,7 +649,7 @@ class Reader:
         )
         yield from join_paginated_iter(
             partial(self._search.search_entries, query, filter_options),
-            self._get_entries_chunk_size,
+            self._pagination_chunk_size,
         )
 
 
