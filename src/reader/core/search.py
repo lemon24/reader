@@ -373,7 +373,7 @@ class Search:
                 UPDATE entries_search_sync_state
                 SET to_update = 0
                 WHERE to_update;
-            """
+                """
             )
 
     def search_entries(
@@ -506,9 +506,7 @@ class Search:
 
         limit_snippet = ''
         if chunk_size:
-            limit_snippet = """
-                LIMIT :chunk_size
-                """
+            limit_snippet = "LIMIT :chunk_size"
             if last:
                 having_snippets.append(
                     """
@@ -535,7 +533,7 @@ class Search:
                 {'NOT' if has_enclosures else ''}
                     (json_array_length(entries.enclosures) IS NULL
                         OR json_array_length(entries.enclosures) = 0)
-            """
+                """
             )
 
         if important is not None:
