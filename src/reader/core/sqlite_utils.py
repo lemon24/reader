@@ -139,13 +139,7 @@ class HeavyMigration:
 
                 if version is None:
                     self.create(db)
-                    db.execute(
-                        """
-                        CREATE TABLE version (
-                            version INTEGER NOT NULL
-                        );
-                    """
-                    )
+                    db.execute("CREATE TABLE version (version INTEGER NOT NULL);")
                     db.execute("INSERT INTO version VALUES (?);", (self.version,))
 
                 elif version < self.version:
@@ -163,11 +157,7 @@ class HeavyMigration:
                             )
 
                         db.execute(
-                            """
-                            UPDATE version
-                            SET version = :to_version;
-                        """,
-                            locals(),
+                            "UPDATE version SET version = :to_version;", locals()
                         )
                         migration(db)
 

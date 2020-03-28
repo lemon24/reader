@@ -115,7 +115,7 @@ def create_feeds(db: sqlite3.Connection, name: str = 'feeds') -> None:
             added TIMESTAMP NOT NULL
 
         );
-    """
+        """
     )
 
 
@@ -149,7 +149,7 @@ def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
                 ON UPDATE CASCADE
                 ON DELETE CASCADE
         );
-    """
+        """
     )
 
 
@@ -166,7 +166,7 @@ def create_feed_metadata(db: sqlite3.Connection) -> None:
                 ON UPDATE CASCADE
                 ON DELETE CASCADE
         );
-    """
+        """
     )
 
 
@@ -175,7 +175,7 @@ def update_from_10_to_11(db: sqlite3.Connection) -> None:  # pragma: no cover
         """
         ALTER TABLE feeds
         ADD COLUMN added TIMESTAMP;
-    """
+        """
     )
 
 
@@ -184,7 +184,7 @@ def update_from_11_to_12(db: sqlite3.Connection) -> None:  # pragma: no cover
         """
         ALTER TABLE entries
         ADD COLUMN first_updated TIMESTAMP;
-    """
+        """
     )
 
 
@@ -209,7 +209,7 @@ def update_from_13_to_14(db: sqlite3.Connection) -> None:  # pragma: no cover
         """
         ALTER TABLE entries
         ADD COLUMN feed_order INTEGER;
-    """
+        """
     )
     db.create_function('_datetime_to_us', 1, _datetime_to_us)
     db.execute(
@@ -220,7 +220,7 @@ def update_from_13_to_14(db: sqlite3.Connection) -> None:  # pragma: no cover
                 - _datetime_to_us(last_updated),
             0
         );
-    """
+        """
     )
 
 
@@ -262,7 +262,7 @@ def update_from_14_to_15(db: sqlite3.Connection) -> None:  # pragma: no cover
             first_updated,
             feed_order
         FROM entries;
-    """
+        """
     )
     db.execute("DROP TABLE entries;")
     db.execute("ALTER TABLE new_entries RENAME TO entries;")
@@ -271,8 +271,8 @@ def update_from_14_to_15(db: sqlite3.Connection) -> None:  # pragma: no cover
 def update_from_15_to_16(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute(
         """
-            ALTER TABLE entries
-            ADD COLUMN important INTEGER;
+        ALTER TABLE entries
+        ADD COLUMN important INTEGER;
         """
     )
 
@@ -287,7 +287,7 @@ def update_from_16_to_17(db: sqlite3.Connection) -> None:  # pragma: no cover
             stale = COALESCE(stale, 0),
             added = COALESCE(added, '1970-01-01 00:00:00.000000')
         ;
-    """
+        """
     )
     db.execute(
         """
@@ -301,7 +301,7 @@ def update_from_16_to_17(db: sqlite3.Connection) -> None:  # pragma: no cover
                 '1970-01-01 00:00:00.000000'
             )
         ;
-    """
+        """
     )
 
     # Re-create tables with the new constraints;
@@ -337,7 +337,7 @@ def update_from_16_to_17(db: sqlite3.Connection) -> None:  # pragma: no cover
             last_updated,
             added
         FROM feeds;
-    """
+        """
     )
     db.execute("DROP TABLE feeds;")
     db.execute("ALTER TABLE new_feeds RENAME TO feeds;")
@@ -379,7 +379,7 @@ def update_from_16_to_17(db: sqlite3.Connection) -> None:  # pragma: no cover
             first_updated_epoch,
             feed_order
         FROM entries;
-    """
+        """
     )
     db.execute("DROP TABLE entries;")
     db.execute("ALTER TABLE new_entries RENAME TO entries;")
@@ -446,11 +446,7 @@ class Storage:
         with self.db:
             try:
                 self.db.execute(
-                    """
-                    INSERT INTO feeds (url, added)
-                    VALUES (:url, :added);
-                """,
-                    locals(),
+                    "INSERT INTO feeds (url, added) VALUES (:url, :added);", locals(),
                 )
             except sqlite3.IntegrityError:
                 # FIXME: Match the error string.
@@ -459,13 +455,7 @@ class Storage:
     @wrap_storage_exceptions()
     def remove_feed(self, url: str) -> None:
         with self.db:
-            rows = self.db.execute(
-                """
-                DELETE FROM feeds
-                WHERE url = :url;
-            """,
-                locals(),
-            )
+            rows = self.db.execute("DELETE FROM feeds WHERE url = :url;", locals())
             if rows.rowcount == 0:
                 raise FeedNotFoundError(url)
             assert rows.rowcount == 1, "shouldn't have more than 1 row"
@@ -492,7 +482,7 @@ class Storage:
                 {order_by_snippet},
                 -- to make sure the order is deterministic
                 feeds.url;
-        """,
+            """,
             locals(),
         )
 
@@ -524,7 +514,7 @@ class Storage:
             {where_url_snippet}
             {where_new_only_snippet}
             ORDER BY feeds.url;
-        """,
+            """,
             locals(),
         )
         for row in cursor:
@@ -569,7 +559,7 @@ class Storage:
                 FROM input
                 LEFT JOIN entries
                     ON (input.id, input.feed) == (entries.id, entries.feed);
-        """,
+            """,
             parameters,
         )
 
@@ -594,12 +584,7 @@ class Storage:
     def set_feed_user_title(self, url: str, title: Optional[str]) -> None:
         with self.db:
             rows = self.db.execute(
-                """
-                UPDATE feeds
-                SET user_title = :title
-                WHERE url = :url;
-            """,
-                locals(),
+                "UPDATE feeds SET user_title = :title WHERE url = :url;", locals(),
             )
             if rows.rowcount == 0:
                 raise FeedNotFoundError(url)
@@ -609,12 +594,7 @@ class Storage:
     def mark_as_stale(self, url: str) -> None:
         with self.db:
             rows = self.db.execute(
-                """
-                UPDATE feeds
-                SET stale = 1
-                WHERE url = :url;
-            """,
-                locals(),
+                "UPDATE feeds SET stale = 1 WHERE url = :url;", locals(),
             )
             if rows.rowcount == 0:
                 raise FeedNotFoundError(url)
@@ -628,7 +608,7 @@ class Storage:
                 UPDATE entries
                 SET read = :read
                 WHERE feed = :feed_url AND id = :entry_id;
-            """,
+                """,
                 locals(),
             )
             if rows.rowcount == 0:
@@ -645,7 +625,7 @@ class Storage:
                 UPDATE entries
                 SET important = :important
                 WHERE feed = :feed_url AND id = :entry_id;
-            """,
+                """,
                 locals(),
             )
             if rows.rowcount == 0:
@@ -693,7 +673,7 @@ class Storage:
                     stale = 0,
                     last_updated = :last_updated
                 WHERE url = :url;
-            """,
+                """,
                 locals(),
             )
 
@@ -709,7 +689,7 @@ class Storage:
                 SET
                     last_updated = :last_updated
                 WHERE url = :url;
-            """,
+                """,
                 locals(),
             )
 
@@ -784,7 +764,7 @@ class Storage:
                     )),
                     :feed_order
                 );
-            """,
+                """,
                 locals(),
             )
         except sqlite3.IntegrityError:
@@ -892,9 +872,7 @@ class Storage:
 
         limit_snippet = ''
         if chunk_size:
-            limit_snippet = """
-                LIMIT :chunk_size
-            """
+            limit_snippet = "LIMIT :chunk_size"
             if last:
                 where_snippets.append(
                     """
@@ -913,7 +891,7 @@ class Storage:
                         :last_negative_feed_order,
                         :last_entry_id
                     )
-                """
+                    """
                 )
 
         if feed_url:
@@ -927,7 +905,7 @@ class Storage:
                 {'NOT' if has_enclosures else ''}
                     (json_array_length(entries.enclosures) IS NULL
                         OR json_array_length(entries.enclosures) = 0)
-            """
+                """
             )
 
         if important is not None:
@@ -1006,7 +984,7 @@ class Storage:
             f"""
             SELECT key, value FROM feed_metadata
             {where_url_snippet};
-        """,
+            """,
             locals(),
         )
 
@@ -1030,7 +1008,7 @@ class Storage:
                         :key,
                         :value_json
                     );
-                """,
+                    """,
                     locals(),
                 )
             except sqlite3.IntegrityError:
@@ -1044,7 +1022,7 @@ class Storage:
                 """
                 DELETE FROM feed_metadata
                 WHERE feed = :feed_url AND key = :key;
-            """,
+                """,
                 locals(),
             )
             if rows.rowcount == 0:
