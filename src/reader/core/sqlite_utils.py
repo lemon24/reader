@@ -4,6 +4,7 @@ sqlite3 utilities. Contains no business logic.
 """
 import sqlite3
 from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Callable
 from typing import Dict
 from typing import Iterator
@@ -137,16 +138,12 @@ class RequirementError(DBError):
 db_errors = [DBError, SchemaVersionError, RequirementError]
 
 
+@dataclass
 class HeavyMigration:
-    def __init__(
-        self,
-        create: Callable[[sqlite3.Connection], None],
-        version: int,
-        migrations: Dict[int, Callable[[sqlite3.Connection], None]],
-    ):
-        self.create = create
-        self.version = version
-        self.migrations = migrations
+
+    create: Callable[[sqlite3.Connection], None]
+    version: int
+    migrations: Dict[int, Callable[[sqlite3.Connection], None]]
 
     @staticmethod
     def get_version(db: sqlite3.Connection) -> Optional[int]:
