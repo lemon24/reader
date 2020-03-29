@@ -407,6 +407,10 @@ def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
             15: update_from_15_to_16,
             16: update_from_16_to_17,
         },
+        # Row value support was added in 3.15.
+        minimum_sqlite_version=(3, 15),
+        # We use the JSON1 extension for entries.content.
+        required_sqlite_compile_options=["ENABLE_JSON1"],
         timeout=timeout,
     )
 

@@ -101,7 +101,7 @@ def foreign_keys_off(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
         db.execute(f"PRAGMA foreign_keys = {'ON' if foreign_keys else 'OFF'};")
 
 
-def foreign_key_check(db):
+def foreign_key_check(db: sqlite3.Connection) -> None:
     """Check foreign key constraint violations.
 
     Raises:
@@ -241,11 +241,11 @@ def open_sqlite_db(
     create: Callable[[sqlite3.Connection], None],
     version: int,
     migrations: Dict[int, Callable[[sqlite3.Connection], None]],
+    minimum_sqlite_version: Tuple[int, ...],
+    required_sqlite_compile_options: Sequence[str] = (),
     timeout: Optional[float] = None,
 ) -> sqlite3.Connection:
-    # TODO: This is business logic, make it an argument.
-    # Row value support was added in 3.15.
-    require_sqlite_version((3, 15))
+    require_sqlite_version(minimum_sqlite_version)
 
     kwargs: '_SqliteOptions' = dict(detect_types=sqlite3.PARSE_DECLTYPES)
     if timeout is not None:
@@ -254,11 +254,8 @@ def open_sqlite_db(
     db = sqlite3.connect(path, **kwargs)
 
     try:
-        # TODO: This is business logic, make it an argument.
-        # Require the JSON1 extension.
-        require_sqlite_compile_options(db, ["ENABLE_JSON1"])
+        require_sqlite_compile_options(db, required_sqlite_compile_options)
 
-        # TODO: This is business logic, make it an argument.
         db.execute("PRAGMA foreign_keys = ON;")
 
         migration = HeavyMigration(create, version, migrations)
