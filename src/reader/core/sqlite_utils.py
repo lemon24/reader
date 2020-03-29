@@ -168,33 +168,35 @@ class HeavyMigration:
                 self.create(db)
                 db.execute("CREATE TABLE version (version INTEGER NOT NULL);")
                 db.execute("INSERT INTO version VALUES (?);", (self.version,))
+                return
 
-            elif version < self.version:
-                if not self.migrations.get(version):
-                    raise SchemaVersionError(f"unsupported version: {version}")
+            if version == self.version:
+                return
 
-                for from_version in range(version, self.version):
-                    to_version = from_version + 1
-                    migration = self.migrations.get(from_version)
-                    if migration is None:
-                        raise SchemaVersionError(
-                            f"no migration from {from_version} to {to_version}; "
-                            f"expected migrations for all versions "
-                            f"later than {version}"
-                        )
-
-                    db.execute("UPDATE version SET version = :to_version;", locals())
-                    migration(db)
-
-                    try:
-                        foreign_key_check(db)
-                    except IntegrityError as e:
-                        raise IntegrityError(
-                            f"after migrating to version {to_version}: {e}"
-                        ) from None
-
-            elif version != self.version:
+            if version > self.version:
                 raise SchemaVersionError(f"invalid version: {version}")
+
+            # version < self.version
+
+            for from_version in range(version, self.version):
+                to_version = from_version + 1
+                migration = self.migrations.get(from_version)
+                if migration is None:
+                    raise SchemaVersionError(
+                        f"no migration from {from_version} to {to_version}; "
+                        f"expected migrations for all versions "
+                        f"later than {version}"
+                    )
+
+                db.execute("UPDATE version SET version = :to_version;", locals())
+                migration(db)
+
+                try:
+                    foreign_key_check(db)
+                except IntegrityError as e:
+                    raise IntegrityError(
+                        f"after migrating to version {to_version}: {e}"
+                    ) from None
 
 
 def require_sqlite_version(version_info: Tuple[int, ...]) -> None:
