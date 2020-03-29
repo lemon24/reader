@@ -12,6 +12,7 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
+from typing_extensions import Protocol
 from typing_extensions import TypedDict
 
 
@@ -138,12 +139,19 @@ class RequirementError(DBError):
 db_errors = [DBError, SchemaVersionError, RequirementError]
 
 
+class _DBFunction(Protocol):  # pragma: no cover
+    def __call__(self, db: sqlite3.Connection) -> None:
+        ...
+
+
 @dataclass
 class HeavyMigration:
 
-    create: Callable[[sqlite3.Connection], None]
+    # mypy will complain if we use Callable[[sqlite3.Connection], None].
+    # TODO: get rid of _DBFunction when https://github.com/python/mypy/issues/5485 is resolved?
+    create: _DBFunction
     version: int
-    migrations: Dict[int, Callable[[sqlite3.Connection], None]]
+    migrations: Dict[int, _DBFunction]
 
     @staticmethod
     def get_version(db: sqlite3.Connection) -> Optional[int]:
@@ -238,9 +246,9 @@ _SqliteOptions = TypedDict(
 def open_sqlite_db(
     path: str,
     *,
-    create: Callable[[sqlite3.Connection], None],
+    create: _DBFunction,
     version: int,
-    migrations: Dict[int, Callable[[sqlite3.Connection], None]],
+    migrations: Dict[int, _DBFunction],
     minimum_sqlite_version: Tuple[int, ...],
     required_sqlite_compile_options: Sequence[str] = (),
     timeout: Optional[float] = None,
