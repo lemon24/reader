@@ -52,7 +52,6 @@ log = logging.getLogger('reader')
 #
 # TODO: Expose BeautifulSoup(features=...) when we have a config system.
 #
-# FIXME: this doesn't actually work
 warnings.filterwarnings(
     'ignore', message='No parser was explicitly specified', module='reader.core.search'
 )
