@@ -28,7 +28,7 @@ setup(
         'dataclasses; python_version<"3.7"',
         'typing_extensions',
         'feedparser>=5',
-        'requests',
+        'requests>=2.18',
     ],
     extras_require={
         'cli': ['click>=5'],

@@ -1,5 +1,4 @@
 import calendar
-import contextlib
 import logging
 import time
 import urllib.parse
@@ -194,6 +193,7 @@ class Parser:
         request = requests.Request('GET', url, headers=headers)
 
         try:
+            # TODO: maybe share the session in the parser?
             with requests.Session() as session:
                 # TODO: remove "type: ignore" once Session.send() gets annotations
                 # https://github.com/python/typeshed/blob/f5a1925e765b92dd1b12ae10cf8bff21c225648f/third_party/2and3/requests/sessions.pyi#L105
@@ -230,8 +230,7 @@ class Parser:
                 # https://github.com/lemon24/reader/issues/108
                 headers.setdefault('content-type', 'text/xml')
 
-                # with response doesn't work with requests 2.9.1
-                with contextlib.closing(response):
+                with response:
                     result = feedparser.parse(response.raw, response_headers=headers)
 
         except Exception as e:
