@@ -281,6 +281,17 @@ def test_update_new_only_not_modified(reader):
     assert len(list(reader.get_entries(feed=feed.url))) == 0
 
 
+@pytest.mark.parametrize('workers', [-1, 0])
+def test_update_workers(reader, workers):
+    parser = Parser()
+    reader._parser = parser
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    reader.add_feed(one.url)
+    with pytest.raises(ValueError):
+        reader.update_feeds(workers=workers)
+
+
 def test_update_last_updated_entries_updated_feed_not_updated(
     reader, call_update_method
 ):
@@ -386,7 +397,7 @@ def test_update_feed_deleted(db_path, call_update_method, feed_action, entry_act
             with pytest.raises(FeedNotFoundError) as excinfo:
                 call_update_method(reader, feed.url)
             assert excinfo.value.url == feed.url
-        elif call_update_method.__name__ == 'call_update_feeds':
+        elif call_update_method.__name__.startswith('call_update_feeds'):
             # shouldn't raise an exception
             call_update_method(reader, feed.url)
         else:

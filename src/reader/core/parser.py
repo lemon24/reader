@@ -194,6 +194,7 @@ class Parser:
 
         try:
             # TODO: maybe share the session in the parser?
+            # TODO: timeouts!
             with requests.Session() as session:
                 # TODO: remove "type: ignore" once Session.send() gets annotations
                 # https://github.com/python/typeshed/blob/f5a1925e765b92dd1b12ae10cf8bff21c225648f/third_party/2and3/requests/sessions.pyi#L105

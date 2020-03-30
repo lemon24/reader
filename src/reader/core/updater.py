@@ -7,7 +7,6 @@ from typing import Sequence
 from typing import Tuple
 from typing import TYPE_CHECKING
 
-from .exceptions import NotModified
 from .types import Entry
 from .types import EntryForUpdate
 from .types import EntryUpdateIntent
@@ -20,7 +19,6 @@ from .types import UpdateResult
 
 if TYPE_CHECKING:  # pragma: no cover
     from .storage import Storage
-    from .parser import Parser
 
 
 log = logging.getLogger("reader")
@@ -33,8 +31,9 @@ class Updater:
     now: datetime
     global_now: datetime
 
-    def __post_init__(self) -> None:
-        if self.old_feed.stale:
+    @classmethod
+    def process_old_feed(cls, feed: FeedForUpdate) -> FeedForUpdate:
+        if feed.stale:
             # db_updated=None not ot tested (removing it causes no tests to fail).
             #
             # This only matters if last_updated is None *and* db_updated is
@@ -42,14 +41,16 @@ class Updater:
             # (last_updated is always set if the feed was updated at least
             # once, unless the database predates last_updated).
             #
-            self.old_feed = self.old_feed._replace(
-                updated=None, http_etag=None, http_last_modified=None
-            )
+            feed = feed._replace(updated=None, http_etag=None, http_last_modified=None)
             log.info(
                 "update feed %r: feed marked as stale, "
                 "ignoring updated, http_etag and http_last_modified",
-                self.url,
+                feed.url,
             )
+        return feed
+
+    def __post_init__(self) -> None:
+        self.old_feed = self.process_old_feed(self.old_feed)
 
     @property
     def url(self) -> str:
@@ -189,12 +190,10 @@ class Updater:
 
         return feed_to_update
 
-    def update(self, parser: "Parser", storage: "Storage") -> UpdateResult:
-        try:
-            parse_result = parser(
-                self.url, self.old_feed.http_etag, self.old_feed.http_last_modified
-            )
-        except NotModified:
+    def update(
+        self, parse_result: Optional[ParseResult], storage: "Storage"
+    ) -> UpdateResult:
+        if not parse_result:
             log.info("update feed %r: feed not modified, skipping", self.url)
             # The feed shouldn't be considered new anymore.
             storage.update_feed(FeedUpdateIntent(self.url, self.now))

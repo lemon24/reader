@@ -35,11 +35,21 @@ def call_update_feeds(reader, _):
     reader.update_feeds()
 
 
+def call_update_feeds_workers(reader, _):
+    reader.update_feeds(workers=2)
+
+
 def call_update_feed(reader, url):
     reader.update_feed(url)
 
 
-@pytest.fixture(params=[call_update_feeds, call_update_feed])
+@pytest.fixture(
+    params=[
+        call_update_feeds,
+        pytest.param(call_update_feeds_workers, marks=pytest.mark.slow),
+        call_update_feed,
+    ]
+)
 def call_update_method(request):
     return request.param
 

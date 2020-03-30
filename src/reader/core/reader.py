@@ -1,10 +1,14 @@
 import datetime
 import logging
+import multiprocessing.dummy
 import warnings
+from contextlib import contextmanager
 from functools import partial
 from typing import Callable
+from typing import cast
 from typing import Collection
 from typing import Iterable
+from typing import Iterator
 from typing import Optional
 from typing import overload
 from typing import Tuple
@@ -14,6 +18,7 @@ from typing import Union
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
+from .exceptions import NotModified
 from .exceptions import ParseError
 from .parser import Parser
 from .search import Search
@@ -29,6 +34,7 @@ from .types import FeedForUpdate
 from .types import FeedInput
 from .types import FeedSortOrder
 from .types import JSONType
+from .types import ParseResult
 from .updater import Updater
 from .utils import _Missing
 from .utils import _missing
@@ -40,6 +46,7 @@ log = logging.getLogger('reader')
 
 
 _T = TypeVar('_T')
+_U = TypeVar('_U')
 
 
 _PostEntryAddPluginType = Callable[['Reader', str, Entry], None]
@@ -207,16 +214,22 @@ class Reader:
         url = feed_argument(feed)
         return self._storage.set_feed_user_title(url, title)
 
-    def update_feeds(self, new_only: bool = False) -> None:
+    def update_feeds(self, new_only: bool = False, workers: int = 1) -> None:
         """Update all the feeds.
 
         Args:
             new_only (bool): Only update feeds that have never been updated.
+            workers (int): Number of threads to use when getting the feeds.
 
         Raises:
             StorageError
 
         """
+        # FIXME: expose workers in the CLI
+
+        if workers < 1:
+            raise ValueError("workers must be a positive integer")
+        make_map = make_noop_map() if workers == 1 else make_pool_map(workers)
 
         # global_now is used as first_updated_epoch for all new entries,
         # so that the subset of new entries from an update appears before
@@ -230,18 +243,40 @@ class Reader:
         #
         global_now = self._now()
 
-        for row in self._storage.get_feeds_for_update(new_only=new_only):
-            try:
-                self._update_feed(row, global_now)
-            except FeedNotFoundError as e:
-                log.info("update feed %r: feed removed during update", e.url)
-            except ParseError as e:
-                log.exception(
-                    "update feed %r: error while getting/parsing feed, "
-                    "skipping; exception: %r",
-                    e.url,
-                    e.__cause__,
-                )
+        with make_map as map:
+
+            # TODO: Remove cast when mypy supports it.
+            #
+            # Without the cast, we get:
+            #
+            #   src/reader/core/reader.py:250: error: No overload variant of "next" matches argument type "Iterable[Tuple[FeedForUpdate, Optional[ParseResult]]]"
+            #
+            # https://github.com/python/mypy/issues/1317
+            # https://github.com/python/mypy/issues/6697
+            #
+            it = cast(
+                Iterator[Tuple[FeedForUpdate, Optional[ParseResult]]],
+                map(
+                    self._parse_feed_for_update,
+                    self._storage.get_feeds_for_update(new_only=new_only),
+                ),
+            )
+
+            while True:
+                try:
+                    row, parse_result = next(it)
+                    self._update_feed(row, parse_result, global_now)
+                except FeedNotFoundError as e:
+                    log.info("update feed %r: feed removed during update", e.url)
+                except ParseError as e:
+                    log.exception(
+                        "update feed %r: error while getting/parsing feed, "
+                        "skipping; exception: %r",
+                        e.url,
+                        e.__cause__,
+                    )
+                except StopIteration:
+                    break
 
     def update_feed(self, feed: FeedInput) -> None:
         """Update a single feed.
@@ -255,11 +290,22 @@ class Reader:
 
         """
         url = feed_argument(feed)
-        self._update_feed(
-            zero_or_one(
-                self._storage.get_feeds_for_update(url), lambda: FeedNotFoundError(url),
-            )
+
+        feed_for_update = zero_or_one(
+            self._storage.get_feeds_for_update(url), lambda: FeedNotFoundError(url),
         )
+
+        self._update_feed(*self._parse_feed_for_update(feed_for_update))
+
+    def _parse_feed_for_update(
+        self, feed: FeedForUpdate
+    ) -> Tuple[FeedForUpdate, Optional[ParseResult]]:
+        # FIXME: Updater is poorly made, we shold not have to do this ಠ_ಠ
+        feed = Updater.process_old_feed(feed)
+        try:
+            return feed, self._parser(feed.url, feed.http_etag, feed.http_last_modified)
+        except NotModified:
+            return feed, None
 
     @staticmethod
     def _now() -> datetime.datetime:
@@ -268,6 +314,7 @@ class Reader:
     def _update_feed(
         self,
         feed_for_update: FeedForUpdate,
+        parse_result: Optional[ParseResult],
         global_now: Optional[datetime.datetime] = None,
     ) -> None:
         now = self._now()
@@ -276,7 +323,7 @@ class Reader:
             global_now = now
 
         updater = Updater(feed_for_update, now, global_now)
-        result = updater.update(self._parser, self._storage)
+        result = updater.update(parse_result, self._storage)
 
         new_entries = [e.entry for e in result.entries if e.new]
 
@@ -630,3 +677,36 @@ class Reader:
             partial(self._search.search_entries, query, filter_options),
             self._pagination_chunk_size,
         )
+
+
+# TODO: find a better way to represent a function like map (mypy)
+#
+#   _MapFunc = Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
+#
+#   @contextmanager
+#   def make_pool_map(workers: int) -> Iterator[_MapFunc[_T, _U]]: ...
+#
+# results in:
+#
+#   src/reader/core/reader.py:227: error: Need type annotation for 'make_map'
+#
+# Using the whole type verbatim in the function definition doesn't.
+
+
+@contextmanager
+def make_pool_map(
+    workers: int,
+) -> Iterator[Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]]:
+    pool = multiprocessing.dummy.Pool(workers)
+    try:
+        yield pool.imap_unordered
+    finally:
+        pool.close()
+        pool.join()
+
+
+@contextmanager
+def make_noop_map() -> Iterator[
+    Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
+]:
+    yield map
