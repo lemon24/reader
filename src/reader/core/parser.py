@@ -194,43 +194,45 @@ class Parser:
         request = requests.Request('GET', url, headers=headers)
 
         try:
-            session = requests.Session()
-            # TODO: remove "type: ignore" once Session.send() gets annotations
-            # https://github.com/python/typeshed/blob/f5a1925e765b92dd1b12ae10cf8bff21c225648f/third_party/2and3/requests/sessions.pyi#L105
-            response = session.send(  # type: ignore
-                session.prepare_request(request), stream=True, verify=self._verify
-            )
-
-            for plugin in self.response_plugins:
-                rv = plugin(session, response, request)
-                if rv is None:
-                    continue
-                # TODO: is this assert needed?
-                assert isinstance(rv, requests.Request)
-                response.close()
-                request = rv
-
+            with requests.Session() as session:
                 # TODO: remove "type: ignore" once Session.send() gets annotations
+                # https://github.com/python/typeshed/blob/f5a1925e765b92dd1b12ae10cf8bff21c225648f/third_party/2and3/requests/sessions.pyi#L105
                 response = session.send(  # type: ignore
                     session.prepare_request(request), stream=True, verify=self._verify
                 )
 
-            # Should we raise_for_status()? feedparser.parse() isn't.
-            # Should we check the status on the feedparser.parse() result?
+                for plugin in self.response_plugins:
+                    rv = plugin(session, response, request)
+                    if rv is None:
+                        continue
+                    # TODO: is this assert needed?
+                    assert isinstance(rv, requests.Request)
+                    response.close()
+                    request = rv
 
-            headers = response.headers.copy()
-            headers.setdefault('content-location', response.url)
+                    # TODO: remove "type: ignore" once Session.send() gets annotations
+                    response = session.send(  # type: ignore
+                        session.prepare_request(request),
+                        stream=True,
+                        verify=self._verify,
+                    )
 
-            # Some feeds don't have a content type, which results in
-            # feedparser.NonXMLContentType being raised. There are valid feeds
-            # with no content type, so we set it anyway and hope feedparser
-            # fails in some other way if the feed really is broken.
-            # https://github.com/lemon24/reader/issues/108
-            headers.setdefault('content-type', 'text/xml')
+                # Should we raise_for_status()? feedparser.parse() isn't.
+                # Should we check the status on the feedparser.parse() result?
 
-            # with response doesn't work with requests 2.9.1
-            with contextlib.closing(response):
-                result = feedparser.parse(response.raw, response_headers=headers)
+                headers = response.headers.copy()
+                headers.setdefault('content-location', response.url)
+
+                # Some feeds don't have a content type, which results in
+                # feedparser.NonXMLContentType being raised. There are valid feeds
+                # with no content type, so we set it anyway and hope feedparser
+                # fails in some other way if the feed really is broken.
+                # https://github.com/lemon24/reader/issues/108
+                headers.setdefault('content-type', 'text/xml')
+
+                # with response doesn't work with requests 2.9.1
+                with contextlib.closing(response):
+                    result = feedparser.parse(response.raw, response_headers=headers)
 
         except Exception as e:
             raise ParseError(url) from e
