@@ -9,7 +9,7 @@ reader changelog
 Version 0.20
 ------------
 
-Unreleased
+Released 2020-03-31
 
 * Fix bug in :meth:`~Reader.enable_search()` that caused it to fail
   if search was already enabled and the reader had any entries.
