@@ -225,7 +225,6 @@ class Reader:
             StorageError
 
         """
-        # FIXME: expose workers in the CLI
 
         if workers < 1:
             raise ValueError("workers must be a positive integer")
@@ -286,6 +285,7 @@ class Reader:
 
         Raises:
             FeedNotFoundError
+            ParseError
             StorageError
 
         """

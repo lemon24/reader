@@ -116,9 +116,16 @@ def remove(kwargs, url, verbose):
 @click.option(
     '--new-only/--no-new-only', help="Only update new (never updated before) feeds."
 )
+@click.option(
+    '--workers',
+    type=click.IntRange(min=1),
+    default=1,
+    show_default=True,
+    help="Number of threads to use when getting the feeds.",
+)
 @click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def update(kwargs, url, new_only, verbose):
+def update(kwargs, url, new_only, workers, verbose):
     """Update one or all feeds.
 
     If URL is not given, update all the feeds.
@@ -129,7 +136,7 @@ def update(kwargs, url, new_only, verbose):
     if url:
         reader.update_feed(url)
     else:
-        reader.update_feeds(new_only=new_only)
+        reader.update_feeds(new_only=new_only, workers=workers)
 
 
 @cli.group()

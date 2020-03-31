@@ -18,8 +18,11 @@ Unreleased
 * Add a ``feed`` argument to :meth:`~Reader.get_feeds`.
 * Add a ``key`` argument to :meth:`~Reader.get_feed_metadata`.
 * Require at least `requests`_ 2.18 (before, the version was unspecified).
+* Allow updating feeds concurrently; add a ``workers`` argument to
+  :meth:`~Reader.update_feeds`. (`#152`_)
 
 .. _requests: https://requests.readthedocs.io
+.. _#152: https://github.com/lemon24/reader/issues/152
 
 
 Version 0.19
