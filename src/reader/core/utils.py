@@ -1,5 +1,8 @@
+import multiprocessing.dummy
+from contextlib import contextmanager
 from typing import Callable
 from typing import Iterable
+from typing import Iterator
 from typing import Optional
 from typing import Tuple
 from typing import TypeVar
@@ -65,3 +68,36 @@ def join_paginated_iter(
         _, last = things[-1]
 
         yield from (t for t, _ in things)
+
+
+# TODO: find a better way to represent a function like map (mypy)
+#
+#   _MapFunc = Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
+#
+#   @contextmanager
+#   def make_pool_map(workers: int) -> Iterator[_MapFunc[_T, _U]]: ...
+#
+# results in:
+#
+#   src/reader/core/reader.py:227: error: Need type annotation for 'make_map'
+#
+# Using the whole type verbatim in the function definition doesn't.
+
+
+@contextmanager
+def make_pool_map(
+    workers: int,
+) -> Iterator[Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]]:
+    pool = multiprocessing.dummy.Pool(workers)
+    try:
+        yield pool.imap_unordered
+    finally:
+        pool.close()
+        pool.join()
+
+
+@contextmanager
+def make_noop_map() -> Iterator[
+    Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
+]:
+    yield map

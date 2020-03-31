@@ -1,8 +1,6 @@
 import datetime
 import logging
-import multiprocessing.dummy
 import warnings
-from contextlib import contextmanager
 from functools import partial
 from typing import Callable
 from typing import cast
@@ -39,6 +37,8 @@ from .updater import Updater
 from .utils import _Missing
 from .utils import _missing
 from .utils import join_paginated_iter
+from .utils import make_noop_map
+from .utils import make_pool_map
 from .utils import zero_or_one
 
 
@@ -677,36 +677,3 @@ class Reader:
             partial(self._search.search_entries, query, filter_options),
             self._pagination_chunk_size,
         )
-
-
-# TODO: find a better way to represent a function like map (mypy)
-#
-#   _MapFunc = Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
-#
-#   @contextmanager
-#   def make_pool_map(workers: int) -> Iterator[_MapFunc[_T, _U]]: ...
-#
-# results in:
-#
-#   src/reader/core/reader.py:227: error: Need type annotation for 'make_map'
-#
-# Using the whole type verbatim in the function definition doesn't.
-
-
-@contextmanager
-def make_pool_map(
-    workers: int,
-) -> Iterator[Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]]:
-    pool = multiprocessing.dummy.Pool(workers)
-    try:
-        yield pool.imap_unordered
-    finally:
-        pool.close()
-        pool.join()
-
-
-@contextmanager
-def make_noop_map() -> Iterator[
-    Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
-]:
-    yield map
