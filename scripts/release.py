@@ -31,7 +31,7 @@ def run_no_venv(*args, **kwargs):
 
 
 def tox():
-    run_no_venv('tox', shell=True)
+    run_no_venv('tox -p all', shell=True)
 
 
 def build():
