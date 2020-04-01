@@ -71,6 +71,24 @@
 {%- endmacro %}
 
 
+{# TODO: unify with text_input_button somehow #}
+
+{% macro text_input_button_get(form_view, label, name, placeholder, value, input_type='text', context=none) -%}
+<li class="collapsible">
+<form action="{{ url_for(form_view) }}" method="get">
+    <span class="label">{{ label }}</span>
+    <span class="hidden">
+        <input type="{{ input_type }}" name="{{ name }}" placeholder="{{ placeholder }}" value="{{ value }}">
+        <button type="submit">{{ label }}</button>
+    </span>
+    {% for name, value in (context or {}) | dictsort -%}
+    <input type="hidden" name='{{ name }}' value='{{ value }}'>
+    {% endfor %}
+</form>
+{%- endmacro %}
+
+
+
 {% macro confirm_button(form_view, action, label, id=none, leave_disabled=false, next=none, context=none) -%}
 <li class="collapsible" data-button-type="confirm" data-callback="function callback(data) {
 

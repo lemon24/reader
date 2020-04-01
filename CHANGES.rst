@@ -11,6 +11,8 @@ Version 0.21
 
 Unreleased
 
+* Minor consistency improvements to the web app search button. (`#122`_)
+
 
 Version 0.20
 ------------
