@@ -2,8 +2,11 @@ import contextlib
 import itertools
 import json
 import time
+import urllib.parse
 
+import bs4
 import humanize
+import requests
 from flask import abort
 from flask import Blueprint
 from flask import current_app
@@ -21,6 +24,7 @@ import reader
 from .api_thing import APIError
 from .api_thing import APIThing
 from reader import make_reader
+from reader import ParseError
 from reader import ReaderError
 from reader.plugins import Loader
 from reader.plugins import LoaderError
@@ -136,15 +140,56 @@ def preview():
     reader = make_reader(':memory:')
     reader.add_feed(url)
 
-    # TODO: this may fail with ParseError etc., handle it gracefully
-    reader.update_feed(url)
+    try:
+        reader.update_feed(url)
+        update_ok = True
+    except ParseError as e:
+        if isinstance(e.__cause__, requests.RequestException):
+            # TODO: handle this nicely
+            raise
+        update_ok = False
 
-    feed = reader.get_feed(url)
-    entries = list(reader.get_entries())
+    if update_ok:
+        feed = reader.get_feed(url)
+        entries = list(reader.get_entries())
 
-    # TODO: maybe limit
+        # TODO: maybe limit
 
-    return stream_template('entries.html', entries=entries, feed=feed, read_only=True,)
+        return stream_template(
+            'entries.html', entries=entries, feed=feed, read_only=True
+        )
+
+    else:
+        # we did not get a requests exception, so the answer is probably valid;
+        # we can't reuse the text of the original response, because parser is using streaming=True;
+        # TODO: maybe we should still expose the response on the exception, we could at least reuse the status code
+        # TODO: ParseError should be more specific, it should be clear if retrieving or parsing failed
+
+        # TODO: this whole thing should be a plugin
+        # TODO this should be a different view
+
+        response = requests.get(url)
+        # TODO: handle this nicely
+        response.raise_for_status()
+
+        soup = bs4.BeautifulSoup(response.content)
+        alternates = []
+        for element in soup.select('link[rel=alternate]'):
+            attrs = dict(element.attrs)
+            if 'href' not in attrs:
+                continue
+            # TODO: maybe filter by feedparser.ACCEPT_HEADER
+            if not any(t in attrs.get('type', '').lower() for t in ('rss', 'atom')):
+                continue
+
+            # this may not work correctly for relative paths, e.g. should
+            # http://example.com/foo + bar.xml result in
+            # http://example.com/bar.xml (now) or
+            # http://example.com/foo/bar.xml?
+            attrs['href'] = urllib.parse.urljoin(url, attrs['href'])
+            alternates.append(attrs)
+
+        return render_template('preview_feed_list.html', url=url, alternates=alternates)
 
 
 @blueprint.route('/feeds')
