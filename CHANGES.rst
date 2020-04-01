@@ -12,6 +12,9 @@ Version 0.21
 Unreleased
 
 * Minor consistency improvements to the web app search button. (`#122`_)
+* Make the "add feed" button show a preview before adding the feed. (`#145`_)
+
+.. _#145: https://github.com/lemon24/reader/issues/145
 
 
 Version 0.20

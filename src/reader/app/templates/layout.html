@@ -33,8 +33,13 @@ right: 0;
 <li>
 <a href="{{ url_for('.entries') }}">entries</a>
 <a href="{{ url_for('.feeds') }}">feeds</a>
-{{ macros.text_input_button('.form_api', 'add-feed', 'add feed', 'feed-url', 'feed URL',
-    next=url_for('.feeds', **request.args)) }}
+
+{{ macros.text_input_button_get(
+    '.preview', 'add feed', 'url', 'search',
+) }}
+
+
+{# TODO: this is likely not needed since add-feed became a GET button #}
 {% for message in get_flashed_messages_by_prefix('add-feed') %}
 <li class="error">{{ message }}
 {% endfor %}
