@@ -4,7 +4,9 @@
 
 
 {% macro make_title() %}
-    {% if not request.args.q %}
+    {% if read_only %}
+        Preview{% if feed %} for{% endif %}
+    {% elif not request.args.q %}
         Entries{% if feed %} for{% endif %}
     {% else %}
         Search for <em>{{ request.args.q }}</em>{% if feed %} in{% endif %}
@@ -23,6 +25,9 @@
 
 <div id="update-entries">
 <ul class="controls">
+
+
+{% if not read_only %}
 
 {{ macros.radio_links('show', [
     ('unread', none),
@@ -43,6 +48,7 @@
 ], none, '.entries', 'important') }}
 
 
+
 {# TODO: maybe show it uncollapsed if we're on the search page #}
 
 {% set context = request.args.copy() %}
@@ -53,12 +59,28 @@
     context=context,
 ) }}
 
+{% endif %}
+
 
 {% if feed %}
 
 <li>
     {% if feed.link %}<a href="{{ feed.link }}">site</a>{% endif %}
     <a href="{{ feed.url }}">feed</a>
+
+
+{# TODO read_only != preview, we should be more specific #}
+{% if read_only %}
+{{ macros.simple_button(
+    '.form_api', 'add-feed', 'add feed',
+    leave_disabled=true,
+    next=url_for('.feeds', **request.args),
+    context={'feed-url': request.args.url}
+) }}
+{% endif %}
+
+
+{% if not read_only %}
 
 {% set next = url_for('.entries', **request.args) %}
 
@@ -77,6 +99,9 @@
 <a href="{{ url_for('.metadata', feed=feed.url) }}">update metadata</a>
 
 {% endif %}
+
+{% endif %}
+
 
 {% for message in get_flashed_messages_by_prefix(
     'mark-all-as-read',
@@ -115,6 +140,9 @@ untitled
     {%- set published = entry.published or entry.updated -%}
     <span title="{{ published }}">{{ published | humanize_naturaltime }}</span>
 
+
+{% if not read_only %}
+
 {% set next = url_for('.entries', **request.args) + '#entry-' + ((loop.index if not loop.last else loop.index - 1) | string) %}
 {% set context = {'feed-url': feed.url, 'entry-id': entry.id} %}
 
@@ -129,6 +157,9 @@ untitled
 {% else %}
 {{ macros.simple_button('.form_api', 'mark-as-important', 'important', leave_disabled=true, next=next, context=context) }}
 {% endif %}
+
+{% endif %}
+
 
 {% for message in get_flashed_messages_by_prefix(
     ('mark-as-read', feed.url, entry.id),
@@ -152,7 +183,9 @@ untitled
 {% if content %}
 <p>
     {{ content | striptags | truncate }}
-    <a href="{{ url_for('.entry', feed=entry.feed.url, entry=entry.id) }}">more</a>
+    {% if not read_only %}
+        <a href="{{ url_for('.entry', feed=entry.feed.url, entry=entry.id) }}">more</a>
+    {% endif %}
 </p>
 {% endif %}
 

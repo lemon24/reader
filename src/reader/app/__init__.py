@@ -124,6 +124,29 @@ def entries():
     )
 
 
+@blueprint.route('/preview')
+def preview():
+    # TODO: maybe unify with entrie() somehow
+
+    url = request.args['url']
+
+    # TODO: maybe redirect to the feed we have if we already have it
+
+    # TODO: maybe cache stuff
+    reader = make_reader(':memory:')
+    reader.add_feed(url)
+
+    # TODO: this may fail with ParseError etc., handle it gracefully
+    reader.update_feed(url)
+
+    feed = reader.get_feed(url)
+    entries = list(reader.get_entries())
+
+    # TODO: maybe limit
+
+    return stream_template('entries.html', entries=entries, feed=feed, read_only=True,)
+
+
 @blueprint.route('/feeds')
 def feeds():
     sort = request.args.get('sort', 'title')
