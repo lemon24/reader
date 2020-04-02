@@ -13,6 +13,8 @@ extensions = [
     'sphinx_click.ext',
 ]
 
+autodoc_mock_imports = ['bs4', 'mutagen']
+
 master_doc = 'index'
 
 project = 'reader'
