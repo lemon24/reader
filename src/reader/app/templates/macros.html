@@ -73,12 +73,12 @@
 
 {# TODO: unify with text_input_button somehow #}
 
-{% macro text_input_button_get(form_view, label, name, placeholder, value, input_type='text', context=none) -%}
+{% macro text_input_button_get(form_view, label, name, placeholder, value, input_type='text', context=none, autocomplete=false) -%}
 <li class="collapsible">
 <form action="{{ url_for(form_view) }}" method="get">
     <span class="label">{{ label }}</span>
     <span class="hidden">
-        <input type="{{ input_type }}" name="{{ name }}" placeholder="{{ placeholder }}" value="{{ value }}">
+        <input type="{{ input_type }}" name="{{ name }}" placeholder="{{ placeholder }}" value="{{ value }}"{% if not autocomplete %} autocomplete="off"{% endif %}>
         <button type="submit">{{ label }}</button>
     </span>
     {% for name, value in (context or {}) | dictsort -%}
