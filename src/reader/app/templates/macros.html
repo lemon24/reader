@@ -42,7 +42,13 @@
 
 <li>
 <a href="{{ enclosure.href }}">{{ enclosure.href.split('/')[-1].split('?')[0] }}</a>
-<small><a href="{{ enclosure | enclosure_tags(entry) }}">with tags</a> {{ enclosure.type }}</small>
+<small>
+
+{% for title, href in additional_enclosure_links(enclosure, entry) %}
+<a href="{{ href }}">{{ title }}</a>
+{% endfor %}
+
+{{ enclosure.type }}</small>
 </li>
 
 {% endfor %}

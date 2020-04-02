@@ -1,12 +1,13 @@
 import tempfile
 from urllib.parse import urlparse
 
+import mutagen.mp3
+import requests
 from flask import Blueprint
 from flask import request
 from flask import Response
 from flask import stream_with_context
 from flask import url_for
-
 
 blueprint = Blueprint('enclosure_tags', __name__)
 
@@ -18,9 +19,6 @@ SET_ONLY_IF_MISSING_TAGS = {'artist'}
 @blueprint.route('/enclosure-tags', defaults={'filename': None})
 @blueprint.route('/enclosure-tags/<filename>')
 def enclosure_tags(filename):
-    import requests
-    import mutagen.mp3
-
     def update_tags(file):
         emp3 = mutagen.mp3.EasyMP3(file)
         changed = False
@@ -70,25 +68,22 @@ def enclosure_tags(filename):
     return Response(stream_with_context(chunks(req)), headers=headers)
 
 
-@blueprint.app_template_filter('enclosure_tags')
 def enclosure_tags_filter(enclosure, entry):
-    try:
-        import mutagen  # noqa: F401
-        import requests  # noqa: F401
-    except ImportError:
-        return enclosure.href
     filename = urlparse(enclosure.href).path.split('/')[-1]
-    if filename.endswith('.mp3'):
-        args = {'url': enclosure.href, 'filename': filename}
-        if entry.title:
-            args['title'] = entry.title
-        if entry.feed.title:
-            args['album'] = entry.feed.title
-        if entry.author or entry.feed.author:
-            args['artist'] = entry.author or entry.feed.author
-        return url_for('enclosure_tags.enclosure_tags', **args)
-    return enclosure.href
+    if not filename.endswith('.mp3'):
+        return []
+
+    args = {'url': enclosure.href, 'filename': filename}
+    if entry.title:
+        args['title'] = entry.title
+    if entry.feed.title:
+        args['album'] = entry.feed.title
+    if entry.author or entry.feed.author:
+        args['artist'] = entry.author or entry.feed.author
+
+    return [('with tags', url_for('enclosure_tags.enclosure_tags', **args))]
 
 
 def init(app):
     app.register_blueprint(blueprint)
+    app.reader_additional_enclosure_links.append(enclosure_tags_filter)

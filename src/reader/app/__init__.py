@@ -315,6 +315,14 @@ def delete_metadata(data):
     get_reader().delete_feed_metadata(feed_url, key)
 
 
+# for some reason, @blueprint.app_template_global does not work
+@blueprint.app_template_global()
+def additional_enclosure_links(enclosure, entry):
+    funcs = getattr(current_app, 'reader_additional_enclosure_links', ())
+    for func in funcs:
+        yield from func(enclosure, entry)
+
+
 class FlaskPluginLoader(Loader):
     def handle_error(self, exception, cause):
         current_app.logger.exception(
@@ -333,6 +341,8 @@ def create_app(db_path, plugins=()):
             "%s; original traceback follows", e, exc_info=e.__cause__ or e
         )
         app.reader_load_plugins = lambda reader: reader
+
+    app.reader_additional_enclosure_links = []
 
     app.secret_key = 'secret'
     app.teardown_appcontext(close_db)
