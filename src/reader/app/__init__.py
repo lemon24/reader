@@ -337,25 +337,17 @@ def create_app(db_path, plugins=()):
     app.secret_key = 'secret'
     app.teardown_appcontext(close_db)
 
-    from .enclosure_tags import enclosure_tags_blueprint, enclosure_tags_filter
+    # TODO: pluginify this
+    # TODO: logging and such
 
-    try:
-        import mutagen
-        import requests
+    import importlib
 
-        app.register_blueprint(enclosure_tags_blueprint)
-    except ImportError:
-        pass
-
-    from .preview_feed_list import preview_feed_list_blueprint
-
-    try:
-        import bs4
-        import requests
-
-        app.register_blueprint(preview_feed_list_blueprint)
-    except ImportError:
-        pass
+    for module_name in ['.enclosure_tags', '.preview_feed_list']:
+        try:
+            module = importlib.import_module(module_name, __name__)
+            module.init(app)
+        except ImportError:
+            pass
 
     app.register_blueprint(blueprint)
     return app

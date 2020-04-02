@@ -8,15 +8,15 @@ from flask import stream_with_context
 from flask import url_for
 
 
-enclosure_tags_blueprint = Blueprint('enclosure_tags', __name__)
+blueprint = Blueprint('enclosure_tags', __name__)
 
 
 ALL_TAGS = ('album', 'title', 'artist')
 SET_ONLY_IF_MISSING_TAGS = {'artist'}
 
 
-@enclosure_tags_blueprint.route('/enclosure-tags', defaults={'filename': None})
-@enclosure_tags_blueprint.route('/enclosure-tags/<filename>')
+@blueprint.route('/enclosure-tags', defaults={'filename': None})
+@blueprint.route('/enclosure-tags/<filename>')
 def enclosure_tags(filename):
     import requests
     import mutagen.mp3
@@ -70,7 +70,7 @@ def enclosure_tags(filename):
     return Response(stream_with_context(chunks(req)), headers=headers)
 
 
-@enclosure_tags_blueprint.app_template_filter('enclosure_tags')
+@blueprint.app_template_filter('enclosure_tags')
 def enclosure_tags_filter(enclosure, entry):
     try:
         import mutagen  # noqa: F401
@@ -88,3 +88,7 @@ def enclosure_tags_filter(enclosure, entry):
             args['artist'] = entry.author or entry.feed.author
         return url_for('enclosure_tags.enclosure_tags', **args)
     return enclosure.href
+
+
+def init(app):
+    app.register_blueprint(blueprint)

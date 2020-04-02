@@ -11,10 +11,10 @@ from flask import url_for
 import reader
 
 
-preview_feed_list_blueprint = Blueprint('preview_feed_list', __name__)
+blueprint = Blueprint('preview_feed_list', __name__)
 
 
-@preview_feed_list_blueprint.route('/preview-feed-list')
+@blueprint.route('/preview-feed-list')
 def feed_list():
     url = request.args['url']
 
@@ -41,7 +41,7 @@ def feed_list():
     return render_template('preview_feed_list.html', url=url, alternates=alternates)
 
 
-@preview_feed_list_blueprint.app_errorhandler(reader.ParseError)
+@blueprint.app_errorhandler(reader.ParseError)
 def handle_parse_error_i_guess(error):
     if request.url_rule.endpoint != 'reader.preview':
         raise error
@@ -52,3 +52,7 @@ def handle_parse_error_i_guess(error):
     # TODO: ParseError should be more specific, it should be clear if retrieving or parsing failed
 
     return redirect(url_for('preview_feed_list.feed_list', url=error.url))
+
+
+def init(app):
+    app.register_blueprint(blueprint)
