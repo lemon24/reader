@@ -30,6 +30,9 @@ be separated by one space::
     READER_PLUGIN='first.plugin:entry_point second_plugin:main' \
     python -m reader some-command
 
+To load web application plugins, set the ``READER_APP_PLUGIN`` environment
+variable in a similar way.
+
 Currently plugins are loaded through the CLI and web application only
 (they won't be loaded when importing :class:`Reader`).
 

@@ -72,3 +72,4 @@ from .core.exceptions import (
 
 _DB_ENVVAR = 'READER_DB'
 _PLUGIN_ENVVAR = 'READER_PLUGIN'
+_APP_PLUGIN_ENVVAR = 'READER_APP_PLUGIN'

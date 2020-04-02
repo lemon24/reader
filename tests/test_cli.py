@@ -102,8 +102,8 @@ def test_cli(db_path, data_dir):
     assert 'search: disabled' in result.output
 
 
-def raise_exception_plugin(reader):
-    assert isinstance(reader, Reader)
+def raise_exception_plugin(thing):
+    assert isinstance(thing, Reader)
     raise Exception("plug-in error")
 
 
@@ -127,8 +127,46 @@ def test_cli_plugin(db_path, monkeypatch):
             'feeds',
         ],
     )
+
     assert result.exit_code != 0
     assert "plug-in error" in result.output
+
+
+def raise_exception_app_plugin(thing):
+    from flask import Flask
+
+    assert isinstance(thing, Flask)
+    raise Exception("plug-in error")
+
+
+@pytest.mark.slow
+def test_cli_app_plugin(db_path, monkeypatch):
+    import sys
+
+    monkeypatch.setattr(
+        sys, 'path', [str(py.path.local(__file__).dirpath())] + sys.path
+    )
+
+    def run_simple(*_):
+        run_simple.called = True
+
+    # make serve return instantly
+    monkeypatch.setattr('werkzeug.serving.run_simple', run_simple)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        ['--db', db_path, 'serve', '--plugin', 'test_cli:raise_exception_app_plugin',],
+    )
+
+    # it doesn't fail, just skips the plugin
+    assert result.exit_code == 0
+    assert "plug-in error" in result.output
+
+    assert run_simple.called
+
+
+# TODO: also test plugins in the successful case, like we do in test_app_wsgi.py
 
 
 @pytest.mark.slow
@@ -137,7 +175,7 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
     exception = Exception("create_app error")
 
     def create_app(*args):
-        assert args == (db_path, ())
+        assert args == (db_path, (), ())
         raise exception
 
     monkeypatch.setattr('reader.app.create_app', create_app)

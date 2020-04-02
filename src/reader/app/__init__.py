@@ -330,34 +330,24 @@ class FlaskPluginLoader(Loader):
         )
 
 
-def create_app(db_path, plugins=()):
+def create_app(db_path, plugins=(), app_plugins=()):
     app = Flask(__name__)
-    app.config['READER_DB'] = db_path
+    app.secret_key = 'secret'
 
-    try:
-        app.reader_load_plugins = FlaskPluginLoader(plugins).load_plugins
-    except LoaderError as e:
-        app.logger.exception(
-            "%s; original traceback follows", e, exc_info=e.__cause__ or e
-        )
-        app.reader_load_plugins = lambda reader: reader
+    app.config['READER_DB'] = db_path
+    app.teardown_appcontext(close_db)
+
+    app.register_blueprint(blueprint)
 
     app.reader_additional_enclosure_links = []
 
-    app.secret_key = 'secret'
-    app.teardown_appcontext(close_db)
+    app.reader_load_plugins = FlaskPluginLoader(plugins).load_plugins
+    # Force reader plugins to load, so we can fail fast for import errors.
+    with app.app_context():
+        get_reader()
 
-    # TODO: pluginify this
-    # TODO: logging and such
+    # app_context() needed for logging to work.
+    with app.app_context():
+        FlaskPluginLoader(app_plugins).load_plugins(app)
 
-    import importlib
-
-    for module_name in ['.enclosure_tags', '.preview_feed_list']:
-        try:
-            module = importlib.import_module(module_name, __name__)
-            module.init(app)
-        except ImportError:
-            pass
-
-    app.register_blueprint(blueprint)
     return app
