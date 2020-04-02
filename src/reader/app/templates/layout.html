@@ -7,7 +7,7 @@
 <script>
 
 window.onload = function () {
-    register_all({{ url_for('.form_api') | tojson | safe }});
+    register_all({{ url_for('reader.form_api') | tojson | safe }});
 };
 
 </script>
@@ -31,11 +31,11 @@ right: 0;
 <div id="top-bar">
 <ul class="controls">
 <li>
-<a href="{{ url_for('.entries') }}">entries</a>
-<a href="{{ url_for('.feeds') }}">feeds</a>
+<a href="{{ url_for('reader.entries') }}">entries</a>
+<a href="{{ url_for('reader.feeds') }}">feeds</a>
 
 {{ macros.text_input_button_get(
-    '.preview', 'add feed', 'url', 'search',
+    'reader.preview', 'add feed', 'url', 'search',
 ) }}
 
 

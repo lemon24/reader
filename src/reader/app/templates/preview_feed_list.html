@@ -21,7 +21,7 @@
 
 {% for alternate in alternates %}
 <li>
-<a href="{{ url_for('.preview', url=alternate.href) }}">
+<a href="{{ url_for('reader.preview', url=alternate.href) }}">
 {{ alternate.title or alternate.href }}</a>
 <small>
 {% if alternate.type %}{{ alternate.type }}{% endif %}
