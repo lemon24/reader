@@ -94,23 +94,40 @@ def test_mark_all_as_read_unread(db_path, browser):
 
 
 @pytest.mark.slow
-def test_add_delete_feed(db_path, browser):
+def test_add_delete_feed(db_path, browser, monkeypatch):
     parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
-    reader = make_reader(db_path)
-    reader._parser = parser
+    def app_make_reader(db_path):
+        reader = make_reader(db_path)
+        reader._parser = parser
+        return reader
+
+    # this is brittle, it may break if we change how we use make_reader in app
+    monkeypatch.setattr('reader.app.make_reader', app_make_reader)
+
+    reader = app_make_reader(db_path)
 
     browser.open('http://app/')
     response = browser.follow_link(browser.find_link(text='feeds'))
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.feed')) == 0
 
+    # go to the preview page
     form = browser.select_form('#top-bar form')
-    form.input({'feed-url': feed.url})
+    form.input({'url': feed.url})
     response = browser.submit_selected(form.form.find('button', text='add feed'))
     assert response.status_code == 200
+    assert (
+        browser.get_current_page().select('title')[0].text
+        == 'Preview for ' + feed.title
+    )
+    assert len(browser.get_current_page().select('.entry')) == 1
+
+    # actually add the feed
+    form = browser.select_form('form.action-add-feed')
+    response = browser.submit_selected(form.form.find('button', text='add_feed'))
     assert len(browser.get_current_page().select('.feed')) == 1
 
     # because we don't have a title at this point
