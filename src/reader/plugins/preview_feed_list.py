@@ -11,7 +11,7 @@ from flask import url_for
 import reader
 
 
-blueprint = Blueprint('preview_feed_list', __name__)
+blueprint = Blueprint('preview_feed_list', __name__, template_folder='templates')
 
 
 @blueprint.route('/preview-feed-list')
