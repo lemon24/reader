@@ -5,6 +5,13 @@ preview_feed_list
 If the feed to be previewed is not actually a feed,
 show a list of feeds linked from that URL (if any).
 
+This plugin needs additional dependencies, use the ``preview-feed-list`` extra
+to install them:
+
+.. code-block:: bash
+
+    pip install reader[preview-feed-list]
+
 To load::
 
     READER_APP_PLUGIN='reader.plugins.preview_feed_list:init' \\

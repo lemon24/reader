@@ -10,6 +10,13 @@ Adds a "with tags" link to a version of the file with tags set as follows:
 * the feed title as album
 * the entry/feed author as author
 
+This plugin needs additional dependencies, use the ``enclosure-tags`` extra
+to install them:
+
+.. code-block:: bash
+
+    pip install reader[enclosure-tags]
+
 To load::
 
     READER_APP_PLUGIN='reader.plugins.enclosure_tags:init' \\

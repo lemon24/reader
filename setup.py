@@ -34,6 +34,7 @@ setup(
         'cli': ['click>=5'],
         'web-app': ['flask>=0.10', 'humanize'],
         'enclosure-tags': ['requests', 'mutagen'],
+        'preview-feed-list': ['requests', 'beautifulsoup4'],
         'plugins': ['setuptools>=40'],
         'search': ['beautifulsoup4'],
         'dev': [
