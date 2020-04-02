@@ -14,9 +14,18 @@
 
 {% block body %}
 
+
+{% if errors %}
+<ul class="controls">
+{% for message in errors %}
+<li class="error">error: {{ message }}
+{% endfor %}
+</ul>
+
+
 {# style similar to macros.entry_enclosures #}
 
-{% if alternates %}
+{% elif alternates %}
 <ul>
 
 {% for alternate in alternates %}

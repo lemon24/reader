@@ -40,9 +40,13 @@ blueprint = Blueprint('preview_feed_list', __name__, template_folder='templates'
 def feed_list():
     url = request.args['url']
 
-    response = requests.get(url)
-    # TODO: handle this nicely
-    response.raise_for_status()
+    try:
+        # TODO: ideally, this should use the parser's session
+        response = requests.get(url)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        # TODO: maybe handle this with flash + 404 (and let the handler show the message)
+        return render_template('preview_feed_list.html', url=url, errors=[str(e)])
 
     soup = bs4.BeautifulSoup(response.content)
     alternates = []
