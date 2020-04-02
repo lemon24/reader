@@ -1,3 +1,18 @@
+"""
+preview_feed_list
+~~~~~~~~~~~~~~~~~
+
+If the feed to be previewed is not actually a feed,
+show a list of feeds linked from that URL (if any).
+
+To load::
+
+    READER_APP_PLUGIN='reader.plugins.preview_feed_list:init' \\
+    python -m reader serve
+
+Implemented for https://github.com/lemon24/reader/issues/150.
+
+"""
 import urllib.parse
 
 import bs4

@@ -44,3 +44,5 @@ Existing plugins
 .. automodule:: reader.plugins.feed_entry_dedupe
 .. automodule:: reader.plugins.enclosure_dedupe
 .. automodule:: reader.plugins.tumblr_gdpr
+.. automodule:: reader.plugins.enclosure_tags
+.. automodule:: reader.plugins.preview_feed_list

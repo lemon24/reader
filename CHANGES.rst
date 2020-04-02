@@ -12,13 +12,20 @@ Version 0.21
 Unreleased
 
 * Minor consistency improvements to the web app search button. (`#122`_)
-* In the web app, the "add feed" button show a preview before adding the feed.
+* Add support for web application plugins. (`#80`_)
+* The enclosure tag proxy is now a plugin, and is disabled by default.
+  See its documentation for details. (`#52`_)
+* In the web app, the "add feed" button shows a preview before adding the feed.
   (`#145`_)
 * In the web app, if the feed to be previewed is not actually a feed,
-  show a list of feeds linked from that URL (if any). (`#150`_)
+  show a list of feeds linked from that URL. This is a plugin,
+  and is disabled by default. (`#150`_)
 
+.. _#80: https://github.com/lemon24/reader/issues/80
+.. _#52: https://github.com/lemon24/reader/issues/52
 .. _#145: https://github.com/lemon24/reader/issues/145
 .. _#150: https://github.com/lemon24/reader/issues/150
+
 
 
 Version 0.20

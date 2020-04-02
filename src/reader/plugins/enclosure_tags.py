@@ -1,3 +1,24 @@
+"""
+enclosure_tags
+~~~~~~~~~~~~~~
+
+Fix tags for MP3 enclosures (e.g. podcasts).
+
+Adds a "with tags" link to a version of the file with tags set as follows:
+
+* the entry title as title
+* the feed title as album
+* the entry/feed author as author
+
+To load::
+
+    READER_APP_PLUGIN='reader.plugins.enclosure_tags:init' \\
+    python -m reader serve
+
+Implemented for https://github.com/lemon24/reader/issues/50.
+Became a plugin in https://github.com/lemon24/reader/issues/52.
+
+"""
 import tempfile
 from urllib.parse import urlparse
 
