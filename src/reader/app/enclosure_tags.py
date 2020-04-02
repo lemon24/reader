@@ -70,6 +70,7 @@ def enclosure_tags(filename):
     return Response(stream_with_context(chunks(req)), headers=headers)
 
 
+@enclosure_tags_blueprint.app_template_filter('enclosure_tags')
 def enclosure_tags_filter(enclosure, entry):
     try:
         import mutagen  # noqa: F401

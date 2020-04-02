@@ -346,7 +346,6 @@ def create_app(db_path, plugins=()):
         app.register_blueprint(enclosure_tags_blueprint)
     except ImportError:
         pass
-    blueprint.app_template_filter('enclosure_tags')(enclosure_tags_filter)
 
     from .preview_feed_list import preview_feed_list_blueprint
 
