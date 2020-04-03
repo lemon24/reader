@@ -31,6 +31,7 @@ from flask import request
 from flask import url_for
 
 import reader
+from reader.app import get_reader
 
 
 blueprint = Blueprint('preview_feed_list', __name__, template_folder='templates')
@@ -40,9 +41,10 @@ blueprint = Blueprint('preview_feed_list', __name__, template_folder='templates'
 def feed_list():
     url = request.args['url']
 
+    session = get_reader()._parser.make_session()
+
     try:
-        # TODO: ideally, this should use the parser's session
-        response = requests.get(url)
+        response = session.get(url)
         response.raise_for_status()
     except requests.RequestException as e:
         # TODO: maybe handle this with flash + 404 (and let the handler show the message)
