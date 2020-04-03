@@ -23,6 +23,7 @@ from reader import ParseError
 from reader import Reader
 from reader import StorageError
 from reader.core.storage import Storage
+from reader.core.types import entry_argument
 from reader.core.types import FeedUpdateIntent
 
 
@@ -688,82 +689,6 @@ def test_get_entries_feed_order(reader, chunk_size):
     assert have == expected
 
 
-def test_get_entries_read(reader):
-    parser = Parser()
-    reader._parser = parser
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
-    entry_two = parser.entry(1, 2, datetime(2010, 2, 1))
-    reader.add_feed(feed.url)
-    reader.update_feeds()
-
-    reader.mark_as_read((feed.url, entry_one.id))
-    entry_one = entry_one._replace(read=True)
-
-    entry_one = entry_one._replace(feed=feed)
-    entry_two = entry_two._replace(feed=feed)
-
-    assert set(reader.get_entries()) == {entry_one, entry_two}
-    assert set(reader.get_entries(read=None)) == {entry_one, entry_two}
-    assert set(reader.get_entries(read=True)) == {entry_one}
-    assert set(reader.get_entries(read=False)) == {entry_two}
-
-    with pytest.raises(ValueError):
-        set(reader.get_entries(read='bad read'))
-
-
-def test_get_entries_feed_url(reader, feed_arg):
-    parser = Parser()
-    reader._parser = parser
-
-    one = parser.feed(1, datetime(2010, 1, 1))
-    entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
-    two = parser.feed(2, datetime(2010, 2, 1))
-    entry_two = parser.entry(2, 2, datetime(2010, 2, 1))
-    reader.add_feed(one.url)
-    reader.add_feed(two.url)
-    reader.update_feeds()
-
-    entry_one = entry_one._replace(feed=one)
-    entry_two = entry_two._replace(feed=two)
-
-    assert set(reader.get_entries()) == {entry_one, entry_two}
-    assert set(reader.get_entries(feed=None)) == {entry_one, entry_two}
-    assert set(reader.get_entries(feed=feed_arg(one))) == {entry_one}
-    assert set(reader.get_entries(feed=feed_arg(two))) == {entry_two}
-
-    # TODO: Should this raise an exception?
-    assert set(reader.get_entries(feed='bad feed')) == set()
-
-    # TODO: How do we test the combination between which and feed_url?
-
-
-def test_get_entries_entry(reader, entry_arg):
-    parser = Parser()
-    reader._parser = parser
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    one = parser.entry(1, 1, datetime(2010, 1, 1))
-    two = parser.entry(1, 2, datetime(2010, 2, 1))
-    reader.add_feed(feed.url)
-    reader.update_feeds()
-
-    one = one._replace(feed=feed)
-    two = two._replace(feed=feed)
-
-    def get(**kwargs):
-        return {(e.id, e.feed.url) for e in reader.get_entries(**kwargs)}
-
-    assert get() == {(one.id, feed.url), (two.id, feed.url)}
-    assert get(entry=None) == {(one.id, feed.url), (two.id, feed.url)}
-    assert get(entry=entry_arg(one)) == {(one.id, feed.url)}
-    assert get(entry=entry_arg(two)) == {(two.id, feed.url)}
-
-    # TODO: Should this raise an exception?
-    assert get(entry=('does not', 'exist')) == set()
-
-
 def test_add_remove_get_feeds(reader, feed_arg):
     parser = Parser()
     reader._parser = parser
@@ -972,33 +897,6 @@ def test_data_roundrip(reader):
     assert list(reader.get_entries()) == [entry._replace(feed=feed)]
 
 
-def test_get_entries_has_enclosure(reader):
-    parser = Parser()
-    reader._parser = parser
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    one = parser.entry(1, 1, datetime(2010, 1, 1))
-    two = parser.entry(1, 2, datetime(2010, 1, 1), enclosures=())
-    three = parser.entry(
-        1, 3, datetime(2010, 1, 1), enclosures=(Enclosure('http://e2'),)
-    )
-
-    reader.add_feed(feed.url)
-    reader.update_feeds()
-
-    one = one._replace(feed=feed)
-    two = two._replace(feed=feed, enclosures=())
-    three = three._replace(feed=feed)
-
-    assert set(reader.get_entries()) == {one, two, three}
-    assert set(reader.get_entries(has_enclosures=None)) == {one, two, three}
-    assert set(reader.get_entries(has_enclosures=False)) == {one, two}
-    assert set(reader.get_entries(has_enclosures=True)) == {three}
-
-    with pytest.raises(ValueError):
-        set(reader.get_entries(has_enclosures='bad has_enclosures'))
-
-
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_integration(reader, feed_type, data_dir):
     feed_filename = 'full.{}'.format(feed_type)
@@ -1123,19 +1021,6 @@ def test_mark_as_important_unimportant_error(reader, exc, meth):
     assert excinfo.value is exc
 
 
-@pytest.mark.parametrize('important', [None, True, False])
-def test_get_entries_important(reader, important):
-    reader._storage = FakeStorage()
-    list(reader.get_entries(important=important))
-
-    ((call, args),) = reader._storage.calls
-    assert call == 'get_entries'
-    assert args[1].important == important
-
-    with pytest.raises(ValueError):
-        set(reader.get_entries(important='bad important'))
-
-
 def test_close(reader):
     reader._storage = FakeStorage()
     reader.close()
@@ -1154,3 +1039,143 @@ def test_closed(reader):
 def test_direct_instantiation():
     with pytest.deprecated_call():
         Reader(':memory:')
+
+
+# BEGIN entry filtering tests
+
+# We're testing both get_entries() and search_entries() here,
+# since filtering works the same for them.
+
+
+def enable_and_update_search(reader):
+    reader.enable_search()
+    reader.update_search()
+
+
+def search_entries(reader, **kwargs):
+    return reader.search_entries('entry', **kwargs)
+
+
+def get_entries(reader, **kwargs):
+    return reader.get_entries(**kwargs)
+
+
+def int_entry_id(entry):
+    # make up for for the bad choices made in fakeparser.Parser
+    # TODO: rework fakeparser to make this kind of stuff easier
+    feed_url, entry_id = entry_argument(entry)
+
+    http, empty, host, feed_int, entries, entry_int = entry.id.split('/')
+    assert [http, empty, host, entries] == ['http:', '', 'www.example.com', 'entries']
+    assert feed_url == f'feed-{feed_int}.xml'
+
+    return int(feed_int), int(entry_int)
+
+
+with_call_entries_method = pytest.mark.parametrize(
+    'pre_stuff, call_method',
+    [(enable_and_update_search, search_entries), (lambda _: None, get_entries),],
+)
+
+
+# TODO: there should probably be a way to get this from the fakeparser
+ALL_IDS = all_ids = {
+    (1, 1),
+    (1, 2),
+    (1, 3),
+    (1, 4),
+    (2, 1),
+}
+
+
+@with_call_entries_method
+@pytest.mark.parametrize(
+    'kwargs, expected',
+    [
+        (dict(), ALL_IDS),
+        (dict(read=None), ALL_IDS),
+        (dict(read=True), {(1, 2)}),
+        (dict(read=False), ALL_IDS - {(1, 2)}),
+        (dict(important=None), ALL_IDS),
+        (dict(important=True), {(1, 3)}),
+        (dict(important=False), ALL_IDS - {(1, 3)}),
+        (dict(has_enclosures=None), ALL_IDS),
+        (dict(has_enclosures=True), {(1, 4)}),
+        (dict(has_enclosures=False), ALL_IDS - {(1, 4)}),
+        (dict(feed=None), ALL_IDS),
+        (dict(feed='feed-1.xml'), {(1, 1), (1, 2), (1, 3), (1, 4)}),
+        (dict(feed='feed-2.xml'), {(2, 1)}),
+        (dict(feed=Feed('feed-2.xml')), {(2, 1)}),
+        (dict(feed='inexistent'), set()),
+        (dict(entry=None), ALL_IDS),
+        (dict(entry=('feed-1.xml', 'http://www.example.com/1/entries/1')), {(1, 1)}),
+        (dict(entry=('feed-1.xml', 'http://www.example.com/1/entries/2')), {(1, 2)}),
+        (
+            dict(
+                entry=Entry(
+                    'http://www.example.com/1/entries/2',
+                    datetime(2010, 2, 1),
+                    feed=Feed('feed-1.xml'),
+                )
+            ),
+            {(1, 2)},
+        ),
+        (dict(entry=('inexistent', 'also-inexistent')), set()),
+    ],
+)
+def test_entries_filtering(reader, pre_stuff, call_method, kwargs, expected):
+    parser = Parser()
+    reader._parser = parser
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    one_one = parser.entry(1, 1, datetime(2010, 1, 1))
+    one_two = parser.entry(1, 2, datetime(2010, 2, 1))  # read
+    one_three = parser.entry(1, 3, datetime(2010, 2, 1))  # important
+    one_four = parser.entry(
+        1, 4, datetime(2010, 2, 1), enclosures=[Enclosure('http://e2')]
+    )
+    two = parser.feed(2, datetime(2010, 1, 1))
+    two_one = parser.entry(2, 1, datetime(2010, 2, 1))
+
+    reader.add_feed(one.url)
+    reader.add_feed(two.url)
+    reader.update_feeds()
+
+    reader.mark_as_read((one.url, one_two.id))
+    reader.mark_as_important((one.url, one_three.id))
+
+    pre_stuff(reader)
+
+    assert {int_entry_id(e) for e in call_method(reader, **kwargs)} == expected
+
+    # TODO: how do we test the combinations between arguments?
+
+
+@with_call_entries_method
+@pytest.mark.parametrize(
+    'kwargs',
+    [
+        dict(read=object()),
+        dict(important=object()),
+        dict(has_enclosures=object()),
+        dict(feed=object()),
+        dict(entry=object()),
+    ],
+)
+def test_entries_filtering_error(reader, pre_stuff, call_method, kwargs):
+    parser = Parser()
+    reader._parser = parser
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    one_one = parser.entry(1, 1, datetime(2010, 1, 1))
+
+    reader.add_feed(one.url)
+    reader.update_feeds()
+
+    pre_stuff(reader)
+
+    with pytest.raises(ValueError):
+        list(call_method(reader, **kwargs))
+
+
+# END entry filtering tests
