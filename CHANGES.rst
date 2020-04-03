@@ -9,7 +9,7 @@ reader changelog
 Version 0.21
 ------------
 
-Unreleased
+Released 2020-04-04
 
 * Minor consistency improvements to the web app search button. (`#122`_)
 * Add support for web application plugins. (`#80`_)
