@@ -20,12 +20,14 @@ Unreleased
 * In the web app, if the feed to be previewed is not actually a feed,
   show a list of feeds linked from that URL. This is a plugin,
   and is disabled by default. (`#150`_)
+* reader now uses a User-Agent header like ``python-reader/0.21``
+  when retrieving feeds instead of the default `requests`_ one. (`#154`_)
 
 .. _#80: https://github.com/lemon24/reader/issues/80
 .. _#52: https://github.com/lemon24/reader/issues/52
 .. _#145: https://github.com/lemon24/reader/issues/145
 .. _#150: https://github.com/lemon24/reader/issues/150
-
+.. _#154: https://github.com/lemon24/reader/issues/154
 
 
 Version 0.20

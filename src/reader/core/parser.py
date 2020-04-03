@@ -14,6 +14,7 @@ from typing import Tuple
 import feedparser  # type: ignore
 import requests
 
+import reader
 from .exceptions import NotModified
 from .exceptions import ParseError
 from .types import Content
@@ -134,6 +135,11 @@ _ResponsePlugin = Callable[
 
 
 class Parser:
+
+    user_agent = (
+        f'python-reader/{reader.__version__} (+https://github.com/lemon24/reader)'
+    )
+
     def __init__(self) -> None:
         self.response_plugins: Collection[_ResponsePlugin] = []
 
@@ -158,6 +164,8 @@ class Parser:
 
     def make_session(self) -> requests.Session:
         session = requests.Session()
+        if self.user_agent:
+            session.headers['User-Agent'] = self.user_agent
         return session
 
     def _parse_http(

@@ -199,7 +199,7 @@ def make_http_get_headers_url(requests_mock):
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse_sends_etag_last_modified(
-    monkeypatch, parse, make_http_get_headers_url, data_dir, feed_type,
+    parse, make_http_get_headers_url, data_dir, feed_type,
 ):
     feed_url = make_http_get_headers_url(data_dir.join('full.' + feed_type))
     parse(feed_url, 'etag', 'last_modified')
@@ -319,3 +319,20 @@ def test_parse_requests_exception(monkeypatch, parse):
         parse('http://example.com')
 
     assert excinfo.value.__cause__ is exc
+
+
+def test_user_agent(parse, make_http_get_headers_url, data_dir):
+    feed_url = make_http_get_headers_url(data_dir.join('full.atom'))
+    parse(feed_url)
+
+    headers = make_http_get_headers_url.request_headers
+    assert headers['User-Agent'].startswith('python-reader/')
+
+
+def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
+    feed_url = make_http_get_headers_url(data_dir.join('full.atom'))
+    parse.user_agent = None
+    parse(feed_url)
+
+    headers = make_http_get_headers_url.request_headers
+    assert 'reader' not in headers['User-Agent']
