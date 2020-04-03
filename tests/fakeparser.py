@@ -5,26 +5,27 @@ from reader import Entry
 from reader import Feed
 from reader import ParseError
 from reader.core.exceptions import NotModified
+from reader.core.types import entry_argument
 from reader.core.types import ParsedFeed
 from reader.core.types import ParseResult
 
 
 def _make_feed(number, updated=None, **kwargs):
     return Feed(
-        'feed-{}.xml'.format(number),
+        f'{number}',
         updated,
-        kwargs.pop('title', 'Feed #{}'.format(number)),
-        kwargs.pop('link', 'http://www.example.com/{}'.format(number)),
+        kwargs.pop('title', f'Feed #{number}'),
+        kwargs.pop('link', f'http://www.example.com/{number}'),
         **kwargs,
     )
 
 
 def _make_entry(feed_number, number, updated, **kwargs):
     return Entry(
-        'http://www.example.com/{}/entries/{}'.format(feed_number, number),
+        f'{feed_number}-{number}',
         updated,
-        kwargs.pop('title', 'Entry #{}'.format(number)),
-        kwargs.pop('link', 'http://www.example.com/entries/{}'.format(number)),
+        kwargs.pop('title', f'Entry #{number}'),
+        kwargs.pop('link', f'http://www.example.com/entries/{number}'),
         **kwargs,
     )
 
@@ -61,6 +62,14 @@ class Parser:
             ParsedFeed(feed, self.http_etag, self.http_last_modified),
             self.entries[feed_number].values(),
         )
+
+    @staticmethod
+    def entry_to_int_pair(entry):
+        feed_url, entry_id = entry_argument(entry)
+        feed_int, sep, entry_int = entry_id.partition('-')
+        assert sep
+        assert feed_url == feed_int
+        return int(feed_int), int(entry_int)
 
 
 class BlockingParser(Parser):
