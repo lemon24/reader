@@ -1,5 +1,3 @@
-import warnings
-
 import feedparser
 import pytest
 from utils import make_url_base
@@ -13,10 +11,7 @@ from reader.core.parser import Parser
 @pytest.fixture
 def parse():
     parse = Parser()
-    parse._verify = False
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        yield parse
+    yield parse
 
 
 def _make_relative_path_url(**_):

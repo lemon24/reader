@@ -136,7 +136,6 @@ _ResponsePlugin = Callable[
 class Parser:
     def __init__(self) -> None:
         self.response_plugins: Collection[_ResponsePlugin] = []
-        self._verify: bool = True
 
     def __call__(
         self,
@@ -159,8 +158,6 @@ class Parser:
 
     def make_session(self) -> requests.Session:
         session = requests.Session()
-        # TODO: This doesn't seem to be used.
-        session.verify = self._verify
         return session
 
     def _parse_http(
