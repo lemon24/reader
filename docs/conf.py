@@ -13,7 +13,7 @@ extensions = [
     'sphinx_click.ext',
 ]
 
-autodoc_mock_imports = ['bs4', 'mutagen', 'flask']
+autodoc_mock_imports = ['bs4', 'mutagen', 'flask', 'werkzeug', 'humanize']
 
 master_doc = 'index'
 
