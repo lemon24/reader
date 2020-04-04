@@ -22,7 +22,8 @@ def _make_feed(number, updated=None, **kwargs):
 
 def _make_entry(feed_number, number, updated, **kwargs):
     return Entry(
-        f'{feed_number}-{number}',
+        # evals to tuple
+        f'{feed_number}, {number}',
         updated,
         kwargs.pop('title', f'Entry #{number}'),
         kwargs.pop('link', f'http://www.example.com/entries/{number}'),
@@ -62,14 +63,6 @@ class Parser:
             ParsedFeed(feed, self.http_etag, self.http_last_modified),
             self.entries[feed_number].values(),
         )
-
-    @staticmethod
-    def entry_to_int_pair(entry):
-        feed_url, entry_id = entry_argument(entry)
-        feed_int, sep, entry_int = entry_id.partition('-')
-        assert sep
-        assert feed_url == feed_int
-        return int(feed_int), int(entry_int)
 
 
 class BlockingParser(Parser):

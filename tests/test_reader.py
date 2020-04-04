@@ -627,7 +627,7 @@ def test_get_entries_order(reader, chunk_size, order_data_key):
     reader._now.now = datetime(2010, 1, 6)
 
     def to_str(e):
-        feed, entry = parser.entry_to_int_pair(e)
+        feed, entry = eval(e.id)
         return "{} {} {:%Y-%m-%d}".format(feed, entry, e.published or e.updated)
 
     assert [to_str(e) for e in reader.get_entries()] == expected
@@ -1095,9 +1095,9 @@ ALL_IDS = all_ids = {
         (dict(feed=Feed('2')), {(2, 1)}),
         (dict(feed='inexistent'), set()),
         (dict(entry=None), ALL_IDS),
-        (dict(entry=('1', '1-1')), {(1, 1)}),
-        (dict(entry=('1', '1-2')), {(1, 2)}),
-        (dict(entry=Entry('1-2', datetime(2010, 2, 1), feed=Feed('1'),)), {(1, 2)},),
+        (dict(entry=('1', '1, 1')), {(1, 1)}),
+        (dict(entry=('1', '1, 2')), {(1, 2)}),
+        (dict(entry=Entry('1, 2', datetime(2010, 2, 1), feed=Feed('1'),)), {(1, 2)},),
         (dict(entry=('inexistent', 'also-inexistent')), set()),
     ],
 )
@@ -1124,9 +1124,7 @@ def test_entries_filtering(reader, pre_stuff, call_method, kwargs, expected):
 
     pre_stuff(reader)
 
-    assert {
-        parser.entry_to_int_pair(e) for e in call_method(reader, **kwargs)
-    } == expected
+    assert {eval(e.id) for e in call_method(reader, **kwargs)} == expected
 
     # TODO: how do we test the combinations between arguments?
 
