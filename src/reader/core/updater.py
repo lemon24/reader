@@ -61,6 +61,9 @@ class Updater:
         return self.old_feed.stale
 
     def should_update_feed(self, new: Feed) -> bool:
+        def log_info(msg, *args):
+            log.info("update feed %r: " + msg, self.url, *args)
+
         old = self.old_feed
         log.debug(
             "update feed %r: old updated %s, new updated %s",
@@ -70,18 +73,13 @@ class Updater:
         )
 
         if not old.last_updated:
-            log.info(
-                "update feed %r: feed has no last_updated, treating as updated",
-                self.url,
-            )
+            log_info("feed has no last_updated, treating as updated")
             feed_was_updated = True
 
             assert not old.updated, "updated must be None if last_updated is None"
 
         elif not new.updated:
-            log.info(
-                "update feed %r: feed has no updated, treating as updated", self.url
-            )
+            log_info("feed has no updated, treating as updated")
             feed_was_updated = True
         else:
             feed_was_updated = not (
@@ -93,44 +91,33 @@ class Updater:
         if not should_be_updated:
             # Some feeds have entries newer than the feed.
             # https://github.com/lemon24/reader/issues/76
-            log.info(
-                "update feed %r: feed not updated, updating entries anyway", self.url
-            )
+            log_info("feed not updated, updating entries anyway")
 
         return should_be_updated
 
     def should_update_entry(
         self, new: Entry, old: Optional[EntryForUpdate]
     ) -> Tuple[Optional[datetime], bool]:
+        def log_debug(msg, *args):
+            log.debug("update entry %r of feed %r: " + msg, new.id, self.url, *args)
+
         updated = new.updated
         old_updated = old.updated if old else None
 
         if self.stale:
-            log.debug(
-                "update entry %r of feed %r: feed marked as stale, updating anyway",
-                new.id,
-                self.url,
-            )
+            log_debug("feed marked as stale, updating anyway")
         elif not new.updated:
-            log.debug(
-                "update entry %r of feed %r: has no updated, "
-                "updating but not changing updated",
-                new.id,
-                self.url,
-            )
+            log_debug("has no updated, updating but not changing updated")
             updated = old_updated or self.now
         elif old_updated and new.updated <= old_updated:
-            log.debug(
-                "update entry %r of feed %r: entry not updated, "
-                "skipping (old updated %s, new updated %s)",
-                new.id,
-                self.url,
+            log_debug(
+                "entry not updated, skipping (old updated %s, new updated %s)",
                 old_updated,
                 new.updated,
             )
             return None, False
 
-        log.debug("update entry %r of feed %r: entry added/updated", new.id, self.url)
+        log_debug("entry added/updated")
         return (updated, True) if not old else (updated, False)
 
     def get_entry_pairs(
