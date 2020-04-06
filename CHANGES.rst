@@ -11,6 +11,11 @@ Version 0.22
 
 Unreleased
 
+* Use ``executemany()`` instead of ``execute()`` in the SQLite storage.
+  Makes updating feeds (excluding network calls) 5-10% faster. (`#144`_)
+
+.. _#144: https://github.com/lemon24/reader/issues/144
+
 
 Version 0.21
 ------------

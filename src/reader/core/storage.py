@@ -11,6 +11,7 @@ from typing import Callable
 from typing import cast
 from typing import Iterable
 from typing import Iterator
+from typing import Mapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -693,7 +694,9 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    def _add_or_update_entry(self, intent: EntryUpdateIntent) -> None:
+    def _make_add_or_update_entries_args(
+        self, intent: EntryUpdateIntent
+    ) -> Mapping[str, Any]:
         feed_url, entry, last_updated, first_updated_epoch, feed_order = intent
 
         updated = entry.updated
@@ -711,73 +714,85 @@ class Storage:
             if entry.enclosures
             else None
         )
-
-        try:
-            self.db.execute(
-                """
-                INSERT OR REPLACE INTO entries (
-                    id,
-                    feed,
-                    title,
-                    link,
-                    updated,
-                    author,
-                    published,
-                    summary,
-                    content,
-                    enclosures,
-                    read,
-                    important,
-                    last_updated,
-                    first_updated_epoch,
-                    feed_order
-                ) VALUES (
-                    :id,
-                    :feed_url,
-                    :title,
-                    :link,
-                    :updated,
-                    :author,
-                    :published,
-                    :summary,
-                    :content,
-                    :enclosures,
-                    (
-                        SELECT read
-                        FROM entries
-                        WHERE id = :id AND feed = :feed_url
-                    ),
-                    (
-                       SELECT important
-                       FROM entries
-                       WHERE id = :id AND feed = :feed_url
-                    ),
-                    :last_updated,
-                    coalesce(:first_updated_epoch, (
-                        SELECT first_updated_epoch
-                        FROM entries
-                        WHERE id = :id AND feed = :feed_url
-                    )),
-                    :feed_order
-                );
-                """,
-                locals(),
-            )
-        except sqlite3.IntegrityError:
-            # FIXME: Match the error string.
-            log.debug(
-                "add_entry %r of feed %r: got IntegrityError",
-                entry.id,
-                feed_url,
-                exc_info=True,
-            )
-            raise FeedNotFoundError(feed_url)
+        return locals()
 
     @wrap_storage_exceptions()
     def add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
+
+        # We need to capture the last value for exception handling
+        # (it's not guaranteed all the entries belong to the same tuple).
+        last_param: Mapping[str, Any] = {}
+
+        def make_params() -> Iterable[Mapping[str, Any]]:
+            nonlocal last_param
+            for last_param in map(self._make_add_or_update_entries_args, entry_tuples):
+                yield last_param
+
         with self.db:
-            for t in entry_tuples:
-                self._add_or_update_entry(t)
+
+            try:
+                self.db.executemany(
+                    """
+                    INSERT OR REPLACE INTO entries (
+                        id,
+                        feed,
+                        title,
+                        link,
+                        updated,
+                        author,
+                        published,
+                        summary,
+                        content,
+                        enclosures,
+                        read,
+                        important,
+                        last_updated,
+                        first_updated_epoch,
+                        feed_order
+                    ) VALUES (
+                        :id,
+                        :feed_url,
+                        :title,
+                        :link,
+                        :updated,
+                        :author,
+                        :published,
+                        :summary,
+                        :content,
+                        :enclosures,
+                        (
+                            SELECT read
+                            FROM entries
+                            WHERE id = :id AND feed = :feed_url
+                        ),
+                        (
+                        SELECT important
+                        FROM entries
+                        WHERE id = :id AND feed = :feed_url
+                        ),
+                        :last_updated,
+                        coalesce(:first_updated_epoch, (
+                            SELECT first_updated_epoch
+                            FROM entries
+                            WHERE id = :id AND feed = :feed_url
+                        )),
+                        :feed_order
+                    );
+                    """,
+                    make_params(),
+                )
+            except sqlite3.IntegrityError:
+                # FIXME: Match the error string.
+
+                feed_url = last_param['feed_url']
+                entry_id = last_param['id']
+                log.debug(
+                    "add_entry %r of feed %r: got IntegrityError",
+                    entry_id,
+                    feed_url,
+                    exc_info=True,
+                )
+                raise FeedNotFoundError(feed_url)
 
     def add_or_update_entry(self, intent: EntryUpdateIntent) -> None:
         # TODO: this method is for testing convenience only, maybe delete it?
