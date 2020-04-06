@@ -58,7 +58,7 @@
 
 
 {% macro text_input_button(form_view, action, label, name, placeholder, leave_disabled=false, next=none, context=none) -%}
-<li class="collapsible" data-button-type="text-input" data-callback="function callback(data) {
+<li class="collapsible" data-button-type="text-input" data-callback="function callback(data, request_data) {
 
 {% if caller is defined %}{{ caller() | forceescape }}{% endif %}
 
@@ -96,7 +96,7 @@
 
 
 {% macro confirm_button(form_view, action, label, id=none, leave_disabled=false, next=none, context=none) -%}
-<li class="collapsible" data-button-type="confirm" data-callback="function callback(data) {
+<li class="collapsible" data-button-type="confirm" data-callback="function callback(data, request_data) {
 
 {% if caller is defined %}{{ caller() | forceescape }}{% endif %}
 
@@ -117,7 +117,7 @@
 
 
 {% macro simple_button(form_view, action, label, leave_disabled=false, next=none, context=none) -%}
-<li class="simple-button" data-button-type="simple" data-callback="function callback(data) {
+<li class="simple-button" data-button-type="simple" data-callback="function callback(data, request_data) {
 
 {% if caller is defined %}{{ caller() | forceescape }}{% endif %}
 

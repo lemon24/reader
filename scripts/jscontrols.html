@@ -22,23 +22,23 @@ window.onload = function () {
 <ul class="controls">
 
 {% call macros.simple_button('form', 'simple', 'simple', next=url_for('root', from_action='next-simple')) %}
-    document.querySelector('#out').innerHTML = "v1: " + JSON.stringify(data);
+    document.querySelector('#out').innerHTML = "v1: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
 {% endcall %}
 {% call macros.confirm_button('form', 'confirm', 'confirm', 'confirm', next=url_for('root', from_action='next-confirm')) %}
-    document.querySelector('#out').innerHTML = "v1: " + JSON.stringify(data);
+    document.querySelector('#out').innerHTML = "v1: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
 {% endcall %}
 {% call macros.text_input_button('form', 'text', 'text', 'text', 'text', next=url_for('root', from_action='next-text')) %}
-    document.querySelector('#out').innerHTML = "v1: " + JSON.stringify(data);
+    document.querySelector('#out').innerHTML = "v1: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
 {% endcall %}
 
 {% call macros.simple_button('form', 'simple', 'simple2', leave_disabled=true, next=url_for('root', from_action='next-simple2')) %}
-    document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data);
+    document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
 {% endcall %}
 {% call macros.confirm_button('form', 'confirm', 'confirm2', 'confirm2', leave_disabled=true, next=url_for('root', from_action='next-confirm2')) %}
-    document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data);
+    document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
 {% endcall %}
 {% call macros.text_input_button('form', 'text', 'text2', 'text', 'text', leave_disabled=true, next=url_for('root', from_action='next-text2')) %}
-    document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data);
+    document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
 {% endcall %}
 
 {{ macros.simple_button('form', 'simple', 'simple3', next=url_for('root', from_action='next-simple3')) }}
@@ -46,7 +46,7 @@ window.onload = function () {
 {{ macros.text_input_button('form', 'text', 'text3', 'text', 'text', next=url_for('root', from_action='next-text3')) }}
 
 {% call macros.simple_button('form', 'simple-next', 'simple next') %}
-    document.querySelector('#out').innerHTML = "simple next: " + JSON.stringify(data);
+    document.querySelector('#out').innerHTML = "simple next: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
 {% endcall %}
 
 

@@ -8,7 +8,7 @@ DONE_TIMEOUT = 1500;
 ERROR_TIMEOUT = 2000;
 
 
-function do_json_request(endpoint, data, callback, errback) {
+function do_json_request(endpoint, request_data, callback, errback) {
     var xhr = new XMLHttpRequest();
 
     xhr.timeout = JSON_REQUEST_TIMEOUT;
@@ -22,19 +22,19 @@ function do_json_request(endpoint, data, callback, errback) {
         }
         else {
             try {
-                var data = JSON.parse(xhr.response);
+                var response_data = JSON.parse(xhr.response);
             } catch (e) {
                 errback("JSON parse error");
                 return;
             }
-            if ('err' in data && 'ok' in data) {
+            if ('err' in response_data && 'ok' in response_data) {
                 errback("bad response: both ok and err");
             }
-            else if ('err' in data) {
-                errback(data.err);
+            else if ('err' in response_data) {
+                errback(response_data.err);
             }
-            else if ('ok' in data) {
-                callback(data.ok);
+            else if ('ok' in response_data) {
+                callback(response_data.ok);
             }
             else {
                 errback("bad response: neither ok nor err");
@@ -47,7 +47,7 @@ function do_json_request(endpoint, data, callback, errback) {
     xhr.setRequestHeader('Content-Type', 'application/json');
 
     try {
-        var json_data = JSON.stringify(data);
+        var json_data = JSON.stringify(request_data);
     } catch (e) {
         errback("JSON stringify error");
         return;
@@ -78,16 +78,16 @@ function register_simple(endpoint, collapsible, callback, errback) {
             button.innerHTML = '...';
             button.disabled = true;
 
-            var data = extract_form_data(button.form);
+            var request_data = extract_form_data(button.form);
             // We do this here to make sure the form data has the stuff from
             // *our* control. If https://github.com/lemon24/reader/issues/69
             // is implemented by having one form element per control,
             // this won't be needed anymore.
-            update_object(data, {action: button.value});
+            update_object(request_data, {action: button.value});
 
-            do_json_request(endpoint, data, function (data) {
+            do_json_request(endpoint, request_data, function (data) {
                 button.innerHTML = 'done';
-                callback(data);
+                callback(data, request_data);
                 setTimeout(reset_button, DONE_TIMEOUT);
             }, function (message) {
                 button.innerHTML = 'error';
@@ -151,16 +151,16 @@ function register_confirm(endpoint, collapsible, callback, errback) {
             button.innerHTML = '...';
             button.disabled = true;
 
-            var data = extract_form_data(button.form);
+            var request_data = extract_form_data(button.form);
             // We do this here to make sure the form data has the stuff from
             // *our* control. If https://github.com/lemon24/reader/issues/69
             // is implemented by having one form element per control,
             // this won't be needed anymore.
-            update_object(data, {action: button.value});
+            update_object(request_data, {action: button.value});
 
-            do_json_request(endpoint, data, function (data) {
+            do_json_request(endpoint, request_data, function (data) {
                 button.innerHTML = 'done';
-                callback(data);
+                callback(data, request_data);
                 setTimeout(reset_button, DONE_TIMEOUT);
             }, function (message) {
                 button.innerHTML = 'error';
@@ -204,19 +204,19 @@ function register_text_input(endpoint, collapsible, callback, errback) {
                 input.disabled = true;
             }
 
-            var data = extract_form_data(button.form);
+            var request_data = extract_form_data(button.form);
             // We do this here to make sure the form data has the stuff from
             // *our* control. If https://github.com/lemon24/reader/issues/69
             // is implemented by having one form element per control,
             // this won't be needed anymore.
-            update_object(data, {action: button.value});
+            update_object(request_data, {action: button.value});
 
-            do_json_request(endpoint, data, function (data) {
+            do_json_request(endpoint, request_data, function (data) {
                 button.innerHTML = 'done';
                 if (collapsible.dataset.leaveDisabled != "true") {
                     input.value = '';
                 }
-                callback(data);
+                callback(data, request_data);
                 setTimeout(reset_button, DONE_TIMEOUT);
             }, function (message) {
                 button.innerHTML = 'error';
