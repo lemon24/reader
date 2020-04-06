@@ -9,12 +9,12 @@ See scripts/jscontrols.py for a minimal usage example.
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 
-import werkzeug
 from flask import flash
 from flask import get_flashed_messages
 from flask import jsonify
 from flask import redirect
 from flask import request
+from werkzeug.datastructures import MultiDict
 
 
 def is_safe_url(target):
@@ -102,7 +102,7 @@ class APIThing:
         return redirect(next)
 
     def dispatch_json(self):
-        data = werkzeug.MultiDict(request.get_json())
+        data = MultiDict(request.get_json())
         action = data['action']
         func = self.actions.get(action)
         if func is None:
