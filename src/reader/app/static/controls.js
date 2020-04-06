@@ -57,6 +57,9 @@ function do_json_request(endpoint, request_data, callback, errback) {
 
 
 function register_simple(endpoint, collapsible, callback, errback) {
+    /* don't override button submit; exit early since no other control enhancement is needed */
+    if (callback === undefined) { return; }
+
     if (collapsible.dataset.buttonType != 'simple') { return; }
     var button = collapsible.querySelector('button[name=action]');
     if (button === null) { return; };
@@ -109,6 +112,9 @@ function register_confirm(endpoint, collapsible, callback, errback) {
     var button = collapsible.querySelector('button[name=action]');
     if (button === null) { return; };
 
+    // Hold on to this in case we still need to submit the form normally.
+    var really = collapsible.querySelector('input[name=really-confirm]');
+
     var form = button.form;
     // form.children is a "live collection",
     // weird stuff happens if we mutate while iterating
@@ -149,6 +155,22 @@ function register_confirm(endpoint, collapsible, callback, errback) {
             clearTimeout(timeout_id);
             timeout_id = null;
             button.innerHTML = '...';
+
+            // Fall back to the default behavior (no JS callback);
+            // we still benefit from the JS cosmetic enhancement.
+            if (callback === undefined) {
+                if (really !== null) {
+                    really.checked = true;
+                    really.style.visibility = "hidden";
+                    form.appendChild(really);
+                }
+
+                // Should result in the form being submitted.
+                return true;
+            }
+
+            // We need to disable the button after we're sure we don't submit
+            // normally, otherwise it will not be included in the POST data.
             button.disabled = true;
 
             var request_data = extract_form_data(button.form);
@@ -178,6 +200,9 @@ function register_confirm(endpoint, collapsible, callback, errback) {
 }
 
 function register_text_input(endpoint, collapsible, callback, errback) {
+    /* don't override button submit; exit early since no other control enhancement is needed */
+    if (callback === undefined) { return; }
+
     if (collapsible.dataset.buttonType != 'text-input') { return; }
     var button = collapsible.querySelector('button[name=action]');
     var input = collapsible.querySelector('input[type=text]');
@@ -260,7 +285,8 @@ function register_controls(endpoint, controls) {
         var collapsible = collapsibles[ixc];
 
         if (collapsible.dataset.callback === undefined) {
-            continue;
+            /* we don't override button submit */
+            var callback = undefined;
         } else {
             try {
                 var callback = eval(collapsible.dataset.callback);
@@ -297,4 +323,12 @@ function extract_form_data(form) {
 
 function update_object(self, other) {
     for (var attrname in other) { self[attrname] = other[attrname]; }
+}
+
+function add_hidden_form_field(form, name, value) {
+    var input = document.createElement("input");
+    input.setAttribute("type", "hidden");
+    input.setAttribute("name", name);
+    input.setAttribute("value", value);
+    form.appendChild(input);
 }

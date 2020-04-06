@@ -50,6 +50,17 @@ window.onload = function () {
 {% endcall %}
 
 
+{% call macros.simple_button('form', 'simple', 'simple no js', next=url_for('root', from_action='next-simple-no-js'), js_enabled=False) %}
+    document.querySelector('#out').innerHTML = "no js, should not happen";
+{% endcall %}
+{% call macros.confirm_button('form', 'confirm', 'confirm no js', 'confirm', next=url_for('root', from_action='next-confirm-no-js'), js_enabled=False) %}
+    document.querySelector('#out').innerHTML = "no js, should not happen";
+{% endcall %}
+{% call macros.text_input_button('form', 'text', 'text no js', 'text', 'text', next=url_for('root', from_action='next-text-no-js'), js_enabled=False) %}
+    document.querySelector('#out').innerHTML = "no js, should not happen";
+{% endcall %}
+
+
 {% for message in get_flashed_messages_by_prefix(
     'simple',
     'confirm',
