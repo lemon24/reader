@@ -13,8 +13,10 @@ Unreleased
 
 * Use ``executemany()`` instead of ``execute()`` in the SQLite storage.
   Makes updating feeds (excluding network calls) 5-10% faster. (`#144`_)
+* In the web app, redirect to the feed's page after adding a feed. (`#119`_)
 
 .. _#144: https://github.com/lemon24/reader/issues/144
+.. _#119: https://github.com/lemon24/reader/issues/119
 
 
 Version 0.21

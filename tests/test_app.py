@@ -128,13 +128,12 @@ def test_add_delete_feed(db_path, browser, monkeypatch):
     # actually add the feed
     form = browser.select_form('form.action-add-feed')
     response = browser.submit_selected(form.form.find('button', text='add_feed'))
-    assert len(browser.get_current_page().select('.feed')) == 1
 
-    # because we don't have a title at this point
-    feed_link = browser.find_link(text=feed.url)
-
-    response = browser.follow_link(feed_link)
+    # we should be at the feed page, via a redirect
     assert response.status_code == 200
+    assert response.url == 'http://app/?feed=' + feed.url
+    assert response.history[-1].status_code == 302
+
     assert len(browser.get_current_page().select('.entry')) == 0
 
     reader.update_feeds()
@@ -144,6 +143,8 @@ def test_add_delete_feed(db_path, browser, monkeypatch):
 
     response = browser.follow_link(browser.find_link(text='feeds'))
     assert response.status_code == 200
+
+    feed_link = browser.find_link(text=feed.title)
 
     form = browser.select_form('.feed form.action-delete-feed')
     form.set_checkbox({'really-delete-feed': True})

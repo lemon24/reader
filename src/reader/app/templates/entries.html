@@ -76,7 +76,8 @@
     '.form_api', 'add-feed', 'add feed',
     leave_disabled=true,
     next=url_for('.entries', feed=request.args.url),
-    context={'feed-url': request.args.url}
+    context={'feed-url': request.args.url},
+    js_enabled=False,
 ) }}
 {% endif %}
 
