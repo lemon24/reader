@@ -3,6 +3,7 @@ import inspect
 import os.path
 import pstats
 import sqlite3
+import statistics
 import sys
 import tempfile
 import timeit
@@ -258,7 +259,7 @@ TIMINGS = OrderedDict(
 TIMINGS_PARAMS_LIST = [(2 ** i,) for i in range(5, 12)]
 TIMINGS_NUMBER = 4
 PROFILE_PARAMS = (2 ** 11,)
-IDS = ('num_entries',)
+PARAM_IDS = ('num_entries',)
 
 
 @click.group()
@@ -274,31 +275,56 @@ def list_():
 
 @cli.command()
 @click.argument('which', nargs=-1)
-def time(which):
+@click.option('-n', '--number', type=int, default=TIMINGS_NUMBER, show_default=True)
+@click.option('-r', '--repeat', type=int, show_default=True)
+def time(which, number, repeat):
     if not which:
         which = ['*']
 
+    if not repeat:
+        extra = ['number'] + list(PARAM_IDS)
+        timeit_func = timeit.timeit
+        stats = {'': lambda x: x}
+    else:
+        extra = ['stat', 'number', 'repeat'] + list(PARAM_IDS)
+        timeit_func = partial(timeit.repeat, repeat=repeat)
+
+        # statistics.quantiles only gets added in Python 3.8
+        import numpy as np
+
+        stats = {
+            'avg': np.mean,
+            'min': lambda xs: min(xs),
+            'p50': partial(np.quantile, q=0.5),
+            'p90': partial(np.quantile, q=0.9),
+        }
+
     names = [name for name in TIMINGS if any(fnmatchcase(name, w) for w in which)]
 
-    extra = ['number'] + list(IDS)
     header = ' '.join(extra + names)
-    print(header)
 
     extra_fmt = ['{{:>{}}}'.format(len(e)) for e in extra]
     names_fmt = ['{{:>{}.3f}}'.format(len(n)) for n in names]
     row_fmt = ' '.join(extra_fmt + names_fmt)
 
-    number = TIMINGS_NUMBER
+    def get_results():
+        for params in TIMINGS_PARAMS_LIST:
+            times = []
+            for name in names:
+                cm = TIMINGS[name](**dict(zip(PARAM_IDS, params)))
+                with cm as fn:
+                    time = timeit_func('fn()', globals=dict(fn=fn), number=number)
+                times.append(time)
+            yield list(params), times
 
-    for params in TIMINGS_PARAMS_LIST:
-        times = []
-        for name in names:
-            cm = TIMINGS[name](**dict(zip(IDS, params)))
-            with cm as fn:
-                time = timeit.timeit('fn()', globals=dict(fn=fn), number=number)
-            times.append(time)
-
-        print(row_fmt.format(number, *(list(params) + times)))
+    print(header)
+    for params, results in get_results():
+        for stat_name, stat in stats.items():
+            if not repeat:
+                prefix = [number]
+            else:
+                prefix = [stat_name, number, repeat]
+            print(row_fmt.format(*prefix, *params, *map(stat, results)))
 
 
 @cli.command()
@@ -308,10 +334,10 @@ def profile(which):
     params = PROFILE_PARAMS
 
     for name in names:
-        print(name, ' '.join('{}={}'.format(i, p) for i, p in zip(IDS, params)))
+        print(name, ' '.join('{}={}'.format(i, p) for i, p in zip(PARAM_IDS, params)))
         print()
 
-        cm = TIMINGS[name](**dict(zip(IDS, params)))
+        cm = TIMINGS[name](**dict(zip(PARAM_IDS, params)))
 
         pr = cProfile.Profile()
         with cm as fn:
