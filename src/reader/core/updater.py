@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 from typing import Iterable
 from typing import Optional
 from typing import Sequence
@@ -61,7 +62,7 @@ class Updater:
         return self.old_feed.stale
 
     def should_update_feed(self, new: Feed) -> bool:
-        def log_info(msg, *args):
+        def log_info(msg: str, *args: Any) -> None:
             log.info("update feed %r: " + msg, self.url, *args)
 
         old = self.old_feed
@@ -98,7 +99,7 @@ class Updater:
     def should_update_entry(
         self, new: Entry, old: Optional[EntryForUpdate]
     ) -> Tuple[Optional[datetime], bool]:
-        def log_debug(msg, *args):
+        def log_debug(msg: str, *args: Any) -> None:
             log.debug("update entry %r of feed %r: " + msg, new.id, self.url, *args)
 
         updated = new.updated
