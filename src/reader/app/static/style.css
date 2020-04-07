@@ -150,6 +150,18 @@ ul.controls .collapsible {
 }
 
 
+/* TODO: same for <strong>? */
+h1 b,
+h2 b,
+h3 b,
+h4 b,
+h5 b,
+h6 b,
+b b {
+    font-weight: normal;
+}
+
+
 /* BEGIN Skeleton
 
 Using a stripped down version of https://github.com/dhg/Skeleton/

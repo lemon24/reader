@@ -5,6 +5,7 @@ import time
 from dataclasses import dataclass
 
 import humanize
+import markupsafe
 from flask import abort
 from flask import Blueprint
 from flask import current_app
@@ -27,9 +28,9 @@ from reader import EntrySearchResult
 from reader import make_reader
 from reader import ParseError
 from reader import ReaderError
+from reader.core.search import apply_highlights
 from reader.plugins import Loader
 from reader.plugins import LoaderError
-
 
 blueprint = Blueprint('reader', __name__)
 
@@ -67,6 +68,14 @@ def add_reader_version():
     g.reader_version = reader.__version__
 
 
+def highlighted(string):
+    # needs to be marked as safe so we don't need to do it everywhere in the template
+    # TODO: maybe use something "more semantic" than <b> (CSS needs changing too if so)
+    return markupsafe.Markup(
+        apply_highlights(string, '<b>', '</b>', lambda s: str(markupsafe.escape(s)))
+    )
+
+
 @dataclass(frozen=True)
 class EntryProxy:
     _search_result: EntrySearchResult
@@ -79,7 +88,7 @@ class EntryProxy:
     def title(self):
         highlight = self._search_result.metadata.get('.title')
         if highlight:
-            return highlight.value
+            return highlighted(highlight)
         return None
 
     @property
@@ -90,7 +99,7 @@ class EntryProxy:
     def summary(self):
         highlight = self._search_result.content.get('.summary')
         if highlight:
-            return highlight.value
+            return highlighted(highlight)
         return None
 
     @property
@@ -100,7 +109,7 @@ class EntryProxy:
             # TODO: find a more correct way to match .content[0].value
             if path.startswith('.content[') and path.endswith('].value'):
                 rv.append(Content(highlight.value, 'text/plain'))
-                # TODO: we can also make a text/html version here
+                rv.append(Content(highlighted(highlight), 'text/html'))
         return rv
 
 
@@ -110,13 +119,13 @@ class FeedProxy:
     _entry: Entry
 
     def __getattr__(self, name):
-        return getattr(self._entry, name)
+        return getattr(self._entry.feed, name)
 
     @property
     def title(self):
         highlight = self._search_result.metadata.get('.feed.title')
         if highlight:
-            return highlight.value
+            return highlighted(highlight)
         return self._entry.feed.title
 
 

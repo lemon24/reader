@@ -9,10 +9,10 @@
     {% elif not request.args.q %}
         Entries{% if feed %} for{% endif %}
     {% else %}
-        Search for <em>{{ request.args.q }}</em>{% if feed %} in{% endif %}
+        Search for <b>{{ request.args.q }}</b>{% if feed %} in{% endif %}
     {% endif %}
     {% if feed %}
-        {{ macros.feed_title(feed) }}
+        <b>{{ macros.feed_title(feed) }}</b>
     {% endif %}
 {% endmacro %}
 
@@ -184,7 +184,13 @@ untitled
 
 {% if content %}
 <p>
-    {{ content | striptags | truncate }}
+    {# TODO: maybe unify entry / search result content or something? #}
+    {% if not request.args.q %}
+        {{ content | striptags | truncate }}
+    {% else %}
+        {{ content }}
+    {% endif %}
+
     {% if not read_only %}
         <a href="{{ url_for('.entry', feed=entry.feed.url, entry=entry.id) }}">more</a>
     {% endif %}
