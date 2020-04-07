@@ -2,6 +2,7 @@ import contextlib
 import itertools
 import json
 import time
+from dataclasses import dataclass
 
 import humanize
 from flask import abort
@@ -20,6 +21,9 @@ from flask import url_for
 import reader
 from .api_thing import APIError
 from .api_thing import APIThing
+from reader import Content
+from reader import Entry
+from reader import EntrySearchResult
 from reader import make_reader
 from reader import ParseError
 from reader import ReaderError
@@ -63,6 +67,59 @@ def add_reader_version():
     g.reader_version = reader.__version__
 
 
+@dataclass(frozen=True)
+class EntryProxy:
+    _search_result: EntrySearchResult
+    _entry: Entry
+
+    def __getattr__(self, name):
+        return getattr(self._entry, name)
+
+    @property
+    def title(self):
+        highlight = self._search_result.metadata.get('.title')
+        if highlight:
+            return highlight.value
+        return None
+
+    @property
+    def feed(self):
+        return FeedProxy(self._search_result, self._entry)
+
+    @property
+    def summary(self):
+        highlight = self._search_result.content.get('.summary')
+        if highlight:
+            return highlight.value
+        return None
+
+    @property
+    def content(self):
+        rv = []
+        for path, highlight in self._search_result.content.items():
+            # TODO: find a more correct way to match .content[0].value
+            if path.startswith('.content[') and path.endswith('].value'):
+                rv.append(Content(highlight.value, 'text/plain'))
+                # TODO: we can also make a text/html version here
+        return rv
+
+
+@dataclass(frozen=True)
+class FeedProxy:
+    _search_result: EntrySearchResult
+    _entry: Entry
+
+    def __getattr__(self, name):
+        return getattr(self._entry, name)
+
+    @property
+    def title(self):
+        highlight = self._search_result.metadata.get('.feed.title')
+        if highlight:
+            return highlight.value
+        return self._entry.feed.title
+
+
 @blueprint.route('/')
 def entries():
     show = request.args.get('show', 'unread')
@@ -94,7 +151,7 @@ def entries():
 
         def get_entries(**kwargs):
             for sr in reader.search_entries(query, **kwargs):
-                yield reader.get_entry(sr)
+                yield EntryProxy(sr, reader.get_entry(sr))
 
     # TODO: render the actual search result, not the entry
     # TODO: catch and flash syntax errors
