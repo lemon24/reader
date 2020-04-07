@@ -9,6 +9,7 @@ import warnings
 from collections import OrderedDict
 from types import MappingProxyType
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import Optional
@@ -602,6 +603,9 @@ class Search:
         return query
 
 
+# TODO: should these be HighlightedString methods?
+
+
 def extract_highlights(text: str, before: str, after: str) -> HighlightedString:
     """
     >>> extract_highlights( '>one< two >three< four', '>', '<')
@@ -637,6 +641,47 @@ def extract_highlights(text: str, before: str, after: str) -> HighlightedString:
         raise ValueError("highlight is never closed")
 
     return HighlightedString(''.join(parts), tuple(slices))
+
+
+def split_highlights(string: HighlightedString) -> Iterable[str]:
+    """Given a HighlightedString, split it into parts.
+
+    In the resulting iterable, strings on even positions are highlighted,
+    and strings on odd position are not highlighted.
+
+    Note: This does not check for improper highlight slices
+    (overlapping, with .start > .stop, or with .step set).
+
+    """
+    start = 0
+
+    for highlight in string.highlights:
+        yield string.value[start : highlight.start]
+        yield string.value[highlight]
+        start = highlight.stop
+
+    yield string.value[start:]
+
+
+def apply_highlights(
+    string: HighlightedString,
+    before: str,
+    after: str,
+    func: Optional[Callable[[str], str]] = None,
+) -> str:
+    def inner() -> Iterable[str]:
+        for index, part in enumerate(split_highlights(string)):
+            if not part:
+                continue
+            if index % 2 == 1:
+                yield before
+            if func:
+                part = func(part)
+            yield part
+            if index % 2 == 1:
+                yield after
+
+    return ''.join(inner())
 
 
 def json_object_get(object_str: str, key: str) -> Any:
