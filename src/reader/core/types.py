@@ -6,6 +6,7 @@ from types import MappingProxyType
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import Generic
 from typing import Iterable
 from typing import List
 from typing import Mapping
@@ -43,6 +44,7 @@ class _namedtuple_compat:
 
     _replace = dataclasses.replace
 
+    # FIXME: this recurses, unlike namedtuple._asdict; remove it
     _asdict = dataclasses.asdict
 
 
@@ -73,21 +75,22 @@ class Feed(_namedtuple_compat):
     user_title: Optional[str] = None
 
 
+_EntryUpdatedType = TypeVar('_EntryUpdatedType', datetime, Optional[datetime])
+
+
 @dataclass(frozen=True)
-class Entry(_namedtuple_compat):
+class _Entry(Generic[_EntryUpdatedType], _namedtuple_compat):
 
     """Data type representing an entry."""
 
     #: Entry identifier.
     id: str
 
-    # Entries returned by the parser always have updated set.
-    # I tried modeling this through typing, but it's too complicated.
-    # TODO: Make typing enforce updated is always set.
-    # TODO: When can be Entry.updated be None anyway?
+    # Entries returned by the parser have updated Optional[Datetime];
+    # before storing an entry, we make sure it's datetime.
 
     #: The date the entry was last updated.
-    updated: Optional[datetime]
+    updated: _EntryUpdatedType
 
     #: The title of the entry.
     title: Optional[str] = None
@@ -122,6 +125,19 @@ class Entry(_namedtuple_compat):
 
     #: The entry's feed.
     feed: Optional[Feed] = None
+
+
+# FIXME: This breaks Sphinx autoclass.
+#
+# We can't use subclasses because of https://github.com/sphinx-doc/sphinx/issues/741
+#
+# If we do use subclasses, we have to re-implement __eq__, because the one we get
+# from dataclass only works with the exact type.
+#
+# Using any kind of docstrings on the Entry alias below does not work
+# (tried setting __doc__ and Sphinx #: and """ comments.
+#
+Entry = _Entry[datetime]
 
 
 @dataclass(frozen=True)
@@ -413,10 +429,13 @@ class ParsedFeed(NamedTuple):
     http_last_modified: Optional[str]
 
 
+ParsedEntry = _Entry[Optional[datetime]]
+
+
 class ParseResult(NamedTuple):
 
     parsed_feed: ParsedFeed
-    entries: Iterable[Entry]
+    entries: Iterable[ParsedEntry]
 
     # compatibility / convenience
 
