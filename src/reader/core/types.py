@@ -191,19 +191,20 @@ class HighlightedString:
             if reason:
                 raise ValueError(f'invalid highlight: {reason}: {highlight}')
 
-        highlights = tuple(sorted(self.highlights))
+        highlights = sorted(self.highlights, key=lambda s: (s.start, s.stop))
 
         prev_highlight = None
         for highlight in highlights:
             if not prev_highlight:
                 prev_highlight = highlight
                 continue
+
             if prev_highlight.stop > highlight.start:
                 raise ValueError(
                     f'highlights must not overlap: {prev_highlight}, {highlight}'
                 )
 
-        object.__setattr__(self, 'highlights', highlights)
+        object.__setattr__(self, 'highlights', tuple(highlights))
 
     def __str__(self) -> str:
         return self.value
