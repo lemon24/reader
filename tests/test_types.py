@@ -64,10 +64,34 @@ def test_highlighted_string_str(string):
 
 
 @pytest.mark.parametrize(
+    'slices',
+    [
+        [slice(0, None)],
+        [slice(None, 0)],
+        [slice(0, 1, 1)],
+        [slice(0, 1, 0)],
+        [slice(0, 1, -1)],
+        [slice(1, 0)],
+        [slice(-1, 0)],
+        [slice(0, -1)],
+        [slice(4, 5)],
+        [slice(5, 5)],
+        [slice(0, 1), slice(0, 2)],
+        [slice(0, 2), slice(1, 3)],
+    ],
+)
+def test_highlighted_string_slice_validation(slices):
+    with pytest.raises(ValueError):
+        HighlightedString('abcd', slices)
+
+
+@pytest.mark.parametrize(
     'input, value, highlights',
     [
         ('', '', []),
         (' one ', ' one ', []),
+        ('><one', 'one', ['']),
+        ('><><one', 'one', ['', '']),
         ('\t >one\n< ', '\t one\n ', ['one\n']),
         ('>one< two >three< four', 'one two three four', ['one', 'three']),
         ('one >two< three >four<', 'one two three four', ['two', 'four']),
@@ -95,9 +119,20 @@ def test_highlighted_string_extract_errors(input):
         (HighlightedString(), ['']),
         (HighlightedString('abcd'), ['abcd']),
         (HighlightedString('abcd', [slice(0, 4)]), ['', 'abcd', '']),
+        (HighlightedString('abcd', [slice(0, 0)]), ['', '', 'abcd']),
+        (HighlightedString('abcd', [slice(4, 4)]), ['abcd', '', '']),
+        (HighlightedString('abcd', [slice(2, 2)]), ['ab', '', 'cd']),
         (HighlightedString('abcd', [slice(1, 3)]), ['a', 'bc', 'd']),
         (
+            HighlightedString('abcd', [slice(0, 0), slice(0, 0)]),
+            ['', '', '', '', 'abcd'],
+        ),
+        (
             HighlightedString('abcd', [slice(1, 2), slice(2, 3)]),
+            ['a', 'b', '', 'c', 'd'],
+        ),
+        (
+            HighlightedString('abcd', [slice(2, 3), slice(1, 2)]),
             ['a', 'b', '', 'c', 'd'],
         ),
         (
@@ -126,8 +161,13 @@ def test_highlighted_string_split(string, expected):
         (HighlightedString(), '', ''),
         (HighlightedString('abcd'), 'abcd', 'ABCD'),
         (HighlightedString('abcd', [slice(0, 4)]), 'xabcdy', 'xABCDy'),
+        (HighlightedString('abcd', [slice(0, 0)]), 'xyabcd', 'xyABCD'),
+        (HighlightedString('abcd', [slice(4, 4)]), 'abcdxy', 'ABCDxy'),
+        (HighlightedString('abcd', [slice(2, 2)]), 'abxycd', 'ABxyCD'),
         (HighlightedString('abcd', [slice(1, 3)]), 'axbcyd', 'AxBCyD'),
+        (HighlightedString('abcd', [slice(0, 0), slice(0, 0)]), 'xyxyabcd', 'xyxyABCD'),
         (HighlightedString('abcd', [slice(1, 2), slice(2, 3)]), 'axbyxcyd', 'AxByxCyD'),
+        (HighlightedString('abcd', [slice(2, 3), slice(1, 2)]), 'axbyxcyd', 'AxByxCyD'),
         (HighlightedString('abcd', [slice(1, 2), slice(3, 4)]), 'axbycxdy', 'AxByCxDy'),
         (HighlightedString('abcd', [slice(0, 1), slice(2, 3)]), 'xaybxcyd', 'xAyBxCyD'),
     ],

@@ -171,8 +171,38 @@ class HighlightedString:
     highlights: Sequence[slice] = ()
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'highlights', tuple(self.highlights))
-        # TODO: slice validation
+        for highlight in self.highlights:
+            reason = ''
+
+            if highlight.start is None or highlight.stop is None:
+                reason = 'start and stop must not be None'
+            elif highlight.step is not None:
+                reason = 'step must be None'
+            elif highlight.start < 0 or highlight.stop < 0:
+                reason = 'start and stop must be equal to or greater than 0'
+            elif highlight.start > len(self.value) or highlight.stop > len(self.value):
+                reason = (
+                    'start and stop must be less than or equal to the string length'
+                )
+            elif highlight.start > highlight.stop:
+                reason = 'start must be not be greater than stop'
+
+            if reason:
+                raise ValueError(f'invalid highlight: {reason}: {highlight}')
+
+        highlights = tuple(sorted(self.highlights))
+
+        prev_highlight = None
+        for highlight in highlights:
+            if not prev_highlight:
+                prev_highlight = highlight
+                continue
+            if prev_highlight.stop > highlight.start:
+                raise ValueError(
+                    f'highlights must not overlap: {prev_highlight}, {highlight}'
+                )
+
+        object.__setattr__(self, 'highlights', highlights)
 
     def __str__(self) -> str:
         return self.value
@@ -235,8 +265,6 @@ class HighlightedString:
     ) -> str:
         def inner() -> Iterable[str]:
             for index, part in enumerate(self.split()):
-                if not part:
-                    continue
                 if index % 2 == 1:
                     yield before
                 if func:
