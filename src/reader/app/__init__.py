@@ -28,7 +28,6 @@ from reader import EntrySearchResult
 from reader import make_reader
 from reader import ParseError
 from reader import ReaderError
-from reader.core.search import apply_highlights
 from reader.plugins import Loader
 from reader.plugins import LoaderError
 
@@ -72,7 +71,7 @@ def highlighted(string):
     # needs to be marked as safe so we don't need to do it everywhere in the template
     # TODO: maybe use something "more semantic" than <b> (CSS needs changing too if so)
     return markupsafe.Markup(
-        apply_highlights(string, '<b>', '</b>', lambda s: str(markupsafe.escape(s)))
+        string.apply('<b>', '</b>', lambda s: str(markupsafe.escape(s)))
     )
 
 
@@ -88,7 +87,7 @@ class EntryProxy:
     def title(self):
         highlight = self._search_result.metadata.get('.title')
         if highlight:
-            return highlighted(highlight)
+            return str(highlight)
         return None
 
     @property
@@ -108,7 +107,7 @@ class EntryProxy:
         for path, highlight in self._search_result.content.items():
             # TODO: find a more correct way to match .content[0].value
             if path.startswith('.content[') and path.endswith('].value'):
-                rv.append(Content(highlight.value, 'text/plain'))
+                rv.append(Content(str(highlight), 'text/plain'))
                 rv.append(Content(highlighted(highlight), 'text/html'))
         return rv
 
@@ -125,7 +124,7 @@ class FeedProxy:
     def title(self):
         highlight = self._search_result.metadata.get('.feed.title')
         if highlight:
-            return highlighted(highlight)
+            return str(highlight)
         return self._entry.feed.title
 
 

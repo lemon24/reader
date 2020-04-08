@@ -2,14 +2,12 @@ import functools
 import json
 import logging
 import random
-import re
 import sqlite3
 import string
 import warnings
 from collections import OrderedDict
 from types import MappingProxyType
 from typing import Any
-from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import Optional
@@ -463,16 +461,19 @@ class Search:
 
                 metadata = {}
                 if title:
-                    metadata['.title'] = extract_highlights(
+                    metadata['.title'] = HighlightedString.extract(
                         title, before_mark, after_mark
                     )
                 if feed_title:
                     metadata[
                         '.feed.title' if not is_feed_user_title else '.feed.user_title'
-                    ] = extract_highlights(feed_title, before_mark, after_mark)
+                    ] = HighlightedString.extract(feed_title, before_mark, after_mark)
 
                 rv_content: Dict[str, HighlightedString] = OrderedDict(
-                    (c['path'], extract_highlights(c['value'], before_mark, after_mark))
+                    (
+                        c['path'],
+                        HighlightedString.extract(c['value'], before_mark, after_mark),
+                    )
                     for c in content
                     if c['path']
                 )
@@ -601,87 +602,6 @@ class Search:
         log.debug("_search_entries query\n%s\n", query)
 
         return query
-
-
-# TODO: should these be HighlightedString methods?
-
-
-def extract_highlights(text: str, before: str, after: str) -> HighlightedString:
-    """
-    >>> extract_highlights( '>one< two >three< four', '>', '<')
-    HighlightedString(value='one two three four', highlights=[slice(0, 3, None), slice(8, 13, None)])
-
-    """
-    pattern = f"({'|'.join(re.escape(s) for s in (before, after))})"
-
-    parts = []
-    slices = []
-
-    index = 0
-    start = None
-
-    for part in re.split(pattern, text):
-        if part == before:
-            if start is not None:
-                raise ValueError("highlight start marker in highlight")
-            start = index
-            continue
-
-        if part == after:
-            if start is None:
-                raise ValueError("unmatched highlight end marker")
-            slices.append(slice(start, index))
-            start = None
-            continue
-
-        parts.append(part)
-        index += len(part)
-
-    if start is not None:
-        raise ValueError("highlight is never closed")
-
-    return HighlightedString(''.join(parts), tuple(slices))
-
-
-def split_highlights(string: HighlightedString) -> Iterable[str]:
-    """Given a HighlightedString, split it into parts.
-
-    In the resulting iterable, strings on even positions are highlighted,
-    and strings on odd position are not highlighted.
-
-    Note: This does not check for improper highlight slices
-    (overlapping, with .start > .stop, or with .step set).
-
-    """
-    start = 0
-
-    for highlight in string.highlights:
-        yield string.value[start : highlight.start]
-        yield string.value[highlight]
-        start = highlight.stop
-
-    yield string.value[start:]
-
-
-def apply_highlights(
-    string: HighlightedString,
-    before: str,
-    after: str,
-    func: Optional[Callable[[str], str]] = None,
-) -> str:
-    def inner() -> Iterable[str]:
-        for index, part in enumerate(split_highlights(string)):
-            if not part:
-                continue
-            if index % 2 == 1:
-                yield before
-            if func:
-                part = func(part)
-            yield part
-            if index % 2 == 1:
-                yield after
-
-    return ''.join(inner())
 
 
 def json_object_get(object_str: str, key: str) -> Any:

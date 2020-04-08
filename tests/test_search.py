@@ -8,10 +8,7 @@ from reader import HighlightedString
 from reader import InvalidSearchQueryError
 from reader import SearchError
 from reader import StorageError
-from reader.core.search import apply_highlights
-from reader.core.search import extract_highlights
 from reader.core.search import Search
-from reader.core.search import split_highlights
 from reader.core.search import strip_html
 
 
@@ -183,81 +180,6 @@ def test_invalid_search_query_error(storage, query):
 
 
 # TODO: test FTS5 column names
-
-
-@pytest.mark.parametrize(
-    'input, value, highlights',
-    [
-        ('', '', []),
-        (' one ', ' one ', []),
-        ('\t >one\n< ', '\t one\n ', ['one\n']),
-        ('>one< two >three< four', 'one two three four', ['one', 'three']),
-        ('one >two< three >four<', 'one two three four', ['two', 'four']),
-    ],
-)
-def test_extract_highlights(input, value, highlights):
-    string = extract_highlights(input, '>', '<')
-    assert string.value == value
-    for hl in string.highlights:
-        assert hl.start is not None
-        assert hl.stop is not None
-        assert hl.step is None
-    assert [string.value[hl] for hl in string.highlights] == highlights
-
-
-@pytest.mark.parametrize('input', ['>one', '>one >two<<', '<two', 'one>', 'two<'])
-def test_extract_highlights_errors(input):
-    with pytest.raises(ValueError):
-        extract_highlights(input, '>', '<')
-
-
-@pytest.mark.parametrize(
-    'string, expected',
-    [
-        (HighlightedString(), ['']),
-        (HighlightedString('abcd'), ['abcd']),
-        (HighlightedString('abcd', [slice(0, 4)]), ['', 'abcd', '']),
-        (HighlightedString('abcd', [slice(1, 3)]), ['a', 'bc', 'd']),
-        (
-            HighlightedString('abcd', [slice(1, 2), slice(2, 3)]),
-            ['a', 'b', '', 'c', 'd'],
-        ),
-        (
-            HighlightedString('abcd', [slice(1, 2), slice(3, 4)]),
-            ['a', 'b', 'c', 'd', ''],
-        ),
-        (
-            HighlightedString('abcd', [slice(0, 1), slice(2, 3)]),
-            ['', 'a', 'b', 'c', 'd'],
-        ),
-        (
-            HighlightedString(
-                'one two three four', [slice(0, 3, None), slice(8, 13, None)]
-            ),
-            ['', 'one', ' two ', 'three', ' four'],
-        ),
-    ],
-)
-def test_split_highlights(string, expected):
-    assert list(split_highlights(string)) == expected
-
-
-@pytest.mark.parametrize(
-    'string, expected, expected_upper',
-    [
-        (HighlightedString(), '', ''),
-        (HighlightedString('abcd'), 'abcd', 'ABCD'),
-        (HighlightedString('abcd', [slice(0, 4)]), 'xabcdy', 'xABCDy'),
-        (HighlightedString('abcd', [slice(1, 3)]), 'axbcyd', 'AxBCyD'),
-        (HighlightedString('abcd', [slice(1, 2), slice(2, 3)]), 'axbyxcyd', 'AxByxCyD'),
-        (HighlightedString('abcd', [slice(1, 2), slice(3, 4)]), 'axbycxdy', 'AxByCxDy'),
-        (HighlightedString('abcd', [slice(0, 1), slice(2, 3)]), 'xaybxcyd', 'xAyBxCyD'),
-    ],
-)
-def test_apply_highlights(string, expected, expected_upper):
-    assert apply_highlights(string, '', '') == string.value
-    assert apply_highlights(string, 'x', 'y') == expected
-    assert apply_highlights(string, 'x', 'y', str.upper) == expected_upper
 
 
 def test_sqlite3_json_extract_non_bmp_character_bug_workaround(reader):

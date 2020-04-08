@@ -1,8 +1,10 @@
 import dataclasses
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import List
@@ -152,8 +154,15 @@ class Enclosure(_namedtuple_compat):
     length: Optional[int] = None
 
 
+_HS = TypeVar('_HS', bound='HighlightedString')
+
+
 @dataclass(frozen=True)
 class HighlightedString:
+
+    # TODO: better docs
+    # TODO: show if we're at the start/end of the value
+    # TODO: should this subclass str? don't know how to handle the slices
 
     #: The string value.
     value: str = ''
@@ -161,8 +170,82 @@ class HighlightedString:
     #: Highlighted parts.
     highlights: Sequence[slice] = ()
 
-    # TODO: better docs
-    # TODO: show if we're at the start/end of the value
+    def __post_init__(self) -> None:
+        object.__setattr__(self, 'highlights', tuple(self.highlights))
+        # TODO: slice validation
+
+    def __str__(self) -> str:
+        return self.value
+
+    @classmethod
+    def extract(cls: Type[_HS], text: str, before: str, after: str) -> _HS:
+        """
+        >>> HighlightedString.extract( '>one< two >three< four', '>', '<')
+        HighlightedString(value='one two three four', highlights=(slice(0, 3, None), slice(8, 13, None)))
+
+        """
+        pattern = f"({'|'.join(re.escape(s) for s in (before, after))})"
+
+        parts = []
+        slices = []
+
+        index = 0
+        start = None
+
+        for part in re.split(pattern, text):
+            if part == before:
+                if start is not None:
+                    raise ValueError("highlight start marker in highlight")
+                start = index
+                continue
+
+            if part == after:
+                if start is None:
+                    raise ValueError("unmatched highlight end marker")
+                slices.append(slice(start, index))
+                start = None
+                continue
+
+            parts.append(part)
+            index += len(part)
+
+        if start is not None:
+            raise ValueError("highlight is never closed")
+
+        return cls(''.join(parts), tuple(slices))
+
+    def split(self) -> Iterable[str]:
+        """Given a HighlightedString, split it into parts.
+
+        In the resulting iterable, strings on even positions are highlighted,
+        and strings on odd position are not highlighted.
+
+        """
+        start = 0
+
+        for highlight in self.highlights:
+            yield self.value[start : highlight.start]
+            yield self.value[highlight]
+            start = highlight.stop
+
+        yield self.value[start:]
+
+    def apply(
+        self, before: str, after: str, func: Optional[Callable[[str], str]] = None,
+    ) -> str:
+        def inner() -> Iterable[str]:
+            for index, part in enumerate(self.split()):
+                if not part:
+                    continue
+                if index % 2 == 1:
+                    yield before
+                if func:
+                    part = func(part)
+                yield part
+                if index % 2 == 1:
+                    yield after
+
+        return ''.join(inner())
 
 
 @dataclass(frozen=True)
