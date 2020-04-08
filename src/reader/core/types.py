@@ -160,14 +160,15 @@ _HS = TypeVar('_HS', bound='HighlightedString')
 @dataclass(frozen=True)
 class HighlightedString:
 
-    # TODO: better docs
-    # TODO: show if we're at the start/end of the value
-    # TODO: should this subclass str? don't know how to handle the slices
+    """A string that has some of its parts highlighted."""
 
-    #: The string value.
+    # TODO: show if we're at the start/end of the value
+
+    #: The underlying string.
     value: str = ''
 
-    #: Highlighted parts.
+    #: The highlights; non-overlapping slices with positive start/stop
+    #: and None step.
     highlights: Sequence[slice] = ()
 
     def __post_init__(self) -> None:
@@ -209,9 +210,18 @@ class HighlightedString:
 
     @classmethod
     def extract(cls: Type[_HS], text: str, before: str, after: str) -> _HS:
-        """
-        >>> HighlightedString.extract( '>one< two >three< four', '>', '<')
-        HighlightedString(value='one two three four', highlights=(slice(0, 3, None), slice(8, 13, None)))
+        """Extract highlights with before/after markers from text.
+
+        >>> HighlightedString.extract( '>one< two', '>', '<')
+        HighlightedString(value='one two', highlights=(slice(0, 3, None),))
+
+        Args:
+            text (str): The original text, with highlights marked by ``before`` and ``after``.
+            before (str): Highlight start marker.
+            after (str): Highlight stop marker.
+
+        Returns:
+            HighlightedString: A highlighted string.
 
         """
         pattern = f"({'|'.join(re.escape(s) for s in (before, after))})"
@@ -245,10 +255,14 @@ class HighlightedString:
         return cls(''.join(parts), tuple(slices))
 
     def split(self) -> Iterable[str]:
-        """Given a HighlightedString, split it into parts.
+        """Split the highlighted string into parts.
 
-        In the resulting iterable, strings on even positions are highlighted,
-        and strings on odd position are not highlighted.
+        >>> list(HighlightedString('abcd', [slice(1, 3)]))
+        ['a', 'bc', 'd']
+
+        Yields:
+            str: The parts. Parts with even indexes are highlighted,
+            parts with odd indexes are not.
 
         """
         start = 0
@@ -263,6 +277,26 @@ class HighlightedString:
     def apply(
         self, before: str, after: str, func: Optional[Callable[[str], str]] = None,
     ) -> str:
+        """Apply before/end markers on the highlighted string.
+
+        The opposite of :meth:`extract`.
+
+        >>> HighlightedString('abcd', [slice(1, 3)]).apply('>', '<')
+        'a>bc<d'
+        >>> HighlightedString('abcd', [slice(1, 3)]).apply('>', '<', str.upper)
+        'A>BC<D'
+
+        Args:
+            before (str): Highlight start marker.
+            after (str): Highlight stop marker.
+            func (callable((str), str) or none): If given, a function
+                to apply to the string parts before adding the markers.
+
+        Returns:
+            str: The string, with highlights marked by ``before`` and ``after``.
+
+        """
+
         def inner() -> Iterable[str]:
             for index, part in enumerate(self.split()):
                 if index % 2 == 1:
