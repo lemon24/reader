@@ -75,69 +75,167 @@ class Feed(_namedtuple_compat):
     user_title: Optional[str] = None
 
 
+# The Entry version we're giving the users (Entry) has stricter types than
+# the one we use internally (ParsedEntry); the natural thing to use here is
+# generics.
+#
+# But, we need to please Python, mypy and Sphinx all at the same time.
+#
+# Things I tried:
+#
+# * Plain type aliases ("Entry = _Entry[datetime]") break Sphinx (no docs
+#   get generated); managed to kinda make this work with a few hacks
+#   and setting Entry.__doc__ by hand (below).
+#
+# * Subclasses of any kind break Sphinx because of
+#   <https://github.com/sphinx-doc/sphinx/issues/741>.
+#
+#   Also, if we do use subclasses, we have to re-implement __eq__,
+#   because the one we get from dataclass only works with the exact type.
+#
+# * Making ParsedEntry a subclass of Entry and changing the type of .updated
+#   (no generics) breaks mypy, because child members must have the same
+#   type as in the parent.
+#
+# * Creating ParsedEntry dynamically with dataclasses.make_dataclass()
+#   confuses mypy; may be fixed in <https://github.com/python/mypy/issues/6063>.
+#
+# * Modifying the source of Entry to create ParsedEntry via exec()
+#   also confuses mypy (it's even more magic).
+#
+# Things I did not try:
+#
+# * Duplicating the full definition of Entry into ParsedEntry. OTOH, we're
+#   already partly doing this in the docstring we set by hand; one could argue
+#   that duplicating the definition is better than the hacks we do bleow.
+
+
 _EntryUpdatedType = TypeVar('_EntryUpdatedType', datetime, Optional[datetime])
 
 
 @dataclass(frozen=True)
 class _Entry(Generic[_EntryUpdatedType], _namedtuple_compat):
 
-    """Data type representing an entry."""
+    """Generic entry type.
 
-    #: Entry identifier.
+    There are some differences between the entries we use internally
+    and the ones we return to people.
+
+    See Entry.__doc__ below for what the attributes mean.
+
+    """
+
     id: str
 
     # Entries returned by the parser have updated Optional[Datetime];
-    # before storing an entry, we make sure it's datetime.
-
-    #: The date the entry was last updated.
+    # before storing an entry, it is always datetime.
     updated: _EntryUpdatedType
 
-    #: The title of the entry.
     title: Optional[str] = None
-
-    #: The URL of a page associated with the entry.
     link: Optional[str] = None
-
-    #: The author of the feed.
     author: Optional[str] = None
-
-    #: The date the entry was first published.
     published: Optional[datetime] = None
-
-    #: A summary of the entry.
     summary: Optional[str] = None
-
-    #: Full content of the entry.
-    #: A sequence of :class:`Content` objects.
     content: Sequence['Content'] = ()
-
-    #: External files associated with the entry.
-    #: A sequence of :class:`Enclosure` objects.
     enclosures: Sequence['Enclosure'] = ()
-
-    #: Whether the entry was read or not.
     read: bool = False
-
-    #: Whether the entry is important or not.
     important: bool = False
 
     # TODO: Model .feed always being set for get_entries() entries through typing.
-
-    #: The entry's feed.
     feed: Optional[Feed] = None
 
 
-# FIXME: This breaks Sphinx autoclass.
-#
-# We can't use subclasses because of https://github.com/sphinx-doc/sphinx/issues/741
-#
-# If we do use subclasses, we have to re-implement __eq__, because the one we get
-# from dataclass only works with the exact type.
-#
-# Using any kind of docstrings on the Entry alias below does not work
-# (tried setting __doc__ and Sphinx #: and """ comments.
-#
 Entry = _Entry[datetime]
+
+# If not set, Sphinx will not pick up none of __doc__ / '#:' before comments /
+# '"""' after comments.
+#
+# If set to "something", the Sphinx docstrings is "alias of 'something'",
+# likely because of <https://github.com/sphinx-doc/sphinx/issues/4422>.
+#
+Entry.__name__ = 'Entry'
+
+# If not set, we get Sphinx warnings.
+#
+# With object.__mro__ we lose the signature in the Sphinx doc.
+# If set to _Entry.__mro__ we get the signature of typing._GenericAlias.
+# Setting __signature__ = inspect.signature(_Entry) also didn't work.
+#
+Entry.__mro__ = object.__mro__
+
+# This works for Sphinx, but help(Entry) remains broken.
+#
+Entry.__doc__ = """
+
+Data type representing an entry.
+
+.. attribute:: id
+    :type: str
+
+    Entry identifier.
+
+.. attribute:: updated
+    :type: datetime
+
+    The date the entry was last updated.
+
+.. attribute:: title
+    :type: Optional[str]
+    :value: None
+
+    The title of the entry.
+
+.. attribute:: link
+    :type: Optional[str]
+    :value: None
+
+    The URL of a page associated with the entry.
+
+.. attribute:: author
+    :type: Optional[str]
+    :value: None
+
+    The author of the feed.
+
+.. attribute:: published
+    :type: Optional[datetime]
+    :value: None
+
+    The date the entry was first published.
+
+.. attribute:: summary
+    :type: Optional[str]
+    :value: None
+
+    A summary of the entry.
+
+.. attribute:: content
+    :type: Sequence['Content']
+    :value: ()
+
+    Full content of the entry.
+    A sequence of :class:`Content` objects.
+
+.. attribute:: enclosures
+    :type: Sequence['Enclosure']
+    :value: ()
+
+    External files associated with the entry.
+    A sequence of :class:`Enclosure` objects.
+
+.. attribute:: read
+    :type: bool
+    :value: False
+
+    Whether the entry was read or not.
+
+.. attribute:: important
+    :type: bool
+    :value: False
+
+    Whether the entry is important or not.
+
+"""
 
 
 @dataclass(frozen=True)
