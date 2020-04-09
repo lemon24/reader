@@ -108,6 +108,9 @@ class Feed(_namedtuple_compat):
 # * Duplicating the full definition of Entry into ParsedEntry. OTOH, we're
 #   already partly doing this in the docstring we set by hand; one could argue
 #   that duplicating the definition is better than the hacks we do bleow.
+#
+# Update: I cut https://github.com/sphinx-doc/sphinx/issues/7450
+# for better generic handling.
 
 
 _EntryUpdatedType = TypeVar('_EntryUpdatedType', datetime, Optional[datetime])
