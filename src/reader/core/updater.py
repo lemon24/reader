@@ -15,7 +15,7 @@ from .types import Feed
 from .types import FeedForUpdate
 from .types import FeedUpdateIntent
 from .types import ParsedEntry
-from .types import ParseResult
+from .types import ParsedFeed
 from .types import UpdatedEntry
 from .types import UpdateResult
 
@@ -151,7 +151,7 @@ class Updater:
 
     def get_feed_to_update(
         self,
-        parse_result: ParseResult,
+        parsed_feed: ParsedFeed,
         entries_to_update: Sequence[Tuple[EntryUpdateIntent, bool]],
     ) -> Optional[FeedUpdateIntent]:
         new_count = sum(bool(n) for _, n in entries_to_update)
@@ -165,13 +165,13 @@ class Updater:
         )
 
         feed_to_update: Optional[FeedUpdateIntent]
-        if self.should_update_feed(parse_result.feed):
+        if self.should_update_feed(parsed_feed.feed):
             feed_to_update = FeedUpdateIntent(
                 self.url,
                 self.now,
-                parse_result.feed,
-                parse_result.http_etag,
-                parse_result.http_last_modified,
+                parsed_feed.feed,
+                parsed_feed.http_etag,
+                parsed_feed.http_last_modified,
             )
         elif new_count or updated_count:
             feed_to_update = FeedUpdateIntent(self.url, self.now)
@@ -181,9 +181,9 @@ class Updater:
         return feed_to_update
 
     def update(
-        self, parse_result: Optional[ParseResult], storage: "Storage"
+        self, parsed_feed: Optional[ParsedFeed], storage: "Storage"
     ) -> UpdateResult:
-        if not parse_result:
+        if not parsed_feed:
             log.info("update feed %r: feed not modified, skipping", self.url)
             # The feed shouldn't be considered new anymore.
             storage.update_feed(FeedUpdateIntent(self.url, self.now))
@@ -191,17 +191,17 @@ class Updater:
 
         entries_to_update = list(
             self.get_entries_to_update(
-                self.get_entry_pairs(parse_result.entries, storage)
+                self.get_entry_pairs(parsed_feed.entries, storage)
             )
         )
-        feed_to_update = self.get_feed_to_update(parse_result, entries_to_update)
+        feed_to_update = self.get_feed_to_update(parsed_feed, entries_to_update)
 
         if entries_to_update:
             storage.add_or_update_entries(e for e, _ in entries_to_update)
         if feed_to_update:
             storage.update_feed(feed_to_update)
 
-        # if self.url != parse_result.feed.url, the feed was redirected.
+        # if self.url != parsed_feed.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
 
         return UpdateResult((UpdatedEntry(e.entry, n) for e, n in entries_to_update))

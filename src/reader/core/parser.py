@@ -22,7 +22,6 @@ from .types import Enclosure
 from .types import Feed
 from .types import ParsedEntry
 from .types import ParsedFeed
-from .types import ParseResult
 
 try:
     import feedparser.http as feedparser_http  # type: ignore
@@ -148,7 +147,7 @@ class Parser:
         url: str,
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
-    ) -> ParseResult:
+    ) -> ParsedFeed:
         url_split = urllib.parse.urlparse(url)
 
         if url_split.scheme in ('http', 'https'):
@@ -156,11 +155,11 @@ class Parser:
 
         return self._parse_file(url)
 
-    def _parse_file(self, path: str) -> ParseResult:
+    def _parse_file(self, path: str) -> ParsedFeed:
         # TODO: What about untrusted input?
         result = feedparser.parse(path)
         feed, entries = _process_feed(path, result)
-        return ParseResult(ParsedFeed(feed, None, None), entries)
+        return ParsedFeed(feed, entries)
 
     def make_session(self) -> requests.Session:
         session = requests.Session()
@@ -173,7 +172,7 @@ class Parser:
         url: str,
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
-    ) -> ParseResult:
+    ) -> ParsedFeed:
         """
         Following the implementation in:
         https://github.com/kurtmckee/feedparser/blob/develop/feedparser/http.py
@@ -253,4 +252,4 @@ class Parser:
         http_last_modified = response.headers.get('Last-Modified', http_last_modified)
 
         feed, entries = _process_feed(url, result)
-        return ParseResult(ParsedFeed(feed, http_etag, http_last_modified), entries)
+        return ParsedFeed(feed, entries, http_etag, http_last_modified)

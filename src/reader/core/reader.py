@@ -32,7 +32,7 @@ from .types import FeedForUpdate
 from .types import FeedInput
 from .types import FeedSortOrder
 from .types import JSONType
-from .types import ParseResult
+from .types import ParsedFeed
 from .updater import Updater
 from .utils import _Missing
 from .utils import _missing
@@ -248,13 +248,13 @@ class Reader:
             #
             # Without the cast, we get:
             #
-            #   src/reader/core/reader.py:250: error: No overload variant of "next" matches argument type "Iterable[Tuple[FeedForUpdate, Optional[ParseResult]]]"
+            #   src/reader/core/reader.py:250: error: No overload variant of "next" matches argument type "Iterable[Tuple[FeedForUpdate, Optional[ParsedFeed]]]"
             #
             # https://github.com/python/mypy/issues/1317
             # https://github.com/python/mypy/issues/6697
             #
             it = cast(
-                Iterator[Tuple[FeedForUpdate, Optional[ParseResult]]],
+                Iterator[Tuple[FeedForUpdate, Optional[ParsedFeed]]],
                 map(
                     self._parse_feed_for_update,
                     self._storage.get_feeds_for_update(new_only=new_only),
@@ -299,7 +299,7 @@ class Reader:
 
     def _parse_feed_for_update(
         self, feed: FeedForUpdate
-    ) -> Tuple[FeedForUpdate, Optional[ParseResult]]:
+    ) -> Tuple[FeedForUpdate, Optional[ParsedFeed]]:
         # FIXME: Updater is poorly made, we shold not have to do this ಠ_ಠ
         feed = Updater.process_old_feed(feed)
         try:
@@ -314,7 +314,7 @@ class Reader:
     def _update_feed(
         self,
         feed_for_update: FeedForUpdate,
-        parse_result: Optional[ParseResult],
+        parse_result: Optional[ParsedFeed],
         global_now: Optional[datetime.datetime] = None,
     ) -> None:
         now = self._now()

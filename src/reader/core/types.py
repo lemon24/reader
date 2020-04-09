@@ -404,13 +404,6 @@ def entry_argument(entry: EntryInput) -> Tuple[str, str]:
 # https://github.com/lemon24/reader/issues/111
 
 
-class ParsedFeed(NamedTuple):
-
-    feed: Feed
-    http_etag: Optional[str]
-    http_last_modified: Optional[str]
-
-
 @dataclass(frozen=True)
 class ParsedEntry(_namedtuple_compat):
 
@@ -458,24 +451,12 @@ class ParsedEntry(_namedtuple_compat):
         return NotImplemented
 
 
-class ParseResult(NamedTuple):
+class ParsedFeed(NamedTuple):
 
-    parsed_feed: ParsedFeed
+    feed: Feed
     entries: Iterable[ParsedEntry]
-
-    # compatibility / convenience
-
-    @property
-    def feed(self) -> Feed:
-        return self.parsed_feed.feed
-
-    @property
-    def http_etag(self) -> Optional[str]:
-        return self.parsed_feed.http_etag
-
-    @property
-    def http_last_modified(self) -> Optional[str]:
-        return self.parsed_feed.http_last_modified
+    http_etag: Optional[str] = None
+    http_last_modified: Optional[str] = None
 
 
 class FeedForUpdate(NamedTuple):

@@ -114,7 +114,7 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(data_dir.join(feed_filename + '.py').read(), expected)
 
-    (feed, _, _), entries = parse(feed_url)
+    feed, entries, _, _ = parse(feed_url)
     entries = list(entries)
 
     assert feed == expected['feed']
@@ -241,18 +241,18 @@ def test_parse_returns_etag_last_modified(
     make_http_etag_last_modified_url.last_modified = 'last_modified'
 
     feed_url = make_http_etag_last_modified_url(data_dir.join('full.' + feed_type))
-    (_, etag, last_modified), _ = parse(feed_url)
+    _, _, etag, last_modified = parse(feed_url)
 
     assert etag == 'etag'
     assert last_modified == 'last_modified'
 
     feed_url = make_http_url(data_dir.join('full.atom'))
-    (_, etag, last_modified), _ = parse(feed_url)
+    _, _, etag, last_modified = parse(feed_url)
 
     assert etag == last_modified == None
 
     feed_url = make_relative_path_url(data_dir.join('full.' + feed_type))
-    (_, etag, last_modified), _ = parse(feed_url)
+    _, _, etag, last_modified = parse(feed_url)
 
     assert etag == last_modified == None
 
@@ -272,7 +272,7 @@ def test_parse_local_timezone(monkeypatch, request, parse, tz, data_dir):
     request.addfinalizer(time.tzset)
     monkeypatch.setenv('TZ', tz)
     time.tzset()
-    feed = parse(str(feed_path))[0][0]
+    feed, _, _, _ = parse(str(feed_path))
     assert feed.updated == expected['feed'].updated
 
 
@@ -299,7 +299,7 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
     parse.response_plugins.append(do_nothing_plugin)
     parse.response_plugins.append(rewrite_to_empty_plugin)
 
-    (feed, _, _), _ = parse(feed_url)
+    feed, _, _, _ = parse(feed_url)
     assert do_nothing_plugin.called
     assert rewrite_to_empty_plugin.called
     assert feed.link is not None

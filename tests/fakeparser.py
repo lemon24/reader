@@ -7,7 +7,6 @@ from reader import ParseError
 from reader.core.exceptions import NotModified
 from reader.core.types import entry_argument
 from reader.core.types import ParsedFeed
-from reader.core.types import ParseResult
 
 
 def _make_feed(number, updated=None, **kwargs):
@@ -59,9 +58,11 @@ class Parser:
                 break
         else:
             raise RuntimeError("unkown feed: {}".format(url))
-        return ParseResult(
-            ParsedFeed(feed, self.http_etag, self.http_last_modified),
+        return ParsedFeed(
+            feed,
             self.entries[feed_number].values(),
+            self.http_etag,
+            self.http_last_modified,
         )
 
 
