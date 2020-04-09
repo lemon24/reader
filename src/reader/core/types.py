@@ -43,6 +43,7 @@ class _namedtuple_compat:
 
     _replace = dataclasses.replace
 
+    # FIXME: this recurses, unlike namedtuple._asdict; remove it
     _asdict = dataclasses.asdict
 
 
@@ -78,16 +79,13 @@ class Entry(_namedtuple_compat):
 
     """Data type representing an entry."""
 
+    # WARNING: When changing attributes, keep Entry and ParsedEntry in sync.
+
     #: Entry identifier.
     id: str
 
-    # Entries returned by the parser always have updated set.
-    # I tried modeling this through typing, but it's too complicated.
-    # TODO: Make typing enforce updated is always set.
-    # TODO: When can be Entry.updated be None anyway?
-
     #: The date the entry was last updated.
-    updated: Optional[datetime]
+    updated: datetime
 
     #: The title of the entry.
     title: Optional[str] = None
@@ -413,10 +411,57 @@ class ParsedFeed(NamedTuple):
     http_last_modified: Optional[str]
 
 
+@dataclass(frozen=True)
+class ParsedEntry(_namedtuple_compat):
+
+    """Like Entry, but some attributes are Optional.
+
+    The natural thing to use would have been generics, but pleasing Python,
+    mypy and Sphinx all at the same time is not possible at the moment,
+    and the workarounds are just as bad or worse.
+
+    We can't use subclassing because the attribute types become less specific.
+
+    An implementation using generics is available here:
+    https://github.com/lemon24/reader/blob/62eb72563b94d78d8860519424103e3c3c1c013d/src/reader/core/types.py#L78-L241
+
+    We should be able to use it once/if this is resolved:
+    https://github.com/sphinx-doc/sphinx/issues/7450
+
+    """
+
+    # WARNING: When changing attributes, keep Entry and ParsedEntry in sync.
+
+    id: str
+
+    # Entries returned by the parser have .updated Optional[Datetime];
+    # it is the updater that ensures .updated is never None.
+    updated: Optional[datetime]
+
+    title: Optional[str] = None
+    link: Optional[str] = None
+    author: Optional[str] = None
+    published: Optional[datetime] = None
+    summary: Optional[str] = None
+    content: Sequence['Content'] = ()
+    enclosures: Sequence['Enclosure'] = ()
+    read: bool = False
+    important: bool = False
+    feed: Optional[Feed] = None
+
+    def __eq__(self, other: object) -> bool:
+        # We'd have to implement __eq__ even if ParsedEntry would be a subclass
+        # of Entry or the other way around; the __eq__ we get from dataclass
+        # considers dataclasses equal only if they have exactly the same type.
+        if isinstance(other, (ParsedEntry, Entry)):
+            return self.__dict__ == other.__dict__
+        return NotImplemented
+
+
 class ParseResult(NamedTuple):
 
     parsed_feed: ParsedFeed
-    entries: Iterable[Entry]
+    entries: Iterable[ParsedEntry]
 
     # compatibility / convenience
 
