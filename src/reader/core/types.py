@@ -429,7 +429,7 @@ class ParsedEntry(_namedtuple_compat):
 
     # Entries returned by the parser have .updated Optional[Datetime];
     # it is the updater that ensures .updated is never None.
-    updated: Optional[datetime]
+    updated: Optional[datetime] = None
 
     title: Optional[str] = None
     link: Optional[str] = None

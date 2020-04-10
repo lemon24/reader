@@ -1,13 +1,16 @@
 from dataclasses import dataclass
+from types import SimpleNamespace
 
 import pytest
 
 from reader import Entry
 from reader import Feed
 from reader.core.types import _namedtuple_compat
+from reader.core.types import Entry
 from reader.core.types import entry_argument
 from reader.core.types import feed_argument
 from reader.core.types import HighlightedString
+from reader.core.types import ParsedEntry
 
 
 def test_namedtuple_compat():
@@ -53,6 +56,13 @@ def test_entry_argument():
         entry_argument(('a', 2))
     with pytest.raises(ValueError):
         entry_argument(('a', 'b', 'c'))
+
+
+def test_parsed_entry_eq():
+    assert Entry('id', None) == ParsedEntry('id')
+    assert ParsedEntry('id') == Entry('id', None)
+    assert ParsedEntry('id') != object()
+    assert ParsedEntry('id') != SimpleNamespace(**ParsedEntry('id').__dict__)
 
 
 @pytest.mark.parametrize(
