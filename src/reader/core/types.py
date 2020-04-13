@@ -5,6 +5,7 @@ from datetime import datetime
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Dict
 from typing import Generic
 from typing import Iterable
@@ -117,10 +118,17 @@ class Entry(_namedtuple_compat):
     #: Whether the entry is important or not.
     important: bool = False
 
-    # TODO: Model .feed always being set for get_entries() entries through typing.
+    # feed should not have a default, but I'd prefer objects that aren't
+    # entry data to be at the end, and dataclasses don't support keyword-only
+    # arguments yet.
+    #
+    # We could use a null object as the default (Feed('')), but None
+    # increases the chance we'll catch feed= not being set at runtime;
+    # we don't check for it in __post_init__ because it's still useful
+    # to have it None in tests. The cast is to please mypy.
 
     #: The entry's feed.
-    feed: Optional[Feed] = None
+    feed: Feed = cast(Feed, None)
 
 
 @dataclass(frozen=True)
