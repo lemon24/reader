@@ -1,11 +1,11 @@
 import threading
 from collections import OrderedDict
 
-from reader import Entry
 from reader import Feed
 from reader import ParseError
 from reader.core.exceptions import NotModified
 from reader.core.types import entry_argument
+from reader.core.types import EntryData
 from reader.core.types import ParsedFeed
 
 
@@ -20,7 +20,7 @@ def _make_feed(number, updated=None, **kwargs):
 
 
 def _make_entry(feed_number, number, updated, **kwargs):
-    return Entry(
+    return EntryData(
         # evals to tuple
         f'{feed_number}, {number}',
         updated,

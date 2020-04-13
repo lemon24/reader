@@ -23,6 +23,7 @@ from .search import Search
 from .storage import Storage
 from .types import Entry
 from .types import entry_argument
+from .types import EntryData
 from .types import EntryFilterOptions
 from .types import EntryInput
 from .types import EntrySearchResult
@@ -49,7 +50,7 @@ _T = TypeVar('_T')
 _U = TypeVar('_U')
 
 
-_PostEntryAddPluginType = Callable[['Reader', str, Entry], None]
+_PostEntryAddPluginType = Callable[['Reader', str, EntryData[datetime.datetime]], None]
 
 
 def make_reader(url: str) -> 'Reader':

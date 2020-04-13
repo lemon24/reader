@@ -19,8 +19,8 @@ from .exceptions import NotModified
 from .exceptions import ParseError
 from .types import Content
 from .types import Enclosure
-from .types import Feed
-from .types import ParsedEntry
+from .types import EntryData
+from .types import FeedData
 from .types import ParsedFeed
 
 try:
@@ -68,7 +68,7 @@ def _get_updated_published(
     return updated, published
 
 
-def _make_entry(entry: Any, is_rss: bool) -> ParsedEntry:
+def _make_entry(entry: Any, is_rss: bool) -> EntryData[Optional[datetime]]:
     assert entry.id
     updated, published = _get_updated_published(entry, is_rss)
 
@@ -87,7 +87,7 @@ def _make_entry(entry: Any, is_rss: bool) -> ParsedEntry:
                 del data['length']
         enclosures.append(Enclosure(**data))
 
-    return ParsedEntry(
+    return EntryData(
         entry.id,
         updated,
         entry.get('title'),
@@ -99,11 +99,12 @@ def _make_entry(entry: Any, is_rss: bool) -> ParsedEntry:
         tuple(enclosures),
         False,
         False,
-        None,
     )
 
 
-def _process_feed(url: str, d: Any) -> Tuple[Feed, Iterable[ParsedEntry]]:
+def _process_feed(
+    url: str, d: Any
+) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
 
     if d.get('bozo'):
         exception = d.get('bozo_exception')
@@ -115,7 +116,7 @@ def _process_feed(url: str, d: Any) -> Tuple[Feed, Iterable[ParsedEntry]]:
     is_rss = d.version.startswith('rss')
     updated, _ = _get_updated_published(d.feed, is_rss)
 
-    feed = Feed(
+    feed = FeedData(
         url,
         updated,
         d.feed.get('title'),

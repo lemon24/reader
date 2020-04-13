@@ -2,14 +2,16 @@ import datetime
 
 from reader import Content
 from reader import Enclosure
-from reader import Entry
-from reader import Feed
+from reader.core.types import EntryData
+from reader.core.types import FeedData
 
 
-feed = Feed(url='{}relative.atom'.format(url_base), link='{}file.html'.format(rel_base))
+feed = FeedData(
+    url='{}relative.atom'.format(url_base), link='{}file.html'.format(rel_base)
+)
 
 entries = [
-    Entry(
+    EntryData(
         id='urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a',
         updated=None,
         link='{}entries/entry.html'.format(rel_base),

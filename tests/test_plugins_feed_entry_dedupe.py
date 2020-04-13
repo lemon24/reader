@@ -107,7 +107,7 @@ def test_feed_entry_dedupe(reader, monkeypatch, tmpdir):
     reader.update_feeds()
 
     assert set(reader.get_entries()) == {
-        e._replace(feed=one)
+        e.as_entry(feed=one)
         for e in {
             # remain untouched
             old,

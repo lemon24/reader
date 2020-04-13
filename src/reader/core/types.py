@@ -6,6 +6,7 @@ from types import MappingProxyType
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import Generic
 from typing import Iterable
 from typing import List
 from typing import Mapping
@@ -79,7 +80,7 @@ class Entry(_namedtuple_compat):
 
     """Data type representing an entry."""
 
-    # WARNING: When changing attributes, keep Entry and ParsedEntry in sync.
+    # WARNING: When changing attributes, keep Entry and EntryData in sync.
 
     #: Entry identifier.
     id: str
@@ -403,33 +404,55 @@ def entry_argument(entry: EntryInput) -> Tuple[str, str]:
 # Private API
 # https://github.com/lemon24/reader/issues/111
 
+# structure similar to
+# https://github.com/lemon24/reader/issues/159#issuecomment-612512033
+
+
+class FeedData(Feed):
+
+    """Future-proofing alias."""
+
+    def as_feed(self) -> Feed:
+        """For testing."""
+        return Feed(**self.__dict__)
+
+
+_UpdatedType = TypeVar('_UpdatedType', datetime, Optional[datetime])
+
 
 @dataclass(frozen=True)
-class ParsedEntry(_namedtuple_compat):
+class EntryData(Generic[_UpdatedType], _namedtuple_compat):
 
-    """Like Entry, but some attributes are Optional.
+    """Like Entry, but .updated is less strict and .feed is missing.
 
     The natural thing to use would have been generics, but pleasing Python,
     mypy and Sphinx all at the same time is not possible at the moment,
     and the workarounds are just as bad or worse.
 
-    We can't use subclassing because the attribute types become less specific.
+    We should be able to use generics once/if this is resolved:
+    https://github.com/sphinx-doc/sphinx/issues/7450
+
+    ...however, it may be better to just have entry be a separate
+    plain dataclass -- help(Entry) works weird with concrete generics.
+
+    We can't use subclass Entry because the attribute types become less specific.
+
+    We can't use a subclass for the common attributes because it confuses
+    Sphinx: https://github.com/sphinx-doc/sphinx/issues/741
 
     An implementation using generics is available here:
     https://github.com/lemon24/reader/blob/62eb72563b94d78d8860519424103e3c3c1c013d/src/reader/core/types.py#L78-L241
 
-    We should be able to use it once/if this is resolved:
-    https://github.com/sphinx-doc/sphinx/issues/7450
-
     """
 
-    # WARNING: When changing attributes, keep Entry and ParsedEntry in sync.
+    # WARNING: When changing attributes, keep Entry and EntryData in sync.
 
+    # TODO: add .feed_url
     id: str
 
-    # Entries returned by the parser have .updated Optional[Datetime];
-    # it is the updater that ensures .updated is never None.
-    updated: Optional[datetime] = None
+    # Entries returned by the parser have .updated Optional[datetime];
+    # entries sent to the storage always have .updatd set (not optional).
+    updated: _UpdatedType
 
     title: Optional[str] = None
     link: Optional[str] = None
@@ -438,23 +461,22 @@ class ParsedEntry(_namedtuple_compat):
     summary: Optional[str] = None
     content: Sequence['Content'] = ()
     enclosures: Sequence['Enclosure'] = ()
+
+    # TODO: are.read and .important used? maybe delete them if not
     read: bool = False
     important: bool = False
-    feed: Optional[Feed] = None
 
-    def __eq__(self, other: object) -> bool:
-        # We'd have to implement __eq__ even if ParsedEntry would be a subclass
-        # of Entry or the other way around; the __eq__ we get from dataclass
-        # considers dataclasses equal only if they have exactly the same type.
-        if isinstance(other, (ParsedEntry, Entry)):
-            return self.__dict__ == other.__dict__
-        return NotImplemented
+    def as_entry(self, **kwargs: object) -> Entry:
+        """For testing."""
+        attrs = dict(self.__dict__)
+        attrs.update(kwargs)
+        return Entry(**attrs)
 
 
 class ParsedFeed(NamedTuple):
 
-    feed: Feed
-    entries: Iterable[ParsedEntry]
+    feed: FeedData
+    entries: Iterable[EntryData[Optional[datetime]]]
     http_etag: Optional[str] = None
     http_last_modified: Optional[str] = None
 
@@ -481,7 +503,7 @@ class FeedForUpdate(NamedTuple):
 
 class EntryForUpdate(NamedTuple):
 
-    """Update-relevant information about an exiting entry, from Storage."""
+    """Update-relevant information about an existing entry, from Storage."""
 
     #: The date the entry was last updated, according to the entry.
     updated: datetime
@@ -496,7 +518,7 @@ class FeedUpdateIntent(NamedTuple):
     #: The time at the start of updating this feed.
     last_updated: datetime
 
-    feed: Optional[Feed] = None
+    feed: Optional[FeedData] = None
     http_etag: Optional[str] = None
     http_last_modified: Optional[str] = None
 
@@ -507,9 +529,10 @@ class EntryUpdateIntent(NamedTuple):
 
     #: The feed URL.
     url: str
+    # TODO: delete .url after we add .feed_url to EntryData
 
     #: The entry.
-    entry: Entry
+    entry: EntryData[datetime]
 
     #: The time at the start of updating this feed (start of update_feed
     #: in update_feed, the start of each feed update in update_feeds).
@@ -526,7 +549,7 @@ class EntryUpdateIntent(NamedTuple):
 
 class UpdatedEntry(NamedTuple):
 
-    entry: Entry
+    entry: EntryData[datetime]
     new: bool
 
 

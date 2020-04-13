@@ -29,19 +29,19 @@ def test_update_stale(reader, call_update_method):
     reader.add_feed(feed.url)
 
     call_update_method(reader, feed.url)
-    assert set(reader.get_entries()) == {entry._replace(feed=feed)}
+    assert set(reader.get_entries()) == {entry.as_entry(feed=feed)}
 
     new_feed = parser.feed(1, datetime(2010, 1, 1), title="new feed title")
     new_entry = parser.entry(1, 1, datetime(2010, 1, 1), title="new entry title")
 
     call_update_method(reader, feed.url)
-    assert set(reader.get_entries()) == {entry._replace(feed=feed)}
+    assert set(reader.get_entries()) == {entry.as_entry(feed=feed)}
 
     parser.calls[:] = []
     reader._storage.mark_as_stale(feed.url)
     call_update_method(reader, feed.url)
     assert parser.calls == [(feed.url, None, None)]
-    assert set(reader.get_entries()) == {new_entry._replace(feed=new_feed)}
+    assert set(reader.get_entries()) == {new_entry.as_entry(feed=new_feed)}
 
 
 def test_update_parse(reader, call_update_method):
@@ -98,8 +98,8 @@ def test_post_entry_add_plugins(reader):
         (second_plugin, feed.url, two),
     ]
     assert set(reader.get_entries()) == {
-        one._replace(feed=feed),
-        two._replace(feed=feed),
+        one.as_entry(feed=feed),
+        two.as_entry(feed=feed),
     }
 
 

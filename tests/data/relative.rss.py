@@ -2,14 +2,16 @@ import datetime
 
 from reader import Content
 from reader import Enclosure
-from reader import Entry
-from reader import Feed
+from reader.core.types import EntryData
+from reader.core.types import FeedData
 
 
-feed = Feed(url='{}relative.rss'.format(url_base), link='{}file.html'.format(rel_base))
+feed = FeedData(
+    url='{}relative.rss'.format(url_base), link='{}file.html'.format(rel_base)
+)
 
 entries = [
-    Entry(
+    EntryData(
         id='7bd204c6-1655-4c27-aeee-53f933c5395f',
         updated=None,
         link='{}blog/post/1'.format(rel_base),

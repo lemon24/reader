@@ -30,7 +30,7 @@ def test_enclosure_dedupe(reader):
     enclosure_dedupe(reader)
 
     assert set(reader.get_entries()) == {
-        one._replace(feed=feed),
-        two._replace(feed=feed),
-        three._replace(feed=feed, enclosures=(Enclosure('href', 'text', 1),)),
+        one.as_entry(feed=feed),
+        two.as_entry(feed=feed),
+        three.as_entry(feed=feed, enclosures=(Enclosure('href', 'text', 1),)),
     }

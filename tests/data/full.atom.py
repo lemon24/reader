@@ -2,11 +2,11 @@ import datetime
 
 from reader import Content
 from reader import Enclosure
-from reader import Entry
-from reader import Feed
+from reader.core.types import EntryData
+from reader.core.types import FeedData
 
 
-feed = Feed(
+feed = FeedData(
     url='{}full.atom'.format(url_base),
     updated=datetime.datetime(2003, 12, 13, 18, 30, 2),
     title='Example Feed',
@@ -15,7 +15,7 @@ feed = Feed(
 )
 
 entries = [
-    Entry(
+    EntryData(
         id='urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a',
         updated=datetime.datetime(2003, 12, 13, 18, 30, 2),
         title='Atom-Powered Robots Run Amok',
@@ -45,7 +45,7 @@ entries = [
             ),
         ),
     ),
-    Entry(
+    EntryData(
         id='urn:uuid:00000000-cfb8-4ebb-aaaa-00000000000',
         updated=datetime.datetime(2003, 12, 13, 0, 0, 0),
         title='Atom-Powered Robots Run Amok Again',

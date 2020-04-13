@@ -8,13 +8,12 @@ from typing import Sequence
 from typing import Tuple
 from typing import TYPE_CHECKING
 
-from .types import Entry
+from .types import EntryData
 from .types import EntryForUpdate
 from .types import EntryUpdateIntent
 from .types import Feed
 from .types import FeedForUpdate
 from .types import FeedUpdateIntent
-from .types import ParsedEntry
 from .types import ParsedFeed
 from .types import UpdatedEntry
 from .types import UpdateResult
@@ -98,7 +97,7 @@ class Updater:
         return should_be_updated
 
     def should_update_entry(
-        self, new: ParsedEntry, old: Optional[EntryForUpdate]
+        self, new: EntryData[Optional[datetime]], old: Optional[EntryForUpdate]
     ) -> Tuple[Optional[datetime], bool]:
         def log_debug(msg: str, *args: Any) -> None:
             log.debug("update entry %r of feed %r: " + msg, new.id, self.url, *args)
@@ -123,8 +122,8 @@ class Updater:
         return (updated, True) if not old else (updated, False)
 
     def get_entry_pairs(
-        self, entries: Iterable[ParsedEntry], storage: "Storage"
-    ) -> Iterable[Tuple[ParsedEntry, Optional[EntryForUpdate]]]:
+        self, entries: Iterable[EntryData[Optional[datetime]]], storage: "Storage"
+    ) -> Iterable[Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]]:
         entries = list(entries)
         pairs = zip(
             entries, storage.get_entries_for_update([(self.url, e.id) for e in entries])
@@ -132,18 +131,23 @@ class Updater:
         return pairs
 
     def get_entries_to_update(
-        self, pairs: Iterable[Tuple[ParsedEntry, Optional[EntryForUpdate]]]
+        self,
+        pairs: Iterable[Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]],
     ) -> Iterable[Tuple[EntryUpdateIntent, bool]]:
         last_updated = self.now
         for feed_order, (new_entry, old_entry) in reversed(list(enumerate(pairs))):
-            assert new_entry.feed is None
+
+            # TODO: change to .feed_url is not None once EntryData gets .feed_url
+            assert getattr(new_entry, 'feed', None) is None
+            assert getattr(new_entry, 'feed_url', None) is None
+
             updated, entry_new = self.should_update_entry(new_entry, old_entry)
 
             if updated:
 
                 yield EntryUpdateIntent(
                     self.url,
-                    Entry(**new_entry._replace(updated=updated).__dict__),
+                    EntryData(**new_entry._replace(updated=updated).__dict__),
                     last_updated,
                     self.global_now if entry_new else None,
                     feed_order,

@@ -2,11 +2,11 @@ import datetime
 
 from reader import Content
 from reader import Enclosure
-from reader import Entry
-from reader import Feed
+from reader.core.types import EntryData
+from reader.core.types import FeedData
 
 
-feed = Feed(
+feed = FeedData(
     url='{}full.rss'.format(url_base),
     updated=datetime.datetime(2010, 9, 6, 0, 1),
     title='RSS Title',
@@ -15,7 +15,7 @@ feed = Feed(
 )
 
 entries = [
-    Entry(
+    EntryData(
         id='7bd204c6-1655-4c27-aeee-53f933c5395f',
         updated=datetime.datetime(2009, 9, 6, 16, 20),
         title='Example entry',
@@ -34,7 +34,7 @@ entries = [
             Enclosure(href='http://example.com/enclosure-with-bad-length'),
         ),
     ),
-    Entry(
+    EntryData(
         id='00000000-1655-4c27-aeee-00000000',
         updated=datetime.datetime(2009, 9, 6, 0, 0, 0),
         title='Example entry, again',

@@ -33,5 +33,5 @@ def test_regex_mark_as_read(reader, monkeypatch, tmpdir):
 
     assert len(list(reader.get_entries())) == 4
     assert set(reader.get_entries(read=True)) == {
-        match_new._replace(feed=one, read=True)
+        match_new.as_entry(feed=one, read=True)
     }
