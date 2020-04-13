@@ -1,5 +1,6 @@
 import dataclasses
 import re
+import warnings
 from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
@@ -83,8 +84,13 @@ class Entry(_namedtuple_compat):
 
     # WARNING: When changing attributes, keep Entry and EntryData in sync.
 
-    #: Entry identifier.
+    #: The entry id.
     id: str
+
+    @property
+    def feed_url(self) -> str:
+        """The feed url."""
+        return self.feed.url
 
     #: The date the entry was last updated.
     updated: datetime
@@ -329,14 +335,11 @@ class EntrySearchResult:
 
     """
 
-    # FIXME: don't like the names of id/feed; they don't resemble anything;
-    # like this, an EntrySearchResult is a valid entry_argument, though
-
     #: The entry id.
     id: str
 
     #: The feed URL.
-    feed: str
+    feed_url: str
 
     #: Matching entry metadata, in arbitrary order.
     #: Currently entry.title and entry.feed.user_title/.title.
@@ -345,6 +348,21 @@ class EntrySearchResult:
     #: Matching entry content, sorted by relevance.
     #: Content is any of entry.summary and entry.content[].value.
     content: Mapping[str, HighlightedString] = MappingProxyType({})
+
+    @property
+    def feed(self) -> str:
+        """The feed URL.
+
+        :deprecated: Use :attr:`feed_url` instead.
+
+        """
+        # TODO: remove me after 0.22
+        warnings.warn(
+            "EntrySearchResult.feed is deprecated and will be removed after "
+            "reader 0.22. Use EntrySearchResult.feed_url instead.",
+            DeprecationWarning,
+        )
+        return self.feed_url
 
     # TODO: entry: Optional[Entry]; model it through typing if possible
 
@@ -383,7 +401,7 @@ class EntryLike(Protocol):
         ...
 
     @property
-    def feed(self) -> FeedLike:  # pragma: no cover
+    def feed_url(self) -> str:  # pragma: no cover
         ...
 
 
@@ -401,7 +419,7 @@ def feed_argument(feed: FeedInput) -> str:
 
 def entry_argument(entry: EntryInput) -> Tuple[str, str]:
     if isinstance(entry, EntryLike):
-        return feed_argument(entry.feed), entry.id
+        return feed_argument(entry.feed_url), entry.id
     if isinstance(entry, tuple) and len(entry) == 2:
         feed_url, entry_id = entry
         if isinstance(feed_url, str) and isinstance(entry_id, str):

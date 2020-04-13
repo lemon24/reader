@@ -4,9 +4,9 @@ from types import SimpleNamespace
 import pytest
 
 from reader import Entry
+from reader import EntrySearchResult
 from reader import Feed
 from reader.core.types import _namedtuple_compat
-from reader.core.types import Entry
 from reader.core.types import entry_argument
 from reader.core.types import feed_argument
 from reader.core.types import HighlightedString
@@ -55,6 +55,13 @@ def test_entry_argument():
         entry_argument(('a', 2))
     with pytest.raises(ValueError):
         entry_argument(('a', 'b', 'c'))
+
+
+def test_entry_search_result_feed():
+    # TODO: remove me after 0.22
+    r = EntrySearchResult('entry', 'feed')
+    with pytest.deprecated_call():
+        r.feed
 
 
 @pytest.mark.parametrize(

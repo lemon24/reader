@@ -208,7 +208,7 @@ def test_search_entries_order_title_summary_beats_title(reader):
     reader.enable_search()
     reader.update_search()
 
-    assert [(e.id, e.feed) for e in reader.search_entries('one')] == [
+    assert [(e.id, e.feed_url) for e in reader.search_entries('one')] == [
         (three.id, feed.url),
         (one.id, feed.url),
     ]
@@ -230,7 +230,7 @@ def test_search_entries_order_title_content_beats_title(reader):
     reader.enable_search()
     reader.update_search()
 
-    assert [(e.id, e.feed) for e in reader.search_entries('one')] == [
+    assert [(e.id, e.feed_url) for e in reader.search_entries('one')] == [
         (three.id, feed.url),
         (one.id, feed.url),
     ]
@@ -302,7 +302,7 @@ def test_search_entries_order_weights(reader, chunk_size):
     reader.enable_search()
     reader.update_search()
 
-    rv = [(e.id, e.feed) for e in reader.search_entries('one')]
+    rv = [(e.id, e.feed_url) for e in reader.search_entries('one')]
 
     assert rv[:2] == [(entry_two.id, feed_two.url), (entry_one.id, feed_one.url)]
 
