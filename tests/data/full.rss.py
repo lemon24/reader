@@ -16,6 +16,7 @@ feed = FeedData(
 
 entries = [
     EntryData(
+        feed_url=feed.url,
         id='7bd204c6-1655-4c27-aeee-53f933c5395f',
         updated=datetime.datetime(2009, 9, 6, 16, 20),
         title='Example entry',
@@ -35,6 +36,7 @@ entries = [
         ),
     ),
     EntryData(
+        feed_url=feed.url,
         id='00000000-1655-4c27-aeee-00000000',
         updated=datetime.datetime(2009, 9, 6, 0, 0, 0),
         title='Example entry, again',

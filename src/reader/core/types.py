@@ -471,9 +471,11 @@ class EntryData(Generic[_UpdatedType], _namedtuple_compat):
 
     """
 
+    #: The feed URL.
+    feed_url: str
+
     # WARNING: When changing attributes, keep Entry and EntryData in sync.
 
-    # TODO: add .feed_url
     id: str
 
     # Entries returned by the parser have .updated Optional[datetime];
@@ -495,6 +497,7 @@ class EntryData(Generic[_UpdatedType], _namedtuple_compat):
     def as_entry(self, **kwargs: object) -> Entry:
         """For testing."""
         attrs = dict(self.__dict__)
+        attrs.pop('feed_url')
         attrs.update(kwargs)
         return Entry(**attrs)
 
@@ -552,10 +555,6 @@ class FeedUpdateIntent(NamedTuple):
 class EntryUpdateIntent(NamedTuple):
 
     """Data to be passed to Storage when updating a feed."""
-
-    #: The feed URL.
-    url: str
-    # TODO: delete .url after we add .feed_url to EntryData
 
     #: The entry.
     entry: EntryData[datetime]

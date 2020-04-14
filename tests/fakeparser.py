@@ -21,6 +21,7 @@ def _make_feed(number, updated=None, **kwargs):
 
 def _make_entry(feed_number, number, updated, **kwargs):
     return EntryData(
+        f'{feed_number}',
         # evals to tuple
         f'{feed_number}, {number}',
         updated,

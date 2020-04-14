@@ -50,6 +50,7 @@ _T = TypeVar('_T')
 _U = TypeVar('_U')
 
 
+# FIXME: remove the feed url from this once EntryData gets .feed_url
 _PostEntryAddPluginType = Callable[['Reader', str, EntryData[datetime.datetime]], None]
 
 

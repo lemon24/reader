@@ -16,6 +16,7 @@ feed = FeedData(
 
 entries = [
     EntryData(
+        feed_url=feed.url,
         id='urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a',
         updated=datetime.datetime(2003, 12, 13, 18, 30, 2),
         title='Atom-Powered Robots Run Amok',
@@ -46,6 +47,7 @@ entries = [
         ),
     ),
     EntryData(
+        feed_url=feed.url,
         id='urn:uuid:00000000-cfb8-4ebb-aaaa-00000000000',
         updated=datetime.datetime(2003, 12, 13, 0, 0, 0),
         title='Atom-Powered Robots Run Amok Again',

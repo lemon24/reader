@@ -126,7 +126,8 @@ class Updater:
     ) -> Iterable[Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]]:
         entries = list(entries)
         pairs = zip(
-            entries, storage.get_entries_for_update([(self.url, e.id) for e in entries])
+            entries,
+            storage.get_entries_for_update([(e.feed_url, e.id) for e in entries]),
         )
         return pairs
 
@@ -137,16 +138,17 @@ class Updater:
         last_updated = self.now
         for feed_order, (new_entry, old_entry) in reversed(list(enumerate(pairs))):
 
-            # TODO: change to .feed_url is not None once EntryData gets .feed_url
-            assert getattr(new_entry, 'feed', None) is None
-            assert getattr(new_entry, 'feed_url', None) is None
+            # This may fail if we ever implement changing the feed URL
+            # in response to a permanent redirect.
+            assert (
+                new_entry.feed_url == self.url
+            ), f'{new_entry.feed_url!r}, {self.url!r}'
 
             updated, entry_new = self.should_update_entry(new_entry, old_entry)
 
             if updated:
 
                 yield EntryUpdateIntent(
-                    self.url,
                     EntryData(**new_entry._replace(updated=updated).__dict__),
                     last_updated,
                     self.global_now if entry_new else None,

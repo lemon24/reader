@@ -68,7 +68,9 @@ def _get_updated_published(
     return updated, published
 
 
-def _make_entry(entry: Any, is_rss: bool) -> EntryData[Optional[datetime]]:
+def _make_entry(
+    feed_url: str, entry: Any, is_rss: bool
+) -> EntryData[Optional[datetime]]:
     assert entry.id
     updated, published = _get_updated_published(entry, is_rss)
 
@@ -88,6 +90,7 @@ def _make_entry(entry: Any, is_rss: bool) -> EntryData[Optional[datetime]]:
         enclosures.append(Enclosure(**data))
 
     return EntryData(
+        feed_url,
         entry.id,
         updated,
         entry.get('title'),
@@ -124,7 +127,7 @@ def _process_feed(
         d.feed.get('author'),
         None,
     )
-    entries = (_make_entry(e, is_rss) for e in d.entries)
+    entries = (_make_entry(url, e, is_rss) for e in d.entries)
 
     return feed, entries
 

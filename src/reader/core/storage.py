@@ -697,10 +697,11 @@ class Storage:
     def _make_add_or_update_entries_args(
         self, intent: EntryUpdateIntent
     ) -> Mapping[str, Any]:
-        feed_url, entry, last_updated, first_updated_epoch, feed_order = intent
+        entry, last_updated, first_updated_epoch, feed_order = intent
 
         updated = entry.updated
         published = entry.published
+        feed_url = entry.feed_url
         id = entry.id
         title = entry.title
         link = entry.link
