@@ -9,7 +9,7 @@ reader changelog
 Version 0.22
 ------------
 
-Unreleased
+Released 2020-04-14
 
 * Add the :attr:`Entry.feed_url` attribute. (`#159`_)
 * Rename the :class:`EntrySearchResult` ``feed`` attribute to
