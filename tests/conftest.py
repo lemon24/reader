@@ -2,7 +2,7 @@ import py.path
 import pytest
 
 from reader import make_reader
-from reader.core.storage import Storage
+from reader.storage import Storage
 
 
 def pytest_addoption(parser):

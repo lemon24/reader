@@ -20,8 +20,7 @@ cov: coverage
 typing: clean-pyc install-dev
 	test $$( python -c 'import sys; print(sys.implementation.name)' ) = pypy \
 	&& echo "mypy is not working on pypy, doing nothing" \
-	|| mypy --strict src/reader/core \
-
+	|| mypy --strict src
 
 test-all: install-dev
 	tox

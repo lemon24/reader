@@ -3,9 +3,9 @@ import pytest
 from utils import make_url_base
 
 from reader import Feed
-from reader.core.exceptions import NotModified
-from reader.core.exceptions import ParseError
-from reader.core.parser import Parser
+from reader.exceptions import NotModified
+from reader.exceptions import ParseError
+from reader.parser import Parser
 
 
 @pytest.fixture

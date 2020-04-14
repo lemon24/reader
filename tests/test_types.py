@@ -6,10 +6,10 @@ import pytest
 from reader import Entry
 from reader import EntrySearchResult
 from reader import Feed
-from reader.core.types import _namedtuple_compat
-from reader.core.types import entry_argument
-from reader.core.types import feed_argument
-from reader.core.types import HighlightedString
+from reader.types import _namedtuple_compat
+from reader.types import entry_argument
+from reader.types import feed_argument
+from reader.types import HighlightedString
 
 
 def test_namedtuple_compat():

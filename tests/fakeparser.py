@@ -3,10 +3,10 @@ from collections import OrderedDict
 
 from reader import Feed
 from reader import ParseError
-from reader.core.exceptions import NotModified
-from reader.core.types import entry_argument
-from reader.core.types import EntryData
-from reader.core.types import ParsedFeed
+from reader.exceptions import NotModified
+from reader.types import entry_argument
+from reader.types import EntryData
+from reader.types import ParsedFeed
 
 
 def _make_feed(number, updated=None, **kwargs):

@@ -8,15 +8,15 @@ from reader import HighlightedString
 from reader import InvalidSearchQueryError
 from reader import SearchError
 from reader import StorageError
-from reader.core.search import Search
-from reader.core.search import strip_html
+from reader.search import Search
+from reader.search import strip_html
 
 
 def test_bs4_import_error(storage, monkeypatch):
     search = Search(storage)
     search.enable()
-    monkeypatch.setattr('reader.core.search.bs4', None)
-    monkeypatch.setattr('reader.core.search.bs4_import_error', ImportError('reason'))
+    monkeypatch.setattr('reader.search.bs4', None)
+    monkeypatch.setattr('reader.search.bs4_import_error', ImportError('reason'))
 
     with pytest.raises(SearchError) as excinfo:
         search.update()
@@ -185,7 +185,7 @@ def test_invalid_search_query_error(storage, query):
 def test_sqlite3_json_extract_non_bmp_character_bug_workaround(reader):
     """Test we're working around https://bugs.python.org/issue38749
 
-    See the reader.core.search.json_object_get docstring for details.
+    See the reader.search.json_object_get docstring for details.
 
     """
     parser = Parser()

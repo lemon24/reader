@@ -2,8 +2,8 @@ import datetime
 
 from reader import Content
 from reader import Enclosure
-from reader.core.types import EntryData
-from reader.core.types import FeedData
+from reader.types import EntryData
+from reader.types import FeedData
 
 
 feed = FeedData(url='{}empty.atom'.format(url_base))

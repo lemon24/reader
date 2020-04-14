@@ -40,9 +40,9 @@ Print the titles of the unread entries::
 __version__ = '0.23.dev0'
 
 
-from .core.reader import Reader, make_reader
+from .reader import Reader, make_reader
 
-from .core.types import (
+from .types import (
     Feed,
     Entry,
     Content,
@@ -51,7 +51,7 @@ from .core.types import (
     HighlightedString,
 )
 
-from .core.exceptions import (
+from .exceptions import (
     ReaderError,
     FeedError,
     FeedExistsError,

@@ -5,20 +5,20 @@ from datetime import datetime
 import pytest
 from utils import rename_argument
 
-import reader.core.sqlite_utils
+import reader.sqlite_utils
 from reader import EntryNotFoundError
 from reader import FeedNotFoundError
 from reader import InvalidSearchQueryError
 from reader import MetadataNotFoundError
 from reader import StorageError
-from reader.core.storage import Storage
-from reader.core.storage import wrap_storage_exceptions
-from reader.core.types import EntryData
-from reader.core.types import EntryFilterOptions
-from reader.core.types import EntryForUpdate
-from reader.core.types import EntryUpdateIntent
-from reader.core.types import FeedData
-from reader.core.types import FeedUpdateIntent
+from reader.storage import Storage
+from reader.storage import wrap_storage_exceptions
+from reader.types import EntryData
+from reader.types import EntryFilterOptions
+from reader.types import EntryForUpdate
+from reader.types import EntryUpdateIntent
+from reader.types import FeedData
+from reader.types import FeedUpdateIntent
 
 
 def test_wrap_storage_exceptions():
@@ -50,7 +50,7 @@ def test_storage_errors_open(tmpdir):
         Storage(str(tmpdir))
 
 
-@pytest.mark.parametrize('db_error_cls', reader.core.sqlite_utils.db_errors)
+@pytest.mark.parametrize('db_error_cls', reader.sqlite_utils.db_errors)
 def test_db_errors(monkeypatch, db_path, db_error_cls):
     """...sqlite_utils.DBError subclasses should be wrapped in StorageError."""
 
