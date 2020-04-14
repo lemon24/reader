@@ -414,7 +414,7 @@ def feed_argument(feed: FeedInput) -> str:
         return feed.url
     if isinstance(feed, str):
         return feed
-    raise ValueError('feed')
+    raise ValueError(f'invalid feed argument: {feed!r}')
 
 
 def entry_argument(entry: EntryInput) -> Tuple[str, str]:
@@ -424,7 +424,7 @@ def entry_argument(entry: EntryInput) -> Tuple[str, str]:
         feed_url, entry_id = entry
         if isinstance(feed_url, str) and isinstance(entry_id, str):
             return entry
-    raise ValueError('entry')
+    raise ValueError(f'invalid entry argument: {entry!r}')
 
 
 # Private API
