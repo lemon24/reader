@@ -479,8 +479,8 @@ class Search:
                 )
 
                 result = EntrySearchResult(
-                    rv_entry_id,
                     rv_feed_url,
+                    rv_entry_id,
                     MappingProxyType(metadata),
                     MappingProxyType(rv_content),
                 )

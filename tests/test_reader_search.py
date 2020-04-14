@@ -108,8 +108,8 @@ def test_search_entries_basic(reader):
     assert list(reader.search_entries('zero')) == []
     assert list(reader.search_entries('one')) == [
         EntrySearchResult(
-            one.id,
             feed.url,
+            one.id,
             {
                 '.title': HighlightedString(one.title, (slice(0, 3),)),
                 '.feed.title': HighlightedString(feed.title),
@@ -118,8 +118,8 @@ def test_search_entries_basic(reader):
     ]
     assert list(reader.search_entries('two')) == [
         EntrySearchResult(
-            two.id,
             feed.url,
+            two.id,
             {
                 '.title': HighlightedString(two.title, (slice(0, 3),)),
                 '.feed.title': HighlightedString(feed.title),
@@ -129,8 +129,8 @@ def test_search_entries_basic(reader):
     ]
     assert list(reader.search_entries('three')) == [
         EntrySearchResult(
-            three.id,
             feed.url,
+            three.id,
             {
                 '.title': HighlightedString(three.title),
                 '.feed.title': HighlightedString(feed.title),
@@ -162,13 +162,13 @@ def test_search_entries_basic(reader):
     # TODO: we're also testing for order here, and maybe we shouldn't
     assert list(reader.search_entries('summary')) == [
         EntrySearchResult(
-            feed_three_entry.id,
             feed_three.url,
+            feed_three_entry.id,
             {'.title': HighlightedString(feed_three_entry.title, (slice(6, 13),))},
         ),
         EntrySearchResult(
-            feed_two_entry.id,
             feed_two.url,
+            feed_two_entry.id,
             {
                 '.feed.user_title': HighlightedString(
                     feed_two_entry.feed.user_title, (slice(2, 9),)
@@ -176,8 +176,8 @@ def test_search_entries_basic(reader):
             },
         ),
         EntrySearchResult(
-            two.id,
             feed.url,
+            two.id,
             {
                 '.title': HighlightedString(two.title),
                 '.feed.title': HighlightedString(feed.title),

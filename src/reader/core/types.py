@@ -84,13 +84,13 @@ class Entry(_namedtuple_compat):
 
     # WARNING: When changing attributes, keep Entry and EntryData in sync.
 
-    #: The entry id.
-    id: str
-
     @property
     def feed_url(self) -> str:
         """The feed url."""
         return self.feed.url
+
+    #: The entry id.
+    id: str
 
     #: The date the entry was last updated.
     updated: datetime
@@ -335,11 +335,11 @@ class EntrySearchResult:
 
     """
 
-    #: The entry id.
-    id: str
-
     #: The feed URL.
     feed_url: str
+
+    #: The entry id.
+    id: str
 
     #: Matching entry metadata, in arbitrary order.
     #: Currently entry.title and entry.feed.user_title/.title.
