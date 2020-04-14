@@ -50,8 +50,7 @@ _T = TypeVar('_T')
 _U = TypeVar('_U')
 
 
-# FIXME: remove the feed url from this once EntryData gets .feed_url
-_PostEntryAddPluginType = Callable[['Reader', str, EntryData[datetime.datetime]], None]
+_PostEntryAddPluginType = Callable[['Reader', EntryData[datetime.datetime]], None]
 
 
 def make_reader(url: str) -> 'Reader':
@@ -331,7 +330,7 @@ class Reader:
 
         for entry in new_entries:
             for plugin in self._post_entry_add_plugins:
-                plugin(self, feed_for_update.url, entry)
+                plugin(self, entry)
 
     def get_entries(
         self,

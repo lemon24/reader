@@ -71,20 +71,20 @@ def test_post_entry_add_plugins(reader):
 
     plugin_calls = []
 
-    def first_plugin(r, f, e):
+    def first_plugin(r, e):
         assert r is reader
-        plugin_calls.append((first_plugin, f, e))
+        plugin_calls.append((first_plugin, e))
 
-    def second_plugin(r, f, e):
+    def second_plugin(r, e):
         assert r is reader
-        plugin_calls.append((second_plugin, f, e))
+        plugin_calls.append((second_plugin, e))
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
     reader._post_entry_add_plugins.append(first_plugin)
     reader.update_feeds()
-    assert plugin_calls == [(first_plugin, feed.url, one)]
+    assert plugin_calls == [(first_plugin, one)]
 
     plugin_calls[:] = []
 
@@ -94,8 +94,8 @@ def test_post_entry_add_plugins(reader):
     reader._post_entry_add_plugins.append(second_plugin)
     reader.update_feeds()
     assert plugin_calls == [
-        (first_plugin, feed.url, two),
-        (second_plugin, feed.url, two),
+        (first_plugin, two),
+        (second_plugin, two),
     ]
     assert set(reader.get_entries()) == {
         one.as_entry(feed=feed),

@@ -30,13 +30,15 @@ Implemented for https://github.com/lemon24/reader/issues/79.
 import re
 
 
-def plugin(reader, url, entry):
-    config = reader.get_feed_metadata(url, 'regex-mark-as-read', {}).get('patterns')
+def plugin(reader, entry):
+    config = reader.get_feed_metadata(entry.feed_url, 'regex-mark-as-read', {}).get(
+        'patterns'
+    )
     if not config:
         return
     for pattern in config:
         if re.search(pattern, entry.title):
-            reader.mark_as_read((url, entry.id))
+            reader.mark_as_read(entry)
             return
 
 
