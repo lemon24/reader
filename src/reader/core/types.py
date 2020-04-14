@@ -50,6 +50,11 @@ class _namedtuple_compat:
     _asdict = dataclasses.asdict
 
 
+# See https://github.com/lemon24/reader/issues/159 for a discussion
+# of how feed- and entry-like objects are uniquely identified, and
+# how to keep it consistent.
+
+
 # Public API
 
 
