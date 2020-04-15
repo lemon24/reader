@@ -1,7 +1,7 @@
 import click
 
 import reader
-from reader.cli import setup_logging
+from reader._cli import setup_logging
 
 
 @click.command()

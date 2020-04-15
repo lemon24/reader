@@ -49,6 +49,6 @@ Start a local reader server at ``http://localhost:8080/``:
 Reference
 ---------
 
-.. click:: reader.cli:cli
+.. click:: reader._cli:cli
     :prog: reader
     :show-nested:

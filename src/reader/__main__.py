@@ -1,6 +1,6 @@
 if __name__ == '__main__':
     try:
-        from reader.cli import cli
+        from reader._cli import cli
 
         cli()
     except ImportError:
@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
         print(
             """\
-Error: cannot import reader.cli
+Error: cannot import reader._cli
 
 This might be due to missing dependencies. The command-line interface is
 optional, use the 'cli' extra to install its dependencies:

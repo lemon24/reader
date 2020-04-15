@@ -4,7 +4,7 @@ from click.testing import CliRunner
 from utils import make_url_base
 
 from reader import Reader
-from reader.cli import cli
+from reader._cli import cli
 
 
 @pytest.mark.slow
