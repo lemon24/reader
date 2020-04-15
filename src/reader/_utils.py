@@ -1,6 +1,9 @@
+import functools
 import multiprocessing.dummy
 from contextlib import contextmanager
+from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Iterable
 from typing import Iterator
 from typing import Optional
@@ -68,6 +71,28 @@ def join_paginated_iter(
         _, last = things[-1]
 
         yield from (t for t, _ in things)
+
+
+FuncType = Callable[..., Any]
+F = TypeVar('F', bound=FuncType)
+
+
+def returns_iter_list(fn: F) -> F:
+    """Call iter(list(...)) on the return value of fn.
+
+    The list() call makes sure callers can't block the storage
+    if they keep the result around and don't iterate over it.
+
+    The iter() call makes sure callers don't expect the
+    result to be anything more than an iterable.
+
+    """
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):  # type: ignore
+        return iter(list(fn(*args, **kwargs)))
+
+    return cast(F, wrapper)
 
 
 # TODO: find a better way to represent a function like map (mypy)

@@ -1,4 +1,3 @@
-import functools
 import json
 import logging
 import sqlite3
@@ -6,14 +5,11 @@ from datetime import datetime
 from datetime import timedelta
 from itertools import chain
 from typing import Any
-from typing import Callable
-from typing import cast
 from typing import Iterable
 from typing import Mapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import TypeVar
 from typing import Union
 
 from ._sqlite_utils import DBError
@@ -25,6 +21,7 @@ from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
+from ._utils import returns_iter_list
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
@@ -39,31 +36,6 @@ from .types import JSONType
 
 
 log = logging.getLogger('reader')
-
-
-FuncType = Callable[..., Any]
-F = TypeVar('F', bound=FuncType)
-
-
-# TODO: move returns_iter_list to utils
-
-
-def returns_iter_list(fn: F) -> F:
-    """Call iter(list(...)) on the return value of fn.
-
-    The list() call makes sure callers can't block the storage
-    if they keep the result around and don't iterate over it.
-
-    The iter() call makes sure callers don't expect the
-    result to be anything more than an iterable.
-
-    """
-
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):  # type: ignore
-        return iter(list(fn(*args, **kwargs)))
-
-    return cast(F, wrapper)
 
 
 def create_db(db: sqlite3.Connection) -> None:
