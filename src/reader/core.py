@@ -15,6 +15,7 @@ from typing import Union
 
 from ._parser import Parser
 from ._search import Search
+from ._storage import Storage
 from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import FeedForUpdate
@@ -24,7 +25,6 @@ from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
 from .exceptions import ParseError
-from .storage import Storage
 from .types import _entry_argument
 from .types import _EntryInput
 from .types import _feed_argument

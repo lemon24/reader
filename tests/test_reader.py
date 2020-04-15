@@ -22,8 +22,8 @@ from reader import MetadataNotFoundError
 from reader import ParseError
 from reader import Reader
 from reader import StorageError
+from reader._storage import Storage
 from reader._types import FeedUpdateIntent
-from reader.storage import Storage
 
 
 def test_update_feed_updated(reader, call_update_method):

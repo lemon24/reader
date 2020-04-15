@@ -19,7 +19,7 @@ from ._types import UpdatedEntry
 from ._types import UpdateResult
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .storage import Storage
+    from ._storage import Storage
 
 
 log = logging.getLogger("reader")

@@ -14,13 +14,13 @@ from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
+from ._storage import Storage
+from ._storage import wrap_storage_exceptions
 from ._types import EntryFilterOptions
 from .exceptions import InvalidSearchQueryError
 from .exceptions import SearchError
 from .exceptions import SearchNotEnabledError
 from .sqlite_utils import ddl_transaction
-from .storage import Storage
-from .storage import wrap_storage_exceptions
 from .types import EntrySearchResult
 from .types import HighlightedString
 
