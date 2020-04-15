@@ -10,6 +10,7 @@ from reader._sqlite_utils import require_sqlite_compile_options
 from reader._sqlite_utils import require_sqlite_version
 from reader._sqlite_utils import RequirementError
 from reader._sqlite_utils import SchemaVersionError
+from reader._sqlite_utils import wrap_exceptions
 
 
 def dummy_ddl_transaction(db):
@@ -65,6 +66,33 @@ def test_ddl_transaction_create_only(ddl_transaction):
             1 / 0
 
     assert len(list(db.execute("PRAGMA table_info(t);"))) == 0
+
+
+class SomeError(Exception):
+    pass
+
+
+def test_wrap_exceptions():
+    db = sqlite3.connect('file::memory:?mode=ro', uri=True)
+
+    with pytest.raises(SomeError):
+        with wrap_exceptions(SomeError):
+            # should raise OperationalError: unable to open database file
+            db.execute('create table t (a)')
+
+    # non- "cannot operate on a closed database" ProgrammingError
+    with pytest.raises(sqlite3.Error):
+        with wrap_exceptions(SomeError):
+            db.execute('values (:a)', {})
+
+    # works now
+    db.execute('values (1)')
+
+    # doesn't after closing
+    db.close()
+    with pytest.raises(SomeError):
+        with wrap_exceptions(SomeError):
+            db.execute('values (1)')
 
 
 class WeirdError(Exception):

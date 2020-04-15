@@ -11,6 +11,7 @@ from typing import Iterator
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from typing import Type
 
 from typing_extensions import Protocol
 from typing_extensions import TypedDict
@@ -67,6 +68,31 @@ def ddl_transaction(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
         raise
     finally:
         db.isolation_level = isolation_level
+
+
+@contextmanager
+def wrap_exceptions(exc_type: Type[Exception]) -> Iterator[None]:
+    """Wrap sqlite3 exceptions in a custom exception.
+
+    Only wraps exceptions that are unlikely to be programming errors (bugs),
+    can only be fixed by the user (e.g. access permission denied), and aren't
+    domain-related (those should have other custom exceptions).
+
+    This is an imprecise science, since the DB-API exceptions are somewhat
+    fuzzy in their meaning and we can't access the SQLite result code.
+
+    Full discussion at https://github.com/lemon24/reader/issues/21
+
+    """
+
+    try:
+        yield
+    except sqlite3.OperationalError as e:
+        raise exc_type(f"sqlite3 error: {e}") from e
+    except sqlite3.ProgrammingError as e:
+        if "cannot operate on a closed database" in str(e).lower():
+            raise exc_type(f"sqlite3 error: {e}") from e
+        raise
 
 
 @contextmanager

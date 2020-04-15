@@ -1,4 +1,3 @@
-import contextlib
 import functools
 import json
 import logging
@@ -10,18 +9,17 @@ from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Iterable
-from typing import Iterator
 from typing import Mapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import Type
 from typing import TypeVar
 from typing import Union
 
 from ._sqlite_utils import DBError
 from ._sqlite_utils import open_sqlite_db
 from ._sqlite_utils import rowcount_exactly_one
+from ._sqlite_utils import wrap_exceptions
 from ._types import EntryFilterOptions
 from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
@@ -41,34 +39,6 @@ from .types import JSONType
 
 
 log = logging.getLogger('reader')
-
-
-# TODO: move wrap_storage_exceptions to _sqlite_utils
-
-
-@contextlib.contextmanager
-def wrap_storage_exceptions(exc_type: Type[Exception] = StorageError) -> Iterator[None]:
-    """Wrap sqlite3 exceptions in StorageError.
-
-    Only wraps exceptions that are unlikely to be programming errors (bugs),
-    can only be fixed by the user (e.g. access permission denied), and aren't
-    domain-related (those should have other custom exceptions).
-
-    This is an imprecise science, since the DB-API exceptions are somewhat
-    fuzzy in their meaning and we can't access the SQLite result code.
-
-    Full discussion at https://github.com/lemon24/reader/issues/21
-
-    """
-
-    try:
-        yield
-    except sqlite3.OperationalError as e:
-        raise exc_type(f"sqlite3 error: {e}") from e
-    except sqlite3.ProgrammingError as e:
-        if "cannot operate on a closed database" in str(e).lower():
-            raise exc_type(f"sqlite3 error: {e}") from e
-        raise
 
 
 FuncType = Callable[..., Any]
@@ -426,7 +396,7 @@ class Storage:
 
     recent_threshold = timedelta(7)
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     def __init__(self, path: str, timeout: Optional[float] = None):
         try:
             self.db = self.open_db(path, timeout=timeout)
@@ -450,7 +420,7 @@ class Storage:
     def close(self) -> None:
         self.db.close()
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     def add_feed(self, url: str, added: datetime) -> None:
         with self.db:
             try:
@@ -461,13 +431,13 @@ class Storage:
                 # FIXME: Match the error string.
                 raise FeedExistsError(url)
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     def remove_feed(self, url: str) -> None:
         with self.db:
             cursor = self.db.execute("DELETE FROM feeds WHERE url = :url;", locals())
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     @returns_iter_list
     def get_feeds(
         self, url: Optional[str] = None, sort: _FeedSortOrder = 'title'
@@ -496,7 +466,7 @@ class Storage:
         for row in cursor:
             yield Feed._make(row)
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     @returns_iter_list
     def get_feeds_for_update(
         self, url: Optional[str] = None, new_only: bool = False
@@ -572,7 +542,7 @@ class Storage:
 
         return (EntryForUpdate(updated) if exists else None for exists, updated in rows)
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     def get_entries_for_update(
         self, entries: Iterable[Tuple[str, str]]
     ) -> Iterable[Optional[EntryForUpdate]]:
@@ -587,7 +557,7 @@ class Storage:
                 raise
         return self._get_entries_for_update_n_queries(entries)
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     def set_feed_user_title(self, url: str, title: Optional[str]) -> None:
         with self.db:
             cursor = self.db.execute(
@@ -595,7 +565,7 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     def mark_as_stale(self, url: str) -> None:
         with self.db:
             cursor = self.db.execute(
@@ -603,7 +573,7 @@ class Storage:
             )
             rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     def mark_as_read_unread(self, feed_url: str, entry_id: str, read: bool) -> None:
         with self.db:
             cursor = self.db.execute(
@@ -616,7 +586,7 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     def mark_as_important_unimportant(
         self, feed_url: str, entry_id: str, important: bool
     ) -> None:
@@ -631,7 +601,7 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     def update_feed(self, intent: FeedUpdateIntent) -> None:
         url, last_updated, feed, http_etag, http_last_modified = intent
 
@@ -714,7 +684,7 @@ class Storage:
         )
         return locals()
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     def add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
 
         # We need to capture the last value for exception handling
@@ -837,7 +807,7 @@ class Storage:
                 last_entry_id,
             ) = last
 
-        with wrap_storage_exceptions():
+        with wrap_exceptions(StorageError):
             cursor = self.db.execute(query, locals())
             for t in cursor:
                 feed = t[0:6]
@@ -980,7 +950,7 @@ class Storage:
 
         return query
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     @returns_iter_list
     def iter_feed_metadata(
         self, feed_url: str, key: Optional[str] = None
@@ -1000,7 +970,7 @@ class Storage:
         for mkey, value in cursor:
             yield mkey, json.loads(value)
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     def set_feed_metadata(self, feed_url: str, key: str, value: JSONType) -> None:
         value_json = json.dumps(value)
 
@@ -1024,7 +994,7 @@ class Storage:
                 # FIXME: Match the error string.
                 raise FeedNotFoundError(feed_url)
 
-    @wrap_storage_exceptions()
+    @wrap_exceptions(StorageError)
     def delete_feed_metadata(self, feed_url: str, key: str) -> None:
         with self.db:
             cursor = self.db.execute(

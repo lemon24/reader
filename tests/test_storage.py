@@ -12,36 +12,12 @@ from reader import InvalidSearchQueryError
 from reader import MetadataNotFoundError
 from reader import StorageError
 from reader._storage import Storage
-from reader._storage import wrap_storage_exceptions
 from reader._types import EntryData
 from reader._types import EntryFilterOptions
 from reader._types import EntryForUpdate
 from reader._types import EntryUpdateIntent
 from reader._types import FeedData
 from reader._types import FeedUpdateIntent
-
-
-def test_wrap_storage_exceptions():
-    db = sqlite3.connect('file::memory:?mode=ro', uri=True)
-
-    with pytest.raises(StorageError):
-        with wrap_storage_exceptions():
-            # should raise OperationalError: unable to open database file
-            db.execute('create table t (a)')
-
-    # non- "cannot operate on a closed database" ProgrammingError
-    with pytest.raises(sqlite3.Error):
-        with wrap_storage_exceptions():
-            db.execute('values (:a)', {})
-
-    # works now
-    db.execute('values (1)')
-
-    # doesn't after closing
-    db.close()
-    with pytest.raises(StorageError):
-        with wrap_storage_exceptions():
-            db.execute('values (1)')
 
 
 def test_storage_errors_open(tmpdir):

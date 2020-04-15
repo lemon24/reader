@@ -15,8 +15,8 @@ from typing import Tuple
 from typing import TypeVar
 
 from ._sqlite_utils import ddl_transaction
+from ._sqlite_utils import wrap_exceptions
 from ._storage import Storage
-from ._storage import wrap_storage_exceptions
 from ._types import EntryFilterOptions
 from .exceptions import InvalidSearchQueryError
 from .exceptions import SearchError
@@ -102,7 +102,7 @@ class Search:
     def __init__(self, storage: Storage):
         self.storage = storage
 
-    @wrap_storage_exceptions(SearchError)
+    @wrap_exceptions(SearchError)
     def enable(self) -> None:
         try:
             self._enable()
@@ -222,7 +222,7 @@ class Search:
                 """
             )
 
-    @wrap_storage_exceptions(SearchError)
+    @wrap_exceptions(SearchError)
     def disable(self) -> None:
         with ddl_transaction(self.storage.db) as db:
             db.execute("DROP TABLE IF EXISTS entries_search;")
@@ -232,7 +232,7 @@ class Search:
             db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
             db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")
 
-    @wrap_storage_exceptions(SearchError)
+    @wrap_exceptions(SearchError)
     def is_enabled(self) -> bool:
         search_table_exists = (
             self.storage.db.execute(
@@ -246,7 +246,7 @@ class Search:
         )
         return search_table_exists
 
-    @wrap_storage_exceptions(SearchError)
+    @wrap_exceptions(SearchError)
     def update(self) -> None:
         try:
             return self._update()
@@ -430,7 +430,7 @@ class Search:
         clean_locals.pop('sql_query')
         log.debug("_search_entries locals\n%r\n", clean_locals)
 
-        with wrap_storage_exceptions(SearchError):
+        with wrap_exceptions(SearchError):
             try:
                 cursor = self.storage.db.execute(sql_query, locals())
             except sqlite3.OperationalError as e:
