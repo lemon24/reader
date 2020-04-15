@@ -217,7 +217,3 @@ class EntryFilterOptions(NamedTuple):
             raise ValueError("has_enclosures should be one of (None, False, True)")
 
         return cls(feed_url, entry_id, read, important, has_enclosures)
-
-
-# TODO: is this really needed? what's wrong with EntryFilterOptions()?
-DEFAULT_ENTRY_FILTER_OPTIONS = EntryFilterOptions()

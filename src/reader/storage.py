@@ -19,7 +19,6 @@ from typing import Type
 from typing import TypeVar
 from typing import Union
 
-from ._types import DEFAULT_ENTRY_FILTER_OPTIONS
 from ._types import EntryFilterOptions
 from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
@@ -800,7 +799,7 @@ class Storage:
     def get_entries(
         self,
         now: datetime,
-        filter_options: EntryFilterOptions = DEFAULT_ENTRY_FILTER_OPTIONS,
+        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         chunk_size: Optional[int] = None,
         last: _EntryLast = None,
     ) -> Iterable[Tuple[Entry, _EntryLast]]:

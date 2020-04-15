@@ -14,7 +14,6 @@ from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
-from ._types import DEFAULT_ENTRY_FILTER_OPTIONS
 from ._types import EntryFilterOptions
 from .exceptions import InvalidSearchQueryError
 from .exceptions import SearchError
@@ -379,7 +378,7 @@ class Search:
     def search_entries(
         self,
         query: str,
-        filter_options: EntryFilterOptions = DEFAULT_ENTRY_FILTER_OPTIONS,
+        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
