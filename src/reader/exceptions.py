@@ -28,10 +28,6 @@ class ParseError(FeedError):
     """
 
 
-class NotModified(FeedError):
-    """Feed not modified."""
-
-
 class EntryError(ReaderError):
     """An entry error occured."""
 
@@ -89,3 +85,11 @@ class SearchNotEnabledError(SearchError):
 
 class InvalidSearchQueryError(SearchError):
     """The search query provided was somehow invalid."""
+
+
+class _NotModified(FeedError):
+    """Feed not modified.
+
+    Signaling exception used internally by Parser.
+
+    """

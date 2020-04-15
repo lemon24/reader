@@ -4,9 +4,9 @@ from datetime import timedelta
 from enum import Enum
 
 import pytest
+from fakeparser import _NotModifiedParser
 from fakeparser import BlockingParser
 from fakeparser import FailingParser
-from fakeparser import NotModifiedParser
 from fakeparser import Parser
 from utils import make_url_base
 
@@ -191,7 +191,7 @@ def test_update_not_modified(reader, call_update_method):
     parser.feed(1, datetime(2010, 1, 2))
     parser.entry(1, 1, datetime(2010, 1, 2))
 
-    not_modified_parser = NotModifiedParser.from_parser(parser)
+    not_modified_parser = _NotModifiedParser.from_parser(parser)
     reader._parser = not_modified_parser
 
     # shouldn't raise an exception
@@ -256,12 +256,12 @@ def test_update_new_only_no_last_updated(reader):
 
 
 def test_update_new_only_not_modified(reader):
-    """A feed should not be considered new anymore after getting NotModified.
+    """A feed should not be considered new anymore after getting _NotModified.
 
     https://github.com/lemon24/reader/issues/95
 
     """
-    parser = NotModifiedParser()
+    parser = _NotModifiedParser()
     reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))

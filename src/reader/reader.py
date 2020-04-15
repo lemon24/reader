@@ -13,10 +13,10 @@ from typing import Tuple
 from typing import TypeVar
 from typing import Union
 
+from .exceptions import _NotModified
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
-from .exceptions import NotModified
 from .exceptions import ParseError
 from .parser import Parser
 from .search import Search
@@ -305,7 +305,7 @@ class Reader:
         feed = Updater.process_old_feed(feed)
         try:
             return feed, self._parser(feed.url, feed.http_etag, feed.http_last_modified)
-        except NotModified:
+        except _NotModified:
             return feed, None
 
     @staticmethod

@@ -3,7 +3,7 @@ import pytest
 from utils import make_url_base
 
 from reader import Feed
-from reader.exceptions import NotModified
+from reader.exceptions import _NotModified
 from reader.exceptions import ParseError
 from reader.parser import Parser
 
@@ -169,11 +169,11 @@ def make_http_url_304(requests_mock):
 
 
 def test_parse_not_modified(monkeypatch, parse, make_http_url_304, data_dir):
-    """parse() should raise NotModified for unchanged feeds."""
+    """parse() should raise _NotModified for unchanged feeds."""
 
     feed_url = make_http_url_304(data_dir.join('full.atom'))
 
-    with pytest.raises(NotModified):
+    with pytest.raises(_NotModified):
         parse(feed_url)
 
 

@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from reader import Feed
 from reader import ParseError
-from reader.exceptions import NotModified
+from reader.exceptions import _NotModified
 from reader.types import entry_argument
 from reader.types import EntryData
 from reader.types import ParsedFeed
@@ -84,9 +84,9 @@ class FailingParser(Parser):
         raise ParseError(None)
 
 
-class NotModifiedParser(Parser):
+class _NotModifiedParser(Parser):
     def __call__(self, *args, **kwargs):
-        raise NotModified(None)
+        raise _NotModified(None)
 
 
 class ParserThatRemembers(Parser):

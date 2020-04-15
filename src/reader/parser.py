@@ -15,7 +15,7 @@ import feedparser  # type: ignore
 import requests
 
 import reader
-from .exceptions import NotModified
+from .exceptions import _NotModified
 from .exceptions import ParseError
 from .types import Content
 from .types import Enclosure
@@ -250,7 +250,7 @@ class Parser:
             raise ParseError(url) from e
 
         if response.status_code == 304:
-            raise NotModified(url)
+            raise _NotModified(url)
 
         http_etag = response.headers.get('ETag', http_etag)
         http_last_modified = response.headers.get('Last-Modified', http_last_modified)
