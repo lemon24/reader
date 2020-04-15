@@ -7,8 +7,8 @@ import click
 import reader
 from . import make_reader
 from . import StorageError
-from .plugins import Loader
-from .plugins import LoaderError
+from ._plugins import Loader
+from ._plugins import LoaderError
 
 
 APP_NAME = reader.__name__

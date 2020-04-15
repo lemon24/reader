@@ -28,8 +28,8 @@ from reader import EntrySearchResult
 from reader import make_reader
 from reader import ParseError
 from reader import ReaderError
-from reader.plugins import Loader
-from reader.plugins import LoaderError
+from reader._plugins import Loader
+from reader._plugins import LoaderError
 
 blueprint = Blueprint('reader', __name__)
 
