@@ -19,6 +19,12 @@ from typing import Type
 from typing import TypeVar
 from typing import Union
 
+from ._types import DEFAULT_ENTRY_FILTER_OPTIONS
+from ._types import EntryFilterOptions
+from ._types import EntryForUpdate
+from ._types import EntryUpdateIntent
+from ._types import FeedForUpdate
+from ._types import FeedUpdateIntent
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
@@ -30,13 +36,8 @@ from .sqlite_utils import rowcount_exactly_one
 from .types import Content
 from .types import Enclosure
 from .types import Entry
-from .types import EntryFilterOptions
-from .types import EntryForUpdate
-from .types import EntryUpdateIntent
 from .types import Feed
-from .types import FeedForUpdate
 from .types import FeedSortOrder
-from .types import FeedUpdateIntent
 from .types import JSONType
 
 
@@ -414,9 +415,6 @@ def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
         required_sqlite_compile_options=["ENABLE_JSON1"],
         timeout=timeout,
     )
-
-
-DEFAULT_FILTER_OPTIONS = EntryFilterOptions()
 
 
 # TODO: rename to _GetEntriesLast, maybe
@@ -802,7 +800,7 @@ class Storage:
     def get_entries(
         self,
         now: datetime,
-        filter_options: EntryFilterOptions = DEFAULT_FILTER_OPTIONS,
+        filter_options: EntryFilterOptions = DEFAULT_ENTRY_FILTER_OPTIONS,
         chunk_size: Optional[int] = None,
         last: _EntryLast = None,
     ) -> Iterable[Tuple[Entry, _EntryLast]]:

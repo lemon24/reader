@@ -14,6 +14,17 @@ from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
+from ._types import DEFAULT_ENTRY_FILTER_OPTIONS
+from ._types import EntryFilterOptions
+from .exceptions import InvalidSearchQueryError
+from .exceptions import SearchError
+from .exceptions import SearchNotEnabledError
+from .sqlite_utils import ddl_transaction
+from .storage import Storage
+from .storage import wrap_storage_exceptions
+from .types import EntrySearchResult
+from .types import HighlightedString
+
 # Only Search.update() has a reason to fail if bs4 is missing.
 try:
     import bs4  # type: ignore
@@ -22,15 +33,6 @@ try:
 except ImportError as e:  # pragma: no cover
     bs4 = None
     bs4_import_error = e
-
-from .exceptions import InvalidSearchQueryError
-from .exceptions import SearchError
-from .exceptions import SearchNotEnabledError
-
-from .sqlite_utils import ddl_transaction
-from .types import EntrySearchResult, EntryFilterOptions, HighlightedString
-from .storage import Storage, wrap_storage_exceptions, DEFAULT_FILTER_OPTIONS
-
 
 log = logging.getLogger('reader')
 
@@ -377,7 +379,7 @@ class Search:
     def search_entries(
         self,
         query: str,
-        filter_options: EntryFilterOptions = DEFAULT_FILTER_OPTIONS,
+        filter_options: EntryFilterOptions = DEFAULT_ENTRY_FILTER_OPTIONS,
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:

@@ -15,13 +15,13 @@ import feedparser  # type: ignore
 import requests
 
 import reader
+from ._types import EntryData
+from ._types import FeedData
+from ._types import ParsedFeed
 from .exceptions import _NotModified
 from .exceptions import ParseError
 from .types import Content
 from .types import Enclosure
-from .types import EntryData
-from .types import FeedData
-from .types import ParsedFeed
 
 try:
     import feedparser.http as feedparser_http  # type: ignore

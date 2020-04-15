@@ -14,6 +14,10 @@ from typing import TypeVar
 from typing import Union
 
 from ._parser import Parser
+from ._types import EntryData
+from ._types import EntryFilterOptions
+from ._types import FeedForUpdate
+from ._types import ParsedFeed
 from .exceptions import _NotModified
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
@@ -23,17 +27,13 @@ from .search import Search
 from .storage import Storage
 from .types import Entry
 from .types import entry_argument
-from .types import EntryData
-from .types import EntryFilterOptions
 from .types import EntryInput
 from .types import EntrySearchResult
 from .types import Feed
 from .types import feed_argument
-from .types import FeedForUpdate
 from .types import FeedInput
 from .types import FeedSortOrder
 from .types import JSONType
-from .types import ParsedFeed
 from .updater import Updater
 from .utils import _Missing
 from .utils import _missing

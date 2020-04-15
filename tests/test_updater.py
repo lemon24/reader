@@ -1,7 +1,6 @@
 import pytest
 
-from reader.types import Entry
-from reader.types import FeedForUpdate
+from reader._types import FeedForUpdate
 from reader.updater import Updater
 
 

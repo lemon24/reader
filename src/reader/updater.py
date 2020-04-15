@@ -8,15 +8,15 @@ from typing import Sequence
 from typing import Tuple
 from typing import TYPE_CHECKING
 
-from .types import EntryData
-from .types import EntryForUpdate
-from .types import EntryUpdateIntent
-from .types import Feed
-from .types import FeedForUpdate
-from .types import FeedUpdateIntent
-from .types import ParsedFeed
-from .types import UpdatedEntry
-from .types import UpdateResult
+from ._types import EntryData
+from ._types import EntryForUpdate
+from ._types import EntryUpdateIntent
+from ._types import FeedData
+from ._types import FeedForUpdate
+from ._types import FeedUpdateIntent
+from ._types import ParsedFeed
+from ._types import UpdatedEntry
+from ._types import UpdateResult
 
 if TYPE_CHECKING:  # pragma: no cover
     from .storage import Storage
@@ -61,7 +61,7 @@ class Updater:
     def stale(self) -> bool:
         return self.old_feed.stale
 
-    def should_update_feed(self, new: Feed) -> bool:
+    def should_update_feed(self, new: FeedData) -> bool:
         def log_info(msg: str, *args: Any) -> None:
             log.info("update feed %r: " + msg, self.url, *args)
 

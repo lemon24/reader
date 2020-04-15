@@ -11,14 +11,14 @@ from reader import FeedNotFoundError
 from reader import InvalidSearchQueryError
 from reader import MetadataNotFoundError
 from reader import StorageError
+from reader._types import EntryData
+from reader._types import EntryFilterOptions
+from reader._types import EntryForUpdate
+from reader._types import EntryUpdateIntent
+from reader._types import FeedData
+from reader._types import FeedUpdateIntent
 from reader.storage import Storage
 from reader.storage import wrap_storage_exceptions
-from reader.types import EntryData
-from reader.types import EntryFilterOptions
-from reader.types import EntryForUpdate
-from reader.types import EntryUpdateIntent
-from reader.types import FeedData
-from reader.types import FeedUpdateIntent
 
 
 def test_wrap_storage_exceptions():
