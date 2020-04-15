@@ -63,7 +63,7 @@ def make_reader(url: str) -> 'Reader':
         StorageError
 
     """
-    return Reader(url, called_directly=False)
+    return Reader(url, _called_directly=False)
 
 
 class Reader:
@@ -77,8 +77,8 @@ class Reader:
 
     _pagination_chunk_size = 2 ** 8
 
-    def __init__(self, path: str, called_directly: bool = True):
-        self._storage = Storage(path)
+    def __init__(self, _path: str, _called_directly: bool = True):
+        self._storage = Storage(_path)
 
         # For now, we're using a storage-bound search provider.
         # If we ever implement an external search provider,
@@ -89,7 +89,7 @@ class Reader:
         self._parser = Parser()
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
 
-        if called_directly:
+        if _called_directly:
             warnings.warn(
                 "Reader objects should be created using make_reader(); the Reader "
                 "constructor is not stable yet and may change without any notice.",
