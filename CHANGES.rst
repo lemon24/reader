@@ -287,7 +287,7 @@ Released 2019-02-09
 * Make updating new feeds up to 2 orders of magnitude faster;
   fixes a problem introduced by `#94`_. (`#104`_)
 * Move the core modules to a separate subpackage and enforce test coverage
-  (``make coverage`` now fails if :mod:`reader.core` coverage is less than
+  (``make coverage`` now fails if the coverage for core modules is less than
   100%). (`#101`_)
 * Support Python 3.8 development branch.
 * Add ``dev`` and ``docs`` extras (to install development requirements).

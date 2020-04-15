@@ -40,7 +40,7 @@ Print the titles of the unread entries::
 __version__ = '0.23.dev0'
 
 
-from .reader import Reader, make_reader
+from .core import Reader, make_reader
 
 from .types import (
     Feed,
