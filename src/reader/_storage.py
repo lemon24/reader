@@ -358,8 +358,7 @@ def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
     )
 
 
-# TODO: rename to _GetEntriesLast, maybe
-_EntryLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
+_GetEntriesLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
 
 
 class Storage:
@@ -743,8 +742,8 @@ class Storage:
         now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         chunk_size: Optional[int] = None,
-        last: _EntryLast = None,
-    ) -> Iterable[Tuple[Entry, _EntryLast]]:
+        last: _GetEntriesLast = None,
+    ) -> Iterable[Tuple[Entry, _GetEntriesLast]]:
         rv = self._get_entries(
             now=now, filter_options=filter_options, chunk_size=chunk_size, last=last
         )
@@ -762,8 +761,8 @@ class Storage:
         now: datetime,
         filter_options: EntryFilterOptions,
         chunk_size: Optional[int] = None,
-        last: _EntryLast = None,
-    ) -> Iterable[Tuple[Entry, _EntryLast]]:
+        last: _GetEntriesLast = None,
+    ) -> Iterable[Tuple[Entry, _GetEntriesLast]]:
         query = self._make_get_entries_query(filter_options, chunk_size, last)
 
         feed_url, entry_id, read, important, has_enclosures = filter_options
@@ -808,7 +807,7 @@ class Storage:
         self,
         filter_options: EntryFilterOptions,
         chunk_size: Optional[int] = None,
-        last: _EntryLast = None,
+        last: _GetEntriesLast = None,
     ) -> str:
         log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
