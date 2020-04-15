@@ -25,14 +25,14 @@ from .exceptions import MetadataNotFoundError
 from .exceptions import ParseError
 from .search import Search
 from .storage import Storage
+from .types import _entry_argument
+from .types import _EntryInput
+from .types import _feed_argument
+from .types import _FeedInput
+from .types import _FeedSortOrder
 from .types import Entry
-from .types import entry_argument
-from .types import EntryInput
 from .types import EntrySearchResult
 from .types import Feed
-from .types import feed_argument
-from .types import FeedInput
-from .types import FeedSortOrder
 from .types import JSONType
 from .updater import Updater
 from .utils import _Missing
@@ -110,7 +110,7 @@ class Reader:
         """
         self._storage.close()
 
-    def add_feed(self, feed: FeedInput) -> None:
+    def add_feed(self, feed: _FeedInput) -> None:
         """Add a new feed.
 
         Args:
@@ -121,11 +121,11 @@ class Reader:
             StorageError
 
         """
-        url = feed_argument(feed)
+        url = _feed_argument(feed)
         now = self._now()
         self._storage.add_feed(url, now)
 
-    def remove_feed(self, feed: FeedInput) -> None:
+    def remove_feed(self, feed: _FeedInput) -> None:
         """Remove a feed.
 
         Also removes all of the feed's entries.
@@ -138,11 +138,11 @@ class Reader:
             StorageError
 
         """
-        url = feed_argument(feed)
+        url = _feed_argument(feed)
         self._storage.remove_feed(url)
 
     def get_feeds(
-        self, *, feed: Optional[FeedInput] = None, sort: FeedSortOrder = 'title'
+        self, *, feed: Optional[_FeedInput] = None, sort: _FeedSortOrder = 'title'
     ) -> Iterable[Feed]:
         """Get all or some of the feeds.
 
@@ -159,23 +159,23 @@ class Reader:
             StorageError
 
         """
-        url = feed_argument(feed) if feed else None
+        url = _feed_argument(feed) if feed else None
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
         return self._storage.get_feeds(url=url, sort=sort)
 
     @overload
-    def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
+    def get_feed(self, feed: _FeedInput) -> Feed:  # pragma: no cover
         ...
 
     @overload
     def get_feed(
-        self, feed: FeedInput, default: _T
+        self, feed: _FeedInput, default: _T
     ) -> Union[Feed, _T]:  # pragma: no cover
         ...
 
     def get_feed(
-        self, feed: FeedInput, default: Union[_Missing, _T] = _missing
+        self, feed: _FeedInput, default: Union[_Missing, _T] = _missing
     ) -> Union[Feed, _T]:
         """Get a feed.
 
@@ -196,11 +196,11 @@ class Reader:
         """
         return zero_or_one(
             self.get_feeds(feed=feed),
-            lambda: FeedNotFoundError(feed_argument(feed)),
+            lambda: FeedNotFoundError(_feed_argument(feed)),
             default,
         )
 
-    def set_feed_user_title(self, feed: FeedInput, title: Optional[str]) -> None:
+    def set_feed_user_title(self, feed: _FeedInput, title: Optional[str]) -> None:
         """Set a user-defined title for a feed.
 
         Args:
@@ -212,7 +212,7 @@ class Reader:
             StorageError
 
         """
-        url = feed_argument(feed)
+        url = _feed_argument(feed)
         return self._storage.set_feed_user_title(url, title)
 
     def update_feeds(self, new_only: bool = False, workers: int = 1) -> None:
@@ -278,7 +278,7 @@ class Reader:
                 except StopIteration:
                     break
 
-    def update_feed(self, feed: FeedInput) -> None:
+    def update_feed(self, feed: _FeedInput) -> None:
         """Update a single feed.
 
         Args:
@@ -290,7 +290,7 @@ class Reader:
             StorageError
 
         """
-        url = feed_argument(feed)
+        url = _feed_argument(feed)
 
         feed_for_update = zero_or_one(
             self._storage.get_feeds_for_update(url), lambda: FeedNotFoundError(url),
@@ -335,8 +335,8 @@ class Reader:
     def get_entries(
         self,
         *,
-        feed: Optional[FeedInput] = None,
-        entry: Optional[EntryInput] = None,
+        feed: Optional[_FeedInput] = None,
+        entry: Optional[_EntryInput] = None,
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,
@@ -381,17 +381,17 @@ class Reader:
         )
 
     @overload
-    def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover
+    def get_entry(self, entry: _EntryInput) -> Entry:  # pragma: no cover
         ...
 
     @overload
     def get_entry(
-        self, entry: EntryInput, default: _T
+        self, entry: _EntryInput, default: _T
     ) -> Union[Entry, _T]:  # pragma: no cover
         ...
 
     def get_entry(
-        self, entry: EntryInput, default: Union[_Missing, _T] = _missing
+        self, entry: _EntryInput, default: Union[_Missing, _T] = _missing
     ) -> Union[Entry, _T]:
         """Get an entry.
 
@@ -412,11 +412,11 @@ class Reader:
         """
         return zero_or_one(
             self.get_entries(entry=entry),
-            lambda: EntryNotFoundError(*entry_argument(entry)),
+            lambda: EntryNotFoundError(*_entry_argument(entry)),
             default,
         )
 
-    def mark_as_read(self, entry: EntryInput) -> None:
+    def mark_as_read(self, entry: _EntryInput) -> None:
         """Mark an entry as read.
 
         Args:
@@ -427,10 +427,10 @@ class Reader:
             StorageError
 
         """
-        feed_url, entry_id = entry_argument(entry)
+        feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_read_unread(feed_url, entry_id, True)
 
-    def mark_as_unread(self, entry: EntryInput) -> None:
+    def mark_as_unread(self, entry: _EntryInput) -> None:
         """Mark an entry as unread.
 
         Args:
@@ -441,10 +441,10 @@ class Reader:
             StorageError
 
         """
-        feed_url, entry_id = entry_argument(entry)
+        feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_read_unread(feed_url, entry_id, False)
 
-    def mark_as_important(self, entry: EntryInput) -> None:
+    def mark_as_important(self, entry: _EntryInput) -> None:
         """Mark an entry as important.
 
         Args:
@@ -455,10 +455,10 @@ class Reader:
             StorageError
 
         """
-        feed_url, entry_id = entry_argument(entry)
+        feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_important_unimportant(feed_url, entry_id, True)
 
-    def mark_as_unimportant(self, entry: EntryInput) -> None:
+    def mark_as_unimportant(self, entry: _EntryInput) -> None:
         """Mark an entry as unimportant.
 
         Args:
@@ -469,11 +469,11 @@ class Reader:
             StorageError
 
         """
-        feed_url, entry_id = entry_argument(entry)
+        feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_important_unimportant(feed_url, entry_id, False)
 
     def iter_feed_metadata(
-        self, feed: FeedInput, *, key: Optional[str] = None,
+        self, feed: _FeedInput, *, key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
         """Get all or some of the metadata values for a feed.
 
@@ -489,23 +489,23 @@ class Reader:
             StorageError
 
         """
-        feed_url = feed_argument(feed)
+        feed_url = _feed_argument(feed)
         return self._storage.iter_feed_metadata(feed_url, key)
 
     @overload
     def get_feed_metadata(
-        self, feed: FeedInput, key: str
+        self, feed: _FeedInput, key: str
     ) -> JSONType:  # pragma: no cover
         ...
 
     @overload
     def get_feed_metadata(
-        self, feed: FeedInput, key: str, default: _T
+        self, feed: _FeedInput, key: str, default: _T
     ) -> Union[JSONType, _T]:  # pragma: no cover
         ...
 
     def get_feed_metadata(
-        self, feed: FeedInput, key: str, default: Union[_Missing, _T] = _missing
+        self, feed: _FeedInput, key: str, default: Union[_Missing, _T] = _missing
     ) -> Union[JSONType, _T]:
         """Get metadata for a feed.
 
@@ -528,11 +528,11 @@ class Reader:
         """
         return zero_or_one(
             (v for _, v in self.iter_feed_metadata(feed, key=key)),
-            lambda: MetadataNotFoundError(feed_argument(feed), key),
+            lambda: MetadataNotFoundError(_feed_argument(feed), key),
             default,
         )
 
-    def set_feed_metadata(self, feed: FeedInput, key: str, value: JSONType) -> None:
+    def set_feed_metadata(self, feed: _FeedInput, key: str, value: JSONType) -> None:
         """Set metadata for a feed.
 
         Args:
@@ -546,10 +546,10 @@ class Reader:
             StorageError
 
         """
-        feed_url = feed_argument(feed)
+        feed_url = _feed_argument(feed)
         self._storage.set_feed_metadata(feed_url, key, value)
 
-    def delete_feed_metadata(self, feed: FeedInput, key: str) -> None:
+    def delete_feed_metadata(self, feed: _FeedInput, key: str) -> None:
         """Delete metadata for a feed.
 
         Args:
@@ -561,7 +561,7 @@ class Reader:
             StorageError
 
         """
-        feed_url = feed_argument(feed)
+        feed_url = _feed_argument(feed)
         self._storage.delete_feed_metadata(feed_url, key)
 
     def enable_search(self) -> None:
@@ -616,8 +616,8 @@ class Reader:
         self,
         query: str,
         *,
-        feed: Optional[FeedInput] = None,
-        entry: Optional[EntryInput] = None,
+        feed: Optional[_FeedInput] = None,
+        entry: Optional[_EntryInput] = None,
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,

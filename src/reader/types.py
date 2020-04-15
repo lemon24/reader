@@ -374,7 +374,7 @@ class EntrySearchResult:
 
 
 # TODO: Could we use some kind of str-compatible enum here?
-FeedSortOrder = Literal['title', 'added']
+_FeedSortOrder = Literal['title', 'added']
 
 
 # https://github.com/python/typing/issues/182
@@ -408,11 +408,11 @@ class EntryLike(Protocol):
         ...
 
 
-FeedInput = Union[str, FeedLike]
-EntryInput = Union[Tuple[str, str], EntryLike]
+_FeedInput = Union[str, FeedLike]
+_EntryInput = Union[Tuple[str, str], EntryLike]
 
 
-def feed_argument(feed: FeedInput) -> str:
+def _feed_argument(feed: _FeedInput) -> str:
     if isinstance(feed, FeedLike):
         return feed.url
     if isinstance(feed, str):
@@ -420,9 +420,9 @@ def feed_argument(feed: FeedInput) -> str:
     raise ValueError(f'invalid feed argument: {feed!r}')
 
 
-def entry_argument(entry: EntryInput) -> Tuple[str, str]:
+def _entry_argument(entry: _EntryInput) -> Tuple[str, str]:
     if isinstance(entry, EntryLike):
-        return feed_argument(entry.feed_url), entry.id
+        return _feed_argument(entry.feed_url), entry.id
     if isinstance(entry, tuple) and len(entry) == 2:
         feed_url, entry_id = entry
         if isinstance(feed_url, str) and isinstance(entry_id, str):

@@ -32,11 +32,11 @@ from .exceptions import StorageError
 from .sqlite_utils import DBError
 from .sqlite_utils import open_sqlite_db
 from .sqlite_utils import rowcount_exactly_one
+from .types import _FeedSortOrder
 from .types import Content
 from .types import Enclosure
 from .types import Entry
 from .types import Feed
-from .types import FeedSortOrder
 from .types import JSONType
 
 
@@ -470,7 +470,7 @@ class Storage:
     @wrap_storage_exceptions()
     @returns_iter_list
     def get_feeds(
-        self, url: Optional[str] = None, sort: FeedSortOrder = 'title'
+        self, url: Optional[str] = None, sort: _FeedSortOrder = 'title'
     ) -> Iterable[Feed]:
         where_url_snippet = '' if not url else "WHERE url = :url"
 

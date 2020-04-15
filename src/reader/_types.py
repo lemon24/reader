@@ -8,15 +8,15 @@ from typing import Sequence
 from typing import Type
 from typing import TypeVar
 
+from .types import _entry_argument
+from .types import _EntryInput
+from .types import _feed_argument
+from .types import _FeedInput
 from .types import _namedtuple_compat
 from .types import Content
 from .types import Enclosure
 from .types import Entry
-from .types import entry_argument
-from .types import EntryInput
 from .types import Feed
-from .types import feed_argument
-from .types import FeedInput
 
 
 # Private API
@@ -195,19 +195,19 @@ class EntryFilterOptions(NamedTuple):
     @classmethod
     def from_args(
         cls: Type[_EFO],
-        feed: Optional[FeedInput] = None,
-        entry: Optional[EntryInput] = None,
+        feed: Optional[_FeedInput] = None,
+        entry: Optional[_EntryInput] = None,
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,
     ) -> _EFO:
-        feed_url = feed_argument(feed) if feed is not None else None
+        feed_url = _feed_argument(feed) if feed is not None else None
 
         # TODO: should we allow specifying both feed and entry?
         if entry is None:
             entry_id = None
         else:
-            feed_url, entry_id = entry_argument(entry)
+            feed_url, entry_id = _entry_argument(entry)
 
         if read not in (None, False, True):
             raise ValueError("read should be one of (None, False, True)")

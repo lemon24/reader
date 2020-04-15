@@ -6,9 +6,9 @@ import pytest
 from reader import Entry
 from reader import EntrySearchResult
 from reader import Feed
+from reader.types import _entry_argument
+from reader.types import _feed_argument
 from reader.types import _namedtuple_compat
-from reader.types import entry_argument
-from reader.types import feed_argument
 from reader.types import HighlightedString
 
 
@@ -29,32 +29,32 @@ def test_namedtuple_compat():
     assert Object(1, 2)._asdict() == {'one': 1, 'two': 2}
 
 
-def test_feed_argument():
+def test__feed_argument():
     feed = Feed('url')
-    assert feed_argument(feed) == feed.url
-    assert feed_argument(feed.url) == feed.url
+    assert _feed_argument(feed) == feed.url
+    assert _feed_argument(feed.url) == feed.url
     with pytest.raises(ValueError):
-        feed_argument(1)
+        _feed_argument(1)
 
 
-def test_entry_argument():
+def test__entry_argument():
     feed = Feed('url')
     entry = Entry('entry', 'updated', feed=feed)
     entry_tuple = feed.url, entry.id
-    assert entry_argument(entry) == entry_tuple
-    assert entry_argument(entry_tuple) == entry_tuple
+    assert _entry_argument(entry) == entry_tuple
+    assert _entry_argument(entry_tuple) == entry_tuple
     with pytest.raises(ValueError):
-        entry_argument(entry._replace(feed=None))
+        _entry_argument(entry._replace(feed=None))
     with pytest.raises(ValueError):
-        entry_argument(1)
+        _entry_argument(1)
     with pytest.raises(ValueError):
-        entry_argument('ab')
+        _entry_argument('ab')
     with pytest.raises(ValueError):
-        entry_argument((1, 'b'))
+        _entry_argument((1, 'b'))
     with pytest.raises(ValueError):
-        entry_argument(('a', 2))
+        _entry_argument(('a', 2))
     with pytest.raises(ValueError):
-        entry_argument(('a', 'b', 'c'))
+        _entry_argument(('a', 'b', 'c'))
 
 
 def test_entry_search_result_feed():
