@@ -5,7 +5,7 @@ from datetime import datetime
 import pytest
 from utils import rename_argument
 
-import reader.sqlite_utils
+import reader._sqlite_utils
 from reader import EntryNotFoundError
 from reader import FeedNotFoundError
 from reader import InvalidSearchQueryError
@@ -50,9 +50,9 @@ def test_storage_errors_open(tmpdir):
         Storage(str(tmpdir))
 
 
-@pytest.mark.parametrize('db_error_cls', reader.sqlite_utils.db_errors)
+@pytest.mark.parametrize('db_error_cls', reader._sqlite_utils.db_errors)
 def test_db_errors(monkeypatch, db_path, db_error_cls):
-    """...sqlite_utils.DBError subclasses should be wrapped in StorageError."""
+    """..._sqlite_utils.DBError subclasses should be wrapped in StorageError."""
 
     def open_db(*args, **kwargs):
         raise db_error_cls("whatever")

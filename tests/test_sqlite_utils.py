@@ -3,13 +3,13 @@ import sys
 
 import pytest
 
-from reader.sqlite_utils import ddl_transaction
-from reader.sqlite_utils import HeavyMigration
-from reader.sqlite_utils import IntegrityError
-from reader.sqlite_utils import require_sqlite_compile_options
-from reader.sqlite_utils import require_sqlite_version
-from reader.sqlite_utils import RequirementError
-from reader.sqlite_utils import SchemaVersionError
+from reader._sqlite_utils import ddl_transaction
+from reader._sqlite_utils import HeavyMigration
+from reader._sqlite_utils import IntegrityError
+from reader._sqlite_utils import require_sqlite_compile_options
+from reader._sqlite_utils import require_sqlite_version
+from reader._sqlite_utils import RequirementError
+from reader._sqlite_utils import SchemaVersionError
 
 
 def dummy_ddl_transaction(db):

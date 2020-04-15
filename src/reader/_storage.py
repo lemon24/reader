@@ -19,6 +19,9 @@ from typing import Type
 from typing import TypeVar
 from typing import Union
 
+from ._sqlite_utils import DBError
+from ._sqlite_utils import open_sqlite_db
+from ._sqlite_utils import rowcount_exactly_one
 from ._types import EntryFilterOptions
 from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
@@ -29,9 +32,6 @@ from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
 from .exceptions import StorageError
-from .sqlite_utils import DBError
-from .sqlite_utils import open_sqlite_db
-from .sqlite_utils import rowcount_exactly_one
 from .types import _FeedSortOrder
 from .types import Content
 from .types import Enclosure
@@ -43,7 +43,7 @@ from .types import JSONType
 log = logging.getLogger('reader')
 
 
-# TODO: move wrap_storage_exceptions to sqlite_utils
+# TODO: move wrap_storage_exceptions to _sqlite_utils
 
 
 @contextlib.contextmanager
