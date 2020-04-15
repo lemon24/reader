@@ -7,7 +7,7 @@ from fakeparser import ParserThatRemembers
 from reader import Entry
 from reader import Feed
 from reader import FeedNotFoundError
-from reader.utils import _missing
+from reader._utils import _missing
 
 
 def test_update_stale(reader, call_update_method):

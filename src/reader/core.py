@@ -20,6 +20,12 @@ from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import FeedForUpdate
 from ._types import ParsedFeed
+from ._utils import _Missing
+from ._utils import _missing
+from ._utils import join_paginated_iter
+from ._utils import make_noop_map
+from ._utils import make_pool_map
+from ._utils import zero_or_one
 from .exceptions import _NotModified
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
@@ -35,12 +41,6 @@ from .types import EntrySearchResult
 from .types import Feed
 from .types import JSONType
 from .updater import Updater
-from .utils import _Missing
-from .utils import _missing
-from .utils import join_paginated_iter
-from .utils import make_noop_map
-from .utils import make_pool_map
-from .utils import zero_or_one
 
 
 log = logging.getLogger('reader')
