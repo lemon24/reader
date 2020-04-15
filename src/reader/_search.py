@@ -15,6 +15,7 @@ from typing import Tuple
 from typing import TypeVar
 
 from ._sqlite_utils import ddl_transaction
+from ._sqlite_utils import json_object_get
 from ._sqlite_utils import wrap_exceptions
 from ._storage import Storage
 from ._types import EntryFilterOptions
@@ -603,39 +604,3 @@ class Search:
         log.debug("_search_entries query\n%s\n", query)
 
         return query
-
-
-def json_object_get(object_str: str, key: str) -> Any:
-    """Extract a key from a string containing a JSON object.
-
-    >>> json_object_get('{"k": "v"}', 'k')
-    'v'
-
-    Because of a bug in SQLite[1][2], json_extract fails for strings
-    containing non-BMP characters (e.g. some emojis).
-
-    However, when the result of json_extract is passed to a user-defined
-    function, instead of failing, the function silently gets passed NULL:
-
-    % cat bug.py
-    import sqlite3, json
-    db = sqlite3.connect(":memory:")
-    db.create_function("udf", 1, lambda x: x)
-    json_string = json.dumps("🤩")
-    print(*db.execute("select udf(json_extract(?, '$'));", (json_string,)))
-    print(*db.execute("select json_extract(?, '$');", (json_string,)))
-    % python bug.py
-    (None,)
-    Traceback (most recent call last):
-      File "bug.py", line 6, in <module>
-        print(*db.execute("select json_extract(?, '$');", (json_string,)))
-    sqlite3.OperationalError: Could not decode to UTF-8 column 'json_extract(?, '$')' with text '������'
-
-    To work around this, we define json_object_get(value, key), equivalent
-    to json_extract(value, '$.' || key), which covers our use case.
-
-    [1]: https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg117549.html
-    [2]: https://bugs.python.org/issue38749
-
-    """
-    return json.loads(object_str)[key]
