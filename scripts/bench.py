@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.join(root_dir, '../tests'))
 from fakeparser import Parser
 
 from reader import Reader
-from reader.app import create_app, get_reader
+from reader._app import create_app, get_reader
 
 
 def get_params(fn):

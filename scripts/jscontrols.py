@@ -11,13 +11,13 @@ from flask import request
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../src'))
 
-from reader.app.api_thing import APIThing, APIError
+from reader._app.api_thing import APIThing, APIError
 
 
 app = Flask(
     __name__,
-    template_folder='../src/reader/app/templates',
-    static_folder='../src/reader/app/static',
+    template_folder='../src/reader/_app/templates',
+    static_folder='../src/reader/_app/static',
 )
 app.secret_key = 'secret'
 

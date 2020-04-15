@@ -178,7 +178,7 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
         assert args == (db_path, (), ())
         raise exception
 
-    monkeypatch.setattr('reader.app.create_app', create_app)
+    monkeypatch.setattr('reader._app.create_app', create_app)
 
     runner = CliRunner()
     result = runner.invoke(cli, ['--db', db_path, 'serve'])

@@ -1,5 +1,5 @@
-recursive-include src/reader/app/templates *
-recursive-include src/reader/app/static *
+recursive-include src/reader/_app/templates *
+recursive-include src/reader/_app/static *
 recursive-include src/reader/plugins/templates *
 include Makefile README.md README.rst CHANGES.rst LICENSE
 recursive-include tests *

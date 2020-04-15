@@ -7,7 +7,7 @@ import wsgiadapter
 from fakeparser import Parser
 
 from reader import make_reader
-from reader.app import create_app
+from reader._app import create_app
 
 
 @pytest.fixture
@@ -105,7 +105,7 @@ def test_add_delete_feed(db_path, browser, monkeypatch):
         return reader
 
     # this is brittle, it may break if we change how we use make_reader in app
-    monkeypatch.setattr('reader.app.make_reader', app_make_reader)
+    monkeypatch.setattr('reader._app.make_reader', app_make_reader)
 
     reader = app_make_reader(db_path)
 

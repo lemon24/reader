@@ -31,7 +31,7 @@ from flask import request
 from flask import url_for
 
 import reader
-from reader.app import get_reader
+from reader._app import get_reader
 
 
 blueprint = Blueprint('preview_feed_list', __name__, template_folder='templates')

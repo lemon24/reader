@@ -9,10 +9,9 @@ To run a local development server:
 """
 import os
 
-import reader
-from reader.app import create_app
+import reader._app
 
-app = create_app(
+app = reader._app.create_app(
     os.environ[reader._DB_ENVVAR],
     os.environ.get(reader._PLUGIN_ENVVAR, '').split(),
     os.environ.get(reader._APP_PLUGIN_ENVVAR, '').split(),

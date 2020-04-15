@@ -223,7 +223,7 @@ def search_entries(kwargs, query):
 
 
 try:
-    from reader.app.cli import serve
+    from reader._app.cli import serve
 
     cli.add_command(serve)
 except ImportError:
