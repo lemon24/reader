@@ -20,6 +20,7 @@ from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import FeedForUpdate
 from ._types import ParsedFeed
+from ._updater import Updater
 from ._utils import _Missing
 from ._utils import _missing
 from ._utils import join_paginated_iter
@@ -40,7 +41,6 @@ from .types import Entry
 from .types import EntrySearchResult
 from .types import Feed
 from .types import JSONType
-from .updater import Updater
 
 
 log = logging.getLogger('reader')
