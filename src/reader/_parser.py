@@ -186,7 +186,7 @@ class Parser:
         No need to add Accept-encoding (requests seems to do this already).
 
         No need to add Referer / User-Agent / Authorization / custom request
-        headers, as they are not exposed in the reader.parser.parse interface
+        headers, as they are not exposed in the Parser.__call__() interface
         (not yet, at least).
 
         We should add:

@@ -13,12 +13,12 @@ from typing import Tuple
 from typing import TypeVar
 from typing import Union
 
+from ._parser import Parser
 from .exceptions import _NotModified
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
 from .exceptions import ParseError
-from .parser import Parser
 from .search import Search
 from .storage import Storage
 from .types import Entry
