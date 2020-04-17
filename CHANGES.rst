@@ -11,6 +11,20 @@ Version 0.23
 
 Unreleased
 
+* Make all private submodules explicitly private. (`#156`_)
+
+  .. note::
+    All direct imports from :mod:`reader` continue to work.
+
+  * The ``reader.core.*`` modules moved to ``reader.*``
+    (most of them prefixed by ``_``).
+  * The web application WSGI entry point moved from
+    ``reader.app.wsgi:app`` to ``reader._app.wsgi:app``.
+  * The entry points for plugins that ship with reader moved from
+    ``reader.plugins.*`` to ``reader._plugins.*``.
+
+.. _#156: https://github.com/lemon24/reader/issues/156
+
 
 Version 0.22
 ------------
