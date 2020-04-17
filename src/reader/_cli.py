@@ -76,6 +76,7 @@ def setup_logging(verbose):
     envvar=reader._PLUGIN_ENVVAR,
     help="Import path to a plug-in. Can be passed multiple times.",
 )
+@click.version_option(reader.__version__, message='%(prog)s %(version)s')
 @click.pass_context
 def cli(ctx, db, plugin):
     if db is None:
