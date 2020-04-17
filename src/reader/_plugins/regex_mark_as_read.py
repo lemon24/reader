@@ -6,7 +6,7 @@ Mark added entries of specific feeds as read if their title matches a regex.
 
 To load::
 
-    READER_PLUGIN='reader.plugins.regex_mark_as_read:regex_mark_as_read' \\
+    READER_PLUGIN='reader._plugins.regex_mark_as_read:regex_mark_as_read' \\
     python -m reader update -v
 
 To configure, set the ``regex-mark-as-read`` feed metadata to something like

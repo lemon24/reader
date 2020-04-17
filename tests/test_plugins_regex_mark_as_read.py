@@ -4,7 +4,7 @@ from datetime import datetime
 
 from fakeparser import Parser
 
-from reader.plugins.regex_mark_as_read import regex_mark_as_read
+from reader._plugins.regex_mark_as_read import regex_mark_as_read
 
 
 def test_regex_mark_as_read(reader, monkeypatch, tmpdir):

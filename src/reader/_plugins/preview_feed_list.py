@@ -14,7 +14,7 @@ to install them:
 
 To load::
 
-    READER_APP_PLUGIN='reader.plugins.preview_feed_list:init' \\
+    READER_APP_PLUGIN='reader._plugins.preview_feed_list:init' \\
     python -m reader serve
 
 Implemented for https://github.com/lemon24/reader/issues/150.

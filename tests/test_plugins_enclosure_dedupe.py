@@ -3,7 +3,7 @@ from datetime import datetime
 from fakeparser import Parser
 
 from reader import Enclosure
-from reader.plugins.enclosure_dedupe import enclosure_dedupe
+from reader._plugins.enclosure_dedupe import enclosure_dedupe
 
 
 def test_enclosure_dedupe(reader):

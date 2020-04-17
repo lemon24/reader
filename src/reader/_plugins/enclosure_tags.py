@@ -19,7 +19,7 @@ to install them:
 
 To load::
 
-    READER_APP_PLUGIN='reader.plugins.enclosure_tags:init' \\
+    READER_APP_PLUGIN='reader._plugins.enclosure_tags:init' \\
     python -m reader serve
 
 Implemented for https://github.com/lemon24/reader/issues/50.

@@ -13,7 +13,7 @@ coverage: clean-pyc install-dev
 	coverage html
 	coverage report \
 		--include '*/reader/*' \
-		--omit '*/reader/__main__.py,*/reader/_cli*,*/reader/app/*,*/reader/_app/*,*/reader/_plugins.py,*/reader/plugins/*,tests/*' \
+		--omit '*/reader/__main__.py,*/reader/_cli*,*/reader/_app/*,*/reader/_plugins/*,tests/*' \
 		--fail-under 100
 
 cov: coverage

@@ -11,7 +11,7 @@ If the old entry is unread, it will be marked as read in favor of the new one.
 
 To load::
 
-    READER_PLUGIN='reader.plugins.feed_entry_dedupe:feed_entry_dedupe' \\
+    READER_PLUGIN='reader._plugins.feed_entry_dedupe:feed_entry_dedupe' \\
     python -m reader update -v
 
 Implemented for https://github.com/lemon24/reader/issues/79.
@@ -30,7 +30,7 @@ Implemented for https://github.com/lemon24/reader/issues/79.
 import logging
 import re
 
-log = logging.getLogger('reader.plugins.feed_entry_dedupe')
+log = logging.getLogger('reader._plugins.feed_entry_dedupe')
 
 
 XML_TAG_RE = re.compile(r'<[^<]+?>', re.I)

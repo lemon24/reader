@@ -5,9 +5,9 @@ from fakeparser import Parser
 
 from reader import Content
 from reader import Entry
-from reader.plugins.feed_entry_dedupe import feed_entry_dedupe
-from reader.plugins.feed_entry_dedupe import is_duplicate
-from reader.plugins.feed_entry_dedupe import normalize
+from reader._plugins.feed_entry_dedupe import feed_entry_dedupe
+from reader._plugins.feed_entry_dedupe import is_duplicate
+from reader._plugins.feed_entry_dedupe import normalize
 
 
 def test_normalize():

@@ -36,7 +36,7 @@ to run ``update`` once immediately after boot::
 Serving the web application
 ---------------------------
 
-reader exposes a standard WSGI application as ``reader.app.wsgi:app``.
+reader exposes a standard WSGI application as ``reader._app.wsgi:app``.
 See the `Flask documentation`_ for more details on how to deploy it.
 The path to the reader database can be configured through the ``READER_DB``
 environment variable.
@@ -52,7 +52,7 @@ An example uWSGI configuration file (probably not idiomatic, from `here`_)::
     [uwsgi]
     socket = /apps/reader/uwsgi/sock
     manage-script-name = true
-    mount = /reader=reader.app.wsgi:app
+    mount = /reader=reader._app.wsgi:app
     plugin = python3
     virtualenv = /apps/reader/
     env = READER_DB=/data/www-data/reader.sqlite

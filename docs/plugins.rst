@@ -40,9 +40,9 @@ Currently plugins are loaded through the CLI and web application only
 Existing plugins
 ----------------
 
-.. automodule:: reader.plugins.regex_mark_as_read
-.. automodule:: reader.plugins.feed_entry_dedupe
-.. automodule:: reader.plugins.enclosure_dedupe
-.. automodule:: reader.plugins.tumblr_gdpr
-.. automodule:: reader.plugins.enclosure_tags
-.. automodule:: reader.plugins.preview_feed_list
+.. automodule:: reader._plugins.regex_mark_as_read
+.. automodule:: reader._plugins.feed_entry_dedupe
+.. automodule:: reader._plugins.enclosure_dedupe
+.. automodule:: reader._plugins.tumblr_gdpr
+.. automodule:: reader._plugins.enclosure_tags
+.. automodule:: reader._plugins.preview_feed_list

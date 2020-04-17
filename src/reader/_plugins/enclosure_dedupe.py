@@ -6,7 +6,7 @@ Deduplicate enclosures of an entry by enclosure URL.
 
 To load::
 
-    READER_PLUGIN='reader.plugins.enclosure_dedupe:enclosure_dedupe' \\
+    READER_PLUGIN='reader._plugins.enclosure_dedupe:enclosure_dedupe' \\
     python -m reader ...
 
 Implemented for https://github.com/lemon24/reader/issues/78.
