@@ -92,7 +92,6 @@ class Reader:
             warnings.warn(
                 "Reader objects should be created using make_reader(); the Reader "
                 "constructor is not stable yet and may change without any notice.",
-                DeprecationWarning,
             )
 
     def close(self) -> None:

@@ -1036,7 +1036,7 @@ def test_closed(reader):
 
 
 def test_direct_instantiation():
-    with pytest.deprecated_call():
+    with pytest.warns(UserWarning):
         Reader(':memory:')
 
 
