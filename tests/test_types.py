@@ -57,13 +57,6 @@ def test__entry_argument():
         _entry_argument(('a', 'b', 'c'))
 
 
-def test_entry_search_result_feed():
-    # TODO: remove me after 0.22
-    r = EntrySearchResult('entry', 'feed')
-    with pytest.deprecated_call():
-        r.feed
-
-
 @pytest.mark.parametrize(
     'highlights',
     [

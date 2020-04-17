@@ -1,6 +1,5 @@
 import dataclasses
 import re
-import warnings
 from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
@@ -351,21 +350,6 @@ class EntrySearchResult:
     #: Matching entry content, sorted by relevance.
     #: Content is any of entry.summary and entry.content[].value.
     content: Mapping[str, HighlightedString] = MappingProxyType({})
-
-    @property
-    def feed(self) -> str:
-        """The feed URL.
-
-        :deprecated: Use :attr:`feed_url` instead.
-
-        """
-        # TODO: remove me after 0.22
-        warnings.warn(
-            "EntrySearchResult.feed is deprecated and will be removed after "
-            "reader 0.22. Use EntrySearchResult.feed_url instead.",
-            DeprecationWarning,
-        )
-        return self.feed_url
 
     # TODO: entry: Optional[Entry]; model it through typing if possible
 

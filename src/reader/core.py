@@ -47,7 +47,6 @@ log = logging.getLogger('reader')
 
 
 _T = TypeVar('_T')
-_U = TypeVar('_U')
 
 
 _PostEntryAddPluginType = Callable[['Reader', EntryData[datetime.datetime]], None]
