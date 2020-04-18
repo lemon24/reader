@@ -19,33 +19,48 @@ from ._types import ParsedFeed
 log = logging.getLogger("reader")
 
 
+def process_old_feed(feed: FeedForUpdate) -> FeedForUpdate:
+    if feed.stale:
+        # db_updated=None not ot tested (removing it causes no tests to fail).
+        #
+        # This only matters if last_updated is None *and* db_updated is
+        # not None. The way the code is, this shouldn't be possible
+        # (last_updated is always set if the feed was updated at least
+        # once, unless the database predates last_updated).
+        #
+        feed = feed._replace(updated=None, http_etag=None, http_last_modified=None)
+        log.info(
+            "update feed %r: feed marked as stale, "
+            "ignoring updated, http_etag and http_last_modified",
+            feed.url,
+        )
+    return feed
+
+
+def make_update_intents(
+    old_feed: FeedForUpdate,
+    now: datetime,
+    global_now: datetime,
+    parsed_feed: Optional[ParsedFeed],
+    entry_pairs: Iterable[
+        Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]
+    ],
+) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
+    updater = _Updater(old_feed, now, global_now)
+    return updater.update(parsed_feed, entry_pairs)
+
+
 @dataclass
-class Updater:
+class _Updater:
+
+    """This is an object only to make logging easier."""
 
     old_feed: FeedForUpdate
     now: datetime
     global_now: datetime
 
-    @classmethod
-    def process_old_feed(cls, feed: FeedForUpdate) -> FeedForUpdate:
-        if feed.stale:
-            # db_updated=None not ot tested (removing it causes no tests to fail).
-            #
-            # This only matters if last_updated is None *and* db_updated is
-            # not None. The way the code is, this shouldn't be possible
-            # (last_updated is always set if the feed was updated at least
-            # once, unless the database predates last_updated).
-            #
-            feed = feed._replace(updated=None, http_etag=None, http_last_modified=None)
-            log.info(
-                "update feed %r: feed marked as stale, "
-                "ignoring updated, http_etag and http_last_modified",
-                feed.url,
-            )
-        return feed
-
     def __post_init__(self) -> None:
-        self.old_feed = self.process_old_feed(self.old_feed)
+        self.old_feed = process_old_feed(self.old_feed)
 
     @property
     def url(self) -> str:

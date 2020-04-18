@@ -14,6 +14,7 @@ from typing import Tuple
 from typing import TypeVar
 from typing import Union
 
+import reader._updater
 from ._parser import Parser
 from ._search import Search
 from ._storage import Storage
@@ -21,7 +22,6 @@ from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import FeedForUpdate
 from ._types import ParsedFeed
-from ._updater import Updater
 from ._utils import _Missing
 from ._utils import _missing
 from ._utils import join_paginated_iter
@@ -87,6 +87,9 @@ class Reader:
         self._search = Search(self._storage)
 
         self._parser = Parser()
+
+        self._updater = reader._updater
+
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
 
         if _called_directly:
@@ -301,7 +304,7 @@ class Reader:
         self, feed: FeedForUpdate
     ) -> Tuple[FeedForUpdate, Optional[ParsedFeed]]:
         # FIXME: Updater is poorly made, we shold not have to do this ಠ_ಠ
-        feed = Updater.process_old_feed(feed)
+        feed = self._updater.process_old_feed(feed)
         try:
             return feed, self._parser(feed.url, feed.http_etag, feed.http_last_modified)
         except _NotModified:
@@ -331,8 +334,9 @@ class Reader:
             ),
         )
 
-        updater = Updater(feed_for_update, now, global_now)
-        feed_to_update, entries_to_update = updater.update(parse_result, entry_pairs)
+        feed_to_update, entries_to_update = self._updater.make_update_intents(
+            feed_for_update, now, global_now, parse_result, entry_pairs
+        )
 
         if entries_to_update:
             self._storage.add_or_update_entries(entries_to_update)
