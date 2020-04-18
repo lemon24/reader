@@ -1,4 +1,5 @@
 import datetime
+import itertools
 import logging
 import warnings
 from functools import partial
@@ -20,6 +21,8 @@ from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import FeedForUpdate
 from ._types import ParsedFeed
+from ._types import UpdatedEntry
+from ._types import UpdateResult
 from ._updater import Updater
 from ._utils import _Missing
 from ._utils import _missing
@@ -321,8 +324,27 @@ class Reader:
         if not global_now:
             global_now = now
 
+        # give storage a chance to consume the entries in a streaming fashion;
+        parsed_entries = itertools.tee(parse_result.entries if parse_result else ())
+        entry_pairs = zip(
+            parsed_entries[0],
+            self._storage.get_entries_for_update(
+                (e.feed_url, e.id) for e in parsed_entries[1]
+            ),
+        )
+
         updater = Updater(feed_for_update, now, global_now)
-        result = updater.update(parse_result, self._storage)
+        feed_to_update, entries_to_update = updater.update(parse_result, entry_pairs)
+
+        if entries_to_update:
+            self._storage.add_or_update_entries(e for e, _ in entries_to_update)
+        if feed_to_update:
+            self._storage.update_feed(feed_to_update)
+
+        # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
+        # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
+
+        result = UpdateResult((UpdatedEntry(e.entry, n) for e, n in entries_to_update))
 
         new_entries = [e.entry for e in result.entries if e.new]
 

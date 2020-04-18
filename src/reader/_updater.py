@@ -6,7 +6,6 @@ from typing import Iterable
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import TYPE_CHECKING
 
 from ._types import EntryData
 from ._types import EntryForUpdate
@@ -15,11 +14,6 @@ from ._types import FeedData
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import ParsedFeed
-from ._types import UpdatedEntry
-from ._types import UpdateResult
-
-if TYPE_CHECKING:  # pragma: no cover
-    from ._storage import Storage
 
 
 log = logging.getLogger("reader")
@@ -121,16 +115,6 @@ class Updater:
         log_debug("entry added/updated")
         return (updated, True) if not old else (updated, False)
 
-    def get_entry_pairs(
-        self, entries: Iterable[EntryData[Optional[datetime]]], storage: "Storage"
-    ) -> Iterable[Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]]:
-        entries = list(entries)
-        pairs = zip(
-            entries,
-            storage.get_entries_for_update([(e.feed_url, e.id) for e in entries]),
-        )
-        return pairs
-
     def get_entries_to_update(
         self,
         pairs: Iterable[Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]],
@@ -187,27 +171,18 @@ class Updater:
         return feed_to_update
 
     def update(
-        self, parsed_feed: Optional[ParsedFeed], storage: "Storage"
-    ) -> UpdateResult:
+        self,
+        parsed_feed: Optional[ParsedFeed],
+        entry_pairs: Iterable[
+            Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]
+        ],
+    ) -> Tuple[Optional[FeedUpdateIntent], Iterable[Tuple[EntryUpdateIntent, bool]]]:
         if not parsed_feed:
             log.info("update feed %r: feed not modified, skipping", self.url)
             # The feed shouldn't be considered new anymore.
-            storage.update_feed(FeedUpdateIntent(self.url, self.now))
-            return UpdateResult(())
+            return FeedUpdateIntent(self.url, self.now), ()
 
-        entries_to_update = list(
-            self.get_entries_to_update(
-                self.get_entry_pairs(parsed_feed.entries, storage)
-            )
-        )
+        entries_to_update = list(self.get_entries_to_update(entry_pairs))
         feed_to_update = self.get_feed_to_update(parsed_feed, entries_to_update)
 
-        if entries_to_update:
-            storage.add_or_update_entries(e for e, _ in entries_to_update)
-        if feed_to_update:
-            storage.update_feed(feed_to_update)
-
-        # if self.url != parsed_feed.feed.url, the feed was redirected.
-        # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
-
-        return UpdateResult((UpdatedEntry(e.entry, n) for e, n in entries_to_update))
+        return feed_to_update, entries_to_update
