@@ -21,8 +21,6 @@ from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import FeedForUpdate
 from ._types import ParsedFeed
-from ._types import UpdatedEntry
-from ._types import UpdateResult
 from ._updater import Updater
 from ._utils import _Missing
 from ._utils import _missing
@@ -344,13 +342,11 @@ class Reader:
         # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
 
-        # This is redundant.
-        result = UpdateResult((UpdatedEntry(e.entry, e.new) for e in entries_to_update))
-        new_entries = [e.entry for e in result.entries if e.new]
-
-        for entry in new_entries:
+        for entry in entries_to_update:
+            if not entry.new:
+                continue
             for plugin in self._post_entry_add_plugins:
-                plugin(self, entry)
+                plugin(self, entry.entry)
 
     def get_entries(
         self,

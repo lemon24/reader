@@ -169,18 +169,6 @@ class EntryUpdateIntent(NamedTuple):
         return self.first_updated_epoch is not None
 
 
-class UpdatedEntry(NamedTuple):
-
-    entry: EntryData[datetime]
-    new: bool
-
-
-class UpdateResult(NamedTuple):
-
-    #: The entries that were updated.
-    entries: Iterable[UpdatedEntry]
-
-
 # TODO: these should probably be in storage.py (along with some of the above)
 
 
