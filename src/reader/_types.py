@@ -163,6 +163,11 @@ class EntryUpdateIntent(NamedTuple):
     #: The index of the entry in the feed (zero-based).
     feed_order: int
 
+    @property
+    def new(self) -> bool:
+        """Whether the entry is new or not."""
+        return self.first_updated_epoch is not None
+
 
 class UpdatedEntry(NamedTuple):
 

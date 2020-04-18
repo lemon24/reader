@@ -337,15 +337,15 @@ class Reader:
         feed_to_update, entries_to_update = updater.update(parse_result, entry_pairs)
 
         if entries_to_update:
-            self._storage.add_or_update_entries(e for e, _ in entries_to_update)
+            self._storage.add_or_update_entries(entries_to_update)
         if feed_to_update:
             self._storage.update_feed(feed_to_update)
 
         # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
 
-        result = UpdateResult((UpdatedEntry(e.entry, n) for e, n in entries_to_update))
-
+        # This is redundant.
+        result = UpdateResult((UpdatedEntry(e.entry, e.new) for e in entries_to_update))
         new_entries = [e.entry for e in result.entries if e.new]
 
         for entry in new_entries:

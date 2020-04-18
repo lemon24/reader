@@ -92,7 +92,7 @@ class Updater:
 
     def should_update_entry(
         self, new: EntryData[Optional[datetime]], old: Optional[EntryForUpdate]
-    ) -> Tuple[Optional[datetime], bool]:
+    ) -> Optional[datetime]:
         def log_debug(msg: str, *args: Any) -> None:
             log.debug("update entry %r of feed %r: " + msg, new.id, self.url, *args)
 
@@ -110,15 +110,15 @@ class Updater:
                 old_updated,
                 new.updated,
             )
-            return None, False
+            return None
 
         log_debug("entry added/updated")
-        return (updated, True) if not old else (updated, False)
+        return updated
 
     def get_entries_to_update(
         self,
         pairs: Iterable[Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]],
-    ) -> Iterable[Tuple[EntryUpdateIntent, bool]]:
+    ) -> Iterable[EntryUpdateIntent]:
         last_updated = self.now
         for feed_order, (new_entry, old_entry) in reversed(list(enumerate(pairs))):
 
@@ -128,7 +128,8 @@ class Updater:
                 new_entry.feed_url == self.url
             ), f'{new_entry.feed_url!r}, {self.url!r}'
 
-            updated, entry_new = self.should_update_entry(new_entry, old_entry)
+            updated = self.should_update_entry(new_entry, old_entry)
+            entry_new = not old_entry
 
             if updated:
 
@@ -137,14 +138,12 @@ class Updater:
                     last_updated,
                     self.global_now if entry_new else None,
                     feed_order,
-                ), entry_new
+                )
 
     def get_feed_to_update(
-        self,
-        parsed_feed: ParsedFeed,
-        entries_to_update: Sequence[Tuple[EntryUpdateIntent, bool]],
+        self, parsed_feed: ParsedFeed, entries_to_update: Sequence[EntryUpdateIntent],
     ) -> Optional[FeedUpdateIntent]:
-        new_count = sum(bool(n) for _, n in entries_to_update)
+        new_count = sum(e.new for e in entries_to_update)
         updated_count = len(entries_to_update) - new_count
 
         log.info(
@@ -176,7 +175,7 @@ class Updater:
         entry_pairs: Iterable[
             Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]
         ],
-    ) -> Tuple[Optional[FeedUpdateIntent], Iterable[Tuple[EntryUpdateIntent, bool]]]:
+    ) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
         if not parsed_feed:
             log.info("update feed %r: feed not modified, skipping", self.url)
             # The feed shouldn't be considered new anymore.
