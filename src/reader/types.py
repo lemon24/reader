@@ -331,9 +331,16 @@ class EntrySearchResult:
 
     """Data type representing the result of an entry search.
 
-    .. todo::
+    :attr:`metadata` and :attr:`content` are dicts where
+    the key is the path of an entry attribute,
+    and the value is a :class:`HighlightedString` snippet
+    corresponding to that attribute, with HTML stripped.
 
-        Explain what .metadata and .content are keyed by.
+    >>> result = next(reader.search_entries('hello internet'))
+    >>> result.metadata['.title'].value
+    'A Recent Hello Internet'
+    >>> reader.get_entry(result).title
+    'A Recent Hello Internet'
 
     """
 
@@ -348,7 +355,7 @@ class EntrySearchResult:
     metadata: Mapping[str, HighlightedString] = MappingProxyType({})
 
     #: Matching entry content, sorted by relevance.
-    #: Content is any of entry.summary and entry.content[].value.
+    #: Any of entry.summary and entry.content[].value.
     content: Mapping[str, HighlightedString] = MappingProxyType({})
 
     # TODO: entry: Optional[Entry]; model it through typing if possible
