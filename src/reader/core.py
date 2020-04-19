@@ -3,8 +3,8 @@ import itertools
 import logging
 import warnings
 from functools import partial
+from typing import Any
 from typing import Callable
-from typing import cast
 from typing import Collection
 from typing import Iterable
 from typing import Iterator
@@ -48,6 +48,7 @@ log = logging.getLogger('reader')
 
 
 _T = TypeVar('_T')
+_U = TypeVar('_U')
 
 
 _PostEntryAddPluginType = Callable[['Reader', EntryData[datetime.datetime]], None]
@@ -233,41 +234,14 @@ class Reader:
             raise ValueError("workers must be a positive integer")
         make_map = make_noop_map() if workers == 1 else make_pool_map(workers)
 
-        # global_now is used as first_updated_epoch for all new entries,
-        # so that the subset of new entries from an update appears before
-        # all others and the entries in it are sorted by published/updated;
-        # if we used last_updated (now) for this, they would be sorted
-        # by feed order first (due to now increasing for each feed).
-        #
-        # A side effect of relying first_updated_epoch for ordering is that
-        # for the second of two new feeds updated in the same update_feeds()
-        # call, first_updated_epoch != last_updated.
-        #
-        global_now = self._now()
-
         with make_map as map:
-
-            # TODO: Remove cast when mypy supports it.
-            #
-            # Without the cast, we get:
-            #
-            #   src/reader/core/reader.py:250: error: No overload variant of "next" matches argument type "Iterable[Tuple[FeedForUpdate, Optional[ParsedFeed]]]"
-            #
-            # https://github.com/python/mypy/issues/1317
-            # https://github.com/python/mypy/issues/6697
-            #
-            it = cast(
-                Iterator[Tuple[FeedForUpdate, Optional[ParsedFeed]]],
-                map(
-                    self._parse_feed_for_update,
-                    self._storage.get_feeds_for_update(new_only=new_only),
-                ),
-            )
+            it = self._update_feeds(new_only=new_only, map=map)
 
             while True:
                 try:
-                    row, parse_result = next(it)
-                    self._update_feed(row, parse_result, global_now)
+                    next(it)
+                except StopIteration:
+                    break
                 except FeedNotFoundError as e:
                     log.info("update feed %r: feed removed during update", e.url)
                 except ParseError as e:
@@ -277,8 +251,6 @@ class Reader:
                         e.url,
                         e.__cause__,
                     )
-                except StopIteration:
-                    break
 
     def update_feed(self, feed: _FeedInput) -> None:
         """Update a single feed.
@@ -293,37 +265,71 @@ class Reader:
 
         """
         url = _feed_argument(feed)
-
-        feed_for_update = zero_or_one(
-            self._storage.get_feeds_for_update(url), lambda: FeedNotFoundError(url),
+        zero_or_one(
+            self._update_feeds(url=url), lambda: FeedNotFoundError(url),
         )
 
-        self._update_feed(*self._parse_feed_for_update(feed_for_update))
+    @staticmethod
+    def _now() -> datetime.datetime:
+        return datetime.datetime.utcnow()
+
+    # The type of map should be
+    #
+    #   Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
+    #
+    # but mypy gets confused; known issue:
+    #
+    # https://github.com/python/mypy/issues/1317
+    # https://github.com/python/mypy/issues/6697
+
+    def _update_feeds(
+        self,
+        url: Optional[str] = None,
+        new_only: bool = False,
+        map: Callable[[Callable[[Any], Any], Iterable[Any]], Iterator[Any]] = map,
+    ) -> Iterator[None]:
+
+        # global_now is used as first_updated_epoch for all new entries,
+        # so that the subset of new entries from an update appears before
+        # all others and the entries in it are sorted by published/updated;
+        # if we used last_updated (now) for this, they would be sorted
+        # by feed order first (due to now increasing for each feed).
+        #
+        # A side effect of relying first_updated_epoch for ordering is that
+        # for the second of two new feeds updated in the same update_feeds()
+        # call, first_updated_epoch != last_updated.
+        #
+        global_now = self._now()
+
+        pairs = map(
+            self._parse_feed_for_update,
+            self._storage.get_feeds_for_update(new_only=new_only, url=url),
+        )
+
+        while True:
+            try:
+                row, parse_result = next(pairs)
+            except StopIteration:
+                break
+            self._update_feed(row, parse_result, global_now)
+            yield
 
     def _parse_feed_for_update(
         self, feed: FeedForUpdate
     ) -> Tuple[FeedForUpdate, Optional[ParsedFeed]]:
-        # FIXME: Updater is poorly made, we shold not have to do this ಠ_ಠ
         feed = self._updater.process_old_feed(feed)
         try:
             return feed, self._parser(feed.url, feed.http_etag, feed.http_last_modified)
         except _NotModified:
             return feed, None
 
-    @staticmethod
-    def _now() -> datetime.datetime:
-        return datetime.datetime.utcnow()
-
     def _update_feed(
         self,
         feed_for_update: FeedForUpdate,
         parse_result: Optional[ParsedFeed],
-        global_now: Optional[datetime.datetime] = None,
+        global_now: datetime.datetime,
     ) -> None:
         now = self._now()
-
-        if not global_now:
-            global_now = now
 
         # give storage a chance to consume the entries in a streaming fashion;
         parsed_entries = itertools.tee(parse_result.entries if parse_result else ())
