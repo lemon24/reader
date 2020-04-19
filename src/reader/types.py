@@ -358,7 +358,7 @@ class EntrySearchResult:
 
 
 # TODO: Could we use some kind of str-compatible enum here?
-_FeedSortOrder = Literal['title', 'added']
+FeedSortOrder = Literal['title', 'added']
 
 
 # https://github.com/python/typing/issues/182
@@ -392,11 +392,11 @@ class EntryLike(Protocol):
         ...
 
 
-_FeedInput = Union[str, FeedLike]
-_EntryInput = Union[Tuple[str, str], EntryLike]
+FeedInput = Union[str, FeedLike]
+EntryInput = Union[Tuple[str, str], EntryLike]
 
 
-def _feed_argument(feed: _FeedInput) -> str:
+def _feed_argument(feed: FeedInput) -> str:
     if isinstance(feed, FeedLike):
         return feed.url
     if isinstance(feed, str):
@@ -404,7 +404,7 @@ def _feed_argument(feed: _FeedInput) -> str:
     raise ValueError(f'invalid feed argument: {feed!r}')
 
 
-def _entry_argument(entry: _EntryInput) -> Tuple[str, str]:
+def _entry_argument(entry: EntryInput) -> Tuple[str, str]:
     if isinstance(entry, EntryLike):
         return _feed_argument(entry.feed_url), entry.id
     if isinstance(entry, tuple) and len(entry) == 2:
@@ -412,3 +412,12 @@ def _entry_argument(entry: _EntryInput) -> Tuple[str, str]:
         if isinstance(feed_url, str) and isinstance(entry_id, str):
             return entry
     raise ValueError(f'invalid entry argument: {entry!r}')
+
+
+class MissingType:
+    def __repr__(self) -> str:
+        return "no value"
+
+
+#: Sentinel object used to detect if the `default` argument was provided."""
+MISSING = MissingType()

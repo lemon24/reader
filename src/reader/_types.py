@@ -9,14 +9,14 @@ from typing import Type
 from typing import TypeVar
 
 from .types import _entry_argument
-from .types import _EntryInput
 from .types import _feed_argument
-from .types import _FeedInput
 from .types import _namedtuple_compat
 from .types import Content
 from .types import Enclosure
 from .types import Entry
+from .types import EntryInput
 from .types import Feed
+from .types import FeedInput
 
 
 # Private API
@@ -188,8 +188,8 @@ class EntryFilterOptions(NamedTuple):
     @classmethod
     def from_args(
         cls: Type[_EFO],
-        feed: Optional[_FeedInput] = None,
-        entry: Optional[_EntryInput] = None,
+        feed: Optional[FeedInput] = None,
+        entry: Optional[EntryInput] = None,
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,

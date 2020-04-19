@@ -7,7 +7,6 @@ from fakeparser import ParserThatRemembers
 from reader import Entry
 from reader import Feed
 from reader import FeedNotFoundError
-from reader._utils import _missing
 
 
 def test_update_stale(reader, call_update_method):
@@ -101,7 +100,3 @@ def test_post_entry_add_plugins(reader):
         one.as_entry(feed=feed),
         two.as_entry(feed=feed),
     }
-
-
-def test_missing():
-    assert repr(_missing) == 'no value'

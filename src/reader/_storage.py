@@ -26,11 +26,11 @@ from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
 from .exceptions import StorageError
-from .types import _FeedSortOrder
 from .types import Content
 from .types import Enclosure
 from .types import Entry
 from .types import Feed
+from .types import FeedSortOrder
 from .types import JSONType
 
 
@@ -189,7 +189,7 @@ class Storage:
     @wrap_exceptions(StorageError)
     @returns_iter_list
     def get_feeds(
-        self, url: Optional[str] = None, sort: _FeedSortOrder = 'title'
+        self, url: Optional[str] = None, sort: FeedSortOrder = 'title'
     ) -> Iterable[Feed]:
         where_url_snippet = '' if not url else "WHERE url = :url"
 

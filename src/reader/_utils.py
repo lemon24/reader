@@ -11,13 +11,8 @@ from typing import Tuple
 from typing import TypeVar
 from typing import Union
 
-
-class _Missing:
-    def __repr__(self) -> str:
-        return "no value"
-
-
-_missing = _Missing()
+from .types import MISSING
+from .types import MissingType
 
 
 _T = TypeVar('_T')
@@ -27,11 +22,11 @@ _U = TypeVar('_U')
 def zero_or_one(
     it: Iterable[_U],
     make_exc: Callable[[], Exception],
-    default: Union[_Missing, _T] = _missing,
+    default: Union[MissingType, _T] = MISSING,
 ) -> Union[_U, _T]:
     things = list(it)
     if len(things) == 0:
-        if isinstance(default, _Missing):
+        if isinstance(default, MissingType):
             raise make_exc()
         return default
     elif len(things) == 1:

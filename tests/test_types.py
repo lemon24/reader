@@ -10,6 +10,7 @@ from reader.types import _entry_argument
 from reader.types import _feed_argument
 from reader.types import _namedtuple_compat
 from reader.types import HighlightedString
+from reader.types import MISSING
 
 
 def test_namedtuple_compat():
@@ -183,3 +184,7 @@ def test_highlighted_string_str(string):
 )
 def test_highlighted_string_roundtrip(input, before, after):
     assert HighlightedString.extract(input, before, after).apply(before, after) == input
+
+
+def test_missing():
+    assert repr(MISSING) == 'no value'
