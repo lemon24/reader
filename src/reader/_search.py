@@ -77,8 +77,8 @@ def strip_html(text: _SqliteType, features: Optional[str] = None) -> _SqliteType
     for e in soup.select('script, noscript, style, title'):
         e.replace_with('\n')
 
+    rv = soup.get_text(separator=' ')
     # TODO: Remove this assert once bs4 gets type annotations.
-    rv = soup.get_text(separator='\n')
     assert isinstance(rv, str)
 
     return rv
