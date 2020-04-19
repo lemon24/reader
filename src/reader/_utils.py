@@ -122,7 +122,7 @@ def make_pool_map(
 
 
 @contextmanager
-def make_noop_map() -> Iterator[
-    Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
-]:
-    yield map
+def make_noop_map(
+    fn: Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
+) -> Iterator[Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]]:
+    yield fn

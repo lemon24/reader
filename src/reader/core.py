@@ -1,3 +1,4 @@
+import builtins
 import datetime
 import itertools
 import logging
@@ -232,7 +233,10 @@ class Reader:
 
         if workers < 1:
             raise ValueError("workers must be a positive integer")
-        make_map = make_noop_map() if workers == 1 else make_pool_map(workers)
+
+        make_map = (
+            make_noop_map(builtins.map) if workers == 1 else make_pool_map(workers)
+        )
 
         with make_map as map:
             it = self._update_feeds(new_only=new_only, map=map)
