@@ -43,8 +43,8 @@ class _namedtuple_compat:
 
     _replace = dataclasses.replace
 
-    # FIXME: this recurses, unlike namedtuple._asdict; remove it
-    _asdict = dataclasses.asdict
+    def _asdict(self) -> Dict[str, Any]:
+        return dict(self.__dict__)
 
 
 # See https://github.com/lemon24/reader/issues/159 for a discussion
