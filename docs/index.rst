@@ -28,6 +28,7 @@ Table of contents
     :maxdepth: 2
 
     install
+    tutorial
     api
     cli
     app
