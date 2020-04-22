@@ -27,6 +27,7 @@ Table of contents
 .. toctree::
     :maxdepth: 2
 
+    install
     api
     cli
     app
