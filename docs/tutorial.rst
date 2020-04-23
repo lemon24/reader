@@ -1,49 +1,75 @@
 Tutorial
 ========
 
-
-... in which we download a podcast.
-
-First, you need to install reader by following the instructions :doc:`here <install>`.
+.. module:: reader
+    :noindex:
 
 
-TODO: All of the prose.
+In this tutorial we'll use reader to download all the episodes of a podcast,
+and then each new episode as they come up.
+
+
+Before starting, install reader by following the instructions :doc:`here <install>`.
 
 
 Adding and updating feeds
 -------------------------
 
-Add feed::
+
+Create a ``script.py`` file::
 
     from reader import make_reader, FeedExistsError
 
-    FEED_URL = "http://www.hellointernet.fm/podcast?format=rss"
-
     reader = make_reader("db.sqlite")
+
+:func:`make_reader` creates a :class:`Reader` object,
+which gives access to most reader functionality and persists all the state
+related to feeds in the ``db.sqlite`` file.
+
+
+Next, add and update the feed::
+
+    FEED_URL = "http://www.hellointernet.fm/podcast?format=rss"
 
     def add_and_update_feed():
         try:
             reader.add_feed(FEED_URL)
         except FeedExistsError:
             pass
-
         reader.update_feeds()
-
-        feed = reader.get_feed(FEED_URL)
-        print(f"updated {feed.title} (last changed at {feed.updated})\n")
 
     add_and_update_feed()
 
-Run with ``python3 script.py``.
+    feed = reader.get_feed(FEED_URL)
+    print(f"updated {feed.title} (last changed at {feed.updated})\n")
 
-Expected output:
+:meth:`~Reader.add_feed` raises an exception if the feed already exists;
+since you will run the script repeatedly to download new episodes,
+we ignore this exception.
+
+:meth:`~Reader.update_feeds` retrieves and stores all the added feeds.
+reader uses the ETag and Last-Modified headers to only retrieve feeds if they
+changed (if supported by the server).
+
+:meth:`~Reader.get_feed` returns a :class:`Feed` object that contains
+information about the feed.
+
+
+Run the script with the following command:
+
+.. code-block:: bash
+
+    python3 script.py
+
+The output should be similar to this:
 
 .. code-block:: text
 
     updated Hello Internet (last changed at 2020-02-28 09:34:02)
 
-
-Remove the add_and_update_feed() line for now. It remembers!
+Comment out the ``add_and_update_feed()`` call for now.
+If you re-run the script, the output should be the same,
+since :meth:`~Reader.get_feed` returns data already persisted in the database.
 
 
 Looking at entries
