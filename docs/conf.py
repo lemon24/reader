@@ -30,6 +30,7 @@ todo_include_todos = False
 
 autodoc_member_order = 'bysource'
 
+pygments_style = 'friendly'
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = []
