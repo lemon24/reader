@@ -20,14 +20,12 @@ see `this <venv_>`_ for how and why to do it.
 Install reader
 --------------
 
-Use the following command to install reader:
+Use the following command to install reader,
+along with its required dependencies:
 
 .. code-block:: bash
 
     pip install reader
-
-
-reader should now be installed, along with its required dependencies.
 
 
 Optional dependencies
