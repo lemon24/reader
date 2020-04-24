@@ -26,7 +26,6 @@ Before starting, install *reader* by following the instructions :doc:`here <inst
 Adding and updating feeds
 -------------------------
 
-
 Create a ``script.py`` file::
 
     from reader import make_reader, FeedExistsError
@@ -88,7 +87,7 @@ Looking at entries
 ------------------
 
 Let's look at the individual elements in the feed (called *entries*);
-add this to our script::
+add this to the script::
 
     def download_everything():
         entries = reader.get_entries()
@@ -129,7 +128,11 @@ tuple, but you can also use an :class:`Entry` object instead.
 Reading entries
 ---------------
 
-Mark those we've seen::
+As mentioned in the beginning, the script will keep track of what episodes
+it already downloaded and only download the new ones.
+
+We can achieve this by getting the unread entries,
+and marking them as read after we process them::
 
     entries = reader.get_entries(feed=feed_url, has_enclosures=True, read=False)
     ...
@@ -138,15 +141,8 @@ Mark those we've seen::
         ...
         reader.mark_as_read(entry)
 
-Output one:
-
-.. code-block:: text
-
-    Hello Internet - H.I. #136: Dog Bingo
-    Hello Internet - H.I. #135: Place Your Bets
-    Hello Internet - # H.I. 134: Boxing Day
-
-Output two:
+If you run the script once, it should have the same output as before.
+If you run it again, it will show the next 3 unread entries:
 
 .. code-block:: text
 
@@ -154,6 +150,9 @@ Output two:
     Hello Internet - H.I. #132: Artisan Water
     Hello Internet - H.I. #131: Panda Park
 
+
+Downloading enclosures
+----------------------
 
 Look at enclosures::
 
@@ -180,9 +179,6 @@ Output:
     Hello Internet - H.I. #128: Complaint Tablet Podcast
       * 128.mp3
 
-
-Downloading enclosures
-----------------------
 
 Add download function::
 
