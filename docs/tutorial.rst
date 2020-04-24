@@ -154,19 +154,44 @@ If you run it again, it will show the next 3 unread entries:
 Downloading enclosures
 ----------------------
 
-Look at enclosures::
+With the machinery to go through entries in place,
+let's go through their enclosures::
 
     for entry in entries:
         print(entry.feed.title, '-', entry.title)
 
         for enclosure in entry.enclosures:
-            if not enclosure.href.endswith('.mp3'):
-                continue
-
             filename = enclosure.href.rpartition('/')[2]
             print("  *", filename)
+            download_file(enclosure.href, os.path.join(PODCASTS_DIR, filename))
 
         reader.mark_as_read(entry)
+
+For each :class:`Enclosure`, we extract the filename from the enclosure URL
+so we can use it as the name of the local file.
+
+In order to make testing easier, we first write a dummy download_file()
+that only writes the enclosure URL to the file instead downloading it::
+
+    def download_file(src_url, dst_path):
+        with open(dst_path, 'w') as file:
+            file.write(src_url + '\n')
+
+Let's add the needed imports and a new constant for the path of
+the download directory::
+
+    import os, os.path
+    ...
+    PODCASTS_DIR = "podcasts"
+
+and make sure the directory exists (otherwise trying to open the file will fail)::
+
+    os.makedirs(PODCASTS_DIR, exist_ok=True)
+    download_everything()
+
+
+TODO: ...
+
 
 Output:
 
@@ -179,35 +204,9 @@ Output:
     Hello Internet - H.I. #128: Complaint Tablet Podcast
       * 128.mp3
 
-
-Add download function::
-
-    def download_file(src_url, dst_path):
-        with open(dst_path, 'w') as f:
-            f.write(src_url + '\n')
-
-and then, in download_everything()::
-
-    for enclosure in entry.enclosures:
-        ...
-        print("  *", filename)
-        download_file(enclosure.href, os.path.join(PODCASTS_DIR, filename))
-
-and imports::
-
-    import os, os.path
-
-and a new constant::
-
-    PODCASTS_DIR = "podcasts"
-
-and create the new directory::
-
-    os.makedirs(PODCASTS_DIR, exist_ok=True)
-    download_everything()
-
 Running this should create podcasts/ and write 127.mp3, 126.mp3, and 125.mp3,
 with http://traffic.libsyn.com/hellointernet/12x.mp3 in each of them.
+
 
 
 Final download function::
