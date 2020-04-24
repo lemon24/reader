@@ -5,11 +5,22 @@ Tutorial
     :noindex:
 
 
-In this tutorial we'll use reader to download all the episodes of a podcast,
+In this tutorial we'll use *reader* to download all the episodes of a podcast,
 and then each new episode as they come up.
 
+`Podcasts <podcast_>`_ are episodic series that share information as digital
+audio files that a user can download to a personal device for easy listening.
 
-Before starting, install reader by following the instructions :doc:`here <install>`.
+Usually, the user is notified of new episodes by periodically downloading
+an `RSS feed <rss_>`_ which contains links to the actual audio files;
+in the context of a feed, these files are called *enclosures*.
+
+
+.. _podcast: https://en.wikipedia.org/wiki/Podcast
+.. _rss: https://en.wikipedia.org/wiki/RSS
+
+
+Before starting, install *reader* by following the instructions :doc:`here <install>`.
 
 
 Adding and updating feeds
@@ -22,37 +33,38 @@ Create a ``script.py`` file::
 
     reader = make_reader("db.sqlite")
 
-:func:`make_reader` creates a :class:`Reader` object,
-which gives access to most reader functionality and persists all the state
-related to feeds in the ``db.sqlite`` file.
-
-
-Next, add and update the feed::
-
-    FEED_URL = "http://www.hellointernet.fm/podcast?format=rss"
+    feed_url = "http://www.hellointernet.fm/podcast?format=rss"
 
     def add_and_update_feed():
         try:
-            reader.add_feed(FEED_URL)
+            reader.add_feed(feed_url)
         except FeedExistsError:
             pass
         reader.update_feeds()
 
     add_and_update_feed()
 
-    feed = reader.get_feed(FEED_URL)
+    feed = reader.get_feed(feed_url)
     print(f"updated {feed.title} (last changed at {feed.updated})\n")
 
-:meth:`~Reader.add_feed` raises an exception if the feed already exists;
-since you will run the script repeatedly to download new episodes,
-we ignore this exception.
+
+:func:`make_reader` creates a :class:`Reader` object;
+this gives access to most *reader* functionality
+and persists the state related to feeds to a file.
+
+:meth:`~Reader.add_feed` adds a new feed to the list of feeds.
+Since we will run the script repeatedly to download new episodes,
+if the feed already exists, we can just move along.
 
 :meth:`~Reader.update_feeds` retrieves and stores all the added feeds.
-reader uses the ETag and Last-Modified headers to only retrieve feeds if they
-changed (if supported by the server).
+*reader* uses the ETag and Last-Modified headers to only retrieve feeds
+if they changed (if supported by the server).
 
 :meth:`~Reader.get_feed` returns a :class:`Feed` object that contains
 information about the feed.
+We could have called :meth:`~Reader.get_feed` before :meth:`~Reader.update_feeds`,
+but the returned feed would have most of its attributes set to None,
+which is not very useful.
 
 
 Run the script with the following command:
@@ -75,7 +87,8 @@ since :meth:`~Reader.get_feed` returns data already persisted in the database.
 Looking at entries
 ------------------
 
-Go through entries::
+Let's look at the individual elements in the feed (called *entries*);
+add this to our script::
 
     def download_everything():
         entries = reader.get_entries()
@@ -86,7 +99,12 @@ Go through entries::
 
     download_everything()
 
-Expected output:
+By default, :meth:`~Reader.get_entries` returns an iterable of
+all the entries of all the feeds, most recent first.
+
+In order to keep the output short, we only look at the first 3 entries for now.
+Running the script should output something like this
+(skipping that first "updated ..." line):
 
 .. code-block:: text
 
@@ -95,14 +113,25 @@ Expected output:
     Hello Internet - # H.I. 134: Boxing Day
 
 
-Only entries with enclosures::
+At the moment we only have a single feed; we can make sure we only get
+the entries for this feed by using the `feed` argument; while we're at it,
+let's also only get the entries that have enclosures::
 
-    entries = reader.get_entries(has_enclosures=True)
+    entries = reader.get_entries(feed=feed_url, has_enclosures=True)
 
+Note that we could have also used ``feed=feed``;
+wherever Reader needs a feed,
+you can pass either the feed URL or a :class:`Feed` object.
+This is similar for entries; they are identified by a (feed URL, entry id)
+tuple, but you can also use an :class:`Entry` object instead.
+
+
+Reading entries
+---------------
 
 Mark those we've seen::
 
-    entries = reader.get_entries(has_enclosures=True, read=False)
+    entries = reader.get_entries(feed=feed_url, has_enclosures=True, read=False)
     ...
 
     for entry in entries:
