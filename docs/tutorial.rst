@@ -20,8 +20,9 @@ in the context of a feed, these files are called *enclosures*.
 .. _rss: https://en.wikipedia.org/wiki/RSS
 
 
+.. note::
 
-Before starting, install *reader* by following the instructions :doc:`here <install>`.
+    Before starting, install *reader* by following the instructions :doc:`here <install>`.
 
 The final script is available as :gh:`an example <examples/podcast.py>`
 in the *reader* repository, if you want to compare your script with the final
@@ -160,7 +161,24 @@ Downloading enclosures
 ----------------------
 
 Once we have the machinery to go through entries in place,
-we go through their enclosures::
+we can move on to downloading enclosures.
+
+First we add some imports we'll use later,
+and a variable for the path of the download directory::
+
+    import os
+    import os.path
+    ...
+    podcasts_dir = "podcasts"
+
+In order to make testing easier, we initially write a dummy download_file()
+function that only writes the enclosure URL to the file instead of downloading it::
+
+    def download_file(src_url, dst_path):
+        with open(dst_path, 'w') as file:
+            file.write(src_url + '\n')
+
+And then we use it in download_everything()::
 
     for entry in entries:
         print(entry.feed.title, '-', entry.title)
@@ -175,23 +193,11 @@ we go through their enclosures::
 For each :class:`Enclosure`, we extract the filename from the enclosure URL
 so we can use it as the name of the local file.
 
-In order to make testing easier, we first write a dummy download_file()
-that only writes the enclosure URL to the file instead downloading it::
+:meth:`~Reader.mark_as_read` gets called *after* we download the file,
+so if the download fails, the script won't skip it at the next re-run.
 
-    def download_file(src_url, dst_path):
-        with open(dst_path, 'w') as file:
-            file.write(src_url + '\n')
-
-Then we add the needed imports and a variable for the path of the download
-directory::
-
-    import os
-    import os.path
-    ...
-    podcasts_dir = "podcasts"
-
-and make sure the directory exists
-(otherwise trying to open a file in it will fail)::
+We also need to make sure the directory exists before calling
+download_everything(), otherwise trying to open a file in it will fail::
 
     os.makedirs(podcasts_dir, exist_ok=True)
     download_everything()
