@@ -2,7 +2,7 @@
 Command-line interface
 ======================
 
-This part of the documentation covers the reader command-line interface.
+This part of the documentation covers the *reader* command-line interface.
 
 .. note::
 

@@ -20,7 +20,7 @@ Development should follow a problem-solution_ approach.
 Style guide
 -----------
 
-reader uses the `Black <https://black.readthedocs.io/en/stable/>`_ style.
+*reader* uses the `Black <https://black.readthedocs.io/en/stable/>`_ style.
 
 You should enforce it by using `pre-commit <https://pre-commit.com/>`_.
 To install it into your git hooks, run::

@@ -2,7 +2,7 @@
 Full-text search
 ================
 
-This part of the documentation covers the reader full-text search functionality.
+This part of the documentation covers the *reader* full-text search functionality.
 
 .. note::
 
@@ -17,7 +17,7 @@ This part of the documentation covers the reader full-text search functionality.
 .. module:: reader
   :noindex:
 
-reader supports full-text searches over the entries' content through the :meth:`~Reader.search_entries()` method.
+*reader* supports full-text searches over the entries' content through the :meth:`~Reader.search_entries()` method.
 
 Since search adds some overhead, it needs to be enabled before being used by calling :meth:`~Reader.enable_search()`. This needs to be done only once (it is persistent across Reader instances using the same database).
 

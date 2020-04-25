@@ -4,13 +4,13 @@ API
 
 .. module:: reader
 
-This part of the documentation covers all the interfaces of reader.
+This part of the documentation covers all the interfaces of *reader*.
 
 
 Reader object
 -------------
 
-All of reader's functionality can be accessed through a :class:`Reader` instance.
+All of *reader*'s functionality can be accessed through a :class:`Reader` instance.
 
 .. todo::
 
