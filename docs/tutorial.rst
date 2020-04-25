@@ -20,19 +20,24 @@ in the context of a feed, these files are called *enclosures*.
 .. _rss: https://en.wikipedia.org/wiki/RSS
 
 
+
 Before starting, install *reader* by following the instructions :doc:`here <install>`.
+
+The final script is available as :gh:`an example <examples/podcast.py>`
+in the *reader* repository, if you want to compare your script with the final
+product as you follow the tutorial.
 
 
 Adding and updating feeds
 -------------------------
 
-Create a ``script.py`` file::
+Create a ``podcast.py`` file::
 
     from reader import make_reader, FeedExistsError
 
-    reader = make_reader("db.sqlite")
-
     feed_url = "http://www.hellointernet.fm/podcast?format=rss"
+
+    reader = make_reader("db.sqlite")
 
     def add_and_update_feed():
         try:
@@ -70,7 +75,7 @@ Run the script with the following command:
 
 .. code-block:: bash
 
-    python3 script.py
+    python3 podcast.py
 
 The output should be similar to this:
 
@@ -251,15 +256,17 @@ we move the temporary file to its final destination.
 Wrapping up
 -----------
 
-Add at the end::
+We're mostly done.
 
-    os.makedirs(podcasts_dir, exist_ok=True)
-    add_and_update_feed()
-    download_everything()
+Uncomment the ``add_and_update_feed()`` call,
+remove the ``entries = list(entries)[:3]`` line in download_everything(),
+and clean up the files we created so we can start over for real:
 
-and remove the ``entries = list(entries)[:3]`` line, and db.sqlite and the podcasts/ dir.
+.. code-block:: bash
 
-And run again; the output should be:
+    rm -r db.sqlite podcasts/
+
+The script output should now look like:
 
 .. code-block:: text
 
@@ -272,3 +279,15 @@ And run again; the output should be:
     Hello Internet - # H.I. 134: Boxing Day
       * HI134.mp3
     ...
+
+with actual MP3 files being downloaded to `podcasts/` (which takes a while).
+
+If you interrupt the script at any point (:kbd:`CTRL+C`),
+it should start from the first episode it did not download.
+If you let it finish and run it again, it will only update the feed
+(unless a new episode just came up; then it will download it).
+
+
+.. todo::
+
+    Some ideas for what to try or where to go next.

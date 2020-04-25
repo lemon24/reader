@@ -65,3 +65,38 @@ texinfo_documents = [
         'Miscellaneous',
     )
 ]
+
+
+# lifted from https://github.com/pallets/flask/blob/0.12.x/docs/conf.py#L64
+
+
+def github_link(name, rawtext, text, lineno, inliner, options=None, content=None):
+    app = inliner.document.settings.env.app
+    release = app.config.release
+    base_url = "https://github.com/lemon24/reader/tree/"
+
+    if text.endswith(">"):
+        words, text = text[:-1].rsplit("<", 1)
+        words = words.strip()
+    else:
+        words = None
+
+    if packaging.version.parse(release).is_devrelease:
+        url = f"{base_url}master/{text}"
+    else:
+        url = f"{base_url}{release}/{text}"
+
+    if words is None:
+        words = url
+
+    from docutils.nodes import reference
+    from docutils.parsers.rst.roles import set_classes
+
+    options = options or {}
+    set_classes(options)
+    node = reference(rawtext, words, refuri=url, **options)
+    return [node], []
+
+
+def setup(app):
+    app.add_role("gh", github_link)
