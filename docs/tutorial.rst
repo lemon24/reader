@@ -154,8 +154,8 @@ If you run it again, it will show the next 3 unread entries:
 Downloading enclosures
 ----------------------
 
-With the machinery to go through entries in place,
-let's go through their enclosures::
+Once we have the machinery to go through entries in place,
+we go through their enclosures::
 
     for entry in entries:
         print(entry.feed.title, '-', entry.title)
@@ -163,7 +163,7 @@ let's go through their enclosures::
         for enclosure in entry.enclosures:
             filename = enclosure.href.rpartition('/')[2]
             print("  *", filename)
-            download_file(enclosure.href, os.path.join(PODCASTS_DIR, filename))
+            download_file(enclosure.href, os.path.join(podcasts_dir, filename))
 
         reader.mark_as_read(entry)
 
@@ -177,23 +177,21 @@ that only writes the enclosure URL to the file instead downloading it::
         with open(dst_path, 'w') as file:
             file.write(src_url + '\n')
 
-Let's add the needed imports and a new constant for the path of
-the download directory::
+Then we add the needed imports and a variable for the path of the download
+directory::
 
-    import os, os.path
+    import os
+    import os.path
     ...
-    PODCASTS_DIR = "podcasts"
+    podcasts_dir = "podcasts"
 
-and make sure the directory exists (otherwise trying to open the file will fail)::
+and make sure the directory exists
+(otherwise trying to open a file in it will fail)::
 
-    os.makedirs(PODCASTS_DIR, exist_ok=True)
+    os.makedirs(podcasts_dir, exist_ok=True)
     download_everything()
 
-
-TODO: ...
-
-
-Output:
+Running the script now should create three .mp3 files in `podcasts/`:
 
 .. code-block:: text
 
@@ -204,14 +202,24 @@ Output:
     Hello Internet - H.I. #128: Complaint Tablet Podcast
       * 128.mp3
 
-Running this should create podcasts/ and write 127.mp3, 126.mp3, and 125.mp3,
-with http://traffic.libsyn.com/hellointernet/12x.mp3 in each of them.
+.. code-block:: bash
+
+    $ for file in podcasts/*; do echo '#' $file; cat $file; done
+    # podcasts/128.mp3
+    http://traffic.libsyn.com/hellointernet/128.mp3
+    # podcasts/129.mp3
+    http://traffic.libsyn.com/hellointernet/129.mp3
+    # podcasts/130.mp3
+    http://traffic.libsyn.com/hellointernet/130.mp3
 
 
+With everything wired up correctly,
+we finally implement the download function using :mod:`requests`::
 
-Final download function::
+    import shutil
+    import requests
 
-    import requests, shutil
+    ...
 
     def download_file(src_url, dst_path):
         part_path = dst_path + '.part'
@@ -228,12 +236,24 @@ Final download function::
                     pass
                 raise
 
+``stream=True`` tells requests *not* to load the whole response body in memory
+(some podcasts can be a few hundred MB in size);
+instead, we copy the content from the underlying file-like object
+to disk using :func:`shutil.copyfileobj`.
+
+In order to avoid leaving around incomplete files in case of failure,
+we first write the content to a temporary file which we try to delete
+if anything goes wrong.
+After we finish writing the content successfully,
+we move the temporary file to its final destination.
+
+
 Wrapping up
 -----------
 
 Add at the end::
 
-    os.makedirs(PODCASTS_DIR, exist_ok=True)
+    os.makedirs(podcasts_dir, exist_ok=True)
     add_and_update_feed()
     download_everything()
 

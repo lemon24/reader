@@ -10,8 +10,14 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
+    'sphinx.ext.intersphinx',
     'sphinx_click.ext',
 ]
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3/", None),
+    "requests": ("https://requests.readthedocs.io/en/stable/", None),
+}
 
 autodoc_mock_imports = ['bs4', 'mutagen', 'flask', 'werkzeug', 'humanize']
 
