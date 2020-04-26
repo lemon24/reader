@@ -11,7 +11,6 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.autosectionlabel',
     'sphinx_click.ext',
 ]
 
@@ -21,6 +20,7 @@ intersphinx_mapping = {
 }
 
 autodoc_mock_imports = ['bs4', 'mutagen', 'flask', 'werkzeug', 'humanize']
+
 
 master_doc = 'index'
 

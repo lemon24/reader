@@ -29,6 +29,8 @@ and on the `JSON1`_ SQLite extension.
     See `#163`_ for details.
 
 
+.. _optional dependencies:
+
 Optional dependencies
 ~~~~~~~~~~~~~~~~~~~~~
 
