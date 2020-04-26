@@ -10,7 +10,6 @@ and then each new episode as they come up.
 
 `Podcasts <podcast_>`_ are episodic series that share information as digital
 audio files that a user can download to a personal device for easy listening.
-
 Usually, the user is notified of new episodes by periodically downloading
 an `RSS feed <rss_>`_ which contains links to the actual audio files;
 in the context of a feed, these files are called *enclosures*.
@@ -20,13 +19,15 @@ in the context of a feed, these files are called *enclosures*.
 .. _rss: https://en.wikipedia.org/wiki/RSS
 
 
-.. note::
-
-    Before starting, install *reader* by following the instructions :doc:`here <install>`.
-
 The final script is available as :gh:`an example <examples/podcast.py>`
 in the *reader* repository, if you want to compare your script with the final
 product as you follow the tutorial.
+
+
+.. note::
+
+    Before starting, install *reader* by following the instructions
+    :doc:`here <install>`.
 
 
 Adding and updating feeds
