@@ -19,7 +19,7 @@ intersphinx_mapping = {
     "requests": ("https://requests.readthedocs.io/en/stable/", None),
 }
 
-autodoc_mock_imports = ['bs4', 'mutagen', 'flask', 'werkzeug', 'humanize']
+autodoc_mock_imports = ['bs4', 'mutagen', 'flask', 'werkzeug', 'humanize', 'markupsafe']
 
 
 master_doc = 'index'
