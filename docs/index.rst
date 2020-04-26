@@ -29,11 +29,10 @@ Table of contents
 
     install
     tutorial
+    fts
     api
     cli
     app
-    fts
-    deploying
     plugins
 
 
