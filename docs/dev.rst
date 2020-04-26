@@ -37,7 +37,7 @@ Testing
 
 To install the testing dependencies::
 
-    pip install '.[cli,web-app,enclosure-tags,plugins,dev]'
+    pip install '.[cli,app,enclosure-tags,plugins,dev]'
 
 Run tests for all supported Python versions::
 
@@ -57,10 +57,10 @@ Run the type checker::
 
     make typing             # installs the dependencies for you
 
-Start a local development server for the web-app::
+Start a local development server for the web application::
 
     FLASK_DEBUG=1 FLASK_TRAP_BAD_REQUEST_ERRORS=1 \
-    FLASK_APP=src/reader/app/wsgi.py \
+    FLASK_APP=src/reader/_app/wsgi.py \
     READER_DB=db.sqlite flask run -h 0.0.0.0 -p 8000
 
 

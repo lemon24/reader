@@ -26,21 +26,19 @@ setup(
     python_requires='>=3.6',
     install_requires=[
         'dataclasses; python_version<"3.7"',
-        'typing_extensions',
+        'typing-extensions',
         'feedparser>=5',
         'requests>=2.18',
     ],
     extras_require={
+        'search': ['beautifulsoup4>=4.5'],
         'cli': ['click>=5'],
-        'web-app': ['flask>=0.10', 'humanize'],
+        'app': ['flask>=0.10', 'humanize'],
+        'plugins': ['setuptools>=40'],
         'enclosure-tags': ['requests', 'mutagen'],
         'preview-feed-list': ['requests', 'beautifulsoup4'],
-        'plugins': ['setuptools>=40'],
-        'search': ['beautifulsoup4'],
         'dev': [
-            # !=5.3.4 because of https://github.com/pytest-dev/pytest/issues/6517
-            # TODO: remove !=5.3.4 once a newer version is published
-            'pytest>=4,!=5.3.4',
+            'pytest>=4',
             'pytest-randomly',
             'coverage',
             'pytest-cov',

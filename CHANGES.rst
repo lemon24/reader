@@ -23,7 +23,12 @@ Unreleased
   * The entry points for plugins that ship with reader moved from
     ``reader.plugins.*`` to ``reader._plugins.*``.
 
+* Require at least beautifulsoup4 4.5 for the ``search`` extra
+  (before, the version was unspecified). (`#161`_)
+* Rename the web application dependencies extra from ``web-app`` to ``app``.
+
 .. _#156: https://github.com/lemon24/reader/issues/156
+.. _#161: https://github.com/lemon24/reader/issues/161
 
 
 Version 0.22
