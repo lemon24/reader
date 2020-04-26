@@ -35,29 +35,38 @@ the first thing you do.
 Testing
 -------
 
-To install the testing dependencies::
+First, install the testing dependencies::
 
-    pip install '.[cli,app,enclosure-tags,plugins,dev]'
-
-Run tests for all supported Python versions::
-
-    make test-all           # installs the dependencies for you, or
-    tox                     # you need to install the dependencies first
+    make install-dev        # or
+    pip install '.[search,cli,app,plugins,enclosure-tags,preview-feed-list,dev,docs]'
 
 Run tests using the current Python interpreter::
 
-    make                    # installs the dependencies for you, or
-    pytest -v --runslow     # you need to install the dependencies first
+    make                    # or
+    make test               # or
+    pytest --runslow
+
+Run tests using the current Python interpreter, but skip slow tests::
+
+    pytest
+
+Run tests for all supported Python versions::
+
+    make test-all          # or
+    tox
 
 Run tests with coverage and generate an HTML report (in ``./htmlcov``)::
 
-    make coverage           # installs the dependencies for you
+    make coverage
 
 Run the type checker::
 
-    make typing             # installs the dependencies for you
+    make typing             # or
+    mypy --strict src
 
 Start a local development server for the web application::
+
+    make serve-dev          # or
 
     FLASK_DEBUG=1 FLASK_TRAP_BAD_REQUEST_ERRORS=1 \
     FLASK_APP=src/reader/_app/wsgi.py \
@@ -67,14 +76,14 @@ Start a local development server for the web application::
 Building the documentation
 --------------------------
 
+First, install the dependencies (``pip install '.[dev]'`` already does it for you)::
+
+    pip install '.[docs]'
+
 The documentation is built with Sphinx::
 
-    make docs               # installs the dependencies for you
-
-or, using Sphinx's Makefile directly::
-
-    pip install '.[docs]'   # to install the dependencies
-    make -C docs html
+    make docs               # or
+    make -C docs html       # using Sphinx's Makefile directly
 
 The built HTML docs should be in ``./docs/_build/html/``.
 
@@ -82,7 +91,11 @@ The built HTML docs should be in ``./docs/_build/html/``.
 Making a release
 ----------------
 
-Making a release (from ``x`` to ``y`` == ``x + 1``; ``scripts/release.py`` already does some of these):
+Making a release (from ``x`` to ``y`` == ``x + 1``):
+
+.. note::
+
+    :gh:`scripts/release.py <scripts/release.py>` already does most of these.
 
 * (release.py) bump version in ``src/reader/__init__.py`` to ``y``
 * (release.py) update changelog with release version and date
