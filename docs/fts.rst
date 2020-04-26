@@ -7,12 +7,7 @@ This part of the documentation covers the *reader* full-text search functionalit
 .. note::
 
     The search functionality is optional, use the ``search`` extra to install
-    its dependencies:
-
-    .. code-block:: bash
-
-        pip install reader[search]
-
+    its :ref:`dependencies <Optional dependencies>`.
 
 .. module:: reader
   :noindex:

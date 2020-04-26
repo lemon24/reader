@@ -8,6 +8,57 @@ Python versions
 *reader* supports Python 3.6 and newer, and PyPy.
 
 
+Dependencies
+------------
+
+These packages will be installed automatically when installing *reader*:
+
+* `feedparser`_ parses feeds; *reader* is essentially feedparser + state.
+* `requests`_ retrieves feeds from the internet;
+  it replaces feedparser's default use of :mod:`urllib`
+  to make it easier to write plugins.
+
+*reader* also depends on the :mod:`sqlite3` standard library module,
+and on the `JSON1`_ SQLite extension.
+
+.. note::
+
+    The SQLite bundled with Python <= 3.8 on Windows
+    does **not** include the JSON1 extension.
+    As a consequence, *reader* may not work on Windows.
+    See `#163`_ for details.
+
+
+Optional dependencies
+~~~~~~~~~~~~~~~~~~~~~
+
+Some dependencies are optional; they can be installed as `extras`_.
+
+As of version |version|, *reader* has the following extras:
+
+* ``search`` provides :doc:`full-text search <fts>` functionality;
+  search also requires that the SQLite used by :mod:`sqlite3`
+  was compiled with the `FTS5`_ extension.
+* ``cli`` installs the dependencies needed for the
+  :doc:`command-line interface <cli>`.
+* ``app`` installs the dependencies needed for the
+  :doc:`web application <app>`.
+* ``plugins`` installs the dependencies needed for
+  :doc:`plugin <plugins>` loading machinery.
+* Specific plugins may require additional dependencies;
+  refer to their documentation for details.
+
+
+.. _feedparser: https://pythonhosted.org/feedparser/
+.. _requests: https://requests.readthedocs.io
+.. _JSON1: https://www.sqlite.org/json1.html
+.. _FTS5: https://www.sqlite.org/fts5.html
+
+.. _#163: https://github.com/lemon24/reader/issues/163
+
+.. _extras: https://www.python.org/dev/peps/pep-0508/#extras
+
+
 Virtual environments
 --------------------
 
@@ -27,21 +78,12 @@ along with its required dependencies:
 
     pip install reader
 
-
-Optional dependencies
-~~~~~~~~~~~~~~~~~~~~~
-
-Some dependencies are optional; to install them, specify them as `extras`_:
+Use the following command to install *reader*
+with `optional dependencies <Optional dependencies_>`_:
 
 .. code-block:: bash
 
     pip install 'reader[some-extra,...]'
-
-As of version |version|, *reader* supports the following extras:
-
-* ``search`` installs :doc:`full-text search <fts>` dependencies
-
-.. _extras: https://www.python.org/dev/peps/pep-0508/#extras
 
 
 Living on the edge

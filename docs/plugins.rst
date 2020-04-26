@@ -5,21 +5,14 @@ Plugins
 .. module:: reader
   :noindex:
 
-.. note::
+.. warning::
 
     The plugin system/hooks are not stable yet and may change without any notice.
-
-    The plugins listed here are also not stable.
 
 .. note::
 
     Plugin loading machinery is optional, use the ``plugins`` extra to install
-    its dependencies:
-
-    .. code-block:: bash
-
-        pip install reader[plugins]
-
+    its :ref:`dependencies <Optional dependencies>`.
 
 There is experimental support of plugins.
 

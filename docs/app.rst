@@ -6,18 +6,14 @@ Web application
 all browsers, including light-weight / text-only ones.
 
 
-.. note::
+.. warning::
 
     The web application is not stable yet and might change without any notice.
 
 .. note::
 
     The web application is optional, use the ``app`` extra to install
-    its dependencies:
-
-    .. code-block:: bash
-
-        pip install reader[app]
+    its :ref:`dependencies <Optional dependencies>`.
 
 
 Serving the web application
