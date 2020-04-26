@@ -13,16 +13,16 @@ Features
   :end-before: end-features
 
 
-Usage
------
+Quickstart
+----------
 
 .. include:: ../README.rst
   :start-after: begin-usage
   :end-before: end-usage
 
 
-Table of contents
------------------
+User’s guide
+------------
 
 .. toctree::
     :maxdepth: 2
@@ -30,10 +30,18 @@ Table of contents
     install
     tutorial
     fts
-    api
     cli
     app
     plugins
+
+
+API reference
+-------------
+
+.. toctree::
+    :maxdepth: 2
+
+    api
 
 
 Project information

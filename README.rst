@@ -33,11 +33,11 @@ Features:
 .. begin-features
 
 * Stand-alone library with stable, clearly documented API, and excellent test coverage.
+* Full-text search.
 * Minimal web interface that works even with text-only browsers.
 
-  * ... with automatic tag fixing for MP3 enclosures (e.g. podcasts).
+  * ... with automatic tag fixing for podcasts (MP3 enclosures).
 
-* Full-text search.
 * (Some) plugin support.
 
 .. end-features
@@ -54,7 +54,7 @@ Usage:
 
 .. code-block:: bash
 
-    $ pip install reader
+    $ pip install reader[search]
 
 .. code-block:: python
 
