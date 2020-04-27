@@ -1,5 +1,6 @@
 import os
 import sys
+import unittest.mock
 
 import packaging.version
 
@@ -21,6 +22,11 @@ intersphinx_mapping = {
 
 autodoc_mock_imports = ['bs4', 'mutagen', 'flask', 'werkzeug', 'humanize', 'markupsafe']
 
+# mock some things "by hand" to work around us importing stuff
+# in reader/_app/__init__.py, which means we can't import
+# reader._app.cli without pulling them in
+for name in ['humanize', 'flask', 'werkzeug.datastructures']:
+    sys.modules[name] = unittest.mock.Mock()
 
 master_doc = 'index'
 
