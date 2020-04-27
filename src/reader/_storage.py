@@ -119,14 +119,20 @@ def create_feed_metadata(db: sqlite3.Connection) -> None:
     )
 
 
+def update_from_17_to_18(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/125
+    db.execute("UPDATE feeds SET stale = 1;")
+
+
 def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
     return open_sqlite_db(
         path,
         create=create_db,
-        version=17,
+        version=18,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
+            17: update_from_17_to_18,
         },
         # Row value support was added in 3.15.
         minimum_sqlite_version=(3, 15),
