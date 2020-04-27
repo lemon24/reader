@@ -51,6 +51,9 @@ class _namedtuple_compat:
 # of how feed- and entry-like objects are uniquely identified, and
 # how to keep it consistent.
 
+# See https://github.com/lemon24/reader/issues/153#issuecomment-620228329
+# for how the feed and entry attributes should match the Atom spec.
+
 
 # Public API
 
