@@ -82,6 +82,27 @@ Feeds page
 
     feeds page
 
+Entry page
+~~~~~~~~~~
+
+.. figure:: screenshots/entry-one.png
+    :width: 240px
+
+    entry page
+
+
+.. figure:: screenshots/entry-two.png
+    :width: 240px
+
+    entry page
+
+Search page
+~~~~~~~~~~
+
+.. figure:: screenshots/search.png
+    :width: 240px
+
+    search page
 
 Lightweight browsers
 ~~~~~~~~~~~~~~~~~~~~
