@@ -6,8 +6,13 @@
     <entry>
         <link href="entries/entry.html"/>
         <id>urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a</id>
-
         <link rel="enclosure" href="enclosure?q=a#fragment" />
+
+        <summary type="html">one &lt;a href="target"&gt;two&lt;/a&gt; three</summary>
+
+        <content type="text/plain">&lt;script&gt;evil&lt;/script&gt; content</content>
+        <content type="text/html">&lt;script&gt;evil&lt;/script&gt; content</content>
+
     </entry>
 
 </feed>

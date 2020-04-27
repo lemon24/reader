@@ -7,6 +7,12 @@
         <link>blog/post/1</link>
         <guid isPermaLink="false">7bd204c6-1655-4c27-aeee-53f933c5395f</guid>
         <enclosure url="enclosure?q=a#fragment" />
+
+        <description>one &lt;a href="target"&gt;two&lt;/a&gt; three</description>
+
+        <content type="text/plain">&lt;script&gt;evil&lt;/script&gt; content</content>
+        <content type="text/html">&lt;script&gt;evil&lt;/script&gt; content</content>
+
     </item>
 
 </channel>
