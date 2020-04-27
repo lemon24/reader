@@ -26,8 +26,8 @@ Unreleased
 * Require at least beautifulsoup4 4.5 for the ``search`` extra
   (before, the version was unspecified). (`#161`_)
 * Rename the web application dependencies extra from ``web-app`` to ``app``.
-* Require sgmllib3k as a dependency to fix relative link resolution
-  and content sanitization. (`#125`_, `#157`_)
+* Fix relative link resolution and content sanitization;
+  sgmllib3k is now a required dependency for this reason. (`#125`_, `#157`_)
 
 .. _#156: https://github.com/lemon24/reader/issues/156
 .. _#161: https://github.com/lemon24/reader/issues/161

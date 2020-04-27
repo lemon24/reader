@@ -1,4 +1,6 @@
 import calendar
+import contextlib
+import inspect
 import logging
 import time
 import urllib.parse
@@ -7,6 +9,7 @@ from typing import Any
 from typing import Callable
 from typing import Collection
 from typing import Iterable
+from typing import Iterator
 from typing import Optional
 from typing import overload
 from typing import Tuple
@@ -30,6 +33,48 @@ except ImportError:
 
 
 log = logging.getLogger('reader')
+
+
+@contextlib.contextmanager
+def _make_feedparser_parse() -> Iterator[Callable[..., Any]]:
+    """Force feedparser content sanitization and relative link resolution ON.
+
+    https://github.com/lemon24/reader/issues/125
+    https://github.com/lemon24/reader/issues/157
+
+    TODO: This context manager is not needed once feedparser 6.0 is released.
+
+    """
+
+    signature = inspect.signature(feedparser.parse)
+    have_kwargs = (
+        'resolve_relative_uris' in signature.parameters
+        and 'sanitize_html' in signature.parameters
+    )
+
+    if have_kwargs:
+
+        def parse(*args: Any, **kwargs: Any) -> Any:
+            return feedparser.parse(
+                *args, resolve_relative_uris=True, sanitize_html=True, **kwargs
+            )
+
+        yield parse
+
+    else:
+
+        # This is in no way thread-safe, but what can you do?
+
+        old_RESOLVE_RELATIVE_URIS = feedparser.RESOLVE_RELATIVE_URIS
+        old_SANITIZE_HTML = feedparser.SANITIZE_HTML
+        feedparser.RESOLVE_RELATIVE_URIS = True
+        feedparser.SANITIZE_HTML = True
+
+        try:
+            yield feedparser.parse
+        finally:
+            feedparser.RESOLVE_RELATIVE_URIS = old_RESOLVE_RELATIVE_URIS
+            feedparser.SANITIZE_HTML = old_SANITIZE_HTML
 
 
 @overload
@@ -160,8 +205,9 @@ class Parser:
         return self._parse_file(url)
 
     def _parse_file(self, path: str) -> ParsedFeed:
-        # TODO: What about untrusted input?
-        result = feedparser.parse(path)
+        # TODO: What about untrusted input? https://github.com/lemon24/reader/issues/155
+        with _make_feedparser_parse() as parse:
+            result = parse(path)
         feed, entries = _process_feed(path, result)
         return ParsedFeed(feed, entries)
 
@@ -243,8 +289,8 @@ class Parser:
                 # https://github.com/lemon24/reader/issues/108
                 headers.setdefault('content-type', 'text/xml')
 
-                with response:
-                    result = feedparser.parse(response.raw, response_headers=headers)
+                with response, _make_feedparser_parse() as parse:
+                    result = parse(response.raw, response_headers=headers)
 
         except Exception as e:
             raise ParseError(url) from e

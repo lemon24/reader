@@ -336,3 +336,23 @@ def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
 
     headers = make_http_get_headers_url.request_headers
     assert 'reader' not in headers['User-Agent']
+
+
+def test_make_feedparser_parse(monkeypatch, parse, data_dir):
+    # TODO: Remove this once we start using feedparser 6.0.
+
+    exc = Exception("whatever")
+
+    def feedparser_parse(
+        *args, resolve_relative_uris=None, sanitize_html=None,
+    ):
+        feedparser_parse.kwargs = resolve_relative_uris, sanitize_html
+        raise exc
+
+    monkeypatch.setattr('feedparser.parse', feedparser_parse)
+
+    with pytest.raises(Exception) as excinfo:
+        parse(str(data_dir.join('full.atom')))
+    assert excinfo.value is exc
+
+    assert feedparser_parse.kwargs == (True, True)
