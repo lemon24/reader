@@ -29,6 +29,7 @@ setup(
         'typing-extensions',
         'feedparser>=5',
         'requests>=2.18',
+        'sgmllib3k>=1',
     ],
     extras_require={
         'search': ['beautifulsoup4>=4.5'],

@@ -17,6 +17,9 @@ These packages will be installed automatically when installing *reader*:
 * `requests`_ retrieves feeds from the internet;
   it replaces feedparser's default use of :mod:`urllib`
   to make it easier to write plugins.
+* `sgmllib3k`_ is a Python 3 "forward-port" of the `sgmllib`_ Python 2
+  standard library module;
+  feedparser uses it for ill-formed XML parsing and content sanitizing.
 
 *reader* also depends on the :mod:`sqlite3` standard library module,
 and on the `JSON1`_ SQLite extension.
@@ -53,6 +56,8 @@ As of version |version|, *reader* has the following extras:
 
 .. _feedparser: https://pythonhosted.org/feedparser/
 .. _requests: https://requests.readthedocs.io
+.. _sgmllib3k: https://pypi.org/project/sgmllib3k/
+.. _sgmllib: https://docs.python.org/2/library/sgmllib.html
 .. _JSON1: https://www.sqlite.org/json1.html
 .. _FTS5: https://www.sqlite.org/fts5.html
 
