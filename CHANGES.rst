@@ -9,7 +9,7 @@ Changelog
 Version 1.0
 -----------
 
-Unreleased
+Released 2020-04-28
 
 * Make all private submodules explicitly private. (`#156`_)
 
