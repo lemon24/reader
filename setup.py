@@ -76,7 +76,7 @@ setup(
         "Issue tracker": "https://github.com/lemon24/reader/issues",
     },
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
@@ -89,6 +89,8 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: Implementation :: CPython',
+        'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Internet',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content :: News/Diary',
         'Topic :: Internet :: WWW/HTTP :: Indexing/Search',

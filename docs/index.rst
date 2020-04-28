@@ -49,7 +49,7 @@ API reference
 Project information
 -------------------
 
-*reader* is released under the :gh:`MIT <LICENSE>` license,
+*reader* is released under the :gh:`BSD <LICENSE>` license,
 its documentation lives at `Read the Docs`_,
 the code on `GitHub`_,
 and the latest release on `PyPI`_.
