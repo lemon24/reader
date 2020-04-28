@@ -1,4 +1,14 @@
-**reader** is a minimal feed reader library.
+.. begin-intro
+
+**reader** is a Python feed reader library.
+
+*reader* can be used to retrieve, store, and manage Atom and RSS feeds.
+It is designed to allow writing feed reader applications
+without any business code,
+and without enforcing a dependency on a particular framework.
+
+
+.. end-intro
 
 
 |build-status| |code-coverage| |documentation-status| |pypi-status| |type-checking| |code-style|

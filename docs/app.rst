@@ -97,7 +97,7 @@ Entry page
     entry page
 
 Search page
-~~~~~~~~~~
+~~~~~~~~~~~
 
 .. figure:: screenshots/search.png
     :width: 240px

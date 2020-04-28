@@ -37,7 +37,8 @@ and on the `JSON1`_ SQLite extension.
 Optional dependencies
 ~~~~~~~~~~~~~~~~~~~~~
 
-Some dependencies are optional; they can be installed as `extras`_.
+Despite coming with a CLI and web application, *reader* is primarily a library.
+As such, most dependencies are optional, and can be installed as `extras`_.
 
 As of version |version|, *reader* has the following extras:
 

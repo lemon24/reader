@@ -2,7 +2,9 @@
 reader
 ======
 
-A minimal feed reader library.
+.. include:: ../README.rst
+  :start-after: begin-intro
+  :end-before: end-intro
 
 
 Features
@@ -47,9 +49,22 @@ API reference
 Project information
 -------------------
 
+*reader* is released under the :gh:`MIT <LICENSE>` license,
+its documentation lives at `Read the Docs`_,
+the code on `GitHub`_,
+and the latest release on `PyPI`_.
+It is rigorously tested on Python 3.6+ and PyPy.
+
+
+.. _Read the Docs: https://reader.readthedocs.io/
+.. _GitHub: https://github.com/lemon24/reader
+.. _PyPI: https://pypi.org/project/reader/
+
+
 .. toctree::
     :maxdepth: 2
 
+    compat
     dev
     changelog
 

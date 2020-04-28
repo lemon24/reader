@@ -1,6 +1,6 @@
 
-reader changelog
-================
+Changelog
+=========
 
 .. module:: reader
   :noindex:
