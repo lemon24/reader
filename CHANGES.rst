@@ -6,8 +6,8 @@ Changelog
   :noindex:
 
 
-Version 0.23
-------------
+Version 1.0
+-----------
 
 Unreleased
 
