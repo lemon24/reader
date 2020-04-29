@@ -80,8 +80,14 @@ class BlockingParser(Parser):
 
 
 class FailingParser(Parser):
-    def __call__(self, *args, **kwargs):
-        raise ParseError(None)
+    def __init__(self, *args, condition=lambda url: True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.condition = condition
+
+    def __call__(self, url, http_etag, http_last_modified):
+        if self.condition(url):
+            raise ParseError(None)
+        return super().__call__(url, http_etag, http_last_modified)
 
 
 class _NotModifiedParser(Parser):

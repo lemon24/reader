@@ -322,14 +322,28 @@ def test_update_feeds_parse_error(reader):
     parser = Parser()
     reader._parser = parser
 
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    reader.add_feed(feed.url)
+    one = parser.feed(1, datetime(2010, 1, 1), title='one')
+    two = parser.feed(2, datetime(2010, 1, 1), title='two')
+    three = parser.feed(3, datetime(2010, 1, 1), title='three')
+
+    for feed in one, two, three:
+        reader.add_feed(feed.url)
     reader.update_feeds()
 
-    reader._parser = FailingParser()
+    assert {f.title for f in reader.get_feeds()} == {'one', 'two', 'three'}
+
+    parser = FailingParser(condition=lambda url: url == '2')
+    reader._parser = parser
+
+    one = parser.feed(1, datetime(2010, 1, 2), title='ONE')
+    two = parser.feed(2, datetime(2010, 1, 2), title='TWO')
+    three = parser.feed(3, datetime(2010, 1, 2), title='THREE')
 
     # shouldn't raise an exception
     reader.update_feeds()
+
+    # it should skip 2 and update 3
+    assert {f.title for f in reader.get_feeds()} == {'ONE', 'two', 'THREE'}
 
 
 class FeedAction(Enum):
