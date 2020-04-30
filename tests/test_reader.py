@@ -1,3 +1,4 @@
+import logging
 import threading
 from datetime import datetime
 from datetime import timedelta
@@ -318,7 +319,10 @@ def test_update_last_updated_entries_updated_feed_not_updated(
     assert feed_for_update.last_updated == datetime(2010, 1, 2)
 
 
-def test_update_feeds_parse_error(reader):
+@pytest.mark.parametrize('workers', [1, 2])
+def test_update_feeds_parse_error(reader, workers, caplog):
+    caplog.set_level(logging.ERROR, 'reader')
+
     parser = Parser()
     reader._parser = parser
 
@@ -328,7 +332,7 @@ def test_update_feeds_parse_error(reader):
 
     for feed in one, two, three:
         reader.add_feed(feed.url)
-    reader.update_feeds()
+    reader.update_feeds(workers=workers)
 
     assert {f.title for f in reader.get_feeds()} == {'one', 'two', 'three'}
 
@@ -340,10 +344,40 @@ def test_update_feeds_parse_error(reader):
     three = parser.feed(3, datetime(2010, 1, 2), title='THREE')
 
     # shouldn't raise an exception
-    reader.update_feeds()
+    reader.update_feeds(workers=workers)
 
     # it should skip 2 and update 3
     assert {f.title for f in reader.get_feeds()} == {'ONE', 'two', 'THREE'}
+
+    # it should log the error, with traceback
+    (record,) = caplog.records
+    assert record.levelname == 'ERROR'
+    exc = record.exc_info[1]
+    assert isinstance(exc, ParseError)
+    assert exc.url == '2'
+    assert str(exc.__cause__) == 'failing'
+    assert repr(exc.url) in record.message
+    assert repr(exc.__cause__) in record.message
+
+
+def test_update_feeds_unexpected_error(reader):
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1), title='one')
+    reader.add_feed(feed.url)
+
+    exc = Exception('unexpected')
+
+    def _update_feed(*_, **__):
+        raise exc
+
+    reader._update_feed = _update_feed
+
+    with pytest.raises(Exception) as excinfo:
+        reader.update_feeds()
+
+    assert excinfo.value is exc
 
 
 class FeedAction(Enum):

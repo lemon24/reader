@@ -239,22 +239,23 @@ class Reader:
         )
 
         with make_map as map:
-            it = self._update_feeds(new_only=new_only, map=map)
+            exceptions = self._update_feeds(new_only=new_only, map=map)
 
-            while True:
-                try:
-                    next(it)
-                except StopIteration:
-                    break
-                except FeedNotFoundError as e:
-                    log.info("update feed %r: feed removed during update", e.url)
-                except ParseError as e:
+            for exc in exceptions:
+                if not exc:
+                    continue
+                if isinstance(exc, FeedNotFoundError):
+                    log.info("update feed %r: feed removed during update", exc.url)
+                elif isinstance(exc, ParseError):
                     log.exception(
                         "update feed %r: error while getting/parsing feed, "
                         "skipping; exception: %r",
-                        e.url,
-                        e.__cause__,
+                        exc.url,
+                        exc.__cause__,
+                        exc_info=exc,
                     )
+                else:
+                    raise exc
 
     def update_feed(self, feed: FeedInput) -> None:
         """Update a single feed.
@@ -269,9 +270,9 @@ class Reader:
 
         """
         url = _feed_argument(feed)
-        zero_or_one(
-            self._update_feeds(url=url), lambda: FeedNotFoundError(url),
-        )
+        exc = zero_or_one(self._update_feeds(url=url), lambda: FeedNotFoundError(url),)
+        if exc:
+            raise exc
 
     @staticmethod
     def _now() -> datetime.datetime:
@@ -291,7 +292,7 @@ class Reader:
         url: Optional[str] = None,
         new_only: bool = False,
         map: Callable[[Callable[[Any], Any], Iterable[Any]], Iterator[Any]] = map,
-    ) -> Iterator[None]:
+    ) -> Iterator[Optional[Exception]]:
 
         # global_now is used as first_updated_epoch for all new entries,
         # so that the subset of new entries from an update appears before
@@ -310,22 +311,26 @@ class Reader:
             self._storage.get_feeds_for_update(new_only=new_only, url=url),
         )
 
-        while True:
+        for row, result in pairs:
+            if isinstance(result, Exception):
+                if not isinstance(result, _NotModified):
+                    yield result
+                    continue
+                result = None
             try:
-                row, parse_result = next(pairs)
-            except StopIteration:
-                break
-            self._update_feed(row, parse_result, global_now)
-            yield
+                self._update_feed(row, result, global_now)
+                yield None
+            except Exception as e:
+                yield e
 
     def _parse_feed_for_update(
         self, feed: FeedForUpdate
-    ) -> Tuple[FeedForUpdate, Optional[ParsedFeed]]:
+    ) -> Tuple[FeedForUpdate, Union[ParsedFeed, Exception]]:
         feed = self._updater.process_old_feed(feed)
         try:
             return feed, self._parser(feed.url, feed.http_etag, feed.http_last_modified)
-        except _NotModified:
-            return feed, None
+        except Exception as e:
+            return feed, e
 
     def _update_feed(
         self,

@@ -86,7 +86,7 @@ class FailingParser(Parser):
 
     def __call__(self, url, http_etag, http_last_modified):
         if self.condition(url):
-            raise ParseError(None)
+            raise ParseError(url) from Exception('failing')
         return super().__call__(url, http_etag, http_last_modified)
 
 
