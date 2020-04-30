@@ -9,7 +9,7 @@ Changelog
 Version 1.0.1
 -------------
 
-Unreleased
+Released 2020-04-30
 
 * Fix bug introduced in `0.20 <Version 0.20_>`_ causing
   :meth:`~Reader.update_feeds()` to silently stop updating
