@@ -6,10 +6,16 @@ Changelog
   :noindex:
 
 
-Version 1.1
------------
+Version 1.0.1
+-------------
 
 Unreleased
+
+* Fix bug introduced in `0.20 <Version 0.20_>`_ causing
+  :meth:`~Reader.update_feeds()` to silently stop updating
+  the remaining feeds after a feed failed. (`#164`_)
+
+.. _#164: https://github.com/lemon24/reader/issues/164
 
 
 Version 1.0
