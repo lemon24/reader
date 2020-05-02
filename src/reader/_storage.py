@@ -554,22 +554,23 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: _GetEntriesLast = None,
     ) -> Iterable[Tuple[Entry, _GetEntriesLast]]:
-        query = self._make_get_entries_query(filter_options, chunk_size, last)
-
-        assert sort in ['recent'], sort
+        query = self._make_get_entries_query(filter_options, sort, chunk_size, last)
 
         feed_url, entry_id, read, important, has_enclosures = filter_options
 
         recent_threshold = now - self.recent_threshold
-        if last:
-            (
-                last_entry_first_updated,
-                last_entry_updated,
-                last_feed_url,
-                last_entry_last_updated,
-                last_negative_feed_order,
-                last_entry_id,
-            ) = last
+        if sort == 'recent':
+            if last:
+                (
+                    last_entry_first_updated,
+                    last_entry_updated,
+                    last_feed_url,
+                    last_entry_last_updated,
+                    last_negative_feed_order,
+                    last_entry_id,
+                ) = last
+        elif sort == 'random':
+            assert not last, last  # pragma: no cover
 
         with wrap_exceptions(StorageError):
             cursor = self.db.execute(query, locals())
@@ -583,22 +584,28 @@ class Storage:
                     t[16] == 1,
                     feed,
                 )
-                last_updated = t[17]
-                first_updated_epoch = t[18]
-                negative_feed_order = t[20]
                 entry = Entry._make(entry)
-                yield entry, (
-                    first_updated_epoch or entry.published or entry.updated,
-                    entry.published or entry.updated,
-                    entry.feed.url,
-                    last_updated,
-                    negative_feed_order,
-                    entry.id,
-                )
+
+                rv_last: _GetEntriesLast = None
+                if sort == 'recent':
+                    last_updated = t[17]
+                    first_updated_epoch = t[18]
+                    negative_feed_order = t[20]
+                    rv_last = (
+                        first_updated_epoch or entry.published or entry.updated,
+                        entry.published or entry.updated,
+                        entry.feed.url,
+                        last_updated,
+                        negative_feed_order,
+                        entry.id,
+                    )
+
+                yield entry, rv_last
 
     def _make_get_entries_query(
         self,
         filter_options: EntryFilterOptions,
+        sort: EntrySortOrder,
         chunk_size: Optional[int] = None,
         last: _GetEntriesLast = None,
     ) -> str:
@@ -616,26 +623,29 @@ class Storage:
         limit_snippet = ''
         if chunk_size:
             limit_snippet = "LIMIT :chunk_size"
-            if last:
-                where_snippets.append(
-                    """
-                    (
-                        kinda_first_updated,
-                        kinda_published,
-                        feeds.url,
-                        entries.last_updated,
-                        negative_feed_order,
-                        entries.id
-                    ) < (
-                        :last_entry_first_updated,
-                        :last_entry_updated,
-                        :last_feed_url,
-                        :last_entry_last_updated,
-                        :last_negative_feed_order,
-                        :last_entry_id
+            if sort == 'recent':
+                if last:
+                    where_snippets.append(
+                        """
+                        (
+                            kinda_first_updated,
+                            kinda_published,
+                            feeds.url,
+                            entries.last_updated,
+                            negative_feed_order,
+                            entries.id
+                        ) < (
+                            :last_entry_first_updated,
+                            :last_entry_updated,
+                            :last_feed_url,
+                            :last_entry_last_updated,
+                            :last_negative_feed_order,
+                            :last_entry_id
+                        )
+                        """
                     )
-                    """
-                )
+            elif sort == 'random':
+                assert not last, last  # pragma: no cover
 
         if feed_url:
             where_snippets.append("feeds.url = :feed_url")
@@ -661,6 +671,46 @@ class Storage:
             where_keyword = ''
             where_snippet = ''
 
+        if sort == 'recent':
+            order_by_snippet = """
+                kinda_first_updated DESC,
+                kinda_published DESC,
+                feeds.url DESC,
+                entries.last_updated DESC,
+                negative_feed_order DESC,
+                -- to make sure the order is deterministic;
+                -- it's unlikely it'll be used, since the probability of a feed
+                -- being updated twice during the same millisecond is very low
+                entries.id DESC
+            """
+
+        elif sort == 'random':
+            # TODO: "order by random()" always goes through the full result set, which is inefficient
+            # details here https://github.com/lemon24/reader/issues/105#issue-409493128
+            order_by_snippet = "random()"
+
+        else:
+            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+
+        if sort == 'recent':
+            select_snippet = """\
+                ,
+                entries.last_updated,
+                coalesce(
+                    CASE
+                    WHEN
+                        coalesce(entries.published, entries.updated)
+                            >= :recent_threshold
+                        THEN entries.first_updated_epoch
+                    END,
+                    entries.published, entries.updated
+                ) as kinda_first_updated,
+                coalesce(entries.published, entries.updated) as kinda_published,
+                - entries.feed_order as negative_feed_order
+            """
+        else:
+            select_snippet = ''
+
         query = f"""
             SELECT
                 feeds.url,
@@ -679,33 +729,14 @@ class Storage:
                 entries.content,
                 entries.enclosures,
                 entries.read,
-                entries.important,
-                entries.last_updated,
-                coalesce(
-                    CASE
-                    WHEN
-                        coalesce(entries.published, entries.updated)
-                            >= :recent_threshold
-                        THEN entries.first_updated_epoch
-                    END,
-                    entries.published, entries.updated
-                ) as kinda_first_updated,
-                coalesce(entries.published, entries.updated) as kinda_published,
-                - entries.feed_order as negative_feed_order
+                entries.important
+                {select_snippet}
             FROM entries
             JOIN feeds ON feeds.url = entries.feed
             {where_keyword}
                 {where_snippet}
             ORDER BY
-                kinda_first_updated DESC,
-                kinda_published DESC,
-                feeds.url DESC,
-                entries.last_updated DESC,
-                negative_feed_order DESC,
-                -- to make sure the order is deterministic;
-                -- it's unlikely it'll be used, since the probability of a feed
-                -- being updated twice during the same millisecond is very low
-                entries.id DESC
+                {order_by_snippet}
             {limit_snippet}
             ;
         """

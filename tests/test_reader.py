@@ -738,6 +738,12 @@ def test_get_entries_recent_feed_order(reader, chunk_size, kwargs):
     assert have == expected
 
 
+@pytest.mark.xfail(reason="FIXME: not implemented")
+def test_get_entries_random():
+    # TODO: maybe implement a dummy SQLite random()
+    pass
+
+
 def test_get_entries_sort_error(reader):
     with pytest.raises(ValueError):
         set(reader.get_entries(sort='bad sort'))
@@ -1112,13 +1118,21 @@ def search_entries(reader, **kwargs):
     return reader.search_entries('entry', **kwargs)
 
 
-def get_entries(reader, **kwargs):
+def get_entries_recent(reader, **kwargs):
     return reader.get_entries(**kwargs)
+
+
+def get_entries_random(reader, **kwargs):
+    return reader.get_entries(sort='random', **kwargs)
 
 
 with_call_entries_method = pytest.mark.parametrize(
     'pre_stuff, call_method',
-    [(enable_and_update_search, search_entries), (lambda _: None, get_entries),],
+    [
+        (enable_and_update_search, search_entries),
+        (lambda _: None, get_entries_recent),
+        (lambda _: None, get_entries_random),
+    ],
 )
 
 

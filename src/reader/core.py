@@ -397,6 +397,10 @@ class Reader:
             Note:
                 The algorithm for "recent" is a heuristic and may change over time.
 
+        ``'random'``
+
+            Random. At at most 256 entries will be returned.
+
         Args:
             feed (str or Feed or None): Only return the entries for this feed.
             entry (tuple(str, str) or Entry or None):
@@ -405,8 +409,8 @@ class Reader:
             important (bool or None): Only return (un)important entries.
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
-            sort (str): How to order entries; only ``'recent'`` for now (default).
-
+            sort (str): How to order entries; one of ``'recent'`` (default)
+                or ``'random'``.
 
         Yields:
             :class:`Entry`: Sorted according to ``sort``.
@@ -422,14 +426,21 @@ class Reader:
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures
         )
+        now = self._now()
 
-        if sort not in ('recent',):
-            raise ValueError("sort should be one of ('recent',)")
-
-        yield from join_paginated_iter(
-            partial(self._storage.get_entries, self._now(), filter_options, sort),
-            self._pagination_chunk_size,
-        )
+        if sort == 'recent':
+            yield from join_paginated_iter(
+                partial(self._storage.get_entries, now, filter_options, sort),
+                self._pagination_chunk_size,
+            )
+        elif sort == 'random':
+            it = self._storage.get_entries(
+                now, filter_options, sort, self._pagination_chunk_size
+            )
+            for entry, _ in it:
+                yield entry
+        else:
+            raise ValueError("sort should be one of ('recent', 'random')")
 
     @overload
     def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover

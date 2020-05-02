@@ -11,9 +11,9 @@ Version 1.1
 
 Unreleased
 
-* Add ``sort`` argument to :meth:`~Reader.get_entries`;
-  currently only the implicit `recent` sort order is available.
-  (:issue:`105`)
+* Add ``sort`` argument to :meth:`~Reader.get_entries`.
+  Allow sorting entries randomly in addition to the default
+  most-recent-first order. (:issue:`105`)
 
 
 Version 1.0.1
