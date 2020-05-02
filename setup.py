@@ -58,6 +58,7 @@ setup(
             'sphinx_rtd_theme',
             'click>=5',
             'sphinx-click',
+            'sphinx-issues',
             # release
             'setuptools',
             'wheel',
@@ -65,7 +66,13 @@ setup(
             # ...
             'pre-commit',
         ],
-        'docs': ['sphinx', 'sphinx_rtd_theme', 'click>=5', 'sphinx-click'],
+        'docs': [
+            'sphinx',
+            'sphinx_rtd_theme',
+            'click>=5',
+            'sphinx-click',
+            'sphinx-issues',
+        ],
     },
     description="A minimal feed reader library.",
     long_description=long_description,

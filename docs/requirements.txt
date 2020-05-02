@@ -3,3 +3,4 @@ sphinx
 sphinx_rtd_theme
 click
 sphinx-click
+sphinx-issues

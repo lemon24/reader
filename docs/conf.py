@@ -13,6 +13,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.intersphinx',
     'sphinx_click.ext',
+    'sphinx_issues',
 ]
 
 intersphinx_mapping = {
@@ -42,6 +43,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 todo_include_todos = False
 
 autodoc_member_order = 'bysource'
+
+issues_github_path = 'lemon24/reader'
 
 pygments_style = 'friendly'
 

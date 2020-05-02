@@ -29,7 +29,7 @@ and on the `JSON1`_ SQLite extension.
     The SQLite bundled with Python <= 3.8 on Windows
     does **not** include the JSON1 extension.
     As a consequence, *reader* may not work on Windows.
-    See `#163`_ for details.
+    See :issue:`163` for details.
 
 
 .. _optional dependencies:
@@ -61,8 +61,6 @@ As of version |version|, *reader* has the following extras:
 .. _sgmllib: https://docs.python.org/2/library/sgmllib.html
 .. _JSON1: https://www.sqlite.org/json1.html
 .. _FTS5: https://www.sqlite.org/fts5.html
-
-.. _#163: https://github.com/lemon24/reader/issues/163
 
 .. _extras: https://www.python.org/dev/peps/pep-0508/#extras
 
