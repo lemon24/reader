@@ -37,6 +37,7 @@ from .types import _feed_argument
 from .types import Entry
 from .types import EntryInput
 from .types import EntrySearchResult
+from .types import EntrySortOrder
 from .types import Feed
 from .types import FeedInput
 from .types import FeedSortOrder
@@ -375,17 +376,26 @@ class Reader:
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,
+        sort: EntrySortOrder = 'recent',
     ) -> Iterable[Entry]:
         """Get all or some of the entries.
 
-        Entries are sorted most recent first. Currently "recent" means:
+        Entries are sorted according to ``sort``. Possible values:
 
-        * by import date for entries published less than 7 days ago
-        * by published date otherwise (if an entry does not have
-          :attr:`~Entry.published`, :attr:`~Entry.updated` is used)
+        ``'recent'``
 
-        Note:
-            The algorithm for "recent" is a heuristic and may change over time.
+            Most recent first. Currently, that means:
+
+            * by import date for entries published less than 7 days ago
+            * by published date otherwise (if an entry does not have
+              :attr:`~Entry.published`, :attr:`~Entry.updated` is used)
+
+            This is to make sure newly imported entries appear at the top
+            regardless of when the feed says they were published
+            (sometimes, it lies by a day or two).
+
+            Note:
+                The algorithm for "recent" is a heuristic and may change over time.
 
         Args:
             feed (str or Feed or None): Only return the entries for this feed.
@@ -395,9 +405,11 @@ class Reader:
             important (bool or None): Only return (un)important entries.
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
+            sort (str): How to order entries; only ``'recent'`` for now (default).
+
 
         Yields:
-            :class:`Entry`: Most recent entries first.
+            :class:`Entry`: Sorted according to ``sort``.
 
         Raises:
             StorageError
@@ -410,8 +422,12 @@ class Reader:
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures
         )
+
+        if sort not in ('recent',):
+            raise ValueError("sort should be one of ('recent',)")
+
         yield from join_paginated_iter(
-            partial(self._storage.get_entries, self._now(), filter_options),
+            partial(self._storage.get_entries, self._now(), filter_options, sort),
             self._pagination_chunk_size,
         )
 

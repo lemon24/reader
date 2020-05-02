@@ -611,7 +611,8 @@ GET_ENTRIES_ORDER_DATA = {
         0,
     ],
 )
-def test_get_entries_order(reader, chunk_size, order_data_key):
+@pytest.mark.parametrize('kwargs', [{}, {'sort': 'recent'}])
+def test_get_entries_recent_order(reader, chunk_size, kwargs, order_data_key):
     """Entries should be sorted descending by (with decreasing priority):
 
     * entry first updated (only if newer than _storage.recent_threshold)
@@ -678,7 +679,7 @@ def test_get_entries_order(reader, chunk_size, order_data_key):
         feed, entry = eval(e.id)
         return "{} {} {:%Y-%m-%d}".format(feed, entry, e.published or e.updated)
 
-    assert [to_str(e) for e in reader.get_entries()] == expected
+    assert [to_str(e) for e in reader.get_entries(**kwargs)] == expected
 
 
 @pytest.mark.parametrize(
@@ -695,7 +696,8 @@ def test_get_entries_order(reader, chunk_size, order_data_key):
         0,
     ],
 )
-def test_get_entries_feed_order(reader, chunk_size):
+@pytest.mark.parametrize('kwargs', [{}, {'sort': 'recent'}])
+def test_get_entries_recent_feed_order(reader, chunk_size, kwargs):
     """All other things being equal, get_entries() should yield entries
     in the order they appear in the feed.
 
@@ -717,7 +719,7 @@ def test_get_entries_feed_order(reader, chunk_size):
     reader.add_feed(feed.url)
     reader.update_feeds()
 
-    have = list(reader.get_entries())
+    have = list(reader.get_entries(**kwargs))
     expected = [e.as_entry(feed=feed) for e in [three, two, four, one]]
     assert have == expected
 
@@ -731,9 +733,14 @@ def test_get_entries_feed_order(reader, chunk_size):
 
     reader.update_feeds()
 
-    have = list(reader.get_entries())
+    have = list(reader.get_entries(**kwargs))
     expected = [e.as_entry(feed=feed) for e in [one, four, two, three]]
     assert have == expected
+
+
+def test_get_entries_sort_error(reader):
+    with pytest.raises(ValueError):
+        set(reader.get_entries(sort='bad sort'))
 
 
 def test_add_remove_get_feeds(reader, feed_arg):
@@ -784,6 +791,8 @@ def test_add_remove_get_feeds(reader, feed_arg):
     with pytest.raises(FeedNotFoundError):
         reader.remove_feed(feed_arg(one))
 
+
+def test_get_feeds_sort_error(reader):
     with pytest.raises(ValueError):
         set(reader.get_feeds(sort='bad sort'))
 

@@ -369,6 +369,7 @@ class EntrySearchResult:
 
 # TODO: Could we use some kind of str-compatible enum here?
 FeedSortOrder = Literal['title', 'added']
+EntrySortOrder = Literal['recent']
 
 
 # https://github.com/python/typing/issues/182

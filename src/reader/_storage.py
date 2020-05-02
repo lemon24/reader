@@ -29,6 +29,7 @@ from .exceptions import StorageError
 from .types import Content
 from .types import Enclosure
 from .types import Entry
+from .types import EntrySortOrder
 from .types import Feed
 from .types import FeedSortOrder
 from .types import JSONType
@@ -525,11 +526,16 @@ class Storage:
         self,
         now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
+        sort: EntrySortOrder = 'recent',
         chunk_size: Optional[int] = None,
         last: _GetEntriesLast = None,
     ) -> Iterable[Tuple[Entry, _GetEntriesLast]]:
         rv = self._get_entries(
-            now=now, filter_options=filter_options, chunk_size=chunk_size, last=last
+            now=now,
+            filter_options=filter_options,
+            sort=sort,
+            chunk_size=chunk_size,
+            last=last,
         )
 
         # Equivalent to using @returns_iter_list, except when we don't have
@@ -544,10 +550,13 @@ class Storage:
         self,
         now: datetime,
         filter_options: EntryFilterOptions,
+        sort: EntrySortOrder,
         chunk_size: Optional[int] = None,
         last: _GetEntriesLast = None,
     ) -> Iterable[Tuple[Entry, _GetEntriesLast]]:
         query = self._make_get_entries_query(filter_options, chunk_size, last)
+
+        assert sort in ['recent'], sort
 
         feed_url, entry_id, read, important, has_enclosures = filter_options
 
