@@ -22,6 +22,7 @@ script: make coverage typing
 
 notifications:
     email: false
+    webhooks: true
 
 after_success:
     - codecov
