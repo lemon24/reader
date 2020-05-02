@@ -17,6 +17,32 @@ Development should follow a problem-solution_ approach.
 .. _problem-solution: https://hintjens.gitbooks.io/scalable-c/content/chapter1.html#problem-what-do-we-do-next
 
 
+Roadmap
+-------
+
+In no particular order:
+
+* Sort entries by random. (:issue:`105`)
+* API to delete old entries. (:issue:`96`)
+* API to delete duplicate entries. (:issue:`140`)
+* Better handling of local feeds. (:issue:`155`)
+* Handle changing the feed URL. (:issue:`149`)
+
+* Various web application improvements.
+* Various search optimizations. (:issue:`122`)
+* Various storage optimizations. (:issue:`143`, :issue:`134`)
+
+* Plugin system / hooks stabilization. (:issue:`80`)
+* Internal API stabilization.
+* CLI stabilization.
+* Configuration file.
+* Web application stabilization.
+
+* (Some) Windows support. (:issue:`163`)
+
+* OPML support. (:issue:`165`)
+
+
 Style guide
 -----------
 
