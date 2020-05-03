@@ -165,13 +165,18 @@ data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
 {%- endmacro %}
 
 
-{% macro radio_links(name, options, default, endpoint, label=none) -%}
+{% macro radio_links(name, options, default, endpoint, label=none, drop_args=()) -%}
 <li>{% if label %}{{ label }}: {% endif %}
 {% set current_option = request.args.get(name, default) -%}
 {%- for option, option_label in options -%}
 {%- set option_label = option_label or option -%}
 
 {%- set args = request.args.copy() -%}
+
+{%- for arg in drop_args -%}
+{%- set _ = args.poplist(arg) -%}
+{%- endfor -%}
+
 {%- if option is none -%}
     {%- set _ = args.poplist(name) -%}
 {%- else -%}

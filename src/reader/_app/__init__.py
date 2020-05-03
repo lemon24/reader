@@ -139,6 +139,9 @@ def entries():
     important = request.args.get('important')
     important = {None: None, 'no': False, 'yes': True}[important]
 
+    sort = request.args.get('sort', 'recent')
+    assert sort in ('recent', 'random', 'search')
+
     reader = get_reader()
 
     feed_url = request.args.get('feed')
@@ -151,10 +154,15 @@ def entries():
     args = request.args.copy()
     query = args.pop('q', None)
     if query is None:
-        get_entries = reader.get_entries
+
+        def get_entries(**kwargs):
+            yield from reader.get_entries(sort=sort, **kwargs)
+
     elif not query:
         # if the query is '', it's not a search
+        args.pop('sort', None)
         return redirect(url_for('.entries', **args))
+
     else:
 
         def get_entries(**kwargs):

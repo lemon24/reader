@@ -14,6 +14,7 @@ Unreleased
 * Add ``sort`` argument to :meth:`~Reader.get_entries`.
   Allow sorting entries randomly in addition to the default
   most-recent-first order. (:issue:`105`)
+* Allow changing the entry sort order in the web application. (:issue:`105`)
 
 
 Version 1.0.1

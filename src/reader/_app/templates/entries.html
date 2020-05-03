@@ -48,11 +48,21 @@
 ], none, '.entries', 'important') }}
 
 
+{{ macros.radio_links('sort', [
+    ('recent', none),
+    ('random', none),
+], 'recent', '.entries', 'sort by', drop_args=['q']) }}
+
 
 {# TODO: maybe show it uncollapsed if we're on the search page #}
 
 {% set context = request.args.copy() %}
 {% set _ = context.pop('q', none) %}
+
+{# since search has its own sort order for now #}
+{# TODO: maybe have a different template for search #}
+{% set _ = context.setlist('sort', ['search']) %}
+
 {{ macros.text_input_button_get(
     '.entries', 'search', 'q', 'search', request.args.q,
     input_type='search',
