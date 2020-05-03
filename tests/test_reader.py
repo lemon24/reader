@@ -1,8 +1,10 @@
 import logging
 import threading
+from collections import Counter
 from datetime import datetime
 from datetime import timedelta
 from enum import Enum
+from itertools import permutations
 
 import pytest
 from fakeparser import _NotModifiedParser
@@ -738,10 +740,63 @@ def test_get_entries_recent_feed_order(reader, chunk_size, kwargs):
     assert have == expected
 
 
-@pytest.mark.xfail(reason="FIXME: not implemented")
-def test_get_entries_random():
-    # TODO: maybe implement a dummy SQLite random()
-    pass
+@pytest.mark.parametrize('chunk_size', [1, 2, 3, 4])
+def test_get_entries_random(reader, chunk_size):
+    """Black box get_entries(sort='random') good enough™ test.
+
+    To have a more open-box test we'd need to:
+
+    * mock SQLite random() to return something predictable (e.g. 0, 1, 2, ...);
+      achievable with an application-devined function
+    * know the initial order of the entries before ORDER BY random() is applied;
+      this is undefined; we could first sort the entries by id in a subquery,
+      but this would slow things down unnecessarily when not testing
+
+    Alternatively, we could rewrite the query to ORDER BY random_rank(entry_id);
+    random_rank could then return whatever we want during testing,
+    and random() otherwise; this would likely add a performance hit.
+
+    """
+    reader._pagination_chunk_size = chunk_size
+
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.entry(1, 1, datetime(2010, 1, 1))
+    two = parser.entry(1, 2, datetime(2010, 1, 1))
+    three = parser.entry(1, 3, datetime(2010, 1, 1))
+    four = parser.entry(1, 4, datetime(2010, 1, 1))
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    # all possible get_entries(sort='random') results
+    all_tuples = set(permutations({e.id for e in reader.get_entries()}, chunk_size))
+
+    # some get_entries(sort='random') results
+    # (we call it enough times so it's likely we get all the results)
+    random_tuples = Counter(
+        tuple(e.id for e in reader.get_entries(sort='random'))
+        for _ in range(20 * len(all_tuples))
+    )
+
+    # check all results are chunk_size length
+    # (only true if we have at least chunk_size entries)
+    # (already checked by the check below in some way)
+    for ids in random_tuples:
+        assert len(ids) == chunk_size
+
+    # check all results are "possible" (no wrong results)
+    assert set(random_tuples).difference(all_tuples) == set()
+
+    # check all possible results were generated
+    # (this may fail, but it's extremely unlikely)
+    assert set(random_tuples) == all_tuples
+
+    # TODO: we could also look at the distribution or something here,
+    # but we're not really trying to test the SQLite random(),
+    # just that the output is "reasonably random"
 
 
 def test_get_entries_sort_error(reader):
