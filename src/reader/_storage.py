@@ -5,12 +5,15 @@ from datetime import datetime
 from datetime import timedelta
 from itertools import chain
 from typing import Any
+from typing import cast
 from typing import Iterable
 from typing import Mapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
+from ._sql_utils import Query  # type: ignore
+from ._sql_utils import ScrollingWindow  # type: ignore
 from ._sqlite_utils import DBError
 from ._sqlite_utils import open_sqlite_db
 from ._sqlite_utils import rowcount_exactly_one
@@ -554,26 +557,21 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: _GetEntriesLast = None,
     ) -> Iterable[Tuple[Entry, _GetEntriesLast]]:
-        query = self._make_get_entries_query(filter_options, sort, chunk_size, last)
+        query, scrolling_window = make_get_entries_query(
+            filter_options, sort, chunk_size, last
+        )
 
         feed_url, entry_id, read, important, has_enclosures = filter_options
 
         recent_threshold = now - self.recent_threshold
         if sort == 'recent':
             if last:
-                (
-                    last_entry_first_updated,
-                    last_entry_updated,
-                    last_feed_url,
-                    last_entry_last_updated,
-                    last_negative_feed_order,
-                    last_entry_id,
-                ) = last
+                last_0, last_1, last_2, last_3, last_4, last_5 = last
         elif sort == 'random':
             assert not last, last  # pragma: no cover
 
         with wrap_exceptions(StorageError):
-            cursor = self.db.execute(query, locals())
+            cursor = self.db.execute(str(query), locals())
             for t in cursor:
                 feed = t[0:6]
                 feed = Feed._make(feed)
@@ -588,162 +586,11 @@ class Storage:
 
                 rv_last: _GetEntriesLast = None
                 if sort == 'recent':
-                    last_updated = t[17]
-                    first_updated_epoch = t[18]
-                    negative_feed_order = t[20]
-                    rv_last = (
-                        first_updated_epoch or entry.published or entry.updated,
-                        entry.published or entry.updated,
-                        entry.feed.url,
-                        last_updated,
-                        negative_feed_order,
-                        entry.id,
+                    rv_last = cast(
+                        _GetEntriesLast,
+                        tuple(l for _, l in scrolling_window.extract_last(t)),
                     )
-
                 yield entry, rv_last
-
-    def _make_get_entries_query(
-        self,
-        filter_options: EntryFilterOptions,
-        sort: EntrySortOrder,
-        chunk_size: Optional[int] = None,
-        last: _GetEntriesLast = None,
-    ) -> str:
-        log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
-
-        feed_url, entry_id, read, important, has_enclosures = filter_options
-
-        where_snippets = []
-
-        if read is not None:
-            where_snippets.append(f"{'' if read else 'NOT'} entries.read")
-
-        # TODO: This needs some sort of query builder so badly.
-
-        limit_snippet = ''
-        if chunk_size:
-            limit_snippet = "LIMIT :chunk_size"
-            if sort == 'recent':
-                if last:
-                    where_snippets.append(
-                        """
-                        (
-                            kinda_first_updated,
-                            kinda_published,
-                            feeds.url,
-                            entries.last_updated,
-                            negative_feed_order,
-                            entries.id
-                        ) < (
-                            :last_entry_first_updated,
-                            :last_entry_updated,
-                            :last_feed_url,
-                            :last_entry_last_updated,
-                            :last_negative_feed_order,
-                            :last_entry_id
-                        )
-                        """
-                    )
-            elif sort == 'random':
-                assert not last, last  # pragma: no cover
-
-        if feed_url:
-            where_snippets.append("feeds.url = :feed_url")
-            if entry_id:
-                where_snippets.append("entries.id = :entry_id")
-
-        if has_enclosures is not None:
-            where_snippets.append(
-                f"""
-                {'NOT' if has_enclosures else ''}
-                    (json_array_length(entries.enclosures) IS NULL
-                        OR json_array_length(entries.enclosures) = 0)
-                """
-            )
-
-        if important is not None:
-            where_snippets.append(f"{'' if important else 'NOT'} entries.important")
-
-        if any(where_snippets):
-            where_keyword = 'WHERE'
-            where_snippet = '\n                AND '.join(where_snippets)
-        else:
-            where_keyword = ''
-            where_snippet = ''
-
-        if sort == 'recent':
-            order_by_snippet = """
-                kinda_first_updated DESC,
-                kinda_published DESC,
-                feeds.url DESC,
-                entries.last_updated DESC,
-                negative_feed_order DESC,
-                -- to make sure the order is deterministic;
-                -- it's unlikely it'll be used, since the probability of a feed
-                -- being updated twice during the same millisecond is very low
-                entries.id DESC
-            """
-
-        elif sort == 'random':
-            # TODO: "order by random()" always goes through the full result set, which is inefficient
-            # details here https://github.com/lemon24/reader/issues/105#issue-409493128
-            order_by_snippet = "random()"
-
-        else:
-            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
-
-        if sort == 'recent':
-            select_snippet = """\
-                ,
-                entries.last_updated,
-                coalesce(
-                    CASE
-                    WHEN
-                        coalesce(entries.published, entries.updated)
-                            >= :recent_threshold
-                        THEN entries.first_updated_epoch
-                    END,
-                    entries.published, entries.updated
-                ) as kinda_first_updated,
-                coalesce(entries.published, entries.updated) as kinda_published,
-                - entries.feed_order as negative_feed_order
-            """
-        else:
-            select_snippet = ''
-
-        query = f"""
-            SELECT
-                feeds.url,
-                feeds.updated,
-                feeds.title,
-                feeds.link,
-                feeds.author,
-                feeds.user_title,
-                entries.id,
-                entries.updated,
-                entries.title,
-                entries.link,
-                entries.author,
-                entries.published,
-                entries.summary,
-                entries.content,
-                entries.enclosures,
-                entries.read,
-                entries.important
-                {select_snippet}
-            FROM entries
-            JOIN feeds ON feeds.url = entries.feed
-            {where_keyword}
-                {where_snippet}
-            ORDER BY
-                {order_by_snippet}
-            {limit_snippet}
-            ;
-        """
-
-        log.debug("_get_entries query\n%s\n", query)
-
-        return query
 
     @wrap_exceptions(StorageError)
     @returns_iter_list
@@ -800,3 +647,123 @@ class Storage:
                 locals(),
             )
         rowcount_exactly_one(cursor, lambda: MetadataNotFoundError(feed_url, key))
+
+
+def make_get_entries_query(
+    filter_options: EntryFilterOptions,
+    sort: EntrySortOrder,
+    chunk_size: Optional[int] = None,
+    last: _GetEntriesLast = None,
+) -> Tuple[Query, ScrollingWindow]:
+    log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
+
+    query = (
+        Query()
+        .SELECT(
+            *"""
+            feeds.url
+            feeds.updated
+            feeds.title
+            feeds.link
+            feeds.author
+            feeds.user_title
+            entries.id
+            entries.updated
+            entries.title
+            entries.link
+            entries.author
+            entries.published
+            entries.summary
+            entries.content
+            entries.enclosures
+            entries.read
+            entries.important
+            """.split()
+        )
+        .FROM("entries")
+        .JOIN("feeds ON feeds.url = entries.feed")
+    )
+
+    # noop scrolling window
+    scrolling_window = ScrollingWindow(query)
+
+    apply_filter_options(query, filter_options)
+
+    if sort == 'recent':
+        query.SELECT(
+            "entries.last_updated",
+            (
+                "kinda_first_updated",
+                """
+                coalesce (
+                    CASE
+                    WHEN
+                        coalesce(entries.published, entries.updated)
+                            >= :recent_threshold
+                        THEN entries.first_updated_epoch
+                    END,
+                    entries.published, entries.updated
+                )
+                """,
+            ),
+            ("kinda_published", "coalesce(entries.published, entries.updated)"),
+            ("negative_feed_order", "- entries.feed_order"),
+        )
+
+        scrolling_window = ScrollingWindow(
+            query,
+            *"""
+            kinda_first_updated
+            kinda_published
+            feeds.url
+            entries.last_updated
+            negative_feed_order
+            entries.id
+            """.split(),
+            desc=True,
+        )
+
+    elif sort == 'random':
+        assert not last, last  # pragma: no cover
+
+        # TODO: "order by random()" always goes through the full result set, which is inefficient
+        # details here https://github.com/lemon24/reader/issues/105#issue-409493128
+        query.ORDER_BY("random()")
+
+    else:
+        assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+
+    # moved here for coverage
+    if chunk_size:
+        scrolling_window.LIMIT(":chunk_size", last=last)
+
+    log.debug("_get_entries query\n%s\n", query)
+
+    return query, scrolling_window
+
+
+def apply_filter_options(
+    query: Query, filter_options: EntryFilterOptions, keyword: str = 'WHERE'
+) -> None:
+    add = getattr(query, keyword)
+    feed_url, entry_id, read, important, has_enclosures = filter_options
+
+    if feed_url:
+        add("entries.feed = :feed_url")
+        if entry_id:
+            add("entries.id = :entry_id")
+
+    if read is not None:
+        add(f"{'' if read else 'NOT'} entries.read")
+
+    if important is not None:
+        add(f"{'' if important else 'NOT'} entries.important")
+
+    if has_enclosures is not None:
+        add(
+            f"""
+            {'NOT' if has_enclosures else ''}
+                (json_array_length(entries.enclosures) IS NULL
+                    OR json_array_length(entries.enclosures) = 0)
+            """
+        )

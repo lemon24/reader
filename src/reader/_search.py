@@ -8,15 +8,19 @@ import warnings
 from collections import OrderedDict
 from types import MappingProxyType
 from typing import Any
+from typing import cast
 from typing import Dict
 from typing import Iterable
 from typing import Optional
 from typing import Tuple
 from typing import TypeVar
 
+from ._sql_utils import Query  # type: ignore
+from ._sql_utils import ScrollingWindow  # type: ignore
 from ._sqlite_utils import ddl_transaction
 from ._sqlite_utils import json_object_get
 from ._sqlite_utils import wrap_exceptions
+from ._storage import apply_filter_options
 from ._storage import Storage
 from ._types import EntryFilterOptions
 from .exceptions import InvalidSearchQueryError
@@ -24,6 +28,7 @@ from .exceptions import SearchError
 from .exceptions import SearchNotEnabledError
 from .types import EntrySearchResult
 from .types import HighlightedString
+
 
 # Only Search.update() has a reason to fail if bs4 is missing.
 try:
@@ -409,14 +414,16 @@ class Search:
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
-        sql_query = self._make_search_entries_query(filter_options, chunk_size, last)
+        sql_query, scrolling_window = make_search_entries_query(
+            filter_options, chunk_size, last
+        )
 
         feed_url, entry_id, read, important, has_enclosures = filter_options
 
         # TODO: lots of get_entries duplication, should be reduced
 
         if last:
-            last = last_rank, last_feed_url, last_entry_id = last
+            last_0, last_1, last_2 = last
 
         random_mark = ''.join(
             random.choices(string.ascii_letters + string.digits, k=20)
@@ -433,7 +440,7 @@ class Search:
 
         with wrap_exceptions(SearchError):
             try:
-                cursor = self.storage.db.execute(sql_query, locals())
+                cursor = self.storage.db.execute(str(sql_query), locals())
             except sqlite3.OperationalError as e:
                 msg_lower = str(e).lower()
 
@@ -487,123 +494,78 @@ class Search:
                     MappingProxyType(rv_content),
                 )
 
-                rv_last = (rank, rv_feed_url, rv_entry_id)
+                rv_last = cast(
+                    _SearchEntriesLast,
+                    tuple(l for _, l in scrolling_window.extract_last(t)),
+                )
                 log.debug("_search_entries rv_last\n%r\n", rv_last)
 
                 yield result, rv_last
 
-    def _make_search_entries_query(
-        self,
-        filter_options: EntryFilterOptions,
-        chunk_size: Optional[int] = None,
-        last: _SearchEntriesLast = None,
-    ) -> str:
-        # TODO: should not duplicate _make_get_entries_query
 
-        feed_url, entry_id, read, important, has_enclosures = filter_options
+def make_search_entries_query(
+    filter_options: EntryFilterOptions,
+    chunk_size: Optional[int] = None,
+    last: _SearchEntriesLast = None,
+) -> Tuple[Query, ScrollingWindow]:
+    search = """
+        SELECT
+            _id,
+            _feed,
+            rank,
+            snippet(
+                entries_search, 0, :before_mark, :after_mark, '...',
+                :snippet_tokens
+            ) AS title,
+            snippet(
+                entries_search, 2, :before_mark, :after_mark, '...',
+                :snippet_tokens
+            ) AS feed,
+            _is_feed_user_title AS is_feed_user_title,
+            json_object(
+                'path', _content_path,
+                'value', snippet(
+                    entries_search, 1,
+                    :before_mark, :after_mark, '...', :snippet_tokens
+                ),
+                'rank', rank
+            ) AS content
+        FROM entries_search
+        WHERE entries_search MATCH :query
+        ORDER BY rank
 
-        having_snippets = []
+        -- TODO: can we improve performance if we move filtering here?
 
-        if read is not None:
-            having_snippets.append(f"{'' if read else 'NOT'} entries.read")
+        -- https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html
+        -- rule 14 https://www.sqlite.org/optoverview.html#subquery_flattening
+        LIMIT -1 OFFSET 0
+    """
 
-        limit_snippet = ''
-        if chunk_size:
-            limit_snippet = "LIMIT :chunk_size"
-            if last:
-                having_snippets.append(
-                    """
-                    (
-                        rank,
-                        entries.feed,
-                        entries.id
-                    ) > (
-                        :last_rank,
-                        :last_feed_url,
-                        :last_entry_id
-                    )
-                    """
-                )
+    query = (
+        Query()
+        .WITH(("search", search))
+        .SELECT(
+            "entries.id",
+            "entries.feed",
+            ("rank", "min(search.rank)"),
+            "search.title",
+            "search.feed",
+            "search.is_feed_user_title",
+            "json_group_array(json(search.content))",
+        )
+        .FROM("entries")
+        .JOIN("search ON (entries.id, entries.feed) = (search._id, search._feed)")
+        .GROUP_BY("entries.id", "entries.feed")
+    )
 
-        if feed_url:
-            having_snippets.append("entries.feed = :feed_url")
-            if entry_id:
-                having_snippets.append("entries.id = :entry_id")
+    apply_filter_options(query, filter_options, 'HAVING')
 
-        if has_enclosures is not None:
-            having_snippets.append(
-                f"""
-                {'NOT' if has_enclosures else ''}
-                    (json_array_length(entries.enclosures) IS NULL
-                        OR json_array_length(entries.enclosures) = 0)
-                """
-            )
+    scrolling_window = ScrollingWindow(
+        query, *"rank entries.feed entries.id".split(), keyword='HAVING'
+    )
+    if chunk_size:
+        scrolling_window.LIMIT(":chunk_size", last=last)
 
-        if important is not None:
-            having_snippets.append(f"{'' if important else 'NOT'} entries.important")
+    log.debug("_search_entries query\n%s\n", query)
 
-        if any(having_snippets):
-            having_keyword = 'HAVING'
-            having_snippet = '\n                AND '.join(having_snippets)
-        else:
-            having_keyword = ''
-            having_snippet = ''
-
-        query = f"""
-
-            WITH search AS (
-                SELECT
-                    _id,
-                    _feed,
-                    rank,
-                    snippet(
-                        entries_search, 0, :before_mark, :after_mark, '...',
-                        :snippet_tokens
-                    ) AS title,
-                    snippet(
-                        entries_search, 2, :before_mark, :after_mark, '...',
-                        :snippet_tokens
-                    ) AS feed,
-                    _is_feed_user_title AS is_feed_user_title,
-                    json_object(
-                        'path', _content_path,
-                        'value', snippet(
-                            entries_search, 1,
-                            :before_mark, :after_mark, '...', :snippet_tokens
-                        ),
-                        'rank', rank
-                    ) AS content
-                FROM entries_search
-                WHERE entries_search MATCH :query
-                ORDER BY rank
-
-                -- TODO: can we improve performance if we move filtering here?
-
-                -- https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html
-                -- rule 14 https://www.sqlite.org/optoverview.html#subquery_flattening
-                LIMIT -1 OFFSET 0
-            )
-
-            SELECT
-                entries.id,
-                entries.feed,
-                min(search.rank) as rank,  -- used for pagination
-                search.title,
-                search.feed,
-                search.is_feed_user_title,
-                json_group_array(json(search.content))
-            FROM entries
-            JOIN search ON (entries.id, entries.feed) = (search._id, search._feed)
-
-            GROUP BY entries.id, entries.feed
-            {having_keyword}
-                {having_snippet}
-            ORDER BY rank, entries.id, entries.feed
-            {limit_snippet}
-            ;
-
-        """
-
-        log.debug("_search_entries query\n%s\n", query)
-
-        return query
+    return query, scrolling_window
