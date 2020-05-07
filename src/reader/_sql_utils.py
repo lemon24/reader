@@ -1,13 +1,16 @@
 # type: ignore
+# It's not really worth trying to type this (I tried),
+# there's too much stuff going on # that's confusing mypy
+# (generated methods, mixins).
 import collections
 import functools
 import textwrap
 
 
-# TODO: typing annotations
-
-
 class BaseQuery(collections.OrderedDict):
+
+    # For a version of this that supports UNIONs and nested queries,
+    # see the second prototype in https://github.com/lemon24/reader/issues/123
 
     default_separators = dict(WHERE='AND', HAVING='AND')
 
@@ -22,7 +25,7 @@ class BaseQuery(collections.OrderedDict):
     def __getattr__(self, name):
         # also, we must not shadow dunder methods (e.g. __deepcopy__)
         if not name.isupper():
-            return super().__getattr__(name)
+            raise AttributeError
         return functools.partial(self.add, name.replace('_', ' '))
 
     def __str__(self, end=';\n'):
@@ -101,7 +104,7 @@ class ScrollingWindowMixin:
         self.__keyword = keyword
 
         order = 'DESC' if desc else 'ASC'
-        self.ORDER_BY(*(f'{thing} {order}' for thing in things))
+        return self.ORDER_BY(*(f'{thing} {order}' for thing in things))
 
     __make_label = 'last_{}'.format
 
@@ -109,7 +112,7 @@ class ScrollingWindowMixin:
         self.add('LIMIT', *things)
 
         if not last:
-            return
+            return self
 
         op = '<' if self.__desc else '>'
         labels = (':' + self.__make_label(i) for i in range(len(self.__things)))
