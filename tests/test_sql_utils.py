@@ -57,7 +57,7 @@ def test_query_complicated():
         .WITH('first cte')
         .GROUP_BY('another group by')
         .HAVING('another having')
-        .WITH('second cte')
+        .WITH(('fancy', 'second cte'))
         .JOIN('another join')
         .WHERE('another where')
         .NATURAL_JOIN('natural join')
@@ -67,7 +67,9 @@ def test_query_complicated():
         """\
         WITH
             first cte,
-            second cte
+            fancy AS (
+                second cte
+            )
         SELECT
             one,
             expr AS two,
