@@ -4,12 +4,11 @@ import functools
 import textwrap
 
 
-# TODO: strip out UNION support, and maybe fancy WITH support;
+# TODO: strip out UNION support, and maybe fancy WITH support (nested Query in general);
 # aside from error handling, coverage should be 100% from the existing code using it
 # TODO: integrate ScrollingWindow into a Query subclass for usability, with default noop window
 # TODO: add ScrollingWindow method to transform last to params
 # TODO: typing annotations
-# TODO: add some basic tests
 
 
 class Query(collections.OrderedDict):  # pragma: no cover
@@ -49,6 +48,9 @@ class Query(collections.OrderedDict):  # pragma: no cover
     }
 
     def __getattr__(self, name):
+        # otherwise deepcopy() won't work
+        if name.startswith('__') and name.endswith('__'):
+            return super().__getattr__(name)
         keyword = name.replace('_', ' ').upper()
         if keyword in self._compound_keywords:
             self = type(self)()._add('', self)
@@ -77,6 +79,8 @@ class Query(collections.OrderedDict):  # pragma: no cover
         pairs = sorted(self.items(), key=lambda p: self._keyword_key(p[0]))
 
         for keyword, things in pairs:
+            if not things:
+                continue
             if keyword:
                 yield keyword + '\n'
 
@@ -135,7 +139,7 @@ class ScrollingWindow:
     _make_label = 'last_{}'.format
 
     def LIMIT(self, *things, last):
-        self._query.LIMIT(things)
+        self._query.LIMIT(*things)
 
         if not last:
             return
