@@ -2,6 +2,7 @@ import cProfile
 import inspect
 import os.path
 import pstats
+import random
 import sqlite3
 import statistics
 import sys
@@ -16,6 +17,7 @@ from fnmatch import fnmatchcase
 from functools import partial
 
 import click
+from jinja2.utils import generate_lorem_ipsum
 
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../src'))
@@ -23,7 +25,7 @@ sys.path.insert(0, os.path.join(root_dir, '../tests'))
 
 from fakeparser import Parser
 
-from reader import Reader
+from reader import make_reader
 from reader._app import create_app, get_reader
 
 
@@ -77,16 +79,23 @@ def inject(**factories):
 NUM_FEEDS = 8
 
 
-def make_reader_with_entries(path, num_entries, num_feeds=NUM_FEEDS):
-    reader = Reader(path)
+def make_reader_with_entries(path, num_entries, num_feeds=NUM_FEEDS, text=False):
+    reader = make_reader(path)
     reader._parser = parser = Parser()
 
     for i in range(num_feeds):
         feed = parser.feed(i, datetime(2010, 1, 1))
         reader.add_feed(feed.url)
 
+    random.seed(0)
     for i in range(num_entries):
-        parser.entry(i % num_feeds, i, datetime(2010, 1, 1) + timedelta(i))
+        kwargs = {}
+        if text:
+            kwargs.update(
+                title=generate_lorem_ipsum(html=False, n=1, min=1, max=10),
+                summary=generate_lorem_ipsum(html=False),
+            )
+        parser.entry(i % num_feeds, i, datetime(2010, 1, 1) + timedelta(i), **kwargs)
 
     return reader
 
@@ -115,7 +124,7 @@ def setup_db_with_entries(num_entries):
 @contextmanager
 def setup_reader_with_entries(num_entries):
     with setup_db_with_entries(num_entries) as path:
-        yield Reader(path)
+        yield make_reader(path)
 
 
 @contextmanager
@@ -249,6 +258,34 @@ time_update_feed_old = inject(reader=setup_reader_feed_old)(_time_update_feed)
 time_update_feed_old_fallback = inject(reader=setup_reader_feed_old_fallback)(
     _time_update_feed
 )
+
+
+@contextmanager
+def setup_reader_with_search_and_some_read_entries(num_entries):
+    with setup_db() as path:
+        reader = make_reader_with_entries(path, num_entries, text=True)
+        reader.update_feeds()
+        reader.enable_search()
+        reader.update_search()
+        for i, entry in enumerate(reader.get_entries()):
+            if i % 2 == 5:
+                reader.mark_as_read(entry)
+        yield reader
+
+
+SEARCH_ENTRIES_QUERY = 'porta justo scelerisque dignissim convallis primis lacus'
+
+
+@inject(reader=setup_reader_with_search_and_some_read_entries)
+def time_search_entries_all(reader):
+    for _ in reader.search_entries(SEARCH_ENTRIES_QUERY):
+        pass
+
+
+@inject(reader=setup_reader_with_search_and_some_read_entries)
+def time_search_entries_read(reader):
+    for _ in reader.search_entries(SEARCH_ENTRIES_QUERY, read=True):
+        pass
 
 
 TIMINGS = OrderedDict(
