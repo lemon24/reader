@@ -4,11 +4,10 @@ import functools
 import textwrap
 
 
-# TODO: integrate ScrollingWindow into a Query subclass for usability, with default noop window
 # TODO: typing annotations
 
 
-class Query(collections.OrderedDict):
+class BaseQuery(collections.OrderedDict):
 
     default_separators = dict(WHERE='AND', HAVING='AND')
 
@@ -91,34 +90,42 @@ class Query(collections.OrderedDict):
             return ','
 
 
-class ScrollingWindow:
-    def __init__(self, query, *things, desc=False, keyword='WHERE'):
-        self._query = query
-        self._things = things = [self._query._clean_up(t) for t in things]
-        self._desc = desc
-        self._keyword = keyword
+class ScrollingWindowMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.scrolling_window_order_by()
+
+    def scrolling_window_order_by(self, *things, desc=False, keyword='WHERE'):
+        self.__things = things = [self._clean_up(t) for t in things]
+        self.__desc = desc
+        self.__keyword = keyword
 
         order = 'DESC' if desc else 'ASC'
-        self._query.ORDER_BY(*(f'{thing} {order}' for thing in things))
+        self.ORDER_BY(*(f'{thing} {order}' for thing in things))
 
-    _make_label = 'last_{}'.format
+    __make_label = 'last_{}'.format
 
     def LIMIT(self, *things, last):
-        self._query.LIMIT(*things)
+        self.add('LIMIT', *things)
 
         if not last:
             return
 
-        op = '<' if self._desc else '>'
-        labels = (':' + self._make_label(i) for i in range(len(self._things)))
+        op = '<' if self.__desc else '>'
+        labels = (':' + self.__make_label(i) for i in range(len(self.__things)))
 
-        getattr(self._query, self._keyword)(
-            Query().add('(', *self._things).add(f') {op} (', *labels).__str__(end=')')
+        return self.add(
+            self.__keyword,
+            Query().add('(', *self.__things).add(f') {op} (', *labels).__str__(end=')'),
         )
 
     def extract_last(self, result):
-        names = [t[0] for t in self._query['SELECT']]
-        return tuple(result[names.index(t)] for t in self._things) or None
+        names = [t[0] for t in self['SELECT']]
+        return tuple(result[names.index(t)] for t in self.__things) or None
 
     def last_params(self, last):
-        return [(self._make_label(i), t) for i, t in enumerate(last or ())]
+        return [(self.__make_label(i), t) for i, t in enumerate(last or ())]
+
+
+class Query(ScrollingWindowMixin, BaseQuery):
+    pass

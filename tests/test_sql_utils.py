@@ -3,13 +3,13 @@ from textwrap import dedent
 
 import pytest
 
+from reader._sql_utils import BaseQuery
 from reader._sql_utils import Query
-from reader._sql_utils import ScrollingWindow
 
 
 def test_query_simple():
     assert str(
-        Query().SELECT('select').FROM('from').JOIN('join').WHERE('where')
+        BaseQuery().SELECT('select').FROM('from').JOIN('join').WHERE('where')
     ) == dedent(
         """\
         SELECT
@@ -37,7 +37,7 @@ def test_query_complicated():
 
     """
     assert str(
-        Query()
+        BaseQuery()
         .WHERE()
         .OUTER_JOIN('outer join')
         .JOIN('join')
@@ -108,27 +108,32 @@ def test_query_complicated():
     )
 
 
+def test_query_deepcopy():
+    deepcopy(Query())
+
+
 def test_scrolling_window():
-    simple_query = Query().SELECT('select').FROM('from')
+    def make_query(cls=Query):
+        return cls().SELECT('select').FROM('from')
 
-    query = deepcopy(simple_query)
-    scrolling_window = ScrollingWindow(query)
-    assert str(query) == str(simple_query)
+    query = make_query()
+    query.scrolling_window_order_by()
+    assert str(query) == str(make_query(BaseQuery))
 
-    query = deepcopy(simple_query)
-    scrolling_window = ScrollingWindow(query, 'one')
-    assert str(query) == str(deepcopy(simple_query).ORDER_BY('one ASC'))
+    query = make_query()
+    query.scrolling_window_order_by('one')
+    assert str(query) == str(make_query(BaseQuery).ORDER_BY('one ASC'))
 
-    query = deepcopy(simple_query)
-    scrolling_window = ScrollingWindow(query, 'one')
-    scrolling_window.LIMIT('limit', last=False)
-    assert str(query) == str(deepcopy(simple_query).ORDER_BY('one ASC').LIMIT('limit'))
+    query = make_query()
+    query.scrolling_window_order_by('one')
+    query.LIMIT('limit', last=False)
+    assert str(query) == str(make_query(BaseQuery).ORDER_BY('one ASC').LIMIT('limit'))
 
-    query = deepcopy(simple_query)
-    scrolling_window = ScrollingWindow(query, 'one')
-    scrolling_window.LIMIT('limit', last=True)
+    query = make_query()
+    query.scrolling_window_order_by('one')
+    query.LIMIT('limit', last=True)
     assert str(query) == str(
-        deepcopy(simple_query)
+        make_query(BaseQuery)
         .WHERE(
             """
             (
@@ -142,11 +147,11 @@ def test_scrolling_window():
         .LIMIT('limit')
     )
 
-    query = deepcopy(simple_query)
-    scrolling_window = ScrollingWindow(query, 'one', desc=True, keyword='HAVING')
-    scrolling_window.LIMIT('limit', last=True)
+    query = make_query()
+    query.scrolling_window_order_by('one', desc=True, keyword='HAVING')
+    query.LIMIT('limit', last=True)
     assert str(query) == str(
-        deepcopy(simple_query)
+        make_query(BaseQuery)
         .HAVING(
             """
             (
@@ -163,11 +168,11 @@ def test_scrolling_window():
 
 def test_scrolling_window_last():
     query = Query().SELECT()
-    scrolling_window = ScrollingWindow(query)
-    assert scrolling_window.extract_last([1, 2, 3]) == None
-    assert dict(scrolling_window.last_params(None)) == {}
+    query.scrolling_window_order_by()
+    assert query.extract_last([1, 2, 3]) == None
+    assert dict(query.last_params(None)) == {}
 
     query = Query().SELECT('one', 'two', 'three')
-    scrolling_window = ScrollingWindow(query, 'one', 'three')
-    assert scrolling_window.extract_last([1, 2, 3]) == (1, 3)
-    assert dict(scrolling_window.last_params([1, 3])) == {'last_0': 1, 'last_1': 3}
+    query.scrolling_window_order_by('one', 'three')
+    assert query.extract_last([1, 2, 3]) == (1, 3)
+    assert dict(query.last_params([1, 3])) == {'last_0': 1, 'last_1': 3}

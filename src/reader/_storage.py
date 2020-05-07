@@ -13,7 +13,6 @@ from typing import Sequence
 from typing import Tuple
 
 from ._sql_utils import Query  # type: ignore
-from ._sql_utils import ScrollingWindow  # type: ignore
 from ._sqlite_utils import DBError
 from ._sqlite_utils import open_sqlite_db
 from ._sqlite_utils import rowcount_exactly_one
@@ -557,16 +556,14 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: _GetEntriesLast = None,
     ) -> Iterable[Tuple[Entry, _GetEntriesLast]]:
-        query, scrolling_window = make_get_entries_query(
-            filter_options, sort, chunk_size, last
-        )
+        query = make_get_entries_query(filter_options, sort, chunk_size, last)
 
         feed_url, entry_id, read, important, has_enclosures = filter_options
 
         recent_threshold = now - self.recent_threshold
 
         params = locals()
-        params.update(scrolling_window.last_params(last))
+        params.update(query.last_params(last))
 
         with wrap_exceptions(StorageError):
             cursor = self.db.execute(str(query), params)
@@ -584,7 +581,7 @@ class Storage:
 
                 rv_last: _GetEntriesLast = None
                 if sort == 'recent':
-                    rv_last = cast(_GetEntriesLast, scrolling_window.extract_last(t))
+                    rv_last = cast(_GetEntriesLast, query.extract_last(t))
                 yield entry, rv_last
 
     @wrap_exceptions(StorageError)
@@ -649,7 +646,7 @@ def make_get_entries_query(
     sort: EntrySortOrder,
     chunk_size: Optional[int] = None,
     last: _GetEntriesLast = None,
-) -> Tuple[Query, ScrollingWindow]:
+) -> Query:
     log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
 
     query = (
@@ -679,9 +676,6 @@ def make_get_entries_query(
         .JOIN("feeds ON feeds.url = entries.feed")
     )
 
-    # noop scrolling window
-    scrolling_window = ScrollingWindow(query)
-
     apply_filter_options(query, filter_options)
 
     if sort == 'recent':
@@ -705,8 +699,7 @@ def make_get_entries_query(
             ("negative_feed_order", "- entries.feed_order"),
         )
 
-        scrolling_window = ScrollingWindow(
-            query,
+        query.scrolling_window_order_by(
             *"""
             kinda_first_updated
             kinda_published
@@ -730,11 +723,11 @@ def make_get_entries_query(
 
     # moved here for coverage
     if chunk_size:
-        scrolling_window.LIMIT(":chunk_size", last=last)
+        query.LIMIT(":chunk_size", last=last)
 
     log.debug("_get_entries query\n%s\n", query)
 
-    return query, scrolling_window
+    return query
 
 
 def apply_filter_options(

@@ -16,7 +16,6 @@ from typing import Tuple
 from typing import TypeVar
 
 from ._sql_utils import Query  # type: ignore
-from ._sql_utils import ScrollingWindow  # type: ignore
 from ._sqlite_utils import ddl_transaction
 from ._sqlite_utils import json_object_get
 from ._sqlite_utils import wrap_exceptions
@@ -414,9 +413,7 @@ class Search:
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
-        sql_query, scrolling_window = make_search_entries_query(
-            filter_options, chunk_size, last
-        )
+        sql_query = make_search_entries_query(filter_options, chunk_size, last)
 
         feed_url, entry_id, read, important, has_enclosures = filter_options
 
@@ -436,7 +433,7 @@ class Search:
         log.debug("_search_entries locals\n%r\n", clean_locals)
 
         params = locals()
-        params.update(scrolling_window.last_params(last))
+        params.update(sql_query.last_params(last))
 
         with wrap_exceptions(SearchError):
             try:
@@ -494,7 +491,7 @@ class Search:
                     MappingProxyType(rv_content),
                 )
 
-                rv_last = cast(_SearchEntriesLast, scrolling_window.extract_last(t))
+                rv_last = cast(_SearchEntriesLast, sql_query.extract_last(t))
                 log.debug("_search_entries rv_last\n%r\n", rv_last)
 
                 yield result, rv_last
@@ -504,7 +501,7 @@ def make_search_entries_query(
     filter_options: EntryFilterOptions,
     chunk_size: Optional[int] = None,
     last: _SearchEntriesLast = None,
-) -> Tuple[Query, ScrollingWindow]:
+) -> Query:
     search = """
         SELECT
             _id,
@@ -557,12 +554,12 @@ def make_search_entries_query(
 
     apply_filter_options(query, filter_options, 'HAVING')
 
-    scrolling_window = ScrollingWindow(
-        query, *"rank entries.feed entries.id".split(), keyword='HAVING'
+    query.scrolling_window_order_by(
+        *"rank entries.feed entries.id".split(), keyword='HAVING'
     )
     if chunk_size:
-        scrolling_window.LIMIT(":chunk_size", last=last)
+        query.LIMIT(":chunk_size", last=last)
 
     log.debug("_search_entries query\n%s\n", query)
 
-    return query, scrolling_window
+    return query
