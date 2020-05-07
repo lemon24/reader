@@ -5,7 +5,6 @@ import textwrap
 
 
 # TODO: integrate ScrollingWindow into a Query subclass for usability, with default noop window
-# TODO: add ScrollingWindow method to transform last to params
 # TODO: typing annotations
 
 
@@ -119,7 +118,7 @@ class ScrollingWindow:
 
     def extract_last(self, result):
         names = [t[0] for t in self._query['SELECT']]
-        return [
-            (self._make_label(i), result[names.index(thing)])
-            for i, thing in enumerate(self._things)
-        ]
+        return tuple(result[names.index(t)] for t in self._things) or None
+
+    def last_params(self, last):
+        return [(self._make_label(i), t) for i, t in enumerate(last or ())]

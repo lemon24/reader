@@ -422,9 +422,6 @@ class Search:
 
         # TODO: lots of get_entries duplication, should be reduced
 
-        if last:
-            last_0, last_1, last_2 = last
-
         random_mark = ''.join(
             random.choices(string.ascii_letters + string.digits, k=20)
         )
@@ -438,9 +435,12 @@ class Search:
         clean_locals.pop('sql_query')
         log.debug("_search_entries locals\n%r\n", clean_locals)
 
+        params = locals()
+        params.update(scrolling_window.last_params(last))
+
         with wrap_exceptions(SearchError):
             try:
-                cursor = self.storage.db.execute(str(sql_query), locals())
+                cursor = self.storage.db.execute(str(sql_query), params)
             except sqlite3.OperationalError as e:
                 msg_lower = str(e).lower()
 
@@ -494,10 +494,7 @@ class Search:
                     MappingProxyType(rv_content),
                 )
 
-                rv_last = cast(
-                    _SearchEntriesLast,
-                    tuple(l for _, l in scrolling_window.extract_last(t)),
-                )
+                rv_last = cast(_SearchEntriesLast, scrolling_window.extract_last(t))
                 log.debug("_search_entries rv_last\n%r\n", rv_last)
 
                 yield result, rv_last

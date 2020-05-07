@@ -161,7 +161,13 @@ def test_scrolling_window():
     )
 
 
-def test_scrolling_window_extract_last():
-    query = Query().SELECT('one', 'two', 'three').FROM('from')
+def test_scrolling_window_last():
+    query = Query().SELECT()
+    scrolling_window = ScrollingWindow(query)
+    assert scrolling_window.extract_last([1, 2, 3]) == None
+    assert dict(scrolling_window.last_params(None)) == {}
+
+    query = Query().SELECT('one', 'two', 'three')
     scrolling_window = ScrollingWindow(query, 'one', 'three')
-    assert scrolling_window.extract_last([1, 2, 3]) == [('last_0', 1), ('last_1', 3)]
+    assert scrolling_window.extract_last([1, 2, 3]) == (1, 3)
+    assert dict(scrolling_window.last_params([1, 3])) == {'last_0': 1, 'last_1': 3}

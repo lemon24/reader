@@ -564,14 +564,12 @@ class Storage:
         feed_url, entry_id, read, important, has_enclosures = filter_options
 
         recent_threshold = now - self.recent_threshold
-        if sort == 'recent':
-            if last:
-                last_0, last_1, last_2, last_3, last_4, last_5 = last
-        elif sort == 'random':
-            assert not last, last  # pragma: no cover
+
+        params = locals()
+        params.update(scrolling_window.last_params(last))
 
         with wrap_exceptions(StorageError):
-            cursor = self.db.execute(str(query), locals())
+            cursor = self.db.execute(str(query), params)
             for t in cursor:
                 feed = t[0:6]
                 feed = Feed._make(feed)
@@ -586,10 +584,7 @@ class Storage:
 
                 rv_last: _GetEntriesLast = None
                 if sort == 'recent':
-                    rv_last = cast(
-                        _GetEntriesLast,
-                        tuple(l for _, l in scrolling_window.extract_last(t)),
-                    )
+                    rv_last = cast(_GetEntriesLast, scrolling_window.extract_last(t))
                 yield entry, rv_last
 
     @wrap_exceptions(StorageError)
