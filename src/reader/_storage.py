@@ -200,28 +200,26 @@ class Storage:
     def get_feeds(
         self, url: Optional[str] = None, sort: FeedSortOrder = 'title'
     ) -> Iterable[Feed]:
-        where_url_snippet = '' if not url else "WHERE url = :url"
+        query = (
+            Query()
+            .SELECT("url, updated, title, link, author, user_title")
+            .FROM("feeds")
+        )
+
+        if url:
+            query.WHERE("url = :url")
 
         if sort == 'title':
-            order_by_snippet = "lower(coalesce(feeds.user_title, feeds.title)) ASC"
+            query.ORDER_BY("lower(coalesce(feeds.user_title, feeds.title)) ASC")
         elif sort == 'added':
-            order_by_snippet = "feeds.added DESC"
+            query.ORDER_BY("feeds.added DESC")
         else:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
-        cursor = self.db.execute(
-            f"""
-            SELECT url, updated, title, link, author, user_title FROM feeds
-            {where_url_snippet}
-            ORDER BY
-                {order_by_snippet},
-                -- to make sure the order is deterministic
-                feeds.url;
-            """,
-            locals(),
-        )
+        # to make sure the order is deterministic
+        query.ORDER_BY("feeds.url")
 
-        for row in cursor:
+        for row in self.db.execute(str(query), locals()):
             yield Feed._make(row)
 
     @wrap_exceptions(StorageError)
@@ -229,30 +227,21 @@ class Storage:
     def get_feeds_for_update(
         self, url: Optional[str] = None, new_only: bool = False
     ) -> Iterable[FeedForUpdate]:
-        if url or new_only:
-            where_snippet = "WHERE 1"
-        else:
-            where_snippet = ''
-        where_url_snippet = '' if not url else " AND url = :url"
-        where_new_only_snippet = '' if not new_only else " AND last_updated is NULL"
-        cursor = self.db.execute(
-            f"""
-            SELECT
-                url,
-                updated,
-                http_etag,
-                http_last_modified,
-                stale,
-                last_updated
-            FROM feeds
-            {where_snippet}
-            {where_url_snippet}
-            {where_new_only_snippet}
-            ORDER BY feeds.url;
-            """,
-            locals(),
+        query = (
+            Query()
+            .SELECT("url, updated, http_etag, http_last_modified, stale, last_updated")
+            .FROM("feeds")
         )
-        for row in cursor:
+
+        if url:
+            query.WHERE("url = :url")
+        if new_only:
+            query.WHERE("last_updated is NULL")
+
+        # to make sure the order is deterministic
+        query.ORDER_BY("feeds.url")
+
+        for row in self.db.execute(str(query), locals()):
             yield FeedForUpdate._make(row)
 
     @returns_iter_list
@@ -578,10 +567,7 @@ class Storage:
                     feed,
                 )
                 entry = Entry._make(entry)
-
-                rv_last: _GetEntriesLast = None
-                if sort == 'recent':
-                    rv_last = cast(_GetEntriesLast, query.extract_last(t))
+                rv_last = cast(_GetEntriesLast, query.extract_last(t))
                 yield entry, rv_last
 
     @wrap_exceptions(StorageError)
@@ -589,19 +575,13 @@ class Storage:
     def iter_feed_metadata(
         self, feed_url: str, key: Optional[str] = None
     ) -> Iterable[Tuple[str, JSONType]]:
-        where_url_snippet = "WHERE feed = :feed_url"
-        if key is not None:
-            where_url_snippet += " AND key = :key"
-
-        cursor = self.db.execute(
-            f"""
-            SELECT key, value FROM feed_metadata
-            {where_url_snippet};
-            """,
-            locals(),
+        query = (
+            Query().SELECT("key, value").FROM("feed_metadata").WHERE("feed = :feed_url")
         )
+        if key is not None:
+            query.WHERE("key = :key")
 
-        for mkey, value in cursor:
+        for mkey, value in self.db.execute(str(query), locals()):
             yield mkey, json.loads(value)
 
     @wrap_exceptions(StorageError)

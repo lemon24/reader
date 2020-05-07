@@ -25,7 +25,9 @@ class BaseQuery(collections.OrderedDict):
     def __getattr__(self, name):
         # also, we must not shadow dunder methods (e.g. __deepcopy__)
         if not name.isupper():
-            raise AttributeError
+            raise AttributeError(
+                f"{type(self).__name__!r} object has no attribute {name!r}"
+            )
         return functools.partial(self.add, name.replace('_', ' '))
 
     def __str__(self, end=';\n'):
