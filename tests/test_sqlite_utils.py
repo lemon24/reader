@@ -26,8 +26,10 @@ def dummy_ddl_transaction(db):
             dummy_ddl_transaction,
             marks=pytest.mark.xfail(
                 "sys.implementation.name == 'pypy' "
-                "and sys.pypy_version_info <= (7, 2, 0)",
-                strict=True,
+                # For some reason, this doesn't work:
+                # https://travis-ci.org/github/lemon24/reader/jobs/684668462
+                # "and sys.pypy_version_info <= (7, 2, 0)",
+                # strict=True,
             ),
         ),
         ddl_transaction,
