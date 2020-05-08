@@ -110,7 +110,7 @@ class ScrollingWindowMixin:
 
     __make_label = 'last_{}'.format
 
-    def LIMIT(self, *things, last):
+    def LIMIT(self, *things, last=False):
         self.add('LIMIT', *things)
 
         if not last:

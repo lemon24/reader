@@ -125,6 +125,10 @@ def test_scrolling_window():
     assert str(query) == str(make_query(BaseQuery).ORDER_BY('one ASC'))
 
     query = make_query()
+    query.LIMIT('limit', last=False)
+    assert str(query) == str(make_query(BaseQuery).LIMIT('limit'))
+
+    query = make_query()
     query.scrolling_window_order_by('one')
     query.LIMIT('limit', last=False)
     assert str(query) == str(make_query(BaseQuery).ORDER_BY('one ASC').LIMIT('limit'))

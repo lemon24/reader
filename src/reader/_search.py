@@ -502,8 +502,10 @@ def make_search_entries_query(
     chunk_size: Optional[int] = None,
     last: _SearchEntriesLast = None,
 ) -> Query:
-    search = """
-        SELECT
+    search = (
+        Query()
+        .SELECT(
+            """
             _id,
             _feed,
             rank,
@@ -524,20 +526,20 @@ def make_search_entries_query(
                 ),
                 'rank', rank
             ) AS content
-        FROM entries_search
-        WHERE entries_search MATCH :query
-        ORDER BY rank
-
-        -- TODO: can we improve performance if we move filtering here?
-
-        -- https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html
-        -- rule 14 https://www.sqlite.org/optoverview.html#subquery_flattening
-        LIMIT -1 OFFSET 0
-    """
+            """
+        )
+        .FROM("entries_search")
+        .WHERE("entries_search MATCH :query")
+        .ORDER_BY("rank")
+        # TODO: can we improve performance if we move filtering here?
+        # https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html
+        # rule 14 https://www.sqlite.org/optoverview.html#subquery_flattening
+        .LIMIT("-1 OFFSET 0")
+    )
 
     query = (
         Query()
-        .WITH(("search", search))
+        .WITH(("search", search.__str__(end='')))
         .SELECT(
             "entries.id",
             "entries.feed",
