@@ -21,10 +21,14 @@ def dummy_ddl_transaction(db):
 @pytest.mark.parametrize(
     'ddl_transaction',
     [
-        # fails, but only on PyPy 3.6, not on CPython
+        # Fails on PyPy3 7.2.0, but not on CPython or PyPy3 7.3.1 (on macOS, at least).
         pytest.param(
             dummy_ddl_transaction,
-            marks=pytest.mark.xfail("sys.implementation.name == 'pypy'", strict=True),
+            marks=pytest.mark.xfail(
+                "sys.implementation.name == 'pypy' "
+                "and sys.pypy_version_info <= (7, 2, 0)",
+                strict=True,
+            ),
         ),
         ddl_transaction,
     ],

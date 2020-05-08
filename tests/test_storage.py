@@ -313,7 +313,19 @@ def test_update_feed_last_updated_not_found(db_path):
         # variable_number defaults to 999 when compiling SQLite from sources
         int(999 / 2) + 1,
         # variable_number defaults to 250000 in Ubuntu 18.04 -provided SQLite
-        pytest.param(int(250000 / 2) + 1, marks=pytest.mark.slow),
+        pytest.param(
+            int(250000 / 2) + 1,
+            marks=(
+                pytest.mark.slow,
+                # Fails on PyPy3 7.3.1 *only when running with --cov* with:
+                #   _sqlite3.InterfaceError: Error binding parameter :feed_url - probably unsupported type.
+                # but not CPython or PyPy3 7.2.0 (on macOS, at least).
+                pytest.mark.xfail(
+                    "sys.implementation.name == 'pypy' "
+                    "and sys.pypy_version_info[:2] == (7, 3)",
+                ),
+            ),
+        ),
     ],
 )
 def test_get_entries_for_update_param_limit(entry_count):

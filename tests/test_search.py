@@ -174,9 +174,11 @@ def test_iter_locked(db_path, iter_stuff):
     [
         ('\x00', InvalidSearchQueryError),
         ('"', InvalidSearchQueryError),
-        # For some reason, * works when filtering is inside the CTE
-        # (it didn't when it was outside).
-        ('*', StopIteration),
+        # For some reason, on CPython * works when the filtering is inside
+        # the CTE (it didn't when it was outside), hence the StopIteration.
+        # On PyPy 7.3.1 we still get a InvalidSearchQueryError.
+        # We're fine as long as we don't get another exception.
+        ('*', (StopIteration, InvalidSearchQueryError)),
         ('O:', InvalidSearchQueryError),
         ('*p', InvalidSearchQueryError),
     ],
