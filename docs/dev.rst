@@ -22,7 +22,6 @@ Roadmap
 
 In no particular order:
 
-* Sort entries by random. (:issue:`105`)
 * API to delete old entries. (:issue:`96`)
 * API to delete duplicate entries. (:issue:`140`)
 * Better handling of local feeds. (:issue:`155`)

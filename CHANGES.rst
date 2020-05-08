@@ -15,6 +15,11 @@ Unreleased
   Allow sorting entries randomly in addition to the default
   most-recent-first order. (:issue:`105`)
 * Allow changing the entry sort order in the web application. (:issue:`105`)
+* Use a query builder instead of appending strings manually
+  for the more complicated queries in search and storage. (:issue:`123`)
+* Make searching entries faster by filtering them *before* searching;
+  e.g. if 1/5 of the entries are read, searching only read entries
+  is now ~5x faster. (enabled by :issue:`123`)
 
 
 Version 1.0.1
