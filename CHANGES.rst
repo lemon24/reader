@@ -9,7 +9,7 @@ Changelog
 Version 1.1
 -----------
 
-Unreleased
+Released 2020-05-08
 
 * Add ``sort`` argument to :meth:`~Reader.get_entries`.
   Allow sorting entries randomly in addition to the default
