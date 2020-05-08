@@ -529,6 +529,7 @@ def make_search_entries_query(
             """
         )
         .FROM("entries_search")
+        .JOIN("entries ON (entries.id, entries.feed) = (_id, _feed)")
         .WHERE("entries_search MATCH :query")
         .ORDER_BY("rank")
         # TODO: can we improve performance if we move filtering here?
@@ -537,27 +538,26 @@ def make_search_entries_query(
         .LIMIT("-1 OFFSET 0")
     )
 
+    apply_filter_options(search, filter_options)
+
     query = (
         Query()
         .WITH(("search", search.__str__(end='')))
         .SELECT(
-            "entries.id",
-            "entries.feed",
+            "search._id",
+            "search._feed",
             ("rank", "min(search.rank)"),
             "search.title",
             "search.feed",
             "search.is_feed_user_title",
             "json_group_array(json(search.content))",
         )
-        .FROM("entries")
-        .JOIN("search ON (entries.id, entries.feed) = (search._id, search._feed)")
-        .GROUP_BY("entries.id", "entries.feed")
+        .FROM("search")
+        .GROUP_BY("search._id", "search._feed")
     )
 
-    apply_filter_options(query, filter_options, 'HAVING')
-
     query.scrolling_window_order_by(
-        *"rank entries.feed entries.id".split(), keyword='HAVING'
+        *"rank search._feed search._id".split(), keyword='HAVING'
     )
     if chunk_size:
         query.LIMIT(":chunk_size", last=last)

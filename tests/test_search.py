@@ -169,13 +169,24 @@ def test_iter_locked(db_path, iter_stuff):
     check_iter_locked(db_path, enable_and_update_search, iter_stuff)
 
 
-@pytest.mark.parametrize('query', ['\x00', '"', '*', 'O:', '*p'])
-def test_invalid_search_query_error(storage, query):
+@pytest.mark.parametrize(
+    'query, exc_type',
+    [
+        ('\x00', InvalidSearchQueryError),
+        ('"', InvalidSearchQueryError),
+        # For some reason, * works when filtering is inside the CTE
+        # (it didn't when it was outside).
+        ('*', StopIteration),
+        ('O:', InvalidSearchQueryError),
+        ('*p', InvalidSearchQueryError),
+    ],
+)
+def test_invalid_search_query_error(storage, query, exc_type):
     # We're not testing this in test_reader_search.py because
     # the invalid query strings are search-provider-dependent.
     search = Search(storage)
     search.enable()
-    with pytest.raises(InvalidSearchQueryError):
+    with pytest.raises(exc_type):
         next(search.search_entries(query))
 
 
