@@ -57,7 +57,7 @@
 {% endmacro %}
 
 
-{% macro text_input_button(form_view, action, label, name, placeholder, leave_disabled=false, next=none, context=none, js_enabled=True) -%}
+{% macro text_input_button(form_view, action, label, name, placeholder, leave_disabled=false, next=none, context=none, js_enabled=True, value=none) -%}
 <li class="collapsible"
 
 data-button-type="text-input"
@@ -77,7 +77,7 @@ data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
 <form action="{{ url_for(form_view) }}" method="post" class="action-{{ action }}">
     <span class="label">{{ label }}</span>
     <span class="hidden">
-        <input type="text" name="{{ name }}" placeholder="{{ placeholder }}" autocomplete="off">
+        <input type="text" name="{{ name }}" placeholder="{{ placeholder }}" value="{{ value or '' }}" autocomplete="off">
         <button type="submit" name="action" value="{{ action }}" autocomplete="off">{{ label }}</button>
     </span>
     {% if next is not none %}<input type="hidden" name="next-{{ action }}" value='{{ next }}'>{% endif %}

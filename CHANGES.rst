@@ -11,6 +11,8 @@ Version 1.2
 
 Unreleased
 
+* Minor feeds web app page improvements.
+
 
 Version 1.1
 -----------
