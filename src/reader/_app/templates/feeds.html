@@ -24,9 +24,11 @@
 {% for feed in feeds %}
 <div id="feed-{{ loop.index }}" class="feed">
 
-<h2><a href="{{ url_for('.entries', feed=feed.url) }}">
+<h2 title="{{ macros.feed_title_secondary(feed) }}">
+<a href="{{ url_for('.entries', feed=feed.url) }}">
 {{- macros.feed_title(feed) -}}
-</a></h2>
+</a>
+</h2>
 
 <ul class="controls">
 

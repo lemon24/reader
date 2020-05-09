@@ -12,7 +12,7 @@
         Search for <b>{{ request.args.q }}</b>{% if feed %} in{% endif %}
     {% endif %}
     {% if feed %}
-        <b>{{ macros.feed_title(feed) }}</b>
+        <b title="{{ macros.feed_title_secondary(feed) }}">{{ macros.feed_title(feed) }}</b>
     {% endif %}
 {% endmacro %}
 

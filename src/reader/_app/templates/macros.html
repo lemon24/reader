@@ -15,6 +15,12 @@
 {%- endif -%}
 {% endmacro %}
 
+{% macro feed_title_secondary(feed) %}
+{%- if feed.user_title and feed.user_title.strip() and feed.title and feed.title.strip() -%}
+    {{ feed.title }}
+{%- endif -%}
+{% endmacro %}
+
 
 {% macro entry_content(entry) %}
 {%- set content = (
