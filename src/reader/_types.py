@@ -41,7 +41,9 @@ _UpdatedType = TypeVar('_UpdatedType', datetime, Optional[datetime])
 @dataclass(frozen=True)
 class EntryData(Generic[_UpdatedType], _namedtuple_compat):
 
-    """Like Entry, but .updated is less strict and .feed is missing.
+    """Entry data that comes from the feed.
+
+    Attributes are a subset of those of Entry.
 
     The natural thing to use would have been generics, but pleasing Python,
     mypy and Sphinx all at the same time is not possible at the moment,
@@ -53,7 +55,7 @@ class EntryData(Generic[_UpdatedType], _namedtuple_compat):
     ...however, it may be better to just have entry be a separate
     plain dataclass -- help(Entry) works weird with concrete generics.
 
-    We can't use subclass Entry because the attribute types become less specific.
+    We can't subclass Entry because the attribute types become less specific.
 
     We can't use a subclass for the common attributes because it confuses
     Sphinx: https://github.com/sphinx-doc/sphinx/issues/741
@@ -81,10 +83,6 @@ class EntryData(Generic[_UpdatedType], _namedtuple_compat):
     summary: Optional[str] = None
     content: Sequence[Content] = ()
     enclosures: Sequence[Enclosure] = ()
-
-    # TODO: are.read and .important used? maybe delete them if not
-    read: bool = False
-    important: bool = False
 
     def as_entry(self, **kwargs: object) -> Entry:
         """For testing."""

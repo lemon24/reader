@@ -145,8 +145,6 @@ def _make_entry(
         entry.get('summary'),
         tuple(content),
         tuple(enclosures),
-        False,
-        False,
     )
 
 
