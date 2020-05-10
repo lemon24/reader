@@ -310,6 +310,16 @@ def list_():
         print(timing)
 
 
+def make_header(extra, names):
+    return ' '.join(extra + names)
+
+
+def make_row_fmt(extra, names, num_fmt='.3f'):
+    extra_fmt = ['{{:>{}}}'.format(len(e)) for e in extra]
+    names_fmt = ['{{:>{}{}}}'.format(len(n), num_fmt) for n in names]
+    return ' '.join(extra_fmt + names_fmt)
+
+
 @cli.command()
 @click.argument('which', nargs=-1)
 @click.option('-n', '--number', type=int, default=TIMINGS_NUMBER, show_default=True)
@@ -338,11 +348,8 @@ def time(which, number, repeat):
 
     names = [name for name in TIMINGS if any(fnmatchcase(name, w) for w in which)]
 
-    header = ' '.join(extra + names)
-
-    extra_fmt = ['{{:>{}}}'.format(len(e)) for e in extra]
-    names_fmt = ['{{:>{}.3f}}'.format(len(n)) for n in names]
-    row_fmt = ' '.join(extra_fmt + names_fmt)
+    header = make_header(extra, names)
+    row_fmt = make_row_fmt(extra, names)
 
     def get_results():
         for params in TIMINGS_PARAMS_LIST:
@@ -362,6 +369,38 @@ def time(which, number, repeat):
             else:
                 prefix = [stat_name, number, repeat]
             print(row_fmt.format(*prefix, *params, *map(stat, results)))
+
+
+@cli.command()
+@click.argument('before', type=click.File())
+@click.argument('after', type=click.File())
+def diff(before, after):
+    pairs = zip(before, after)
+
+    b_line, a_line = next(pairs)
+    assert b_line == a_line
+
+    parts = b_line.split()
+    first_param_index = parts.index(PARAM_IDS[0])
+    first_name_index = first_param_index + len(PARAM_IDS)
+    assert parts[first_param_index:first_name_index] == list(PARAM_IDS)
+
+    extra = parts[:first_name_index]
+    names = parts[first_name_index:]
+
+    header = make_header(extra, names)
+    row_fmt = make_row_fmt(extra, names, '.1%')
+
+    print(header)
+    for b_line, a_line in pairs:
+        b_parts, a_parts = b_line.split(), a_line.split()
+        assert b_parts[:first_name_index] == a_parts[:first_name_index]
+
+        results = [
+            1 - float(a) / float(b)
+            for a, b in zip(a_parts[first_name_index:], b_parts[first_name_index:])
+        ]
+        print(row_fmt.format(*b_parts[:first_name_index], *results))
 
 
 @cli.command()
