@@ -57,7 +57,7 @@ def join_paginated_iter(
         #
         if not chunk_size:
             yield from (t for t, _ in things)
-            return
+            break
 
         things = list(things)
         if not things:
@@ -66,6 +66,9 @@ def join_paginated_iter(
         _, last = things[-1]
 
         yield from (t for t, _ in things)
+
+        if len(things) < chunk_size:
+            break
 
 
 FuncType = Callable[..., Any]

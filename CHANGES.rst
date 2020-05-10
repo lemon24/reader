@@ -12,6 +12,11 @@ Version 1.2
 Unreleased
 
 * Minor web application improvements.
+* Remove unneeded additional query in methods that use pagination
+  (for n = len(result) / page size, always do n queries instead n+1).
+  :meth:`~Reader.get_entries` and :meth:`~Reader.search_entries` are now
+  33–7% and 46–36% faster, respectively, for results of size 32–256.
+  (:issue:`166`)
 
 
 Version 1.1
