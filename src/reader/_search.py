@@ -19,6 +19,7 @@ from ._sqlite_utils import json_object_get
 from ._sqlite_utils import paginated_query
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
+from ._sqlite_utils import wrap_exceptions_iter
 from ._storage import apply_filter_options
 from ._storage import Storage
 from ._types import EntryFilterOptions
@@ -385,6 +386,7 @@ class Search:
         "unterminated string",
     ]
 
+    @wrap_exceptions_iter(SearchError)
     def search_entries(
         self,
         query: str,
@@ -448,26 +450,25 @@ class Search:
                 MappingProxyType(rv_content),
             )
 
-        with wrap_exceptions(SearchError):
-            try:
-                yield from paginated_query(
-                    self.storage.db, sql_query, context, value_factory, chunk_size, last
-                )
+        try:
+            yield from paginated_query(
+                self.storage.db, sql_query, context, value_factory, chunk_size, last
+            )
 
-            except sqlite3.OperationalError as e:
-                msg_lower = str(e).lower()
+        except sqlite3.OperationalError as e:
+            msg_lower = str(e).lower()
 
-                if 'no such table' in msg_lower:
-                    raise SearchNotEnabledError() from e
+            if 'no such table' in msg_lower:
+                raise SearchNotEnabledError() from e
 
-                is_query_error = any(
-                    fragment in msg_lower
-                    for fragment in self._query_error_message_fragments
-                )
-                if is_query_error:
-                    raise InvalidSearchQueryError(str(e)) from e
+            is_query_error = any(
+                fragment in msg_lower
+                for fragment in self._query_error_message_fragments
+            )
+            if is_query_error:
+                raise InvalidSearchQueryError(str(e)) from e
 
-                raise
+            raise
 
 
 def make_search_entries_query(

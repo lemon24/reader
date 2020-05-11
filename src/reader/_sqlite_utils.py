@@ -2,6 +2,7 @@
 sqlite3 utilities. Contains no business logic.
 
 """
+import functools
 import json
 import sqlite3
 from contextlib import contextmanager
@@ -9,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Dict
 from typing import Iterator
 from typing import Optional
@@ -101,6 +103,24 @@ def wrap_exceptions(exc_type: Type[Exception]) -> Iterator[None]:
         if "cannot operate on a closed database" in str(e).lower():
             raise exc_type(f"sqlite3 error: {e}") from e
         raise
+
+
+FuncType = Callable[..., Any]
+F = TypeVar('F', bound=FuncType)
+
+
+def wrap_exceptions_iter(exc_type: Type[Exception]) -> Callable[[F], F]:
+    """Like wrap_exceptions(), but for generators."""
+
+    def decorator(fn: F) -> F:
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):  # type: ignore
+            with wrap_exceptions(exc_type):
+                yield from fn(*args, **kwargs)
+
+        return cast(F, wrapper)
+
+    return decorator
 
 
 @contextmanager

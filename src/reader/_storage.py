@@ -17,6 +17,7 @@ from ._sqlite_utils import open_sqlite_db
 from ._sqlite_utils import paginated_query
 from ._sqlite_utils import rowcount_exactly_one
 from ._sqlite_utils import wrap_exceptions
+from ._sqlite_utils import wrap_exceptions_iter
 from ._types import EntryFilterOptions
 from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
@@ -514,6 +515,7 @@ class Storage:
         # TODO: this method is for testing convenience only, maybe delete it?
         self.add_or_update_entries([intent])
 
+    @wrap_exceptions_iter(StorageError)
     def get_entries(
         self,
         now: datetime,
@@ -540,10 +542,9 @@ class Storage:
             )
             return Entry._make(entry)
 
-        with wrap_exceptions(StorageError):
-            yield from paginated_query(
-                self.db, query, context, value_factory, chunk_size, last
-            )
+        yield from paginated_query(
+            self.db, query, context, value_factory, chunk_size, last
+        )
 
     @wrap_exceptions(StorageError)
     @returns_iter_list
