@@ -241,7 +241,7 @@ def iter_pagination_chunk_size_3(storage):
 
 
 def iter_iter_feed_metadata(storage):
-    return storage.iter_feed_metadata('two')
+    return storage.iter_feed_metadata('two', chunk_size=1)
 
 
 @pytest.mark.slow
@@ -380,36 +380,6 @@ def test_get_entries_for_update(storage_cls):
 @pytest.fixture
 def storage():
     return Storage(':memory:')
-
-
-def test_feed_metadata(storage):
-    assert set(storage.iter_feed_metadata('one')) == set()
-    assert set(storage.iter_feed_metadata('one', 'key')) == set()
-
-    with pytest.raises(FeedNotFoundError):
-        storage.set_feed_metadata('one', 'key', 'value')
-
-    with pytest.raises(MetadataNotFoundError):
-        storage.delete_feed_metadata('one', 'key')
-
-    storage.add_feed('one', datetime(2010, 1, 1))
-    storage.set_feed_metadata('one', 'key', 'value')
-
-    assert set(storage.iter_feed_metadata('one')) == {('key', 'value')}
-    assert set(storage.iter_feed_metadata('one', 'key')) == {('key', 'value')}
-    assert set(storage.iter_feed_metadata('one', 'second')) == set()
-
-    storage.add_feed('two', datetime(2010, 1, 1))
-    storage.set_feed_metadata('two', '2', 2)
-    storage.set_feed_metadata('one', 'second', 1)
-
-    assert set(storage.iter_feed_metadata('one')) == {('key', 'value'), ('second', 1)}
-    assert set(storage.iter_feed_metadata('one', 'key')) == {('key', 'value')}
-    assert set(storage.iter_feed_metadata('one', 'second')) == {('second', 1)}
-
-    storage.delete_feed_metadata('one', 'key')
-
-    assert set(storage.iter_feed_metadata('one')) == {('second', 1)}
 
 
 def test_entry_remains_read_after_update(storage_with_two_entries):

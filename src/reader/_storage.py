@@ -149,6 +149,7 @@ def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
 # should be _SqliteType
 _GetEntriesLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
 _GetFeedsLast = Optional[Tuple[Any, Any]]
+_IterFeedMetadataLast = Optional[Tuple[Any]]
 
 
 class Storage:
@@ -552,19 +553,32 @@ class Storage:
             self.db, query, context, value_factory, chunk_size, last
         )
 
-    @wrap_exceptions(StorageError)
-    @returns_iter_list
+    @wrap_exceptions_iter(StorageError)
     def iter_feed_metadata(
-        self, feed_url: str, key: Optional[str] = None
-    ) -> Iterable[Tuple[str, JSONType]]:
+        self,
+        feed_url: str,
+        key: Optional[str] = None,
+        chunk_size: Optional[int] = None,
+        last: _IterFeedMetadataLast = None,
+    ) -> Iterable[Tuple[Tuple[str, JSONType], _IterFeedMetadataLast]]:
         query = (
-            Query().SELECT("key, value").FROM("feed_metadata").WHERE("feed = :feed_url")
+            Query()
+            .SELECT("key", "value")
+            .FROM("feed_metadata")
+            .WHERE("feed = :feed_url")
         )
         if key is not None:
             query.WHERE("key = :key")
 
-        for mkey, value in self.db.execute(str(query), locals()):
-            yield mkey, json.loads(value)
+        query.scrolling_window_order_by("key")
+
+        def value_factory(t: Tuple[Any, ...]) -> Tuple[str, JSONType]:
+            key, value, *_ = t
+            return key, json.loads(value)
+
+        yield from paginated_query(
+            self.db, query, locals(), value_factory, chunk_size, last
+        )
 
     @wrap_exceptions(StorageError)
     def set_feed_metadata(self, feed_url: str, key: str, value: JSONType) -> None:

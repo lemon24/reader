@@ -554,7 +554,10 @@ class Reader:
 
         """
         feed_url = _feed_argument(feed)
-        return self._storage.iter_feed_metadata(feed_url, key)
+        yield from join_paginated_iter(
+            partial(self._storage.iter_feed_metadata, feed_url, key),
+            self._pagination_chunk_size,
+        )
 
     @overload
     def get_feed_metadata(
