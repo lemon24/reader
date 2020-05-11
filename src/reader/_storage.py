@@ -522,30 +522,7 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: _GetEntriesLast = None,
     ) -> Iterable[Tuple[Entry, _GetEntriesLast]]:
-        rv = self._get_entries(
-            now=now,
-            filter_options=filter_options,
-            sort=sort,
-            chunk_size=chunk_size,
-            last=last,
-        )
 
-        # Equivalent to using @returns_iter_list, except when we don't have
-        # a chunk_size (which disables pagination, but can block the database).
-        # TODO: If we don't expose chunk_size, why have this special case?
-        if chunk_size:
-            rv = iter(list(rv))
-
-        return rv
-
-    def _get_entries(
-        self,
-        now: datetime,
-        filter_options: EntryFilterOptions,
-        sort: EntrySortOrder,
-        chunk_size: Optional[int] = None,
-        last: _GetEntriesLast = None,
-    ) -> Iterable[Tuple[Entry, _GetEntriesLast]]:
         query = make_get_entries_query(filter_options, sort)
 
         context = dict(

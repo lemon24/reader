@@ -380,5 +380,15 @@ def paginated_query(
         context['chunk_size'] = chunk_size
         context.update(query.last_params(last))
 
-    for t in db.execute(str(query), context):
-        yield value_factory(t), query.extract_last(t)
+    rv = (
+        (value_factory(t), query.extract_last(t))
+        for t in db.execute(str(query), context)
+    )
+
+    # Equivalent to using @returns_iter_list, except when we don't have
+    # a chunk_size (which disables pagination, but can block the database).
+    # TODO: If we don't expose chunk_size, why have this special case?
+    if chunk_size:
+        return iter(list(rv))
+
+    return rv

@@ -377,24 +377,6 @@ class Search:
                 """
             )
 
-    def search_entries(
-        self,
-        query: str,
-        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
-        chunk_size: Optional[int] = None,
-        last: _SearchEntriesLast = None,
-    ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
-
-        rv = self._search_entries(
-            query=query, filter_options=filter_options, chunk_size=chunk_size, last=last
-        )
-
-        # See comment in get_entries() for why we're doing this.
-        if chunk_size:
-            rv = iter(list(rv))
-
-        return rv
-
     _query_error_message_fragments = [
         "fts5: syntax error near",
         "unknown special query",
@@ -403,13 +385,14 @@ class Search:
         "unterminated string",
     ]
 
-    def _search_entries(
+    def search_entries(
         self,
         query: str,
-        filter_options: EntryFilterOptions,
+        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
+
         sql_query = make_search_entries_query(filter_options)
 
         random_mark = ''.join(
