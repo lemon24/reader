@@ -8,7 +8,6 @@ import warnings
 from collections import OrderedDict
 from types import MappingProxyType
 from typing import Any
-from typing import cast
 from typing import Dict
 from typing import Iterable
 from typing import Optional
@@ -17,6 +16,7 @@ from typing import Tuple
 from ._sql_utils import Query  # type: ignore
 from ._sqlite_utils import ddl_transaction
 from ._sqlite_utils import json_object_get
+from ._sqlite_utils import paginated_query
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
 from ._storage import apply_filter_options
@@ -410,11 +410,7 @@ class Search:
         chunk_size: Optional[int] = None,
         last: _SearchEntriesLast = None,
     ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
-        sql_query = make_search_entries_query(filter_options, chunk_size, last)
-
-        feed_url, entry_id, read, important, has_enclosures = filter_options
-
-        # TODO: lots of get_entries duplication, should be reduced
+        sql_query = make_search_entries_query(filter_options)
 
         random_mark = ''.join(
             random.choices(string.ascii_letters + string.digits, k=20)
@@ -422,19 +418,59 @@ class Search:
         before_mark = f'>>>{random_mark}>>>'
         after_mark = f'<<<{random_mark}<<<'
 
-        # 255 letters / 4.7 letters per word (average in English)
-        snippet_tokens = 54
+        context = dict(
+            query=query,
+            **filter_options._asdict(),
+            before_mark=before_mark,
+            after_mark=after_mark,
+            # 255 letters / 4.7 letters per word (average in English)
+            snippet_tokens=54,
+        )
 
-        clean_locals = dict(locals())
-        clean_locals.pop('sql_query')
-        log.debug("_search_entries locals\n%r\n", clean_locals)
+        def value_factory(t: Tuple[Any, ...]) -> EntrySearchResult:
+            (
+                entry_id,
+                feed_url,
+                rank,
+                title,
+                feed_title,
+                is_feed_user_title,
+                content,
+            ) = t
+            content = json.loads(content)
 
-        params = locals()
-        params.update(sql_query.last_params(last))
+            metadata = {}
+            if title:
+                metadata['.title'] = HighlightedString.extract(
+                    title, before_mark, after_mark
+                )
+            if feed_title:
+                metadata[
+                    '.feed.title' if not is_feed_user_title else '.feed.user_title'
+                ] = HighlightedString.extract(feed_title, before_mark, after_mark)
+
+            rv_content: Dict[str, HighlightedString] = OrderedDict(
+                (
+                    c['path'],
+                    HighlightedString.extract(c['value'], before_mark, after_mark),
+                )
+                for c in content
+                if c['path']
+            )
+
+            return EntrySearchResult(
+                feed_url,
+                entry_id,
+                MappingProxyType(metadata),
+                MappingProxyType(rv_content),
+            )
 
         with wrap_exceptions(SearchError):
             try:
-                cursor = self.storage.db.execute(str(sql_query), params)
+                yield from paginated_query(
+                    self.storage.db, sql_query, context, value_factory, chunk_size, last
+                )
+
             except sqlite3.OperationalError as e:
                 msg_lower = str(e).lower()
 
@@ -449,49 +485,6 @@ class Search:
                     raise InvalidSearchQueryError(str(e)) from e
 
                 raise
-
-            for t in cursor:
-                (
-                    rv_entry_id,
-                    rv_feed_url,
-                    rank,
-                    title,
-                    feed_title,
-                    is_feed_user_title,
-                    content,
-                ) = t
-                content = json.loads(content)
-
-                metadata = {}
-                if title:
-                    metadata['.title'] = HighlightedString.extract(
-                        title, before_mark, after_mark
-                    )
-                if feed_title:
-                    metadata[
-                        '.feed.title' if not is_feed_user_title else '.feed.user_title'
-                    ] = HighlightedString.extract(feed_title, before_mark, after_mark)
-
-                rv_content: Dict[str, HighlightedString] = OrderedDict(
-                    (
-                        c['path'],
-                        HighlightedString.extract(c['value'], before_mark, after_mark),
-                    )
-                    for c in content
-                    if c['path']
-                )
-
-                result = EntrySearchResult(
-                    rv_feed_url,
-                    rv_entry_id,
-                    MappingProxyType(metadata),
-                    MappingProxyType(rv_content),
-                )
-
-                rv_last = cast(_SearchEntriesLast, sql_query.extract_last(t))
-                log.debug("_search_entries rv_last\n%r\n", rv_last)
-
-                yield result, rv_last
 
 
 def make_search_entries_query(
@@ -556,8 +549,6 @@ def make_search_entries_query(
     query.scrolling_window_order_by(
         *"rank search._feed search._id".split(), keyword='HAVING'
     )
-    if chunk_size:
-        query.LIMIT(":chunk_size", last=last)
 
     log.debug("_search_entries query\n%s\n", query)
 

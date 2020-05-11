@@ -5,7 +5,6 @@ from datetime import datetime
 from datetime import timedelta
 from itertools import chain
 from typing import Any
-from typing import cast
 from typing import Iterable
 from typing import Mapping
 from typing import Optional
@@ -15,6 +14,7 @@ from typing import Tuple
 from ._sql_utils import Query  # type: ignore
 from ._sqlite_utils import DBError
 from ._sqlite_utils import open_sqlite_db
+from ._sqlite_utils import paginated_query
 from ._sqlite_utils import rowcount_exactly_one
 from ._sqlite_utils import wrap_exceptions
 from ._types import EntryFilterOptions
@@ -145,6 +145,7 @@ def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
     )
 
 
+# should be _SqliteType
 _GetEntriesLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
 
 
@@ -545,30 +546,27 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: _GetEntriesLast = None,
     ) -> Iterable[Tuple[Entry, _GetEntriesLast]]:
-        query = make_get_entries_query(filter_options, sort, chunk_size, last)
+        query = make_get_entries_query(filter_options, sort)
 
-        feed_url, entry_id, read, important, has_enclosures = filter_options
+        context = dict(
+            recent_threshold=now - self.recent_threshold, **filter_options._asdict(),
+        )
 
-        recent_threshold = now - self.recent_threshold
-
-        params = locals()
-        params.update(query.last_params(last))
+        def value_factory(t: Tuple[Any, ...]) -> Entry:
+            feed = Feed._make(t[0:6])
+            entry = t[6:13] + (
+                tuple(Content(**d) for d in json.loads(t[13])) if t[13] else (),
+                tuple(Enclosure(**d) for d in json.loads(t[14])) if t[14] else (),
+                t[15] == 1,
+                t[16] == 1,
+                feed,
+            )
+            return Entry._make(entry)
 
         with wrap_exceptions(StorageError):
-            cursor = self.db.execute(str(query), params)
-            for t in cursor:
-                feed = t[0:6]
-                feed = Feed._make(feed)
-                entry = t[6:13] + (
-                    tuple(Content(**d) for d in json.loads(t[13])) if t[13] else (),
-                    tuple(Enclosure(**d) for d in json.loads(t[14])) if t[14] else (),
-                    t[15] == 1,
-                    t[16] == 1,
-                    feed,
-                )
-                entry = Entry._make(entry)
-                rv_last = cast(_GetEntriesLast, query.extract_last(t))
-                yield entry, rv_last
+            yield from paginated_query(
+                self.db, query, context, value_factory, chunk_size, last
+            )
 
     @wrap_exceptions(StorageError)
     @returns_iter_list
@@ -622,13 +620,8 @@ class Storage:
 
 
 def make_get_entries_query(
-    filter_options: EntryFilterOptions,
-    sort: EntrySortOrder,
-    chunk_size: Optional[int] = None,
-    last: _GetEntriesLast = None,
+    filter_options: EntryFilterOptions, sort: EntrySortOrder,
 ) -> Query:
-    log.debug("_get_entries chunk_size=%s last=%s", chunk_size, last)
-
     query = (
         Query()
         .SELECT(
@@ -692,18 +685,12 @@ def make_get_entries_query(
         )
 
     elif sort == 'random':
-        assert not last, last  # pragma: no cover
-
         # TODO: "order by random()" always goes through the full result set, which is inefficient
         # details here https://github.com/lemon24/reader/issues/105#issue-409493128
         query.ORDER_BY("random()")
 
     else:
         assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
-
-    # moved here for coverage
-    if chunk_size:
-        query.LIMIT(":chunk_size", last=last)
 
     log.debug("_get_entries query\n%s\n", query)
 

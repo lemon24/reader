@@ -15,6 +15,7 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 from typing import Type
+from typing import TYPE_CHECKING
 from typing import TypeVar
 
 from typing_extensions import Protocol
@@ -351,3 +352,33 @@ def json_object_get(object_str: str, key: str) -> Any:
 
     """
     return json.loads(object_str)[key]
+
+
+# TODO: maybe move this to _sql_utils,
+# since DB can be anything with .execute(), but a Query is always required;
+# leaving here for now because _sql_utils.py has type checking disabled
+
+_T = TypeVar('_T')
+_U = TypeVar('_U')
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ._sql_utils import Query  # type: ignore
+
+
+def paginated_query(
+    db: sqlite3.Connection,
+    query: 'Query',
+    # FIXME: Any should be SQLiteType
+    context: Dict[str, Any],
+    value_factory: Callable[[Tuple[Any, ...]], _T],
+    chunk_size: Optional[int],
+    last: _U,
+) -> Iterator[Tuple[_T, _U]]:
+
+    if chunk_size:
+        query.LIMIT(":chunk_size", last=last)
+        context['chunk_size'] = chunk_size
+        context.update(query.last_params(last))
+
+    for t in db.execute(str(query), context):
+        yield value_factory(t), query.extract_last(t)
