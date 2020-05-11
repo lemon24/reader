@@ -6,6 +6,7 @@ import json
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -14,9 +15,13 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 from typing import Type
+from typing import TypeVar
 
 from typing_extensions import Protocol
 from typing_extensions import TypedDict
+
+
+SQLiteType = TypeVar('SQLiteType', None, int, float, str, bytes, datetime)
 
 
 @contextmanager

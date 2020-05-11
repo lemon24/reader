@@ -13,11 +13,11 @@ from typing import Dict
 from typing import Iterable
 from typing import Optional
 from typing import Tuple
-from typing import TypeVar
 
 from ._sql_utils import Query  # type: ignore
 from ._sqlite_utils import ddl_transaction
 from ._sqlite_utils import json_object_get
+from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
 from ._storage import apply_filter_options
 from ._storage import Storage
@@ -62,11 +62,8 @@ warnings.filterwarnings(
 )
 
 
-_SqliteType = TypeVar('_SqliteType', None, int, float, str, bytes)
-
-
 @functools.lru_cache()
-def strip_html(text: _SqliteType, features: Optional[str] = None) -> _SqliteType:
+def strip_html(text: SQLiteType, features: Optional[str] = None) -> SQLiteType:
     if not isinstance(text, str):
         return text
 
