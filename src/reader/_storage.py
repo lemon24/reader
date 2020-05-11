@@ -148,6 +148,7 @@ def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
 
 # should be _SqliteType
 _GetEntriesLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
+_GetFeedsLast = Optional[Tuple[Any, Any]]
 
 
 class Storage:
@@ -197,32 +198,37 @@ class Storage:
             cursor = self.db.execute("DELETE FROM feeds WHERE url = :url;", locals())
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    @wrap_exceptions(StorageError)
-    @returns_iter_list
+    @wrap_exceptions_iter(StorageError)
     def get_feeds(
-        self, url: Optional[str] = None, sort: FeedSortOrder = 'title'
-    ) -> Iterable[Feed]:
+        self,
+        url: Optional[str] = None,
+        sort: FeedSortOrder = 'title',
+        chunk_size: Optional[int] = None,
+        last: _GetFeedsLast = None,
+    ) -> Iterable[Tuple[Feed, _GetFeedsLast]]:
         query = (
             Query()
-            .SELECT("url, updated, title, link, author, user_title")
+            .SELECT(*"url updated title link author user_title".split())
             .FROM("feeds")
         )
 
         if url:
             query.WHERE("url = :url")
 
+        # sort by url at the end to make sure the order is deterministic
         if sort == 'title':
-            query.ORDER_BY("lower(coalesce(feeds.user_title, feeds.title)) ASC")
+            query.SELECT(("kinda_title", "lower(coalesce(user_title, title))"))
+            query.scrolling_window_order_by("kinda_title", "url")
         elif sort == 'added':
-            query.ORDER_BY("feeds.added DESC")
+            query.SELECT("added")
+            query.scrolling_window_order_by("added", "url", desc=True)
         else:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
-        # to make sure the order is deterministic
-        query.ORDER_BY("feeds.url")
-
-        for row in self.db.execute(str(query), locals()):
-            yield Feed._make(row)
+        # TODO: it would be nice if value_factory would only be passed the values in the initial select (excluding things added for scrolling_window_order_by)
+        yield from paginated_query(
+            self.db, query, locals(), lambda t: Feed._make(t[:6]), chunk_size, last
+        )
 
     @wrap_exceptions(StorageError)
     @returns_iter_list

@@ -217,7 +217,7 @@ def check_errors_locked(db_path, pre_stuff, do_stuff, exc_type):
 
 
 def iter_get_feeds(storage):
-    return storage.get_feeds()
+    return storage.get_feeds(chunk_size=1)
 
 
 def iter_get_feeds_for_update(storage):

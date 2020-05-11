@@ -167,7 +167,9 @@ class Reader:
         url = _feed_argument(feed) if feed else None
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
-        return self._storage.get_feeds(url=url, sort=sort)
+        yield from join_paginated_iter(
+            partial(self._storage.get_feeds, url, sort), self._pagination_chunk_size,
+        )
 
     @overload
     def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
