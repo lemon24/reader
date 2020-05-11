@@ -382,7 +382,7 @@ _T = TypeVar('_T')
 _U = TypeVar('_U')
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ._sql_utils import Query  # type: ignore
+    from ._sql_utils import Query
 
 
 def paginated_query(
@@ -394,14 +394,15 @@ def paginated_query(
     chunk_size: Optional[int],
     last: _U,
 ) -> Iterator[Tuple[_T, _U]]:
+    # We need the cast to/from _U until we find a better way of typing last.
 
     if chunk_size:
         query.LIMIT(":chunk_size", last=last)
         context['chunk_size'] = chunk_size
-        context.update(query.last_params(last))
+        context.update(query.last_params(cast(Optional[Tuple[Any, ...]], last)))
 
     rv = (
-        (value_factory(t), query.extract_last(t))
+        (value_factory(t), cast(_U, query.extract_last(t)))
         for t in db.execute(str(query), context)
     )
 

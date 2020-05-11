@@ -13,7 +13,7 @@ from typing import Iterable
 from typing import Optional
 from typing import Tuple
 
-from ._sql_utils import Query  # type: ignore
+from ._sql_utils import Query
 from ._sqlite_utils import ddl_transaction
 from ._sqlite_utils import json_object_get
 from ._sqlite_utils import paginated_query
@@ -515,7 +515,7 @@ def make_search_entries_query(
 
     query = (
         Query()
-        .WITH(("search", search.__str__(end='')))
+        .WITH(("search", search.to_str(end='')))
         .SELECT(
             "search._id",
             "search._feed",

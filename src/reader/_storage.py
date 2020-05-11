@@ -11,7 +11,7 @@ from typing import Optional
 from typing import Sequence
 from typing import Tuple
 
-from ._sql_utils import Query  # type: ignore
+from ._sql_utils import Query
 from ._sqlite_utils import DBError
 from ._sqlite_utils import open_sqlite_db
 from ._sqlite_utils import paginated_query
