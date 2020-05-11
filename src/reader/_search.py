@@ -506,7 +506,6 @@ def make_search_entries_query(
         .JOIN("entries ON (entries.id, entries.feed) = (_id, _feed)")
         .WHERE("entries_search MATCH :query")
         .ORDER_BY("rank")
-        # TODO: can we improve performance if we move filtering here?
         # https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html
         # rule 14 https://www.sqlite.org/optoverview.html#subquery_flattening
         .LIMIT("-1 OFFSET 0")
