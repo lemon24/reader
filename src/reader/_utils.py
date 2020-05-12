@@ -1,7 +1,7 @@
 import functools
 import multiprocessing.dummy
 from contextlib import contextmanager
-from queue import SimpleQueue
+from queue import Queue
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -124,7 +124,7 @@ def wrap_map(map: F, workers: int) -> F:
     @no_type_check
     def wrapper(func, iterable):
         sentinel = object()
-        queue = SimpleQueue()
+        queue = Queue()
 
         for _ in range(workers):
             queue.put(next(iterable, sentinel))
