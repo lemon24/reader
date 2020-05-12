@@ -146,10 +146,26 @@ def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
     )
 
 
-# should be _SqliteType
+# There are two reasons paginating methods that return an iterator:
+#
+# * to avoid locking the database for too long
+#   (not consuming a generator should not lock the database), and
+# * to avoid consuming too much memory;
+#
+# it is OK to take proportionally more time to get more things,
+# it is not OK to have more errors.
+#
+# See the following for more details:
+#
+# https://github.com/lemon24/reader/issues/6
+# https://github.com/lemon24/reader/issues/167#issuecomment-626753299
+
+
+# TODO: There must be a better way than defining one _...Last type alias per method.
 _GetEntriesLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
 _GetFeedsLast = Optional[Tuple[Any, Any]]
 _IterFeedMetadataLast = Optional[Tuple[Any]]
+_GetFeedsForUpdateLast = Optional[Tuple[Any]]
 
 
 class Storage:
@@ -178,6 +194,7 @@ class Storage:
         # https://github.com/lemon24/reader/issues/122#issuecomment-591302580
 
         self.path = path
+        self.timeout = timeout
 
     def close(self) -> None:
         self.db.close()
@@ -226,19 +243,27 @@ class Storage:
         else:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
-        # TODO: it would be nice if value_factory would only be passed the values in the initial select (excluding things added for scrolling_window_order_by)
         yield from paginated_query(
             self.db, query, locals(), lambda t: Feed._make(t[:6]), chunk_size, last
         )
 
-    @wrap_exceptions(StorageError)
-    @returns_iter_list
+    @wrap_exceptions_iter(StorageError)
     def get_feeds_for_update(
-        self, url: Optional[str] = None, new_only: bool = False
-    ) -> Iterable[FeedForUpdate]:
+        self,
+        url: Optional[str] = None,
+        new_only: bool = False,
+        chunk_size: Optional[int] = None,
+        last: _GetFeedsForUpdateLast = None,
+    ) -> Iterable[Tuple[FeedForUpdate, _GetFeedsForUpdateLast]]:
+        # Ideally, Reader shouldn't care this is paginated,
+        # but we still need to get the chunk_size from somewhere,
+        # so better to have both chunk_size and last like the the other methods.
+
         query = (
             Query()
-            .SELECT("url, updated, http_etag, http_last_modified, stale, last_updated")
+            .SELECT(
+                *"url updated http_etag http_last_modified stale last_updated".split()
+            )
             .FROM("feeds")
         )
 
@@ -247,11 +272,11 @@ class Storage:
         if new_only:
             query.WHERE("last_updated is NULL")
 
-        # to make sure the order is deterministic
-        query.ORDER_BY("feeds.url")
+        query.scrolling_window_order_by("url")
 
-        for row in self.db.execute(str(query), locals()):
-            yield FeedForUpdate._make(row)
+        yield from paginated_query(
+            self.db, query, locals(), FeedForUpdate._make, chunk_size, last
+        )
 
     @returns_iter_list
     def _get_entries_for_update_n_queries(

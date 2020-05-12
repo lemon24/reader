@@ -1,11 +1,13 @@
 import functools
 import multiprocessing.dummy
 from contextlib import contextmanager
+from queue import SimpleQueue
 from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Iterable
 from typing import Iterator
+from typing import no_type_check
 from typing import Optional
 from typing import Tuple
 from typing import TypeVar
@@ -113,10 +115,41 @@ def make_pool_map(
 ) -> Iterator[Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]]:
     pool = multiprocessing.dummy.Pool(workers)
     try:
-        yield pool.imap_unordered
+        yield wrap_map(pool.imap_unordered, workers)
     finally:
         pool.close()
         pool.join()
+
+
+def wrap_map(map: F, workers: int) -> F:
+    """Ensure map() calls next() on its iterable in the current thread.
+
+    multiprocessing.dummy.Pool.imap_unordered seems to pass
+    the iterable to the worker threads, which call next() on it.
+
+    For generators, this means the generator code runs in the worker thread,
+    which is a problem if the generator calls stuff that shouldn't be called
+    across threads; e.g., calling a sqlite3.Connection method results in:
+
+        sqlite3.ProgrammingError: SQLite objects created in a thread
+        can only be used in that same thread. The object was created
+        in thread id 1234 and this is thread id 5678.
+
+    """
+
+    @no_type_check
+    def wrapper(func, iterable):
+        sentinel = object()
+        queue = SimpleQueue()
+
+        for _ in range(workers):
+            queue.put(next(iterable, sentinel))
+
+        for rv in map(func, iter(queue.get, sentinel)):
+            queue.put(next(iterable, sentinel))
+            yield rv
+
+    return cast(F, wrapper)
 
 
 @contextmanager

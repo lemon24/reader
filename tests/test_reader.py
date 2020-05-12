@@ -310,14 +310,14 @@ def test_update_last_updated_entries_updated_feed_not_updated(
     reader._now = lambda: datetime(2010, 1, 1)
     call_update_method(reader, feed.url)
 
-    (feed_for_update,) = reader._storage.get_feeds_for_update(url=feed.url)
+    ((feed_for_update, _),) = reader._storage.get_feeds_for_update(url=feed.url)
     assert feed_for_update.last_updated == datetime(2010, 1, 1)
 
     parser.entry(1, 1, datetime(2010, 1, 1))
     reader._now = lambda: datetime(2010, 1, 2)
     call_update_method(reader, feed.url)
 
-    (feed_for_update,) = reader._storage.get_feeds_for_update(url=feed.url)
+    ((feed_for_update, _),) = reader._storage.get_feeds_for_update(url=feed.url)
     assert feed_for_update.last_updated == datetime(2010, 1, 2)
 
 

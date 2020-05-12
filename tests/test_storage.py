@@ -221,7 +221,7 @@ def iter_get_feeds(storage):
 
 
 def iter_get_feeds_for_update(storage):
-    return storage.get_feeds_for_update()
+    return storage.get_feeds_for_update(chunk_size=1)
 
 
 def iter_pagination_chunk_size_0(storage):
