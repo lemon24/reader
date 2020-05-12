@@ -10,6 +10,7 @@ from typing import Mapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from typing import TypeVar
 
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
@@ -39,6 +40,9 @@ from .types import JSONType
 
 
 log = logging.getLogger('reader')
+
+
+_T = TypeVar('_T')
 
 
 def create_db(db: sqlite3.Connection) -> None:
@@ -161,13 +165,6 @@ def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
 # https://github.com/lemon24/reader/issues/167#issuecomment-626753299
 
 
-# TODO: There must be a better way than defining one _...Last type alias per method.
-_GetEntriesLast = Optional[Tuple[Any, Any, Any, Any, Any, Any]]
-_GetFeedsLast = Optional[Tuple[Any, Any]]
-_IterFeedMetadataLast = Optional[Tuple[Any]]
-_GetFeedsForUpdateLast = Optional[Tuple[Any]]
-
-
 class Storage:
 
     open_db = staticmethod(open_db)
@@ -222,8 +219,8 @@ class Storage:
         url: Optional[str] = None,
         sort: FeedSortOrder = 'title',
         chunk_size: Optional[int] = None,
-        last: _GetFeedsLast = None,
-    ) -> Iterable[Tuple[Feed, _GetFeedsLast]]:
+        last: Optional[_T] = None,
+    ) -> Iterable[Tuple[Feed, Optional[_T]]]:
         query = (
             Query()
             .SELECT(*"url updated title link author user_title".split())
@@ -253,8 +250,8 @@ class Storage:
         url: Optional[str] = None,
         new_only: bool = False,
         chunk_size: Optional[int] = None,
-        last: _GetFeedsForUpdateLast = None,
-    ) -> Iterable[Tuple[FeedForUpdate, _GetFeedsForUpdateLast]]:
+        last: Optional[_T] = None,
+    ) -> Iterable[Tuple[FeedForUpdate, Optional[_T]]]:
         # Ideally, Reader shouldn't care this is paginated,
         # but we still need to get the chunk_size from somewhere,
         # so better to have both chunk_size and last like the the other methods.
@@ -554,8 +551,8 @@ class Storage:
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: EntrySortOrder = 'recent',
         chunk_size: Optional[int] = None,
-        last: _GetEntriesLast = None,
-    ) -> Iterable[Tuple[Entry, _GetEntriesLast]]:
+        last: Optional[_T] = None,
+    ) -> Iterable[Tuple[Entry, Optional[_T]]]:
 
         query = make_get_entries_query(filter_options, sort)
 
@@ -584,8 +581,8 @@ class Storage:
         feed_url: str,
         key: Optional[str] = None,
         chunk_size: Optional[int] = None,
-        last: _IterFeedMetadataLast = None,
-    ) -> Iterable[Tuple[Tuple[str, JSONType], _IterFeedMetadataLast]]:
+        last: Optional[_T] = None,
+    ) -> Iterable[Tuple[Tuple[str, JSONType], Optional[_T]]]:
         query = (
             Query()
             .SELECT("key", "value")

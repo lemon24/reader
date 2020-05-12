@@ -12,6 +12,7 @@ from typing import Dict
 from typing import Iterable
 from typing import Optional
 from typing import Tuple
+from typing import TypeVar
 
 from ._sql_utils import Query
 from ._sqlite_utils import ddl_transaction
@@ -40,6 +41,9 @@ except ImportError as e:  # pragma: no cover
     bs4_import_error = e
 
 log = logging.getLogger('reader')
+
+
+_T = TypeVar('_T')
 
 
 # BeautifulSoup warns if not giving it a parser explicitly; full text:
@@ -84,9 +88,6 @@ def strip_html(text: SQLiteType, features: Optional[str] = None) -> SQLiteType:
     assert isinstance(rv, str)
 
     return rv
-
-
-_SearchEntriesLast = Optional[Tuple[Any, Any, Any]]
 
 
 class Search:
@@ -392,8 +393,8 @@ class Search:
         query: str,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         chunk_size: Optional[int] = None,
-        last: _SearchEntriesLast = None,
-    ) -> Iterable[Tuple[EntrySearchResult, _SearchEntriesLast]]:
+        last: Optional[_T] = None,
+    ) -> Iterable[Tuple[EntrySearchResult, Optional[_T]]]:
 
         sql_query = make_search_entries_query(filter_options)
 
@@ -471,11 +472,7 @@ class Search:
             raise
 
 
-def make_search_entries_query(
-    filter_options: EntryFilterOptions,
-    chunk_size: Optional[int] = None,
-    last: _SearchEntriesLast = None,
-) -> Query:
+def make_search_entries_query(filter_options: EntryFilterOptions,) -> Query:
     search = (
         Query()
         .SELECT(

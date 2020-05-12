@@ -167,6 +167,7 @@ class Reader:
         url = _feed_argument(feed) if feed else None
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
+
         yield from join_paginated_iter(
             partial(self._storage.get_feeds, url, sort), self._pagination_chunk_size,
         )
