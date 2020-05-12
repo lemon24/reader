@@ -95,24 +95,8 @@ def returns_iter_list(fn: F) -> F:
     return cast(F, wrapper)
 
 
-# TODO: find a better way to represent a function like map (mypy)
-#
-#   _MapFunc = Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
-#
-#   @contextmanager
-#   def make_pool_map(workers: int) -> Iterator[_MapFunc[_T, _U]]: ...
-#
-# results in:
-#
-#   src/reader/core/reader.py:227: error: Need type annotation for 'make_map'
-#
-# Using the whole type verbatim in the function definition doesn't.
-
-
 @contextmanager
-def make_pool_map(
-    workers: int,
-) -> Iterator[Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]]:
+def make_pool_map(workers: int) -> Iterator[F]:
     pool = multiprocessing.dummy.Pool(workers)
     try:
         yield wrap_map(pool.imap_unordered, workers)
@@ -153,7 +137,5 @@ def wrap_map(map: F, workers: int) -> F:
 
 
 @contextmanager
-def make_noop_map(
-    fn: Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
-) -> Iterator[Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]]:
+def make_noop_map(fn: F) -> Iterator[F]:
     yield fn
