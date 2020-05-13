@@ -261,10 +261,16 @@ time_update_feed_old_fallback = inject(reader=setup_reader_feed_old_fallback)(
 
 
 @contextmanager
-def setup_reader_with_search_and_some_read_entries(num_entries):
+def setup_reader_with_text_entries(num_entries):
     with setup_db() as path:
         reader = make_reader_with_entries(path, num_entries, text=True)
         reader.update_feeds()
+        yield reader
+
+
+@contextmanager
+def setup_reader_with_search_and_some_read_entries(num_entries):
+    with setup_reader_with_search_not_updated(num_entries) as reader:
         reader.enable_search()
         reader.update_search()
         for i, entry in enumerate(reader.get_entries()):
@@ -286,6 +292,16 @@ def time_search_entries_all(reader):
 def time_search_entries_read(reader):
     for _ in reader.search_entries(SEARCH_ENTRIES_QUERY, read=True):
         pass
+
+
+@inject(reader=setup_reader_with_text_entries)
+def time_update_search(reader):
+    # Sadly time() doesn't allow running the setup for every repeat,
+    # so we enable/disable search inside the benchmark
+    # (otherwise the second update_search() call has nothing to do).
+    reader.enable_search()
+    reader.update_search()
+    reader.disable_search()
 
 
 TIMINGS = OrderedDict(
