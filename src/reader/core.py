@@ -87,7 +87,11 @@ class Reader:
         # If we ever implement an external search provider,
         # we'll probably need to do the wiring differently.
         # See the Search docstring for details.
-        self._search = Search(self._storage)
+        self._search = Search(
+            self._storage,
+            # FIXME: find a better way of passing/changing config options
+            lambda: self._pagination_chunk_size,
+        )
 
         self._parser = Parser()
 

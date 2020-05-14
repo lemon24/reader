@@ -7,6 +7,7 @@ from utils import rename_argument
 from reader import Content
 from reader import Enclosure
 from reader import EntrySearchResult
+from reader import FeedNotFoundError
 from reader import HighlightedString
 from reader import Reader
 from reader import ReaderError
@@ -23,6 +24,7 @@ def reader_without_and_with_entries(request, reader):
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
+    two = parser.entry(1, 2, datetime(2010, 1, 1), title='one')
 
     reader.add_feed(feed.url)
     reader.update_feeds()
@@ -63,6 +65,35 @@ def test_disable_search_already_disabled(reader):
 @rename_argument('reader', 'reader_without_and_with_entries')
 def test_update_search(reader):
     reader.enable_search()
+    reader.update_search()
+
+
+@rename_argument('reader', 'reader_without_and_with_entries')
+@pytest.mark.parametrize('chunk_size', [Reader._pagination_chunk_size, 2])
+def test_update_search_feeds_change_after_enable(reader, chunk_size):
+    reader._pagination_chunk_size = chunk_size
+    reader.enable_search()
+    reader.update_search()
+
+    try:
+        reader.remove_feed('1')
+    except FeedNotFoundError:
+        pass
+
+    parser = Parser()
+    reader._parser = parser
+
+    parser.feed(1, datetime(2010, 1, 1))
+    parser.entry(1, 2, datetime(2010, 1, 2), title='changed')
+    parser.entry(1, 3, datetime(2010, 1, 2), title='new')
+    parser.feed(2, datetime(2010, 1, 1))
+    parser.entry(2, 1, datetime(2010, 1, 1), title='two')
+    parser.entry(2, 2, datetime(2010, 1, 1), title='two')
+
+    reader.add_feed('1')
+    reader.add_feed('2')
+    reader.update_feeds()
+
     reader.update_search()
 
 

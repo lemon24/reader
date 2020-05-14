@@ -6,8 +6,10 @@ import sqlite3
 import string
 import warnings
 from collections import OrderedDict
+from itertools import chain
 from types import MappingProxyType
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import Optional
@@ -103,8 +105,16 @@ class Search:
 
     """
 
-    def __init__(self, storage: Storage):
+    def __init__(
+        self, storage: Storage, get_chunk_size: Callable[[], int] = lambda: 256
+    ):
         self.storage = storage
+        self.get_chunk_size = get_chunk_size
+
+    @property
+    def chunk_size(self) -> int:
+        # FIXME: placeholder until we have a better way of getting it from Reader, maybe
+        return self.get_chunk_size()
 
     @wrap_exceptions(SearchError)
     def enable(self) -> None:
@@ -273,37 +283,80 @@ class Search:
         self.storage.db.create_function('strip_html', 1, strip_html)
         self.storage.db.create_function('json_object_get', 2, json_object_get)
 
+        # FIXME: how do we test pagination?
+        self._delete_from_search()
         with self.storage.db:
-            self._delete_from_search()
             self._delete_from_sync_state()
             self._insert_into_search()
             self._clear_to_update()
 
-    def _delete_from_search(self):
-        self.storage.db.execute(
-            """
-            -- SQLite doesn't support DELETE-FROM-JOIN
-            DELETE FROM entries_search
-            WHERE
-                (_id, _feed) IN (
-                    SELECT id, feed
-                    FROM entries_search_sync_state
-                    WHERE to_update OR to_delete
-                )
-            ;
-            """
-        )
+    def _delete_from_search(self) -> None:
+        # SQLite doesn't support DELETE-FROM-JOIN.
+        #
+        # The SQLite that ships with the Windows and macOS official
+        # Python builds does not have ENABLE_UPDATE_DELETE_LIMIT,
+        # so we can't DELETE ... LIMIT.
+        #
+        # Also, can't use cursor.rowcount / changes() to see how many
+        # rows were deleted because entries_search is not "real" table.
 
-    def _delete_from_sync_state(self):
-        self.storage.db.execute(
+        # TODO: this looks a lot like _utils.join_paginated_iter,
+        # minus last and actually yielding stuff
+
+        while True:
+            with self.storage.db as db:
+                to_delete = list(
+                    db.execute(
+                        """
+                        SELECT esss.id, esss.feed
+                        FROM entries_search_sync_state AS esss
+                        JOIN entries_search ON (esss.id, esss.feed) = (_id, _feed)
+                        WHERE to_update OR to_delete
+                        LIMIT ?;
+                        """,
+                        (self.chunk_size,),
+                    )
+                )
+
+                log.debug('Search.update: _delete_from_search: %i', len(to_delete))
+
+                if not to_delete:
+                    break
+
+                # TODO: this logic is duplicated from _get_entries_for_update_one_query
+                values_snippet = ', '.join(['(?, ?)'] * len(to_delete))
+                parameters = list(chain.from_iterable(to_delete))
+
+                db.execute(
+                    f"""
+                    WITH
+                        input(feed, id) AS (
+                            VALUES {values_snippet}
+                        )
+                    DELETE
+                    FROM entries_search
+                    WHERE
+                        (_id, _feed) IN input
+                    ;
+                    """,
+                    parameters,
+                )
+
+                if len(to_delete) < self.chunk_size:
+                    break
+
+    def _delete_from_sync_state(self) -> None:
+        cursor = self.storage.db.execute(
             """
             DELETE FROM entries_search_sync_state
             WHERE to_delete;
             """
         )
+        # FIXME: paginate me
+        log.debug('Search.update: _delete_from_sync_state: %i', cursor.rowcount)
 
-    def _insert_into_search(self):
-        self.storage.db.execute(
+    def _insert_into_search(self) -> None:
+        cursor = self.storage.db.execute(
             """
             WITH
 
@@ -381,15 +434,18 @@ class Search:
 
             """
         )
+        # FIXME: paginate
+        log.debug('Search.update: _insert_into_search: %i', cursor.rowcount)
 
-    def _clear_to_update(self):
-        self.storage.db.execute(
+    def _clear_to_update(self) -> None:
+        cursor = self.storage.db.execute(
             """
             UPDATE entries_search_sync_state
             SET to_update = 0
             WHERE to_update;
             """
         )
+        log.debug('Search.update: _clear_to_update: %i', cursor.rowcount)
 
     _query_error_message_fragments = [
         "fts5: syntax error near",

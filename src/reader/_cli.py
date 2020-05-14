@@ -199,9 +199,11 @@ def search_disable(kwargs):
 
 
 @search.command('update')
+@click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def search_update(kwargs):
+def search_update(kwargs, verbose):
     """Update the search index."""
+    setup_logging(verbose)
     reader = make_reader_with_plugins(**kwargs)
     reader.update_search()
 
