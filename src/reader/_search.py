@@ -273,111 +273,123 @@ class Search:
         self.storage.db.create_function('strip_html', 1, strip_html)
         self.storage.db.create_function('json_object_get', 2, json_object_get)
 
-        with self.storage.db as db:
-            db.execute(
-                """
-                -- SQLite doesn't support DELETE-FROM-JOIN
-                DELETE FROM entries_search
-                WHERE
-                    (_id, _feed) IN (
-                        SELECT id, feed
-                        FROM entries_search_sync_state
-                        WHERE to_update OR to_delete
-                    )
-                ;
-                """
-            )
-            db.execute(
-                """
-                DELETE FROM entries_search_sync_state
-                WHERE to_delete;
-                """
-            )
-            db.execute(
-                """
-                WITH
+        with self.storage.db:
+            self._delete_from_search()
+            self._delete_from_sync_state()
+            self._insert_into_search()
+            self._clear_to_update()
 
-                from_summary AS (
-                    SELECT
-                        entries.id,
-                        entries.feed,
-                        '.summary',
-                        strip_html(entries.title),
-                        strip_html(entries.summary)
+    def _delete_from_search(self):
+        self.storage.db.execute(
+            """
+            -- SQLite doesn't support DELETE-FROM-JOIN
+            DELETE FROM entries_search
+            WHERE
+                (_id, _feed) IN (
+                    SELECT id, feed
                     FROM entries_search_sync_state
-                    JOIN entries USING (id, feed)
-                    WHERE
-                        entries_search_sync_state.to_update
-                        AND NOT (summary IS NULL OR summary = '')
-                ),
-
-                from_content AS (
-                    SELECT
-                        entries.id,
-                        entries.feed,
-                        '.content[' || json_each.key || '].value',
-                        strip_html(entries.title),
-                        strip_html(json_object_get(json_each.value, 'value'))
-                    FROM entries_search_sync_state
-                    JOIN entries USING (id, feed)
-                    JOIN json_each(entries.content)
-                    WHERE
-                        entries_search_sync_state.to_update
-                        AND json_valid(content) and json_array_length(content) > 0
-                        -- TODO: test the right content types get indexed
-                        AND (
-                            json_object_get(json_each.value, 'type') is NULL
-                            OR lower(json_object_get(json_each.value, 'type')) in (
-                                'text/html', 'text/xhtml', 'text/plain'
-                            )
-                        )
-                ),
-
-                from_default AS (
-                    SELECT
-                        entries.id,
-                        entries.feed,
-                        NULL,
-                        strip_html(entries.title),
-                        NULL
-                    FROM entries_search_sync_state
-                    JOIN entries USING (id, feed)
-                    WHERE
-                        entries_search_sync_state.to_update
-                        AND (summary IS NULL OR summary = '')
-                        AND (not json_valid(content) OR json_array_length(content) = 0)
-                ),
-
-                union_all(id, feed, content_path, title, content_text) AS (
-                    SELECT * FROM from_summary
-                    UNION
-                    SELECT * FROM from_content
-                    UNION
-                    SELECT * FROM from_default
+                    WHERE to_update OR to_delete
                 )
+            ;
+            """
+        )
 
-                INSERT INTO entries_search
+    def _delete_from_sync_state(self):
+        self.storage.db.execute(
+            """
+            DELETE FROM entries_search_sync_state
+            WHERE to_delete;
+            """
+        )
 
+    def _insert_into_search(self):
+        self.storage.db.execute(
+            """
+            WITH
+
+            from_summary AS (
                 SELECT
-                    union_all.title,
-                    union_all.content_text,
-                    strip_html(coalesce(feeds.user_title, feeds.title)),
-                    union_all.id,
-                    union_all.feed as feed,
-                    union_all.content_path,
-                    feeds.user_title IS NOT NULL
-                FROM union_all
-                JOIN feeds ON feeds.url = union_all.feed;
+                    entries.id,
+                    entries.feed,
+                    '.summary',
+                    strip_html(entries.title),
+                    strip_html(entries.summary)
+                FROM entries_search_sync_state
+                JOIN entries USING (id, feed)
+                WHERE
+                    entries_search_sync_state.to_update
+                    AND NOT (summary IS NULL OR summary = '')
+            ),
 
-                """
+            from_content AS (
+                SELECT
+                    entries.id,
+                    entries.feed,
+                    '.content[' || json_each.key || '].value',
+                    strip_html(entries.title),
+                    strip_html(json_object_get(json_each.value, 'value'))
+                FROM entries_search_sync_state
+                JOIN entries USING (id, feed)
+                JOIN json_each(entries.content)
+                WHERE
+                    entries_search_sync_state.to_update
+                    AND json_valid(content) and json_array_length(content) > 0
+                    -- TODO: test the right content types get indexed
+                    AND (
+                        json_object_get(json_each.value, 'type') is NULL
+                        OR lower(json_object_get(json_each.value, 'type')) in (
+                            'text/html', 'text/xhtml', 'text/plain'
+                        )
+                    )
+            ),
+
+            from_default AS (
+                SELECT
+                    entries.id,
+                    entries.feed,
+                    NULL,
+                    strip_html(entries.title),
+                    NULL
+                FROM entries_search_sync_state
+                JOIN entries USING (id, feed)
+                WHERE
+                    entries_search_sync_state.to_update
+                    AND (summary IS NULL OR summary = '')
+                    AND (not json_valid(content) OR json_array_length(content) = 0)
+            ),
+
+            union_all(id, feed, content_path, title, content_text) AS (
+                SELECT * FROM from_summary
+                UNION
+                SELECT * FROM from_content
+                UNION
+                SELECT * FROM from_default
             )
-            db.execute(
-                """
-                UPDATE entries_search_sync_state
-                SET to_update = 0
-                WHERE to_update;
-                """
-            )
+
+            INSERT INTO entries_search
+
+            SELECT
+                union_all.title,
+                union_all.content_text,
+                strip_html(coalesce(feeds.user_title, feeds.title)),
+                union_all.id,
+                union_all.feed as feed,
+                union_all.content_path,
+                feeds.user_title IS NOT NULL
+            FROM union_all
+            JOIN feeds ON feeds.url = union_all.feed;
+
+            """
+        )
+
+    def _clear_to_update(self):
+        self.storage.db.execute(
+            """
+            UPDATE entries_search_sync_state
+            SET to_update = 0
+            WHERE to_update;
+            """
+        )
 
     _query_error_message_fragments = [
         "fts5: syntax error near",
