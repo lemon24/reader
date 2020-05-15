@@ -291,117 +291,107 @@ class Search:
         self._insert_into_search()
 
     def _delete_from_search(self) -> None:
-        # The chunked query doesn't work with chunk_size == 0 (nothing gets deleted);
-        # using -1 as the limit pulls everything into memory
-        if not self.chunk_size:
-            with self.storage.db as db:
-                db.execute(
-                    """
-                    DELETE
-                    FROM entries_search
-                    WHERE
-                        (_id, _feed) in (
-                            -- TODO: same query as below, but without the LIMIT, dedupe
-                            SELECT esss.id, esss.feed
-                            FROM entries_search_sync_state AS esss
-                            JOIN entries_search ON (esss.id, esss.feed) = (_id, _feed)
-                            WHERE to_update OR to_delete
-                        )
-                    ;
-                    """
-                )
-            log.debug(
-                'Search.update: _delete_from_search: everything (chunk_size: %s)',
-                self.chunk_size,
-            )
-            return
-
-        # SQLite doesn't support DELETE-FROM-JOIN.
+        # Some notes about why these queries are the way they are:
         #
-        # The SQLite that ships with the Windows and macOS official
-        # Python builds does not have ENABLE_UPDATE_DELETE_LIMIT,
-        # so we can't DELETE ... LIMIT.
+        # SQLite doesn't support DELETE-FROM-JOIN, so we can't use that.
         #
-        # Also, can't use cursor.rowcount / changes() to see how many
-        # rows were deleted because entries_search is not "real" table.
+        # We could use DELETE-LIMIT, but the SQLite that ships with
+        # the Windows and macOS official Python builds does not have
+        # ENABLE_UPDATE_DELETE_LIMIT, so we don't want to use it;
+        # https://www.sqlite.org/lang_delete.html
+        #
+        # Also, we can't use cursor.rowcount to see how many rows were
+        # deleted from entries_search because it's not a real table
+        # https://www.sqlite.org/c3ref/changes.html
+        #
+        # So, we get the ids of things to delete and then do so, in chunks.
+        #
+        # ... except for chunk_size == 0, when we delete everything at once
+        # (LIMIT -1 pulls everything into memory, and we don't want that).
 
-        # TODO: this looks a lot like _utils.join_paginated_iter,
+        to_delete_query = (
+            Query()
+            .SELECT("esss.id, esss.feed")
+            .FROM("entries_search_sync_state AS esss")
+            .JOIN("entries_search ON (esss.id, esss.feed) = (_id, _feed)")
+            .WHERE("to_update OR to_delete")
+        )
+
+        if self.chunk_size:
+            to_delete_query.LIMIT('?')
+            to_delete_query_str = str(to_delete_query)
+
+        # TODO: this loop looks a lot like _utils.join_paginated_iter,
         # minus last and actually yielding stuff
 
         while True:
             with self.storage.db as db:
-                to_delete = list(
-                    db.execute(
-                        """
-                        SELECT esss.id, esss.feed
-                        FROM entries_search_sync_state AS esss
-                        JOIN entries_search ON (esss.id, esss.feed) = (_id, _feed)
-                        WHERE to_update OR to_delete
-                        LIMIT ?;
-                        """,
-                        (self.chunk_size,),
+                to_delete = []
+                if self.chunk_size:
+                    to_delete = list(
+                        db.execute(to_delete_query_str, (self.chunk_size,))
                     )
-                )
-
-                log.debug(
-                    'Search.update: _delete_from_search: %i (chunk_size: %s)',
-                    len(to_delete),
-                    self.chunk_size,
-                )
-
-                if not to_delete:
-                    break
-
-                # TODO: this logic is duplicated from _get_entries_for_update_one_query
-                values_snippet = ', '.join(['(?, ?)'] * len(to_delete))
-                parameters = list(chain.from_iterable(to_delete))
-
-                db.execute(
-                    f"""
-                    WITH
-                        input AS (
-                            VALUES {values_snippet}
+                    if not to_delete:
+                        log.debug(
+                            'Search.update: _delete_from_search (chunk_size: %s): 0',
+                            self.chunk_size,
                         )
-                    DELETE
-                    FROM entries_search
-                    WHERE
-                        (_id, _feed) IN input
-                    ;
+                        break
+
+                    # TODO: kinda duplicated from _get_entries_for_update_one_query
+                    input_snippet = 'VALUES ' + ', '.join(['(?, ?)'] * len(to_delete))
+                    parameters = list(chain.from_iterable(to_delete))
+
+                else:
+                    input_snippet = to_delete_query.to_str(end='')
+                    parameters = []
+
+                cursor = db.execute(
+                    f"""
+                    WITH input AS ({input_snippet})
+                    DELETE FROM entries_search
+                    WHERE (_id, _feed) IN input;
                     """,
                     parameters,
                 )
+                log.debug(
+                    'Search.update: _delete_from_search (chunk_size: %s): %s',
+                    self.chunk_size,
+                    len(to_delete) if self.chunk_size else cursor.rowcount,
+                )
 
+                if not self.chunk_size:
+                    break
                 if len(to_delete) < self.chunk_size:
                     break
 
     def _delete_from_sync_state(self) -> None:
+        # Here, cursor.rowcount does work (unless we use CTEs),
+        # so we don't need to look at the things to delete.
+
         while True:
             with self.storage.db as db:
-                # Again, DELETE ... LIMIT does not work in some places, see above.
-                # Using CTEs for the WHERE ... IN target makes rowcount -1.
                 cursor = db.execute(
                     """
-                DELETE
-                FROM entries_search_sync_state
-                WHERE (id, feed) IN (
-                        SELECT id, feed
-                        FROM entries_search_sync_state
-                        WHERE to_delete
-                        LIMIT ?
-                    )
-                ;
-                """,
+                    DELETE
+                    FROM entries_search_sync_state
+                    WHERE (id, feed) IN (
+                            SELECT id, feed
+                            FROM entries_search_sync_state
+                            WHERE to_delete
+                            LIMIT ?
+                        )
+                    ;
+                    """,
                     (self.chunk_size or -1,),
                 )
 
             log.debug(
-                'Search.update: _delete_from_sync_state: %i (chunk_size: %s)',
-                cursor.rowcount,
+                'Search.update: _delete_from_sync_state (chunk_size: %s): %s',
                 self.chunk_size,
+                cursor.rowcount,
             )
-            assert cursor.rowcount >= 0, (
-                "expected non-negative rowcount, %s" % cursor.rowcount
-            )
+            assert cursor.rowcount >= 0
 
             if not self.chunk_size:
                 break
@@ -496,10 +486,12 @@ class Search:
                     WHERE to_update;
                     """
                 )
-            assert cursor.rowcount >= 0, (
-                "expected non-negative rowcount, %s" % cursor.rowcount
+            log.debug(
+                'Search.update: _insert_into_search (chunk_size: %s): %s',
+                self.chunk_size,
+                cursor.rowcount,
             )
-            log.debug('Search.update: _insert_into_search: %i', cursor.rowcount)
+            assert cursor.rowcount >= 0
             return
 
         while True:
