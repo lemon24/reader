@@ -72,7 +72,7 @@ def test_update_search(reader):
 
 
 @rename_argument('reader', 'reader_without_and_with_entries')
-@pytest.mark.parametrize('chunk_size', [Reader._pagination_chunk_size, 2])
+@pytest.mark.parametrize('chunk_size', [Reader._pagination_chunk_size, 2, 0])
 def test_update_search_feeds_change_after_enable(reader, chunk_size):
     reader._pagination_chunk_size = chunk_size
     reader.enable_search()
@@ -86,7 +86,7 @@ def test_update_search_feeds_change_after_enable(reader, chunk_size):
     parser = Parser()
     reader._parser = parser
 
-    parser.feed(1, datetime(2010, 1, 1))
+    parser.feed(1, datetime(2010, 1, 2))
     parser.entry(1, 2, datetime(2010, 1, 2), title='feed one changed')
     parser.entry(1, 6, datetime(2010, 1, 2), title='feed one new')
     parser.feed(2, datetime(2010, 1, 1))
@@ -99,6 +99,19 @@ def test_update_search_feeds_change_after_enable(reader, chunk_size):
     reader.update_feeds()
 
     reader.update_search()
+
+    assert {(e.id, e.feed_url) for e in reader.get_entries()} == {
+        (e.id, e.feed_url) for e in reader.search_entries('feed')
+    }
+
+    # no title, shouldn't come up in search
+    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+    reader.update_feeds()
+    reader.get_entry(entry)
+
+    assert (entry.id, entry.feed_url) not in {
+        (e.id, e.feed_url) for e in reader.search_entries('feed')
+    }
 
 
 @rename_argument('reader', 'reader_without_and_with_entries')

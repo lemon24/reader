@@ -291,6 +291,27 @@ class Search:
             self._clear_to_update()
 
     def _delete_from_search(self) -> None:
+        # The chunked query doesn't work with chunk_size == 0 (nothing gets deleted);
+        # using -1 as the limit pulls everything into memory
+        if not self.chunk_size:
+            with self.storage.db as db:
+                db.execute(
+                    """
+                    DELETE
+                    FROM entries_search
+                    WHERE
+                        (_id, _feed) in (
+                            -- TODO: same query as below, but without the LIMIT, dedupe
+                            SELECT esss.id, esss.feed
+                            FROM entries_search_sync_state AS esss
+                            JOIN entries_search ON (esss.id, esss.feed) = (_id, _feed)
+                            WHERE to_update OR to_delete
+                        )
+                    ;
+                    """
+                )
+            return
+
         # SQLite doesn't support DELETE-FROM-JOIN.
         #
         # The SQLite that ships with the Windows and macOS official
@@ -305,11 +326,6 @@ class Search:
 
         while True:
             with self.storage.db as db:
-                # FIXME: nothing gets deleted if chunk_size is 0!
-                # we can't simply use -1 as limit, since we'd be pulling the whole list into memory.
-                # there's no test for this, btw.
-                # do we even want to support non-paginated deletes?
-
                 to_delete = list(
                     db.execute(
                         """
