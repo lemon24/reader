@@ -6,7 +6,9 @@ import sqlite3
 import string
 import warnings
 from collections import OrderedDict
+from copy import deepcopy
 from itertools import chain
+from itertools import repeat
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
@@ -300,10 +302,6 @@ class Search:
         # ENABLE_UPDATE_DELETE_LIMIT, so we don't want to use it;
         # https://www.sqlite.org/lang_delete.html
         #
-        # Also, we can't use cursor.rowcount to see how many rows were
-        # deleted from entries_search because it's not a real table
-        # https://www.sqlite.org/c3ref/changes.html
-        #
         # So, we get the ids of things to delete and then do so, in chunks.
         #
         # ... except for chunk_size == 0, when we delete everything at once
@@ -319,14 +317,17 @@ class Search:
 
         if self.chunk_size:
             to_delete_query.LIMIT('?')
-            to_delete_query_str = str(to_delete_query)
+        to_delete_query_str = to_delete_query.to_str(end='')
 
         # TODO: this loop looks a lot like _utils.join_paginated_iter,
         # minus last and actually yielding stuff
 
+        delete_query = Query().DELETE_FROM("entries_search")
+
         while True:
+            query = deepcopy(delete_query)
+
             with self.storage.db as db:
-                to_delete = []
                 if self.chunk_size:
                     to_delete = list(
                         db.execute(to_delete_query_str, (self.chunk_size,))
@@ -339,25 +340,20 @@ class Search:
                         break
 
                     # TODO: kinda duplicated from _get_entries_for_update_one_query
-                    input_snippet = 'VALUES ' + ', '.join(['(?, ?)'] * len(to_delete))
+                    values = ', '.join(repeat('(?, ?)', len(to_delete)))
+                    query.WHERE(f"(_id, _feed) IN (VALUES {values})")
+
                     parameters = list(chain.from_iterable(to_delete))
 
                 else:
-                    input_snippet = to_delete_query.to_str(end='')
+                    query.WHERE(f"(_id, _feed) IN ({to_delete_query_str})")
                     parameters = []
 
-                cursor = db.execute(
-                    f"""
-                    WITH input AS ({input_snippet})
-                    DELETE FROM entries_search
-                    WHERE (_id, _feed) IN input;
-                    """,
-                    parameters,
-                )
+                cursor = db.execute(str(query), parameters)
                 log.debug(
                     'Search.update: _delete_from_search (chunk_size: %s): %s',
                     self.chunk_size,
-                    len(to_delete) if self.chunk_size else cursor.rowcount,
+                    cursor.rowcount,
                 )
 
                 if not self.chunk_size:
