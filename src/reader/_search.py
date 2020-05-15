@@ -6,9 +6,7 @@ import sqlite3
 import string
 import warnings
 from collections import OrderedDict
-from copy import deepcopy
 from itertools import chain
-from itertools import repeat
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
@@ -297,59 +295,28 @@ class Search:
         #
         # SQLite doesn't support DELETE-FROM-JOIN, so we can't use that.
         #
-        # We could use DELETE-LIMIT, but the SQLite that ships with
-        # the Windows and macOS official Python builds does not have
-        # ENABLE_UPDATE_DELETE_LIMIT, so we don't want to use it;
+        # We could use DELETE-LIMIT, but the Windows and macOS official
+        # Python build SQLite does not have ENABLE_UPDATE_DELETE_LIMIT;
         # https://www.sqlite.org/lang_delete.html
-        #
-        # So, we get the ids of things to delete and then do so, in chunks.
-        #
-        # ... except for chunk_size == 0, when we delete everything at once
-        # (LIMIT -1 pulls everything into memory, and we don't want that).
-
-        to_delete_query = (
-            Query()
-            .SELECT("esss.id, esss.feed")
-            .FROM("entries_search_sync_state AS esss")
-            .JOIN("entries_search ON (esss.id, esss.feed) = (_id, _feed)")
-            .WHERE("to_update OR to_delete")
-        )
-
-        if self.chunk_size:
-            to_delete_query.LIMIT('?')
-        to_delete_query_str = to_delete_query.to_str(end='')
 
         # TODO: this loop looks a lot like _utils.join_paginated_iter,
         # minus last and actually yielding stuff
 
-        delete_query = Query().DELETE_FROM("entries_search")
-
         while True:
-            query = deepcopy(delete_query)
-
             with self.storage.db as db:
-                if self.chunk_size:
-                    to_delete = list(
-                        db.execute(to_delete_query_str, (self.chunk_size,))
-                    )
-                    if not to_delete:
-                        log.debug(
-                            'Search.update: _delete_from_search (chunk_size: %s): 0',
-                            self.chunk_size,
-                        )
-                        break
-
-                    # TODO: kinda duplicated from _get_entries_for_update_one_query
-                    values = ', '.join(repeat('(?, ?)', len(to_delete)))
-                    query.WHERE(f"(_id, _feed) IN (VALUES {values})")
-
-                    parameters = list(chain.from_iterable(to_delete))
-
-                else:
-                    query.WHERE(f"(_id, _feed) IN ({to_delete_query_str})")
-                    parameters = []
-
-                cursor = db.execute(str(query), parameters)
+                cursor = db.execute(
+                    """
+                    DELETE FROM entries_search
+                    WHERE (_id, _feed) IN (
+                        SELECT esss.id, esss.feed
+                        FROM entries_search_sync_state AS esss
+                        JOIN entries_search ON (esss.id, esss.feed) = (_id, _feed)
+                        WHERE to_update OR to_delete
+                        LIMIT ?
+                    );
+                    """,
+                    (self.chunk_size or -1,),
+                )
                 log.debug(
                     'Search.update: _delete_from_search (chunk_size: %s): %s',
                     self.chunk_size,
@@ -358,7 +325,7 @@ class Search:
 
                 if not self.chunk_size:
                     break
-                if len(to_delete) < self.chunk_size:
+                if cursor.rowcount < self.chunk_size:
                     break
 
     def _delete_from_sync_state(self) -> None:
@@ -372,12 +339,11 @@ class Search:
                     DELETE
                     FROM entries_search_sync_state
                     WHERE (id, feed) IN (
-                            SELECT id, feed
-                            FROM entries_search_sync_state
-                            WHERE to_delete
-                            LIMIT ?
-                        )
-                    ;
+                        SELECT id, feed
+                        FROM entries_search_sync_state
+                        WHERE to_delete
+                        LIMIT ?
+                    );
                     """,
                     (self.chunk_size or -1,),
                 )
