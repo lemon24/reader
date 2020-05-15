@@ -23,8 +23,11 @@ def reader_without_and_with_entries(request, reader):
     reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
-    one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
-    two = parser.entry(1, 2, datetime(2010, 1, 1), title='one')
+    parser.entry(1, 1, datetime(2010, 1, 1), title='feed one')
+    parser.entry(1, 2, datetime(2010, 1, 1), title='feed one')
+    parser.entry(1, 3, datetime(2010, 1, 1), title='feed one')
+    parser.entry(1, 4, datetime(2010, 1, 1), title='feed one')
+    parser.entry(1, 5, datetime(2010, 1, 1), title='feed one')
 
     reader.add_feed(feed.url)
     reader.update_feeds()
@@ -84,11 +87,12 @@ def test_update_search_feeds_change_after_enable(reader, chunk_size):
     reader._parser = parser
 
     parser.feed(1, datetime(2010, 1, 1))
-    parser.entry(1, 2, datetime(2010, 1, 2), title='changed')
-    parser.entry(1, 3, datetime(2010, 1, 2), title='new')
+    parser.entry(1, 2, datetime(2010, 1, 2), title='feed one changed')
+    parser.entry(1, 6, datetime(2010, 1, 2), title='feed one new')
     parser.feed(2, datetime(2010, 1, 1))
-    parser.entry(2, 1, datetime(2010, 1, 1), title='two')
-    parser.entry(2, 2, datetime(2010, 1, 1), title='two')
+    parser.entry(2, 1, datetime(2010, 1, 1), title='feed two')
+    parser.entry(2, 2, datetime(2010, 1, 1), title='feed two')
+    parser.entry(2, 3, datetime(2010, 1, 1), title='feed two')
 
     reader.add_feed('1')
     reader.add_feed('2')

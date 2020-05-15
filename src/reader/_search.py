@@ -285,8 +285,8 @@ class Search:
 
         # FIXME: how do we test pagination?
         self._delete_from_search()
+        self._delete_from_sync_state()
         with self.storage.db:
-            self._delete_from_sync_state()
             self._insert_into_search()
             self._clear_to_update()
 
@@ -305,6 +305,11 @@ class Search:
 
         while True:
             with self.storage.db as db:
+                # FIXME: nothing gets deleted if chunk_size is 0!
+                # we can't simply use -1 as limit, since we'd be pulling the whole list into memory.
+                # there's no test for this, btw.
+                # do we even want to support non-paginated deletes?
+
                 to_delete = list(
                     db.execute(
                         """
@@ -318,7 +323,11 @@ class Search:
                     )
                 )
 
-                log.debug('Search.update: _delete_from_search: %i', len(to_delete))
+                log.debug(
+                    'Search.update: _delete_from_search: %i (chunk_size: %s)',
+                    len(to_delete),
+                    self.chunk_size,
+                )
 
                 if not to_delete:
                     break
@@ -330,7 +339,7 @@ class Search:
                 db.execute(
                     f"""
                     WITH
-                        input(feed, id) AS (
+                        input AS (
                             VALUES {values_snippet}
                         )
                     DELETE
@@ -346,14 +355,38 @@ class Search:
                     break
 
     def _delete_from_sync_state(self) -> None:
-        cursor = self.storage.db.execute(
-            """
-            DELETE FROM entries_search_sync_state
-            WHERE to_delete;
-            """
-        )
-        # FIXME: paginate me
-        log.debug('Search.update: _delete_from_sync_state: %i', cursor.rowcount)
+        while True:
+            with self.storage.db as db:
+                # Again, DELETE ... LIMIT does not work in some places, see above.
+                # Using CTEs for the WHERE ... IN target makes rowcount -1.
+                cursor = db.execute(
+                    """
+                DELETE
+                FROM entries_search_sync_state
+                WHERE (id, feed) IN (
+                        SELECT id, feed
+                        FROM entries_search_sync_state
+                        WHERE to_delete
+                        LIMIT ?
+                    )
+                ;
+                """,
+                    (self.chunk_size or -1,),
+                )
+
+            log.debug(
+                'Search.update: _delete_from_sync_state: %i (chunk_size: %s)',
+                cursor.rowcount,
+                self.chunk_size,
+            )
+            assert cursor.rowcount >= 0, (
+                "expected non-negative rowcount, %s" % cursor.rowcount
+            )
+
+            if not self.chunk_size:
+                break
+            if cursor.rowcount < self.chunk_size:
+                break
 
     def _insert_into_search(self) -> None:
         cursor = self.storage.db.execute(
