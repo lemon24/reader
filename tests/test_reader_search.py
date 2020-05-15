@@ -100,8 +100,9 @@ def test_update_search_feeds_change_after_enable(reader, chunk_size):
 
     reader.update_search()
 
-    assert {(e.id, e.feed_url) for e in reader.get_entries()} == {
-        (e.id, e.feed_url) for e in reader.search_entries('feed')
+    assert {(e.id, e.feed_url, e.title) for e in reader.get_entries()} == {
+        (e.id, e.feed_url, e.metadata['.title'].value)
+        for e in reader.search_entries('feed')
     }
 
     # no title, shouldn't come up in search

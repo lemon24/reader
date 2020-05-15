@@ -167,6 +167,8 @@ class Search:
                 );
                 """
             )
+            # TODO: This should probably be paginated,
+            # but it's called once and should not take too long, so we can do it later.
             db.execute(
                 """
                 INSERT INTO entries_search_sync_state
@@ -286,9 +288,7 @@ class Search:
         # FIXME: how do we test pagination?
         self._delete_from_search()
         self._delete_from_sync_state()
-        with self.storage.db:
-            self._insert_into_search()
-            self._clear_to_update()
+        self._insert_into_search()
 
     def _delete_from_search(self) -> None:
         # The chunked query doesn't work with chunk_size == 0 (nothing gets deleted);
@@ -310,6 +310,10 @@ class Search:
                     ;
                     """
                 )
+            log.debug(
+                'Search.update: _delete_from_search: everything (chunk_size: %s)',
+                self.chunk_size,
+            )
             return
 
         # SQLite doesn't support DELETE-FROM-JOIN.
@@ -405,96 +409,222 @@ class Search:
                 break
 
     def _insert_into_search(self) -> None:
-        cursor = self.storage.db.execute(
-            """
-            WITH
+        if not self.chunk_size:
+            with self.storage.db as db:
+                db.execute(
+                    """
+                    WITH
 
-            from_summary AS (
-                SELECT
-                    entries.id,
-                    entries.feed,
-                    '.summary',
-                    strip_html(entries.title),
-                    strip_html(entries.summary)
-                FROM entries_search_sync_state
-                JOIN entries USING (id, feed)
-                WHERE
-                    entries_search_sync_state.to_update
-                    AND NOT (summary IS NULL OR summary = '')
-            ),
+                    from_summary AS (
+                        SELECT
+                            entries.id,
+                            entries.feed,
+                            '.summary',
+                            strip_html(entries.title),
+                            strip_html(entries.summary)
+                        FROM entries_search_sync_state
+                        JOIN entries USING (id, feed)
+                        WHERE
+                            entries_search_sync_state.to_update
+                            AND NOT (summary IS NULL OR summary = '')
+                    ),
 
-            from_content AS (
-                SELECT
-                    entries.id,
-                    entries.feed,
-                    '.content[' || json_each.key || '].value',
-                    strip_html(entries.title),
-                    strip_html(json_object_get(json_each.value, 'value'))
-                FROM entries_search_sync_state
-                JOIN entries USING (id, feed)
-                JOIN json_each(entries.content)
-                WHERE
-                    entries_search_sync_state.to_update
-                    AND json_valid(content) and json_array_length(content) > 0
-                    -- TODO: test the right content types get indexed
-                    AND (
-                        json_object_get(json_each.value, 'type') is NULL
-                        OR lower(json_object_get(json_each.value, 'type')) in (
-                            'text/html', 'text/xhtml', 'text/plain'
-                        )
+                    from_content AS (
+                        SELECT
+                            entries.id,
+                            entries.feed,
+                            '.content[' || json_each.key || '].value',
+                            strip_html(entries.title),
+                            strip_html(json_object_get(json_each.value, 'value'))
+                        FROM entries_search_sync_state
+                        JOIN entries USING (id, feed)
+                        JOIN json_each(entries.content)
+                        WHERE
+                            entries_search_sync_state.to_update
+                            AND json_valid(content) and json_array_length(content) > 0
+                            -- TODO: test the right content types get indexed
+                            AND (
+                                json_object_get(json_each.value, 'type') is NULL
+                                OR lower(json_object_get(json_each.value, 'type')) in (
+                                    'text/html', 'text/xhtml', 'text/plain'
+                                )
+                            )
+                    ),
+
+                    from_default AS (
+                        SELECT
+                            entries.id,
+                            entries.feed,
+                            NULL,
+                            strip_html(entries.title),
+                            NULL
+                        FROM entries_search_sync_state
+                        JOIN entries USING (id, feed)
+                        WHERE
+                            entries_search_sync_state.to_update
+                            AND (summary IS NULL OR summary = '')
+                            AND (not json_valid(content) OR json_array_length(content) = 0)
+                    ),
+
+                    union_all(id, feed, content_path, title, content_text) AS (
+                        SELECT * FROM from_summary
+                        UNION
+                        SELECT * FROM from_content
+                        UNION
+                        SELECT * FROM from_default
                     )
-            ),
 
-            from_default AS (
-                SELECT
-                    entries.id,
-                    entries.feed,
-                    NULL,
-                    strip_html(entries.title),
-                    NULL
-                FROM entries_search_sync_state
-                JOIN entries USING (id, feed)
-                WHERE
-                    entries_search_sync_state.to_update
-                    AND (summary IS NULL OR summary = '')
-                    AND (not json_valid(content) OR json_array_length(content) = 0)
-            ),
+                    INSERT INTO entries_search
 
-            union_all(id, feed, content_path, title, content_text) AS (
-                SELECT * FROM from_summary
-                UNION
-                SELECT * FROM from_content
-                UNION
-                SELECT * FROM from_default
+                    SELECT
+                        union_all.title,
+                        union_all.content_text,
+                        strip_html(coalesce(feeds.user_title, feeds.title)),
+                        union_all.id,
+                        union_all.feed as feed,
+                        union_all.content_path,
+                        feeds.user_title IS NOT NULL
+                    FROM union_all
+                    JOIN feeds ON feeds.url = union_all.feed;
+
+                    """
+                )
+                cursor = db.execute(
+                    """
+                    UPDATE entries_search_sync_state
+                    SET to_update = 0
+                    WHERE to_update;
+                    """
+                )
+            assert cursor.rowcount >= 0, (
+                "expected non-negative rowcount, %s" % cursor.rowcount
             )
+            log.debug('Search.update: _insert_into_search: %i', cursor.rowcount)
+            return
 
-            INSERT INTO entries_search
+        while True:
+            with self.storage.db as db:
+                to_update = list(
+                    db.execute(
+                        """
+                        SELECT id, feed
+                        FROM entries_search_sync_state
+                        WHERE to_update
+                        LIMIT ?;
+                        """,
+                        (self.chunk_size,),
+                    )
+                )
 
-            SELECT
-                union_all.title,
-                union_all.content_text,
-                strip_html(coalesce(feeds.user_title, feeds.title)),
-                union_all.id,
-                union_all.feed as feed,
-                union_all.content_path,
-                feeds.user_title IS NOT NULL
-            FROM union_all
-            JOIN feeds ON feeds.url = union_all.feed;
+                log.debug(
+                    'Search.update: _insert_into_search: %i (chunk_size: %s)',
+                    len(to_update),
+                    self.chunk_size,
+                )
 
-            """
-        )
-        # FIXME: paginate
-        log.debug('Search.update: _insert_into_search: %i', cursor.rowcount)
+                if not to_update:
+                    break
 
-    def _clear_to_update(self) -> None:
-        cursor = self.storage.db.execute(
-            """
-            UPDATE entries_search_sync_state
-            SET to_update = 0
-            WHERE to_update;
-            """
-        )
-        log.debug('Search.update: _clear_to_update: %i', cursor.rowcount)
+                # TODO: this logic is duplicated from _get_entries_for_update_one_query
+                values_snippet = ', '.join(['(?, ?)'] * len(to_update))
+                parameters = list(chain.from_iterable(to_update))
+
+                # TODO: duplicates the same huge query above
+                db.execute(
+                    f"""
+                    WITH
+
+                    input(id, feed) AS (
+                        VALUES {values_snippet}
+                    ),
+
+                    from_summary AS (
+                        SELECT
+                            entries.id,
+                            entries.feed,
+                            '.summary',
+                            strip_html(entries.title),
+                            strip_html(entries.summary)
+                        FROM input
+                        JOIN entries USING (id, feed)
+                        WHERE
+                            NOT (summary IS NULL OR summary = '')
+                    ),
+
+                    from_content AS (
+                        SELECT
+                            entries.id,
+                            entries.feed,
+                            '.content[' || json_each.key || '].value',
+                            strip_html(entries.title),
+                            strip_html(json_object_get(json_each.value, 'value'))
+                        FROM input
+                        JOIN entries USING (id, feed)
+                        JOIN json_each(entries.content)
+                        WHERE
+                            json_valid(content) and json_array_length(content) > 0
+                            -- TODO: test the right content types get indexed
+                            AND (
+                                json_object_get(json_each.value, 'type') is NULL
+                                OR lower(json_object_get(json_each.value, 'type')) in (
+                                    'text/html', 'text/xhtml', 'text/plain'
+                                )
+                            )
+                    ),
+
+                    from_default AS (
+                        SELECT
+                            entries.id,
+                            entries.feed,
+                            NULL,
+                            strip_html(entries.title),
+                            NULL
+                        FROM input
+                        JOIN entries USING (id, feed)
+                        WHERE
+                            (summary IS NULL OR summary = '')
+                            AND (not json_valid(content) OR json_array_length(content) = 0)
+                    ),
+
+                    union_all(id, feed, content_path, title, content_text) AS (
+                        SELECT * FROM from_summary
+                        UNION
+                        SELECT * FROM from_content
+                        UNION
+                        SELECT * FROM from_default
+                    )
+
+                    INSERT INTO entries_search
+
+                    SELECT
+                        union_all.title,
+                        union_all.content_text,
+                        strip_html(coalesce(feeds.user_title, feeds.title)),
+                        union_all.id,
+                        union_all.feed as feed,
+                        union_all.content_path,
+                        feeds.user_title IS NOT NULL
+                    FROM union_all
+                    JOIN feeds ON feeds.url = union_all.feed;
+
+                    """,
+                    parameters,
+                )
+                db.execute(
+                    f"""
+                    WITH
+                        input(id, feed) AS (
+                            VALUES {values_snippet}
+                        )
+                    UPDATE entries_search_sync_state
+                    SET to_update = 0
+                    WHERE (id, feed) IN input;
+                    """,
+                    parameters,
+                )
+
+                if len(to_update) < self.chunk_size:
+                    break
 
     _query_error_message_fragments = [
         "fts5: syntax error near",
