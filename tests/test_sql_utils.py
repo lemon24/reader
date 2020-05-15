@@ -108,6 +108,58 @@ def test_query_complicated():
     )
 
 
+def test_query_insert_update_delete():
+    # TODO: maybe bake the VALUES parens in
+    assert str(BaseQuery().INSERT_INTO('table').VALUES('(one)', '(two)')) == dedent(
+        """\
+        INSERT INTO
+            table
+        VALUES
+            (one),
+            (two)
+        ;
+        """
+    )
+
+    assert str(BaseQuery().REPLACE_INTO('table').SELECT('something')) == dedent(
+        """\
+        REPLACE INTO
+            table
+        SELECT
+            something
+        ;
+        """
+    )
+
+    assert str(
+        BaseQuery().UPDATE_OR_REPLACE('table').SET('something').WHERE('condition')
+    ) == dedent(
+        """\
+        UPDATE OR REPLACE
+            table
+        SET
+            something
+        WHERE
+            condition
+        ;
+        """
+    )
+
+    assert str(
+        BaseQuery().WITH('cte').DELETE_FROM('table').WHERE('condition')
+    ) == dedent(
+        """\
+        WITH
+            cte
+        DELETE FROM
+            table
+        WHERE
+            condition
+        ;
+        """
+    )
+
+
 def test_query_deepcopy():
     deepcopy(Query())
 

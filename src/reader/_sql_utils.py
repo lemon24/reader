@@ -1,3 +1,7 @@
+"""
+Homegrown sqlitebuilder.mini rip-off;
+https://sqlbuilder.readthedocs.io/en/latest/#short-manual-for-sqlbuilder-mini
+"""
 import collections
 import functools
 import textwrap
@@ -83,15 +87,30 @@ class BaseQuery(_BQBase):
                 yield '\n'
 
     def _keyword_key(self, keyword: str) -> float:
-        if 'JOIN' in keyword:
-            keyword = 'JOIN'
+        for fuzzy_keyword, predicate in self._fuzzy_keywords:
+            if predicate(keyword):
+                keyword = fuzzy_keyword
+                break
         try:
             return self._keyword_order.index(keyword)
         except ValueError:
             return float('inf')
 
+    _fuzzy_keywords: List[Tuple[str, Callable[[str], bool]]] = [
+        ('JOIN', lambda s: 'JOIN' in s),
+        ('INSERT', lambda s: s.startswith('INSERT')),
+        ('INSERT', lambda s: s.startswith('REPLACE')),
+        ('UPDATE', lambda s: s.startswith('UPDATE')),
+        ('DELETE', lambda s: s.startswith('DELETE')),
+    ]
+
     _keyword_order = [
         'WITH',
+        'INSERT',
+        'VALUES',
+        'UPDATE',
+        'SET',
+        'DELETE',
         'SELECT',
         'FROM',
         'JOIN',
