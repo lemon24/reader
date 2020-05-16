@@ -6,7 +6,6 @@ import sqlite3
 import string
 import warnings
 from collections import OrderedDict
-from itertools import chain
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
@@ -298,12 +297,22 @@ class Search:
         # We could use DELETE-LIMIT, but the Windows and macOS official
         # Python build SQLite does not have ENABLE_UPDATE_DELETE_LIMIT;
         # https://www.sqlite.org/lang_delete.html
+        #
+        # Due to a bug in the Python sqlite3 binding, cursor.rowcount is -1
+        # if the query does not start with INSERT/UPDATE/DELETE;
+        # this means no CTEs or comments should precede the keyword;
+        # https://bugs.python.org/issue35398, https://bugs.python.org/issue36859
+        #
+        # Alternatively, we can use the changes() SQL function instead
+        # (this always works);
+        # https://www.sqlite.org/lang_corefunc.html#changes
 
         # TODO: this loop looks a lot like _utils.join_paginated_iter,
         # minus last and actually yielding stuff
 
         while True:
             with self.storage.db as db:
+                # FIXME: this can delete more than chunk size (e.g. an entry has both summary and content); sometimes cursor.rowcount < self.chunk_size does not mean everything is deleted
                 cursor = db.execute(
                     """
                     DELETE FROM entries_search
@@ -329,8 +338,8 @@ class Search:
                     break
 
     def _delete_from_sync_state(self) -> None:
-        # Here, cursor.rowcount does work (unless we use CTEs),
-        # so we don't need to look at the things to delete.
+        # See the comments in _delete_from_search for
+        # why these queries are the way they are.
 
         while True:
             with self.storage.db as db:
@@ -361,136 +370,26 @@ class Search:
                 break
 
     def _insert_into_search(self) -> None:
-        if not self.chunk_size:
-            with self.storage.db as db:
-                db.execute(
-                    """
-                    WITH
+        # See the comments in _delete_from_search for
+        # why these queries are the way they are.
 
-                    from_summary AS (
-                        SELECT
-                            entries.id,
-                            entries.feed,
-                            '.summary',
-                            strip_html(entries.title),
-                            strip_html(entries.summary)
-                        FROM entries_search_sync_state
-                        JOIN entries USING (id, feed)
-                        WHERE
-                            entries_search_sync_state.to_update
-                            AND NOT (summary IS NULL OR summary = '')
-                    ),
-
-                    from_content AS (
-                        SELECT
-                            entries.id,
-                            entries.feed,
-                            '.content[' || json_each.key || '].value',
-                            strip_html(entries.title),
-                            strip_html(json_object_get(json_each.value, 'value'))
-                        FROM entries_search_sync_state
-                        JOIN entries USING (id, feed)
-                        JOIN json_each(entries.content)
-                        WHERE
-                            entries_search_sync_state.to_update
-                            AND json_valid(content) and json_array_length(content) > 0
-                            -- TODO: test the right content types get indexed
-                            AND (
-                                json_object_get(json_each.value, 'type') is NULL
-                                OR lower(json_object_get(json_each.value, 'type')) in (
-                                    'text/html', 'text/xhtml', 'text/plain'
-                                )
-                            )
-                    ),
-
-                    from_default AS (
-                        SELECT
-                            entries.id,
-                            entries.feed,
-                            NULL,
-                            strip_html(entries.title),
-                            NULL
-                        FROM entries_search_sync_state
-                        JOIN entries USING (id, feed)
-                        WHERE
-                            entries_search_sync_state.to_update
-                            AND (summary IS NULL OR summary = '')
-                            AND (not json_valid(content) OR json_array_length(content) = 0)
-                    ),
-
-                    union_all(id, feed, content_path, title, content_text) AS (
-                        SELECT * FROM from_summary
-                        UNION
-                        SELECT * FROM from_content
-                        UNION
-                        SELECT * FROM from_default
-                    )
-
-                    INSERT INTO entries_search
-
-                    SELECT
-                        union_all.title,
-                        union_all.content_text,
-                        strip_html(coalesce(feeds.user_title, feeds.title)),
-                        union_all.id,
-                        union_all.feed as feed,
-                        union_all.content_path,
-                        feeds.user_title IS NOT NULL
-                    FROM union_all
-                    JOIN feeds ON feeds.url = union_all.feed;
-
-                    """
-                )
-                cursor = db.execute(
-                    """
-                    UPDATE entries_search_sync_state
-                    SET to_update = 0
-                    WHERE to_update;
-                    """
-                )
-            log.debug(
-                'Search.update: _insert_into_search (chunk_size: %s): %s',
-                self.chunk_size,
-                cursor.rowcount,
-            )
-            assert cursor.rowcount >= 0
-            return
+        input_query = """
+            SELECT id, feed
+            FROM entries_search_sync_state
+            WHERE to_update
+            ORDER BY id, feed
+            LIMIT ?
+        """
 
         while True:
             with self.storage.db as db:
-                to_update = list(
-                    db.execute(
-                        """
-                        SELECT id, feed
-                        FROM entries_search_sync_state
-                        WHERE to_update
-                        LIMIT ?;
-                        """,
-                        (self.chunk_size,),
-                    )
-                )
-
-                log.debug(
-                    'Search.update: _insert_into_search: %i (chunk_size: %s)',
-                    len(to_update),
-                    self.chunk_size,
-                )
-
-                if not to_update:
-                    break
-
-                # TODO: this logic is duplicated from _get_entries_for_update_one_query
-                values_snippet = ', '.join(['(?, ?)'] * len(to_update))
-                parameters = list(chain.from_iterable(to_update))
-
-                # TODO: duplicates the same huge query above
-                db.execute(
+                cursor = db.execute(
                     f"""
+                    INSERT INTO entries_search
+
                     WITH
 
-                    input(id, feed) AS (
-                        VALUES {values_snippet}
-                    ),
+                    input(id, feed) AS ({input_query}),
 
                     from_summary AS (
                         SELECT
@@ -548,7 +447,6 @@ class Search:
                         SELECT * FROM from_default
                     )
 
-                    INSERT INTO entries_search
 
                     SELECT
                         union_all.title,
@@ -562,22 +460,35 @@ class Search:
                     JOIN feeds ON feeds.url = union_all.feed;
 
                     """,
-                    parameters,
+                    (self.chunk_size or -1,),
                 )
-                db.execute(
+                log.debug(
+                    'Search.update: _insert_into_search (insert; chunk_size: %s): %i',
+                    self.chunk_size,
+                    cursor.rowcount,
+                )
+                assert cursor.rowcount >= 0
+
+                # Bail early, there's nothing to update.
+                if cursor.rowcount == 0:
+                    break
+
+                cursor = db.execute(
                     f"""
-                    WITH
-                        input(id, feed) AS (
-                            VALUES {values_snippet}
-                        )
                     UPDATE entries_search_sync_state
                     SET to_update = 0
-                    WHERE (id, feed) IN input;
+                    WHERE (id, feed) IN ({input_query});
                     """,
-                    parameters,
+                    (self.chunk_size or -1,),
                 )
-
-                if len(to_update) < self.chunk_size:
+                log.debug(
+                    'Search.update: _insert_into_search (set; chunk_size: %s): %i',
+                    self.chunk_size,
+                    cursor.rowcount,
+                )
+                if not self.chunk_size:
+                    break
+                if cursor.rowcount < self.chunk_size:
                     break
 
     _query_error_message_fragments = [
