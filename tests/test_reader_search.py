@@ -23,7 +23,14 @@ def reader_without_and_with_entries(request, reader):
     reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
-    parser.entry(1, 1, datetime(2010, 1, 1), title='feed one')
+    parser.entry(
+        1,
+        1,
+        datetime(2010, 1, 1),
+        title='feed one',
+        summary='summary',
+        content=[Content('content'), Content('another content')],
+    )
     parser.entry(1, 2, datetime(2010, 1, 1), title='feed one')
     parser.entry(1, 3, datetime(2010, 1, 1), title='feed one')
     parser.entry(1, 4, datetime(2010, 1, 1), title='feed one')
@@ -109,6 +116,10 @@ def test_update_search_feeds_change_after_enable(reader, chunk_size):
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
     reader.update_feeds()
     reader.get_entry(entry)
+
+    # TODO: Should this be in test_search.py?
+    # Other implementations may update the index as soon as an entry is updated,
+    # and have a noop update_search().
 
     assert (entry.id, entry.feed_url) not in {
         (e.id, e.feed_url) for e in reader.search_entries('feed')

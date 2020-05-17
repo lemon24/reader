@@ -312,7 +312,6 @@ class Search:
 
         while True:
             with self.storage.db as db:
-                # FIXME: this can delete more than chunk size (e.g. an entry has both summary and content); sometimes cursor.rowcount < self.chunk_size does not mean everything is deleted
                 cursor = db.execute(
                     """
                     DELETE FROM entries_search
@@ -331,9 +330,17 @@ class Search:
                     self.chunk_size,
                     cursor.rowcount,
                 )
+                assert cursor.rowcount >= 0
 
                 if not self.chunk_size:
                     break
+
+                # Each entries_search_sync_state row should have
+                # at least one correponding row in entries_search.
+                # This means that rowcount may be greater than chunk_size
+                # (not a problem), even if there are no rows left to delete
+                # (also not a problem, there will be an additional query
+                # that deletes 0 rows).
                 if cursor.rowcount < self.chunk_size:
                     break
 
@@ -469,6 +476,12 @@ class Search:
                 )
                 assert cursor.rowcount >= 0
 
+                # Note: We are limiting the number of entries added,
+                # not of content pieces (entries_search rows) added.
+                # An entry with a lot of contents may still cause this to take
+                # a lot of time; it is a problem for later, though, since
+                # in practice we don't usually have more than 2 rows per entry.
+
                 # Bail early, there's nothing to update.
                 if cursor.rowcount == 0:
                     break
@@ -486,6 +499,8 @@ class Search:
                     self.chunk_size,
                     cursor.rowcount,
                 )
+                assert cursor.rowcount >= 0
+
                 if not self.chunk_size:
                     break
                 if cursor.rowcount < self.chunk_size:
