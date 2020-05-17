@@ -4,6 +4,7 @@ import sqlite3
 from datetime import datetime
 from datetime import timedelta
 from itertools import chain
+from itertools import repeat
 from typing import Any
 from typing import Callable
 from typing import Iterable
@@ -317,7 +318,7 @@ class Storage:
         if not entries:
             return []
 
-        values_snippet = ', '.join(['(?, ?)'] * len(entries))
+        values_snippet = ', '.join(repeat('(?, ?)', len(entries)))
         parameters = list(chain.from_iterable(entries))
 
         rows = self.db.execute(
