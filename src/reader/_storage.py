@@ -25,6 +25,7 @@ from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
+from ._utils import join_paginated_iter
 from ._utils import returns_iter_list
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
@@ -201,6 +202,10 @@ class Storage:
         # FIXME: placeholder until we have a better way of getting it from Reader, maybe
         self.get_chunk_size = get_chunk_size
 
+    @property
+    def chunk_size(self) -> int:
+        return self.get_chunk_size()
+
     def close(self) -> None:
         self.db.close()
 
@@ -254,34 +259,39 @@ class Storage:
 
     @wrap_exceptions_iter(StorageError)
     def get_feeds_for_update(
-        self,
-        url: Optional[str] = None,
-        new_only: bool = False,
-        chunk_size: Optional[int] = None,
-        last: Optional[_T] = None,
-    ) -> Iterable[Tuple[FeedForUpdate, Optional[_T]]]:
-        # Ideally, Reader shouldn't care this is paginated,
-        # but we still need to get the chunk_size from somewhere,
-        # so better to have both chunk_size and last like the the other methods.
+        self, url: Optional[str] = None, new_only: bool = False,
+    ) -> Iterable[FeedForUpdate]:
+        # Reader shouldn't care this is paginated,
+        # so we don't expose any pagination stuff.
 
-        query = (
-            Query()
-            .SELECT(
-                *"url updated http_etag http_last_modified stale last_updated".split()
+        def inner(
+            chunk_size: Optional[int], last: Optional[_T]
+        ) -> Iterable[Tuple[FeedForUpdate, Optional[_T]]]:
+            query = (
+                Query()
+                .SELECT(
+                    'url',
+                    'updated',
+                    'http_etag',
+                    'http_last_modified',
+                    'stale',
+                    'last_updated',
+                )
+                .FROM("feeds")
             )
-            .FROM("feeds")
-        )
 
-        if url:
-            query.WHERE("url = :url")
-        if new_only:
-            query.WHERE("last_updated is NULL")
+            if url:
+                query.WHERE("url = :url")
+            if new_only:
+                query.WHERE("last_updated is NULL")
 
-        query.scrolling_window_order_by("url")
+            query.scrolling_window_order_by("url")
 
-        yield from paginated_query(
-            self.db, query, locals(), FeedForUpdate._make, chunk_size, last
-        )
+            yield from paginated_query(
+                self.db, query, locals(), FeedForUpdate._make, chunk_size, last
+            )
+
+        yield from join_paginated_iter(inner, self.chunk_size)
 
     @returns_iter_list
     def _get_entries_for_update_n_queries(

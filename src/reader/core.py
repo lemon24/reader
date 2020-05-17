@@ -314,12 +314,8 @@ class Reader:
         #
         global_now = self._now()
 
-        feeds_for_update = join_paginated_iter(
-            partial(self._storage.get_feeds_for_update, url, new_only),
-            self._pagination_chunk_size,
-        )
-
-        pairs = map(self._parse_feed_for_update, feeds_for_update,)
+        feeds_for_update = self._storage.get_feeds_for_update(url, new_only)
+        pairs = map(self._parse_feed_for_update, feeds_for_update)
 
         for row, result in pairs:
             if isinstance(result, Exception):
