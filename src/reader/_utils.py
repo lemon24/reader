@@ -1,4 +1,5 @@
 import functools
+import itertools
 import multiprocessing.dummy
 from contextlib import contextmanager
 from queue import Queue
@@ -93,6 +94,19 @@ def returns_iter_list(fn: F) -> F:
         return iter(list(fn(*args, **kwargs)))
 
     return cast(F, wrapper)
+
+
+def chunks(n: int, iterable: Iterable[_T]) -> Iterable[Iterable[_T]]:
+    """grouper(2, 'ABCDE') --> AB CD E"""
+    # based on https://stackoverflow.com/a/8991553
+    it = iter(iterable)
+    while True:
+        chunk = itertools.islice(it, n)
+        try:
+            first = next(chunk)
+        except StopIteration:
+            break
+        yield itertools.chain([first], chunk)
 
 
 @contextmanager

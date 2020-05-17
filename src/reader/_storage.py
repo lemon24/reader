@@ -26,6 +26,7 @@ from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
+from ._utils import chunks
 from ._utils import join_paginated_iter
 from ._utils import returns_iter_list
 from .exceptions import EntryNotFoundError
@@ -483,9 +484,25 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
+        iterables = (
+            chunks(self.chunk_size, entry_tuples)
+            if self.chunk_size
+            else (entry_tuples,)
+        )
 
+        # It's acceptable for this to not be atomic (only some of the entries
+        # may be updated if we get an exception), since they will likely
+        # be updated on the next update (because the feed will not be marked
+        # as updated if there's an exception, so we get a free retry).
+        for iterable in iterables:
+            self._add_or_update_entries(iterable)
+
+    def _add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
         # We need to capture the last value for exception handling
         # (it's not guaranteed all the entries belong to the same tuple).
+        # FIXME: In this case, is it ok to just fail other feeds too
+        # if we have an exception? If no, we should force the entries to
+        # belong to a single feed!
         last_param: Mapping[str, Any] = {}
 
         def make_params() -> Iterable[Mapping[str, Any]]:
