@@ -1,6 +1,17 @@
 """
-Homegrown sqlitebuilder.mini rip-off;
+Homegrown SQL query builder.
+
+Inspired by sqlitebuilder.mini;
 https://sqlbuilder.readthedocs.io/en/latest/#short-manual-for-sqlbuilder-mini
+
+See tests/test_sql_utils.py for some usage examples.
+
+For a version of this that supports UNIONs and nested queries,
+see the second prototype in https://github.com/lemon24/reader/issues/123
+
+For a version of this that supports INSERT/UPDATE/DELETE, see
+https://github.com/lemon24/reader/commit/7c97fccf61d16946176c2455be3634c5a8343e1b
+
 """
 import collections
 import functools
@@ -31,9 +42,6 @@ else:
 
 
 class BaseQuery(_BQBase):
-
-    # For a version of this that supports UNIONs and nested queries,
-    # see the second prototype in https://github.com/lemon24/reader/issues/123
 
     default_separators = dict(WHERE='AND', HAVING='AND')
 
@@ -87,30 +95,15 @@ class BaseQuery(_BQBase):
                 yield '\n'
 
     def _keyword_key(self, keyword: str) -> float:
-        for fuzzy_keyword, predicate in self._fuzzy_keywords:
-            if predicate(keyword):
-                keyword = fuzzy_keyword
-                break
+        if 'JOIN' in keyword:
+            keyword = 'JOIN'
         try:
             return self._keyword_order.index(keyword)
         except ValueError:
             return float('inf')
 
-    _fuzzy_keywords: List[Tuple[str, Callable[[str], bool]]] = [
-        ('JOIN', lambda s: 'JOIN' in s),
-        ('INSERT', lambda s: s.startswith('INSERT')),
-        ('INSERT', lambda s: s.startswith('REPLACE')),
-        ('UPDATE', lambda s: s.startswith('UPDATE')),
-        ('DELETE', lambda s: s.startswith('DELETE')),
-    ]
-
     _keyword_order = [
         'WITH',
-        'INSERT',
-        'VALUES',
-        'UPDATE',
-        'SET',
-        'DELETE',
         'SELECT',
         'FROM',
         'JOIN',
