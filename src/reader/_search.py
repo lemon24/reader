@@ -8,7 +8,6 @@ import warnings
 from collections import OrderedDict
 from types import MappingProxyType
 from typing import Any
-from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import Optional
@@ -104,16 +103,12 @@ class Search:
 
     """
 
-    def __init__(
-        self, storage: Storage, get_chunk_size: Callable[[], int] = lambda: 256
-    ):
+    def __init__(self, storage: Storage):
         self.storage = storage
-        self.get_chunk_size = get_chunk_size
 
     @property
     def chunk_size(self) -> int:
-        # FIXME: placeholder until we have a better way of getting it from Reader, maybe
-        return self.get_chunk_size()
+        return self.storage.get_chunk_size()
 
     @wrap_exceptions(SearchError)
     def enable(self) -> None:

@@ -5,6 +5,7 @@ from datetime import datetime
 from datetime import timedelta
 from itertools import chain
 from typing import Any
+from typing import Callable
 from typing import Iterable
 from typing import Mapping
 from typing import Optional
@@ -172,7 +173,12 @@ class Storage:
     recent_threshold = timedelta(7)
 
     @wrap_exceptions(StorageError)
-    def __init__(self, path: str, timeout: Optional[float] = None):
+    def __init__(
+        self,
+        path: str,
+        timeout: Optional[float] = None,
+        get_chunk_size: Callable[[], int] = lambda: 256,
+    ):
         try:
             self.db = self.open_db(path, timeout=timeout)
         except DBError as e:
@@ -192,6 +198,8 @@ class Storage:
 
         self.path = path
         self.timeout = timeout
+        # FIXME: placeholder until we have a better way of getting it from Reader, maybe
+        self.get_chunk_size = get_chunk_size
 
     def close(self) -> None:
         self.db.close()

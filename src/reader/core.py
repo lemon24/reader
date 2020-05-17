@@ -81,17 +81,17 @@ class Reader:
     _pagination_chunk_size = 2 ** 8
 
     def __init__(self, _path: str, _called_directly: bool = True):
-        self._storage = Storage(_path)
+        self._storage = Storage(
+            _path,
+            # TODO: find a better way of passing/changing config options
+            get_chunk_size=lambda: self._pagination_chunk_size,
+        )
 
         # For now, we're using a storage-bound search provider.
         # If we ever implement an external search provider,
         # we'll probably need to do the wiring differently.
         # See the Search docstring for details.
-        self._search = Search(
-            self._storage,
-            # FIXME: find a better way of passing/changing config options
-            lambda: self._pagination_chunk_size,
-        )
+        self._search = Search(self._storage,)
 
         self._parser = Parser()
 
