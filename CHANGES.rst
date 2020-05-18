@@ -17,6 +17,13 @@ Unreleased
   :meth:`~Reader.get_entries` and :meth:`~Reader.search_entries` are now
   33–7% and 46–36% faster, respectively, for results of size 32–256.
   (:issue:`166`)
+* All queries are now chunked/paginated to avoid locking the SQLite storage
+  for too long, decreasing the chance of concurrent queries timing out;
+  the problem was most visible during :meth:`~Reader.update_search`.
+  This should cap memory usage for methods returning an iterable
+  that were not paginated before;
+  previously the whole result set would be read before returning it.
+  (:issue:`167`)
 
 
 Version 1.1
