@@ -28,7 +28,6 @@ from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._utils import chunks
 from ._utils import join_paginated_iter
-from ._utils import returns_iter_list
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
@@ -295,10 +294,11 @@ class Storage:
 
         yield from join_paginated_iter(inner, self.chunk_size)
 
-    @returns_iter_list
     def _get_entries_for_update_n_queries(
         self, entries: Sequence[Tuple[str, str]]
     ) -> Iterable[Optional[EntryForUpdate]]:
+        # We use an explicit transaction for speed
+        # (otherwise we get an implicit one for each query).
         with self.db:
             for feed_url, id in entries:  # noqa: B007
                 row = self.db.execute(
@@ -312,11 +312,10 @@ class Storage:
                 ).fetchone()
                 yield EntryForUpdate(row[0]) if row else None
 
-    @returns_iter_list
     def _get_entries_for_update_one_query(
         self, entries: Sequence[Tuple[str, str]]
     ) -> Iterable[Optional[EntryForUpdate]]:
-        if not entries:
+        if not entries:  # pragma: no cover
             return []
 
         values_snippet = ', '.join(repeat('(?, ?)', len(entries)))
@@ -328,32 +327,42 @@ class Storage:
                 input(feed, id) AS (
                     VALUES {values_snippet}
                 )
-                SELECT
-                    entries.id IS NOT NULL,
-                    entries.updated
-                FROM input
-                LEFT JOIN entries
-                    ON (input.id, input.feed) == (entries.id, entries.feed);
+            SELECT
+                entries.id IS NOT NULL,
+                entries.updated
+            FROM input
+            LEFT JOIN entries
+                ON (input.id, input.feed) == (entries.id, entries.feed);
             """,
             parameters,
         )
 
+        # This can't be a generator because we need to get OperationalError
+        # in this function (so get_entries_for_update() below can catch it).
         return (EntryForUpdate(updated) if exists else None for exists, updated in rows)
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions_iter(StorageError)
     def get_entries_for_update(
         self, entries: Iterable[Tuple[str, str]]
     ) -> Iterable[Optional[EntryForUpdate]]:
-        # The reason there are two implementations for this method:
-        # https://github.com/lemon24/reader/issues/109
+        # It's acceptable for this method to not be atomic. TODO: Why?
 
-        entries = list(entries)
-        try:
-            return self._get_entries_for_update_one_query(entries)
-        except sqlite3.OperationalError as e:
-            if "too many SQL variables" not in str(e):
-                raise
-        return self._get_entries_for_update_n_queries(entries)
+        iterables = chunks(self.chunk_size, entries) if self.chunk_size else (entries,)
+        for iterable in iterables:
+
+            # The reason there are two implementations for this method:
+            # https://github.com/lemon24/reader/issues/109
+            iterable = list(iterable)
+            try:
+                rv = self._get_entries_for_update_one_query(iterable)
+            except sqlite3.OperationalError as e:
+                if "too many SQL variables" not in str(e):
+                    raise
+                rv = self._get_entries_for_update_n_queries(iterable)
+
+            if self.chunk_size:
+                rv = list(rv)
+            yield from rv
 
     @wrap_exceptions(StorageError)
     def set_feed_user_title(self, url: str, title: Optional[str]) -> None:

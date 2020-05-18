@@ -90,7 +90,7 @@ def get_feeds_for_update(storage, _, __):
 
 
 def get_entries_for_update(storage, feed, entry):
-    storage.get_entries_for_update([(feed.url, entry.id)])
+    list(storage.get_entries_for_update([(feed.url, entry.id)]))
 
 
 def set_feed_user_title(storage, feed, __):
@@ -338,6 +338,11 @@ def test_get_entries_for_update_param_limit(entry_count):
     storage = Storage(':memory:')
 
     # shouldn't raise an exception
+    list(
+        storage.get_entries_for_update(
+            ('feed', 'entry-{}'.format(i)) for i in range(entry_count)
+        )
+    )
     list(
         storage.get_entries_for_update(
             ('feed', 'entry-{}'.format(i)) for i in range(entry_count)
