@@ -9,7 +9,7 @@ Changelog
 Version 1.2
 -----------
 
-Unreleased
+Released 2020-05-18
 
 * Minor web application improvements.
 * Remove unneeded additional query in methods that use pagination
