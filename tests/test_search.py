@@ -13,7 +13,7 @@ from reader._search import strip_html
 
 
 def test_bs4_import_error(storage, monkeypatch):
-    search = Search(storage)
+    search = Search(storage.db)
     search.enable()
     monkeypatch.setattr('reader._search.bs4', None)
     monkeypatch.setattr('reader._search.bs4_import_error', ImportError('reason'))
@@ -81,27 +81,27 @@ def test_strip_html(input, expected_output, features):
 
 
 def enable_search(storage, _, __):
-    Search(storage).enable()
+    Search(storage.db).enable()
 
 
 def disable_search(storage, _, __):
-    Search(storage).disable()
+    Search(storage.db).disable()
 
 
 def is_search_enabled(storage, _, __):
-    Search(storage).is_enabled()
+    Search(storage.db).is_enabled()
 
 
 def update_search(storage, _, __):
-    Search(storage).update()
+    Search(storage.db).update()
 
 
 def search_entries_chunk_size_0(storage, _, __):
-    list(Search(storage).search_entries('entry', chunk_size=0))
+    list(Search(storage.db).search_entries('entry', chunk_size=0))
 
 
 def search_entries_chunk_size_1(storage, _, __):
-    list(Search(storage).search_entries('entry', chunk_size=1))
+    list(Search(storage.db).search_entries('entry', chunk_size=1))
 
 
 @pytest.mark.slow
@@ -125,25 +125,25 @@ def test_errors_locked(db_path, pre_stuff, do_stuff):
 
 
 def enable_and_update_search(storage):
-    search = Search(storage)
+    search = Search(storage.db)
     search.enable()
     search.update()
 
 
 def iter_search_entries_chunk_size_0(storage):
-    return Search(storage).search_entries('entry', chunk_size=0)
+    return Search(storage.db).search_entries('entry', chunk_size=0)
 
 
 def iter_search_entries_chunk_size_1(storage):
-    return Search(storage).search_entries('entry', chunk_size=1)
+    return Search(storage.db).search_entries('entry', chunk_size=1)
 
 
 def iter_search_entries_chunk_size_2(storage):
-    return Search(storage).search_entries('entry', chunk_size=2)
+    return Search(storage.db).search_entries('entry', chunk_size=2)
 
 
 def iter_search_entries_chunk_size_3(storage):
-    return Search(storage).search_entries('entry', chunk_size=3)
+    return Search(storage.db).search_entries('entry', chunk_size=3)
 
 
 @pytest.mark.slow
@@ -186,7 +186,7 @@ def test_iter_locked(db_path, iter_stuff):
 def test_invalid_search_query_error(storage, query, exc_type):
     # We're not testing this in test_reader_search.py because
     # the invalid query strings are search-provider-dependent.
-    search = Search(storage)
+    search = Search(storage.db)
     search.enable()
     with pytest.raises(exc_type):
         next(search.search_entries(query))

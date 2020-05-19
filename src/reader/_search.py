@@ -8,6 +8,7 @@ import warnings
 from collections import OrderedDict
 from types import MappingProxyType
 from typing import Any
+from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import Optional
@@ -22,7 +23,6 @@ from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
 from ._sqlite_utils import wrap_exceptions_iter
 from ._storage import apply_filter_options
-from ._storage import Storage
 from ._types import EntryFilterOptions
 from .exceptions import InvalidSearchQueryError
 from .exceptions import SearchError
@@ -101,14 +101,19 @@ class Search:
     https://github.com/lemon24/reader/issues/122#issuecomment-591302580
     for details.
 
+
+
     """
 
-    def __init__(self, storage: Storage):
-        self.storage = storage
+    def __init__(
+        self, db: sqlite3.Connection, get_chunk_size: Callable[[], int] = lambda: 256,
+    ):
+        self.db = db
+        self.get_chunk_size = get_chunk_size
 
     @property
     def chunk_size(self) -> int:
-        return self.storage.get_chunk_size()
+        return self.get_chunk_size()
 
     @wrap_exceptions(SearchError)
     def enable(self) -> None:
@@ -120,7 +125,7 @@ class Search:
             raise
 
     def _enable(self) -> None:
-        with ddl_transaction(self.storage.db) as db:
+        with ddl_transaction(self.db) as db:
 
             # The column names matter, as they can be used in column filters;
             # https://www.sqlite.org/fts5.html#fts5_column_filters
@@ -234,7 +239,7 @@ class Search:
 
     @wrap_exceptions(SearchError)
     def disable(self) -> None:
-        with ddl_transaction(self.storage.db) as db:
+        with ddl_transaction(self.db) as db:
             db.execute("DROP TABLE IF EXISTS entries_search;")
             db.execute("DROP TABLE IF EXISTS entries_search_sync_state;")
             db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert;")
@@ -245,7 +250,7 @@ class Search:
     @wrap_exceptions(SearchError)
     def is_enabled(self) -> bool:
         search_table_exists = (
-            self.storage.db.execute(
+            self.db.execute(
                 """
                 SELECT name
                 FROM sqlite_master
@@ -276,8 +281,8 @@ class Search:
             ) from bs4_import_error
 
         # TODO: is it ok to define the same function many times on the same connection?
-        self.storage.db.create_function('strip_html', 1, strip_html)
-        self.storage.db.create_function('json_object_get', 2, json_object_get)
+        self.db.create_function('strip_html', 1, strip_html)
+        self.db.create_function('json_object_get', 2, json_object_get)
 
         # FIXME: how do we test pagination?
         self._delete_from_search()
@@ -306,7 +311,7 @@ class Search:
         # minus last and actually yielding stuff
 
         while True:
-            with self.storage.db as db:
+            with self.db as db:
                 cursor = db.execute(
                     """
                     DELETE FROM entries_search
@@ -344,7 +349,7 @@ class Search:
         # why these queries are the way they are.
 
         while True:
-            with self.storage.db as db:
+            with self.db as db:
                 cursor = db.execute(
                     """
                     DELETE
@@ -384,7 +389,7 @@ class Search:
         """
 
         while True:
-            with self.storage.db as db:
+            with self.db as db:
                 cursor = db.execute(
                     f"""
                     INSERT INTO entries_search
@@ -575,7 +580,7 @@ class Search:
 
         try:
             yield from paginated_query(
-                self.storage.db, sql_query, context, value_factory, chunk_size, last
+                self.db, sql_query, context, value_factory, chunk_size, last
             )
 
         except sqlite3.OperationalError as e:
