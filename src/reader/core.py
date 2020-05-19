@@ -24,7 +24,7 @@ from ._types import EntryFilterOptions
 from ._types import FeedForUpdate
 from ._types import ParsedFeed
 from ._utils import join_paginated_iter
-from ._utils import make_noop_map
+from ._utils import make_noop_context_manager
 from ._utils import make_pool_map
 from ._utils import zero_or_one
 from .exceptions import _NotModified
@@ -243,7 +243,9 @@ class Reader:
             raise ValueError("workers must be a positive integer")
 
         make_map = (
-            make_noop_map(builtins.map) if workers == 1 else make_pool_map(workers)
+            make_noop_context_manager(builtins.map)
+            if workers == 1
+            else make_pool_map(workers)
         )
 
         with make_map as map:

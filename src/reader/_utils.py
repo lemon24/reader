@@ -132,5 +132,5 @@ def wrap_map(map: F, workers: int) -> F:
 
 
 @contextmanager
-def make_noop_map(fn: F) -> Iterator[F]:
-    yield fn
+def make_noop_context_manager(thing: _T) -> Iterator[_T]:
+    yield thing
