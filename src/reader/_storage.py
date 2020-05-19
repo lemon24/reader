@@ -186,18 +186,6 @@ class Storage:
         except DBError as e:
             raise StorageError(str(e)) from e
 
-        # TODO: If migrations happened, Storage-coupled Search needs to be notified.
-        #
-        # Even better, Search's migration should happen within the same
-        # ddl_transaction open_db uses.
-        #
-        # Note that simply calling search.disable() and then search.enable() +
-        # search.update() will probably not do the right thing, since
-        # ddl_transaction is not reentrant.
-        #
-        # Also see "How does this interact with migrations?" in
-        # https://github.com/lemon24/reader/issues/122#issuecomment-591302580
-
         self.path = path
         self.timeout = timeout
         # FIXME: placeholder until we have a better way of getting it from Reader, maybe

@@ -92,16 +92,35 @@ def strip_html(text: SQLiteType, features: Optional[str] = None) -> SQLiteType:
 
 class Search:
 
-    """SQLite-storage-bound search provider.
+    """Search provider tightly coupled to the SQLite storage.
 
     This is a separate class because conceptually search is not coupled to
-    storage (and future search providers may not be).
+    storage (and future/alternative search providers may not be).
 
     See "Do we want to support external search providers in the future?" in
     https://github.com/lemon24/reader/issues/122#issuecomment-591302580
     for details.
 
+    Schema changes related to search must be added to a Storage migration::
 
+        def update_from_X_to_Y(db):
+            from ._search import Search
+            from ._utils import make_noop_context_manager
+
+            search = Search(db)
+            # We're already within a ddl_transaction, Search shouldn't
+            # start another one since ddl_transaction is not reentrant.
+            search.ddl_transaction = make_noop_context_manager
+
+            if search.is_enabled():
+                # If the names of things remain the same, the queries
+                # from the previous version's disable() otherwise.
+                search.disable()
+
+                search.enable()
+
+    Also see "How does this interact with migrations?" in
+    https://github.com/lemon24/reader/issues/122#issuecomment-591302580
 
     """
 
@@ -115,6 +134,8 @@ class Search:
     def chunk_size(self) -> int:
         return self.get_chunk_size()
 
+    ddl_transaction = staticmethod(ddl_transaction)
+
     @wrap_exceptions(SearchError)
     def enable(self) -> None:
         try:
@@ -125,7 +146,7 @@ class Search:
             raise
 
     def _enable(self) -> None:
-        with ddl_transaction(self.db) as db:
+        with self.ddl_transaction(self.db) as db:
 
             # The column names matter, as they can be used in column filters;
             # https://www.sqlite.org/fts5.html#fts5_column_filters
@@ -239,7 +260,7 @@ class Search:
 
     @wrap_exceptions(SearchError)
     def disable(self) -> None:
-        with ddl_transaction(self.db) as db:
+        with self.ddl_transaction(self.db) as db:
             db.execute("DROP TABLE IF EXISTS entries_search;")
             db.execute("DROP TABLE IF EXISTS entries_search_sync_state;")
             db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert;")
