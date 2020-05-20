@@ -9,6 +9,7 @@ from reader import Feed
 from reader.types import _entry_argument
 from reader.types import _feed_argument
 from reader.types import _namedtuple_compat
+from reader.types import ExceptionInfo
 from reader.types import HighlightedString
 from reader.types import MISSING
 
@@ -188,3 +189,15 @@ def test_highlighted_string_roundtrip(input, before, after):
 
 def test_missing():
     assert repr(MISSING) == 'no value'
+
+
+def test_exception_info():
+    try:
+        raise ValueError('message')
+    except Exception as e:
+        ei = ExceptionInfo.from_exception(e)
+
+    assert ei.type_name == 'builtins.ValueError'
+    assert ei.value_str == 'message'
+    assert ei.traceback_str.startswith('Traceback')
+    assert ei.traceback_str.rstrip().endswith('ValueError: message')

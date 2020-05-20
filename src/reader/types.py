@@ -1,5 +1,6 @@
 import dataclasses
 import re
+import traceback
 from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
@@ -80,6 +81,38 @@ class Feed(_namedtuple_compat):
 
     #: User-defined feed title.
     user_title: Optional[str] = None
+
+    #: If a :exc:`ParseError` happend during the last update, its cause.
+    last_exception: Optional['ExceptionInfo'] = None
+
+
+_EI = TypeVar('_EI', bound='ExceptionInfo')
+
+
+@dataclass(frozen=True)
+class ExceptionInfo(_namedtuple_compat):
+
+    """Data type representing information about an exception."""
+
+    # Similar to traceback.TracebackException and boltons.tbutils.ExceptionInfo.
+    # If ever make this richer, we might as well use one of them.
+
+    #: The fully qualified name of the exception type.
+    type_name: str
+
+    #: String representation of the exception value.
+    value_str: str
+
+    #: String representation of the exception traceback.
+    traceback_str: str
+
+    @classmethod
+    def from_exception(cls: Type[_EI], exc: BaseException) -> _EI:
+        return cls(
+            f'{type(exc).__module__}.{type(exc).__qualname__}',
+            str(exc),
+            ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__)),
+        )
 
 
 @dataclass(frozen=True)

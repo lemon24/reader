@@ -249,7 +249,7 @@ class Storage:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
         yield from paginated_query(
-            self.db, query, locals(), lambda t: Feed._make(t[:6]), chunk_size, last
+            self.db, query, locals(), feed_factory, chunk_size, last
         )
 
     @wrap_exceptions_iter(StorageError)
@@ -600,7 +600,8 @@ class Storage:
         )
 
         def value_factory(t: Tuple[Any, ...]) -> Entry:
-            feed = Feed._make(t[0:6])
+            # FIXME: actually get this
+            feed = feed_factory(t[0:6])
             entry = t[6:13] + (
                 tuple(Content(**d) for d in json.loads(t[13])) if t[13] else (),
                 tuple(Enclosure(**d) for d in json.loads(t[14])) if t[14] else (),
@@ -676,6 +677,10 @@ class Storage:
                 locals(),
             )
         rowcount_exactly_one(cursor, lambda: MetadataNotFoundError(feed_url, key))
+
+
+def feed_factory(t: Tuple[Any, ...]) -> Feed:
+    return Feed._make(t[:6] + (None,))
 
 
 def make_get_entries_query(

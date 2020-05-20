@@ -28,6 +28,9 @@ Data objects
 .. autoclass:: Feed
     :members:
 
+.. autoclass:: ExceptionInfo
+    :members:
+
 .. autoclass:: Entry
     :members:
 

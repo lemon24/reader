@@ -44,6 +44,7 @@ from .core import Reader, make_reader
 
 from .types import (
     Feed,
+    ExceptionInfo,
     Entry,
     Content,
     Enclosure,
