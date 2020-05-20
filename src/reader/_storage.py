@@ -72,7 +72,8 @@ def create_feeds(db: sqlite3.Connection, name: str = 'feeds') -> None:
             -- reader data
             stale INTEGER NOT NULL DEFAULT 0,
             last_updated TIMESTAMP,  -- null if the feed was never updated
-            added TIMESTAMP NOT NULL
+            added TIMESTAMP NOT NULL,
+            last_exception TEXT
 
         );
         """
@@ -80,7 +81,6 @@ def create_feeds(db: sqlite3.Connection, name: str = 'feeds') -> None:
 
 
 def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
-    # TODO: Add NOT NULL where applicable.
     db.execute(
         f"""
         CREATE TABLE {name} (
@@ -135,15 +135,21 @@ def update_from_17_to_18(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute("UPDATE feeds SET stale = 1;")
 
 
+def update_from_18_to_19(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/68
+    db.execute("ALTER TABLE feeds ADD COLUMN last_exception TEXT;")
+
+
 def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
     return open_sqlite_db(
         path,
         create=create_db,
-        version=18,
+        version=19,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
             17: update_from_17_to_18,
+            18: update_from_18_to_19,
         },
         # Row value support was added in 3.15.
         minimum_sqlite_version=(3, 15),
