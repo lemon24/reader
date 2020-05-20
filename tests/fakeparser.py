@@ -83,13 +83,19 @@ class FailingParser(Parser):
     def __init__(self, *args, condition=lambda url: True, **kwargs):
         super().__init__(*args, **kwargs)
         self.condition = condition
+        self.exception = Exception('failing')
 
     def __call__(self, url, http_etag, http_last_modified):
         if self.condition(url):
-            raise ParseError(url) from Exception('failing')
+            try:
+                # We raise so the exception has a traceback set.
+                raise self.exception
+            except Exception as e:
+                raise ParseError(url) from e
         return super().__call__(url, http_etag, http_last_modified)
 
 
+# FIXME: this is prefixed by an underscore by mistake
 class _NotModifiedParser(Parser):
     def __call__(self, *args, **kwargs):
         raise _NotModified(None)

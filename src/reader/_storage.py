@@ -37,6 +37,7 @@ from .types import Content
 from .types import Enclosure
 from .types import Entry
 from .types import EntrySortOrder
+from .types import ExceptionInfo
 from .types import Feed
 from .types import FeedSortOrder
 from .types import JSONType
@@ -231,7 +232,7 @@ class Storage:
     ) -> Iterable[Tuple[Feed, Optional[_T]]]:
         query = (
             Query()
-            .SELECT(*"url updated title link author user_title".split())
+            .SELECT(*"url updated title link author user_title last_exception".split())
             .FROM("feeds")
         )
 
@@ -271,6 +272,7 @@ class Storage:
                     'http_last_modified',
                     'stale',
                     'last_updated',
+                    ('last_exception', 'last_exception IS NOT NULL'),
                 )
                 .FROM("feeds")
             )
@@ -404,12 +406,14 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def update_feed(self, intent: FeedUpdateIntent) -> None:
-        url, last_updated, feed, http_etag, http_last_modified = intent
+        url, last_updated, feed, http_etag, http_last_modified, last_exception = intent
 
         if feed:
             # TODO support updating feed URL
             # https://github.com/lemon24/reader/issues/149
             assert url == feed.url, "updating feed URL not supported"
+
+            assert last_exception is None, "last_exception must be none if feed is set"
 
             self._update_feed_full(intent)
             return
@@ -418,10 +422,18 @@ class Storage:
         assert (
             http_last_modified is None
         ), "http_last_modified must be none if feed is none"
-        self._update_feed_last_updated(url, last_updated)
+
+        if not last_exception:
+            assert last_updated, "last_updated must be set if last_exception is none"
+            self._update_feed_last_updated(url, last_updated)
+        else:
+            assert (
+                not last_updated
+            ), "last_updated must not be set if last_exception is not none"
+            self._update_feed_last_exception(url, last_exception)
 
     def _update_feed_full(self, intent: FeedUpdateIntent) -> None:
-        url, last_updated, feed, http_etag, http_last_modified = intent
+        url, last_updated, feed, http_etag, http_last_modified, _ = intent
 
         assert feed is not None
         updated = feed.updated
@@ -441,7 +453,8 @@ class Storage:
                     http_etag = :http_etag,
                     http_last_modified = :http_last_modified,
                     stale = 0,
-                    last_updated = :last_updated
+                    last_updated = :last_updated,
+                    last_exception = NULL
                 WHERE url = :url;
                 """,
                 locals(),
@@ -455,7 +468,24 @@ class Storage:
                 """
                 UPDATE feeds
                 SET
-                    last_updated = :last_updated
+                    last_updated = :last_updated,
+                    last_exception = NULL
+                WHERE url = :url;
+                """,
+                locals(),
+            )
+        rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
+
+    def _update_feed_last_exception(
+        self, url: str, last_exception: ExceptionInfo
+    ) -> None:
+        last_exception_json = json.dumps(last_exception._asdict())
+        with self.db:
+            cursor = self.db.execute(
+                """
+                UPDATE feeds
+                SET
+                    last_exception = :last_exception_json
                 WHERE url = :url;
                 """,
                 locals(),
@@ -600,13 +630,12 @@ class Storage:
         )
 
         def value_factory(t: Tuple[Any, ...]) -> Entry:
-            # FIXME: actually get this
-            feed = feed_factory(t[0:6])
-            entry = t[6:13] + (
-                tuple(Content(**d) for d in json.loads(t[13])) if t[13] else (),
-                tuple(Enclosure(**d) for d in json.loads(t[14])) if t[14] else (),
-                t[15] == 1,
+            feed = feed_factory(t[0:7])
+            entry = t[7:14] + (
+                tuple(Content(**d) for d in json.loads(t[14])) if t[14] else (),
+                tuple(Enclosure(**d) for d in json.loads(t[15])) if t[15] else (),
                 t[16] == 1,
+                t[17] == 1,
                 feed,
             )
             return Entry._make(entry)
@@ -680,7 +709,7 @@ class Storage:
 
 
 def feed_factory(t: Tuple[Any, ...]) -> Feed:
-    return Feed._make(t[:6] + (None,))
+    return Feed._make(t[:6] + (ExceptionInfo(**json.loads(t[6])) if t[6] else None,))
 
 
 def make_get_entries_query(
@@ -696,6 +725,7 @@ def make_get_entries_query(
             feeds.link
             feeds.author
             feeds.user_title
+            feeds.last_exception
             entries.id
             entries.updated
             entries.title

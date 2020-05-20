@@ -15,6 +15,7 @@ from .types import Content
 from .types import Enclosure
 from .types import Entry
 from .types import EntryInput
+from .types import ExceptionInfo
 from .types import Feed
 from .types import FeedInput
 
@@ -119,6 +120,9 @@ class FeedForUpdate(NamedTuple):
     #: The date the feed was last updated, according to reader; none if never.
     last_updated: Optional[datetime]
 
+    # Whether the feed had an exception at the last update.
+    last_exception: bool
+
 
 class EntryForUpdate(NamedTuple):
 
@@ -135,11 +139,16 @@ class FeedUpdateIntent(NamedTuple):
     url: str
 
     #: The time at the start of updating this feed.
-    last_updated: datetime
+    last_updated: Optional[datetime]
 
     feed: Optional[FeedData] = None
     http_etag: Optional[str] = None
     http_last_modified: Optional[str] = None
+
+    # TODO: Is there a better way of modelling/enforcing these? A sort of tagged union, maybe? (last_updated should be non-optional then)
+
+    #: Cause of ParseError, if any; if set, everything else except url should be None.
+    last_exception: Optional[ExceptionInfo] = None
 
 
 class EntryUpdateIntent(NamedTuple):

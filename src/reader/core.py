@@ -22,6 +22,7 @@ from ._storage import Storage
 from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import FeedForUpdate
+from ._types import FeedUpdateIntent
 from ._types import ParsedFeed
 from ._utils import join_paginated_iter
 from ._utils import make_noop_context_manager
@@ -38,6 +39,7 @@ from .types import Entry
 from .types import EntryInput
 from .types import EntrySearchResult
 from .types import EntrySortOrder
+from .types import ExceptionInfo
 from .types import Feed
 from .types import FeedInput
 from .types import FeedSortOrder
@@ -319,11 +321,29 @@ class Reader:
         feeds_for_update = self._storage.get_feeds_for_update(url, new_only)
         pairs = map(self._parse_feed_for_update, feeds_for_update)
 
+        # TODO: this has grown kinda ugly :(
+
         for row, result in pairs:
             if isinstance(result, Exception):
+                if isinstance(result, ParseError):
+                    intent = FeedUpdateIntent(
+                        row.url,
+                        None,
+                        last_exception=ExceptionInfo.from_exception(
+                            result.__cause__ or result
+                        ),
+                    )
+
+                    try:
+                        self._storage.update_feed(intent)
+                    except FeedNotFoundError as e:
+                        yield e
+                        continue
+
                 if not isinstance(result, _NotModified):
                     yield result
                     continue
+
                 result = None
             try:
                 self._update_feed(row, result, global_now)
@@ -365,6 +385,13 @@ class Reader:
             self._storage.add_or_update_entries(entries_to_update)
         if feed_to_update:
             self._storage.update_feed(feed_to_update)
+        else:
+            if feed_for_update.last_exception:
+                # Clear last_exception.
+                # TODO: Maybe be more explicit about this? (i.e. have a storage method for it)
+                self._storage.update_feed(
+                    FeedUpdateIntent(feed_for_update.url, feed_for_update.last_updated)
+                )
 
         # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).

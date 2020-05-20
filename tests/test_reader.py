@@ -12,6 +12,7 @@ from fakeparser import BlockingParser
 from fakeparser import FailingParser
 from fakeparser import Parser
 from utils import make_url_base
+from utils import rename_argument
 
 from reader import Content
 from reader import Enclosure
@@ -362,6 +363,113 @@ def test_update_feeds_parse_error(reader, workers, caplog):
     assert repr(exc.__cause__) in record.message
 
 
+@pytest.fixture
+def reader_with_one_feed(reader):
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    parser.entry(1, 1, datetime(2010, 1, 1))
+
+    reader.add_feed(feed.url)
+
+    return reader
+
+
+@rename_argument('reader', 'reader_with_one_feed')
+def test_last_exception_not_updated(reader, call_update_method):
+    assert reader.get_feed('1').last_exception is None
+
+
+@rename_argument('reader', 'reader_with_one_feed')
+def test_last_exception_ok(reader, call_update_method):
+    call_update_method(reader, '1')
+    assert reader.get_feed('1').last_exception is None
+    assert next(reader.get_entries()).feed.last_exception is None
+
+
+@rename_argument('reader', 'reader_with_one_feed')
+def test_last_exception_failed(reader, call_update_method):
+    call_update_method(reader, '1')
+    old_parser = reader._parser
+
+    old_last_updated = next(reader._storage.get_feeds_for_update('1')).last_updated
+    assert old_last_updated is not None
+
+    reader._parser = FailingParser()
+    try:
+        call_update_method(reader, '1')
+    except ParseError:
+        pass
+
+    # The cause gets stored.
+    last_exception = reader.get_feed('1').last_exception
+    assert next(reader.get_entries()).feed.last_exception == last_exception
+    assert last_exception.type_name == 'builtins.Exception'
+    assert last_exception.value_str == 'failing'
+    assert last_exception.traceback_str.startswith('Traceback')
+
+    reader._parser.exception = ValueError('another')
+    try:
+        call_update_method(reader, '1')
+    except ParseError:
+        pass
+
+    # The cause changes.
+    last_exception = reader.get_feed('1').last_exception
+    assert last_exception.type_name == 'builtins.ValueError'
+    assert last_exception.value_str == 'another'
+
+    # The cause does not get reset if other feeds get updated.
+    reader._parser = old_parser
+    old_parser.feed(2, datetime(2010, 1, 1))
+    reader.add_feed('2')
+    reader.update_feeds(new_only=True)
+    assert reader.get_feed('1').last_exception == last_exception
+    assert reader.get_feed('2').last_exception is None
+
+    # None of the failures bumped last_updated.
+    new_last_updated = next(reader._storage.get_feeds_for_update('1')).last_updated
+    assert new_last_updated == old_last_updated
+
+
+def same_parser(parser):
+    return parser
+
+
+def updated_feeds_parser(parser):
+    parser.feeds = {
+        number: feed._replace(
+            updated=feed.updated + timedelta(1), title=f'New title for #{number}'
+        )
+        for number, feed in parser.feeds.items()
+    }
+    return parser
+
+
+def raises_not_modified_parser(_):
+    return _NotModifiedParser()
+
+
+@pytest.mark.parametrize(
+    'make_new_parser', [same_parser, updated_feeds_parser, raises_not_modified_parser,]
+)
+@rename_argument('reader', 'reader_with_one_feed')
+def test_last_exception_reset(reader, call_update_method, make_new_parser):
+    call_update_method(reader, '1')
+    old_parser = reader._parser
+
+    reader._parser = FailingParser()
+    try:
+        call_update_method(reader, '1')
+    except ParseError:
+        pass
+
+    reader._parser = make_new_parser(old_parser)
+    call_update_method(reader, '1')
+    assert reader.get_feed('1').last_exception is None
+
+
 def test_update_feeds_unexpected_error(reader):
     parser = Parser()
     reader._parser = parser
@@ -385,6 +493,7 @@ def test_update_feeds_unexpected_error(reader):
 class FeedAction(Enum):
     none = object()
     update = object()
+    fail = object()
 
 
 class EntryAction(Enum):
@@ -400,7 +509,7 @@ class EntryAction(Enum):
         (f, e)
         for f in FeedAction
         for e in EntryAction
-        if (f, e) != (FeedAction.none, EntryAction.none)
+        if (f, e) not in {(FeedAction.none, EntryAction.none),}
     ],
 )
 def test_update_feed_deleted(db_path, call_update_method, feed_action, entry_action):
@@ -428,7 +537,14 @@ def test_update_feed_deleted(db_path, call_update_method, feed_action, entry_act
     if feed_action is FeedAction.update:
         feed = parser.feed(1, datetime(2010, 1, 2))
 
-    blocking_parser = BlockingParser.from_parser(parser)
+    if feed_action is not FeedAction.fail:
+        parser_cls = BlockingParser
+    else:
+
+        class parser_cls(BlockingParser, FailingParser):
+            pass
+
+    blocking_parser = parser_cls.from_parser(parser)
 
     def target():
         try:
