@@ -11,6 +11,10 @@ Version 1.3
 
 Unreleased
 
+* If a feed failed to update, provide details about the error
+  in :attr:`Feed.last_exception`. (:issue:`68`)
+* Show details about feed update errors in the web application. (:issue:`68`)
+
 
 Version 1.2
 -----------

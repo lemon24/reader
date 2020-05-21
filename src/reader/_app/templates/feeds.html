@@ -53,6 +53,14 @@
 <li class="error">{{ message }}
 {% endfor %}
 
+{% if feed.last_exception %}
+<li class="error" title="{{ feed.last_exception.traceback_str }}">
+<b>update error</b>:
+{% set type_parts = feed.last_exception.type_name.partition('builtins.') %}
+{{ feed.last_exception.type_name if type_parts[0] else type_parts[2] }}:
+{{ feed.last_exception.value_str }}
+{% endif %}
+
 </ul>
 
 
