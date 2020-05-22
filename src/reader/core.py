@@ -21,6 +21,7 @@ from ._search import Search
 from ._storage import Storage
 from ._types import EntryData
 from ._types import EntryFilterOptions
+from ._types import EntryUpdateIntent
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import ParsedFeed
@@ -28,7 +29,6 @@ from ._utils import join_paginated_iter
 from ._utils import make_noop_context_manager
 from ._utils import make_pool_map
 from ._utils import zero_or_one
-from .exceptions import _NotModified
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
@@ -39,7 +39,6 @@ from .types import Entry
 from .types import EntryInput
 from .types import EntrySearchResult
 from .types import EntrySortOrder
-from .types import ExceptionInfo
 from .types import Feed
 from .types import FeedInput
 from .types import FeedSortOrder
@@ -318,43 +317,62 @@ class Reader:
         #
         global_now = self._now()
 
+        # Excluding the special exception handling,
+        # this function is a pipeline that looks somewhat like this:
+        #
+        #   self._storage.get_feeds_for_update \
+        #   | self._updater.process_old_feed \
+        #   | xargs -n1 -P $workers self._parse_feed_for_update \
+        #   | self._get_entries_for_update \
+        #   | self._updater.make_update_intents \
+        #   | self._update_feed
+        #
+        # Since we only need _parse_feed_for_update to run in parallel,
+        # everything after that is in a single for loop for readability.
+        #
+        # It may make sense to also have _get_entries_for_update run in
+        # parallel with a different (slower) storage, but for now we're good.
+
         feeds_for_update = self._storage.get_feeds_for_update(url, new_only)
+        feeds_for_update = builtins.map(
+            self._updater.process_old_feed, feeds_for_update
+        )
+
         pairs = map(self._parse_feed_for_update, feeds_for_update)
 
-        # TODO: this has grown kinda ugly :(
+        for feed_for_update, parse_result in pairs:
 
-        for row, result in pairs:
-            if isinstance(result, Exception):
-                if isinstance(result, ParseError):
-                    intent = FeedUpdateIntent(
-                        row.url,
-                        None,
-                        last_exception=ExceptionInfo.from_exception(
-                            result.__cause__ or result
-                        ),
-                    )
-
-                    try:
-                        self._storage.update_feed(intent)
-                    except FeedNotFoundError as e:
-                        yield e
-                        continue
-
-                if not isinstance(result, _NotModified):
-                    yield result
-                    continue
-
-                result = None
             try:
-                self._update_feed(row, result, global_now)
-                yield None
+                # give storage a chance to consume the entries in a streaming fashion;
+                parsed_entries = itertools.tee(
+                    parse_result.entries
+                    if not isinstance(parse_result, Exception)
+                    else ()
+                )
+                entry_pairs = zip(
+                    parsed_entries[0],
+                    self._storage.get_entries_for_update(
+                        (e.feed_url, e.id) for e in parsed_entries[1]
+                    ),
+                )
+
+                now = self._now()
+                (
+                    feed_to_update,
+                    entries_to_update,
+                    exception,
+                ) = self._updater.make_update_intents(
+                    feed_for_update, now, global_now, parse_result, entry_pairs
+                )
+
+                self._update_feed(feed_to_update, entries_to_update)
+                yield exception
             except Exception as e:
                 yield e
 
     def _parse_feed_for_update(
         self, feed: FeedForUpdate
     ) -> Tuple[FeedForUpdate, Union[ParsedFeed, Exception]]:
-        feed = self._updater.process_old_feed(feed)
         try:
             return feed, self._parser(feed.url, feed.http_etag, feed.http_last_modified)
         except Exception as e:
@@ -362,36 +380,13 @@ class Reader:
 
     def _update_feed(
         self,
-        feed_for_update: FeedForUpdate,
-        parse_result: Optional[ParsedFeed],
-        global_now: datetime.datetime,
+        feed_to_update: Optional[FeedUpdateIntent],
+        entries_to_update: Iterable[EntryUpdateIntent],
     ) -> None:
-        now = self._now()
-
-        # give storage a chance to consume the entries in a streaming fashion;
-        parsed_entries = itertools.tee(parse_result.entries if parse_result else ())
-        entry_pairs = zip(
-            parsed_entries[0],
-            self._storage.get_entries_for_update(
-                (e.feed_url, e.id) for e in parsed_entries[1]
-            ),
-        )
-
-        feed_to_update, entries_to_update = self._updater.make_update_intents(
-            feed_for_update, now, global_now, parse_result, entry_pairs
-        )
-
-        if entries_to_update:
-            self._storage.add_or_update_entries(entries_to_update)
         if feed_to_update:
+            if entries_to_update:
+                self._storage.add_or_update_entries(entries_to_update)
             self._storage.update_feed(feed_to_update)
-        else:
-            if feed_for_update.last_exception:
-                # Clear last_exception.
-                # TODO: Maybe be more explicit about this? (i.e. have a storage method for it)
-                self._storage.update_feed(
-                    FeedUpdateIntent(feed_for_update.url, feed_for_update.last_updated)
-                )
 
         # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).

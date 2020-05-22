@@ -6,6 +6,7 @@ from typing import Iterable
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from typing import Union
 
 from ._types import EntryData
 from ._types import EntryForUpdate
@@ -14,7 +15,9 @@ from ._types import FeedData
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import ParsedFeed
-
+from .exceptions import _NotModified
+from .exceptions import ParseError
+from .types import ExceptionInfo
 
 log = logging.getLogger("reader")
 
@@ -41,11 +44,13 @@ def make_update_intents(
     old_feed: FeedForUpdate,
     now: datetime,
     global_now: datetime,
-    parsed_feed: Optional[ParsedFeed],
+    parsed_feed: Union[ParsedFeed, Exception],
     entry_pairs: Iterable[
         Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]
     ],
-) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
+) -> Tuple[
+    Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent], Optional[Exception]
+]:
     updater = _Updater(old_feed, now, global_now)
     return updater.update(parsed_feed, entry_pairs)
 
@@ -186,17 +191,42 @@ class _Updater:
 
     def update(
         self,
-        parsed_feed: Optional[ParsedFeed],
+        parsed_feed: Union[ParsedFeed, Exception],
         entry_pairs: Iterable[
             Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]
         ],
-    ) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
-        if not parsed_feed:
+    ) -> Tuple[
+        Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent], Optional[Exception]
+    ]:
+        if isinstance(parsed_feed, _NotModified):
             log.info("update feed %r: feed not modified, skipping", self.url)
             # The feed shouldn't be considered new anymore.
-            return FeedUpdateIntent(self.url, self.now), ()
+            return FeedUpdateIntent(self.url, self.now), (), None
+
+        if isinstance(parsed_feed, ParseError):
+            return (
+                FeedUpdateIntent(
+                    self.url,
+                    None,
+                    last_exception=ExceptionInfo.from_exception(
+                        parsed_feed.__cause__ or parsed_feed
+                    ),
+                ),
+                (),
+                parsed_feed,
+            )
+
+        # this could also be pass-through (None, (), parsed_feed)
+        assert not isinstance(
+            parsed_feed, Exception
+        ), "shouldn't happen"  # pragma: no cover
 
         entries_to_update = list(self.get_entries_to_update(entry_pairs))
         feed_to_update = self.get_feed_to_update(parsed_feed, entries_to_update)
 
-        return feed_to_update, entries_to_update
+        if not feed_to_update and self.old_feed.last_exception:
+            # Clear last_exception.
+            # TODO: Maybe be more explicit about this? (i.e. have a storage method for it)
+            feed_to_update = FeedUpdateIntent(self.url, self.old_feed.last_updated)
+
+        return feed_to_update, entries_to_update, None
