@@ -27,13 +27,26 @@ from .types import FeedInput
 # https://github.com/lemon24/reader/issues/159#issuecomment-612512033
 
 
-class FeedData(Feed):
+@dataclass(frozen=True)
+class FeedData(_namedtuple_compat):
 
-    """Future-proofing alias."""
+    """Feed data that comes from the feed.
 
-    def as_feed(self) -> Feed:
+    Attributes are a subset of those of Feed.
+
+    """
+
+    url: str
+    updated: Optional[datetime] = None
+    title: Optional[str] = None
+    link: Optional[str] = None
+    author: Optional[str] = None
+
+    def as_feed(self, **kwargs: object) -> Feed:
         """For testing."""
-        return Feed(**self.__dict__)
+        attrs = dict(self.__dict__)
+        attrs.update(kwargs)
+        return Feed(**attrs)
 
 
 _UpdatedType = TypeVar('_UpdatedType', datetime, Optional[datetime])

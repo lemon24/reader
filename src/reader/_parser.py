@@ -163,12 +163,7 @@ def _process_feed(
     updated, _ = _get_updated_published(d.feed, is_rss)
 
     feed = FeedData(
-        url,
-        updated,
-        d.feed.get('title'),
-        d.feed.get('link'),
-        d.feed.get('author'),
-        None,
+        url, updated, d.feed.get('title'), d.feed.get('link'), d.feed.get('author'),
     )
     entries = (_make_entry(url, e, is_rss) for e in d.entries)
 
