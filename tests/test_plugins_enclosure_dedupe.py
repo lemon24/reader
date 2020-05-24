@@ -29,8 +29,8 @@ def test_enclosure_dedupe(reader):
 
     enclosure_dedupe(reader)
 
-    assert set(reader.get_entries()) == {
-        one.as_entry(feed=feed),
-        two.as_entry(feed=feed),
-        three.as_entry(feed=feed, enclosures=(Enclosure('href', 'text', 1),)),
+    assert set((e.id, e.enclosures) for e in reader.get_entries()) == {
+        (one.id, one.enclosures),
+        (two.id, two.enclosures),
+        (three.id, (Enclosure('href', 'text', 1),)),
     }

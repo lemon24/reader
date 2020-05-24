@@ -232,7 +232,17 @@ class Storage:
     ) -> Iterable[Tuple[Feed, Optional[_T]]]:
         query = (
             Query()
-            .SELECT(*"url updated title link author user_title last_exception".split())
+            .SELECT(
+                'url',
+                'updated',
+                'title',
+                'link',
+                'author',
+                'user_title',
+                'added',
+                'last_updated',
+                'last_exception',
+            )
             .FROM("feeds")
         )
 
@@ -630,12 +640,12 @@ class Storage:
         )
 
         def value_factory(t: Tuple[Any, ...]) -> Entry:
-            feed = feed_factory(t[0:7])
-            entry = t[7:14] + (
-                tuple(Content(**d) for d in json.loads(t[14])) if t[14] else (),
-                tuple(Enclosure(**d) for d in json.loads(t[15])) if t[15] else (),
-                t[16] == 1,
-                t[17] == 1,
+            feed = feed_factory(t[0:9])
+            entry = t[9:16] + (
+                tuple(Content(**d) for d in json.loads(t[16])) if t[16] else (),
+                tuple(Enclosure(**d) for d in json.loads(t[17])) if t[17] else (),
+                t[18] == 1,
+                t[19] == 1,
                 feed,
             )
             return Entry._make(entry)
@@ -709,7 +719,7 @@ class Storage:
 
 
 def feed_factory(t: Tuple[Any, ...]) -> Feed:
-    return Feed._make(t[:6] + (ExceptionInfo(**json.loads(t[6])) if t[6] else None,))
+    return Feed._make(t[:8] + (ExceptionInfo(**json.loads(t[8])) if t[8] else None,))
 
 
 def make_get_entries_query(
@@ -725,6 +735,8 @@ def make_get_entries_query(
             feeds.link
             feeds.author
             feeds.user_title
+            feeds.added
+            feeds.last_updated
             feeds.last_exception
             entries.id
             entries.updated

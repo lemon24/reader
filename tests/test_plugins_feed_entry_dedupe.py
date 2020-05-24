@@ -106,20 +106,17 @@ def test_feed_entry_dedupe(reader, monkeypatch, tmpdir):
 
     reader.update_feeds()
 
-    assert set(reader.get_entries()) == {
-        e.as_entry(feed=one, read=read)
-        for e, read in {
-            # remain untouched
-            (old, False),
-            (new, False),
-            # also remain untouched
-            (title_only_one, False),
-            (title_only_two, False),
-            # the new one is marked as read because the old one was
-            (read_one, True),
-            (read_two, True),
-            # the old one is marked as read in favor of the new one
-            (unread_one, True),
-            (unread_two, False),
-        }
+    assert set((e.id, e.read) for e in reader.get_entries()) == {
+        # remain untouched
+        (old.id, False),
+        (new.id, False),
+        # also remain untouched
+        (title_only_one.id, False),
+        (title_only_two.id, False),
+        # the new one is marked as read because the old one was
+        (read_one.id, True),
+        (read_two.id, True),
+        # the old one is marked as read in favor of the new one
+        (unread_one.id, True),
+        (unread_two.id, False),
     }

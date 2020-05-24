@@ -67,7 +67,7 @@ class Feed(_namedtuple_compat):
     #: The URL of the feed.
     url: str
 
-    #: The date the feed was last updated.
+    #: The date the feed was last updated, according to the feed.
     updated: Optional[datetime] = None
 
     #: The title of the feed.
@@ -81,6 +81,14 @@ class Feed(_namedtuple_compat):
 
     #: User-defined feed title.
     user_title: Optional[str] = None
+
+    # added is required, but we want it after feed data; the cast is for mypy.
+
+    #: The date when the feed was added.
+    added: datetime = cast(datetime, None)
+
+    #: The date when the feed was last retrieved by reader.
+    last_updated: Optional[datetime] = None
 
     #: If a :exc:`ParseError` happend during the last update, its cause.
     last_exception: Optional['ExceptionInfo'] = None

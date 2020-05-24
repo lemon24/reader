@@ -30,6 +30,9 @@ from reader._storage import Storage
 from reader._types import FeedUpdateIntent
 
 
+# TODO: testing added/last_updated everywhere is kinda ugly
+
+
 def test_update_feed_updated(reader, call_update_method):
     """If a feed is not newer than the stored one, it should not be updated,
     but its entries should be processed anyway.
@@ -44,35 +47,52 @@ def test_update_feed_updated(reader, call_update_method):
     old_feed = parser.feed(1, datetime(2010, 1, 1), title='old')
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
 
+    reader._now = lambda: datetime(2010, 1, 1)
     reader.add_feed(old_feed.url)
+    reader._now = lambda: datetime(2010, 1, 2)
     call_update_method(reader, old_feed.url)
-    assert set(reader.get_entries()) == {entry_one.as_entry(feed=old_feed)}
+    feed = old_feed._replace(
+        added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2)
+    )
+    assert set(reader.get_entries()) == {entry_one.as_entry(feed=feed)}
 
     parser.feed(1, datetime(2010, 1, 1), title='old-different-title')
     entry_two = parser.entry(1, 2, datetime(2010, 2, 1))
+    reader._now = lambda: datetime(2010, 1, 3)
     call_update_method(reader, old_feed.url)
+    feed = old_feed._replace(
+        added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 3)
+    )
     assert set(reader.get_entries()) == {
-        entry_one.as_entry(feed=old_feed),
-        entry_two.as_entry(feed=old_feed),
+        entry_one.as_entry(feed=feed),
+        entry_two.as_entry(feed=feed),
     }
 
-    parser.feed(1, datetime(2009, 1, 1), title='even-older')
+    even_older_feed = parser.feed(1, datetime(2009, 1, 1), title='even-older')
     entry_three = parser.entry(1, 3, datetime(2010, 2, 1))
+    reader._now = lambda: datetime(2010, 1, 4)
     call_update_method(reader, old_feed.url)
+    feed = old_feed._replace(
+        added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 4)
+    )
     assert set(reader.get_entries()) == {
-        entry_one.as_entry(feed=old_feed),
-        entry_two.as_entry(feed=old_feed),
-        entry_three.as_entry(feed=old_feed),
+        entry_one.as_entry(feed=feed),
+        entry_two.as_entry(feed=feed),
+        entry_three.as_entry(feed=feed),
     }
 
     new_feed = parser.feed(1, datetime(2010, 1, 2), title='new')
     entry_four = parser.entry(1, 4, datetime(2010, 2, 1))
+    reader._now = lambda: datetime(2010, 1, 5)
+    feed = new_feed._replace(
+        added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 5)
+    )
     call_update_method(reader, old_feed.url)
     assert set(reader.get_entries()) == {
-        entry_one.as_entry(feed=new_feed),
-        entry_two.as_entry(feed=new_feed),
-        entry_three.as_entry(feed=new_feed),
-        entry_four.as_entry(feed=new_feed),
+        entry_one.as_entry(feed=feed),
+        entry_two.as_entry(feed=feed),
+        entry_three.as_entry(feed=feed),
+        entry_four.as_entry(feed=feed),
     }
 
 
@@ -85,20 +105,27 @@ def test_update_entry_updated(reader, call_update_method):
     feed = parser.feed(1, datetime(2010, 1, 1))
     old_entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
+    reader._now = lambda: datetime(2010, 2, 1)
     reader.add_feed(feed.url)
+    reader._now = lambda: datetime(2010, 2, 2)
     call_update_method(reader, feed.url)
+    feed = feed._replace(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 2))
     assert set(reader.get_entries()) == {old_entry.as_entry(feed=feed)}
 
     feed = parser.feed(1, datetime(2010, 1, 2))
     new_entry = old_entry._replace(title='New Entry')
     parser.entries[1][1] = new_entry
+    reader._now = lambda: datetime(2010, 2, 3)
     call_update_method(reader, feed.url)
+    feed = feed._replace(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 3))
     assert set(reader.get_entries()) == {old_entry.as_entry(feed=feed)}
 
     feed = parser.feed(1, datetime(2010, 1, 3))
     new_entry = new_entry._replace(updated=datetime(2010, 1, 2))
     parser.entries[1][1] = new_entry
+    reader._now = lambda: datetime(2010, 2, 4)
     call_update_method(reader, feed.url)
+    feed = feed._replace(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 4))
     assert set(reader.get_entries()) == {new_entry.as_entry(feed=feed)}
 
 
@@ -124,9 +151,10 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
 
     feed = parser.feed(1, None, title='old')
     entry_one = parser.entry(1, 1, None, title='old')
-    reader.add_feed(feed.url)
     reader._now = lambda: datetime(2010, 1, 1)
+    reader.add_feed(feed.url)
     call_update_method(reader, feed)
+    feed = feed._replace(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 1))
 
     assert set(reader.get_feeds()) == {feed}
     assert set(reader.get_entries()) == {
@@ -138,6 +166,7 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
     entry_two = parser.entry(1, 2, None)
     reader._now = lambda: datetime(2010, 1, 2)
     call_update_method(reader, feed)
+    feed = feed._replace(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2))
 
     assert set(reader.get_feeds()) == {feed}
     assert set(reader.get_entries()) == {
@@ -209,6 +238,7 @@ def test_update_new_only(reader):
     reader._parser = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
+    reader._now = lambda: datetime(2010, 1, 1)
     reader.add_feed(one.url)
     reader.update_feeds(new_only=True)
 
@@ -218,14 +248,18 @@ def test_update_new_only(reader):
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
     two = parser.feed(2, datetime(2010, 2, 1))
     entry_two = parser.entry(2, 2, datetime(2010, 2, 1))
+    reader._now = lambda: datetime(2010, 1, 2)
     reader.add_feed(two.url)
     reader.update_feeds(new_only=True)
 
+    two = two._replace(added=datetime(2010, 1, 2), last_updated=datetime(2010, 1, 2))
     assert len(set(reader.get_feeds())) == 2
     assert set(reader.get_entries()) == {entry_two.as_entry(feed=two)}
 
+    reader._now = lambda: datetime(2010, 1, 3)
     reader.update_feeds()
 
+    one = one._replace(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 3))
     assert len(set(reader.get_feeds())) == 2
     assert set(reader.get_entries()) == {
         entry_one.as_entry(feed=one),
@@ -584,13 +618,17 @@ def test_update_feed(reader, feed_arg):
     with pytest.raises(FeedNotFoundError):
         reader.update_feed(feed_arg(one))
 
+    reader._now = lambda: datetime(2010, 1, 1)
+    one = one._replace(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 1))
+    two = two._replace(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 1))
+
     reader.add_feed(one.url)
     reader.add_feed(two.url)
     reader.update_feed(feed_arg(one))
 
-    assert set(reader.get_feeds()) == {one, Feed(two.url, None, None, None, None)}
+    assert set(reader.get_feeds()) == {one, Feed(two.url, added=datetime(2010, 1, 1))}
     assert reader.get_feed(one.url) == one
-    assert reader.get_feed(two.url) == Feed(two.url, None, None, None, None)
+    assert reader.get_feed(two.url) == Feed(two.url, added=datetime(2010, 1, 1))
     assert set(reader.get_entries()) == {entry_one.as_entry(feed=one)}
 
     reader.update_feed(feed_arg(two))
@@ -837,11 +875,9 @@ def test_get_entries_recent_feed_order(reader, chunk_size, kwargs):
     reader.add_feed(feed.url)
     reader.update_feeds()
 
-    have = list(reader.get_entries(**kwargs))
-    expected = [e.as_entry(feed=feed) for e in [three, two, four, one]]
-    assert have == expected
+    assert list(eval(e.id)[1] for e in reader.get_entries(**kwargs)) == [3, 2, 4, 1]
 
-    feed = parser.feed(1, datetime(2010, 1, 2))
+    parser.feed(1, datetime(2010, 1, 2))
     del parser.entries[1][1]
     one = parser.entry(1, 1, datetime(2010, 1, 2))
     del parser.entries[1][4]
@@ -851,9 +887,7 @@ def test_get_entries_recent_feed_order(reader, chunk_size, kwargs):
 
     reader.update_feeds()
 
-    have = list(reader.get_entries(**kwargs))
-    expected = [e.as_entry(feed=feed) for e in [one, four, two, three]]
-    assert have == expected
+    assert list(eval(e.id)[1] for e in reader.get_entries(**kwargs)) == [1, 4, 2, 3]
 
 
 @pytest.mark.parametrize('chunk_size', [1, 2, 3, 4])
@@ -939,20 +973,24 @@ def test_add_remove_get_feeds(reader, feed_arg):
     with pytest.raises(FeedNotFoundError):
         reader.remove_feed(feed_arg(one))
 
+    reader._now = lambda: datetime(2010, 1, 1)
     reader.add_feed(feed_arg(one))
     reader.add_feed(feed_arg(two))
 
     assert set(reader.get_feeds()) == {
-        Feed(f.url, None, None, None, None) for f in (one, two)
+        Feed(f.url, added=datetime(2010, 1, 1)) for f in (one, two)
     }
-    assert reader.get_feed(feed_arg(one)) == Feed(one.url, None, None, None, None)
+    assert reader.get_feed(feed_arg(one)) == Feed(one.url, added=datetime(2010, 1, 1))
     assert set(reader.get_entries()) == set()
 
     with pytest.raises(FeedExistsError):
         reader.add_feed(feed_arg(one))
 
+    reader._now = lambda: datetime(2010, 1, 2)
     reader.update_feeds()
 
+    one = one._replace(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2))
+    two = two._replace(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2))
     entry_one = entry_one.as_entry(feed=one)
     entry_two = entry_two.as_entry(feed=two)
 
@@ -1000,20 +1038,12 @@ def test_get_feeds_order_title(reader):
     reader.add_feed(feed4.url)
     reader.add_feed(feed5.url)
 
-    assert list(reader.get_feeds()) == [
-        Feed(f.url, None, None, None, None) for f in (feed1, feed2, feed3, feed4, feed5)
-    ]
+    assert list(f.url for f in reader.get_feeds()) == '1 2 3 4 5'.split()
 
     reader.update_feeds()
     reader.set_feed_user_title(feed5, 'five')
 
-    assert list(reader.get_feeds()) == [
-        feed4,
-        feed5._replace(user_title='five'),
-        feed1,
-        feed3,
-        feed2,
-    ]
+    assert list(f.url for f in reader.get_feeds()) == '4 5 1 3 2'.split()
 
 
 def test_get_feeds_order_title_case_insensitive(reader):
@@ -1036,7 +1066,7 @@ def test_get_feeds_order_title_case_insensitive(reader):
 
     reader.update_feeds()
 
-    assert list(reader.get_feeds()) == [feed1, feed3, feed2]
+    assert list(f.url for f in reader.get_feeds()) == '1 3 2'.split()
 
 
 def test_get_feeds_order_added(reader):
@@ -1065,20 +1095,18 @@ def test_get_feeds_order_added(reader):
     feed3 = parser.feed(3, datetime(2010, 1, 3))
     reader.add_feed(feed3.url)
 
-    assert list(reader.get_feeds(sort='added')) == [
-        Feed(f.url, None, None, None, None) for f in [feed2, feed1, feed3]
-    ]
+    assert list(f.url for f in reader.get_feeds(sort='added')) == '2 1 3'.split()
 
     reader.update_feeds()
 
-    assert list(reader.get_feeds(sort='added')) == [feed2, feed1, feed3]
+    assert list(f.url for f in reader.get_feeds(sort='added')) == '2 1 3'.split()
 
 
 def test_set_feed_user_title(reader, feed_arg):
     parser = Parser()
     reader._parser = parser
 
-    one = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.feed(1, datetime(2010, 1, 1), title='title')
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
     with pytest.raises(FeedNotFoundError):
@@ -1086,30 +1114,29 @@ def test_set_feed_user_title(reader, feed_arg):
 
     reader.add_feed(one.url)
 
-    assert reader.get_feed(one.url) == Feed(one.url, None, None, None, None, None)
-    assert list(reader.get_feeds()) == [Feed(one.url, None, None, None, None, None)]
+    def title_tuple(feed):
+        return feed.url, feed.title, feed.user_title
+
+    assert title_tuple(reader.get_feed(one.url)) == (one.url, None, None)
+    assert [title_tuple(f) for f in reader.get_feeds()] == [(one.url, None, None)]
 
     reader.set_feed_user_title(feed_arg(one), 'blah')
 
-    assert reader.get_feed(one.url) == Feed(one.url, None, None, None, None, 'blah')
-    assert list(reader.get_feeds()) == [Feed(one.url, None, None, None, None, 'blah')]
+    assert title_tuple(reader.get_feed(one.url)) == (one.url, None, 'blah')
+    assert [title_tuple(f) for f in reader.get_feeds()] == [(one.url, None, 'blah')]
 
     reader.update_feeds()
 
-    one_with_title = one._replace(user_title='blah')
-
-    assert reader.get_feed(one.url) == one_with_title
-    assert list(reader.get_feeds()) == [one_with_title]
-    assert list(reader.get_entries()) == [entry.as_entry(feed=one_with_title)]
+    assert title_tuple(reader.get_feed(one.url)) == (one.url, 'title', 'blah')
+    assert [title_tuple(f) for f in reader.get_feeds()] == [(one.url, 'title', 'blah')]
 
     reader.set_feed_user_title(feed_arg(one), None)
 
-    assert reader.get_feed(one.url) == one
-    assert list(reader.get_feeds()) == [one]
-    assert list(reader.get_entries()) == [entry.as_entry(feed=one)]
+    assert title_tuple(reader.get_feed(one.url)) == (one.url, 'title', None)
+    assert [title_tuple(f) for f in reader.get_feeds()] == [(one.url, 'title', None)]
 
 
-def test_data_roundrip(reader):
+def test_data_roundtrip(reader):
     parser = Parser()
     reader._parser = parser
 
@@ -1124,18 +1151,33 @@ def test_data_roundrip(reader):
         enclosures=(Enclosure('http://e1', 'type', 1000), Enclosure('http://e2')),
     )
 
+    reader._now = lambda: datetime(2010, 1, 2)
     reader.add_feed(feed.url)
+    reader._now = lambda: datetime(2010, 1, 3)
     reader.update_feeds()
 
-    assert list(reader.get_entries()) == [entry.as_entry(feed=feed)]
+    assert list(reader.get_entries()) == [
+        entry.as_entry(
+            feed=feed._replace(
+                added=datetime(2010, 1, 2), last_updated=datetime(2010, 1, 3)
+            )
+        )
+    ]
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-def test_integration(reader, feed_type, data_dir):
+def test_integration(reader, feed_type, data_dir, monkeypatch):
     feed_filename = 'full.{}'.format(feed_type)
     feed_url = str(data_dir.join(feed_filename))
 
+    import unittest.mock
+
+    datetime_mock = unittest.mock.MagicMock(wraps=datetime)
+    monkeypatch.setattr('datetime.datetime', datetime_mock)
+
+    datetime_mock.utcnow = lambda: datetime(2010, 1, 1)
     reader.add_feed(feed_url)
+    datetime_mock.utcnow = lambda: datetime(2010, 1, 2)
     reader.update_feeds()
 
     (feed,) = reader.get_feeds()
@@ -1145,7 +1187,9 @@ def test_integration(reader, feed_type, data_dir):
     expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(data_dir.join(feed_filename + '.py').read(), expected)
 
-    assert feed == expected['feed'].as_feed()
+    assert feed == expected['feed'].as_feed(
+        added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2)
+    )
     assert entries == {e.as_entry(feed=feed) for e in expected['entries']}
 
 
@@ -1185,6 +1229,8 @@ def test_get_entry(reader, entry_arg):
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
+
+    reader._now = lambda: datetime(2010, 1, 2)
     reader.add_feed(feed.url)
 
     with pytest.raises(EntryNotFoundError):
@@ -1192,9 +1238,16 @@ def test_get_entry(reader, entry_arg):
     assert reader.get_entry(entry_arg(entry.as_entry(feed=feed)), None) == None
     assert reader.get_entry(entry_arg(entry.as_entry(feed=feed)), default=1) == 1
 
+    reader._now = lambda: datetime(2010, 1, 3)
     reader.update_feeds()
 
-    entry = entry.as_entry(feed=feed)
+    # TODO: find a way to not test added/last_updated here
+
+    entry = entry.as_entry(
+        feed=feed._replace(
+            added=datetime(2010, 1, 2), last_updated=datetime(2010, 1, 3)
+        )
+    )
     assert reader.get_entry(entry_arg(entry)) == entry
 
 

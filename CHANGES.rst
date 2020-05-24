@@ -14,6 +14,7 @@ Unreleased
 * If a feed failed to update, provide details about the error
   in :attr:`Feed.last_exception`. (:issue:`68`)
 * Show details about feed update errors in the web application. (:issue:`68`)
+* Expose the :attr:`~Feed.added` and :attr:`~Feed.last_updated` Feed attributes.
 
 
 Version 1.2
