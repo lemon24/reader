@@ -138,7 +138,7 @@ class Entry(_namedtuple_compat):
     #: The entry id.
     id: str
 
-    #: The date the entry was last updated.
+    #: The date the entry was last updated, according to the feed.
     updated: datetime
 
     #: The title of the entry.
@@ -169,6 +169,9 @@ class Entry(_namedtuple_compat):
 
     #: Whether the entry is important or not.
     important: bool = False
+
+    #: The date when the entry was last updated by reader.
+    last_updated: datetime = cast(datetime, None)
 
     # feed should not have a default, but I'd prefer objects that aren't
     # entry data to be at the end, and dataclasses don't support keyword-only

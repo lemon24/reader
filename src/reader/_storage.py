@@ -646,6 +646,7 @@ class Storage:
                 tuple(Enclosure(**d) for d in json.loads(t[17])) if t[17] else (),
                 t[18] == 1,
                 t[19] == 1,
+                t[20],
                 feed,
             )
             return Entry._make(entry)
@@ -749,6 +750,7 @@ def make_get_entries_query(
             entries.enclosures
             entries.read
             entries.important
+            entries.last_updated
             """.split()
         )
         .FROM("entries")
