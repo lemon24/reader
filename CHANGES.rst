@@ -16,6 +16,7 @@ Unreleased
 * Show details about feed update errors in the web application. (:issue:`68`)
 * Expose the :attr:`~Feed.added` and :attr:`~Feed.last_updated` Feed attributes.
 * Expose the :attr:`~Entry.last_updated` Entry attribute.
+* Minor web application improvements (show feed added/updated).
 
 
 Version 1.2

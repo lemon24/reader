@@ -79,6 +79,15 @@
     {% if feed.link %}<a href="{{ feed.link }}">site</a>{% endif %}
     <a href="{{ feed.url }}">feed</a>
 
+{# duplicated from feeds.html #}
+<li>
+    added <span title="{{ feed.added }}">{{ feed.added | humanize_naturaltime }}</span>;
+    {% if feed.updated %}
+        updated
+        <span title="{{ feed.updated }}">{{ feed.updated | humanize_naturaltime }}</span>
+    {% else %}
+        not updated
+    {% endif %}
 
 {# TODO read_only != preview, we should be more specific #}
 {% if read_only %}
