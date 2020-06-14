@@ -7,6 +7,7 @@ from itertools import chain
 from itertools import repeat
 from typing import Any
 from typing import Callable
+from typing import Dict
 from typing import Iterable
 from typing import Mapping
 from typing import Optional
@@ -210,7 +211,8 @@ class Storage:
         with self.db:
             try:
                 self.db.execute(
-                    "INSERT INTO feeds (url, added) VALUES (:url, :added);", locals(),
+                    "INSERT INTO feeds (url, added) VALUES (:url, :added);",
+                    dict(url=url, added=added),
                 )
             except sqlite3.IntegrityError:
                 # FIXME: Match the error string.
@@ -219,7 +221,9 @@ class Storage:
     @wrap_exceptions(StorageError)
     def remove_feed(self, url: str) -> None:
         with self.db:
-            cursor = self.db.execute("DELETE FROM feeds WHERE url = :url;", locals())
+            cursor = self.db.execute(
+                "DELETE FROM feeds WHERE url = :url;", dict(url=url)
+            )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     @wrap_exceptions_iter(StorageError)
@@ -245,9 +249,11 @@ class Storage:
             )
             .FROM("feeds")
         )
+        context: Dict[str, object] = {}
 
         if url:
             query.WHERE("url = :url")
+            context.update(url=url)
 
         # sort by url at the end to make sure the order is deterministic
         if sort == 'title':
@@ -260,7 +266,7 @@ class Storage:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
         yield from paginated_query(
-            self.db, query, locals(), feed_factory, chunk_size, last
+            self.db, query, context, feed_factory, chunk_size, last
         )
 
     @wrap_exceptions_iter(StorageError)
@@ -286,16 +292,18 @@ class Storage:
                 )
                 .FROM("feeds")
             )
+            context: Dict[str, object] = {}
 
             if url:
                 query.WHERE("url = :url")
+                context.update(url=url)
             if new_only:
                 query.WHERE("last_updated is NULL")
 
             query.scrolling_window_order_by("url")
 
             yield from paginated_query(
-                self.db, query, locals(), FeedForUpdate._make, chunk_size, last
+                self.db, query, context, FeedForUpdate._make, chunk_size, last
             )
 
         yield from join_paginated_iter(inner, self.chunk_size)
@@ -307,6 +315,7 @@ class Storage:
         # (otherwise we get an implicit one for each query).
         with self.db:
             for feed_url, id in entries:  # noqa: B007
+                context = dict(feed_url=feed_url, id=id)
                 row = self.db.execute(
                     """
                     SELECT updated
@@ -314,7 +323,7 @@ class Storage:
                     WHERE feed = :feed_url
                         AND id = :id;
                     """,
-                    locals(),
+                    context,
                 ).fetchone()
                 yield EntryForUpdate(row[0]) if row else None
 
@@ -374,7 +383,8 @@ class Storage:
     def set_feed_user_title(self, url: str, title: Optional[str]) -> None:
         with self.db:
             cursor = self.db.execute(
-                "UPDATE feeds SET user_title = :title WHERE url = :url;", locals(),
+                "UPDATE feeds SET user_title = :title WHERE url = :url;",
+                dict(url=url, title=title),
             )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
@@ -382,7 +392,7 @@ class Storage:
     def mark_as_stale(self, url: str) -> None:
         with self.db:
             cursor = self.db.execute(
-                "UPDATE feeds SET stale = 1 WHERE url = :url;", locals(),
+                "UPDATE feeds SET stale = 1 WHERE url = :url;", dict(url=url)
             )
             rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
@@ -395,7 +405,7 @@ class Storage:
                 SET read = :read
                 WHERE feed = :feed_url AND id = :entry_id;
                 """,
-                locals(),
+                dict(feed_url=feed_url, entry_id=entry_id, read=read),
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
@@ -410,7 +420,7 @@ class Storage:
                 SET important = :important
                 WHERE feed = :feed_url AND id = :entry_id;
                 """,
-                locals(),
+                dict(feed_url=feed_url, entry_id=entry_id, important=important),
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
@@ -443,13 +453,15 @@ class Storage:
             self._update_feed_last_exception(url, last_exception)
 
     def _update_feed_full(self, intent: FeedUpdateIntent) -> None:
-        url, last_updated, feed, http_etag, http_last_modified, _ = intent
-
+        context = intent._asdict()
+        feed = context.pop('feed')
         assert feed is not None
-        updated = feed.updated
-        title = feed.title
-        link = feed.link
-        author = feed.author
+        context.pop('last_exception')
+
+        # TODO: can't use context.update(feed._asdict()) because for some tests intent.feed is Feed instead of FeedData
+        context.update(
+            updated=feed.updated, title=feed.title, link=feed.link, author=feed.author
+        )
 
         with self.db:
             cursor = self.db.execute(
@@ -467,10 +479,10 @@ class Storage:
                     last_exception = NULL
                 WHERE url = :url;
                 """,
-                locals(),
+                context,
             )
 
-        rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
+        rowcount_exactly_one(cursor, lambda: FeedNotFoundError(intent.url))
 
     def _update_feed_last_updated(self, url: str, last_updated: datetime) -> None:
         with self.db:
@@ -482,48 +494,44 @@ class Storage:
                     last_exception = NULL
                 WHERE url = :url;
                 """,
-                locals(),
+                dict(url=url, last_updated=last_updated),
             )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     def _update_feed_last_exception(
         self, url: str, last_exception: ExceptionInfo
     ) -> None:
-        last_exception_json = json.dumps(last_exception._asdict())
         with self.db:
             cursor = self.db.execute(
                 """
                 UPDATE feeds
                 SET
-                    last_exception = :last_exception_json
+                    last_exception = :last_exception
                 WHERE url = :url;
                 """,
-                locals(),
+                dict(url=url, last_exception=json.dumps(last_exception._asdict())),
             )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     def _make_add_or_update_entries_args(
         self, intent: EntryUpdateIntent
     ) -> Mapping[str, Any]:
-        entry, last_updated, first_updated_epoch, feed_order = intent
-
-        updated = entry.updated
-        published = entry.published
-        feed_url = entry.feed_url
-        id = entry.id
-        title = entry.title
-        link = entry.link
-        author = entry.author
-        summary = entry.summary
-        content = (
-            json.dumps([t._asdict() for t in entry.content]) if entry.content else None
+        context = intent._asdict()
+        entry = context.pop('entry')
+        context.update(entry._asdict())
+        context.update(
+            content=(
+                json.dumps([t._asdict() for t in entry.content])
+                if entry.content
+                else None
+            ),
+            enclosures=(
+                json.dumps([t._asdict() for t in entry.enclosures])
+                if entry.enclosures
+                else None
+            ),
         )
-        enclosures = (
-            json.dumps([t._asdict() for t in entry.enclosures])
-            if entry.enclosures
-            else None
-        )
-        return locals()
+        return context
 
     @wrap_exceptions(StorageError)
     def add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
@@ -669,8 +677,10 @@ class Storage:
             .FROM("feed_metadata")
             .WHERE("feed = :feed_url")
         )
+        context = dict(feed_url=feed_url)
         if key is not None:
             query.WHERE("key = :key")
+            context.update(key=key)
 
         query.scrolling_window_order_by("key")
 
@@ -679,13 +689,11 @@ class Storage:
             return key, json.loads(value)
 
         yield from paginated_query(
-            self.db, query, locals(), value_factory, chunk_size, last
+            self.db, query, context, value_factory, chunk_size, last
         )
 
     @wrap_exceptions(StorageError)
     def set_feed_metadata(self, feed_url: str, key: str, value: JSONType) -> None:
-        value_json = json.dumps(value)
-
         with self.db:
             try:
                 self.db.execute(
@@ -700,7 +708,7 @@ class Storage:
                         :value_json
                     );
                     """,
-                    locals(),
+                    dict(feed_url=feed_url, key=key, value_json=json.dumps(value)),
                 )
             except sqlite3.IntegrityError:
                 # FIXME: Match the error string.
@@ -714,7 +722,7 @@ class Storage:
                 DELETE FROM feed_metadata
                 WHERE feed = :feed_url AND key = :key;
                 """,
-                locals(),
+                dict(feed_url=feed_url, key=key),
             )
         rowcount_exactly_one(cursor, lambda: MetadataNotFoundError(feed_url, key))
 

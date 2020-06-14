@@ -247,7 +247,10 @@ class HeavyMigration:
                         f"later than {version}"
                     )
 
-                db.execute("UPDATE version SET version = :to_version;", locals())
+                db.execute(
+                    "UPDATE version SET version = :to_version;",
+                    dict(to_version=to_version),
+                )
                 migration(db)
 
                 try:

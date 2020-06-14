@@ -158,7 +158,7 @@ class FeedUpdateIntent(NamedTuple):
     http_etag: Optional[str] = None
     http_last_modified: Optional[str] = None
 
-    # TODO: Is there a better way of modelling/enforcing these? A sort of tagged union, maybe? (last_updated should be non-optional then)
+    # TODO: Is there a better way of modeling/enforcing these? A sort of tagged union, maybe? (last_updated should be non-optional then)
 
     #: Cause of ParseError, if any; if set, everything else except url should be None.
     last_exception: Optional[ExceptionInfo] = None
