@@ -7,6 +7,8 @@ from fakeparser import ParserThatRemembers
 from reader import Entry
 from reader import Feed
 from reader import FeedNotFoundError
+from reader import make_reader
+from reader._storage import Storage
 
 
 def test_update_stale(reader, call_update_method):
@@ -124,3 +126,9 @@ def test_post_entry_add_plugins(reader):
     assert set(e.id for e in reader.get_entries()) == {'1, 1', '1, 2'}
 
     # TODO: What is the expected behavior if a plugin raises an exception?
+
+
+def test_make_reader_storage():
+    storage = Storage(':memory:')
+    reader = make_reader('', _storage=storage)
+    assert reader._storage is storage

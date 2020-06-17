@@ -16,7 +16,7 @@ All of *reader*'s functionality can be accessed through a :class:`Reader` instan
 
     Split this into sub-sections.
 
-.. autofunction:: make_reader
+.. autofunction:: make_reader(url: str) -> reader.core.Reader
 
 .. autoclass:: Reader(...)
     :members:
