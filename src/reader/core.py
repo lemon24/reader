@@ -67,7 +67,35 @@ def make_reader(url: str) -> 'Reader':
         StorageError
 
     """
-    return Reader(url, _called_directly=False)
+
+    # If we ever need to change the signature of make_reader(),
+    # or support additional storage/search implementations,
+    # we'll need to do the wiring differently.
+    #
+    # See this comment for details on how it should evolve:
+    # https://github.com/lemon24/reader/issues/168#issuecomment-642002049
+
+    storage = Storage(url)
+
+    # For now, we're using a storage-bound search provider.
+    search = Search(storage.db)
+
+    reader = Reader(storage, search, _called_directly=False)
+
+    # We're passing this to both the storage and search because
+    # I didn't want to change the tests to set it in two places.
+    # Ideally, it should be a storage argument/attribute,
+    # and the search should use it from there; then, we can just change
+    # the assignment target (reader(._storage)._pagination_chunk_size;
+    # even better would be to parametrize the storage in a way transparent
+    # to Reader.
+    def get_chunk_size() -> int:
+        return reader._pagination_chunk_size
+
+    storage.get_chunk_size = get_chunk_size
+    search.get_chunk_size = get_chunk_size
+
+    return reader
 
 
 class Reader:
@@ -81,23 +109,13 @@ class Reader:
 
     _pagination_chunk_size = 2 ** 8
 
-    def __init__(self, _path: str, _called_directly: bool = True):
-        # TODO: find a better way of passing/changing config options
-        def get_chunk_size() -> int:
-            return self._pagination_chunk_size
-
-        self._storage = Storage(_path, get_chunk_size=get_chunk_size)
-
-        # For now, we're using a storage-bound search provider.
-        # If we ever implement an external search provider,
-        # we'll probably need to do the wiring differently.
-        # See the Search docstring for details.
-        self._search = Search(self._storage.db, get_chunk_size=get_chunk_size)
-
+    def __init__(
+        self, _storage: Storage, _search: Search, _called_directly: bool = True
+    ):
+        self._storage = _storage
+        self._search = _search
         self._parser = Parser()
-
         self._updater = reader._updater
-
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
 
         if _called_directly:

@@ -1347,7 +1347,7 @@ def test_closed(reader):
 
 def test_direct_instantiation():
     with pytest.warns(UserWarning):
-        Reader(':memory:')
+        Reader('storage', 'search')
 
 
 # BEGIN entry filtering tests
