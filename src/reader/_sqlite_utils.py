@@ -261,8 +261,15 @@ class HeavyMigration:
                     ) from None
 
 
-def require_sqlite_version(version_info: Tuple[int, ...]) -> None:
-    if version_info > sqlite3.sqlite_version_info:
+def require_sqlite_version(
+    db: sqlite3.Connection, version_info: Tuple[int, ...]
+) -> None:
+    # TODO: this assignment should fail with DBError
+    (version,) = db.execute("SELECT sqlite_version();").fetchone()
+
+    version_ints = tuple(int(i) for i in version.split('.'))
+
+    if version_info > version_ints:
         raise RequirementError(
             "at least SQLite version {} required, {} installed".format(
                 ".".join(str(i) for i in version_info),
@@ -310,8 +317,6 @@ def open_sqlite_db(
     required_sqlite_compile_options: Sequence[str] = (),
     timeout: Optional[float] = None,
 ) -> sqlite3.Connection:
-    require_sqlite_version(minimum_sqlite_version)
-
     kwargs: '_SqliteOptions' = dict(detect_types=sqlite3.PARSE_DECLTYPES)
     if timeout is not None:
         kwargs["timeout"] = timeout
@@ -319,6 +324,7 @@ def open_sqlite_db(
     db = sqlite3.connect(path, **kwargs)
 
     try:
+        require_sqlite_version(db, minimum_sqlite_version)
         require_sqlite_compile_options(db, required_sqlite_compile_options)
 
         db.execute("PRAGMA foreign_keys = ON;")

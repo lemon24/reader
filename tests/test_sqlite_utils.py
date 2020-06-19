@@ -235,15 +235,16 @@ def test_migration_integrity_error():
         migration.migrate(db)
 
 
-def test_require_sqlite_version(monkeypatch):
-    monkeypatch.setattr('sqlite3.sqlite_version_info', (3, 15, 0))
+def test_require_sqlite_version():
+    db = MockConnection()
+    db._cursor._fetchall_rv = [('3.15.0',)]
 
     with pytest.raises(RequirementError):
-        require_sqlite_version((3, 16, 0))
+        require_sqlite_version(db, (3, 16, 0))
 
     # shouldn't raise an exception
-    require_sqlite_version((3, 15, 0))
-    require_sqlite_version((3, 14))
+    require_sqlite_version(db, (3, 15, 0))
+    require_sqlite_version(db, (3, 14))
 
 
 class MockCursor:
@@ -257,6 +258,9 @@ class MockCursor:
     def fetchall(self):
         return self._fetchall_rv
 
+    def fetchone(self):
+        return self._fetchall_rv[0]
+
     def close(self):
         pass
 
@@ -267,6 +271,11 @@ class MockConnection:
 
     def cursor(self):
         return self._cursor
+
+    def execute(self, *args):
+        cursor = self.cursor()
+        cursor.execute(*args)
+        return cursor
 
 
 def test_require_sqlite_compile_options():
