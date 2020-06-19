@@ -390,7 +390,24 @@ def time(which, number, repeat):
 @cli.command()
 @click.argument('before', type=click.File())
 @click.argument('after', type=click.File())
-def diff(before, after):
+@click.option(
+    '--format',
+    type=click.Choice(['percent-decrease', 'times']),
+    default='percent-decrease',
+    show_default=True,
+    help="percent-decrease == 1 - after / before. times == after / before.",
+)
+def diff(before, after, format):
+    if format == 'percent-decrease':
+        row_num_fmt = '.1%'
+        func = lambda b, a: 1 - float(a) / float(b)
+    elif format == 'times':
+        # it would be nice if we could add an "x" after the number, but eh...
+        row_num_fmt = '.2f'
+        func = lambda b, a: float(a) / float(b)
+    else:
+        assert False, "shouldn't happen"
+
     pairs = zip(before, after)
 
     b_line, a_line = next(pairs)
@@ -405,7 +422,7 @@ def diff(before, after):
     names = parts[first_name_index:]
 
     header = make_header(extra, names)
-    row_fmt = make_row_fmt(extra, names, '.1%')
+    row_fmt = make_row_fmt(extra, names, row_num_fmt)
 
     print(header)
     for b_line, a_line in pairs:
@@ -413,7 +430,7 @@ def diff(before, after):
         assert b_parts[:first_name_index] == a_parts[:first_name_index]
 
         results = [
-            1 - float(a) / float(b)
+            func(b, a)
             for a, b in zip(a_parts[first_name_index:], b_parts[first_name_index:])
         ]
         print(row_fmt.format(*b_parts[:first_name_index], *results))
