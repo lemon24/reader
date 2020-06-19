@@ -17,9 +17,9 @@ from typing import TypeVar
 
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
-from ._sqlite_utils import open_sqlite_db
 from ._sqlite_utils import paginated_query
 from ._sqlite_utils import rowcount_exactly_one
+from ._sqlite_utils import setup_db as setup_sqlite_db
 from ._sqlite_utils import wrap_exceptions
 from ._sqlite_utils import wrap_exceptions_iter
 from ._types import EntryFilterOptions
@@ -142,9 +142,9 @@ def update_from_18_to_19(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute("ALTER TABLE feeds ADD COLUMN last_exception TEXT;")
 
 
-def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
-    return open_sqlite_db(
-        path,
+def setup_db(db: sqlite3.Connection) -> None:
+    return setup_sqlite_db(
+        db,
         create=create_db,
         version=19,
         migrations={
@@ -157,11 +157,10 @@ def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
         minimum_sqlite_version=(3, 15),
         # We use the JSON1 extension for entries.content.
         required_sqlite_compile_options=["ENABLE_JSON1"],
-        timeout=timeout,
     )
 
 
-# There are two reasons paginating methods that return an iterator:
+# There are two reasons for paginating methods that return an iterator:
 #
 # * to avoid locking the database for too long
 #   (not consuming a generator should not lock the database), and
@@ -178,26 +177,34 @@ def open_db(path: str, timeout: Optional[float]) -> sqlite3.Connection:
 
 class Storage:
 
-    open_db = staticmethod(open_db)
-
     recent_threshold = timedelta(7)
 
     @wrap_exceptions(StorageError)
-    def __init__(
-        self,
-        path: str,
-        timeout: Optional[float] = None,
-        get_chunk_size: Callable[[], int] = lambda: 256,
-    ):
+    def __init__(self, path: str, timeout: Optional[float] = None):
+        kwargs = {}
+        if timeout is not None:
+            kwargs['timeout'] = timeout
+
+        db = self.connect(path, detect_types=sqlite3.PARSE_DECLTYPES, **kwargs)
         try:
-            self.db = self.open_db(path, timeout=timeout)
+            try:
+                self.setup_db(db)
+            except BaseException:
+                db.close()
+                raise
         except DBError as e:
             raise StorageError(str(e)) from e
 
+        self.db = db
         self.path = path
         self.timeout = timeout
+
         # FIXME: placeholder until we have a better way of getting it from Reader, maybe
-        self.get_chunk_size = get_chunk_size
+        self.get_chunk_size: Callable[[], int] = lambda: 256
+
+    # TODO: these are not part of the Storage API
+    connect = staticmethod(sqlite3.connect)
+    setup_db = staticmethod(setup_db)
 
     @property
     def chunk_size(self) -> int:

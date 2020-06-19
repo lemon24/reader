@@ -124,11 +124,9 @@ class Search:
 
     """
 
-    def __init__(
-        self, db: sqlite3.Connection, get_chunk_size: Callable[[], int] = lambda: 256,
-    ):
+    def __init__(self, db: sqlite3.Connection):
         self.db = db
-        self.get_chunk_size = get_chunk_size
+        self.get_chunk_size: Callable[[], int] = lambda: 256
 
     @property
     def chunk_size(self) -> int:

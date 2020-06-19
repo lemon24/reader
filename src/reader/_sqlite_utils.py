@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 
 from typing_extensions import Protocol
-from typing_extensions import TypedDict
 
 
 SQLiteType = TypeVar('SQLiteType', None, int, float, str, bytes, datetime)
@@ -285,46 +284,22 @@ def require_compile_options(db: sqlite3.Connection, options: Sequence[str]) -> N
         )
 
 
-# Be explicit about the types of the sqlite3.connect kwargs,
-# otherwise we get stuff like:
-#
-#   Argument 2 to "connect" has incompatible type "**Dict[str, int]"; expected "..."
-#
-_SqliteOptions = TypedDict(
-    "_SqliteOptions", {"detect_types": int, "timeout": float}, total=False
-)
-
-
-def open_sqlite_db(
-    path: str,
+def setup_db(
+    db: sqlite3.Connection,
     *,
     create: _DBFunction,
     version: int,
     migrations: Dict[int, _DBFunction],
     minimum_sqlite_version: Tuple[int, ...],
     required_sqlite_compile_options: Sequence[str] = (),
-    timeout: Optional[float] = None,
-) -> sqlite3.Connection:
-    kwargs: '_SqliteOptions' = dict(detect_types=sqlite3.PARSE_DECLTYPES)
-    if timeout is not None:
-        kwargs["timeout"] = timeout
+) -> None:
+    require_version(db, minimum_sqlite_version)
+    require_compile_options(db, required_sqlite_compile_options)
 
-    db = sqlite3.connect(path, **kwargs)
+    db.execute("PRAGMA foreign_keys = ON;")
 
-    try:
-        require_version(db, minimum_sqlite_version)
-        require_compile_options(db, required_sqlite_compile_options)
-
-        db.execute("PRAGMA foreign_keys = ON;")
-
-        migration = HeavyMigration(create, version, migrations)
-        migration.migrate(db)
-
-        return db
-
-    except BaseException:
-        db.close()
-        raise
+    migration = HeavyMigration(create, version, migrations)
+    migration.migrate(db)
 
 
 def rowcount_exactly_one(

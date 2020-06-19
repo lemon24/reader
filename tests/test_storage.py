@@ -27,16 +27,16 @@ def test_storage_errors_open(tmpdir):
 
 
 @pytest.mark.parametrize('db_error_cls', reader._sqlite_utils.db_errors)
-def test_db_errors(monkeypatch, db_path, db_error_cls):
+def test_db_errors(db_path, db_error_cls):
     """..._sqlite_utils.DBError subclasses should be wrapped in StorageError."""
 
-    def open_db(*args, **kwargs):
-        raise db_error_cls("whatever")
-
-    monkeypatch.setattr(Storage, 'open_db', staticmethod(open_db))
+    class MyStorage(Storage):
+        @staticmethod
+        def setup_db(*args, **kwargs):
+            raise db_error_cls("whatever")
 
     with pytest.raises(StorageError):
-        Storage(db_path)
+        MyStorage(db_path)
 
 
 def test_path(db_path):
@@ -44,18 +44,21 @@ def test_path(db_path):
     assert storage.path == db_path
 
 
-def test_timeout(monkeypatch, db_path):
-    """Storage.__init__ must pass timeout= to open_db."""
+def test_timeout(db_path):
+    """Storage.__init__ must pass timeout= to connect."""
 
-    def open_db(*args, timeout=None):
-        open_db.timeout = timeout
+    expected_timeout = None
 
-    monkeypatch.setattr(Storage, 'open_db', staticmethod(open_db))
+    class MyStorage(Storage):
+        @classmethod
+        def connect(cls, *args, **kwargs):
+            nonlocal expected_timeout
+            expected_timeout = kwargs.get('timeout')
+            return super().connect(*args, **kwargs)
 
-    timeout = object()
-    Storage(db_path, timeout)
+    MyStorage(db_path, 19)
 
-    assert open_db.timeout is timeout
+    assert expected_timeout == 19
 
 
 def test_close():
