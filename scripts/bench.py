@@ -270,7 +270,7 @@ def setup_reader_with_text_entries(num_entries):
 
 @contextmanager
 def setup_reader_with_search_and_some_read_entries(num_entries):
-    with setup_reader_with_search_not_updated(num_entries) as reader:
+    with setup_reader_with_text_entries(num_entries) as reader:
         reader.enable_search()
         reader.update_search()
         for i, entry in enumerate(reader.get_entries()):
