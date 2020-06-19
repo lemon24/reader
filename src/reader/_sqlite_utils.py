@@ -261,11 +261,9 @@ class HeavyMigration:
                     ) from None
 
 
-def require_sqlite_version(
-    db: sqlite3.Connection, version_info: Tuple[int, ...]
-) -> None:
+def require_version(db: sqlite3.Connection, version_info: Tuple[int, ...]) -> None:
     # TODO: this assignment should fail with DBError
-    (version,) = db.execute("SELECT sqlite_version();").fetchone()
+    ((version,),) = db.execute("SELECT sqlite_version();")
 
     version_ints = tuple(int(i) for i in version.split('.'))
 
@@ -278,19 +276,9 @@ def require_sqlite_version(
         )
 
 
-def get_db_compile_options(db: sqlite3.Connection) -> Sequence[str]:
-    cursor = db.cursor()
-    try:
-        cursor.execute("PRAGMA compile_options;")
-        return [r[0] for r in cursor.fetchall()]
-    finally:
-        cursor.close()
-
-
-def require_sqlite_compile_options(
-    db: sqlite3.Connection, options: Sequence[str]
-) -> None:
-    missing = set(options).difference(get_db_compile_options(db))
+def require_compile_options(db: sqlite3.Connection, options: Sequence[str]) -> None:
+    actual_options = [r[0] for r in db.execute("PRAGMA compile_options;")]
+    missing = set(options).difference(actual_options)
     if missing:
         raise RequirementError(
             f"required SQLite compile options missing: {sorted(missing)}"
@@ -324,8 +312,8 @@ def open_sqlite_db(
     db = sqlite3.connect(path, **kwargs)
 
     try:
-        require_sqlite_version(db, minimum_sqlite_version)
-        require_sqlite_compile_options(db, required_sqlite_compile_options)
+        require_version(db, minimum_sqlite_version)
+        require_compile_options(db, required_sqlite_compile_options)
 
         db.execute("PRAGMA foreign_keys = ON;")
 

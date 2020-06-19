@@ -6,8 +6,8 @@ import pytest
 from reader._sqlite_utils import ddl_transaction
 from reader._sqlite_utils import HeavyMigration
 from reader._sqlite_utils import IntegrityError
-from reader._sqlite_utils import require_sqlite_compile_options
-from reader._sqlite_utils import require_sqlite_version
+from reader._sqlite_utils import require_compile_options
+from reader._sqlite_utils import require_version
 from reader._sqlite_utils import RequirementError
 from reader._sqlite_utils import SchemaVersionError
 from reader._sqlite_utils import wrap_exceptions
@@ -235,58 +235,33 @@ def test_migration_integrity_error():
         migration.migrate(db)
 
 
-def test_require_sqlite_version():
-    db = MockConnection()
-    db._cursor._fetchall_rv = [('3.15.0',)]
+def test_require_version():
+    db = MockConnection(execute_rv=[('3.15.0',)])
 
     with pytest.raises(RequirementError):
-        require_sqlite_version(db, (3, 16, 0))
+        require_version(db, (3, 16, 0))
 
     # shouldn't raise an exception
-    require_sqlite_version(db, (3, 15, 0))
-    require_sqlite_version(db, (3, 14))
-
-
-class MockCursor:
-    def __init__(self):
-        self._execute_args = None
-        self._fetchall_rv = None
-
-    def execute(self, *args):
-        self._execute_args = args
-
-    def fetchall(self):
-        return self._fetchall_rv
-
-    def fetchone(self):
-        return self._fetchall_rv[0]
-
-    def close(self):
-        pass
+    require_version(db, (3, 15, 0))
+    require_version(db, (3, 14))
 
 
 class MockConnection:
-    def __init__(self):
-        self._cursor = MockCursor()
-
-    def cursor(self):
-        return self._cursor
+    def __init__(self, *, execute_rv=None):
+        self._execute_rv = execute_rv
 
     def execute(self, *args):
-        cursor = self.cursor()
-        cursor.execute(*args)
-        return cursor
+        return self._execute_rv
 
 
-def test_require_sqlite_compile_options():
-    db = MockConnection()
-    db._cursor._fetchall_rv = [('ONE',), ('TWO',)]
+def test_require_compile_options():
+    db = MockConnection(execute_rv=[('ONE',), ('TWO',)])
 
     with pytest.raises(RequirementError):
-        require_sqlite_compile_options(db, ['THREE'])
+        require_compile_options(db, ['THREE'])
     with pytest.raises(RequirementError):
-        require_sqlite_compile_options(db, ['ONE', 'THREE'])
+        require_compile_options(db, ['ONE', 'THREE'])
 
     # shouldn't raise an exception
-    require_sqlite_compile_options(db, ['ONE'])
-    require_sqlite_compile_options(db, ['ONE', 'TWO'])
+    require_compile_options(db, ['ONE'])
+    require_compile_options(db, ['ONE', 'TWO'])
