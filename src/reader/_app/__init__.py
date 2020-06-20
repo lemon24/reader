@@ -209,8 +209,10 @@ def preview():
     reader = make_reader(':memory:')
     reader.add_feed(url)
 
-    reader.update_feed(url)
-    # TODO: handle ParseError nicely
+    # update_feeds(), not update_feed(), because it handles errors for us
+    # (feed.last_exception will get checked in the template);
+    # https://github.com/lemon24/reader/issues/172
+    reader.update_feeds(url)
 
     feed = reader.get_feed(url)
     entries = list(reader.get_entries())

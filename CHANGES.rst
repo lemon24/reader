@@ -17,6 +17,8 @@ Unreleased
 * Expose the :attr:`~Feed.added` and :attr:`~Feed.last_updated` Feed attributes.
 * Expose the :attr:`~Entry.last_updated` Entry attribute.
 * Minor web application improvements (show feed added/updated).
+* When previewing an invalid feed, display the error nicely instead of
+  returning an HTTP 500 Internal Server Error. (:issue:`172`)
 
 
 Version 1.2
