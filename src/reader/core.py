@@ -397,6 +397,9 @@ class Reader:
         try:
             return feed, self._parser(feed.url, feed.http_etag, feed.http_last_modified)
         except Exception as e:
+            log.debug(
+                "_parse_feed_for_update exception, traceback follows", exc_info=True
+            )
             return feed, e
 
     def _update_feed(
