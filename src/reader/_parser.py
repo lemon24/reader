@@ -64,6 +64,8 @@ def _make_feedparser_parse() -> Iterator[Callable[..., Any]]:
     else:
 
         # This is in no way thread-safe, but what can you do?
+        # TODO: Well, you could use locks to make it threadsafe...
+        # https://docs.python.org/3/library/threading.html#lock-objects
 
         old_RESOLVE_RELATIVE_URIS = feedparser.RESOLVE_RELATIVE_URIS
         old_SANITIZE_HTML = feedparser.SANITIZE_HTML
