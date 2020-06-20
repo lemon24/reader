@@ -16,10 +16,13 @@ Unreleased
 * Show details about feed update errors in the web application. (:issue:`68`)
 * Expose the :attr:`~Feed.added` and :attr:`~Feed.last_updated` Feed attributes.
 * Expose the :attr:`~Entry.last_updated` Entry attribute.
-* Minor web application improvements (show feed added/updated).
-* When previewing an invalid feed, display the error nicely instead of
-  returning an HTTP 500 Internal Server Error. (:issue:`172`)
-
+* Raise :exc:`ParseError` / log during update if an entry has no id,
+  instead of unconditionally raising :exc:`AttributeError`. (:issue:`170`)
+* Fall back to <link> as entry id if an entry in an RSS feed has no <guid>;
+  previously, feeds like this would fail on update. (:issue:`170`)
+* Minor web application improvements (show feed added/updated date).
+* In the web application, handle previewing an invalid feed nicely
+  instead of returning an HTTP 500 Internal Server Error. (:issue:`172`)
 
 Version 1.2
 -----------

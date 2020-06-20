@@ -121,7 +121,7 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     assert entries == expected['entries']
 
 
-def test_parse_error(monkeypatch, parse, data_dir):
+def test_feedparser_exceptions(monkeypatch, parse, data_dir):
     """parse() should reraise most feedparser exceptions."""
 
     feedparser_exception = Exception("whatever")
@@ -356,3 +356,64 @@ def test_make_feedparser_parse(monkeypatch, parse, data_dir):
     assert excinfo.value is exc
 
     assert feedparser_parse.kwargs == (True, True)
+
+
+def test_missing_entry_id(parse):
+    """Handle RSS entries without guid.
+    https://github.com/lemon24/reader/issues/170
+
+    """
+    # TODO: this test is brittle, Parser accepting feed text is unintended
+    # and may be removed after https://github.com/lemon24/reader/issues/155
+
+    # For RSS, when id is missing, parse() falls back to link.
+    result = parse(
+        """
+        <?xml version="1.0" encoding="UTF-8" ?>
+        <rss version="2.0">
+        <channel>
+            <item>
+                <link>http://www.example.com/blog/post/1</link>
+                <title>Example entry</title>
+                <description>Here is some text.</description>
+                <pubDate>Sun, 06 Sep 2009 16:20:00 +0000</pubDate>
+            </item>
+        </channel>
+        </rss>
+        """.strip()
+    )
+    (entry,) = list(result.entries)
+    assert entry.id == entry.link
+
+    # ... and only link.
+    with pytest.raises(ParseError):
+        parse(
+            """
+            <?xml version="1.0" encoding="UTF-8" ?>
+            <rss version="2.0">
+            <channel>
+                <item>
+                    <title>Example entry</title>
+                    <description>Here is some text.</description>
+                    <pubDate>Sun, 06 Sep 2009 16:20:00 +0000</pubDate>
+                </item>
+            </channel>
+            </rss>
+            """.strip()
+        )
+
+    # There is no fallback for Atom.
+    with pytest.raises(ParseError):
+        parse(
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <feed xmlns="http://www.w3.org/2005/Atom">
+                <entry>
+                    <title>Atom-Powered Robots Run Amok</title>
+                    <link href="http://example.org/2003/12/13/atom03"/>
+                    <updated>2003-12-13T18:30:02Z</updated>
+                    <summary>Some text.</summary>
+                </entry>
+            </feed>
+            """.strip()
+        )

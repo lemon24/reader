@@ -118,7 +118,23 @@ def _get_updated_published(
 def _make_entry(
     feed_url: str, entry: Any, is_rss: bool
 ) -> EntryData[Optional[datetime]]:
-    assert entry.id
+    id = entry.get('id')
+
+    # <guid> (entry.id) is not actually required for RSS;
+    # <link> is, so we fall back to it.
+    # https://github.com/lemon24/reader/issues/170
+    # http://www.詹姆斯.com/blog/2006/08/rss-dup-detection
+    if not id and is_rss:
+        id = entry.get('link')
+        log.debug(
+            "parse %s: RSS entry does not have (gu)id, falling back to link", feed_url
+        )
+
+    if not id:
+        # TODO: Pass a message to ParseError explaining why this is an error.
+        # at the moment, the user just gets a "ParseError: <feed URL>" message.
+        raise ParseError(feed_url)
+
     updated, published = _get_updated_published(entry, is_rss)
 
     content = []
@@ -138,7 +154,7 @@ def _make_entry(
 
     return EntryData(
         feed_url,
-        entry.id,
+        id,
         updated,
         entry.get('title'),
         entry.get('link'),
@@ -167,7 +183,10 @@ def _process_feed(
     feed = FeedData(
         url, updated, d.feed.get('title'), d.feed.get('link'), d.feed.get('author'),
     )
-    entries = (_make_entry(url, e, is_rss) for e in d.entries)
+    # This must be a list, not a generator expression,
+    # otherwise the user may get a ParseError when calling
+    # next(parse_result.entries), i.e. after parse() returned.
+    entries = [_make_entry(url, e, is_rss) for e in d.entries]
 
     return feed, entries
 
