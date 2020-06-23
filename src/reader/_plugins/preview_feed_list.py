@@ -30,8 +30,8 @@ from flask import render_template
 from flask import request
 from flask import url_for
 
-import reader
 from reader._app import get_reader
+from reader._app import got_preview_parse_error
 
 
 blueprint = Blueprint('preview_feed_list', __name__, template_folder='templates')
@@ -42,6 +42,10 @@ def feed_list():
     url = request.args['url']
 
     session = get_reader()._parser.make_session()
+
+    # TODO: url may not actually be an http URL; now we get "error: Invalid URL 'file.xml': No schema supplied. ..."
+    # if https://github.com/lemon24/reader/issues/155#issuecomment-647048623 gets implemented,
+    # we should delegate to the parser "give me the content of this URL"
 
     try:
         response = session.get(url)
@@ -69,8 +73,19 @@ def feed_list():
     return render_template('preview_feed_list.html', url=url, alternates=alternates)
 
 
-@blueprint.app_errorhandler(reader.ParseError)
+class GotPreviewParseError(Exception):
+    """Signaling exception used to intercept /preview ParseError"""
+
+
+@got_preview_parse_error.connect
+def raise_got_preview_parse_error(error):
+    raise GotPreviewParseError() from error
+
+
+@blueprint.app_errorhandler(GotPreviewParseError)
 def handle_parse_error_i_guess(error):
+    parse_error = error.__cause__
+
     if request.url_rule.endpoint != 'reader.preview':
         raise error
 
@@ -79,7 +94,7 @@ def handle_parse_error_i_guess(error):
     # TODO: maybe we should still expose the response on the exception, we could at least reuse the status code
     # TODO: ParseError should be more specific, it should be clear if retrieving or parsing failed
 
-    return redirect(url_for('preview_feed_list.feed_list', url=error.url))
+    return redirect(url_for('preview_feed_list.feed_list', url=parse_error.url))
 
 
 def init(app):

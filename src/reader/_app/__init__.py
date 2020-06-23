@@ -4,6 +4,7 @@ import json
 import time
 from dataclasses import dataclass
 
+import flask.signals
 import humanize
 import markupsafe
 from flask import abort
@@ -34,6 +35,12 @@ from reader._plugins import LoaderError
 blueprint = Blueprint('reader', __name__)
 
 blueprint.app_template_filter('humanize_naturaltime')(humanize.naturaltime)
+
+# if any plugins need signals, they need to install blinker
+signals = flask.signals.Namespace()
+
+# NOTE: these signals are part of the app extension API
+got_preview_parse_error = signals.signal('preview-parse-error')
 
 
 def get_reader():
@@ -209,10 +216,16 @@ def preview():
     reader = make_reader(':memory:')
     reader.add_feed(url)
 
-    # update_feeds(), not update_feed(), because it handles errors for us
-    # (feed.last_exception will get checked in the template);
+    try:
+        reader.update_feed(url)
+    except ParseError as e:
+        # give plugins a chance to intercept this
+        got_preview_parse_error.send(e)
+
     # https://github.com/lemon24/reader/issues/172
-    reader.update_feeds(url)
+    # no plugin intercepted the response, so we show the feed;
+    # feed.last_exception will be checked in the template,
+    # and if there was a ParseError, it will be shown
 
     feed = reader.get_feed(url)
     entries = list(reader.get_entries())
@@ -414,6 +427,7 @@ def create_app(db_path, plugins=(), app_plugins=()):
 
     app.register_blueprint(blueprint)
 
+    # NOTE: this is part of the app extension API
     app.reader_additional_enclosure_links = []
 
     app.reader_load_plugins = FlaskPluginLoader(plugins).load_plugins
