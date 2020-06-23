@@ -23,6 +23,9 @@ Unreleased
 * Minor web application improvements (show feed added/updated date).
 * In the web application, handle previewing an invalid feed nicely
   instead of returning an HTTP 500 Internal Server Error. (:issue:`172`)
+* Internal API changes to support multiple storage implementations
+  in the future. (:issue:`168`)
+
 
 Version 1.2
 -----------

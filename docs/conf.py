@@ -26,7 +26,7 @@ autodoc_mock_imports = ['bs4', 'mutagen', 'flask', 'werkzeug', 'humanize', 'mark
 # mock some things "by hand" to work around us importing stuff
 # in reader/_app/__init__.py, which means we can't import
 # reader._app.cli without pulling them in
-for name in ['humanize', 'flask', 'werkzeug.datastructures']:
+for name in ['humanize', 'flask', 'flask.signals', 'werkzeug.datastructures']:
     sys.modules[name] = unittest.mock.Mock()
 
 master_doc = 'index'
