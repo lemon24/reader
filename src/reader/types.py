@@ -135,6 +135,9 @@ class Entry(_namedtuple_compat):
         """The feed url."""
         return self.feed.url
 
+    # TODO: .id and .updated will still be set to some default value if the entry doesn't have them; we should at least document this.
+    # I'm not sure its useful to expose the original values. If we do it, it would be minimally invasive to add them as new attributes (even if it means id/updated don't always reflect their value in the feed); the names should work with the schemes proposed in #153 and #159.
+
     #: The entry id.
     id: str
 
