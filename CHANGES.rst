@@ -9,7 +9,7 @@ Changelog
 Version 1.3
 -----------
 
-Unreleased
+Released 2020-06-23
 
 * If a feed failed to update, provide details about the error
   in :attr:`Feed.last_exception`. (:issue:`68`)
