@@ -37,7 +37,7 @@ setup(
         'app': ['flask>=0.10', 'humanize'],
         'plugins': ['setuptools>=40'],
         'enclosure-tags': ['requests', 'mutagen'],
-        'preview-feed-list': ['requests', 'beautifulsoup4'],
+        'preview-feed-list': ['requests', 'beautifulsoup4', 'blinker>=1.4'],
         'dev': [
             'pytest>=4',
             'pytest-randomly',
