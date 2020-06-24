@@ -166,13 +166,20 @@ def _make_entry(
     )
 
 
+# https://pythonhosted.org/feedparser/character-encoding.html#handling-incorrectly-declared-encodings
+_THINGS_WE_CARE_ABOUT_BUT_ARE_SURVIVABLE = (
+    feedparser.CharacterEncodingOverride,
+    feedparser.NonXMLContentType,
+)
+
+
 def _process_feed(
     url: str, d: Any
 ) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
 
     if d.get('bozo'):
         exception = d.get('bozo_exception')
-        if isinstance(exception, feedparser.CharacterEncodingOverride):
+        if isinstance(exception, _THINGS_WE_CARE_ABOUT_BUT_ARE_SURVIVABLE):
             log.warning("parse %s: got %r", url, exception)
         else:
             raise ParseError(url) from exception

@@ -11,6 +11,11 @@ Version 1.4
 
 Unreleased
 
+* Do not fail for feeds with incorrectly-declared media types,
+  if feedparser can parse the feed;
+  this is similar to the current behavior for incorrectly-declared encodings.
+  (:issue:`171`)
+
 
 Version 1.3
 -----------

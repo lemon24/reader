@@ -1,3 +1,5 @@
+import logging
+
 import feedparser
 import pytest
 from utils import make_url_base
@@ -141,21 +143,34 @@ def test_feedparser_exceptions(monkeypatch, parse, data_dir):
     assert excinfo.value.__cause__ is feedparser_exception
 
 
-def test_parse_character_encoding_override(monkeypatch, parse, data_dir):
-    """parse() should not reraise feedparser.CharacterEncodingOverride."""
+@pytest.mark.parametrize(
+    'exc_cls', [feedparser.CharacterEncodingOverride, feedparser.NonXMLContentType]
+)
+def test_parse_survivable_feedparser_exceptions(
+    monkeypatch, caplog, parse, data_dir, exc_cls
+):
+    """parse() should not reraise some acceptable feedparser exceptions."""
 
     old_feedparser_parse = feedparser.parse
 
     def feedparser_parse(*args, **kwargs):
         rv = old_feedparser_parse(*args, **kwargs)
         rv['bozo'] = 1
-        rv['bozo_exception'] = feedparser.CharacterEncodingOverride("whatever")
+        rv['bozo_exception'] = exc_cls("whatever")
         return rv
 
     monkeypatch.setattr('feedparser.parse', feedparser_parse)
 
-    # shouldn't raise an exception
-    parse(str(data_dir.join('full.atom')))
+    with caplog.at_level(logging.WARNING, logger="reader"):
+        # shouldn't raise an exception
+        parse(str(data_dir.join('full.atom')))
+
+    warnings = [
+        message
+        for logger, level, message in caplog.record_tuples
+        if logger == 'reader' and level == logging.WARNING
+    ]
+    assert sum('full.atom' in m and exc_cls.__name__ in m for m in warnings) > 0
 
 
 @pytest.fixture
