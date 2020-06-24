@@ -647,6 +647,8 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[Entry, Optional[_T]]]:
+        # See this issue for some thoughts on the sort='random' implementation:
+        # https://github.com/lemon24/reader/issues/105
 
         query = make_get_entries_query(filter_options, sort)
 

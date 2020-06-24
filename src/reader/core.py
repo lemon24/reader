@@ -101,6 +101,11 @@ def make_reader(url: str, _storage: Optional[Storage] = None) -> 'Reader':
     return reader
 
 
+# If we ever want to implement metrics for Reader, see this comment:
+# https://github.com/lemon24/reader/issues/68#issuecomment-450025175
+# TODO: gather all the design notes in one place
+
+
 class Reader:
 
     """A feed reader.
