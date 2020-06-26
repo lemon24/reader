@@ -376,3 +376,9 @@ def test_search_entries_order_weights(reader, chunk_size):
 
 
 # END order tests
+
+
+def test_search_entries_sort_error(reader):
+    reader.enable_search()
+    with pytest.raises(ValueError):
+        set(reader.search_entries('one', sort='bad sort'))

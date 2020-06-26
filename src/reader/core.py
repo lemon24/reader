@@ -45,6 +45,7 @@ from .types import FeedSortOrder
 from .types import JSONType
 from .types import MISSING
 from .types import MissingType
+from .types import SearchSortOrder
 
 
 log = logging.getLogger('reader')
@@ -744,8 +745,20 @@ class Reader:
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,
+        sort: SearchSortOrder = 'relevant',
     ) -> Iterable[EntrySearchResult]:
-        """Get entries matching a full-text search query, sorted by relevance.
+        """Get entries matching a full-text search query.
+
+        Entries are sorted according to ``sort``. Possible values:
+
+        ``'relevant'``
+
+            Most relevant first.
+
+        ``'recent'``
+
+            Most recent first. See :meth:`~Reader.get_entries()`
+            for details on what *recent* means.
 
         Note:
             The query syntax is dependent on the search provider.
@@ -783,9 +796,11 @@ class Reader:
             important (bool or None): Only search (un)important entries.
             has_enclosures (bool or None): Only search entries that (don't)
                 have enclosures.
+            sort (str): How to order results; one of ``'relevant'`` (default)
+                or ``'recent'``.
 
         Yields:
-            :class:`EntrySearchResult`: Best-match entries first.
+            :class:`EntrySearchResult`: Sorted according to ``sort``.
 
         Raises:
             SearchNotEnabledError
@@ -797,6 +812,14 @@ class Reader:
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures
         )
+
+        if sort == 'relevant':
+            pass
+        elif sort == 'recent':  # pragma: no cover
+            raise NotImplementedError()
+        else:
+            raise ValueError("sort should be one of ('relevant', 'recent')")
+
         yield from join_paginated_iter(
             partial(self._search.search_entries, query, filter_options),
             self._pagination_chunk_size,
