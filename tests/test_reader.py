@@ -754,11 +754,7 @@ with_call_entries_recent_method = pytest.mark.parametrize(
     [
         (lambda _: None, get_entries_default),
         (lambda _: None, get_entries_recent),
-        pytest.param(
-            enable_and_update_search,
-            search_entries_recent,
-            marks=pytest.mark.xfail(raises=NotImplementedError, strict=True),
-        ),
+        (enable_and_update_search, search_entries_recent),
     ],
 )
 
@@ -1420,11 +1416,7 @@ with_call_entries_method = pytest.mark.parametrize(
         (lambda _: None, get_entries_recent),
         (lambda _: None, get_entries_random),
         (enable_and_update_search, search_entries_relevant),
-        pytest.param(
-            enable_and_update_search,
-            search_entries_recent,
-            marks=pytest.mark.xfail(raises=NotImplementedError),
-        ),
+        (enable_and_update_search, search_entries_recent),
     ],
 )
 

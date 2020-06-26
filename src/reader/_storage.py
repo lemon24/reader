@@ -747,7 +747,7 @@ def make_get_entries_query(
         Query()
         .SELECT(
             *"""
-            feeds.url
+            entries.feed
             feeds.updated
             feeds.title
             feeds.link
@@ -777,37 +777,7 @@ def make_get_entries_query(
     apply_filter_options(query, filter_options)
 
     if sort == 'recent':
-        query.SELECT(
-            "entries.last_updated",
-            (
-                "kinda_first_updated",
-                """
-                coalesce (
-                    CASE
-                    WHEN
-                        coalesce(entries.published, entries.updated)
-                            >= :recent_threshold
-                        THEN entries.first_updated_epoch
-                    END,
-                    entries.published, entries.updated
-                )
-                """,
-            ),
-            ("kinda_published", "coalesce(entries.published, entries.updated)"),
-            ("negative_feed_order", "- entries.feed_order"),
-        )
-
-        query.scrolling_window_order_by(
-            *"""
-            kinda_first_updated
-            kinda_published
-            feeds.url
-            entries.last_updated
-            negative_feed_order
-            entries.id
-            """.split(),
-            desc=True,
-        )
+        apply_recent(query)
 
     elif sort == 'random':
         # TODO: "order by random()" always goes through the full result set, which is inefficient
@@ -847,3 +817,39 @@ def apply_filter_options(
                     OR json_array_length(entries.enclosures) = 0)
             """
         )
+
+
+def apply_recent(
+    query: Query, keyword: str = 'WHERE', id_prefix: str = 'entries.'
+) -> None:
+    query.SELECT(
+        "entries.last_updated",
+        (
+            "kinda_first_updated",
+            """
+            coalesce (
+                CASE
+                WHEN
+                    coalesce(entries.published, entries.updated)
+                        >= :recent_threshold
+                    THEN entries.first_updated_epoch
+                END,
+                entries.published, entries.updated
+            )
+            """,
+        ),
+        ("kinda_published", "coalesce(entries.published, entries.updated)"),
+        ("negative_feed_order", "- entries.feed_order"),
+    )
+    query.scrolling_window_order_by(
+        *f"""
+        kinda_first_updated
+        kinda_published
+        {id_prefix}feed
+        entries.last_updated
+        negative_feed_order
+        {id_prefix}id
+        """.split(),
+        desc=True,
+        keyword=keyword,
+    )

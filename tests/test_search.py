@@ -97,11 +97,11 @@ def update_search(storage, _, __):
 
 
 def search_entries_chunk_size_0(storage, _, __):
-    list(Search(storage.db).search_entries('entry', chunk_size=0))
+    list(Search(storage.db).search_entries('entry', datetime(2010, 1, 1), chunk_size=0))
 
 
 def search_entries_chunk_size_1(storage, _, __):
-    list(Search(storage.db).search_entries('entry', chunk_size=1))
+    list(Search(storage.db).search_entries('entry', datetime(2010, 1, 1), chunk_size=1))
 
 
 @pytest.mark.slow
@@ -131,19 +131,27 @@ def enable_and_update_search(storage):
 
 
 def iter_search_entries_chunk_size_0(storage):
-    return Search(storage.db).search_entries('entry', chunk_size=0)
+    return Search(storage.db).search_entries(
+        'entry', datetime(2010, 1, 1), chunk_size=0
+    )
 
 
 def iter_search_entries_chunk_size_1(storage):
-    return Search(storage.db).search_entries('entry', chunk_size=1)
+    return Search(storage.db).search_entries(
+        'entry', datetime(2010, 1, 1), chunk_size=1
+    )
 
 
 def iter_search_entries_chunk_size_2(storage):
-    return Search(storage.db).search_entries('entry', chunk_size=2)
+    return Search(storage.db).search_entries(
+        'entry', datetime(2010, 1, 1), chunk_size=2
+    )
 
 
 def iter_search_entries_chunk_size_3(storage):
-    return Search(storage.db).search_entries('entry', chunk_size=3)
+    return Search(storage.db).search_entries(
+        'entry', datetime(2010, 1, 1), chunk_size=3
+    )
 
 
 @pytest.mark.slow
@@ -189,7 +197,7 @@ def test_invalid_search_query_error(storage, query, exc_type):
     search = Search(storage.db)
     search.enable()
     with pytest.raises(exc_type):
-        next(search.search_entries(query))
+        next(search.search_entries(query, datetime(2010, 1, 1)))
 
 
 # TODO: test FTS5 column names

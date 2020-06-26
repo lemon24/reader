@@ -6,6 +6,8 @@ import sqlite3
 import string
 import warnings
 from collections import OrderedDict
+from datetime import datetime
+from datetime import timedelta
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
@@ -23,12 +25,15 @@ from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
 from ._sqlite_utils import wrap_exceptions_iter
 from ._storage import apply_filter_options
+from ._storage import apply_recent
+from ._storage import Storage
 from ._types import EntryFilterOptions
 from .exceptions import InvalidSearchQueryError
 from .exceptions import SearchError
 from .exceptions import SearchNotEnabledError
 from .types import EntrySearchResult
 from .types import HighlightedString
+from .types import SearchSortOrder
 
 
 # Only Search.update() has a reason to fail if bs4 is missing.
@@ -127,6 +132,9 @@ class Search:
     def __init__(self, db: sqlite3.Connection):
         self.db = db
         self.get_chunk_size: Callable[[], int] = lambda: 256
+        self.get_recent_threshold: Callable[
+            [], timedelta
+        ] = lambda: Storage.recent_threshold
 
     @property
     def chunk_size(self) -> int:
@@ -537,12 +545,14 @@ class Search:
     def search_entries(
         self,
         query: str,
+        now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
+        sort: SearchSortOrder = 'relevant',
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[EntrySearchResult, Optional[_T]]]:
 
-        sql_query = make_search_entries_query(filter_options)
+        sql_query = make_search_entries_query(filter_options, sort)
 
         random_mark = ''.join(
             random.choices(string.ascii_letters + string.digits, k=20)
@@ -557,6 +567,7 @@ class Search:
             after_mark=after_mark,
             # 255 letters / 4.7 letters per word (average in English)
             snippet_tokens=54,
+            recent_threshold=now - self.get_recent_threshold(),
         )
 
         def value_factory(t: Tuple[Any, ...]) -> EntrySearchResult:
@@ -568,6 +579,7 @@ class Search:
                 feed_title,
                 is_feed_user_title,
                 content,
+                *_,
             ) = t
             content = json.loads(content)
 
@@ -618,7 +630,9 @@ class Search:
             raise
 
 
-def make_search_entries_query(filter_options: EntryFilterOptions,) -> Query:
+def make_search_entries_query(
+    filter_options: EntryFilterOptions, sort: SearchSortOrder
+) -> Query:
     search = (
         Query()
         .SELECT(
@@ -672,9 +686,15 @@ def make_search_entries_query(filter_options: EntryFilterOptions,) -> Query:
         .GROUP_BY("search._id", "search._feed")
     )
 
-    query.scrolling_window_order_by(
-        *"rank search._feed search._id".split(), keyword='HAVING'
-    )
+    if sort == 'relevant':
+        query.scrolling_window_order_by(
+            *"rank search._feed search._id".split(), keyword='HAVING'
+        )
+    elif sort == 'recent':
+        query.JOIN("entries ON (entries.id, entries.feed) = (_id, _feed)")
+        apply_recent(query, keyword='HAVING', id_prefix='search._')
+    else:
+        assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
     log.debug("_search_entries query\n%s\n", query)
 

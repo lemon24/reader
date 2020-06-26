@@ -93,11 +93,11 @@ def make_reader(url: str, _storage: Optional[Storage] = None) -> 'Reader':
     # the assignment target (reader(._storage)._pagination_chunk_size;
     # even better would be to parametrize the storage in a way transparent
     # to Reader.
-    def get_chunk_size() -> int:
-        return reader._pagination_chunk_size
+    storage.get_chunk_size = lambda: reader._pagination_chunk_size
+    search.get_chunk_size = lambda: reader._pagination_chunk_size
 
-    storage.get_chunk_size = get_chunk_size
-    search.get_chunk_size = get_chunk_size
+    # We have the same sick relationship between storage and search.
+    search.get_recent_threshold = lambda: storage.recent_threshold
 
     return reader
 
@@ -813,14 +813,12 @@ class Reader:
             feed, entry, read, important, has_enclosures
         )
 
-        if sort == 'relevant':
-            pass
-        elif sort == 'recent':
-            raise NotImplementedError()
-        else:
+        if sort not in ('relevant', 'recent'):
             raise ValueError("sort should be one of ('relevant', 'recent')")
 
+        now = self._now()
+
         yield from join_paginated_iter(
-            partial(self._search.search_entries, query, filter_options),
+            partial(self._search.search_entries, query, now, filter_options, sort),
             self._pagination_chunk_size,
         )
