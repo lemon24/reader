@@ -720,6 +720,49 @@ class FakeNow:
         return self.now
 
 
+def get_entries_default(reader, **kwargs):
+    return reader.get_entries(**kwargs)
+
+
+def get_entries_recent(reader, **kwargs):
+    return reader.get_entries(sort='recent', **kwargs)
+
+
+def get_entries_random(reader, **kwargs):
+    return reader.get_entries(sort='random', **kwargs)
+
+
+def enable_and_update_search(reader):
+    reader.enable_search()
+    reader.update_search()
+
+
+def search_entries_default(reader, **kwargs):
+    return reader.search_entries('entry', **kwargs)
+
+
+def search_entries_relevant(reader, **kwargs):
+    return reader.search_entries('entry', sort='relevant', **kwargs)
+
+
+def search_entries_recent(reader, **kwargs):
+    return reader.search_entries('entry', sort='recent', **kwargs)
+
+
+with_call_entries_recent_method = pytest.mark.parametrize(
+    'pre_stuff, call_method',
+    [
+        (lambda _: None, get_entries_default),
+        (lambda _: None, get_entries_recent),
+        pytest.param(
+            enable_and_update_search,
+            search_entries_recent,
+            marks=pytest.mark.xfail(raises=NotImplementedError, strict=True),
+        ),
+    ],
+)
+
+
 # use the pre-#141 threshold to avoid updating GET_ENTRIES_ORDER_DATA
 GET_ENTRIES_ORDER_RECENT_THRESHOLD = timedelta(3)
 
@@ -727,44 +770,44 @@ GET_ENTRIES_ORDER_DATA = {
     'all_newer_than_threshold': (
         timedelta(100),
         [
-            '1 3 2010-01-04',
-            '1 4 2010-01-03',
-            '2 3 2010-01-02',
-            '1 2 2010-01-02',
-            '2 5 2009-12-20',
-            '2 2 2010-01-02',
-            '1 1 2010-01-02',
-            '2 1 2010-01-05',
-            '2 4 2010-01-04',
+            (1, 3, '2010-01-04'),
+            (1, 4, '2010-01-03'),
+            (2, 3, '2010-01-02'),
+            (1, 2, '2010-01-02'),
+            (2, 5, '2009-12-20'),
+            (2, 2, '2010-01-02'),
+            (1, 1, '2010-01-02'),
+            (2, 1, '2010-01-05'),
+            (2, 4, '2010-01-04'),
         ],
     ),
     'all_older_than_threshold': (
         timedelta(0),
         [
-            '2 1 2010-01-05',
-            '2 4 2010-01-04',
-            '1 3 2010-01-04',
-            '1 4 2010-01-03',
-            '2 3 2010-01-02',
-            '2 2 2010-01-02',
-            '1 2 2010-01-02',
-            '1 1 2010-01-02',
-            '2 5 2009-12-20',
+            (2, 1, '2010-01-05'),
+            (2, 4, '2010-01-04'),
+            (1, 3, '2010-01-04'),
+            (1, 4, '2010-01-03'),
+            (2, 3, '2010-01-02'),
+            (2, 2, '2010-01-02'),
+            (1, 2, '2010-01-02'),
+            (1, 1, '2010-01-02'),
+            (2, 5, '2009-12-20'),
         ],
     ),
     'some_older_than_threshold': (
         GET_ENTRIES_ORDER_RECENT_THRESHOLD,
         [
-            '1 3 2010-01-04',
-            '1 4 2010-01-03',
-            '2 1 2010-01-05',
-            '2 4 2010-01-04',
+            (1, 3, '2010-01-04'),
+            (1, 4, '2010-01-03'),
+            (2, 1, '2010-01-05'),
+            (2, 4, '2010-01-04'),
             # published or updated >= timedelta(3)
-            '2 3 2010-01-02',
-            '2 2 2010-01-02',
-            '1 2 2010-01-02',
-            '1 1 2010-01-02',
-            '2 5 2009-12-20',
+            (2, 3, '2010-01-02'),
+            (2, 2, '2010-01-02'),
+            (1, 2, '2010-01-02'),
+            (1, 1, '2010-01-02'),
+            (2, 5, '2009-12-20'),
         ],
     ),
 }
@@ -785,8 +828,10 @@ GET_ENTRIES_ORDER_DATA = {
         0,
     ],
 )
-@pytest.mark.parametrize('kwargs', [{}, {'sort': 'recent'}])
-def test_get_entries_recent_order(reader, chunk_size, kwargs, order_data_key):
+@with_call_entries_recent_method
+def test_get_entries_recent_order(
+    reader, chunk_size, order_data_key, pre_stuff, call_method
+):
     """Entries should be sorted descending by (with decreasing priority):
 
     * entry first updated (only if newer than _storage.recent_threshold)
@@ -849,11 +894,9 @@ def test_get_entries_recent_order(reader, chunk_size, kwargs, order_data_key):
     reader._storage.recent_threshold = recent_threshold
     reader._now.now = datetime(2010, 1, 6)
 
-    def to_str(e):
-        feed, entry = eval(e.id)
-        return "{} {} {:%Y-%m-%d}".format(feed, entry, e.published or e.updated)
+    pre_stuff(reader)
 
-    assert [to_str(e) for e in reader.get_entries(**kwargs)] == expected
+    assert [eval(e.id) for e in call_method(reader)] == [t[:2] for t in expected]
 
 
 @pytest.mark.parametrize(
@@ -870,8 +913,8 @@ def test_get_entries_recent_order(reader, chunk_size, kwargs, order_data_key):
         0,
     ],
 )
-@pytest.mark.parametrize('kwargs', [{}, {'sort': 'recent'}])
-def test_get_entries_recent_feed_order(reader, chunk_size, kwargs):
+@with_call_entries_recent_method
+def test_get_entries_recent_feed_order(reader, chunk_size, pre_stuff, call_method):
     """All other things being equal, get_entries() should yield entries
     in the order they appear in the feed.
 
@@ -892,8 +935,9 @@ def test_get_entries_recent_feed_order(reader, chunk_size, kwargs):
 
     reader.add_feed(feed.url)
     reader.update_feeds()
+    pre_stuff(reader)
 
-    assert list(eval(e.id)[1] for e in reader.get_entries(**kwargs)) == [3, 2, 4, 1]
+    assert [eval(e.id)[1] for e in call_method(reader)] == [3, 2, 4, 1]
 
     parser.feed(1, datetime(2010, 1, 2))
     del parser.entries[1][1]
@@ -904,8 +948,9 @@ def test_get_entries_recent_feed_order(reader, chunk_size, kwargs):
     two = parser.entry(1, 2, datetime(2010, 1, 2))
 
     reader.update_feeds()
+    pre_stuff(reader)
 
-    assert list(eval(e.id)[1] for e in reader.get_entries(**kwargs)) == [1, 4, 2, 3]
+    assert [eval(e.id)[1] for e in call_method(reader)] == [1, 4, 2, 3]
 
 
 @pytest.mark.parametrize('chunk_size', [1, 2, 3, 4])
@@ -1369,29 +1414,17 @@ def test_direct_instantiation():
 # since filtering works the same for them.
 
 
-def enable_and_update_search(reader):
-    reader.enable_search()
-    reader.update_search()
-
-
-def search_entries(reader, **kwargs):
-    return reader.search_entries('entry', **kwargs)
-
-
-def get_entries_recent(reader, **kwargs):
-    return reader.get_entries(**kwargs)
-
-
-def get_entries_random(reader, **kwargs):
-    return reader.get_entries(sort='random', **kwargs)
-
-
 with_call_entries_method = pytest.mark.parametrize(
     'pre_stuff, call_method',
     [
-        (enable_and_update_search, search_entries),
         (lambda _: None, get_entries_recent),
         (lambda _: None, get_entries_random),
+        (enable_and_update_search, search_entries_relevant),
+        pytest.param(
+            enable_and_update_search,
+            search_entries_recent,
+            marks=pytest.mark.xfail(raises=NotImplementedError),
+        ),
     ],
 )
 

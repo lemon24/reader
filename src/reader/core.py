@@ -815,7 +815,7 @@ class Reader:
 
         if sort == 'relevant':
             pass
-        elif sort == 'recent':  # pragma: no cover
+        elif sort == 'recent':
             raise NotImplementedError()
         else:
             raise ValueError("sort should be one of ('relevant', 'recent')")
