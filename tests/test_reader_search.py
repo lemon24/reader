@@ -78,9 +78,13 @@ def test_update_search(reader):
     reader.update_search()
 
 
+with_sort = pytest.mark.parametrize('sort', ['relevant', 'recent'])
+
+
 @rename_argument('reader', 'reader_without_and_with_entries')
+@with_sort
 @pytest.mark.parametrize('chunk_size', [Reader._pagination_chunk_size, 2, 0])
-def test_update_search_feeds_change_after_enable(reader, chunk_size):
+def test_update_search_feeds_change_after_enable(reader, sort, chunk_size):
     reader._pagination_chunk_size = chunk_size
     reader.enable_search()
     reader.update_search()
@@ -109,7 +113,7 @@ def test_update_search_feeds_change_after_enable(reader, chunk_size):
 
     assert {(e.id, e.feed_url, e.title) for e in reader.get_entries()} == {
         (e.id, e.feed_url, e.metadata['.title'].value)
-        for e in reader.search_entries('feed')
+        for e in reader.search_entries('feed', sort=sort)
     }
 
     # no title, shouldn't come up in search
@@ -122,7 +126,7 @@ def test_update_search_feeds_change_after_enable(reader, chunk_size):
     # and have a noop update_search().
 
     assert (entry.id, entry.feed_url) not in {
-        (e.id, e.feed_url) for e in reader.search_entries('feed')
+        (e.id, e.feed_url) for e in reader.search_entries('feed', sort=sort)
     }
 
 
@@ -133,12 +137,14 @@ def test_update_search_fails_if_not_enabled(reader):
 
 
 @rename_argument('reader', 'reader_without_and_with_entries')
-def test_search_entries_fails_if_not_enabled(reader):
+@with_sort
+def test_search_entries_fails_if_not_enabled(reader, sort):
     with pytest.raises(SearchNotEnabledError):
-        list(reader.search_entries('one'))
+        list(reader.search_entries('one', sort=sort))
 
 
-def test_search_entries_basic(reader):
+@with_sort
+def test_search_entries_basic(reader, sort):
     parser = Parser()
     reader._parser = parser
 
@@ -163,10 +169,12 @@ def test_search_entries_basic(reader):
 
     reader.update_search()
 
+    search = lambda *a, **kw: reader.search_entries(*a, sort=sort, **kw)
+
     # TODO: the asserts below look parametrizable
 
-    assert list(reader.search_entries('zero')) == []
-    assert list(reader.search_entries('one')) == [
+    assert list(search('zero')) == []
+    assert list(search('one')) == [
         EntrySearchResult(
             feed.url,
             one.id,
@@ -176,7 +184,7 @@ def test_search_entries_basic(reader):
             },
         )
     ]
-    assert list(reader.search_entries('two')) == [
+    assert list(search('two')) == [
         EntrySearchResult(
             feed.url,
             two.id,
@@ -187,7 +195,7 @@ def test_search_entries_basic(reader):
             {'.summary': HighlightedString('summary')},
         )
     ]
-    assert list(reader.search_entries('three')) == [
+    assert list(search('three')) == [
         EntrySearchResult(
             feed.url,
             three.id,
@@ -205,8 +213,8 @@ def test_search_entries_basic(reader):
 
     # TODO: fix inconsistent naming
 
-    feed_two = parser.feed(2, datetime(2010, 1, 1))
-    feed_two_entry = parser.entry(2, 1, datetime(2010, 1, 1), title=None)
+    feed_two = parser.feed(2, datetime(2010, 1, 2))
+    feed_two_entry = parser.entry(2, 1, datetime(2010, 1, 2), title=None)
     feed_three = parser.feed(3, datetime(2010, 1, 1), title=None)
     feed_three_entry = parser.entry(3, 1, datetime(2010, 1, 1), title='entry summary')
 
@@ -219,32 +227,35 @@ def test_search_entries_basic(reader):
 
     reader.update_search()
 
-    # TODO: we're also testing for order here, and maybe we shouldn't
-    assert list(reader.search_entries('summary')) == [
-        EntrySearchResult(
-            feed_three.url,
-            feed_three_entry.id,
-            {'.title': HighlightedString(feed_three_entry.title, (slice(6, 13),))},
-        ),
-        EntrySearchResult(
-            feed_two.url,
-            feed_two_entry.id,
-            {
-                '.feed.user_title': HighlightedString(
-                    feed_two_entry.feed.user_title, (slice(2, 9),)
-                )
-            },
-        ),
-        EntrySearchResult(
-            feed.url,
-            two.id,
-            {
-                '.title': HighlightedString(two.title),
-                '.feed.title': HighlightedString(feed.title),
-            },
-            {'.summary': HighlightedString(two.summary, (slice(0, 7),))},
-        ),
-    ]
+    # We can't use a set here because the dicts in EntrySearchResult aren't hashable.
+    assert {(e.feed_url, e.id): e for e in search('summary')} == {
+        (e.feed_url, e.id): e
+        for e in [
+            EntrySearchResult(
+                feed_three.url,
+                feed_three_entry.id,
+                {'.title': HighlightedString(feed_three_entry.title, (slice(6, 13),))},
+            ),
+            EntrySearchResult(
+                feed_two.url,
+                feed_two_entry.id,
+                {
+                    '.feed.user_title': HighlightedString(
+                        feed_two_entry.feed.user_title, (slice(2, 9),)
+                    )
+                },
+            ),
+            EntrySearchResult(
+                feed.url,
+                two.id,
+                {
+                    '.title': HighlightedString(two.title),
+                    '.feed.title': HighlightedString(feed.title),
+                },
+                {'.summary': HighlightedString(two.summary, (slice(0, 7),))},
+            ),
+        ]
+    }
 
 
 # search_entries() filtering is tested in test_reader.py::test_entries_filtering{,_error}
@@ -296,30 +307,6 @@ def test_search_entries_order_title_content_beats_title(reader):
     ]
 
 
-def test_search_entries_order_content(reader):
-    parser = Parser()
-    reader._parser = parser
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    one = parser.entry(
-        1,
-        1,
-        datetime(2010, 1, 1),
-        summary='word word',
-        content=[Content('word'), Content('does not match'), Content('word word word')],
-    )
-
-    reader.add_feed(feed.url)
-    reader.update_feeds()
-    reader.enable_search()
-    reader.update_search()
-
-    # there should be exactly one result
-    (rv,) = reader.search_entries('word')
-
-    assert list(rv.content) == ['.content[2].value', '.summary', '.content[0].value']
-
-
 @pytest.mark.parametrize(
     'chunk_size',
     [
@@ -335,7 +322,7 @@ def test_search_entries_order_content(reader):
     ],
 )
 def test_search_entries_order_weights(reader, chunk_size):
-    """entry title beats feed title beats entry content/summary."""
+    """Entry title beats feed title beats entry content/summary."""
 
     # TODO: may need fixing once we finish tuning the weights (it should fail)
 
@@ -372,6 +359,76 @@ def test_search_entries_order_weights(reader, chunk_size):
         (entry_four.id, feed_two.url),
         (entry_five.id, feed_two.url),
         (entry_six.id, feed_two.url),
+    ]
+
+
+def test_search_entries_order_content(reader):
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.entry(
+        1,
+        1,
+        datetime(2010, 1, 1),
+        summary='word word',
+        content=[
+            Content('word'),
+            Content('does not match'),
+            Content('word word word word'),
+            Content('word word word'),
+        ],
+    )
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+    reader.enable_search()
+    reader.update_search()
+
+    # there should be exactly one result
+    (rv,) = reader.search_entries('word')
+    assert list(rv.content) == [
+        '.content[2].value',
+        '.content[3].value',
+        '.summary',
+        '.content[0].value',
+    ]
+
+
+def test_search_entries_order_content_recent(reader):
+    """When sort='recent' is used, the .content of any individual result
+    should still be sorted by relevance.
+
+    """
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.entry(
+        1,
+        1,
+        datetime(2010, 1, 1),
+        title='word',
+        content=[Content('word word'), Content('word'), Content('word word word')],
+    )
+    two = parser.entry(1, 2, datetime(2010, 1, 2), summary='word')
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+    reader.enable_search()
+    reader.update_search()
+
+    # sanity check, one is more relevant
+    assert [e.id for e in reader.search_entries('word')] == ['1, 1', '1, 2']
+
+    results = list(reader.search_entries('word', sort='recent'))
+    # two is first because of updated
+    assert [e.id for e in results] == ['1, 2', '1, 1']
+    # but within 1, the content keys are sorted by relevance;
+    assert list(results[1].content) == [
+        '.content[2].value',
+        '.content[0].value',
+        '.content[1].value',
     ]
 
 
