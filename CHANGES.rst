@@ -20,6 +20,7 @@ Unreleased
   (the default). (:issue:`176`)
 * In the web application, display a nice error message for invalid search
   queries instead of returning an HTTP 500 Internal Server Error.
+* Other minor web application improvements.
 
 
 Version 1.3

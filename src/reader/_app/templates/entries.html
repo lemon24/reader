@@ -248,7 +248,15 @@ untitled
 </div>
 
 {% else %}
-<p>no {% if current_what != 'all' %}{{ current_what }} {% endif %}entries for this feed</p>
+
+{% if not error %}
+    {% if not request.args.q %}
+        <p>no {% if current_what != 'all' %}{{ current_what }} {% endif %}entries for this feed</p>
+    {% else %}
+        <p>no results for this query</p>
+    {% endif %}
+{% endif %}
+
 {% endfor %}
 
 
