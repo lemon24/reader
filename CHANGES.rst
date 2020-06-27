@@ -18,6 +18,8 @@ Unreleased
 * Add ``sort`` argument to :meth:`~Reader.search_entries`.
   Allow sorting search results by recency in addition to relevance
   (the default). (:issue:`176`)
+* In the web application, display a nice error message for invalid search
+  queries instead of returning an HTTP 500 Internal Server Error.
 
 
 Version 1.3

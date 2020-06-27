@@ -10,6 +10,7 @@ import markupsafe
 from flask import abort
 from flask import Blueprint
 from flask import current_app
+from flask import flash
 from flask import Flask
 from flask import g
 from flask import get_flashed_messages
@@ -26,6 +27,7 @@ from .api_thing import APIThing
 from reader import Content
 from reader import Entry
 from reader import EntrySearchResult
+from reader import InvalidSearchQueryError
 from reader import make_reader
 from reader import ParseError
 from reader import ReaderError
@@ -188,6 +190,15 @@ def entries():
         read=read, feed=feed_url, has_enclosures=has_enclosures, important=important
     )
 
+    error = None
+    try:
+        first = next(entries)
+        entries = itertools.chain([first], entries)
+    except StopIteration:
+        pass
+    except InvalidSearchQueryError as e:
+        error = f"invalid search query: {e}"
+
     limit = request.args.get('limit', type=int)
     if limit:
         entries = itertools.islice(entries, limit)
@@ -205,7 +216,11 @@ def entries():
     get_flashed_messages()
 
     return stream_template(
-        'entries.html', entries=entries, feed=feed, entries_data=entries_data
+        'entries.html',
+        entries=entries,
+        feed=feed,
+        entries_data=entries_data,
+        error=error,
     )
 
 

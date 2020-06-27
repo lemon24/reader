@@ -152,10 +152,16 @@
 {% endif %}
 
 
+{% if error %}
+<li class="error"><b>error</b>: {{ error }}
+{% endif %}
+
+
 </ul>
 
 
 </div>
+
 
 
 {% for entry in entries %}
