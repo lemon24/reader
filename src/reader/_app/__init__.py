@@ -146,8 +146,12 @@ def entries():
     important = request.args.get('important')
     important = {None: None, 'no': False, 'yes': True}[important]
 
-    sort = request.args.get('sort', 'recent')
-    assert sort in ('recent', 'random', 'search')
+    if not request.args.get('q'):
+        sort = request.args.get('sort', 'recent')
+        assert sort in ('recent', 'random')
+    else:
+        sort = request.args.get('sort', 'relevant')
+        assert sort in ('recent', 'relevant')
 
     reader = get_reader()
 
@@ -173,7 +177,7 @@ def entries():
     else:
 
         def get_entries(**kwargs):
-            for sr in reader.search_entries(query, **kwargs):
+            for sr in reader.search_entries(query, sort=sort, **kwargs):
                 yield EntryProxy(sr, reader.get_entry(sr))
 
     # TODO: render the actual search result, not the entry

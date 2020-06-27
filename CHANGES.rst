@@ -15,6 +15,9 @@ Unreleased
   if feedparser can parse the feed;
   this is similar to the current behavior for incorrectly-declared encodings.
   (:issue:`171`)
+* Add ``sort`` argument to :meth:`~Reader.search_entries`.
+  Allow sorting search results by recency in addition to relevance
+  (the default). (:issue:`176`)
 
 
 Version 1.3
