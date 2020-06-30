@@ -11,30 +11,6 @@ Version 1.4
 
 Unreleased
 
-* Use SQLite's `write-ahead logging`_ by default,
-  to increase concurrency and prevent "database is locked" errors.
-  (:issue:`169`, :issue:`175`)
-
-  This changes how the database appears on disk and how it can be used;
-  most importantly:
-
-  * There are additional quasi-persistent ``-wal`` and ``-shm`` files
-    associated with the database.
-    Backing up the database by simply copying it may not be enough
-    (this was also true before this change, to a lesser extent).
-    To make a backup of the database, use the SQLite CLI::
-
-      sqlite3 src.sqlite ".backup 'dst.sqlite'"
-
-  * All processes using the database must be on the same host computer;
-    WAL does not work over a network filesystem.
-
-  *reader* will enable WAL exactly once: at creation for new databases,
-  and when migrating to reader 1.4 for existing databases.
-  After this, it can be disabled again from the SQLite CLI::
-
-    sqlite3 db.sqlite "pragma journal_mode = delete;"
-
 * Do not fail for feeds with incorrectly-declared media types,
   if feedparser can parse the feed;
   this is similar to the current behavior for incorrectly-declared encodings.
@@ -45,9 +21,6 @@ Unreleased
 * In the web application, display a nice error message for invalid search
   queries instead of returning an HTTP 500 Internal Server Error.
 * Other minor web application improvements.
-
-
-.. _write-ahead logging: https://www.sqlite.org/wal.html
 
 
 Version 1.3

@@ -54,9 +54,6 @@ def create_db(db: sqlite3.Connection) -> None:
     create_feeds(db)
     create_entries(db)
     create_feed_metadata(db)
-    # https://github.com/lemon24/reader/issues/169
-    # https://github.com/lemon24/reader/issues/175
-    db.execute("PRAGMA journal_mode = WAL;")
 
 
 def create_feeds(db: sqlite3.Connection, name: str = 'feeds') -> None:
@@ -145,22 +142,16 @@ def update_from_18_to_19(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute("ALTER TABLE feeds ADD COLUMN last_exception TEXT;")
 
 
-def update_from_19_to_20(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/169
-    db.execute("PRAGMA journal_mode = WAL;")
-
-
 def setup_db(db: sqlite3.Connection) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=20,
+        version=19,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
             17: update_from_17_to_18,
             18: update_from_18_to_19,
-            19: update_from_19_to_20,
         },
         # Row value support was added in 3.15.
         minimum_sqlite_version=(3, 15),
