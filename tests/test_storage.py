@@ -181,7 +181,8 @@ def test_errors_locked(db_path, do_stuff):
 def check_errors_locked(db_path, pre_stuff, do_stuff, exc_type):
     """Actual implementation of test_errors_locked, so it can be reused."""
 
-    storage = Storage(db_path)
+    # WAL provides more concurrency; some things won't to block with it enabled.
+    storage = Storage(db_path, wal_enabled=False)
     storage.db.execute("PRAGMA busy_timeout = 0;")
 
     feed = FeedData('one')
@@ -195,7 +196,7 @@ def check_errors_locked(db_path, pre_stuff, do_stuff, exc_type):
     can_return_from_transaction = threading.Event()
 
     def target():
-        storage = Storage(db_path)
+        storage = Storage(db_path, wal_enabled=False)
         storage.db.isolation_level = None
         storage.db.execute("BEGIN EXCLUSIVE;")
         in_transaction.set()
@@ -272,7 +273,8 @@ def test_iter_locked(db_path, iter_stuff):
 def check_iter_locked(db_path, pre_stuff, iter_stuff):
     """Actual implementation of test_errors_locked, so it can be reused."""
 
-    storage = Storage(db_path)
+    # WAL provides more concurrency; some things won't to block with it enabled.
+    storage = Storage(db_path, wal_enabled=False)
 
     feed = FeedData('one')
     entry = EntryData('one', 'entry', datetime(2010, 1, 1), title='entry')
@@ -296,7 +298,7 @@ def check_iter_locked(db_path, pre_stuff, iter_stuff):
     next(rv)
 
     # shouldn't raise an exception
-    storage = Storage(db_path, timeout=0)
+    storage = Storage(db_path, timeout=0, wal_enabled=False)
     storage.mark_as_read_unread(feed.url, entry.id, 1)
     storage = Storage(db_path, timeout=0)
     storage.mark_as_read_unread(feed.url, entry.id, 0)

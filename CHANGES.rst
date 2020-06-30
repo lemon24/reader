@@ -11,6 +11,10 @@ Version 1.4
 
 Unreleased
 
+* Use SQLite's `write-ahead logging`_ to increase concurrency
+  and reduce "database is locked" errors.
+  At the moment there is no way to disable WAL.
+  (:issue:`169`, :issue:`175`)
 * Do not fail for feeds with incorrectly-declared media types,
   if feedparser can parse the feed;
   this is similar to the current behavior for incorrectly-declared encodings.

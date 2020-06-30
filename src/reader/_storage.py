@@ -142,7 +142,7 @@ def update_from_18_to_19(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute("ALTER TABLE feeds ADD COLUMN last_exception TEXT;")
 
 
-def setup_db(db: sqlite3.Connection) -> None:
+def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
@@ -157,6 +157,7 @@ def setup_db(db: sqlite3.Connection) -> None:
         minimum_sqlite_version=(3, 15),
         # We use the JSON1 extension for entries.content.
         required_sqlite_compile_options=["ENABLE_JSON1"],
+        wal_enabled=wal_enabled,
     )
 
 
@@ -180,7 +181,12 @@ class Storage:
     recent_threshold = timedelta(7)
 
     @wrap_exceptions(StorageError)
-    def __init__(self, path: str, timeout: Optional[float] = None):
+    def __init__(
+        self,
+        path: str,
+        timeout: Optional[float] = None,
+        wal_enabled: Optional[bool] = True,
+    ):
         kwargs = {}
         if timeout is not None:
             kwargs['timeout'] = timeout
@@ -188,7 +194,7 @@ class Storage:
         db = self.connect(path, detect_types=sqlite3.PARSE_DECLTYPES, **kwargs)
         try:
             try:
-                self.setup_db(db)
+                self.setup_db(db, wal_enabled)
             except BaseException:
                 db.close()
                 raise

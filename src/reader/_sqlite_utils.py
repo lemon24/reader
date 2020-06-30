@@ -214,7 +214,7 @@ class HeavyMigration:
         except sqlite3.OperationalError as e:
             if "no such table" in str(e).lower():
                 return None
-            raise
+            raise SchemaVersionError(f"cannot get current version: {e}") from e
         assert isinstance(version, int)
         return version
 
@@ -292,11 +292,20 @@ def setup_db(
     migrations: Dict[int, _DBFunction],
     minimum_sqlite_version: Tuple[int, ...],
     required_sqlite_compile_options: Sequence[str] = (),
+    wal_enabled: Optional[bool] = None,
 ) -> None:
     require_version(db, minimum_sqlite_version)
     require_compile_options(db, required_sqlite_compile_options)
 
     db.execute("PRAGMA foreign_keys = ON;")
+
+    # Can't do this in a transaction, so we just do it all the time.
+    # https://github.com/lemon24/reader/issues/169
+    if wal_enabled is not None:
+        if wal_enabled:
+            db.execute("PRAGMA journal_mode = WAL;")
+        else:
+            db.execute("PRAGMA journal_mode = DELETE;")
 
     migration = HeavyMigration(create, version, migrations)
     migration.migrate(db)

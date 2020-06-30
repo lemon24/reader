@@ -10,6 +10,7 @@ from reader._sqlite_utils import require_compile_options
 from reader._sqlite_utils import require_version
 from reader._sqlite_utils import RequirementError
 from reader._sqlite_utils import SchemaVersionError
+from reader._sqlite_utils import setup_db
 from reader._sqlite_utils import wrap_exceptions
 
 
@@ -215,6 +216,15 @@ def test_migration_invalid_version():
     assert columns == ['one', 'two']
 
 
+def test_migration_invalid_version_table():
+    db = sqlite3.connect(':memory:')
+    with db:
+        db.execute("CREATE TABLE version (not_version);")
+    migration = HeavyMigration(create_db_2, 2, {})
+    with pytest.raises(SchemaVersionError) as excinfo:
+        migration.migrate(db)
+
+
 def test_migration_integrity_error():
     def create_db(db):
         db.execute("CREATE TABLE t (one INTEGER PRIMARY KEY);")
@@ -265,3 +275,23 @@ def test_require_compile_options():
     # shouldn't raise an exception
     require_compile_options(db, ['ONE'])
     require_compile_options(db, ['ONE', 'TWO'])
+
+
+@pytest.mark.parametrize(
+    'wal_enabled, expected_mode', [(None, 'memory'), (True, 'wal'), (False, 'delete')]
+)
+def test_setup_db_wal_enabled(db_path, wal_enabled, expected_mode):
+    db = sqlite3.connect(db_path)
+    db.execute("PRAGMA journal_mode = MEMORY;")
+
+    setup_db(
+        db,
+        create=lambda db: None,
+        version=0,
+        migrations={},
+        minimum_sqlite_version=(3, 15, 0),
+        wal_enabled=wal_enabled,
+    )
+
+    ((mode,),) = db.execute("PRAGMA journal_mode;")
+    assert mode.lower() == expected_mode
