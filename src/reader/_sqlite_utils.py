@@ -5,6 +5,7 @@ sqlite3 utilities. Contains no business logic.
 import functools
 import json
 import sqlite3
+from contextlib import closing
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
@@ -261,8 +262,9 @@ class HeavyMigration:
 
 
 def require_version(db: sqlite3.Connection, version_info: Tuple[int, ...]) -> None:
-    # TODO: this assignment should fail with DBError
-    ((version,),) = db.execute("SELECT sqlite_version();")
+    with closing(db.cursor()) as cursor:
+        # TODO: this assignment should fail with DBError
+        ((version,),) = cursor.execute("SELECT sqlite_version();")
 
     version_ints = tuple(int(i) for i in version.split('.'))
 
@@ -276,7 +278,8 @@ def require_version(db: sqlite3.Connection, version_info: Tuple[int, ...]) -> No
 
 
 def require_compile_options(db: sqlite3.Connection, options: Sequence[str]) -> None:
-    actual_options = [r[0] for r in db.execute("PRAGMA compile_options;")]
+    with closing(db.cursor()) as cursor:
+        actual_options = [r[0] for r in cursor.execute("PRAGMA compile_options;")]
     missing = set(options).difference(actual_options)
     if missing:
         raise RequirementError(
@@ -297,15 +300,22 @@ def setup_db(
     require_version(db, minimum_sqlite_version)
     require_compile_options(db, required_sqlite_compile_options)
 
-    db.execute("PRAGMA foreign_keys = ON;")
+    with closing(db.cursor()) as cursor:
+        cursor.execute("PRAGMA foreign_keys = ON;")
 
-    # Can't do this in a transaction, so we just do it all the time.
-    # https://github.com/lemon24/reader/issues/169
-    if wal_enabled is not None:
-        if wal_enabled:
-            db.execute("PRAGMA journal_mode = WAL;")
-        else:
-            db.execute("PRAGMA journal_mode = DELETE;")
+        # Can't do this in a transaction, so we just do it all the time.
+        #
+        # Also, every cursor up to here must be closed explictly, othewise
+        # we get an "cannot commit transaction - SQL statements in progress"
+        # on PyPy.
+        #
+        # https://github.com/lemon24/reader/issues/169
+        #
+        if wal_enabled is not None:
+            if wal_enabled:
+                cursor.execute("PRAGMA journal_mode = WAL;")
+            else:
+                cursor.execute("PRAGMA journal_mode = DELETE;")
 
     migration = HeavyMigration(create, version, migrations)
     migration.migrate(db)

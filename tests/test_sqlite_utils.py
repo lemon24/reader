@@ -263,6 +263,12 @@ class MockConnection:
     def execute(self, *args):
         return self._execute_rv
 
+    def cursor(self):
+        return self
+
+    def close(self):
+        pass
+
 
 def test_require_compile_options():
     db = MockConnection(execute_rv=[('ONE',), ('TWO',)])
@@ -282,7 +288,7 @@ def test_require_compile_options():
 )
 def test_setup_db_wal_enabled(db_path, wal_enabled, expected_mode):
     db = sqlite3.connect(db_path)
-    db.execute("PRAGMA journal_mode = MEMORY;")
+    db.execute("PRAGMA journal_mode = MEMORY;").close()
 
     setup_db(
         db,
