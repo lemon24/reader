@@ -1,4 +1,5 @@
 import itertools
+import logging
 import multiprocessing.dummy
 from contextlib import contextmanager
 from queue import Queue
@@ -9,6 +10,7 @@ from typing import Iterable
 from typing import Iterator
 from typing import no_type_check
 from typing import Optional
+from typing import Sequence
 from typing import Tuple
 from typing import TypeVar
 from typing import Union
@@ -134,3 +136,15 @@ def wrap_map(map: F, workers: int) -> F:
 @contextmanager
 def make_noop_context_manager(thing: _T) -> Iterator[_T]:
     yield thing
+
+
+class PrefixLogger(logging.LoggerAdapter):
+
+    # if needed, add: with log.push('another prefix'): ...
+
+    def __init__(self, logger: logging.Logger, prefixes: Sequence[str] = ()):
+        super().__init__(logger, {})
+        self.prefixes = tuple(prefixes)
+
+    def process(self, msg: str, kwargs: Any) -> Tuple[str, Any]:  # pragma: no cover
+        return ': '.join(self.prefixes + (msg,)), kwargs

@@ -15,6 +15,7 @@ from ._types import FeedData
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import ParsedFeed
+from ._utils import PrefixLogger
 from .exceptions import _NotModified
 from .exceptions import ParseError
 from .types import ExceptionInfo
@@ -63,9 +64,11 @@ class _Updater:
     old_feed: FeedForUpdate
     now: datetime
     global_now: datetime
+    log: Union[logging.Logger, logging.LoggerAdapter] = log
 
     def __post_init__(self) -> None:
         self.old_feed = process_old_feed(self.old_feed)
+        self.log = PrefixLogger(log, ["update feed %r" % self.url])
 
     @property
     def url(self) -> str:
@@ -76,25 +79,17 @@ class _Updater:
         return self.old_feed.stale
 
     def should_update_feed(self, new: FeedData) -> bool:
-        def log_info(msg: str, *args: Any) -> None:
-            log.info("update feed %r: " + msg, self.url, *args)
-
         old = self.old_feed
-        log.debug(
-            "update feed %r: old updated %s, new updated %s",
-            self.url,
-            old.updated,
-            new.updated,
-        )
+        self.log.debug("old updated %s, new updated %s", old.updated, new.updated)
 
         if not old.last_updated:
-            log_info("feed has no last_updated, treating as updated")
+            self.log.info("feed has no last_updated, treating as updated")
             feed_was_updated = True
 
             assert not old.updated, "updated must be None if last_updated is None"
 
         elif not new.updated:
-            log_info("feed has no updated, treating as updated")
+            self.log.info("feed has no updated, treating as updated")
             feed_was_updated = True
         else:
             feed_was_updated = not (
@@ -106,33 +101,33 @@ class _Updater:
         if not should_be_updated:
             # Some feeds have entries newer than the feed.
             # https://github.com/lemon24/reader/issues/76
-            log_info("feed not updated, updating entries anyway")
+            self.log.info("feed not updated, updating entries anyway")
 
         return should_be_updated
 
     def should_update_entry(
         self, new: EntryData[Optional[datetime]], old: Optional[EntryForUpdate]
     ) -> Optional[datetime]:
-        def log_debug(msg: str, *args: Any) -> None:
-            log.debug("update entry %r of feed %r: " + msg, new.id, self.url, *args)
+        def debug(msg: str, *args: Any) -> None:
+            self.log.debug("entry %r: " + msg, new.id, *args)
 
         updated = new.updated
         old_updated = old.updated if old else None
 
         if self.stale:
-            log_debug("feed marked as stale, updating anyway")
+            debug("feed marked as stale, updating anyway")
         elif not new.updated:
-            log_debug("has no updated, updating but not changing updated")
+            debug("has no updated, updating but not changing updated")
             updated = old_updated or self.now
         elif old_updated and new.updated <= old_updated:
-            log_debug(
+            debug(
                 "entry not updated, skipping (old updated %s, new updated %s)",
                 old_updated,
                 new.updated,
             )
             return None
 
-        log_debug("entry added/updated")
+        debug("entry added/updated")
         return updated
 
     def get_entries_to_update(
@@ -166,12 +161,7 @@ class _Updater:
         new_count = sum(e.new for e in entries_to_update)
         updated_count = len(entries_to_update) - new_count
 
-        log.info(
-            "update feed %r: updated (updated %d, new %d)",
-            self.url,
-            updated_count,
-            new_count,
-        )
+        self.log.info("updated (updated %d, new %d)", updated_count, new_count)
 
         feed_to_update: Optional[FeedUpdateIntent]
         if self.should_update_feed(parsed_feed.feed):
@@ -199,7 +189,7 @@ class _Updater:
         Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent], Optional[Exception]
     ]:
         if isinstance(parsed_feed, _NotModified):
-            log.info("update feed %r: feed not modified, skipping", self.url)
+            self.log.info("feed not modified, skipping")
             # The feed shouldn't be considered new anymore.
             return FeedUpdateIntent(self.url, self.now), (), None
 
