@@ -52,11 +52,13 @@ def make_update_intents(
 ) -> Tuple[
     Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent], Optional[Exception]
 ]:
-    updater = _Updater(old_feed, now, global_now)
+    updater = _Updater(
+        old_feed, now, global_now, PrefixLogger(log, ["update feed %r" % old_feed.url]),
+    )
     return updater.update(parsed_feed, entry_pairs)
 
 
-@dataclass
+@dataclass(frozen=True)
 class _Updater:
 
     """This is an object only to make logging easier."""
@@ -67,8 +69,7 @@ class _Updater:
     log: Union[logging.Logger, logging.LoggerAdapter] = log
 
     def __post_init__(self) -> None:
-        self.old_feed = process_old_feed(self.old_feed)
-        self.log = PrefixLogger(log, ["update feed %r" % self.url])
+        object.__setattr__(self, 'old_feed', process_old_feed(self.old_feed))
 
     @property
     def url(self) -> str:
