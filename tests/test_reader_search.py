@@ -1,3 +1,4 @@
+import threading
 from datetime import datetime
 
 import pytest
@@ -9,9 +10,11 @@ from reader import Enclosure
 from reader import EntrySearchResult
 from reader import FeedNotFoundError
 from reader import HighlightedString
+from reader import make_reader
 from reader import Reader
 from reader import ReaderError
 from reader import SearchNotEnabledError
+from reader import StorageError
 
 
 @pytest.fixture(params=[False, True], ids=['without_entries', 'with_entries'])
@@ -439,3 +442,64 @@ def test_search_entries_sort_error(reader):
     reader.enable_search()
     with pytest.raises(ValueError):
         set(reader.search_entries('one', sort='bad sort'))
+
+
+def test_update_search_entry_changed_during_update(db_path, monkeypatch):
+    # This is a very intrusive test, maybe we should move it somewhere else.
+
+    reader = make_reader(db_path)
+    parser = reader._parser = Parser()
+
+    feed = parser.feed(1, datetime(2010, 1, 1), title='one')
+    parser.entry(1, 1, datetime(2010, 1, 1), title='one')
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    reader.enable_search()
+    reader.update_search()
+
+    feed = parser.feed(1, datetime(2010, 1, 2), title='two')
+    parser.entry(1, 1, datetime(2010, 1, 2), title='two')
+    reader.update_feed(feed.url)
+
+    in_strip_html = threading.Event()
+    can_return_from_strip_html = threading.Event()
+
+    def target():
+        from reader._search import Search
+
+        class MySearch(Search):
+            @staticmethod
+            def strip_html(*args, **kwargs):
+                in_strip_html.set()
+                can_return_from_strip_html.wait()
+                return Search.strip_html(*args, **kwargs)
+
+        # FIXME: remove monkeypatching when make_reader() gets a search_cls argument
+        monkeypatch.setattr('reader.core.Search', MySearch)
+
+        reader = make_reader(db_path)
+        reader.update_search()
+
+    thread = threading.Thread(target=target)
+    thread.start()
+
+    in_strip_html.wait()
+
+    try:
+        feed = parser.feed(1, datetime(2010, 1, 3), title='three')
+        parser.entry(1, 1, datetime(2010, 1, 3), title='three')
+        reader._storage.db.execute("PRAGMA busy_timeout = 0;")
+        reader.update_feed(feed.url)
+        expected_title = 'three'
+    except StorageError:
+        expected_title = 'two'
+    finally:
+        can_return_from_strip_html.set()
+        thread.join()
+
+    reader.update_search()
+
+    (entry,) = reader.get_entries()
+    (result,) = reader.search_entries('one OR two OR three')
+    assert entry.title == result.metadata['.title'].value == expected_title

@@ -136,11 +136,15 @@ class Search:
             [], timedelta
         ] = lambda: Storage.recent_threshold
 
+        self.db.create_function('strip_html', 1, self.strip_html)
+        self.db.create_function('json_object_get', 2, json_object_get)
+
     @property
     def chunk_size(self) -> int:
         return self.get_chunk_size()
 
     ddl_transaction = staticmethod(ddl_transaction)
+    strip_html = staticmethod(strip_html)
 
     @wrap_exceptions(SearchError)
     def enable(self) -> None:
@@ -306,10 +310,6 @@ class Search:
                 "use the 'search' extra to install them; "
                 f"original import error: {bs4_import_error}"
             ) from bs4_import_error
-
-        # TODO: is it ok to define the same function many times on the same connection?
-        self.db.create_function('strip_html', 1, strip_html)
-        self.db.create_function('json_object_get', 2, json_object_get)
 
         # FIXME: how do we test pagination?
         self._delete_from_search()
