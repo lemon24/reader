@@ -1,3 +1,4 @@
+import io
 import logging
 
 import feedparser
@@ -430,5 +431,19 @@ def test_missing_entry_id(parse):
                     <summary>Some text.</summary>
                 </entry>
             </feed>
+            """.strip()
+        )
+
+
+def test_no_version(parse):
+    """Raise ParseError if feedparser can't detect the feed type and
+    there's no bozo_exception.
+
+    """
+    with pytest.raises(ParseError):
+        parse(
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <element>aaa</element>
             """.strip()
         )

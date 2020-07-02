@@ -184,6 +184,10 @@ def _process_feed(
         else:
             raise ParseError(url) from exception
 
+    if not d.version:
+        # TODO: pass a message to ParseError explaining what's happening
+        raise ParseError(url)
+
     is_rss = d.version.startswith('rss')
     updated, _ = _get_updated_published(d.feed, is_rss)
 

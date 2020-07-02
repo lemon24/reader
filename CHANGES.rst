@@ -19,6 +19,8 @@ Unreleased
   if feedparser can parse the feed;
   this is similar to the current behavior for incorrectly-declared encodings.
   (:issue:`171`)
+* Raise :exc:`ParseError` during update for feeds feedparser can't detect
+  the type of, instead of silently returning an empty feed. (:issue:`171`)
 * Add ``sort`` argument to :meth:`~Reader.search_entries`.
   Allow sorting search results by recency in addition to relevance
   (the default). (:issue:`176`)
