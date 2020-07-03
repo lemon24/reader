@@ -160,7 +160,12 @@ def test_search_entries_basic(reader, sort):
         datetime(2010, 1, 1),
         title='shall not be named',
         summary='does not match',
-        content=[Content('three content')],
+        # The emoji is to catch a bug in the json_extract() SQLite function.
+        # As of reader 1.4 we're not using it anymore, and the workaround
+        # was removed; we keep the emoji in case of regressions.
+        # Bug: https://bugs.python.org/issue38749
+        # Workaround and more details: https://github.com/lemon24/reader/blob/d4363f683fc18ca12f597809ceca4e7dbd0a303a/src/reader/_sqlite_utils.py#L332
+        content=[Content('three 🤩 content')],
     )
 
     reader.add_feed(feed.url)

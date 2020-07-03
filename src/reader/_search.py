@@ -8,18 +8,20 @@ import warnings
 from collections import OrderedDict
 from datetime import datetime
 from datetime import timedelta
+from itertools import groupby
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Iterable
+from typing import List
 from typing import Optional
 from typing import Tuple
 from typing import TypeVar
+from typing import Union
 
 from ._sql_utils import Query
 from ._sqlite_utils import ddl_transaction
-from ._sqlite_utils import json_object_get
 from ._sqlite_utils import paginated_query
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
@@ -136,8 +138,9 @@ class Search:
             [], timedelta
         ] = lambda: Storage.recent_threshold
 
-        self.db.create_function('strip_html', 1, self.strip_html)
-        self.db.create_function('json_object_get', 2, json_object_get)
+    # chunk_size, ddl_transaction and strip_html are not part of the
+    # Search interface, but are part of the private API of this implementation
+    # to allow overriding during tests.
 
     @property
     def chunk_size(self) -> int:
@@ -404,134 +407,168 @@ class Search:
                 break
 
     def _insert_into_search(self) -> None:
-        # See the comments in _delete_from_search for
-        # why these queries are the way they are.
-
-        input_query = """
-            SELECT id, feed
-            FROM entries_search_sync_state
-            WHERE to_update
-            ORDER BY id, feed
-            LIMIT ?
-        """
+        # We don't call strip_html() in transactions, because it keeps
+        # the database locked for too long; instead, we:
+        #
+        # * pull a bunch of entry content into Python (one transaction),
+        # * strip HTML outside of a transaction, and then
+        # * update each entry and clear entries_search_sync_state,
+        #   but only if its last_updated didn't change (another transaction).
+        #
+        # Before reader 1.4, we would insert the data from entries
+        # into entries_search in a single INSERT statement
+        # (with stripping HTML taking ~90% of the time)
+        # and then clear entries_search_sync_state,
+        # all in a single transaction.
+        #
+        # The advantage was that entries could not be updated while
+        # updating search (because the database was locked);
+        # now it *can* happen, and we must not clear entries_search_sync_state
+        # if it did (we rely on last_updated for this).
+        #
+        # See this comment for pseudocode of both approaches:
+        # https://github.com/lemon24/reader/issues/175#issuecomment-652489019
 
         while True:
-            with self.db as db:
-                cursor = db.execute(
-                    f"""
-                    INSERT INTO entries_search
+            rows = list(
+                self.db.execute(
+                    """
+                SELECT
+                    entries.id,
+                    entries.feed,
+                    entries.last_updated,
+                    coalesce(feeds.user_title, feeds.title),
+                    feeds.user_title IS NOT NULL,
+                    entries.title,
+                    entries.summary,
+                    entries.content
+                FROM entries_search_sync_state AS esss
+                JOIN entries USING (id, feed)
+                JOIN feeds ON feeds.url = esss.feed
+                WHERE esss.to_update
+                LIMIT ?
+                """,
+                    # if it's not chunked, it's one by one;
+                    # we can't / don't want to pull all the entries into memory
+                    (self.chunk_size or 1,),
+                )
+            )
 
-                    WITH
+            if not rows:
+                # nothing to update
+                break
 
-                    input(id, feed) AS ({input_query}),
+            stripped: List[Dict[str, Any]] = []
+            for (
+                id,
+                feed_url,
+                last_updated,
+                feed_title,
+                is_feed_user_title,
+                title,
+                summary,
+                content_json,
+            ) in rows:
 
-                    from_summary AS (
-                        SELECT
-                            entries.id,
-                            entries.feed,
-                            '.summary',
-                            strip_html(entries.title),
-                            strip_html(entries.summary)
-                        FROM input
-                        JOIN entries USING (id, feed)
-                        WHERE
-                            NOT (summary IS NULL OR summary = '')
-                    ),
+                final: List[Union[Tuple[str, str], Tuple[None, None]]] = []
 
-                    from_content AS (
-                        SELECT
-                            entries.id,
-                            entries.feed,
-                            '.content[' || json_each.key || '].value',
-                            strip_html(entries.title),
-                            strip_html(json_object_get(json_each.value, 'value'))
-                        FROM input
-                        JOIN entries USING (id, feed)
-                        JOIN json_each(entries.content)
-                        WHERE
-                            json_valid(content) and json_array_length(content) > 0
-                            -- TODO: test the right content types get indexed
-                            AND (
-                                json_object_get(json_each.value, 'type') is NULL
-                                OR lower(json_object_get(json_each.value, 'type')) in (
-                                    'text/html', 'text/xhtml', 'text/plain'
-                                )
+                content = json.loads(content_json) if content_json else []
+                if content and isinstance(content, list):
+                    for i, content_dict in enumerate(content):
+                        if (content_dict.get('type') or '').lower() not in (
+                            '',
+                            'text/html',
+                            'text/xhtml',
+                            'text/plain',
+                        ):
+                            continue
+
+                        final.append(
+                            (
+                                self.strip_html(content_dict.get('value')),
+                                f'.content[{i}].value',
                             )
-                    ),
+                        )
 
-                    from_default AS (
-                        SELECT
-                            entries.id,
-                            entries.feed,
-                            NULL,
-                            strip_html(entries.title),
-                            NULL
-                        FROM input
-                        JOIN entries USING (id, feed)
-                        WHERE
-                            (summary IS NULL OR summary = '')
-                            AND (not json_valid(content) OR json_array_length(content) = 0)
-                    ),
+                if summary:
+                    final.append((self.strip_html(summary), '.summary'))
 
-                    union_all(id, feed, content_path, title, content_text) AS (
-                        SELECT * FROM from_summary
-                        UNION
-                        SELECT * FROM from_content
-                        UNION
-                        SELECT * FROM from_default
+                if not final:
+                    final.append((None, None))
+
+                stripped_title = self.strip_html(title)
+                stripped_feed_title = self.strip_html(feed_title)
+
+                stripped.extend(
+                    dict(
+                        title=stripped_title,
+                        content=content_value,
+                        feed=stripped_feed_title,
+                        _id=id,
+                        _feed=feed_url,
+                        _content_path=content_path,
+                        _is_feed_user_title=is_feed_user_title,
+                        _last_updated=last_updated,
                     )
-
-
-                    SELECT
-                        union_all.title,
-                        union_all.content_text,
-                        strip_html(coalesce(feeds.user_title, feeds.title)),
-                        union_all.id,
-                        union_all.feed as feed,
-                        union_all.content_path,
-                        feeds.user_title IS NOT NULL
-                    FROM union_all
-                    JOIN feeds ON feeds.url = union_all.feed;
-
-                    """,
-                    (self.chunk_size or -1,),
+                    for content_value, content_path in final
                 )
-                log.debug(
-                    'Search.update: _insert_into_search (insert; chunk_size: %s): %i',
-                    self.chunk_size,
-                    cursor.rowcount,
-                )
-                assert cursor.rowcount >= 0
 
-                # Note: We are limiting the number of entries added,
-                # not of content pieces (entries_search rows) added.
-                # An entry with a lot of contents may still cause this to take
-                # a lot of time; it is a problem for later, though, since
-                # in practice we don't usually have more than 2 rows per entry.
+            # presumably we could insert everything in a single transaction,
+            # but we'd have to throw everything away if just one entry changed
 
-                # Bail early, there's nothing to update.
-                if cursor.rowcount == 0:
-                    break
+            groups = groupby(stripped, lambda d: (d['_id'], d['_feed']))
+            for (id, feed_url), group_iter in groups:
+                group = list(group_iter)
+                with self.db as db:
+                    cursor = db.executemany(
+                        """
+                        INSERT INTO entries_search
+                        WITH input(
+                            title,
+                            content,
+                            feed,
+                            _id,
+                            _feed,
+                            _content_path,
+                            _is_feed_user_title
+                        ) AS (
+                            VALUES (
+                                :title,
+                                :content,
+                                :feed,
+                                :_id,
+                                :_feed,
+                                :_content_path,
+                                :_is_feed_user_title
+                            )
+                        )
+                        SELECT input.* FROM input
+                        JOIN entries
+                        WHERE
+                            (entries.id, entries.feed) = (_id, _feed)
+                            AND last_updated = :_last_updated
+                        ;
+                        """,
+                        group,
+                    )
+                    assert cursor.rowcount >= 0
 
-                cursor = db.execute(
-                    f"""
-                    UPDATE entries_search_sync_state
-                    SET to_update = 0
-                    WHERE (id, feed) IN ({input_query});
-                    """,
-                    (self.chunk_size or -1,),
-                )
-                log.debug(
-                    'Search.update: _insert_into_search (set; chunk_size: %s): %i',
-                    self.chunk_size,
-                    cursor.rowcount,
-                )
-                assert cursor.rowcount >= 0
+                    # this depends on rowcount being the sum of rowcounts for
+                    # all the insert statements
+                    if cursor.rowcount < len(group):
+                        # last_updated changed since we got it;
+                        # skip the entry, we'll catch it on the next loop
+                        db.rollback()
+                        continue
 
-                if not self.chunk_size:
-                    break
-                if cursor.rowcount < self.chunk_size:
-                    break
+                    cursor = db.execute(
+                        """
+                        UPDATE entries_search_sync_state
+                        SET to_update = 0
+                        WHERE (id, feed) = (?, ?);
+                        """,
+                        (id, feed_url),
+                    )
 
     _query_error_message_fragments = [
         "fts5: syntax error near",

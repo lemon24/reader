@@ -201,26 +201,3 @@ def test_invalid_search_query_error(storage, query, exc_type):
 
 
 # TODO: test FTS5 column names
-
-
-def test_sqlite3_json_extract_non_bmp_character_bug_workaround(reader):
-    """Test we're working around https://bugs.python.org/issue38749
-
-    See the reader._search.json_object_get docstring for details.
-
-    """
-    parser = Parser()
-    reader._parser = parser
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    one = parser.entry(
-        1, 1, datetime(2010, 1, 1), title='one', content=[Content('content 🤩 content')]
-    )
-
-    reader.add_feed(feed.url)
-    reader.update_feeds()
-    reader.enable_search()
-    reader.update_search()
-
-    (rv,) = reader.search_entries('one')
-    assert rv.content['.content[0].value'].value == one.content[0].value
