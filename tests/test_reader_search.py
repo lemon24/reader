@@ -508,3 +508,57 @@ def test_update_search_entry_changed_during_update(db_path, monkeypatch):
     (entry,) = reader.get_entries()
     (result,) = reader.search_entries('one OR two OR three')
     assert entry.title == result.metadata['.title'].value == expected_title
+
+
+def test_update_search_concurrent_calls(db_path, monkeypatch):
+    # This is a very intrusive test, maybe we should move it somewhere else.
+
+    reader = make_reader(db_path)
+    parser = reader._parser = Parser()
+
+    feed = parser.feed(1, datetime(2010, 1, 1), title='feed')
+    parser.entry(
+        1,
+        1,
+        datetime(2010, 1, 1),
+        title='entry',
+        summary='summary',
+        content=[Content('content')],
+    )
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+    reader.enable_search()
+
+    barrier = threading.Barrier(2)
+
+    def target():
+        from reader._search import Search
+
+        class MySearch(Search):
+            @staticmethod
+            def strip_html(*args, **kwargs):
+                print('waiting')
+                barrier.wait()
+                print('done')
+                return Search.strip_html(*args, **kwargs)
+
+        # FIXME: remove monkeypatching when make_reader() gets a search_cls argument
+        monkeypatch.setattr('reader.core.Search', MySearch)
+
+        reader = make_reader(db_path)
+        reader.update_search()
+
+    print()
+    print()
+
+    threads = [threading.Thread(target=target) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    (result,) = reader.search_entries('entry')
+    assert len(result.content) == 2
+
+    ((rowcount,),) = reader._search.db.execute("select count(*) from entries_search;")
+    assert rowcount == 2

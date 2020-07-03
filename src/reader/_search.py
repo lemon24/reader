@@ -433,21 +433,21 @@ class Search:
             rows = list(
                 self.db.execute(
                     """
-                SELECT
-                    entries.id,
-                    entries.feed,
-                    entries.last_updated,
-                    coalesce(feeds.user_title, feeds.title),
-                    feeds.user_title IS NOT NULL,
-                    entries.title,
-                    entries.summary,
-                    entries.content
-                FROM entries_search_sync_state AS esss
-                JOIN entries USING (id, feed)
-                JOIN feeds ON feeds.url = esss.feed
-                WHERE esss.to_update
-                LIMIT ?
-                """,
+                    SELECT
+                        entries.id,
+                        entries.feed,
+                        entries.last_updated,
+                        coalesce(feeds.user_title, feeds.title),
+                        feeds.user_title IS NOT NULL,
+                        entries.title,
+                        entries.summary,
+                        entries.content
+                    FROM entries_search_sync_state AS esss
+                    JOIN entries USING (id, feed)
+                    JOIN feeds ON feeds.url = esss.feed
+                    WHERE esss.to_update
+                    LIMIT ?
+                    """,
                     # if it's not chunked, it's one by one;
                     # we can't / don't want to pull all the entries into memory
                     (self.chunk_size or 1,),
@@ -520,7 +520,37 @@ class Search:
             groups = groupby(stripped, lambda d: (d['_id'], d['_feed']))
             for (id, feed_url), group_iter in groups:
                 group = list(group_iter)
+                # with self.ddl_transaction(self.db) as db:
                 with self.db as db:
+                    # With the default isolation mode, a BEGIN is emitted
+                    # only when a DML statement is executed (I think);
+                    # this means that any SELECTs aren't actually
+                    # inside of a transaction; this is a DBAPI2 (mis)feature.
+                    #
+                    # BEGIN IMMEDIATE acquires a write lock immediately;
+                    # this will fail now, or will succeed and none
+                    # of the following statements until COMMIT/ROLLBACK
+                    # can fail with "database is locked".
+                    # We can't use a plain BEGIN (== DEFFERED), since
+                    # it delays acquiring a write lock until the first write
+                    # statement (the insert).
+                    #
+                    db.execute('BEGIN IMMEDIATE;')
+
+                    to_update = db.execute(
+                        """
+                        SELECT to_update
+                        FROM entries_search_sync_state
+                        WHERE (id, feed) = (?, ?);
+                        """,
+                        (id, feed_url),
+                    ).fetchone()
+                    if not (to_update and to_update[0]):
+                        # a concurrent call updated this entry, skip it
+                        continue
+
+                    # TODO: Can we rewrite this to check if last_updated
+                    # changed with a separate query?
                     cursor = db.executemany(
                         """
                         INSERT INTO entries_search
