@@ -146,5 +146,9 @@ class PrefixLogger(logging.LoggerAdapter):
         super().__init__(logger, {})
         self.prefixes = tuple(prefixes)
 
+    @staticmethod
+    def _escape(s: str) -> str:
+        return '%%'.join(s.split('%'))
+
     def process(self, msg: str, kwargs: Any) -> Tuple[str, Any]:  # pragma: no cover
-        return ': '.join(self.prefixes + (msg,)), kwargs
+        return ': '.join(tuple(self._escape(p) for p in self.prefixes) + (msg,)), kwargs

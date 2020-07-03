@@ -514,7 +514,8 @@ class Search:
                 )
 
             # presumably we could insert everything in a single transaction,
-            # but we'd have to throw everything away if just one entry changed
+            # but we'd have to throw everything away if just one entry changed;
+            # https://github.com/lemon24/reader/issues/175#issuecomment-653535994
 
             groups = groupby(stripped, lambda d: (d['_id'], d['_feed']))
             for (id, feed_url), group_iter in groups:
