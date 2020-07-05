@@ -57,7 +57,7 @@ def setup_logging(verbose):
     logging.getLogger('reader').setLevel(level)
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
-        '%(asctime)s %(levelname)-7s %(message)s', '%Y-%m-%dT%H:%M:%S'
+        '%(asctime)s %(process)7s %(levelname)-7s %(message)s', '%Y-%m-%dT%H:%M:%S'
     )
     handler.setFormatter(formatter)
     logging.getLogger('reader').addHandler(handler)
