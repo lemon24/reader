@@ -1,3 +1,4 @@
+import functools
 import logging
 import os.path
 import traceback
@@ -12,6 +13,8 @@ from ._plugins import LoaderError
 
 
 APP_NAME = reader.__name__
+
+log = logging.getLogger(__name__)
 
 
 def get_default_db_path(create_dir=False):
@@ -57,10 +60,50 @@ def setup_logging(verbose):
     logging.getLogger('reader').setLevel(level)
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
-        '%(asctime)s %(process)7s %(levelname)-7s %(message)s', '%Y-%m-%dT%H:%M:%S'
+        '%(asctime)s %(process)7s %(levelname)-8s %(message)s', '%Y-%m-%dT%H:%M:%S'
     )
     handler.setFormatter(formatter)
     logging.getLogger('reader').addHandler(handler)
+
+
+def log_verbose(fn):
+    @click.option('-v', '--verbose', count=True)
+    @functools.wraps(fn)
+    def wrapper(*args, verbose, **kwargs):
+        setup_logging(verbose)
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def log_command(fn):
+    @log_verbose
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        ctx = click.get_current_context()
+        params = []
+        while ctx:
+            params.append((ctx.info_name, ctx.params))
+            ctx = ctx.parent
+
+        log.info(
+            "command started: %s", ' '.join(f"{n} {p}" for n, p in reversed(params))
+        )
+
+        try:
+            rv = fn(*args, **kwargs)
+            log.info("command finished successfully")
+            return rv
+
+        except Exception as e:
+            log.critical(
+                "command failed due to unexpected error: %s; traceback follows",
+                e,
+                exc_info=True,
+            )
+            click.get_current_context().exit(1)
+
+    return wrapper
 
 
 @click.group()
@@ -90,11 +133,10 @@ def cli(ctx, db, plugin):
 @cli.command()
 @click.argument('url')
 @click.option('--update/--no-update', help="Update the feed after adding it.")
-@click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def add(kwargs, url, update, verbose):
+@log_verbose
+def add(kwargs, url, update):
     """Add a new feed."""
-    setup_logging(verbose)
     reader = make_reader_with_plugins(**kwargs)
     reader.add_feed(url)
     if update:
@@ -103,11 +145,10 @@ def add(kwargs, url, update, verbose):
 
 @cli.command()
 @click.argument('url')
-@click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def remove(kwargs, url, verbose):
+@log_verbose
+def remove(kwargs, url):
     """Remove an existing feed."""
-    setup_logging(verbose)
     reader = make_reader_with_plugins(**kwargs)
     reader.remove_feed(url)
 
@@ -124,15 +165,14 @@ def remove(kwargs, url, verbose):
     show_default=True,
     help="Number of threads to use when getting the feeds.",
 )
-@click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def update(kwargs, url, new_only, workers, verbose):
+@log_command
+def update(kwargs, url, new_only, workers):
     """Update one or all feeds.
 
     If URL is not given, update all the feeds.
 
     """
-    setup_logging(verbose)
     reader = make_reader_with_plugins(**kwargs)
     if url:
         reader.update_feed(url)
@@ -199,11 +239,10 @@ def search_disable(kwargs):
 
 
 @search.command('update')
-@click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def search_update(kwargs, verbose):
+@log_command
+def search_update(kwargs):
     """Update the search index."""
-    setup_logging(verbose)
     reader = make_reader_with_plugins(**kwargs)
     reader.update_search()
 
