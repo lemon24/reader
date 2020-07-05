@@ -530,7 +530,6 @@ class Search:
             groups = groupby(stripped, lambda d: (d['_id'], d['_feed']))
             for (id, feed_url), group_iter in groups:
                 group = list(group_iter)
-                # with self.ddl_transaction(self.db) as db:
                 with self.db as db:
                     # With the default isolation mode, a BEGIN is emitted
                     # only when a DML statement is executed (I think);

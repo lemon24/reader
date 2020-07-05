@@ -30,6 +30,7 @@ Unreleased
 * In the web application, display a nice error message for invalid search
   queries instead of returning an HTTP 500 Internal Server Error.
 * Other minor web application improvements.
+* Minor CLI logging improvements.
 
 
 Version 1.3
