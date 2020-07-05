@@ -413,7 +413,8 @@ class Search:
         # * pull a bunch of entry content into Python (one transaction),
         # * strip HTML outside of a transaction, and then
         # * update each entry and clear entries_search_sync_state,
-        #   but only if its last_updated didn't change (another transaction).
+        #   but only if it still needs to be updated,
+        #   and its last_updated didn't change (another transaction).
         #
         # Before reader 1.4, we would insert the data from entries
         # into entries_search in a single INSERT statement
@@ -452,6 +453,15 @@ class Search:
                     # we can't / don't want to pull all the entries into memory
                     (self.chunk_size or 1,),
                 )
+            )
+
+            first_entry = (rows[0][1], rows[0][0]) if rows else None
+            log.debug(
+                "Search.update: _insert_into_search (chunk_size: %s): "
+                "got %s entries; first entry: %r",
+                self.chunk_size,
+                len(rows),
+                first_entry,
             )
 
             if not rows:
@@ -547,52 +557,44 @@ class Search:
                     ).fetchone()
                     if not (to_update and to_update[0]):
                         # a concurrent call updated this entry, skip it
+                        log.debug(
+                            "Search.update: _insert_into_search: "
+                            "entry already updated, skipping: %r",
+                            (feed_url, id),
+                        )
                         continue
 
-                    # TODO: Can we rewrite this to check if last_updated
-                    # changed with a separate query?
-                    cursor = db.executemany(
+                    last_updated = db.execute(
+                        "SELECT last_updated FROM entries WHERE (id, feed) = (?, ?);",
+                        (id, feed_url),
+                    ).fetchone()
+                    if last_updated[0] != group[0]['_last_updated']:
+                        # last_updated changed since we got it;
+                        # skip the entry, we'll catch it on the next loop
+                        log.debug(
+                            "Search.update: _insert_into_search: "
+                            "entry last_updated changed, skipping: %r",
+                            (feed_url, id),
+                        )
+                        continue
+
+                    db.executemany(
                         """
                         INSERT INTO entries_search
-                        WITH input(
-                            title,
-                            content,
-                            feed,
-                            _id,
-                            _feed,
-                            _content_path,
-                            _is_feed_user_title
-                        ) AS (
-                            VALUES (
-                                :title,
-                                :content,
-                                :feed,
-                                :_id,
-                                :_feed,
-                                :_content_path,
-                                :_is_feed_user_title
-                            )
-                        )
-                        SELECT input.* FROM input
-                        JOIN entries
-                        WHERE
-                            (entries.id, entries.feed) = (_id, _feed)
-                            AND last_updated = :_last_updated
-                        ;
+                        VALUES (
+                            :title,
+                            :content,
+                            :feed,
+                            :_id,
+                            :_feed,
+                            :_content_path,
+                            :_is_feed_user_title
+                        );
                         """,
                         group,
                     )
-                    assert cursor.rowcount >= 0
 
-                    # this depends on rowcount being the sum of rowcounts for
-                    # all the insert statements
-                    if cursor.rowcount < len(group):
-                        # last_updated changed since we got it;
-                        # skip the entry, we'll catch it on the next loop
-                        db.rollback()
-                        continue
-
-                    cursor = db.execute(
+                    db.execute(
                         """
                         UPDATE entries_search_sync_state
                         SET to_update = 0
@@ -600,6 +602,8 @@ class Search:
                         """,
                         (id, feed_url),
                     )
+
+            log.debug("Search.update: _insert_into_search: chunk done")
 
     _query_error_message_fragments = [
         "fts5: syntax error near",
