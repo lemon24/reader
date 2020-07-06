@@ -192,7 +192,12 @@ class _Updater:
         if isinstance(parsed_feed, _NotModified):
             self.log.info("feed not modified, skipping")
             # The feed shouldn't be considered new anymore.
-            return FeedUpdateIntent(self.url, self.now), (), None
+            if not self.old_feed.last_updated:
+                return FeedUpdateIntent(self.url, self.now), (), None
+            # Clear last_exception.
+            if self.old_feed.last_exception:
+                return FeedUpdateIntent(self.url, self.old_feed.last_updated), (), None
+            return None, (), None
 
         if isinstance(parsed_feed, ParseError):
             return (
