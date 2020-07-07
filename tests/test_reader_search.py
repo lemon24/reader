@@ -516,7 +516,6 @@ def test_update_search_entry_changed_during_strip_html(db_path, monkeypatch):
     assert entry.title == result.metadata['.title'].value == expected_title
 
 
-@pytest.mark.xfail(strict=True, reason="fix TBD")
 def test_update_search_entry_changed_between_insert_loops(db_path, monkeypatch):
     """Test the entry can't be added twice to the search index if it changes
     during reader.update_search() between two insert loops.

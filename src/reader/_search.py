@@ -349,7 +349,7 @@ class Search:
                         SELECT esss.id, esss.feed
                         FROM entries_search_sync_state AS esss
                         JOIN entries_search ON (esss.id, esss.feed) = (_id, _feed)
-                        WHERE to_update OR to_delete
+                        WHERE to_delete
                         LIMIT ?
                     );
                     """,
@@ -581,6 +581,11 @@ class Search:
                         (feed_url, id),
                     )
                     continue
+
+                db.execute(
+                    "DELETE FROM entries_search WHERE (_id, _feed) = (?, ?)",
+                    (id, feed_url),
+                )
 
                 db.executemany(
                     """
