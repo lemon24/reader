@@ -407,6 +407,12 @@ class Search:
                 break
 
     def _insert_into_search(self) -> None:
+        # The loop is done outside of the chunk logic to help testing.
+        done = False
+        while not done:
+            done = not self._insert_into_search_one_chunk()
+
+    def _insert_into_search_one_chunk(self) -> bool:
         # We don't call strip_html() in transactions, because it keeps
         # the database locked for too long; instead, we:
         #
@@ -430,179 +436,179 @@ class Search:
         # See this comment for pseudocode of both approaches:
         # https://github.com/lemon24/reader/issues/175#issuecomment-652489019
 
-        while True:
-            rows = list(
-                self.db.execute(
+        rows = list(
+            self.db.execute(
+                """
+                SELECT
+                    entries.id,
+                    entries.feed,
+                    entries.last_updated,
+                    coalesce(feeds.user_title, feeds.title),
+                    feeds.user_title IS NOT NULL,
+                    entries.title,
+                    entries.summary,
+                    entries.content
+                FROM entries_search_sync_state AS esss
+                JOIN entries USING (id, feed)
+                JOIN feeds ON feeds.url = esss.feed
+                WHERE esss.to_update
+                LIMIT ?
+                """,
+                # if it's not chunked, it's one by one;
+                # we can't / don't want to pull all the entries into memory
+                (self.chunk_size or 1,),
+            )
+        )
+
+        first_entry = (rows[0][1], rows[0][0]) if rows else None
+        log.debug(
+            "Search.update: _insert_into_search (chunk_size: %s): "
+            "got %s entries; first entry: %r",
+            self.chunk_size,
+            len(rows),
+            first_entry,
+        )
+
+        if not rows:
+            # nothing to update
+            return False
+
+        stripped: List[Dict[str, Any]] = []
+        for (
+            id,
+            feed_url,
+            last_updated,
+            feed_title,
+            is_feed_user_title,
+            title,
+            summary,
+            content_json,
+        ) in rows:
+
+            final: List[Union[Tuple[str, str], Tuple[None, None]]] = []
+
+            content = json.loads(content_json) if content_json else []
+            if content and isinstance(content, list):
+                for i, content_dict in enumerate(content):
+                    if (content_dict.get('type') or '').lower() not in (
+                        '',
+                        'text/html',
+                        'text/xhtml',
+                        'text/plain',
+                    ):
+                        continue
+
+                    final.append(
+                        (
+                            self.strip_html(content_dict.get('value')),
+                            f'.content[{i}].value',
+                        )
+                    )
+
+            if summary:
+                final.append((self.strip_html(summary), '.summary'))
+
+            if not final:
+                final.append((None, None))
+
+            stripped_title = self.strip_html(title)
+            stripped_feed_title = self.strip_html(feed_title)
+
+            stripped.extend(
+                dict(
+                    title=stripped_title,
+                    content=content_value,
+                    feed=stripped_feed_title,
+                    _id=id,
+                    _feed=feed_url,
+                    _content_path=content_path,
+                    _is_feed_user_title=is_feed_user_title,
+                    _last_updated=last_updated,
+                )
+                for content_value, content_path in final
+            )
+
+        # presumably we could insert everything in a single transaction,
+        # but we'd have to throw everything away if just one entry changed;
+        # https://github.com/lemon24/reader/issues/175#issuecomment-653535994
+
+        groups = groupby(stripped, lambda d: (d['_id'], d['_feed']))
+        for (id, feed_url), group_iter in groups:
+            group = list(group_iter)
+            with self.db as db:
+                # With the default isolation mode, a BEGIN is emitted
+                # only when a DML statement is executed (I think);
+                # this means that any SELECTs aren't actually
+                # inside of a transaction; this is a DBAPI2 (mis)feature.
+                #
+                # BEGIN IMMEDIATE acquires a write lock immediately;
+                # this will fail now, or will succeed and none
+                # of the following statements until COMMIT/ROLLBACK
+                # can fail with "database is locked".
+                # We can't use a plain BEGIN (== DEFFERED), since
+                # it delays acquiring a write lock until the first write
+                # statement (the insert).
+                #
+                db.execute('BEGIN IMMEDIATE;')
+
+                to_update = db.execute(
                     """
-                    SELECT
-                        entries.id,
-                        entries.feed,
-                        entries.last_updated,
-                        coalesce(feeds.user_title, feeds.title),
-                        feeds.user_title IS NOT NULL,
-                        entries.title,
-                        entries.summary,
-                        entries.content
-                    FROM entries_search_sync_state AS esss
-                    JOIN entries USING (id, feed)
-                    JOIN feeds ON feeds.url = esss.feed
-                    WHERE esss.to_update
-                    LIMIT ?
+                    SELECT to_update
+                    FROM entries_search_sync_state
+                    WHERE (id, feed) = (?, ?);
                     """,
-                    # if it's not chunked, it's one by one;
-                    # we can't / don't want to pull all the entries into memory
-                    (self.chunk_size or 1,),
-                )
-            )
-
-            first_entry = (rows[0][1], rows[0][0]) if rows else None
-            log.debug(
-                "Search.update: _insert_into_search (chunk_size: %s): "
-                "got %s entries; first entry: %r",
-                self.chunk_size,
-                len(rows),
-                first_entry,
-            )
-
-            if not rows:
-                # nothing to update
-                break
-
-            stripped: List[Dict[str, Any]] = []
-            for (
-                id,
-                feed_url,
-                last_updated,
-                feed_title,
-                is_feed_user_title,
-                title,
-                summary,
-                content_json,
-            ) in rows:
-
-                final: List[Union[Tuple[str, str], Tuple[None, None]]] = []
-
-                content = json.loads(content_json) if content_json else []
-                if content and isinstance(content, list):
-                    for i, content_dict in enumerate(content):
-                        if (content_dict.get('type') or '').lower() not in (
-                            '',
-                            'text/html',
-                            'text/xhtml',
-                            'text/plain',
-                        ):
-                            continue
-
-                        final.append(
-                            (
-                                self.strip_html(content_dict.get('value')),
-                                f'.content[{i}].value',
-                            )
-                        )
-
-                if summary:
-                    final.append((self.strip_html(summary), '.summary'))
-
-                if not final:
-                    final.append((None, None))
-
-                stripped_title = self.strip_html(title)
-                stripped_feed_title = self.strip_html(feed_title)
-
-                stripped.extend(
-                    dict(
-                        title=stripped_title,
-                        content=content_value,
-                        feed=stripped_feed_title,
-                        _id=id,
-                        _feed=feed_url,
-                        _content_path=content_path,
-                        _is_feed_user_title=is_feed_user_title,
-                        _last_updated=last_updated,
+                    (id, feed_url),
+                ).fetchone()
+                if not (to_update and to_update[0]):
+                    # a concurrent call updated this entry, skip it
+                    log.debug(
+                        "Search.update: _insert_into_search: "
+                        "entry already updated, skipping: %r",
+                        (feed_url, id),
                     )
-                    for content_value, content_path in final
+                    continue
+
+                last_updated = db.execute(
+                    "SELECT last_updated FROM entries WHERE (id, feed) = (?, ?);",
+                    (id, feed_url),
+                ).fetchone()
+                if last_updated[0] != group[0]['_last_updated']:
+                    # last_updated changed since we got it;
+                    # skip the entry, we'll catch it on the next loop
+                    log.debug(
+                        "Search.update: _insert_into_search: "
+                        "entry last_updated changed, skipping: %r",
+                        (feed_url, id),
+                    )
+                    continue
+
+                db.executemany(
+                    """
+                    INSERT INTO entries_search
+                    VALUES (
+                        :title,
+                        :content,
+                        :feed,
+                        :_id,
+                        :_feed,
+                        :_content_path,
+                        :_is_feed_user_title
+                    );
+                    """,
+                    group,
                 )
 
-            # presumably we could insert everything in a single transaction,
-            # but we'd have to throw everything away if just one entry changed;
-            # https://github.com/lemon24/reader/issues/175#issuecomment-653535994
+                db.execute(
+                    """
+                    UPDATE entries_search_sync_state
+                    SET to_update = 0
+                    WHERE (id, feed) = (?, ?);
+                    """,
+                    (id, feed_url),
+                )
 
-            groups = groupby(stripped, lambda d: (d['_id'], d['_feed']))
-            for (id, feed_url), group_iter in groups:
-                group = list(group_iter)
-                with self.db as db:
-                    # With the default isolation mode, a BEGIN is emitted
-                    # only when a DML statement is executed (I think);
-                    # this means that any SELECTs aren't actually
-                    # inside of a transaction; this is a DBAPI2 (mis)feature.
-                    #
-                    # BEGIN IMMEDIATE acquires a write lock immediately;
-                    # this will fail now, or will succeed and none
-                    # of the following statements until COMMIT/ROLLBACK
-                    # can fail with "database is locked".
-                    # We can't use a plain BEGIN (== DEFFERED), since
-                    # it delays acquiring a write lock until the first write
-                    # statement (the insert).
-                    #
-                    db.execute('BEGIN IMMEDIATE;')
-
-                    to_update = db.execute(
-                        """
-                        SELECT to_update
-                        FROM entries_search_sync_state
-                        WHERE (id, feed) = (?, ?);
-                        """,
-                        (id, feed_url),
-                    ).fetchone()
-                    if not (to_update and to_update[0]):
-                        # a concurrent call updated this entry, skip it
-                        log.debug(
-                            "Search.update: _insert_into_search: "
-                            "entry already updated, skipping: %r",
-                            (feed_url, id),
-                        )
-                        continue
-
-                    last_updated = db.execute(
-                        "SELECT last_updated FROM entries WHERE (id, feed) = (?, ?);",
-                        (id, feed_url),
-                    ).fetchone()
-                    if last_updated[0] != group[0]['_last_updated']:
-                        # last_updated changed since we got it;
-                        # skip the entry, we'll catch it on the next loop
-                        log.debug(
-                            "Search.update: _insert_into_search: "
-                            "entry last_updated changed, skipping: %r",
-                            (feed_url, id),
-                        )
-                        continue
-
-                    db.executemany(
-                        """
-                        INSERT INTO entries_search
-                        VALUES (
-                            :title,
-                            :content,
-                            :feed,
-                            :_id,
-                            :_feed,
-                            :_content_path,
-                            :_is_feed_user_title
-                        );
-                        """,
-                        group,
-                    )
-
-                    db.execute(
-                        """
-                        UPDATE entries_search_sync_state
-                        SET to_update = 0
-                        WHERE (id, feed) = (?, ?);
-                        """,
-                        (id, feed_url),
-                    )
-
-            log.debug("Search.update: _insert_into_search: chunk done")
+        log.debug("Search.update: _insert_into_search: chunk done")
+        return True
 
     _query_error_message_fragments = [
         "fts5: syntax error near",

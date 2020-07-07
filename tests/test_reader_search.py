@@ -449,7 +449,13 @@ def test_search_entries_sort_error(reader):
         set(reader.search_entries('one', sort='bad sort'))
 
 
-def test_update_search_entry_changed_during_update(db_path, monkeypatch):
+def test_update_search_entry_changed_during_strip_html(db_path, monkeypatch):
+    """Test the entry can't remain out of sync if it changes
+    during reader.update_search() in a strip_html() call.
+
+    https://github.com/lemon24/reader/issues/175#issuecomment-652489019
+
+    """
     # This is a very intrusive test, maybe we should move it somewhere else.
 
     reader = make_reader(db_path)
@@ -510,7 +516,86 @@ def test_update_search_entry_changed_during_update(db_path, monkeypatch):
     assert entry.title == result.metadata['.title'].value == expected_title
 
 
+@pytest.mark.xfail(strict=True, reason="fix TBD")
+def test_update_search_entry_changed_between_insert_loops(db_path, monkeypatch):
+    """Test the entry can't be added twice to the search index if it changes
+    during reader.update_search() between two insert loops.
+
+    The scenario is:
+
+    * entry has to_update set
+    * _delete_from_search removes it from search
+    * loop 1 of _insert_into_search finds entry and inserts it into search,
+      clears to_update
+    * entry has to_update set (if to_update is set because the feed changed,
+      last_updated does not change; even if it did, it doesn't matter,
+      since the transaction only spans a single loop)
+    * loop 2 of _insert_into_search finds entry and inserts it into search
+      again, clears to_update
+    * loop 3 of _insert_into_search doesn't find any entry, returns
+
+    https://github.com/lemon24/reader/issues/175#issuecomment-654213853
+
+    """
+    # This is a very intrusive test, maybe we should move it somewhere else.
+
+    reader = make_reader(db_path)
+    reader.enable_search()
+
+    parser = reader._parser = Parser()
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    parser.entry(1, 1, datetime(2010, 1, 1), summary='one')
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    in_insert_chunk = threading.Event()
+    can_return_from_insert_chunk = threading.Event()
+
+    def target():
+        reader = make_reader(db_path)
+        original_insert_chunk = reader._search._insert_into_search_one_chunk
+
+        loop = 0
+
+        def insert_chunk(*args, **kwargs):
+            nonlocal loop
+            if loop == 1:
+                in_insert_chunk.set()
+                can_return_from_insert_chunk.wait()
+            loop += 1
+            return original_insert_chunk(*args, **kwargs)
+
+        reader._search._insert_into_search_one_chunk = insert_chunk
+        reader.update_search()
+
+    thread = threading.Thread(target=target)
+    thread.start()
+
+    in_insert_chunk.wait()
+
+    try:
+        feed = parser.feed(1, datetime(2010, 1, 2))
+        parser.entry(1, 1, datetime(2010, 1, 2), summary='two')
+        reader.update_feed(feed.url)
+    finally:
+        can_return_from_insert_chunk.set()
+        thread.join()
+
+    (result,) = reader.search_entries('entry')
+    assert len(result.content) == 1
+
+    ((rowcount,),) = reader._search.db.execute("select count(*) from entries_search;")
+    assert rowcount == 1
+
+
 def test_update_search_concurrent_calls(db_path, monkeypatch):
+    """Test concurrent calls to reader.update_search() don't interfere
+    with one another.
+
+    https://github.com/lemon24/reader/issues/175#issuecomment-652489019
+
+    """
     # This is a very intrusive test, maybe we should move it somewhere else.
 
     reader = make_reader(db_path)
@@ -537,9 +622,7 @@ def test_update_search_concurrent_calls(db_path, monkeypatch):
         class MySearch(Search):
             @staticmethod
             def strip_html(*args, **kwargs):
-                print('waiting')
                 barrier.wait()
-                print('done')
                 return Search.strip_html(*args, **kwargs)
 
         # FIXME: remove monkeypatching when make_reader() gets a search_cls argument
@@ -547,9 +630,6 @@ def test_update_search_concurrent_calls(db_path, monkeypatch):
 
         reader = make_reader(db_path)
         reader.update_search()
-
-    print()
-    print()
 
     threads = [threading.Thread(target=target) for _ in range(2)]
     for thread in threads:
