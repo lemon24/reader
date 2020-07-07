@@ -11,13 +11,17 @@ Version 1.4
 
 Unreleased
 
-* Use SQLite's `write-ahead logging`_ to increase concurrency
-  and reduce the likelihood of "database is locked" errors.
-  At the moment there is no way to disable WAL.
-  (:issue:`169`, :issue:`175`)
-* Prepare entries to be added to the search index
-  (:meth:`~Reader.update_search`) outside transactions,
-  to reduce the likelihood of "database is locked" errors. (:issue:`175`)
+* Work to reduce the likelihood of "database is locked" errors during updates
+  (:issue:`175`):
+
+  * Use SQLite's `write-ahead logging`_ to increase concurrency.
+    At the moment there is no way to disable WAL.
+    (:issue:`169`)
+  * Prepare entries to be added to the search index
+    (:meth:`~Reader.update_search`) outside transactions.
+  * Fix bug causing duplicate rows in the search index
+    when an entry changes while updating the search index.
+
 * Do not fail for feeds with incorrectly-declared media types,
   if feedparser can parse the feed;
   this is similar to the current behavior for incorrectly-declared encodings.
@@ -31,6 +35,8 @@ Unreleased
   queries instead of returning an HTTP 500 Internal Server Error.
 * Other minor web application improvements.
 * Minor CLI logging improvements.
+
+.. _write-ahead logging: https://www.sqlite.org/wal.html
 
 
 Version 1.3
