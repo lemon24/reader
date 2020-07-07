@@ -572,7 +572,7 @@ class Search:
                     "SELECT last_updated FROM entries WHERE (id, feed) = (?, ?);",
                     (id, feed_url),
                 ).fetchone()
-                if last_updated[0] != group[0]['_last_updated']:
+                if not last_updated or last_updated[0] != group[0]['_last_updated']:
                     # last_updated changed since we got it;
                     # skip the entry, we'll catch it on the next loop
                     log.debug(

@@ -479,6 +479,8 @@ def test_update_search_entry_changed_during_strip_html(db_path, monkeypatch):
     def target():
         from reader._search import Search
 
+        # strip_html() may or may not be used a SQLite user-defined function,
+        # hence the whole subclassing thing
         class MySearch(Search):
             @staticmethod
             def strip_html(*args, **kwargs):
