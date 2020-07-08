@@ -302,6 +302,7 @@ import functools  # noqa: E402
 import sqlite3  # noqa: E402
 import time  # noqa: E402
 import json  # noqa: E402
+import traceback  # noqa: E402
 
 
 def _make_wrapper(method, stmt=False):
@@ -314,10 +315,20 @@ def _make_wrapper(method, stmt=False):
         if stmt:
             data['stmt'] = args[0] if args else None
 
+        try:
+            tb = traceback.extract_stack()
+            frame = tb[-2]
+            data['caller'] = frame.filename, frame.name
+        except IndexError:
+            pass
+
         start = time.perf_counter()
         try:
             if callable(method):
                 return method(self, *args)
+        except Exception as e:
+            data['exception'] = f"{type(e).__module__}.{type(e).__qualname__}: {e}"
+            raise
         finally:
             end = time.perf_counter()
             data['duration'] = end - start
