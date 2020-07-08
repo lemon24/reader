@@ -13,6 +13,7 @@ from typing import Mapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from typing import Type
 from typing import TypeVar
 
 from ._sql_utils import Query
@@ -186,10 +187,13 @@ class Storage:
         path: str,
         timeout: Optional[float] = None,
         wal_enabled: Optional[bool] = True,
+        factory: Optional[Type[sqlite3.Connection]] = None,
     ):
-        kwargs = {}
+        kwargs: Dict[str, Any] = {}
         if timeout is not None:
             kwargs['timeout'] = timeout
+        if factory:
+            kwargs['factory'] = factory
 
         db = self.connect(path, detect_types=sqlite3.PARSE_DECLTYPES, **kwargs)
         try:

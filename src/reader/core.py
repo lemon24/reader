@@ -58,7 +58,9 @@ _U = TypeVar('_U')
 _PostEntryAddPluginType = Callable[['Reader', EntryData[datetime.datetime]], None]
 
 
-def make_reader(url: str, _storage: Optional[Storage] = None) -> 'Reader':
+def make_reader(
+    url: str, _storage: Optional[Storage] = None, _storage_factory: Any = None,
+) -> 'Reader':
     """Create a new :class:`Reader`.
 
     Args:
@@ -79,7 +81,7 @@ def make_reader(url: str, _storage: Optional[Storage] = None) -> 'Reader':
     # See this comment for details on how it should evolve:
     # https://github.com/lemon24/reader/issues/168#issuecomment-642002049
 
-    storage = _storage or Storage(url)
+    storage = _storage or Storage(url, factory=_storage_factory)
 
     # For now, we're using a storage-bound search provider.
     search = Search(storage.db)

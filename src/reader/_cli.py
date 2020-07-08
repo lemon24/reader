@@ -33,9 +33,18 @@ def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
 
-def make_reader_with_plugins(db_path, plugins):
+def make_reader_with_plugins(db_path, plugins, debug_storage):
+
+    kwargs = {}
+    if debug_storage:
+
+        class Connection(DebugConnection):
+            _log_method = logging.getLogger('reader._storage').debug
+
+        kwargs['_storage_factory'] = Connection
+
     try:
-        reader = make_reader(db_path)
+        reader = make_reader(db_path, **kwargs)
     except StorageError as e:
         abort("{}: {}: {}", db_path, e, e.__cause__)
     except Exception as e:
@@ -119,15 +128,20 @@ def log_command(fn):
     envvar=reader._PLUGIN_ENVVAR,
     help="Import path to a plug-in. Can be passed multiple times.",
 )
+@click.option(
+    '--debug-storage/--no-debug-storage',
+    hidden=True,
+    help="NOT TESTED. With -vv, log storage database calls.",
+)
 @click.version_option(reader.__version__, message='%(prog)s %(version)s')
 @click.pass_context
-def cli(ctx, db, plugin):
+def cli(ctx, db, plugin, debug_storage):
     if db is None:
         try:
             db = get_default_db_path(create_dir=True)
         except Exception as e:
             abort("{}", e)
-    ctx.obj = {'db_path': db, 'plugins': plugin}
+    ctx.obj = {'db_path': db, 'plugins': plugin, 'debug_storage': debug_storage}
 
 
 @cli.command()
@@ -270,6 +284,99 @@ try:
     cli.add_command(serve)
 except ImportError:
     pass
+
+
+# BEGIN DebugConnection
+
+# This belongs in reader._sqlite_utils, but I don't want to test/type yet
+# (e.g. typing.no_type_check still doesn't work for classes).
+# It shouldn't be an issue, since this functionality is not public.
+
+import functools  # noqa: E402
+import sqlite3  # noqa: E402
+import time  # noqa: E402
+
+
+def _wrap_simple(method):
+    @functools.wraps(method)
+    def wrapper(self, *args):
+        self._log(method.__name__)
+        return method(self, *args)
+
+    return wrapper
+
+
+def _wrap_executelike(method):
+    @functools.wraps(method)
+    def wrapper(self, *args):
+        sql, *_ = args
+        self._log("%s: begin:\n%s", method.__name__, sql)
+        start = time.perf_counter()
+        try:
+            return method(self, *args)
+        finally:
+            end = time.perf_counter()
+            self._log("%s: end: %.6fs", method.__name__, end - start)
+
+    return wrapper
+
+
+def _dunder_del(self):
+    # the sqlite3 objects don't have a __del__
+    self._log('__del__')
+
+
+_dunder_del.__name__ = '__del__'
+
+
+class DebugConnection(sqlite3.Connection):
+
+    """sqlite3 connection subclass for debugging stuff.
+
+    >>> class MyDebugConnection(DebugConnection):
+    ...     _log_method = logging.getLogger('whatever').debug
+    ...     _set_trace = True
+    ...
+    >>> db = sqlite3.connect('', factory=MyDebugConnection)
+
+    """
+
+    _set_trace = False
+
+    @staticmethod
+    def _log_method(*args, **kwargs):
+        raise NotImplementedError
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self._set_trace:
+            self.set_trace_callback(lambda stmt: self._log("~trace:\n%s", stmt))
+
+    def _log(self, message, *args, **kwargs):
+        self._log_method("connection %x: " + message, id(self), *args, **kwargs)
+
+    def cursor(self, factory=None):
+        if factory:
+            raise NotImplementedError("cursor(factory=...) not supported")
+        return super().cursor(factory=DebugCursor)
+
+    close = _wrap_simple(sqlite3.Connection.close)
+    __enter__ = _wrap_simple(sqlite3.Connection.__enter__)
+    __exit__ = _wrap_simple(sqlite3.Connection.__exit__)
+    __del__ = _dunder_del
+
+
+class DebugCursor(sqlite3.Cursor):
+    def _log(self, message, *args, **kwargs):
+        self.connection._log("cursor %x: " + message, id(self), *args, **kwargs)
+
+    execute = _wrap_executelike(sqlite3.Cursor.execute)
+    executemany = _wrap_executelike(sqlite3.Cursor.executemany)
+    close = _wrap_simple(sqlite3.Cursor.close)
+    __del__ = _dunder_del
+
+
+# END DebugConnection
 
 
 if __name__ == '__main__':
