@@ -1,4 +1,5 @@
 import functools
+import json
 import logging
 import os.path
 import traceback
@@ -37,9 +38,14 @@ def make_reader_with_plugins(db_path, plugins, debug_storage):
 
     kwargs = {}
     if debug_storage:
+        log_debug = logging.getLogger('reader._storage').debug
+        pid = os.getpid()
 
         class Connection(DebugConnection):
-            _log_method = logging.getLogger('reader._storage').debug
+            @staticmethod
+            def _log_method(data):
+                data['pid'] = pid
+                log_debug(json.dumps(data))
 
         kwargs['_storage_factory'] = Connection
 
@@ -295,46 +301,38 @@ except ImportError:
 import functools  # noqa: E402
 import sqlite3  # noqa: E402
 import time  # noqa: E402
+import json  # noqa: E402
 
 
-def _wrap_simple(method):
+def _make_wrapper(method, stmt=False):
     @functools.wraps(method)
     def wrapper(self, *args):
-        self._log(method.__name__)
-        return method(self, *args)
+        data = {
+            'method': method if isinstance(method, str) else method.__name__,
+            'start': time.time(),
+        }
+        if stmt:
+            data['stmt'] = args[0] if args else None
 
-    return wrapper
-
-
-def _wrap_executelike(method):
-    @functools.wraps(method)
-    def wrapper(self, *args):
-        sql, *_ = args
-        self._log("%s: begin:\n%s", method.__name__, sql)
         start = time.perf_counter()
         try:
-            return method(self, *args)
+            if callable(method):
+                return method(self, *args)
         finally:
             end = time.perf_counter()
-            self._log("%s: end: %.6fs", method.__name__, end - start)
+            data['duration'] = end - start
+            self._log(data)
 
     return wrapper
-
-
-def _dunder_del(self):
-    # the sqlite3 objects don't have a __del__
-    self._log('__del__')
-
-
-_dunder_del.__name__ = '__del__'
 
 
 class DebugConnection(sqlite3.Connection):
 
     """sqlite3 connection subclass for debugging stuff.
 
+    >>> debug = logging.getLogger('whatever').debug
     >>> class MyDebugConnection(DebugConnection):
-    ...     _log_method = logging.getLogger('whatever').debug
+    ...     _log_method = staticmethod(lambda data: debug(json.dumps(data)))
     ...     _set_trace = True
     ...
     >>> db = sqlite3.connect('', factory=MyDebugConnection)
@@ -344,36 +342,50 @@ class DebugConnection(sqlite3.Connection):
     _set_trace = False
 
     @staticmethod
-    def _log_method(*args, **kwargs):
+    def _log_method(data):
         raise NotImplementedError
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._next_cursor_id = 0
         if self._set_trace:
-            self.set_trace_callback(lambda stmt: self._log("~trace:\n%s", stmt))
+            trace_wrapper = _make_wrapper('~trace', stmt=True)
 
-    def _log(self, message, *args, **kwargs):
-        self._log_method("connection %x: " + message, id(self), *args, **kwargs)
+            def trace(stmt):
+                return trace_wrapper(self, stmt)
+
+            self.set_trace_callback(trace)
+
+    def _log(self, data):
+        # less likely for this to be the same address
+        data['connection'] = id(self)
+        self._log_method(data)
 
     def cursor(self, factory=None):
         if factory:
             raise NotImplementedError("cursor(factory=...) not supported")
-        return super().cursor(factory=DebugCursor)
+        cursor = super().cursor(factory=DebugCursor)
+        cursor._id = self._next_cursor_id
+        self._next_cursor_id += 1
+        return cursor
 
-    close = _wrap_simple(sqlite3.Connection.close)
-    __enter__ = _wrap_simple(sqlite3.Connection.__enter__)
-    __exit__ = _wrap_simple(sqlite3.Connection.__exit__)
-    __del__ = _dunder_del
+    close = _make_wrapper(sqlite3.Connection.close)
+    __enter__ = _make_wrapper(sqlite3.Connection.__enter__)
+    __exit__ = _make_wrapper(sqlite3.Connection.__exit__)
+    # the sqlite3 objects don't have a __del__
+    __del__ = _make_wrapper('__del__')
 
 
 class DebugCursor(sqlite3.Cursor):
-    def _log(self, message, *args, **kwargs):
-        self.connection._log("cursor %x: " + message, id(self), *args, **kwargs)
+    def _log(self, data):
+        # can't rely on id(self) as it's likely to be reused
+        data['cursor'] = self._id
+        self.connection._log(data)
 
-    execute = _wrap_executelike(sqlite3.Cursor.execute)
-    executemany = _wrap_executelike(sqlite3.Cursor.executemany)
-    close = _wrap_simple(sqlite3.Cursor.close)
-    __del__ = _dunder_del
+    execute = _make_wrapper(sqlite3.Cursor.execute, stmt=True)
+    executemany = _make_wrapper(sqlite3.Cursor.executemany, stmt=True)
+    close = _make_wrapper(sqlite3.Cursor.close)
+    __del__ = _make_wrapper('__del__')
 
 
 # END DebugConnection

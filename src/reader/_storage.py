@@ -192,7 +192,7 @@ class Storage:
         kwargs: Dict[str, Any] = {}
         if timeout is not None:
             kwargs['timeout'] = timeout
-        if factory:
+        if factory:  # pragma: no cover
             kwargs['factory'] = factory
 
         db = self.connect(path, detect_types=sqlite3.PARSE_DECLTYPES, **kwargs)
