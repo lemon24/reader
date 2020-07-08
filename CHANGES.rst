@@ -22,6 +22,7 @@ Unreleased
   * Fix bug causing duplicate rows in the search index
     when an entry changes while updating the search index.
 
+* Require at least click 7.0 for the ``cli`` extra.
 * Do not fail for feeds with incorrectly-declared media types,
   if feedparser can parse the feed;
   this is similar to the current behavior for incorrectly-declared encodings.

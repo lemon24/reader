@@ -33,7 +33,7 @@ setup(
     ],
     extras_require={
         'search': ['beautifulsoup4>=4.5'],
-        'cli': ['click>=5'],
+        'cli': ['click>=7'],
         'app': ['flask>=0.10', 'humanize'],
         'plugins': ['setuptools>=40'],
         'enclosure-tags': ['requests', 'mutagen'],
@@ -56,7 +56,7 @@ setup(
             # docs
             'sphinx',
             'sphinx_rtd_theme',
-            'click>=5',
+            'click>=7',
             'sphinx-click',
             'sphinx-issues',
             # release
@@ -69,7 +69,7 @@ setup(
         'docs': [
             'sphinx',
             'sphinx_rtd_theme',
-            'click>=5',
+            'click>=7',
             'sphinx-click',
             'sphinx-issues',
         ],
