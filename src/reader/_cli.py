@@ -11,6 +11,7 @@ from . import make_reader
 from . import StorageError
 from ._plugins import Loader
 from ._plugins import LoaderError
+from ._sqlite_utils import DebugConnection
 
 
 APP_NAME = reader.__name__
@@ -290,116 +291,6 @@ try:
     cli.add_command(serve)
 except ImportError:
     pass
-
-
-# BEGIN DebugConnection
-
-# This belongs in reader._sqlite_utils, but I don't want to test/type yet
-# (e.g. typing.no_type_check still doesn't work for classes).
-# It shouldn't be an issue, since this functionality is not public.
-
-import functools  # noqa: E402
-import sqlite3  # noqa: E402
-import time  # noqa: E402
-import json  # noqa: E402
-import traceback  # noqa: E402
-
-
-def _make_wrapper(method, stmt=False):
-    @functools.wraps(method)
-    def wrapper(self, *args):
-        data = {
-            'method': method if isinstance(method, str) else method.__name__,
-            'start': time.time(),
-        }
-        if stmt:
-            data['stmt'] = args[0] if args else None
-
-        try:
-            tb = traceback.extract_stack()
-            frame = tb[-2]
-            data['caller'] = frame.filename, frame.name
-        except IndexError:
-            pass
-
-        start = time.perf_counter()
-        try:
-            if callable(method):
-                return method(self, *args)
-        except Exception as e:
-            data['exception'] = f"{type(e).__module__}.{type(e).__qualname__}: {e}"
-            raise
-        finally:
-            end = time.perf_counter()
-            data['duration'] = end - start
-            self._log(data)
-
-    return wrapper
-
-
-class DebugConnection(sqlite3.Connection):
-
-    """sqlite3 connection subclass for debugging stuff.
-
-    >>> debug = logging.getLogger('whatever').debug
-    >>> class MyDebugConnection(DebugConnection):
-    ...     _log_method = staticmethod(lambda data: debug(json.dumps(data)))
-    ...     _set_trace = True
-    ...
-    >>> db = sqlite3.connect('', factory=MyDebugConnection)
-
-    """
-
-    _set_trace = False
-
-    @staticmethod
-    def _log_method(data):
-        raise NotImplementedError
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._next_cursor_id = 0
-        if self._set_trace:
-            trace_wrapper = _make_wrapper('~trace', stmt=True)
-
-            def trace(stmt):
-                return trace_wrapper(self, stmt)
-
-            self.set_trace_callback(trace)
-
-    def _log(self, data):
-        # less likely for this to be the same address
-        data['connection'] = id(self)
-        self._log_method(data)
-
-    def cursor(self, factory=None):
-        if factory:
-            raise NotImplementedError("cursor(factory=...) not supported")
-        cursor = super().cursor(factory=DebugCursor)
-        cursor._id = self._next_cursor_id
-        self._next_cursor_id += 1
-        return cursor
-
-    close = _make_wrapper(sqlite3.Connection.close)
-    __enter__ = _make_wrapper(sqlite3.Connection.__enter__)
-    __exit__ = _make_wrapper(sqlite3.Connection.__exit__)
-    # the sqlite3 objects don't have a __del__
-    __del__ = _make_wrapper('__del__')
-
-
-class DebugCursor(sqlite3.Cursor):
-    def _log(self, data):
-        # can't rely on id(self) as it's likely to be reused
-        data['cursor'] = self._id
-        self.connection._log(data)
-
-    execute = _make_wrapper(sqlite3.Cursor.execute, stmt=True)
-    executemany = _make_wrapper(sqlite3.Cursor.executemany, stmt=True)
-    close = _make_wrapper(sqlite3.Cursor.close)
-    __del__ = _make_wrapper('__del__')
-
-
-# END DebugConnection
 
 
 if __name__ == '__main__':
