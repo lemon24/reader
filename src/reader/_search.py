@@ -112,16 +112,18 @@ class Search:
 
         def update_from_X_to_Y(db):
             from ._search import Search
-            from ._utils import make_noop_context_manager
 
             search = Search(db)
-            # We're already within a ddl_transaction, Search shouldn't
-            # start another one since ddl_transaction is not reentrant.
-            search.ddl_transaction = make_noop_context_manager
 
             if search.is_enabled():
-                # If the names of things remain the same, the queries
-                # from the previous version's disable() otherwise.
+                # We're already within a transaction, we use _enable/_disable,
+                # not enable/disable.
+                # Or, we can selectively call some of the _drop_*/_create_*
+                # methods (e.g. to only re-create triggers)
+
+                # This works only if the names of things remain the same.
+                # Otherwise, the queries from the previous version's disable()
+                # need to be copied verbatim.
                 search.disable()
 
                 search.enable()
@@ -138,148 +140,174 @@ class Search:
             [], timedelta
         ] = lambda: Storage.recent_threshold
 
-    # chunk_size, ddl_transaction and strip_html are not part of the
-    # Search interface, but are part of the private API of this implementation
+    # chunk_size and strip_html are not part of the Search interface,
+    # but are part of the private API of this implementation
     # to allow overriding during tests.
 
     @property
     def chunk_size(self) -> int:
         return self.get_chunk_size()
 
-    ddl_transaction = staticmethod(ddl_transaction)
     strip_html = staticmethod(strip_html)
 
     @wrap_exceptions(SearchError)
     def enable(self) -> None:
         try:
-            self._enable()
+            with ddl_transaction(self.db):
+                self._enable()
         except sqlite3.OperationalError as e:
             if "table entries_search already exists" in str(e).lower():
                 return
             raise
 
     def _enable(self) -> None:
-        with self.ddl_transaction(self.db) as db:
+        # Private API, may be called from migrations.
+        self._create_tables()
+        self._create_triggers()
 
-            # The column names matter, as they can be used in column filters;
-            # https://www.sqlite.org/fts5.html#fts5_column_filters
-            #
-            # We put the unindexed stuff at the end to avoid having to adjust
-            # stuff depended on the column index if we add new columns.
-            #
-            db.execute(
-                """
-                CREATE VIRTUAL TABLE entries_search USING fts5(
-                    title,  -- entries.title
-                    content,  -- entries.summary or one of entries.content
-                    feed,  -- feeds.title or feed.user_title
-                    _id UNINDEXED,
-                    _feed UNINDEXED,
-                    _content_path UNINDEXED,  -- TODO: maybe optimize this to a number
-                    _is_feed_user_title UNINDEXED,
-                    tokenize = "porter unicode61 remove_diacritics 1 tokenchars '_'"
-                );
-                """
-            )
-            # FIXME: we still need to tune the rank weights, these are just guesses
-            db.execute(
-                """
-                INSERT INTO entries_search(entries_search, rank)
-                VALUES ('rank', 'bm25(4, 1, 2)');
-                """
-            )
+    def _create_tables(self) -> None:
+        # Private API, may be called from migrations.
 
-            db.execute(
-                """
-                CREATE TABLE entries_search_sync_state (
-                    id TEXT NOT NULL,
-                    feed TEXT NOT NULL,
-                    to_update INTEGER NOT NULL DEFAULT 1,
-                    to_delete INTEGER NOT NULL DEFAULT 0,
-                    PRIMARY KEY (id, feed)
-                );
-                """
-            )
-            # TODO: This should probably be paginated,
-            # but it's called once and should not take too long, so we can do it later.
-            db.execute(
-                """
+        assert self.db.in_transaction
+
+        # The column names matter, as they can be used in column filters;
+        # https://www.sqlite.org/fts5.html#fts5_column_filters
+        #
+        # We put the unindexed stuff at the end to avoid having to adjust
+        # stuff depended on the column index if we add new columns.
+        #
+        self.db.execute(
+            """
+            CREATE VIRTUAL TABLE entries_search USING fts5(
+                title,  -- entries.title
+                content,  -- entries.summary or one of entries.content
+                feed,  -- feeds.title or feed.user_title
+                _id UNINDEXED,
+                _feed UNINDEXED,
+                _content_path UNINDEXED,  -- TODO: maybe optimize this to a number
+                _is_feed_user_title UNINDEXED,
+                tokenize = "porter unicode61 remove_diacritics 1 tokenchars '_'"
+            );
+            """
+        )
+        # FIXME: we still need to tune the rank weights, these are just guesses
+        self.db.execute(
+            """
+            INSERT INTO entries_search(entries_search, rank)
+            VALUES ('rank', 'bm25(4, 1, 2)');
+            """
+        )
+
+        self.db.execute(
+            """
+            CREATE TABLE entries_search_sync_state (
+                id TEXT NOT NULL,
+                feed TEXT NOT NULL,
+                to_update INTEGER NOT NULL DEFAULT 1,
+                to_delete INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (id, feed)
+            );
+            """
+        )
+        # TODO: This should probably be paginated,
+        # but it's called once and should not take too long, so we can do it later.
+        self.db.execute(
+            """
+            INSERT INTO entries_search_sync_state
+            SELECT id, feed, 1, 0
+            FROM entries;
+            """
+        )
+
+    def _create_triggers(self) -> None:
+        # Private API, may be called from migrations.
+
+        assert self.db.in_transaction
+
+        # TODO: use "UPDATE OF ... ON" instead;
+        # how do we test it?
+        # TODO: only run UPDATE triggers if the values are actually different;
+        # how do we test it?
+        # TODO: what happens if the feed ID changes? can't happen yet;
+        # also see https://github.com/lemon24/reader/issues/149
+
+        self.db.execute(
+            """
+            CREATE TRIGGER entries_search_entries_insert
+            AFTER INSERT ON entries
+            BEGIN
                 INSERT INTO entries_search_sync_state
-                SELECT id, feed, 1, 0
-                FROM entries;
-                """
-            )
+                VALUES (new.id, new.feed, 1, 0);
+            END;
+            """
+        )
+        self.db.execute(
+            """
+            CREATE TRIGGER entries_search_entries_update
+            AFTER UPDATE ON entries
+            BEGIN
+                UPDATE entries_search_sync_state
+                SET to_update = 1
+                WHERE (new.id, new.feed) = (
+                    entries_search_sync_state.id,
+                    entries_search_sync_state.feed
+                );
+            END;
+            """
+        )
+        self.db.execute(
+            """
+            CREATE TRIGGER entries_search_entries_delete
+            AFTER DELETE ON entries
+            BEGIN
+                UPDATE entries_search_sync_state
+                SET to_delete = 1
+                WHERE (old.id, old.feed) = (
+                    entries_search_sync_state.id,
+                    entries_search_sync_state.feed
+                );
+            END;
+            """
+        )
 
-            # TODO: use "UPDATE OF ... ON" instead;
-            # how do we test it?
-            # TODO: only run UPDATE triggers if the values are actually different;
-            # how do we test it?
-            # TODO: what happens if the feed ID changes? can't happen yet;
-            # also see https://github.com/lemon24/reader/issues/149
-
-            db.execute(
-                """
-                CREATE TRIGGER entries_search_entries_insert
-                AFTER INSERT ON entries
-                BEGIN
-                    INSERT INTO entries_search_sync_state
-                    VALUES (new.id, new.feed, 1, 0);
-                END;
-                """
-            )
-            db.execute(
-                """
-                CREATE TRIGGER entries_search_entries_update
-                AFTER UPDATE ON entries
-                BEGIN
-                    UPDATE entries_search_sync_state
-                    SET to_update = 1
-                    WHERE (new.id, new.feed) = (
-                        entries_search_sync_state.id,
-                        entries_search_sync_state.feed
-                    );
-                END;
-                """
-            )
-            db.execute(
-                """
-                CREATE TRIGGER entries_search_entries_delete
-                AFTER DELETE ON entries
-                BEGIN
-                    UPDATE entries_search_sync_state
-                    SET to_delete = 1
-                    WHERE (old.id, old.feed) = (
-                        entries_search_sync_state.id,
-                        entries_search_sync_state.feed
-                    );
-                END;
-                """
-            )
-
-            # No need to do anything for added feeds, since they don't have
-            # any entries. No need to do anything for deleted feeds, since
-            # the entries delete trigger will take care of its entries.
-            db.execute(
-                """
-                CREATE TRIGGER entries_search_feeds_update
-                AFTER UPDATE ON feeds
-                BEGIN
-                    UPDATE entries_search_sync_state
-                    SET to_update = 1
-                    WHERE new.url = entries_search_sync_state.feed;
-                END;
-                """
-            )
+        # No need to do anything for added feeds, since they don't have
+        # any entries. No need to do anything for deleted feeds, since
+        # the entries delete trigger will take care of its entries.
+        self.db.execute(
+            """
+            CREATE TRIGGER entries_search_feeds_update
+            AFTER UPDATE ON feeds
+            BEGIN
+                UPDATE entries_search_sync_state
+                SET to_update = 1
+                WHERE new.url = entries_search_sync_state.feed;
+            END;
+            """
+        )
 
     @wrap_exceptions(SearchError)
     def disable(self) -> None:
-        with self.ddl_transaction(self.db) as db:
-            db.execute("DROP TABLE IF EXISTS entries_search;")
-            db.execute("DROP TABLE IF EXISTS entries_search_sync_state;")
-            db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert;")
-            db.execute("DROP TRIGGER IF EXISTS entries_search_entries_update;")
-            db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
-            db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")
+        with ddl_transaction(self.db):
+            self._disable()
+
+    def _disable(self) -> None:
+        # Private API, may be called from migrations.
+        self._drop_triggers()
+        self._drop_tables()
+
+    def _drop_tables(self) -> None:
+        # Private API, may be called from migrations.
+        assert self.db.in_transaction
+        self.db.execute("DROP TABLE IF EXISTS entries_search;")
+        self.db.execute("DROP TABLE IF EXISTS entries_search_sync_state;")
+
+    def _drop_triggers(self) -> None:
+        # Private API, may be called from migrations.
+        assert self.db.in_transaction
+        self.db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert;")
+        self.db.execute("DROP TRIGGER IF EXISTS entries_search_entries_update;")
+        self.db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
+        self.db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")
 
     @wrap_exceptions(SearchError)
     def is_enabled(self) -> bool:
