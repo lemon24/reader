@@ -365,8 +365,15 @@ class Search:
         # (this always works);
         # https://www.sqlite.org/lang_corefunc.html#changes
 
-        # TODO: this loop looks a lot like _utils.join_paginated_iter,
-        # minus last and actually yielding stuff
+        if self.chunk_size:
+            # `DELETE FROM entries_search` may be slower than other queries,
+            # so we use smaller chunks to avoid keeping locks for too long.
+            # https://github.com/lemon24/reader/issues/175#issuecomment-656112990
+            chunk_size = max(1, int(self.chunk_size / 16))
+        else:
+            chunk_size = self.chunk_size
+
+        # TODO: is the join required? it results in 2 entries_search scans instead of 1
 
         while True:
             with self.db as db:
@@ -381,11 +388,11 @@ class Search:
                         LIMIT ?
                     );
                     """,
-                    (self.chunk_size or -1,),
+                    (chunk_size or -1,),
                 )
                 log.debug(
                     'Search.update: _delete_from_search (chunk_size: %s): %s',
-                    self.chunk_size,
+                    chunk_size,
                     cursor.rowcount,
                 )
                 assert cursor.rowcount >= 0
@@ -610,6 +617,9 @@ class Search:
                     )
                     continue
 
+                # we can't rely on _delete_from_search doing it,
+                # since a parallel update may have added some rows since then
+                # (and we'd duplicate them)
                 db.execute(
                     "DELETE FROM entries_search WHERE (_id, _feed) = (?, ?)",
                     (id, feed_url),
