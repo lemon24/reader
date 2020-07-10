@@ -133,6 +133,149 @@ def test_update_search_feeds_change_after_enable(reader, sort, chunk_size):
     }
 
 
+UPDATE_TRIGGERS_DATA = {
+    "no entry": [(lambda r: None, None),],
+    "after insert on entries": [
+        (
+            lambda r: r._parser.entry(1, 1, datetime(2010, 1, 1)),
+            ['.title', '.feed.title'],
+        ),
+    ],
+    "after delete on entries": [
+        (
+            lambda r: r._parser.entry(1, 1, datetime(2010, 1, 1)),
+            ['.title', '.feed.title'],
+        ),
+        (
+            lambda r: (
+                r.remove_feed('1'),
+                r._parser.entries[1].pop(1),
+                r.add_feed('1'),
+            ),
+            None,
+        ),
+    ],
+    "after update on entries: title": [
+        (
+            lambda r: r._parser.entry(1, 1, datetime(2010, 1, 1)),
+            ['.title', '.feed.title'],
+        ),
+        (
+            lambda r: r._parser.entry(1, 1, datetime(2010, 1, 2), title='entry new'),
+            ['.title', '.feed.title'],
+        ),
+        (
+            lambda r: r._parser.entry(1, 1, datetime(2010, 1, 3), title=None),
+            ['.feed.title'],
+        ),
+        (
+            lambda r: r._parser.entry(1, 1, datetime(2010, 1, 4), title='another'),
+            ['.title', '.feed.title'],
+        ),
+    ],
+    "after update on entries: summary": [
+        (
+            lambda r: r._parser.entry(1, 1, datetime(2010, 1, 1)),
+            ['.title', '.feed.title'],
+        ),
+        (
+            lambda r: r._parser.entry(1, 1, datetime(2010, 1, 2), summary='old'),
+            ['.title', '.feed.title', '.summary'],
+        ),
+        (
+            lambda r: r._parser.entry(1, 1, datetime(2010, 1, 3), summary='new'),
+            ['.title', '.feed.title', '.summary'],
+        ),
+    ],
+    "after update on entries: content": [
+        (
+            lambda r: r._parser.entry(1, 1, datetime(2010, 1, 1)),
+            ['.title', '.feed.title'],
+        ),
+        (
+            lambda r: r._parser.entry(
+                1, 1, datetime(2010, 1, 2), content=[Content('old')]
+            ),
+            ['.title', '.feed.title', '.content[0].value'],
+        ),
+        (
+            lambda r: r._parser.entry(
+                1, 1, datetime(2010, 1, 3), content=[Content('new')]
+            ),
+            ['.title', '.feed.title', '.content[0].value'],
+        ),
+        (
+            lambda r: r._parser.entry(
+                1,
+                1,
+                datetime(2010, 1, 4),
+                content=[Content('new'), Content('another one')],
+            ),
+            ['.title', '.feed.title', '.content[0].value', '.content[1].value'],
+        ),
+        (
+            lambda r: r._parser.entry(
+                1, 1, datetime(2010, 1, 5), content=[Content('another one')]
+            ),
+            ['.title', '.feed.title', '.content[0].value'],
+        ),
+    ],
+    "after update on feeds: title": [
+        (
+            lambda r: r._parser.entry(1, 1, datetime(2010, 1, 1)),
+            ['.title', '.feed.title'],
+        ),
+        (
+            lambda r: r._parser.feed(1, datetime(2010, 1, 2), title='new'),
+            ['.title', '.feed.title'],
+        ),
+        (lambda r: r._parser.feed(1, datetime(2010, 1, 3), title=None), ['.title']),
+        (
+            lambda r: r._parser.feed(1, datetime(2010, 1, 4), title='another'),
+            ['.title', '.feed.title'],
+        ),
+    ],
+    "after update on feeds: user_title": [
+        (
+            lambda r: r._parser.entry(1, 1, datetime(2010, 1, 1)),
+            ['.title', '.feed.title'],
+        ),
+        (lambda r: r.set_feed_user_title('1', 'user'), ['.title', '.feed.user_title']),
+        (lambda r: r.set_feed_user_title('1', None), ['.title', '.feed.title']),
+    ],
+}
+
+
+@pytest.mark.parametrize(
+    'data', list(UPDATE_TRIGGERS_DATA.values()), ids=list(UPDATE_TRIGGERS_DATA)
+)
+def test_update_triggers(reader, data):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    reader.add_feed(feed.url)
+    reader.enable_search()
+
+    # subtests may be a nice way of showing which of the steps failed
+    for do_stuff, paths in data:
+        do_stuff(reader)
+        reader.update_feeds()
+        reader.update_search()
+
+        entry_data = {
+            (e.feed_url, e.id): {p: eval(f"e{p}", dict(e=e, p=p)) for p in paths}
+            for e in reader.get_entries()
+        }
+
+        result_data = {
+            (r.feed_url, r.id): {
+                p: hl.value for p, hl in {**r.metadata, **r.content}.items()
+            }
+            for r in reader.search_entries('entry OR feed')
+        }
+
+        assert entry_data == result_data
+
+
 @rename_argument('reader', 'reader_without_and_with_entries')
 def test_update_search_fails_if_not_enabled(reader):
     with pytest.raises(SearchNotEnabledError):
@@ -449,6 +592,9 @@ def test_search_entries_sort_error(reader):
         set(reader.search_entries('one', sort='bad sort'))
 
 
+# BEGIN concurrency tests
+
+
 def test_update_search_entry_changed_during_strip_html(db_path, monkeypatch):
     """Test the entry can't remain out of sync if it changes
     during reader.update_search() in a strip_html() call.
@@ -643,3 +789,6 @@ def test_update_search_concurrent_calls(db_path, monkeypatch):
 
     ((rowcount,),) = reader._search.db.execute("select count(*) from entries_search;")
     assert rowcount == 2
+
+
+# END concurrency tests
