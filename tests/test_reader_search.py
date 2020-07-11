@@ -226,12 +226,24 @@ UPDATE_TRIGGERS_DATA = {
             ['.title', '.feed.title'],
         ),
         (
-            lambda r: r._parser.feed(1, datetime(2010, 1, 2), title='new'),
+            lambda r: (
+                r._parser.feed(1, datetime(2010, 1, 2), title='new'),
+                r._parser.entry(1, 1, datetime(2010, 1, 2)),
+            ),
             ['.title', '.feed.title'],
         ),
-        (lambda r: r._parser.feed(1, datetime(2010, 1, 3), title=None), ['.title']),
         (
-            lambda r: r._parser.feed(1, datetime(2010, 1, 4), title='another'),
+            lambda r: (
+                r._parser.feed(1, datetime(2010, 1, 3), title=None),
+                r._parser.entry(1, 1, datetime(2010, 1, 3)),
+            ),
+            ['.title'],
+        ),
+        (
+            lambda r: (
+                r._parser.feed(1, datetime(2010, 1, 4), title='another'),
+                r._parser.entry(1, 1, datetime(2010, 1, 4)),
+            ),
             ['.title', '.feed.title'],
         ),
     ],
@@ -240,8 +252,20 @@ UPDATE_TRIGGERS_DATA = {
             lambda r: r._parser.entry(1, 1, datetime(2010, 1, 1)),
             ['.title', '.feed.title'],
         ),
-        (lambda r: r.set_feed_user_title('1', 'user'), ['.title', '.feed.user_title']),
-        (lambda r: r.set_feed_user_title('1', None), ['.title', '.feed.title']),
+        (
+            lambda r: (
+                r.set_feed_user_title('1', 'user'),
+                r._parser.entry(1, 1, datetime(2010, 1, 2)),
+            ),
+            ['.title', '.feed.user_title'],
+        ),
+        (
+            lambda r: (
+                r.set_feed_user_title('1', None),
+                r._parser.entry(1, 1, datetime(2010, 1, 3)),
+            ),
+            ['.title', '.feed.title'],
+        ),
     ],
 }
 
@@ -255,8 +279,7 @@ def test_update_triggers(reader, data):
     reader.add_feed(feed.url)
     reader.enable_search()
 
-    # subtests may be a nice way of showing which of the steps failed
-    for do_stuff, paths in data:
+    for i, (do_stuff, paths) in enumerate(data):
         do_stuff(reader)
         reader.update_feeds()
         reader.update_search()
@@ -273,7 +296,7 @@ def test_update_triggers(reader, data):
             for r in reader.search_entries('entry OR feed')
         }
 
-        assert entry_data == result_data
+        assert entry_data == result_data, f"change {i}"
 
 
 @rename_argument('reader', 'reader_without_and_with_entries')

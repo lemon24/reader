@@ -21,6 +21,11 @@ Unreleased
     (:meth:`~Reader.update_search`) outside transactions.
   * Fix bug causing duplicate rows in the search index
     when an entry changes while updating the search index.
+  * Update the search index for an entry only if the specific values
+    included in the index change.
+    Previously, any change on the feed would result in all its entries being
+    re-indexed, even if the feed title or the entry content didn't change.
+    This should reduce the :meth:`~Reader.update_search` run time significantly.
 
 * Require at least click 7.0 for the ``cli`` extra.
 * Do not fail for feeds with incorrectly-declared media types,

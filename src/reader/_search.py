@@ -224,10 +224,11 @@ class Search:
 
         assert self.db.in_transaction
 
-        # TODO: use "UPDATE OF ... ON" instead;
-        # how do we test it?
-        # TODO: only run UPDATE triggers if the values are actually different;
-        # how do we test it?
+        # for "UPDATE OF <known columns> ON ... WHEN <values are actually different>":
+        # * how do we test it?
+        #   * A: maybe update some stuff the trigger shouldn't run for and check total_changes()
+        #   *... removing some of the columns doesn't seem to fail any tests :|
+
         # TODO: what happens if the feed ID changes? can't happen yet;
         # also see https://github.com/lemon24/reader/issues/149
 
@@ -244,7 +245,15 @@ class Search:
         self.db.execute(
             """
             CREATE TRIGGER entries_search_entries_update
-            AFTER UPDATE ON entries
+            AFTER UPDATE
+
+            OF title, summary, content
+            ON entries
+            WHEN
+                new.title != old.title
+                OR new.summary != old.summary
+                OR new.content != old.content
+
             BEGIN
                 UPDATE entries_search_sync_state
                 SET to_update = 1
@@ -276,7 +285,14 @@ class Search:
         self.db.execute(
             """
             CREATE TRIGGER entries_search_feeds_update
-            AFTER UPDATE ON feeds
+            AFTER UPDATE
+
+            OF title, user_title
+            ON feeds
+            WHEN
+                new.title != old.title
+                OR new.user_title != old.user_title
+
             BEGIN
                 UPDATE entries_search_sync_state
                 SET to_update = 1

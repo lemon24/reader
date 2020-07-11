@@ -143,16 +143,27 @@ def update_from_18_to_19(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute("ALTER TABLE feeds ADD COLUMN last_exception TEXT;")
 
 
+def update_from_19_to_20(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/175#issuecomment-654213853
+    from ._search import Search
+
+    search = Search(db)
+    if search.is_enabled():
+        search._drop_triggers()
+        search._create_triggers()
+
+
 def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=19,
+        version=20,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
             17: update_from_17_to_18,
             18: update_from_18_to_19,
+            19: update_from_19_to_20,
         },
         # Row value support was added in 3.15.
         minimum_sqlite_version=(3, 15),
