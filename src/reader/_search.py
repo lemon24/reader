@@ -381,9 +381,8 @@ class Search:
                     """
                     DELETE FROM entries_search
                     WHERE (_id, _feed) IN (
-                        SELECT esss.id, esss.feed
-                        FROM entries_search_sync_state AS esss
-                        JOIN entries_search ON (esss.id, esss.feed) = (_id, _feed)
+                        SELECT id, feed
+                        FROM entries_search_sync_state
                         WHERE to_delete
                         LIMIT ?
                     );
