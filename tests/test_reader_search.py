@@ -274,6 +274,10 @@ UPDATE_TRIGGERS_DATA = {
     'data', list(UPDATE_TRIGGERS_DATA.values()), ids=list(UPDATE_TRIGGERS_DATA)
 )
 def test_update_triggers(reader, data):
+    """update_search() should update the search index
+    if the indexed fields change.
+
+    """
     reader._parser = parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
@@ -297,6 +301,118 @@ def test_update_triggers(reader, data):
         }
 
         assert entry_data == result_data, f"change {i}"
+
+
+@pytest.mark.parametrize('set_user_title', [False, True])
+def test_update_triggers_no_change(db_path, monkeypatch, set_user_title):
+    """update_search() should *not* update the search index
+    if anything else except the indexed fields changes.
+
+    """
+    from reader._search import Search
+
+    strip_html_called = 0
+
+    class MySearch(Search):
+        @staticmethod
+        def strip_html(*args, **kwargs):
+            nonlocal strip_html_called
+            strip_html_called += 1
+            return Search.strip_html(*args, **kwargs)
+
+    # TODO: remove monkeypatching when make_reader() gets a search_cls argument
+    monkeypatch.setattr('reader.core.Search', MySearch)
+
+    reader = make_reader(db_path)
+    reader._parser = parser = Parser()
+
+    reader._parser = parser = Parser()
+    feed = parser.feed(1, datetime(2010, 1, 1), title='feed')
+    entry = parser.entry(
+        1,
+        1,
+        datetime(2010, 1, 1),
+        title='entry',
+        summary='summary',
+        content=[Content('content')],
+    )
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+    if set_user_title:
+        reader.set_feed_user_title(feed, 'user title')
+
+    reader.enable_search()
+    reader.update_search()
+
+    assert strip_html_called > 0
+    strip_html_called = 0
+
+    (old_result,) = reader.search_entries('entry OR feed')
+
+    feed = parser.feed(
+        1, datetime(2010, 1, 2), title='feed', link='link', author='author'
+    )
+
+    """
+    entry = parser.entry(
+        1, 1, datetime(2010, 1, 2),
+        title='entry',
+        summary='summary',
+        content=[Content('content')],
+        link='link', author='author',
+        published=datetime(2010, 1, 2),
+        enclosures=[Enclosure('enclosure')],
+    )
+    """
+    # NOTE: As of 1.4, updating entries normall (above) uses INSERT OR REPLACE.
+    # REPLACE == DELETE + INSERT (https://www.sqlite.org/lang_conflict.html),
+    # so updating the entry normally *will not* fire the ON UPDATE trigger,
+    # but the ON DELETE and ON INSERT ones (basically, the ON UPDATE trigger
+    # never fires at the moment).
+    #
+    # Meanwhile, we do a (more intrusive/brittle) manual update:
+    with reader._search.db as db:
+        db.execute(
+            """
+            UPDATE entries
+            SET (
+                title,
+                link,
+                updated,
+                author,
+                published,
+                summary,
+                content,
+                enclosures
+            ) = (
+                'entry',
+                'http://www.example.com/entries/1',
+                '2010-01-02 00:00:00',
+                'author',
+                '2010-01-02 00:00:00',
+                'summary',
+                '[{"value": "content", "type": null, "language": null}]',
+                '[{"href": "enclosure", "type": null, "length": null}]'
+            )
+            WHERE (id, feed) = ('1, 1', '1');
+            """
+        )
+    # TODO: Change this test when updating entries uses UPDATE instead of INSERT OR REPLACE
+
+    reader.mark_as_read(entry)
+    reader.mark_as_important(entry)
+
+    reader.update_feeds()
+    if set_user_title:
+        reader.set_feed_user_title(feed, 'user title')
+
+    reader.update_search()
+
+    (new_result,) = reader.search_entries('entry OR feed')
+
+    assert old_result == new_result
+    assert strip_html_called == 0
 
 
 @rename_argument('reader', 'reader_without_and_with_entries')
@@ -657,7 +773,7 @@ def test_update_search_entry_changed_during_strip_html(db_path, monkeypatch):
                 can_return_from_strip_html.wait()
                 return Search.strip_html(*args, **kwargs)
 
-        # FIXME: remove monkeypatching when make_reader() gets a search_cls argument
+        # TODO: remove monkeypatching when make_reader() gets a search_cls argument
         monkeypatch.setattr('reader.core.Search', MySearch)
 
         reader = make_reader(db_path)
@@ -795,7 +911,7 @@ def test_update_search_concurrent_calls(db_path, monkeypatch):
                 barrier.wait()
                 return Search.strip_html(*args, **kwargs)
 
-        # FIXME: remove monkeypatching when make_reader() gets a search_cls argument
+        # TODO: remove monkeypatching when make_reader() gets a search_cls argument
         monkeypatch.setattr('reader.core.Search', MySearch)
 
         reader = make_reader(db_path)

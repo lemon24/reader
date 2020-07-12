@@ -224,11 +224,6 @@ class Search:
 
         assert self.db.in_transaction
 
-        # for "UPDATE OF <known columns> ON ... WHEN <values are actually different>":
-        # * how do we test it?
-        #   * A: maybe update some stuff the trigger shouldn't run for and check total_changes()
-        #   *... removing some of the columns doesn't seem to fail any tests :|
-
         # TODO: what happens if the feed ID changes? can't happen yet;
         # also see https://github.com/lemon24/reader/issues/149
 
