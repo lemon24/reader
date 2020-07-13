@@ -187,6 +187,10 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
 # https://github.com/lemon24/reader/issues/6
 # https://github.com/lemon24/reader/issues/167#issuecomment-626753299
 
+# When trying to fix "database is locked" errors or to optimize stuff,
+# have a look at the lessons here first:
+# https://github.com/lemon24/reader/issues/175#issuecomment-657495233
+
 
 class Storage:
 

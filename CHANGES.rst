@@ -14,19 +14,20 @@ Unreleased
 * Work to reduce the likelihood of "database is locked" errors during updates
   (:issue:`175`):
 
-  * Use SQLite's `write-ahead logging`_ to increase concurrency.
-    At the moment there is no way to disable WAL.
-    (:issue:`169`)
   * Prepare entries to be added to the search index
     (:meth:`~Reader.update_search`) outside transactions.
   * Fix bug causing duplicate rows in the search index
     when an entry changes while updating the search index.
-  * Update the search index for an entry only if the specific values
-    included in the index change.
-    Previously, any change on the feed would result in all its entries being
-    re-indexed, even if the feed title or the entry content didn't change.
-    This should reduce the :meth:`~Reader.update_search` run time significantly.
+  * Update the search index only when the indexed values change (details below).
+  * Use SQLite WAL (details below).
 
+* Update the search index only when the indexed values change.
+  Previously, any change on a feed would result in all its entries being
+  re-indexed, even if the feed title or the entry content didn't change.
+  This should reduce the :meth:`~Reader.update_search` run time significantly.
+* Use SQLite's `write-ahead logging`_ to increase concurrency.
+  At the moment there is no way to disable WAL.
+  (:issue:`169`)
 * Require at least click 7.0 for the ``cli`` extra.
 * Do not fail for feeds with incorrectly-declared media types,
   if feedparser can parse the feed;

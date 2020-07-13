@@ -365,7 +365,7 @@ def test_update_triggers_no_change(db_path, monkeypatch, set_user_title):
         enclosures=[Enclosure('enclosure')],
     )
     """
-    # NOTE: As of 1.4, updating entries normall (above) uses INSERT OR REPLACE.
+    # NOTE: As of 1.4, updating entries normally (above) uses INSERT OR REPLACE.
     # REPLACE == DELETE + INSERT (https://www.sqlite.org/lang_conflict.html),
     # so updating the entry normally *will not* fire the ON UPDATE trigger,
     # but the ON DELETE and ON INSERT ones (basically, the ON UPDATE trigger

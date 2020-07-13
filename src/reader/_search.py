@@ -97,6 +97,11 @@ def strip_html(text: SQLiteType, features: Optional[str] = None) -> SQLiteType:
     return rv
 
 
+# When trying to fix "database is locked" errors or to optimize stuff,
+# have a look at the lessons here first:
+# https://github.com/lemon24/reader/issues/175#issuecomment-657495233
+
+
 class Search:
 
     """Search provider tightly coupled to the SQLite storage.
@@ -127,6 +132,8 @@ class Search:
                 search.disable()
 
                 search.enable()
+
+    Example: https://github.com/lemon24/reader/blob/f0894d93d8573680c656335ded46ebcf482cf7cd/src/reader/_storage.py#L146
 
     Also see "How does this interact with migrations?" in
     https://github.com/lemon24/reader/issues/122#issuecomment-591302580
