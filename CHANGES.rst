@@ -9,7 +9,7 @@ Changelog
 Version 1.4
 -----------
 
-Unreleased
+Released 2020-07-13
 
 * Work to reduce the likelihood of "database is locked" errors during updates
   (:issue:`175`):
