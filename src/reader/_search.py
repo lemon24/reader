@@ -12,7 +12,6 @@ from functools import partial
 from itertools import groupby
 from types import MappingProxyType
 from typing import Any
-from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import List
@@ -29,7 +28,6 @@ from ._sqlite_utils import wrap_exceptions
 from ._sqlite_utils import wrap_exceptions_iter
 from ._storage import apply_filter_options
 from ._storage import apply_recent
-from ._storage import Storage
 from ._types import EntryFilterOptions
 from ._utils import join_paginated_iter
 from .exceptions import InvalidSearchQueryError
@@ -142,21 +140,17 @@ class Search:
 
     """
 
+    # TODO: these are duplicated from storage, find a way to get them from there.
+    # recent_threshold and chunk_size are not part of the Search interface,
+    # but are part of the private API of this implementation.
+    recent_threshold = timedelta(7)
+    chunk_size = 2 ** 8
+
     def __init__(self, db: sqlite3.Connection):
         self.db = db
-        self.get_chunk_size: Callable[[], int] = lambda: 256
-        self.get_recent_threshold: Callable[
-            [], timedelta
-        ] = lambda: Storage.recent_threshold
 
-    # chunk_size and strip_html are not part of the Search interface,
-    # but are part of the private API of this implementation
-    # to allow overriding during tests.
-
-    @property
-    def chunk_size(self) -> int:
-        return self.get_chunk_size()
-
+    # chunk_size is not part of the Search interface,
+    # but is part of the private API of this implementation.
     strip_html = staticmethod(strip_html)
 
     @wrap_exceptions(SearchError)
@@ -718,7 +712,7 @@ class Search:
             after_mark=after_mark,
             # 255 letters / 4.7 letters per word (average in English)
             snippet_tokens=54,
-            recent_threshold=now - self.get_recent_threshold(),
+            recent_threshold=now - self.recent_threshold,
         )
 
         def value_factory(t: Tuple[Any, ...]) -> EntrySearchResult:

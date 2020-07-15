@@ -7,7 +7,6 @@ from functools import partial
 from itertools import chain
 from itertools import repeat
 from typing import Any
-from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import Mapping
@@ -195,7 +194,10 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
 
 class Storage:
 
+    # recent_threshold and chunk_size are not part of the Storage interface,
+    # but are part of the private API of this implementation.
     recent_threshold = timedelta(7)
+    chunk_size = 2 ** 8
 
     @wrap_exceptions(StorageError)
     def __init__(
@@ -225,16 +227,9 @@ class Storage:
         self.path = path
         self.timeout = timeout
 
-        # FIXME: placeholder until we have a better way of getting it from Reader, maybe
-        self.get_chunk_size: Callable[[], int] = lambda: 256
-
     # TODO: these are not part of the Storage API
     connect = staticmethod(sqlite3.connect)
     setup_db = staticmethod(setup_db)
-
-    @property
-    def chunk_size(self) -> int:
-        return self.get_chunk_size()
 
     def close(self) -> None:
         self.db.close()

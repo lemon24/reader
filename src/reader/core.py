@@ -85,20 +85,6 @@ def make_reader(
     search = Search(storage.db)
 
     reader = Reader(storage, search, _called_directly=False)
-
-    # We're passing this to both the storage and search because
-    # I didn't want to change the tests to set it in two places.
-    # Ideally, it should be a storage argument/attribute,
-    # and the search should use it from there; then, we can just change
-    # the assignment target (reader(._storage)._pagination_chunk_size;
-    # even better would be to parametrize the storage in a way transparent
-    # to Reader.
-    storage.get_chunk_size = lambda: reader._pagination_chunk_size
-    search.get_chunk_size = lambda: reader._pagination_chunk_size
-
-    # We have the same sick relationship between storage and search.
-    search.get_recent_threshold = lambda: storage.recent_threshold
-
     return reader
 
 
@@ -115,8 +101,6 @@ class Reader:
     constructor is not stable yet and may change without any notice.
 
     """
-
-    _pagination_chunk_size = 2 ** 8
 
     def __init__(
         self, _storage: Storage, _search: Search, _called_directly: bool = True

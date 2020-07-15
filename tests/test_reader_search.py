@@ -15,6 +15,7 @@ from reader import Reader
 from reader import ReaderError
 from reader import SearchNotEnabledError
 from reader import StorageError
+from reader._search import Search
 
 
 @pytest.fixture(params=[False, True], ids=['without_entries', 'with_entries'])
@@ -86,9 +87,9 @@ with_sort = pytest.mark.parametrize('sort', ['relevant', 'recent'])
 
 @rename_argument('reader', 'reader_without_and_with_entries')
 @with_sort
-@pytest.mark.parametrize('chunk_size', [Reader._pagination_chunk_size, 2, 0])
+@pytest.mark.parametrize('chunk_size', [Search.chunk_size, 2, 0])
 def test_update_search_feeds_change_after_enable(reader, sort, chunk_size):
-    reader._pagination_chunk_size = chunk_size
+    reader._search.chunk_size = chunk_size
     reader.enable_search()
     reader.update_search()
 
@@ -601,7 +602,7 @@ def test_search_entries_order_title_content_beats_title(reader):
     'chunk_size',
     [
         # the default
-        Reader._pagination_chunk_size,
+        Search.chunk_size,
         # rough result size for this test
         1,
         2,
@@ -616,7 +617,7 @@ def test_search_entries_order_weights(reader, chunk_size):
 
     # TODO: may need fixing once we finish tuning the weights (it should fail)
 
-    reader._pagination_chunk_size = chunk_size
+    reader._search.chunk_size = chunk_size
 
     parser = Parser()
     reader._parser = parser

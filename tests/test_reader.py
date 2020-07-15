@@ -137,7 +137,7 @@ def test_update_entry_updated(reader, call_update_method):
     }
 
 
-@pytest.mark.parametrize('chunk_size', [Reader._pagination_chunk_size, 1])
+@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1])
 def test_update_no_updated(reader, chunk_size, call_update_method):
     """If a feed has updated == None, it should be treated as updated.
 
@@ -152,7 +152,7 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
     https://github.com/lemon24/reader/issues/88
 
     """
-    reader._pagination_chunk_size = chunk_size
+    reader._storage.chunk_size = chunk_size
 
     parser = Parser()
     reader._parser = parser
@@ -814,7 +814,7 @@ GET_ENTRIES_ORDER_DATA = {
     'chunk_size',
     [
         # the default
-        Reader._pagination_chunk_size,
+        Storage.chunk_size,
         # rough result size for this test
         1,
         2,
@@ -845,8 +845,10 @@ def test_get_entries_recent_order(
 
     # TODO: Break this into smaller tests; working with it for #113 was a pain.
 
-    reader._pagination_chunk_size = chunk_size
+    reader._storage.chunk_size = chunk_size
+    reader._search.chunk_size = chunk_size
     reader._storage.recent_threshold = GET_ENTRIES_ORDER_RECENT_THRESHOLD
+    reader._search.recent_threshold = GET_ENTRIES_ORDER_RECENT_THRESHOLD
 
     parser = Parser()
     reader._parser = parser
@@ -888,6 +890,7 @@ def test_get_entries_recent_order(
     recent_threshold, expected = GET_ENTRIES_ORDER_DATA[order_data_key]
 
     reader._storage.recent_threshold = recent_threshold
+    reader._search.recent_threshold = recent_threshold
     reader._now.now = datetime(2010, 1, 6)
 
     pre_stuff(reader)
@@ -899,7 +902,7 @@ def test_get_entries_recent_order(
     'chunk_size',
     [
         # the default
-        Reader._pagination_chunk_size,
+        Storage.chunk_size,
         # rough result size for this test
         1,
         2,
@@ -917,7 +920,8 @@ def test_get_entries_recent_feed_order(reader, chunk_size, pre_stuff, call_metho
     https://github.com/lemon24/reader/issues/87
 
     """
-    reader._pagination_chunk_size = chunk_size
+    reader._storage.chunk_size = chunk_size
+    reader._search.chunk_size = chunk_size
 
     parser = Parser()
     reader._parser = parser
@@ -966,7 +970,7 @@ def test_get_entries_random(reader, chunk_size):
     and random() otherwise; this would likely add a performance hit.
 
     """
-    reader._pagination_chunk_size = chunk_size
+    reader._storage.chunk_size = chunk_size
 
     parser = Parser()
     reader._parser = parser
