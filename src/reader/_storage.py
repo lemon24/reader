@@ -3,6 +3,7 @@ import logging
 import sqlite3
 from datetime import datetime
 from datetime import timedelta
+from functools import partial
 from itertools import chain
 from itertools import repeat
 from typing import Any
@@ -258,8 +259,15 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    @wrap_exceptions_iter(StorageError)
     def get_feeds(
+        self, url: Optional[str] = None, sort: FeedSortOrder = 'title',
+    ) -> Iterable[Feed]:
+        yield from join_paginated_iter(
+            partial(self.get_feeds_page, url, sort), self.chunk_size,
+        )
+
+    @wrap_exceptions_iter(StorageError)
+    def get_feeds_page(
         self,
         url: Optional[str] = None,
         sort: FeedSortOrder = 'title',
@@ -663,8 +671,27 @@ class Storage:
         # TODO: this method is for testing convenience only, maybe delete it?
         self.add_or_update_entries([intent])
 
-    @wrap_exceptions_iter(StorageError)
     def get_entries(
+        self,
+        now: datetime,
+        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
+        sort: EntrySortOrder = 'recent',
+    ) -> Iterable[Entry]:
+        # TODO: deduplicate
+        if sort == 'recent':
+            yield from join_paginated_iter(
+                partial(self.get_entries_page, now, filter_options, sort),
+                self.chunk_size,
+            )
+        elif sort == 'random':
+            it = self.get_entries_page(now, filter_options, sort, self.chunk_size)
+            for entry, _ in it:
+                yield entry
+        else:
+            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+
+    @wrap_exceptions_iter(StorageError)
+    def get_entries_page(
         self,
         now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
@@ -697,8 +724,15 @@ class Storage:
             self.db, query, context, value_factory, chunk_size, last
         )
 
-    @wrap_exceptions_iter(StorageError)
     def iter_feed_metadata(
+        self, feed_url: str, key: Optional[str] = None,
+    ) -> Iterable[Tuple[str, JSONType]]:
+        yield from join_paginated_iter(
+            partial(self.iter_feed_metadata_page, feed_url, key), self.chunk_size,
+        )
+
+    @wrap_exceptions_iter(StorageError)
+    def iter_feed_metadata_page(
         self,
         feed_url: str,
         key: Optional[str] = None,

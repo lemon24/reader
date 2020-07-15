@@ -8,6 +8,7 @@ import warnings
 from collections import OrderedDict
 from datetime import datetime
 from datetime import timedelta
+from functools import partial
 from itertools import groupby
 from types import MappingProxyType
 from typing import Any
@@ -30,6 +31,7 @@ from ._storage import apply_filter_options
 from ._storage import apply_recent
 from ._storage import Storage
 from ._types import EntryFilterOptions
+from ._utils import join_paginated_iter
 from .exceptions import InvalidSearchQueryError
 from .exceptions import SearchError
 from .exceptions import SearchNotEnabledError
@@ -678,8 +680,20 @@ class Search:
         "unterminated string",
     ]
 
-    @wrap_exceptions_iter(SearchError)
     def search_entries(
+        self,
+        query: str,
+        now: datetime,
+        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
+        sort: SearchSortOrder = 'relevant',
+    ) -> Iterable[EntrySearchResult]:
+        yield from join_paginated_iter(
+            partial(self.search_entries_page, query, now, filter_options, sort),
+            self.chunk_size,
+        )
+
+    @wrap_exceptions_iter(SearchError)
+    def search_entries_page(
         self,
         query: str,
         now: datetime,

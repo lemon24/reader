@@ -97,11 +97,19 @@ def update_search(storage, _, __):
 
 
 def search_entries_chunk_size_0(storage, _, __):
-    list(Search(storage.db).search_entries('entry', datetime(2010, 1, 1), chunk_size=0))
+    list(
+        Search(storage.db).search_entries_page(
+            'entry', datetime(2010, 1, 1), chunk_size=0
+        )
+    )
 
 
 def search_entries_chunk_size_1(storage, _, __):
-    list(Search(storage.db).search_entries('entry', datetime(2010, 1, 1), chunk_size=1))
+    list(
+        Search(storage.db).search_entries_page(
+            'entry', datetime(2010, 1, 1), chunk_size=1
+        )
+    )
 
 
 @pytest.mark.slow
@@ -131,25 +139,25 @@ def enable_and_update_search(storage):
 
 
 def iter_search_entries_chunk_size_0(storage):
-    return Search(storage.db).search_entries(
+    return Search(storage.db).search_entries_page(
         'entry', datetime(2010, 1, 1), chunk_size=0
     )
 
 
 def iter_search_entries_chunk_size_1(storage):
-    return Search(storage.db).search_entries(
+    return Search(storage.db).search_entries_page(
         'entry', datetime(2010, 1, 1), chunk_size=1
     )
 
 
 def iter_search_entries_chunk_size_2(storage):
-    return Search(storage.db).search_entries(
+    return Search(storage.db).search_entries_page(
         'entry', datetime(2010, 1, 1), chunk_size=2
     )
 
 
 def iter_search_entries_chunk_size_3(storage):
-    return Search(storage.db).search_entries(
+    return Search(storage.db).search_entries_page(
         'entry', datetime(2010, 1, 1), chunk_size=3
     )
 

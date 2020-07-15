@@ -3,7 +3,6 @@ import datetime
 import itertools
 import logging
 import warnings
-from functools import partial
 from typing import Any
 from typing import Callable
 from typing import Collection
@@ -25,7 +24,6 @@ from ._types import EntryUpdateIntent
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import ParsedFeed
-from ._utils import join_paginated_iter
 from ._utils import make_noop_context_manager
 from ._utils import make_pool_map
 from ._utils import zero_or_one
@@ -201,10 +199,7 @@ class Reader:
         url = _feed_argument(feed) if feed else None
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
-
-        yield from join_paginated_iter(
-            partial(self._storage.get_feeds, url, sort), self._pagination_chunk_size,
-        )
+        return self._storage.get_feeds(url, sort)
 
     @overload
     def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
@@ -487,21 +482,10 @@ class Reader:
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures
         )
-        now = self._now()
-
-        if sort == 'recent':
-            yield from join_paginated_iter(
-                partial(self._storage.get_entries, now, filter_options, sort),
-                self._pagination_chunk_size,
-            )
-        elif sort == 'random':
-            it = self._storage.get_entries(
-                now, filter_options, sort, self._pagination_chunk_size
-            )
-            for entry, _ in it:
-                yield entry
-        else:
+        if sort not in ('recent', 'random'):
             raise ValueError("sort should be one of ('recent', 'random')")
+        now = self._now()
+        return self._storage.get_entries(now, filter_options, sort)
 
     @overload
     def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover
@@ -613,10 +597,7 @@ class Reader:
 
         """
         feed_url = _feed_argument(feed)
-        yield from join_paginated_iter(
-            partial(self._storage.iter_feed_metadata, feed_url, key),
-            self._pagination_chunk_size,
-        )
+        return self._storage.iter_feed_metadata(feed_url, key)
 
     @overload
     def get_feed_metadata(
@@ -814,13 +795,7 @@ class Reader:
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures
         )
-
         if sort not in ('relevant', 'recent'):
             raise ValueError("sort should be one of ('relevant', 'recent')")
-
         now = self._now()
-
-        yield from join_paginated_iter(
-            partial(self._search.search_entries, query, now, filter_options, sort),
-            self._pagination_chunk_size,
-        )
+        return self._search.search_entries(query, now, filter_options, sort)

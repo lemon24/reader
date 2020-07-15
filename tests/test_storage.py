@@ -129,11 +129,11 @@ def add_or_update_entries(storage, feed, entry):
 
 
 def get_entries_chunk_size_0(storage, _, __):
-    list(storage.get_entries(chunk_size=0, now=datetime(2010, 1, 1)))
+    list(storage.get_entries_page(chunk_size=0, now=datetime(2010, 1, 1)))
 
 
 def get_entries_chunk_size_1(storage, _, __):
-    list(storage.get_entries(chunk_size=1, now=datetime(2010, 1, 1)))
+    list(storage.get_entries_page(chunk_size=1, now=datetime(2010, 1, 1)))
 
 
 def iter_feed_metadata(storage, feed, __):
@@ -221,7 +221,7 @@ def check_errors_locked(db_path, pre_stuff, do_stuff, exc_type):
 
 
 def iter_get_feeds(storage):
-    return storage.get_feeds(chunk_size=1)
+    return storage.get_feeds_page(chunk_size=1)
 
 
 def iter_get_feeds_for_update(storage):
@@ -229,23 +229,23 @@ def iter_get_feeds_for_update(storage):
 
 
 def iter_pagination_chunk_size_0(storage):
-    return storage.get_entries(chunk_size=0, now=datetime(2010, 1, 1))
+    return storage.get_entries_page(chunk_size=0, now=datetime(2010, 1, 1))
 
 
 def iter_pagination_chunk_size_1(storage):
-    return storage.get_entries(chunk_size=1, now=datetime(2010, 1, 1))
+    return storage.get_entries_page(chunk_size=1, now=datetime(2010, 1, 1))
 
 
 def iter_pagination_chunk_size_2(storage):
-    return storage.get_entries(chunk_size=2, now=datetime(2010, 1, 1))
+    return storage.get_entries_page(chunk_size=2, now=datetime(2010, 1, 1))
 
 
 def iter_pagination_chunk_size_3(storage):
-    return storage.get_entries(chunk_size=3, now=datetime(2010, 1, 1))
+    return storage.get_entries_page(chunk_size=3, now=datetime(2010, 1, 1))
 
 
 def iter_iter_feed_metadata(storage):
-    return storage.iter_feed_metadata('two', chunk_size=1)
+    return storage.iter_feed_metadata_page('two', chunk_size=1)
 
 
 @pytest.mark.slow
@@ -407,7 +407,7 @@ def test_entry_remains_read_after_update(storage_with_two_entries):
 
     assert {
         e.id
-        for e, _ in storage.get_entries(
+        for e in storage.get_entries(
             datetime(2010, 1, 1), EntryFilterOptions(read=True)
         )
     } == {'one'}
@@ -439,7 +439,7 @@ def storage_with_two_entries(storage):
 def test_important_unimportant_by_default(storage):
     assert {
         e.id
-        for e, _ in storage.get_entries(
+        for e in storage.get_entries(
             datetime(2010, 1, 1), EntryFilterOptions(important=False)
         )
     } == {'one', 'two'}
@@ -449,25 +449,25 @@ def test_important_unimportant_by_default(storage):
 def test_important_get_entries(storage):
     storage.mark_as_important_unimportant('feed', 'one', True)
 
-    assert {e.id for e, _ in storage.get_entries(now=datetime(2010, 1, 1))} == {
+    assert {e.id for e in storage.get_entries(now=datetime(2010, 1, 1))} == {
         'one',
         'two',
     }
     assert {
         e.id
-        for e, _ in storage.get_entries(
+        for e in storage.get_entries(
             datetime(2010, 1, 1), EntryFilterOptions(important=None)
         )
     } == {'one', 'two'}
     assert {
         e.id
-        for e, _ in storage.get_entries(
+        for e in storage.get_entries(
             datetime(2010, 1, 1), EntryFilterOptions(important=True)
         )
     } == {'one'}
     assert {
         e.id
-        for e, _ in storage.get_entries(
+        for e in storage.get_entries(
             datetime(2010, 1, 1), EntryFilterOptions(important=False)
         )
     } == {'two'}
@@ -488,7 +488,7 @@ def test_important_entry_remains_important_after_update(storage):
 
     assert {
         e.id
-        for e, _ in storage.get_entries(
+        for e in storage.get_entries(
             datetime(2010, 1, 1), EntryFilterOptions(important=True)
         )
     } == {'one'}
@@ -498,9 +498,10 @@ def test_important_entry_remains_important_after_update(storage):
 def test_important_entry_important(storage):
     storage.mark_as_important_unimportant('feed', 'one', True)
 
-    assert {
-        e.id: e.important for e, _ in storage.get_entries(datetime(2010, 1, 1))
-    } == {'one': True, 'two': False}
+    assert {e.id: e.important for e in storage.get_entries(datetime(2010, 1, 1))} == {
+        'one': True,
+        'two': False,
+    }
 
 
 @rename_argument('storage', 'storage_with_two_entries')
@@ -510,7 +511,7 @@ def test_important_mark_as_unimportant(storage):
 
     assert {
         e.id
-        for e, _ in storage.get_entries(
+        for e in storage.get_entries(
             datetime(2010, 1, 1), EntryFilterOptions(important=True)
         )
     } == set()
