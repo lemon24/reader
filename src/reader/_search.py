@@ -17,6 +17,7 @@ from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
@@ -36,6 +37,9 @@ from .exceptions import SearchNotEnabledError
 from .types import EntrySearchResult
 from .types import HighlightedString
 from .types import SearchSortOrder
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ._storage import Storage
 
 
 # Only Search.update() has a reason to fail if bs4 is missing.
@@ -140,16 +144,28 @@ class Search:
 
     """
 
-    # TODO: these are duplicated from storage, find a way to get them from there.
-    # recent_threshold and chunk_size are not part of the Search interface,
-    # but are part of the private API of this implementation.
-    recent_threshold = timedelta(7)
-    chunk_size = 2 ** 8
+    def __init__(self, storage: 'Storage', db: Optional[sqlite3.Connection] = None):
+        self.storage = storage
+        # HACK: during migrations there's no storage, so we need to pass the DB in
+        # TODO: find a way to have a storage even during migrations;
+        # it would be nice if we could make one with a specific db
+        self._db = db
 
-    def __init__(self, db: sqlite3.Connection):
-        self.db = db
+    # db, recent_threshold, and chunk_size exposed for convenience
 
-    # chunk_size is not part of the Search interface,
+    @property
+    def db(self) -> sqlite3.Connection:
+        return self._db or self.storage.db
+
+    @property
+    def recent_threshold(self) -> timedelta:
+        return self.storage.recent_threshold
+
+    @property
+    def chunk_size(self) -> int:
+        return self.storage.chunk_size
+
+    # strip_html is not part of the Search interface,
     # but is part of the private API of this implementation.
     strip_html = staticmethod(strip_html)
 

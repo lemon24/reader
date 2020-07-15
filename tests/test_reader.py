@@ -846,9 +846,7 @@ def test_get_entries_recent_order(
     # TODO: Break this into smaller tests; working with it for #113 was a pain.
 
     reader._storage.chunk_size = chunk_size
-    reader._search.chunk_size = chunk_size
     reader._storage.recent_threshold = GET_ENTRIES_ORDER_RECENT_THRESHOLD
-    reader._search.recent_threshold = GET_ENTRIES_ORDER_RECENT_THRESHOLD
 
     parser = Parser()
     reader._parser = parser
@@ -890,7 +888,6 @@ def test_get_entries_recent_order(
     recent_threshold, expected = GET_ENTRIES_ORDER_DATA[order_data_key]
 
     reader._storage.recent_threshold = recent_threshold
-    reader._search.recent_threshold = recent_threshold
     reader._now.now = datetime(2010, 1, 6)
 
     pre_stuff(reader)
@@ -921,7 +918,6 @@ def test_get_entries_recent_feed_order(reader, chunk_size, pre_stuff, call_metho
 
     """
     reader._storage.chunk_size = chunk_size
-    reader._search.chunk_size = chunk_size
 
     parser = Parser()
     reader._parser = parser

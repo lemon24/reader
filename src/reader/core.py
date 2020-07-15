@@ -82,7 +82,7 @@ def make_reader(
     storage = _storage or Storage(url, factory=_storage_factory)
 
     # For now, we're using a storage-bound search provider.
-    search = Search(storage.db)
+    search = Search(storage)
 
     reader = Reader(storage, search, _called_directly=False)
     return reader

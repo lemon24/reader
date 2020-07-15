@@ -13,7 +13,7 @@ from reader._search import strip_html
 
 
 def test_bs4_import_error(storage, monkeypatch):
-    search = Search(storage.db)
+    search = Search(storage)
     search.enable()
     monkeypatch.setattr('reader._search.bs4', None)
     monkeypatch.setattr('reader._search.bs4_import_error', ImportError('reason'))
@@ -46,18 +46,18 @@ STRIP_HTML_DATA = [(i, i) for i in [None, 10, 11.2, b'aabb', b'aa<br>bb']] + [
     ('<head>aa<title>tt</title></head>bb', 'aa\nbb'),
     (
         """
-            <head>
-                aa
-                <title>tt</title>
-                <p>bb
-                <script>ss</script>
-                <b>cc
-                <noscript>nn</noscript>
-                <style>ss</style>
-                dd
-            </head>
-            ee
-            """,
+        <head>
+            aa
+            <title>tt</title>
+            <p>bb
+            <script>ss</script>
+            <b>cc
+            <noscript>nn</noscript>
+            <style>ss</style>
+            dd
+        </head>
+        ee
+        """,
         'aa\nbb\ncc\ndd\nee',
     ),
 ]
@@ -81,34 +81,30 @@ def test_strip_html(input, expected_output, features):
 
 
 def enable_search(storage, _, __):
-    Search(storage.db).enable()
+    Search(storage).enable()
 
 
 def disable_search(storage, _, __):
-    Search(storage.db).disable()
+    Search(storage).disable()
 
 
 def is_search_enabled(storage, _, __):
-    Search(storage.db).is_enabled()
+    Search(storage).is_enabled()
 
 
 def update_search(storage, _, __):
-    Search(storage.db).update()
+    Search(storage).update()
 
 
 def search_entries_chunk_size_0(storage, _, __):
     list(
-        Search(storage.db).search_entries_page(
-            'entry', datetime(2010, 1, 1), chunk_size=0
-        )
+        Search(storage).search_entries_page('entry', datetime(2010, 1, 1), chunk_size=0)
     )
 
 
 def search_entries_chunk_size_1(storage, _, __):
     list(
-        Search(storage.db).search_entries_page(
-            'entry', datetime(2010, 1, 1), chunk_size=1
-        )
+        Search(storage).search_entries_page('entry', datetime(2010, 1, 1), chunk_size=1)
     )
 
 
@@ -133,31 +129,31 @@ def test_errors_locked(db_path, pre_stuff, do_stuff):
 
 
 def enable_and_update_search(storage):
-    search = Search(storage.db)
+    search = Search(storage)
     search.enable()
     search.update()
 
 
 def iter_search_entries_chunk_size_0(storage):
-    return Search(storage.db).search_entries_page(
+    return Search(storage).search_entries_page(
         'entry', datetime(2010, 1, 1), chunk_size=0
     )
 
 
 def iter_search_entries_chunk_size_1(storage):
-    return Search(storage.db).search_entries_page(
+    return Search(storage).search_entries_page(
         'entry', datetime(2010, 1, 1), chunk_size=1
     )
 
 
 def iter_search_entries_chunk_size_2(storage):
-    return Search(storage.db).search_entries_page(
+    return Search(storage).search_entries_page(
         'entry', datetime(2010, 1, 1), chunk_size=2
     )
 
 
 def iter_search_entries_chunk_size_3(storage):
-    return Search(storage.db).search_entries_page(
+    return Search(storage).search_entries_page(
         'entry', datetime(2010, 1, 1), chunk_size=3
     )
 
@@ -202,7 +198,7 @@ def test_iter_locked(db_path, iter_stuff):
 def test_invalid_search_query_error(storage, query, exc_type):
     # We're not testing this in test_reader_search.py because
     # the invalid query strings are search-provider-dependent.
-    search = Search(storage.db)
+    search = Search(storage)
     search.enable()
     with pytest.raises(exc_type):
         next(search.search_entries(query, datetime(2010, 1, 1)))
