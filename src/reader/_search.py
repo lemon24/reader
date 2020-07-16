@@ -39,7 +39,7 @@ from .types import HighlightedString
 from .types import SearchSortOrder
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ._storage import Storage
+    from ._storage import Storage  # noqa: F401
 
 
 # Only Search.update() has a reason to fail if bs4 is missing.
@@ -144,25 +144,32 @@ class Search:
 
     """
 
-    def __init__(self, storage: 'Storage', db: Optional[sqlite3.Connection] = None):
+    def __init__(self, storage: Union['Storage', sqlite3.Connection]):
+        # during migrations there's no storage, so we need to pass the DB in
         self.storage = storage
-        # HACK: during migrations there's no storage, so we need to pass the DB in
-        # TODO: find a way to have a storage even during migrations;
-        # it would be nice if we could make one with a specific db
-        self._db = db
 
-    # db, recent_threshold, and chunk_size exposed for convenience
+    # db, recent_threshold, and chunk_size exposed for convenience.
 
     @property
     def db(self) -> sqlite3.Connection:
-        return self._db or self.storage.db
+        if isinstance(self.storage, sqlite3.Connection):  # pragma: no cover
+            return self.storage
+        return self.storage.db
 
     @property
     def recent_threshold(self) -> timedelta:
+        if isinstance(self.storage, sqlite3.Connection):  # pragma: no cover
+            raise NotImplementedError(
+                f"self.storage is {self.storage!r}, should be Storage"
+            )
         return self.storage.recent_threshold
 
     @property
     def chunk_size(self) -> int:
+        if isinstance(self.storage, sqlite3.Connection):  # pragma: no cover
+            raise NotImplementedError(
+                f"self.storage is {self.storage!r}, should be Storage"
+            )
         return self.storage.chunk_size
 
     # strip_html is not part of the Search interface,

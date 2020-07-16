@@ -147,8 +147,7 @@ def update_from_19_to_20(db: sqlite3.Connection) -> None:  # pragma: no cover
     # for https://github.com/lemon24/reader/issues/175#issuecomment-654213853
     from ._search import Search
 
-    # There's no storage at tis point, so we fake one.
-    search = Search(Storage(':memory:'), db=db)
+    search = Search(db)
     if search.is_enabled():
         search._drop_triggers()
         search._create_triggers()
@@ -224,7 +223,7 @@ class Storage:
         except DBError as e:
             raise StorageError(str(e)) from e
 
-        self.db = db
+        self.db: sqlite3.Connection = db
         self.path = path
         self.timeout = timeout
 
