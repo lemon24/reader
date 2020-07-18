@@ -396,6 +396,24 @@ def _make_debug_method_wrapper(method, stmt=False):  # pragma: no cover
         except IndexError:
             pass
 
+        try:
+            io_counters = self.connection._io_counters
+        except AttributeError:
+            io_counters = self._io_counters
+
+        if io_counters:
+            fields = ['read_count', 'write_count', 'read_bytes', 'write_bytes']
+            try:
+                import psutil  # type: ignore
+
+                process = psutil.Process()
+            except ImportError:
+                process = None
+            try:
+                start_io_counters = process.io_counters()
+            except AttributeError:
+                pass
+
         start = time.perf_counter()
         try:
             if callable(method):
@@ -406,6 +424,17 @@ def _make_debug_method_wrapper(method, stmt=False):  # pragma: no cover
         finally:
             end = time.perf_counter()
             data['duration'] = end - start
+
+            if io_counters:
+                try:
+                    end_io_counters = process.io_counters()
+                    data['io_counters'] = {
+                        f: getattr(end_io_counters, f) - getattr(start_io_counters, f)
+                        for f in fields
+                    }
+                except AttributeError:
+                    pass
+
             self._log(data)
 
     return wrapper
@@ -442,6 +471,7 @@ def _make_debug_connection_cls():  # pragma: no cover
         """
 
         _set_trace = False
+        _io_counters = False
 
         @staticmethod
         def _log_method(data):

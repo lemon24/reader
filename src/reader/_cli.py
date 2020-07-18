@@ -43,6 +43,8 @@ def make_reader_with_plugins(db_path, plugins, debug_storage):
         pid = os.getpid()
 
         class Connection(DebugConnection):
+            _io_counters = True
+
             @staticmethod
             def _log_method(data):
                 data['pid'] = pid
