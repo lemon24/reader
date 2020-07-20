@@ -1,3 +1,5 @@
+import functools
+import json
 import logging
 import os.path
 import traceback
@@ -9,9 +11,12 @@ from . import make_reader
 from . import StorageError
 from ._plugins import Loader
 from ._plugins import LoaderError
+from ._sqlite_utils import DebugConnection
 
 
 APP_NAME = reader.__name__
+
+log = logging.getLogger(__name__)
 
 
 def get_default_db_path(create_dir=False):
@@ -30,9 +35,25 @@ def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
 
-def make_reader_with_plugins(db_path, plugins):
+def make_reader_with_plugins(db_path, plugins, debug_storage):
+
+    kwargs = {}
+    if debug_storage:
+        log_debug = logging.getLogger('reader._storage').debug
+        pid = os.getpid()
+
+        class Connection(DebugConnection):
+            _io_counters = True
+
+            @staticmethod
+            def _log_method(data):
+                data['pid'] = pid
+                log_debug(json.dumps(data))
+
+        kwargs['_storage_factory'] = Connection
+
     try:
-        reader = make_reader(db_path)
+        reader = make_reader(db_path, **kwargs)
     except StorageError as e:
         abort("{}: {}: {}", db_path, e, e.__cause__)
     except Exception as e:
@@ -57,10 +78,50 @@ def setup_logging(verbose):
     logging.getLogger('reader').setLevel(level)
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
-        '%(asctime)s %(levelname)-7s %(message)s', '%Y-%m-%dT%H:%M:%S'
+        '%(asctime)s %(process)7s %(levelname)-8s %(message)s', '%Y-%m-%dT%H:%M:%S'
     )
     handler.setFormatter(formatter)
     logging.getLogger('reader').addHandler(handler)
+
+
+def log_verbose(fn):
+    @click.option('-v', '--verbose', count=True)
+    @functools.wraps(fn)
+    def wrapper(*args, verbose, **kwargs):
+        setup_logging(verbose)
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def log_command(fn):
+    @log_verbose
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        ctx = click.get_current_context()
+        params = []
+        while ctx:
+            params.append((ctx.info_name, ctx.params))
+            ctx = ctx.parent
+
+        log.info(
+            "command started: %s", ' '.join(f"{n} {p}" for n, p in reversed(params))
+        )
+
+        try:
+            rv = fn(*args, **kwargs)
+            log.info("command finished successfully")
+            return rv
+
+        except Exception as e:
+            log.critical(
+                "command failed due to unexpected error: %s; traceback follows",
+                e,
+                exc_info=True,
+            )
+            click.get_current_context().exit(1)
+
+    return wrapper
 
 
 @click.group()
@@ -76,25 +137,29 @@ def setup_logging(verbose):
     envvar=reader._PLUGIN_ENVVAR,
     help="Import path to a plug-in. Can be passed multiple times.",
 )
+@click.option(
+    '--debug-storage/--no-debug-storage',
+    hidden=True,
+    help="NOT TESTED. With -vv, log storage database calls.",
+)
 @click.version_option(reader.__version__, message='%(prog)s %(version)s')
 @click.pass_context
-def cli(ctx, db, plugin):
+def cli(ctx, db, plugin, debug_storage):
     if db is None:
         try:
             db = get_default_db_path(create_dir=True)
         except Exception as e:
             abort("{}", e)
-    ctx.obj = {'db_path': db, 'plugins': plugin}
+    ctx.obj = {'db_path': db, 'plugins': plugin, 'debug_storage': debug_storage}
 
 
 @cli.command()
 @click.argument('url')
 @click.option('--update/--no-update', help="Update the feed after adding it.")
-@click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def add(kwargs, url, update, verbose):
+@log_verbose
+def add(kwargs, url, update):
     """Add a new feed."""
-    setup_logging(verbose)
     reader = make_reader_with_plugins(**kwargs)
     reader.add_feed(url)
     if update:
@@ -103,11 +168,10 @@ def add(kwargs, url, update, verbose):
 
 @cli.command()
 @click.argument('url')
-@click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def remove(kwargs, url, verbose):
+@log_verbose
+def remove(kwargs, url):
     """Remove an existing feed."""
-    setup_logging(verbose)
     reader = make_reader_with_plugins(**kwargs)
     reader.remove_feed(url)
 
@@ -124,15 +188,14 @@ def remove(kwargs, url, verbose):
     show_default=True,
     help="Number of threads to use when getting the feeds.",
 )
-@click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def update(kwargs, url, new_only, workers, verbose):
+@log_command
+def update(kwargs, url, new_only, workers):
     """Update one or all feeds.
 
     If URL is not given, update all the feeds.
 
     """
-    setup_logging(verbose)
     reader = make_reader_with_plugins(**kwargs)
     if url:
         reader.update_feed(url)
@@ -199,11 +262,10 @@ def search_disable(kwargs):
 
 
 @search.command('update')
-@click.option('-v', '--verbose', count=True)
 @click.pass_obj
-def search_update(kwargs, verbose):
+@log_command
+def search_update(kwargs):
     """Update the search index."""
-    setup_logging(verbose)
     reader = make_reader_with_plugins(**kwargs)
     reader.update_search()
 

@@ -180,10 +180,12 @@ class Storage:
     recent_threshold = timedelta(7)
 
     @wrap_exceptions(StorageError)
-    def __init__(self, path: str, timeout: Optional[float] = None):
+    def __init__(self, path: str, timeout: Optional[float] = None, factory=None):
         kwargs = {}
         if timeout is not None:
             kwargs['timeout'] = timeout
+        if factory:  # pragma: no cover
+            kwargs['factory'] = factory
 
         db = self.connect(path, detect_types=sqlite3.PARSE_DECLTYPES, **kwargs)
         try:
