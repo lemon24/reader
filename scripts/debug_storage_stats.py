@@ -135,7 +135,7 @@ def main(sort, totals):
     if sort:
         agg_index = list(agg_funcs).index('sum')
         value_index = list(value_funcs).index(sort)
-        key = lambda t: t[agg_index][value_index + 1]
+        key = lambda t: t[1][agg_index][value_index + 1]
         tables = sorted(tables, key=key, reverse=True)
 
     if totals:
