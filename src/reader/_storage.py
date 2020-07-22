@@ -172,6 +172,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             20: update_from_20_to_21,
         },
         # Row value support was added in 3.15.
+        # TODO: Remove the Search.update() check once this gets bumped to >=3.18.
         minimum_sqlite_version=(3, 15),
         # We use the JSON1 extension for entries.content.
         required_sqlite_compile_options=["ENABLE_JSON1"],

@@ -1,4 +1,6 @@
 from datetime import datetime
+from unittest.mock import ANY
+from unittest.mock import MagicMock
 
 import pytest
 from fakeparser import Parser
@@ -10,6 +12,8 @@ from reader import SearchError
 from reader import StorageError
 from reader._search import Search
 from reader._search import strip_html
+from reader._sqlite_utils import DBError
+from reader._sqlite_utils import require_version
 
 
 def test_bs4_import_error(storage, monkeypatch):
@@ -202,6 +206,19 @@ def test_invalid_search_query_error(storage, query, exc_type):
     search.enable()
     with pytest.raises(exc_type):
         next(search.search_entries(query, datetime(2010, 1, 1)))
+
+
+def test_minimum_sqlite_version(storage, monkeypatch):
+    mock = MagicMock(wraps=require_version, side_effect=DBError)
+    monkeypatch.setattr('reader._search.require_version', mock)
+
+    search = Search(storage)
+    search.enable()
+
+    with pytest.raises(SearchError):
+        search.update()
+
+    mock.assert_called_with(ANY, (3, 18))
 
 
 # TODO: test FTS5 column names

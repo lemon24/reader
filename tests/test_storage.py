@@ -1,6 +1,8 @@
 import sqlite3
 import threading
 from datetime import datetime
+from unittest.mock import ANY
+from unittest.mock import MagicMock
 
 import pytest
 from utils import rename_argument
@@ -11,6 +13,8 @@ from reader import FeedNotFoundError
 from reader import InvalidSearchQueryError
 from reader import MetadataNotFoundError
 from reader import StorageError
+from reader._sqlite_utils import DBError
+from reader._sqlite_utils import require_version
 from reader._storage import Storage
 from reader._types import EntryData
 from reader._types import EntryFilterOptions
@@ -520,3 +524,13 @@ def test_important_mark_as_unimportant(storage):
 def test_important_mark_entry_not_found(storage):
     with pytest.raises(EntryNotFoundError):
         storage.mark_as_important_unimportant('feed', 'one', True)
+
+
+def test_minimum_sqlite_version(db_path, monkeypatch):
+    mock = MagicMock(wraps=require_version, side_effect=DBError)
+    monkeypatch.setattr('reader._sqlite_utils.require_version', mock)
+
+    with pytest.raises(StorageError):
+        Storage(db_path)
+
+    mock.assert_called_with(ANY, (3, 15))

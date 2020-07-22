@@ -22,8 +22,10 @@ from typing import TypeVar
 from typing import Union
 
 from ._sql_utils import Query
+from ._sqlite_utils import DBError
 from ._sqlite_utils import ddl_transaction
 from ._sqlite_utils import paginated_query
+from ._sqlite_utils import require_version
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
 from ._sqlite_utils import wrap_exceptions_iter
@@ -403,7 +405,13 @@ class Search:
                 f"original import error: {bs4_import_error}"
             ) from bs4_import_error
 
-        # FIXME: check version >= 3.18 for #178
+        # last_insert_rowid() / cursor.lastrowid works correctly for FTS5
+        # tables only starting with SQLite 3.18.
+        # https://www.sqlite.org/releaselog/3_18_0.html
+        try:
+            require_version(self.db, (3, 18))
+        except DBError as e:
+            raise SearchError(str(e)) from e
 
         self._delete_from_search()
         self._insert_into_search()

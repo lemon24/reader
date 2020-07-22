@@ -11,6 +11,18 @@ Version 1.5
 
 Unreleased
 
+* Use rowid when deleting from the search index, instead of the entry id.
+  Previously, each :meth:`~Reader.update_search` call would result in a full
+  scan, even if there was nothing to update/delete.
+  This should reduce the amount of reads significantly
+  (deleting 4 entries from a database with 10k entries
+  resulted in an 1000x decrease in bytes read).
+  (:issue:`178`)
+* Require at least SQLite 3.18 (released 2017-03-30) for the current
+  :meth:`~Reader.update_search` implementation;
+  all other *reader* features continue to work with SQLite >= 3.15.
+  (:issue:`178`)
+
 
 Version 1.4
 -----------
