@@ -231,6 +231,7 @@ class Search:
                 feed TEXT NOT NULL,
                 to_update INTEGER NOT NULL DEFAULT 1,
                 to_delete INTEGER NOT NULL DEFAULT 0,
+                es_rowids TEXT NOT NULL DEFAULT '[]',
                 PRIMARY KEY (id, feed)
             );
             """
@@ -239,8 +240,8 @@ class Search:
         # but it's called once and should not take too long, so we can do it later.
         self.db.execute(
             """
-            INSERT INTO entries_search_sync_state
-            SELECT id, feed, 1, 0
+            INSERT INTO entries_search_sync_state (id, feed)
+            SELECT id, feed
             FROM entries;
             """
         )
@@ -253,13 +254,36 @@ class Search:
         # TODO: what happens if the feed ID changes? can't happen yet;
         # also see https://github.com/lemon24/reader/issues/149
 
+        # We can't use just "INSERT INTO entries_search_sync_state (id, feed)",
+        # because this trigger also gets called in case of
+        # "INSERT OR REPLACE INTO entries" (REPLACE = DELETE + INSERT),
+        # which would wipe out es_rowids.
+        #
+        # Per https://www.sqlite.org/lang_conflict.html,
+        # the ON DELETE trigger doesn't fire during REPLACE
+        # if recursive_triggers are not enabled (they aren't, as of 1.5).
+        #
+        # What I don't understand is why the "INSERT into esss" below succeeds
+        # even when a specific (id, feed) already exists in esss
+        # (it seems to act as INSERT OR REPLACE -- maybe because it already
+        # is in one, and that REPLACE is global?).
+        # Anyway, it seems to do what we need it to do.
+
         self.db.execute(
             """
             CREATE TRIGGER entries_search_entries_insert
             AFTER INSERT ON entries
             BEGIN
-                INSERT INTO entries_search_sync_state
-                VALUES (new.id, new.feed, 1, 0);
+                INSERT INTO entries_search_sync_state (id, feed, es_rowids)
+                VALUES (
+                    new.id,
+                    new.feed,
+                    (
+                        SELECT es_rowids
+                        from entries_search_sync_state
+                        where (id, feed) = (new.id, new.feed)
+                    )
+                );
             END;
             """
         )
@@ -379,103 +403,71 @@ class Search:
                 f"original import error: {bs4_import_error}"
             ) from bs4_import_error
 
-        # FIXME: how do we test pagination?
+        # FIXME: check version >= 3.18 for #178
+
         self._delete_from_search()
-        self._delete_from_sync_state()
         self._insert_into_search()
 
     def _delete_from_search(self) -> None:
-        # Some notes about why these queries are the way they are:
-        #
-        # SQLite doesn't support DELETE-FROM-JOIN, so we can't use that.
-        #
-        # We could use DELETE-LIMIT, but the Windows and macOS official
-        # Python build SQLite does not have ENABLE_UPDATE_DELETE_LIMIT;
-        # https://www.sqlite.org/lang_delete.html
-        #
-        # Due to a bug in the Python sqlite3 binding, cursor.rowcount is -1
-        # if the query does not start with INSERT/UPDATE/DELETE;
-        # this means no CTEs or comments should precede the keyword;
-        # https://bugs.python.org/issue35398, https://bugs.python.org/issue36859
-        #
-        # Alternatively, we can use the changes() SQL function instead
-        # (this always works);
-        # https://www.sqlite.org/lang_corefunc.html#changes
+        done = False
+        while not done:
+            done = not self._delete_from_search_one_chunk()
 
-        if self.chunk_size:
-            # `DELETE FROM entries_search` may be slower than other queries,
-            # so we use smaller chunks to avoid keeping locks for too long.
-            # https://github.com/lemon24/reader/issues/175#issuecomment-656112990
-            chunk_size = max(1, int(self.chunk_size / 16))
-        else:
-            chunk_size = self.chunk_size
+    def _delete_from_search_one_chunk(self) -> bool:
+        # if it's not chunked, it's one by one;
+        # we can't / don't want to pull all the entries into memory
+        chunk_size = self.chunk_size or 1
 
-        # TODO: is the join required? it results in 2 entries_search scans instead of 1
+        with self.db as db:
+            # See _insert_into_search_one_chunk for why we're doing this.
+            db.execute('BEGIN IMMEDIATE;')
 
-        while True:
-            with self.db as db:
-                cursor = db.execute(
+            # TODO: maybe use a single cursor
+
+            rows = list(
+                db.execute(
                     """
-                    DELETE FROM entries_search
-                    WHERE (_id, _feed) IN (
-                        SELECT id, feed
-                        FROM entries_search_sync_state
-                        WHERE to_delete
-                        LIMIT ?
-                    );
-                    """,
-                    (chunk_size or -1,),
-                )
-                log.debug(
-                    'Search.update: _delete_from_search (chunk_size: %s): %s',
-                    chunk_size,
-                    cursor.rowcount,
-                )
-                assert cursor.rowcount >= 0
-
-                if not self.chunk_size:
-                    break
-
-                # Each entries_search_sync_state row should have
-                # at least one correponding row in entries_search.
-                # This means that rowcount may be greater than chunk_size
-                # (not a problem), even if there are no rows left to delete
-                # (also not a problem, there will be an additional query
-                # that deletes 0 rows).
-                if cursor.rowcount < self.chunk_size:
-                    break
-
-    def _delete_from_sync_state(self) -> None:
-        # See the comments in _delete_from_search for
-        # why these queries are the way they are.
-
-        while True:
-            with self.db as db:
-                cursor = db.execute(
-                    """
-                    DELETE
+                    SELECT id, feed, es_rowids
                     FROM entries_search_sync_state
-                    WHERE (id, feed) IN (
-                        SELECT id, feed
-                        FROM entries_search_sync_state
-                        WHERE to_delete
-                        LIMIT ?
-                    );
+                    WHERE to_delete
+                    LIMIT ?;
                     """,
-                    (self.chunk_size or -1,),
+                    (chunk_size,),
                 )
-
-            log.debug(
-                'Search.update: _delete_from_sync_state (chunk_size: %s): %s',
-                self.chunk_size,
-                cursor.rowcount,
             )
-            assert cursor.rowcount >= 0
 
-            if not self.chunk_size:
-                break
-            if cursor.rowcount < self.chunk_size:
-                break
+            first_entry = (rows[0][1], rows[0][0]) if rows else None
+            log.debug(
+                "Search.update: _delete_from_search (chunk_size: %s): "
+                "got %s entries; first entry: %r",
+                self.chunk_size,
+                len(rows),
+                first_entry,
+            )
+
+            if not rows:
+                # nothing to delete
+                return False
+
+            # it may be possible to delete all of them in a single query,
+            # but because we're using SQLite (and they execute locally),
+            # we're not gonna bother
+
+            db.executemany(
+                "DELETE FROM entries_search WHERE rowid = ?;",
+                ((id,) for row in rows for id in json.loads(row[2])),
+            )
+            db.executemany(
+                "DELETE FROM entries_search_sync_state WHERE (id, feed) = (?, ?);",
+                (row[:2] for row in rows),
+            )
+
+            if len(rows) < chunk_size:
+                # no results left (at least when nothing else happens in parallel)
+                return False
+
+        log.debug("Search.update: _delete_from_search: chunk done")
+        return True
 
     def _insert_into_search(self) -> None:
         # The loop is done outside of the chunk logic to help testing.
@@ -514,6 +506,7 @@ class Search:
                     entries.id,
                     entries.feed,
                     entries.last_updated,
+                    esss.es_rowids,
                     coalesce(feeds.user_title, feeds.title),
                     feeds.user_title IS NOT NULL,
                     entries.title,
@@ -549,13 +542,13 @@ class Search:
             id,
             feed_url,
             last_updated,
+            es_rowids_json,
             feed_title,
             is_feed_user_title,
             title,
             summary,
             content_json,
         ) in rows:
-
             final: List[Union[Tuple[str, str], Tuple[None, None]]] = []
 
             content = json.loads(content_json) if content_json else []
@@ -595,6 +588,7 @@ class Search:
                     _content_path=content_path,
                     _is_feed_user_title=is_feed_user_title,
                     _last_updated=last_updated,
+                    _es_rowids=json.loads(es_rowids_json),
                 )
                 for content_value, content_path in final
             )
@@ -622,15 +616,22 @@ class Search:
                 #
                 db.execute('BEGIN IMMEDIATE;')
 
+                # TODO: maybe use a single cursor
+                # TODO: these two checks look very cumbersome, make them easier to read
+
                 to_update = db.execute(
                     """
-                    SELECT to_update
+                    SELECT to_update, es_rowids
                     FROM entries_search_sync_state
                     WHERE (id, feed) = (?, ?);
                     """,
                     (id, feed_url),
                 ).fetchone()
-                if not (to_update and to_update[0]):
+                if not (
+                    to_update
+                    and to_update[0]
+                    and set(json.loads(to_update[1])) == set(group[0]['_es_rowids'])
+                ):
                     # a concurrent call updated this entry, skip it
                     log.debug(
                         "Search.update: _insert_into_search: "
@@ -656,34 +657,37 @@ class Search:
                 # we can't rely on _delete_from_search doing it,
                 # since a parallel update may have added some rows since then
                 # (and we'd duplicate them)
-                db.execute(
-                    "DELETE FROM entries_search WHERE (_id, _feed) = (?, ?)",
-                    (id, feed_url),
+                db.executemany(
+                    "DELETE FROM entries_search WHERE rowid = ?;",
+                    ((id,) for id in group[0]['_es_rowids']),
                 )
 
-                db.executemany(
-                    """
-                    INSERT INTO entries_search
-                    VALUES (
-                        :title,
-                        :content,
-                        :feed,
-                        :_id,
-                        :_feed,
-                        :_content_path,
-                        :_is_feed_user_title
-                    );
-                    """,
-                    group,
-                )
+                new_es_rowids = []
+                for params in group:
+                    cursor = db.execute(
+                        """
+                        INSERT INTO entries_search
+                        VALUES (
+                            :title,
+                            :content,
+                            :feed,
+                            :_id,
+                            :_feed,
+                            :_content_path,
+                            :_is_feed_user_title
+                        );
+                        """,
+                        params,
+                    )
+                    new_es_rowids.append(cursor.lastrowid)
 
                 db.execute(
                     """
                     UPDATE entries_search_sync_state
-                    SET to_update = 0
+                    SET to_update = 0, es_rowids = ?
                     WHERE (id, feed) = (?, ?);
                     """,
-                    (id, feed_url),
+                    (json.dumps(new_es_rowids), id, feed_url),
                 )
 
         log.debug("Search.update: _insert_into_search: chunk done")
