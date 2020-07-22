@@ -154,8 +154,38 @@ def update_from_19_to_20(db: sqlite3.Connection) -> None:  # pragma: no cover
 
 
 def update_from_20_to_21(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # https://github.com/lemon24/reader/issues/178
-    raise NotImplementedError("no migration for #178 yet")
+    # for https://github.com/lemon24/reader/issues/178
+
+    from ._search import Search
+
+    search = Search(db)
+    if search.is_enabled():
+        search._drop_triggers()
+
+        db.execute(
+            """
+            ALTER TABLE entries_search_sync_state
+            ADD COLUMN es_rowids TEXT NOT NULL DEFAULT '[]';
+            """
+        )
+
+        input = db.execute(
+            """
+            SELECT json_group_array(rowid), _id, _feed
+            FROM entries_search
+            GROUP BY _id, _feed;
+            """
+        )
+        db.executemany(
+            """
+            UPDATE entries_search_sync_state
+            SET es_rowids = ?
+            WHERE (id, feed) = (?, ?);
+            """,
+            input,
+        )
+
+        search._create_triggers()
 
 
 def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
