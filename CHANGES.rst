@@ -22,6 +22,20 @@ Unreleased
   :meth:`~Reader.update_search` implementation;
   all other *reader* features continue to work with SQLite >= 3.15.
   (:issue:`178`)
+* Run ``PRAGMA optimize`` on :meth:`~Reader.close()`.
+  This should increase the performance of all methods.
+  As an example, in :issue:`178` it was found that :meth:`~Reader.update_search`
+  resulted in a full scan of the entries table,
+  even if there was nothing to update;
+  this change should prevent this from happening.
+  (:issue:`143`)
+
+  .. note::
+    ``PRAGMA optimize`` is a no-op in SQLite versions earlier than 3.18.
+    In order to avoid the case described above, you should run `ANALYZE`_
+    regularly (e.g. every few days).
+
+.. _ANALYZE: https://www.sqlite.org/lang_analyze.html
 
 
 Version 1.4
@@ -45,6 +59,7 @@ Released 2020-07-13
   This should reduce the :meth:`~Reader.update_search` run time significantly.
 * Use SQLite's `write-ahead logging`_ to increase concurrency.
   At the moment there is no way to disable WAL.
+  This change may be reverted in the future.
   (:issue:`169`)
 * Require at least click 7.0 for the ``cli`` extra.
 * Do not fail for feeds with incorrectly-declared media types,

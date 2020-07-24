@@ -71,9 +71,26 @@ def test_close():
     storage.db.execute('values (1)')
 
     storage.close()
+    # no-op a second time
+    storage.close()
 
     with pytest.raises(sqlite3.ProgrammingError):
         storage.db.execute('values (1)')
+
+
+def test_close_error():
+    class Connection(sqlite3.Connection):
+        pass
+
+    def execute(*args):
+        raise sqlite3.ProgrammingError('unexpected error')
+
+    storage = Storage(':memory:', factory=Connection)
+    storage.db.execute = execute
+
+    # should not be StorageError, because it's likely a bug
+    with pytest.raises(sqlite3.ProgrammingError):
+        storage.close()
 
 
 def init(storage, _, __):

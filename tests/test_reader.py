@@ -1397,6 +1397,8 @@ def test_closed(reader):
         reader.add_feed('one')
     with pytest.raises(StorageError):
         list(reader.get_entries())
+    # however, we must be able to call close() again:
+    reader.close()
 
 
 def test_direct_instantiation():

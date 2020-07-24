@@ -268,7 +268,15 @@ class Storage:
     connect = staticmethod(sqlite3.connect)
     setup_db = staticmethod(setup_db)
 
+    @wrap_exceptions(StorageError)
     def close(self) -> None:
+        try:
+            self.db.execute("PRAGMA optimize;")
+        except sqlite3.ProgrammingError as e:
+            # Calling close() a second time is a noop.
+            if "cannot operate on a closed database" in str(e).lower():
+                return
+            raise
         self.db.close()
 
     @wrap_exceptions(StorageError)
