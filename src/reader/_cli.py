@@ -63,6 +63,7 @@ def make_reader_with_plugins(db_path, plugins, debug_storage):
         loader = Loader(plugins)
         loader.load_plugins(reader)
     except LoaderError as e:
+        reader.close()
         abort("{}; original traceback follows\n\n{}", e, format_tb(e.__cause__ or e))
 
     return reader
@@ -124,6 +125,17 @@ def log_command(fn):
     return wrapper
 
 
+def pass_reader(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        ctx = click.get_current_context()
+        reader = make_reader_with_plugins(**ctx.obj)
+        ctx.call_on_close(reader.close)
+        return fn(reader, *args, **kwargs)
+
+    return wrapper
+
+
 @click.group()
 @click.option(
     '--db',
@@ -156,11 +168,10 @@ def cli(ctx, db, plugin, debug_storage):
 @cli.command()
 @click.argument('url')
 @click.option('--update/--no-update', help="Update the feed after adding it.")
-@click.pass_obj
 @log_verbose
-def add(kwargs, url, update):
+@pass_reader
+def add(reader, url, update):
     """Add a new feed."""
-    reader = make_reader_with_plugins(**kwargs)
     reader.add_feed(url)
     if update:
         reader.update_feed(url)
@@ -168,11 +179,10 @@ def add(kwargs, url, update):
 
 @cli.command()
 @click.argument('url')
-@click.pass_obj
 @log_verbose
-def remove(kwargs, url):
+@pass_reader
+def remove(reader, url):
     """Remove an existing feed."""
-    reader = make_reader_with_plugins(**kwargs)
     reader.remove_feed(url)
 
 
@@ -188,15 +198,14 @@ def remove(kwargs, url):
     show_default=True,
     help="Number of threads to use when getting the feeds.",
 )
-@click.pass_obj
 @log_command
-def update(kwargs, url, new_only, workers):
+@pass_reader
+def update(reader, url, new_only, workers):
     """Update one or all feeds.
 
     If URL is not given, update all the feeds.
 
     """
-    reader = make_reader_with_plugins(**kwargs)
     if url:
         reader.update_feed(url)
     else:
@@ -209,17 +218,16 @@ def list():
 
 
 @list.command()
-@click.pass_obj
-def feeds(kwargs):
+@pass_reader
+def feeds(reader):
     """List all the feeds."""
-    reader = make_reader_with_plugins(**kwargs)
     for feed in reader.get_feeds():
         click.echo(feed.url)
 
 
 @list.command()
-@click.pass_obj
-def entries(kwargs):
+@pass_reader
+def entries(reader):
     """List all the entries.
 
     Outputs one line per entry in the following format:
@@ -227,7 +235,6 @@ def entries(kwargs):
         <feed URL> <entry link or id>
 
     """
-    reader = make_reader_with_plugins(**kwargs)
     for entry in reader.get_entries():
         click.echo("{} {}".format(entry.feed.url, entry.link or entry.id))
 
@@ -238,42 +245,38 @@ def search():
 
 
 @search.command('status')
-@click.pass_obj
-def search_status(kwargs):
+@pass_reader
+def search_status(reader):
     """Check search status."""
-    reader = make_reader_with_plugins(**kwargs)
     click.echo(f"search: {'enabled' if reader.is_search_enabled() else 'disabled'}")
 
 
 @search.command('enable')
-@click.pass_obj
-def search_enable(kwargs):
+@pass_reader
+def search_enable(reader):
     """Enable search."""
-    reader = make_reader_with_plugins(**kwargs)
     reader.enable_search()
 
 
 @search.command('disable')
-@click.pass_obj
-def search_disable(kwargs):
+@pass_reader
+def search_disable(reader):
     """Disable search."""
-    reader = make_reader_with_plugins(**kwargs)
     reader.disable_search()
 
 
 @search.command('update')
-@click.pass_obj
 @log_command
-def search_update(kwargs):
+@pass_reader
+def search_update(reader):
     """Update the search index."""
-    reader = make_reader_with_plugins(**kwargs)
     reader.update_search()
 
 
 @search.command('entries')
 @click.argument('query')
-@click.pass_obj
-def search_entries(kwargs, query):
+@pass_reader
+def search_entries(reader, query):
     """Search entries.
 
     Outputs one line per entry in the following format:
@@ -281,7 +284,6 @@ def search_entries(kwargs, query):
         <feed URL> <entry link or id>
 
     """
-    reader = make_reader_with_plugins(**kwargs)
     for rv in reader.search_entries(query):
         entry = reader.get_entry(rv)
         click.echo("{} {}".format(entry.feed.url, entry.link or entry.id))
