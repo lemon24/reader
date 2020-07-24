@@ -39,6 +39,8 @@ def make_reader_with_plugins(db_path, plugins, debug_storage):
 
     kwargs = {}
     if debug_storage:
+        # TODO: the web app should be able to do this too
+
         log_debug = logging.getLogger('reader._storage').debug
         pid = os.getpid()
 
