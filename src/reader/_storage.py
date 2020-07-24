@@ -270,6 +270,11 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def close(self) -> None:
+        # If "PRAGMA optimize" on every close becomes too expensive, we can
+        # add an option to disable it, or call db.interrupt() after some time.
+        # TODO: Once SQLite 3.32 becomes widespread, use "PRAGMA analysis_limit"
+        # for the same purpose. Details:
+        # https://github.com/lemon24/reader/issues/143#issuecomment-663433197
         try:
             self.db.execute("PRAGMA optimize;")
         except sqlite3.ProgrammingError as e:
@@ -277,6 +282,7 @@ class Storage:
             if "cannot operate on a closed database" in str(e).lower():
                 return
             raise
+
         self.db.close()
 
     @wrap_exceptions(StorageError)
