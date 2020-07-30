@@ -9,7 +9,7 @@ Changelog
 Version 1.5
 -----------
 
-Unreleased
+Released 2020-07-30
 
 * Use rowid when deleting from the search index, instead of the entry id.
   Previously, each :meth:`~Reader.update_search` call would result in a full
