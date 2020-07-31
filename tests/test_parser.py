@@ -1,5 +1,6 @@
 import io
 import logging
+from unittest.mock import MagicMock
 
 import feedparser
 import pytest
@@ -447,3 +448,46 @@ def test_no_version(parse):
             <element>aaa</element>
             """.strip()
         )
+
+
+@pytest.fixture
+def make_http_set_headers_url(requests_mock):
+    def make_url(feed_path, headers=None):
+        url = 'http://example.com/' + feed_path.basename
+        requests_mock.get(url, text=feed_path.read(), headers=headers or {})
+        return url
+
+    yield make_url
+
+
+def test_response_headers(monkeypatch, make_http_set_headers_url, parse, data_dir):
+    """The parser should pass the response headers it got from requests.get()
+    to feedparser.parse().
+
+    """
+    mock = MagicMock(wraps=feedparser.parse)
+    monkeypatch.setattr('feedparser.parse', mock)
+
+    feed_url = make_http_set_headers_url(
+        data_dir.join('empty.atom'), {'whatever': 'boo'}
+    )
+    parse(feed_url)
+
+    assert mock.call_args[1]['response_headers']['whatever'] == 'boo'
+
+
+def test_default_response_headers(
+    monkeypatch, make_http_set_headers_url, parse, data_dir
+):
+    """The response headers passed to feedparser.parse() should have specific
+    headers set even if they weren't present in the requests.get() response.
+
+    """
+    mock = MagicMock(wraps=feedparser.parse)
+    monkeypatch.setattr('feedparser.parse', mock)
+
+    feed_url = make_http_set_headers_url(data_dir.join('empty.atom'))
+    parse(feed_url)
+
+    assert mock.call_args[1]['response_headers']['Content-Location'] == feed_url
+    assert mock.call_args[1]['response_headers']['Content-Type'] == 'text/xml'
