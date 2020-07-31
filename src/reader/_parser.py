@@ -279,6 +279,7 @@ class Parser:
 
         try:
             # TODO: maybe share the session in the parser?
+            # TODO: additionally, expose the plugin logic so other plugins like preview_feed_list can do requests in the same way
             # TODO: timeouts!
             with self.make_session() as session:
                 # TODO: remove "type: ignore" once Session.send() gets annotations
