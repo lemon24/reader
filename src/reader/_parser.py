@@ -269,13 +269,13 @@ class Parser:
 
         """
 
-        headers = {'Accept': feedparser_http.ACCEPT_HEADER, 'A-IM': 'feed'}
+        request_headers = {'Accept': feedparser_http.ACCEPT_HEADER, 'A-IM': 'feed'}
         if http_etag:
-            headers['If-None-Match'] = http_etag
+            request_headers['If-None-Match'] = http_etag
         if http_last_modified:
-            headers['If-Modified-Since'] = http_last_modified
+            request_headers['If-Modified-Since'] = http_last_modified
 
-        request = requests.Request('GET', url, headers=headers)
+        request = requests.Request('GET', url, headers=request_headers)
 
         try:
             # TODO: maybe share the session in the parser?
@@ -304,18 +304,18 @@ class Parser:
                 # Should we raise_for_status()? feedparser.parse() isn't.
                 # Should we check the status on the feedparser.parse() result?
 
-                headers = response.headers.copy()
-                headers.setdefault('content-location', response.url)
+                response_headers = response.headers.copy()
+                response_headers.setdefault('content-location', response.url)
 
                 # Some feeds don't have a content type, which results in
                 # feedparser.NonXMLContentType being raised. There are valid feeds
                 # with no content type, so we set it anyway and hope feedparser
                 # fails in some other way if the feed really is broken.
                 # https://github.com/lemon24/reader/issues/108
-                headers.setdefault('content-type', 'text/xml')
+                response_headers.setdefault('content-type', 'text/xml')
 
                 with response, _make_feedparser_parse() as parse:
-                    result = parse(response.raw, response_headers=headers)
+                    result = parse(response.raw, response_headers=response_headers)
 
         except Exception as e:
             raise ParseError(url) from e
