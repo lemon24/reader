@@ -11,6 +11,9 @@ Version 1.6
 
 Unreleased
 
+* Add ``cloudflare_ua_fix`` plugin (work around Cloudflare sometimes
+  blocking requests). (:issue:`181`)
+
 
 Version 1.5
 -----------
