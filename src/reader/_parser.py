@@ -4,10 +4,12 @@ import inspect
 import logging
 import time
 import urllib.parse
+from dataclasses import astuple
+from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
 from typing import Any
 from typing import Callable
-from typing import Collection
 from typing import Iterable
 from typing import Iterator
 from typing import Optional
@@ -214,7 +216,7 @@ class Parser:
     )
 
     def __init__(self) -> None:
-        self.response_plugins: Collection[_ResponsePlugin] = []
+        self.session_hooks = SessionHooks()
 
     def __call__(
         self,
@@ -237,9 +239,9 @@ class Parser:
         return ParsedFeed(feed, entries)
 
     def make_session(self) -> requests.Session:
-        session = requests.Session()
+        session = SessionWrapper(hooks=self.session_hooks.copy())
         if self.user_agent:
-            session.headers['User-Agent'] = self.user_agent
+            session.session.headers['User-Agent'] = self.user_agent
         return session
 
     def _parse_http(
@@ -275,32 +277,11 @@ class Parser:
         if http_last_modified:
             request_headers['If-Modified-Since'] = http_last_modified
 
-        request = requests.Request('GET', url, headers=request_headers)
-
         try:
             # TODO: maybe share the session in the parser?
-            # TODO: additionally, expose the plugin logic so other plugins like preview_feed_list can do requests in the same way
             # TODO: timeouts!
             with self.make_session() as session:
-                # TODO: remove "type: ignore" once Session.send() gets annotations
-                # https://github.com/python/typeshed/blob/f5a1925e765b92dd1b12ae10cf8bff21c225648f/third_party/2and3/requests/sessions.pyi#L105
-                response = session.send(  # type: ignore
-                    session.prepare_request(request), stream=True,
-                )
-
-                for plugin in self.response_plugins:
-                    rv = plugin(session, response, request)
-                    if rv is None:
-                        continue
-                    # TODO: is this assert needed? yes, we should raise custome exception though
-                    assert isinstance(rv, requests.Request)
-                    response.close()
-                    request = rv
-
-                    # TODO: remove "type: ignore" once Session.send() gets annotations
-                    response = session.send(  # type: ignore
-                        session.prepare_request(request), stream=True,
-                    )
+                response = session.get(url, headers=request_headers, stream=True)
 
                 # Should we raise_for_status()? feedparser.parse() isn't.
                 # Should we check the status on the feedparser.parse() result?
@@ -329,3 +310,59 @@ class Parser:
 
         feed, entries = _process_feed(url, result)
         return ParsedFeed(feed, entries, http_etag, http_last_modified)
+
+
+# FIXME FIXME FIXME: type annotations
+
+
+@dataclass
+class SessionHooks:
+    # TODO: add request hooks per the gist below
+    # (removed because I didn't want to write tests for them)
+    # https://gist.github.com/lemon24/f0adead297010a1afd8255c87a01db78#file-two-py
+
+    response: list = field(default_factory=list)
+
+    def copy(self):
+        return type(self)(*(list(v) for v in astuple(self)))
+
+
+@dataclass
+class SessionWrapper:
+
+    session: requests.Session = field(default_factory=requests.Session)
+    hooks: SessionHooks = field(default_factory=SessionHooks)
+
+    def get(self, url, headers=None, params=None, **kwargs):
+        # only requests.BaseAdapter.send() kwargs allowed
+        assert set(kwargs) - {'stream', 'timeout', 'verify', 'cert', 'proxies'} == set()
+
+        request = requests.Request('GET', url, headers=headers, params=params)
+
+        # TODO: remove "type: ignore" once Session.send() gets annotations
+        # https://github.com/python/typeshed/blob/f5a1925e765b92dd1b12ae10cf8bff21c225648f/third_party/2and3/requests/sessions.pyi#L105
+        response = self.session.send(self.session.prepare_request(request), **kwargs)
+
+        for plugin in self.hooks.response:
+            new_request = plugin(self.session, response, request, **kwargs)
+            if new_request is None:
+                continue
+
+            # TODO: will this fail if stream=False?
+            response.close()
+
+            # TODO: is this assert needed? yes, we should raise a custom exception though
+            assert isinstance(new_request, requests.Request)
+
+            request = new_request
+            response = self.session.send(
+                self.session.prepare_request(request), **kwargs
+            )
+
+        return response
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.session.close()

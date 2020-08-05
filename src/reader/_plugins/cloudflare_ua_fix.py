@@ -20,7 +20,7 @@ Implemented for https://github.com/lemon24/reader/issues/181.
 import feedparser
 
 
-def cf_ua_fix(session, response, request):
+def cf_ua_fix(session, response, request, **kwargs):
     if not response.status_code == 403:
         return None
     if not response.headers.get('Server', '').lower().startswith('cloudflare'):
@@ -37,4 +37,4 @@ def cf_ua_fix(session, response, request):
 
 
 def init(reader):
-    reader._parser.response_plugins.append(cf_ua_fix)
+    reader._parser.session_hooks.response.append(cf_ua_fix)

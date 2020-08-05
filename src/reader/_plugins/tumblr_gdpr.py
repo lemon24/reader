@@ -17,6 +17,11 @@ To load::
 
 Implemented for https://github.com/lemon24/reader/issues/67.
 
+.. note::
+
+    This plugin does not seem to be needed anymore as of August 2020.
+
+
 """
 import re
 
@@ -62,7 +67,7 @@ def fill_cookie_jar_requests(session, consent_form_url):
     assert response.status_code == 200
 
 
-def tumblr_gdpr_parse_response_plugin(session, response, request):
+def tumblr_gdpr_parse_response_plugin(session, response, request, **kwargs):
     if not response.url.startswith('https://www.tumblr.com/privacy/consent'):
         return None
 
@@ -71,4 +76,4 @@ def tumblr_gdpr_parse_response_plugin(session, response, request):
 
 
 def tumblr_gdpr(reader):
-    reader._parser.response_plugins.append(tumblr_gdpr_parse_response_plugin)
+    reader._parser.session_hooks.response.append(tumblr_gdpr_parse_response_plugin)

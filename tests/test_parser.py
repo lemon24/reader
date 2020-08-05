@@ -299,7 +299,7 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
 
     import requests
 
-    def do_nothing_plugin(session, response, request):
+    def do_nothing_plugin(session, response, request, **kwargs):
         do_nothing_plugin.called = True
         assert isinstance(session, requests.Session)
         assert isinstance(response, requests.Response)
@@ -307,14 +307,14 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
         assert request.url == feed_url
         return None
 
-    def rewrite_to_empty_plugin(session, response, request):
+    def rewrite_to_empty_plugin(session, response, request, **kwargs):
         rewrite_to_empty_plugin.called = True
         request.url = request.url.replace('empty', 'full')
         return request
 
     parse = Parser()
-    parse.response_plugins.append(do_nothing_plugin)
-    parse.response_plugins.append(rewrite_to_empty_plugin)
+    parse.session_hooks.response.append(do_nothing_plugin)
+    parse.session_hooks.response.append(rewrite_to_empty_plugin)
 
     feed, _, _, _ = parse(feed_url)
     assert do_nothing_plugin.called
@@ -325,12 +325,10 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
 def test_parse_requests_exception(monkeypatch, parse):
     exc = Exception('exc')
 
-    def raise_exc():
+    def raise_exc(*_, **__):
         raise exc
 
-    import requests
-
-    monkeypatch.setattr(requests, 'Session', raise_exc)
+    monkeypatch.setattr('reader._parser.SessionWrapper', raise_exc)
 
     with pytest.raises(ParseError) as excinfo:
         parse('http://example.com')
