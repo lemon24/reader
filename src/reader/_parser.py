@@ -1,6 +1,5 @@
 import calendar
 import logging
-import threading
 import time
 from collections import OrderedDict
 from dataclasses import astuple
@@ -19,11 +18,11 @@ from typing import Tuple
 from typing import TypeVar
 from typing import Union
 
-import feedparser  # type: ignore
 import requests
 from typing_extensions import Protocol
 
 import reader
+from . import _feedparser as feedparser
 from ._types import EntryData
 from ._types import FeedData
 from ._types import ParsedFeed
@@ -32,40 +31,8 @@ from .exceptions import ParseError
 from .types import Content
 from .types import Enclosure
 
-try:
-    import feedparser.http as feedparser_http  # type: ignore
-except ImportError:
-    feedparser_http = feedparser
-
 
 log = logging.getLogger('reader')
-
-
-def _feedparser_parse(*args: Any, **kwargs: Any) -> Any:
-    """Force feedparser content sanitization and relative link resolution ON.
-
-    https://github.com/lemon24/reader/issues/125
-    https://github.com/lemon24/reader/issues/157
-
-    TODO: This wrapper is not needed once feedparser 6.0 is released.
-
-    """
-    try:
-        return feedparser.parse(
-            *args, resolve_relative_uris=True, sanitize_html=True, **kwargs
-        )
-    except TypeError as e:
-        if 'resolve_relative_uris' not in str(e):  # pragma: no cover
-            raise
-
-    # Best effort; still not safe if someone else changes the globals.
-    with threading.Lock():
-        old = feedparser.RESOLVE_RELATIVE_URIS, feedparser.SANITIZE_HTML
-        feedparser.RESOLVE_RELATIVE_URIS, feedparser.SANITIZE_HTML = True, True
-        try:
-            return feedparser.parse(*args, **kwargs)
-        finally:
-            feedparser.RESOLVE_RELATIVE_URIS, feedparser.SANITIZE_HTML = old
 
 
 @overload
@@ -230,7 +197,12 @@ class Parser:
 
     def _parse_file(self, url: str, *args: Any, **kwargs: Any) -> ParsedFeed:
         # TODO: What about untrusted input? https://github.com/lemon24/reader/issues/155
-        result = _feedparser_parse(url)
+
+        # feedparser content sanitization and relative link resolution should be ON.
+        # https://github.com/lemon24/reader/issues/125
+        # https://github.com/lemon24/reader/issues/157
+        result = feedparser.parse(url, resolve_relative_uris=True, sanitize_html=True)
+
         feed, entries = _process_feed(url, result)
         return ParsedFeed(feed, entries)
 
@@ -267,7 +239,7 @@ class Parser:
 
         """
 
-        request_headers = {'Accept': feedparser_http.ACCEPT_HEADER, 'A-IM': 'feed'}
+        request_headers = {'Accept': feedparser.http.ACCEPT_HEADER, 'A-IM': 'feed'}
         if http_etag:
             request_headers['If-None-Match'] = http_etag
         if http_last_modified:
@@ -293,8 +265,11 @@ class Parser:
                 response_headers.setdefault('content-type', 'text/xml')
 
                 with response:
-                    result = _feedparser_parse(
-                        response.raw, response_headers=response_headers
+                    result = feedparser.parse(
+                        response.raw,
+                        response_headers=response_headers,
+                        resolve_relative_uris=True,
+                        sanitize_html=True,
                     )
 
         except Exception as e:
