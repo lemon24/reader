@@ -1,6 +1,4 @@
 import calendar
-import contextlib
-import inspect
 import logging
 import time
 from collections import OrderedDict
@@ -12,7 +10,6 @@ from typing import Any
 from typing import Callable
 from typing import cast
 from typing import Iterable
-from typing import Iterator
 from typing import Mapping
 from typing import Optional
 from typing import overload
@@ -43,48 +40,37 @@ except ImportError:
 log = logging.getLogger('reader')
 
 
-@contextlib.contextmanager
-def _make_feedparser_parse() -> Iterator[Callable[..., Any]]:
+def _feedparser_parse(*args: Any, **kwargs: Any) -> Any:
     """Force feedparser content sanitization and relative link resolution ON.
 
     https://github.com/lemon24/reader/issues/125
     https://github.com/lemon24/reader/issues/157
 
-    TODO: This context manager is not needed once feedparser 6.0 is released.
+    TODO: This wrapper is not needed once feedparser 6.0 is released.
 
     """
+    try:
+        return feedparser.parse(
+            *args, resolve_relative_uris=True, sanitize_html=True, **kwargs
+        )
+    except TypeError as e:
+        if 'resolve_relative_uris' not in str(e):  # pragma: no cover
+            raise
 
-    signature = inspect.signature(feedparser.parse)
-    have_kwargs = (
-        'resolve_relative_uris' in signature.parameters
-        and 'sanitize_html' in signature.parameters
-    )
+    # This is in no way thread-safe, but what can you do?
+    # TODO: Well, you could use locks to make it threadsafe...
+    # https://docs.python.org/3/library/threading.html#lock-objects
 
-    if have_kwargs:
+    old_RESOLVE_RELATIVE_URIS = feedparser.RESOLVE_RELATIVE_URIS
+    old_SANITIZE_HTML = feedparser.SANITIZE_HTML
+    feedparser.RESOLVE_RELATIVE_URIS = True
+    feedparser.SANITIZE_HTML = True
 
-        def parse(*args: Any, **kwargs: Any) -> Any:
-            return feedparser.parse(
-                *args, resolve_relative_uris=True, sanitize_html=True, **kwargs
-            )
-
-        yield parse
-
-    else:
-
-        # This is in no way thread-safe, but what can you do?
-        # TODO: Well, you could use locks to make it threadsafe...
-        # https://docs.python.org/3/library/threading.html#lock-objects
-
-        old_RESOLVE_RELATIVE_URIS = feedparser.RESOLVE_RELATIVE_URIS
-        old_SANITIZE_HTML = feedparser.SANITIZE_HTML
-        feedparser.RESOLVE_RELATIVE_URIS = True
-        feedparser.SANITIZE_HTML = True
-
-        try:
-            yield feedparser.parse
-        finally:
-            feedparser.RESOLVE_RELATIVE_URIS = old_RESOLVE_RELATIVE_URIS
-            feedparser.SANITIZE_HTML = old_SANITIZE_HTML
+    try:
+        return feedparser.parse(*args, **kwargs)
+    finally:
+        feedparser.RESOLVE_RELATIVE_URIS = old_RESOLVE_RELATIVE_URIS
+        feedparser.SANITIZE_HTML = old_SANITIZE_HTML
 
 
 @overload
@@ -249,8 +235,7 @@ class Parser:
 
     def _parse_file(self, url: str, *args: Any, **kwargs: Any) -> ParsedFeed:
         # TODO: What about untrusted input? https://github.com/lemon24/reader/issues/155
-        with _make_feedparser_parse() as parse:
-            result = parse(url)
+        result = _feedparser_parse(url)
         feed, entries = _process_feed(url, result)
         return ParsedFeed(feed, entries)
 
@@ -312,8 +297,10 @@ class Parser:
                 # https://github.com/lemon24/reader/issues/108
                 response_headers.setdefault('content-type', 'text/xml')
 
-                with response, _make_feedparser_parse() as parse:
-                    result = parse(response.raw, response_headers=response_headers)
+                with response:
+                    result = _feedparser_parse(
+                        response.raw, response_headers=response_headers
+                    )
 
         except Exception as e:
             raise ParseError(url) from e
