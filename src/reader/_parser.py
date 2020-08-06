@@ -264,7 +264,11 @@ class Parser:
                 # https://github.com/lemon24/reader/issues/108
                 response_headers.setdefault('content-type', 'text/xml')
 
+                # The content is already decoded by requests/urllib3.
+                response_headers.pop('content-encoding', None)
+
                 with response:
+                    response.raw.decode_content = True
                     result = feedparser.parse(
                         response.raw,
                         response_headers=response_headers,

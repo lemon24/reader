@@ -18,14 +18,26 @@ except ImportError:
     http = fp
 
 
-def parse(*args: Any, **kwargs: Any) -> Any:
+class _ReadWrapper:
+    def __init__(self, file: Any):
+        self._file = file
+
+    def read(self, size: int = -1) -> Any:
+        return self._file.read(size)
+
+
+def parse(thing: Any, **kwargs: Any) -> Any:
     try:
-        return fp.parse(*args, **kwargs)
+        return fp.parse(thing, **kwargs)
     except TypeError as e:
-        if 'parse() got an unexpected keyword argument' not in str(
-            e
-        ):  # pragma: no cover
+        unexpected_kw = 'parse() got an unexpected keyword argument' in str(e)
+        if not unexpected_kw:  # pragma: no cover
             raise
+
+    # feedparser 6.0 doesn't decode the content.
+    # feedparser 5.* looks at thing.headers['content-encoding'].
+    if hasattr(thing, 'read'):
+        thing = _ReadWrapper(thing)
 
     # Best effort; still not safe if someone else changes the globals.
     with threading.Lock():
@@ -35,6 +47,6 @@ def parse(*args: Any, **kwargs: Any) -> Any:
             kwargs.pop('sanitize_html', fp.SANITIZE_HTML),
         )
         try:
-            return fp.parse(*args, **kwargs)
+            return fp.parse(thing, **kwargs)
         finally:
             fp.RESOLVE_RELATIVE_URIS, fp.SANITIZE_HTML = old
