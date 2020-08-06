@@ -2,27 +2,18 @@ import calendar
 import logging
 import time
 from collections import OrderedDict
-from dataclasses import astuple
-from dataclasses import dataclass
-from dataclasses import field
 from datetime import datetime
 from typing import Any
 from typing import Callable
-from typing import cast
 from typing import Iterable
-from typing import Mapping
 from typing import Optional
 from typing import overload
-from typing import Sequence
 from typing import Tuple
-from typing import TypeVar
-from typing import Union
-
-import requests
-from typing_extensions import Protocol
 
 import reader
 from . import _feedparser as feedparser
+from ._requests_utils import SessionHooks
+from ._requests_utils import SessionWrapper
 from ._types import EntryData
 from ._types import FeedData
 from ._types import ParsedFeed
@@ -287,87 +278,3 @@ class Parser:
 
         feed, entries = _process_feed(url, result)
         return ParsedFeed(feed, entries, http_etag, http_last_modified)
-
-
-_T = TypeVar('_T')
-
-
-class _RequestPlugin(Protocol):
-    def __call__(
-        self, session: requests.Session, request: requests.Request, **kwargs: Any,
-    ) -> Optional[requests.Request]:  # pragma: no cover
-        ...
-
-
-class _ResponsePlugin(Protocol):
-    def __call__(
-        self,
-        session: requests.Session,
-        response: requests.Response,
-        request: requests.Request,
-        **kwargs: Any,
-    ) -> Optional[requests.Request]:  # pragma: no cover
-        ...
-
-
-@dataclass
-class SessionHooks:
-    # TODO: add request hooks per the gist below
-    # (removed because I didn't want to write tests for them)
-    # https://gist.github.com/lemon24/f0adead297010a1afd8255c87a01db78#file-two-py
-
-    request: Sequence[_RequestPlugin] = field(default_factory=list)
-    response: Sequence[_ResponsePlugin] = field(default_factory=list)
-
-    def copy(self: _T) -> _T:
-        return type(self)(*(list(v) for v in astuple(self)))
-
-
-@dataclass
-class SessionWrapper:
-
-    session: requests.Session = field(default_factory=requests.Session)
-    hooks: SessionHooks = field(default_factory=SessionHooks)
-
-    def get(
-        self,
-        url: Union[str, bytes],
-        headers: Optional[Mapping[str, str]] = None,
-        params: Union[None, bytes, Mapping[str, str]] = None,
-        **kwargs: Any,
-    ) -> requests.Response:
-        # kwargs get passed to requests.BaseAdapter.send();
-        # can be one of: stream, timeout, verify, cert, proxies
-
-        request = requests.Request('GET', url, headers=headers, params=params)
-
-        for request_hook in self.hooks.request:
-            request = request_hook(self.session, request, **kwargs) or request
-
-        response = self.session.send(  # type: ignore
-            self.session.prepare_request(request), **kwargs
-        )
-
-        for response_hook in self.hooks.response:
-            new_request = response_hook(self.session, response, request, **kwargs)
-            if new_request is None:
-                continue
-
-            # TODO: will this fail if stream=False?
-            response.close()
-
-            # TODO: is this assert needed? yes, we should raise a custom exception though
-            assert isinstance(new_request, requests.Request)
-
-            request = new_request
-            response = self.session.send(  # type: ignore
-                self.session.prepare_request(request), **kwargs
-            )
-
-        return cast(requests.Response, response)
-
-    def __enter__(self: _T) -> _T:
-        return self
-
-    def __exit__(self, *args: Any) -> None:
-        self.session.close()
