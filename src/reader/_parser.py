@@ -3,7 +3,7 @@ import contextlib
 import inspect
 import logging
 import time
-import urllib.parse
+from collections import OrderedDict
 from dataclasses import astuple
 from dataclasses import dataclass
 from dataclasses import field
@@ -216,7 +216,24 @@ class Parser:
     )
 
     def __init__(self) -> None:
+        self.parsers = OrderedDict()
         self.session_hooks = SessionHooks()
+
+        self.mount_parser('https://', self._parse_http)
+        self.mount_parser('http://', self._parse_http)
+        self.mount_parser('', self._parse_file)
+
+    def mount_parser(self, prefix, parser):
+        self.parsers[prefix] = parser
+        keys_to_move = [k for k in self.parsers if len(k) < len(prefix)]
+        for key in keys_to_move:
+            self.parsers[key] = self.parsers.pop(key)
+
+    def get_parser(self, url):
+        for prefix, parser in self.parsers.items():
+            if url.lower().startswith(prefix.lower()):
+                return parser
+        raise ParseError(f"no parsers were found for {url!r}")
 
     def __call__(
         self,
@@ -224,18 +241,13 @@ class Parser:
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
     ) -> ParsedFeed:
-        url_split = urllib.parse.urlparse(url)
+        return self.get_parser(url)(url, http_etag, http_last_modified)
 
-        if url_split.scheme in ('http', 'https'):
-            return self._parse_http(url, http_etag, http_last_modified)
-
-        return self._parse_file(url)
-
-    def _parse_file(self, path: str) -> ParsedFeed:
+    def _parse_file(self, url: str, *args, **kwargs) -> ParsedFeed:
         # TODO: What about untrusted input? https://github.com/lemon24/reader/issues/155
         with _make_feedparser_parse() as parse:
-            result = parse(path)
-        feed, entries = _process_feed(path, result)
+            result = parse(url)
+        feed, entries = _process_feed(url, result)
         return ParsedFeed(feed, entries)
 
     def make_session(self) -> requests.Session:

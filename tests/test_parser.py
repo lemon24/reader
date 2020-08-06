@@ -489,3 +489,26 @@ def test_default_response_headers(
 
     assert mock.call_args[1]['response_headers']['Content-Location'] == feed_url
     assert mock.call_args[1]['response_headers']['Content-Type'] == 'text/xml'
+
+
+def test_parsers(parse):
+    parse.parsers.clear()
+
+    parse.mount_parser('http://', lambda *args: ('generic', *args))
+    parse.mount_parser('http://specific.com', lambda *args: ('specific', *args))
+
+    assert parse('http://generic.com/', 'etag', None) == (
+        'generic',
+        'http://generic.com/',
+        'etag',
+        None,
+    )
+    assert parse('http://specific.com/', None, 'last_modified') == (
+        'specific',
+        'http://specific.com/',
+        None,
+        'last_modified',
+    )
+
+    with pytest.raises(ParseError):
+        parse('file:unknown')
