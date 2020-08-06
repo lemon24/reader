@@ -30,7 +30,7 @@ def parse(thing: Any, **kwargs: Any) -> Any:
     try:
         return fp.parse(thing, **kwargs)
     except TypeError as e:
-        unexpected_kw = 'parse() got an unexpected keyword argument' in str(e)
+        unexpected_kw = 'parse() got' in str(e) and 'unexpected keyword' in str(e)
         if not unexpected_kw:  # pragma: no cover
             raise
 
