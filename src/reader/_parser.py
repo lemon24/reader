@@ -10,14 +10,20 @@ from dataclasses import field
 from datetime import datetime
 from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Iterable
 from typing import Iterator
+from typing import Mapping
 from typing import Optional
 from typing import overload
+from typing import Sequence
 from typing import Tuple
+from typing import TypeVar
+from typing import Union
 
 import feedparser  # type: ignore
 import requests
+from typing_extensions import Protocol
 
 import reader
 from ._types import EntryData
@@ -204,9 +210,18 @@ def _process_feed(
     return feed, entries
 
 
-_ResponsePlugin = Callable[
-    [requests.Session, requests.Response, requests.Request], Optional[requests.Request]
-]
+class _ResponsePlugin(Protocol):
+    def __call__(
+        self,
+        session: requests.Session,
+        response: requests.Response,
+        request: requests.Request,
+        **kwargs: Any,
+    ) -> Optional[requests.Request]:  # pragma: no cover
+        ...
+
+
+_ParserType = Callable[[str, Optional[str], Optional[str]], ParsedFeed]
 
 
 class Parser:
@@ -216,20 +231,20 @@ class Parser:
     )
 
     def __init__(self) -> None:
-        self.parsers = OrderedDict()
+        self.parsers: 'OrderedDict[str, _ParserType]' = OrderedDict()
         self.session_hooks = SessionHooks()
 
         self.mount_parser('https://', self._parse_http)
         self.mount_parser('http://', self._parse_http)
         self.mount_parser('', self._parse_file)
 
-    def mount_parser(self, prefix, parser):
+    def mount_parser(self, prefix: str, parser: _ParserType) -> None:
         self.parsers[prefix] = parser
         keys_to_move = [k for k in self.parsers if len(k) < len(prefix)]
         for key in keys_to_move:
             self.parsers[key] = self.parsers.pop(key)
 
-    def get_parser(self, url):
+    def get_parser(self, url: str) -> _ParserType:
         for prefix, parser in self.parsers.items():
             if url.lower().startswith(prefix.lower()):
                 return parser
@@ -243,14 +258,14 @@ class Parser:
     ) -> ParsedFeed:
         return self.get_parser(url)(url, http_etag, http_last_modified)
 
-    def _parse_file(self, url: str, *args, **kwargs) -> ParsedFeed:
+    def _parse_file(self, url: str, *args: Any, **kwargs: Any) -> ParsedFeed:
         # TODO: What about untrusted input? https://github.com/lemon24/reader/issues/155
         with _make_feedparser_parse() as parse:
             result = parse(url)
         feed, entries = _process_feed(url, result)
         return ParsedFeed(feed, entries)
 
-    def make_session(self) -> requests.Session:
+    def make_session(self) -> 'SessionWrapper':
         session = SessionWrapper(hooks=self.session_hooks.copy())
         if self.user_agent:
             session.session.headers['User-Agent'] = self.user_agent
@@ -324,7 +339,7 @@ class Parser:
         return ParsedFeed(feed, entries, http_etag, http_last_modified)
 
 
-# FIXME FIXME FIXME: type annotations
+_T = TypeVar('_T')
 
 
 @dataclass
@@ -333,9 +348,9 @@ class SessionHooks:
     # (removed because I didn't want to write tests for them)
     # https://gist.github.com/lemon24/f0adead297010a1afd8255c87a01db78#file-two-py
 
-    response: list = field(default_factory=list)
+    response: Sequence[_ResponsePlugin] = field(default_factory=list)
 
-    def copy(self):
+    def copy(self: _T) -> _T:
         return type(self)(*(list(v) for v in astuple(self)))
 
 
@@ -345,15 +360,21 @@ class SessionWrapper:
     session: requests.Session = field(default_factory=requests.Session)
     hooks: SessionHooks = field(default_factory=SessionHooks)
 
-    def get(self, url, headers=None, params=None, **kwargs):
+    def get(
+        self,
+        url: Union[str, bytes],
+        headers: Optional[Mapping[str, str]] = None,
+        params: Union[None, bytes, Mapping[str, str]] = None,
+        **kwargs: Any,
+    ) -> requests.Response:
         # only requests.BaseAdapter.send() kwargs allowed
         assert set(kwargs) - {'stream', 'timeout', 'verify', 'cert', 'proxies'} == set()
 
         request = requests.Request('GET', url, headers=headers, params=params)
 
-        # TODO: remove "type: ignore" once Session.send() gets annotations
-        # https://github.com/python/typeshed/blob/f5a1925e765b92dd1b12ae10cf8bff21c225648f/third_party/2and3/requests/sessions.pyi#L105
-        response = self.session.send(self.session.prepare_request(request), **kwargs)
+        response = self.session.send(  # type: ignore
+            self.session.prepare_request(request), **kwargs
+        )
 
         for plugin in self.hooks.response:
             new_request = plugin(self.session, response, request, **kwargs)
@@ -367,14 +388,14 @@ class SessionWrapper:
             assert isinstance(new_request, requests.Request)
 
             request = new_request
-            response = self.session.send(
+            response = self.session.send(  # type: ignore
                 self.session.prepare_request(request), **kwargs
             )
 
-        return response
+        return cast(requests.Response, response)
 
-    def __enter__(self):
+    def __enter__(self: _T) -> _T:
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: Any) -> None:
         self.session.close()
