@@ -13,8 +13,13 @@ Unreleased
 
 * Add ``cloudflare_ua_fix`` plugin (work around Cloudflare sometimes
   blocking requests). (:issue:`181`)
-* When previewing a feed in the web application, use the same READER_PLUGINs
-  the main reader uses. (:issue:`181`)
+* Internal parser API changes to support alternative parsers, pre-request hooks,
+  and making arbitrary HTTP requests using the same logic :class:`Reader` uses.
+  (:issue:`155`)
+* feedparser 6.0 (beta) compatibility fixes.
+* In the /preview page and the ``preview_feed_list`` plugin,
+  use the same plugins the main :class:`Reader` does.
+  (enabled by :issue:`155`)
 
 
 Version 1.5
