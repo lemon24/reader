@@ -1,5 +1,6 @@
 import calendar
 import logging
+import threading
 import time
 from collections import OrderedDict
 from dataclasses import astuple
@@ -57,20 +58,14 @@ def _feedparser_parse(*args: Any, **kwargs: Any) -> Any:
         if 'resolve_relative_uris' not in str(e):  # pragma: no cover
             raise
 
-    # This is in no way thread-safe, but what can you do?
-    # TODO: Well, you could use locks to make it threadsafe...
-    # https://docs.python.org/3/library/threading.html#lock-objects
-
-    old_RESOLVE_RELATIVE_URIS = feedparser.RESOLVE_RELATIVE_URIS
-    old_SANITIZE_HTML = feedparser.SANITIZE_HTML
-    feedparser.RESOLVE_RELATIVE_URIS = True
-    feedparser.SANITIZE_HTML = True
-
-    try:
-        return feedparser.parse(*args, **kwargs)
-    finally:
-        feedparser.RESOLVE_RELATIVE_URIS = old_RESOLVE_RELATIVE_URIS
-        feedparser.SANITIZE_HTML = old_SANITIZE_HTML
+    # Best effort; still not safe if someone else changes the globals.
+    with threading.Lock():
+        old = feedparser.RESOLVE_RELATIVE_URIS, feedparser.SANITIZE_HTML
+        feedparser.RESOLVE_RELATIVE_URIS, feedparser.SANITIZE_HTML = True, True
+        try:
+            return feedparser.parse(*args, **kwargs)
+        finally:
+            feedparser.RESOLVE_RELATIVE_URIS, feedparser.SANITIZE_HTML = old
 
 
 @overload
