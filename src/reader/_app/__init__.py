@@ -233,6 +233,8 @@ def preview():
 
     # TODO: maybe cache stuff
     reader = make_reader(':memory:')
+    current_app.reader_load_plugins(reader)
+
     reader.add_feed(url)
 
     try:

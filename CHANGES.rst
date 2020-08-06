@@ -13,6 +13,8 @@ Unreleased
 
 * Add ``cloudflare_ua_fix`` plugin (work around Cloudflare sometimes
   blocking requests). (:issue:`181`)
+* When previewing a feed in the web application, use the same READER_PLUGINs
+  the main reader uses. (:issue:`181`)
 
 
 Version 1.5
