@@ -299,13 +299,16 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
 
     import requests
 
+    def req_plugin(session, request, **kwargs):
+        req_plugin.called = True
+        assert request.url == feed_url
+
     def do_nothing_plugin(session, response, request, **kwargs):
         do_nothing_plugin.called = True
         assert isinstance(session, requests.Session)
         assert isinstance(response, requests.Response)
         assert isinstance(request, requests.Request)
         assert request.url == feed_url
-        return None
 
     def rewrite_to_empty_plugin(session, response, request, **kwargs):
         rewrite_to_empty_plugin.called = True
@@ -313,10 +316,12 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
         return request
 
     parse = Parser()
+    parse.session_hooks.request.append(req_plugin)
     parse.session_hooks.response.append(do_nothing_plugin)
     parse.session_hooks.response.append(rewrite_to_empty_plugin)
 
     feed, _, _, _ = parse(feed_url)
+    assert req_plugin.called
     assert do_nothing_plugin.called
     assert rewrite_to_empty_plugin.called
     assert feed.link is not None
