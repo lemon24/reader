@@ -22,8 +22,8 @@ class _ReadWrapper:
     def __init__(self, file: Any):
         self._file = file
 
-    def read(self, size: int = -1) -> Any:
-        return self._file.read(size)
+    def read(self, *args: Any) -> Any:
+        return self._file.read(*args)
 
 
 def parse(thing: Any, **kwargs: Any) -> Any:
