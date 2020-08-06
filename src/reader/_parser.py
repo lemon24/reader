@@ -7,7 +7,6 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Optional
-from typing import overload
 from typing import Tuple
 
 import reader
@@ -26,35 +25,21 @@ from .types import Enclosure
 log = logging.getLogger('reader')
 
 
-@overload
-def _datetime_from_timetuple(tt: None) -> None:  # pragma: no cover
-    ...
-
-
-@overload
-def _datetime_from_timetuple(tt: time.struct_time) -> datetime:  # pragma: no cover
-    ...
-
-
-def _datetime_from_timetuple(tt: Optional[time.struct_time]) -> Optional[datetime]:
-    return datetime.utcfromtimestamp(calendar.timegm(tt)) if tt else None
+def _datetime_from_timetuple(tt: time.struct_time) -> datetime:
+    return datetime.utcfromtimestamp(calendar.timegm(tt))
 
 
 def _get_updated_published(
     thing: Any, is_rss: bool
 ) -> Tuple[Optional[datetime], Optional[datetime]]:
-    # feed.get and entry.get don't work for updated due historical reasons;
-    # from the docs: "As of version 5.1.1, if this key [.updated] doesn't
-    # exist but [thing].published does, the value of [thing].published
-    # will be returned. [...] This mapping is temporary and will be
-    # removed in a future version of feedparser."
+    def convert(key: str) -> Any:
+        # feedparser.FeedParserDict.get('updated') defaults to published
+        # for historical reasons; "key in thing" bypasses that
+        value = thing[key] if key in thing else None
+        return _datetime_from_timetuple(value) if value else None
 
-    updated = None
-    published = None
-    if 'updated_parsed' in thing:
-        updated = _datetime_from_timetuple(thing.updated_parsed)
-    if 'published_parsed' in thing:
-        published = _datetime_from_timetuple(thing.published_parsed)
+    updated = convert('updated_parsed')
+    published = convert('published_parsed')
 
     if published and not updated and is_rss:
         updated, published = published, None
