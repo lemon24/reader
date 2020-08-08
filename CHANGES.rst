@@ -11,12 +11,16 @@ Version 1.6
 
 Unreleased
 
+* Fail fast for feeds that return HTTP 4xx or 5xx status codes,
+  instead of (likely) failing later with an ambiguous XML parsing error.
+  The cause of the raised :exc:`ParseError` is now an instance of
+  :exc:`requests.HTTPError`. (:issue:`182`)
 * Add ``cloudflare_ua_fix`` plugin (work around Cloudflare sometimes
   blocking requests). (:issue:`181`)
+* feedparser 6.0 (beta) compatibility fixes.
 * Internal parser API changes to support alternative parsers, pre-request hooks,
   and making arbitrary HTTP requests using the same logic :class:`Reader` uses.
   (:issue:`155`)
-* feedparser 6.0 (beta) compatibility fixes.
 * In the /preview page and the ``preview_feed_list`` plugin,
   use the same plugins the main :class:`Reader` does.
   (enabled by :issue:`155`)

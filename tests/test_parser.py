@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import feedparser
 import pytest
+import requests
 from utils import make_url_base
 
 from reader import Feed
@@ -176,22 +177,36 @@ def test_parse_survivable_feedparser_exceptions(
 
 
 @pytest.fixture
-def make_http_url_304(requests_mock):
-    def make_url(feed_path):
+def make_http_url_bad_status(requests_mock):
+    def make_url(feed_path, status):
         url = 'http://example.com/' + feed_path.basename
-        requests_mock.get(url, status_code=304)
+        requests_mock.get(url, status_code=status)
         return url
 
     yield make_url
 
 
-def test_parse_not_modified(monkeypatch, parse, make_http_url_304, data_dir):
+def test_parse_not_modified(monkeypatch, parse, make_http_url_bad_status, data_dir):
     """parse() should raise _NotModified for unchanged feeds."""
 
-    feed_url = make_http_url_304(data_dir.join('full.atom'))
-
+    feed_url = make_http_url_bad_status(data_dir.join('full.atom'), 304)
     with pytest.raises(_NotModified):
         parse(feed_url)
+
+
+@pytest.mark.parametrize('status', [404, 503])
+def test_parse_bad_status(
+    monkeypatch, parse, make_http_url_bad_status, data_dir, status
+):
+    """parse() should raise ParseError for 4xx or 5xx status codes.
+    https://github.com/lemon24/reader/issues/182
+
+    """
+    feed_url = make_http_url_bad_status(data_dir.join('full.atom'), status)
+    with pytest.raises(ParseError) as excinfo:
+        parse(feed_url)
+
+    assert isinstance(excinfo.value.__cause__, requests.HTTPError)
 
 
 @pytest.fixture

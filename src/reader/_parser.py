@@ -227,8 +227,8 @@ class Parser:
             with self.make_session() as session:
                 response = session.get(url, headers=request_headers, stream=True)
 
-                # Should we raise_for_status()? feedparser.parse() isn't.
-                # Should we check the status on the feedparser.parse() result?
+                # TODO: the ParseError wrapping this should have a nice error message
+                response.raise_for_status()
 
                 response_headers = response.headers.copy()
                 response_headers.setdefault('content-location', response.url)
