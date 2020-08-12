@@ -2,12 +2,15 @@ import calendar
 import logging
 import time
 from collections import OrderedDict
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Optional
 from typing import Tuple
+
+from typing_extensions import Protocol
 
 import reader
 from . import _feedparser as feedparser
@@ -134,7 +137,7 @@ def _process_feed(
     return feed, entries
 
 
-_ParserType = Callable[[str, Optional[str], Optional[str]], ParsedFeed]
+ParserType = Callable[[str, Optional[str], Optional[str]], ParsedFeed]
 
 
 class Parser:
@@ -144,16 +147,16 @@ class Parser:
     )
 
     def __init__(self) -> None:
-        self.parsers: 'OrderedDict[str, _ParserType]' = OrderedDict()
+        self.parsers: 'OrderedDict[str, ParserType]' = OrderedDict()
         self.session_hooks = SessionHooks()
 
-    def mount_parser(self, prefix: str, parser: _ParserType) -> None:
+    def mount_parser(self, prefix: str, parser: ParserType) -> None:
         self.parsers[prefix] = parser
         keys_to_move = [k for k in self.parsers if len(k) < len(prefix)]
         for key in keys_to_move:
             self.parsers[key] = self.parsers.pop(key)
 
-    def get_parser(self, url: str) -> _ParserType:
+    def get_parser(self, url: str) -> ParserType:
         for prefix, parser in self.parsers.items():
             if url.lower().startswith(prefix.lower()):
                 return parser
@@ -167,24 +170,37 @@ class Parser:
     ) -> ParsedFeed:
         return self.get_parser(url)(url, http_etag, http_last_modified)
 
-    def _parse_file(self, url: str, *args: Any, **kwargs: Any) -> ParsedFeed:
-        # TODO: What about untrusted input? https://github.com/lemon24/reader/issues/155
-
-        # feedparser content sanitization and relative link resolution should be ON.
-        # https://github.com/lemon24/reader/issues/125
-        # https://github.com/lemon24/reader/issues/157
-        result = feedparser.parse(url, resolve_relative_uris=True, sanitize_html=True)
-
-        feed, entries = _process_feed(url, result)
-        return ParsedFeed(feed, entries)
-
-    def make_session(self) -> 'SessionWrapper':
+    def make_session(self) -> SessionWrapper:
         session = SessionWrapper(hooks=self.session_hooks.copy())
         if self.user_agent:
             session.session.headers['User-Agent'] = self.user_agent
         return session
 
-    def _parse_http(
+
+@dataclass
+class FileParser:
+    def __call__(self, url: str, *args: Any, **kwargs: Any) -> ParsedFeed:
+        # TODO: What about untrusted input? https://github.com/lemon24/reader/issues/155
+
+        # feedparser content sanitization and relative link resolution should be ON. #125, #157.
+        result = feedparser.parse(url, resolve_relative_uris=True, sanitize_html=True)
+
+        feed, entries = _process_feed(url, result)
+        return ParsedFeed(feed, entries)
+
+
+class _MakeSession(Protocol):
+    # https://github.com/python/mypy/issues/708#issuecomment-647124281 workaround
+    def __call__(self) -> SessionWrapper:
+        ...
+
+
+@dataclass
+class HTTPParser:
+
+    make_session: _MakeSession
+
+    def __call__(
         self,
         url: str,
         http_etag: Optional[str] = None,
@@ -241,6 +257,10 @@ class Parser:
 
                 with response:
                     response.raw.decode_content = True
+
+                    # feedparser content sanitization and relative link resolution should be ON.
+                    # https://github.com/lemon24/reader/issues/125
+                    # https://github.com/lemon24/reader/issues/157
                     result = feedparser.parse(
                         response.raw,
                         response_headers=response_headers,
@@ -263,7 +283,8 @@ class Parser:
 
 def default_parser() -> Parser:
     parser = Parser()
-    parser.mount_parser('https://', parser._parse_http)
-    parser.mount_parser('http://', parser._parse_http)
-    parser.mount_parser('', parser._parse_file)
+    http_parser = HTTPParser(parser.make_session)
+    parser.mount_parser('https://', http_parser)
+    parser.mount_parser('http://', http_parser)
+    parser.mount_parser('', FileParser())
     return parser
