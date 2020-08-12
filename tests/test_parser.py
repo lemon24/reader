@@ -375,6 +375,7 @@ def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
 
 def test_make_feedparser_parse(monkeypatch, parse, data_dir):
     # TODO: Remove this once we start using feedparser 6.0.
+    # UPDATE: ... or not? I'm not sure what it was supposed to be testing.
 
     exc = Exception("whatever")
 
@@ -386,9 +387,9 @@ def test_make_feedparser_parse(monkeypatch, parse, data_dir):
 
     monkeypatch.setattr('feedparser.parse', feedparser_parse)
 
-    with pytest.raises(Exception) as excinfo:
+    with pytest.raises(ParseError) as excinfo:
         parse(str(data_dir.join('full.atom')))
-    assert excinfo.value is exc
+    assert excinfo.value.__cause__ is exc
 
     assert feedparser_parse.kwargs == (True, True)
 
@@ -400,6 +401,10 @@ def test_missing_entry_id(parse):
     """
     # TODO: this test is brittle, default_parser accepting feed text is unintended
     # and may be removed after https://github.com/lemon24/reader/issues/155
+
+    from reader._parser import feedparser, _process_feed, ParsedFeed
+
+    parse = lambda s: ParsedFeed(*_process_feed('', feedparser.parse(s)))
 
     # For RSS, when id is missing, parse() falls back to link.
     result = parse(
@@ -459,6 +464,10 @@ def test_no_version(parse):
     there's no bozo_exception.
 
     """
+    from reader._parser import feedparser, _process_feed, ParsedFeed
+
+    parse = lambda s: ParsedFeed(*_process_feed('', feedparser.parse(s)))
+
     with pytest.raises(ParseError):
         parse(
             """

@@ -1,6 +1,9 @@
 import calendar
 import logging
+import os.path
 import time
+import urllib.parse
+import urllib.request
 from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime
@@ -108,6 +111,9 @@ _THINGS_WE_CARE_ABOUT_BUT_ARE_SURVIVABLE = (
 )
 
 
+# FIXME: #155, expose _process feed so we can call it in tests
+
+
 def _process_feed(
     url: str, d: Any
 ) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
@@ -160,6 +166,7 @@ class Parser:
         for prefix, parser in self.parsers.items():
             if url.lower().startswith(prefix.lower()):
                 return parser
+        # FIXME: this is a parse error for url "no parsers were found ..."
         raise ParseError(f"no parsers were found for {url!r}")
 
     def __call__(
@@ -179,14 +186,153 @@ class Parser:
 
 @dataclass
 class FileParser:
-    def __call__(self, url: str, *args: Any, **kwargs: Any) -> ParsedFeed:
-        # TODO: What about untrusted input? https://github.com/lemon24/reader/issues/155
 
-        # feedparser content sanitization and relative link resolution should be ON. #125, #157.
-        result = feedparser.parse(url, resolve_relative_uris=True, sanitize_html=True)
+    """Bare path and file:// URI parser, with support for feed roots,
+    per https://github.com/lemon24/reader/issues/155
+
+    """
+
+    feed_root: str
+
+    def __call__(self, url: str, *args: Any, **kwargs: Any) -> ParsedFeed:
+        try:
+            with open(self._normalize_url(url), 'rb') as file:
+                # enable sanitization and relative link resolution, #125, #157.
+                # not sure if relative link resolution actually happens.
+                result = feedparser.parse(
+                    file, resolve_relative_uris=True, sanitize_html=True
+                )
+        except Exception as e:
+            raise ParseError(url) from e
 
         feed, entries = _process_feed(url, result)
         return ParsedFeed(feed, entries)
+
+    def _normalize_url(self, url: str) -> str:
+        path = _extract_path(url)
+        if self.feed_root:
+            path = _resolve_root(self.feed_root, path)
+            if _is_windows_device_file(path):
+                raise ValueError(f"path must not be a device file: {url!r}")
+        return path
+
+
+def _extract_path(url: str) -> str:
+    """Transform a file URI or a path to a path."""
+
+    url_parsed = urllib.parse.urlparse(url)
+
+    if url_parsed.scheme == 'file':
+        if url_parsed.netloc not in ('', 'localhost'):
+            raise ValueError(f"unknown authority for file URI: {url!r}")
+        # TODO: maybe disallow query, params, fragment too, to reserve for future uses
+
+        return urllib.request.url2pathname(url_parsed.path)
+
+    if url_parsed.scheme:
+        # on Windows, drive is the drive letter the UNC \\host\share;
+        # on POSIX, drive is always empty
+        drive, _ = os.path.splitdrive(url)
+
+        if not drive:
+            # should end up as the same type as "no parsers were found", maybe
+            raise ValueError(f"unknown file URI scheme: {url!r}")
+
+        # we have a scheme, but we're on Windows and url looks like a path
+        return url
+
+    # no scheme, treat as a path
+    return url
+
+
+def _is_abs_path(path: str) -> bool:
+    """Return True if path is an absolute pathname.
+
+    Unlike os.path.isabs(), return False when there's no drive (Windows).
+
+    """
+    if not os.path.isabs(path):
+        return False
+    if os.name == 'nt':
+        drive, _ = os.path.splitdrive(path)
+        # ntpath.isabs('\\aaa') -> True,
+        # even though it's relative to the current drive;
+        # https://devblogs.microsoft.com/oldnewthing/20101011-00/?p=12563
+        if not drive:
+            return False
+    return True
+
+
+def _resolve_root(root: str, path: str) -> str:
+    """Resolve a path relative to a root, and normalize the result.
+
+    This is a path computation, there's no checks perfomed on the arguments.
+
+    It works like os.normcase(os.path.normpath(os.path.join(root, path))),
+    but with additional restrictions:
+
+    * root must be absolute.
+    * path must be relative.
+    * Directory traversal above the root is not allowed;
+      https://en.wikipedia.org/wiki/Directory_traversal_attack
+
+    Symlinks are allowed, as long as they're under the root.
+
+    Note that the '..' components are collapsed with no regard for symlinks.
+
+    """
+
+    # this implementation is based on the requirements / notes in
+    # https://github.com/lemon24/reader/issues/155#issuecomment-672324186
+
+    if not _is_abs_path(root):
+        raise ValueError(f"root must be absolute: {root!r}")
+    if _is_abs_path(path):
+        raise ValueError(f"path must be relative: {path!r}")
+
+    root = os.path.normcase(os.path.normpath(root))
+
+    # we normalize the path **before** symlinks are resolved;
+    # i.e. it behaves as realpath -L (logical), not realpath -P (physical).
+    # https://docs.python.org/3/library/os.path.html#os.path.normpath
+    # https://stackoverflow.com/questions/34865153/os-path-normpath-and-symbolic-links
+    path = os.path.normcase(os.path.normpath(os.path.join(root, path)))
+
+    # this means we support symlinks, as long as they're under the root
+    # (the target itself may be outside).
+
+    # if we want to prevent symlink targets outside root,
+    # we should do it here.
+
+    if not path.startswith(root):
+        raise ValueError(f"path is outside of root: {path!r}")
+
+    # FIXME: device files
+
+    return path
+
+
+# from https://github.com/pallets/werkzeug/blob/b45ac05b7feb30d4611d6b754bd94334ece4b1cd/src/werkzeug/utils.py#L40
+_windows_device_files = (
+    "CON",
+    "AUX",
+    "COM1",
+    "COM2",
+    "COM3",
+    "COM4",
+    "LPT1",
+    "LPT2",
+    "LPT3",
+    "PRN",
+    "NUL",
+)
+
+
+def _is_windows_device_file(path: str) -> bool:
+    if os.name != 'nt':
+        return False
+    filename = os.path.basename(os.path.normpath(path)).upper()
+    return filename not in _windows_device_files
 
 
 class _MakeSession(Protocol):
@@ -286,5 +432,6 @@ def default_parser() -> Parser:
     http_parser = HTTPParser(parser.make_session)
     parser.mount_parser('https://', http_parser)
     parser.mount_parser('http://', http_parser)
-    parser.mount_parser('', FileParser())
+    # FIXME: #155, expose feed_root argument
+    parser.mount_parser('', FileParser(''))
     return parser
