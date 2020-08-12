@@ -16,6 +16,7 @@ from typing import Union
 
 import reader._updater
 from ._parser import default_parser
+from ._parser import Parser
 from ._search import Search
 from ._storage import Storage
 from ._types import EntryData
@@ -57,12 +58,74 @@ _PostEntryAddPluginType = Callable[['Reader', EntryData[datetime.datetime]], Non
 
 
 def make_reader(
-    url: str, _storage: Optional[Storage] = None, _storage_factory: Any = None,
+    url: str,
+    *,
+    feed_root: Optional[str] = '',
+    _storage: Optional[Storage] = None,
+    _storage_factory: Any = None,
 ) -> 'Reader':
     """Create a new :class:`Reader`.
 
+    FIXME: repetition
+
+    The parsing of local feed files is controlled by ``feed_root``.
+    If enabled, the feed URL can be a bare path or a file URI.
+    Its interpretation depends on the value of ``feed_root``.
+    It can be one of the following:
+
+    ``None``
+
+        No local file parsing. Updating local feeds will fail.
+
+    ``''`` (the empty string)
+
+        Full filesystem access. This should be used only if the source of
+        feed URLs is trusted.
+
+        Both absolute and relative feed paths are supported.
+        The current working directory is honored.
+
+        Example: Assuming the current working directory is ``/feeds``,
+        all of the following feed URLs correspond to ``/feeds/feed.xml``:
+        ``feed.xml``, ``/feeds/feed.xml``, ``file:feed.xml``,
+        and ``file:/feeds/feed.xml``.
+
+    ``'/path/to/feed/root'`` (any non-empty string)
+
+        An absolute path; all feed URLs are interpreted as relative to it.
+        This can be used if the source  of feed URLs is untrusted.
+
+        Feed paths must be relative. The current working directory is ignored.
+
+        Example: Assuming the feed root is ``/feeds``, feed URLs
+        ``feed.xml`` and ``file:feed.xml`` correspond to ``/feeds/feed.xml``.
+        ``/feed.xml`` and ``file:/feed.xml`` are both errors.
+
+        Relative paths pointing outside the feed root are errors,
+        to prevent directory traversal attacks. Note that symbolic links
+        inside the feed root *can* point outside it.
+
+        The root and feed paths are joined and normalized with no regard for
+        symbolic links; see :func:`os.path.normpath` for details.
+
+        Accessing device files on Windows is an error.
+
+    .. versionadded:: 1.6
+        The ``feed_root`` keyword argument.
+
+    .. versionchanged:: 2.0
+        The default ``feed_root`` behavior will change from
+        *full filesystem access* (``''``) to
+        *don't open local feeds* (``None``).
+
     Args:
         url (str): Path to the reader database.
+        feed_root (str or None):
+            Directory where to look for local feeds.
+            One of ``None`` (don't open local feeds),
+            ``''`` (full filesystem access; default), or
+            ``'/path/to/feed/root'`` (an absolute path that feed paths are relative to).
+
 
     Returns:
         Reader: The reader.
@@ -84,7 +147,9 @@ def make_reader(
     # For now, we're using a storage-bound search provider.
     search = Search(storage)
 
-    reader = Reader(storage, search, _called_directly=False)
+    parser = default_parser(feed_root)
+
+    reader = Reader(storage, search, parser, _called_directly=False)
     return reader
 
 
@@ -103,11 +168,15 @@ class Reader:
     """
 
     def __init__(
-        self, _storage: Storage, _search: Search, _called_directly: bool = True
+        self,
+        _storage: Storage,
+        _search: Search,
+        _parser: Parser,
+        _called_directly: bool = True,
     ):
         self._storage = _storage
         self._search = _search
-        self._parser = default_parser()
+        self._parser = _parser
         self._updater = reader._updater
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
 
@@ -434,7 +503,8 @@ class Reader:
             regardless of when the feed says they were published
             (sometimes, it lies by a day or two).
 
-            Note:
+            .. note::
+
                 The algorithm for "recent" is a heuristic and may change over time.
 
         ``'random'``

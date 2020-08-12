@@ -15,7 +15,7 @@ from reader.exceptions import ParseError
 
 @pytest.fixture
 def parse():
-    parse = default_parser()
+    parse = default_parser('')
     yield parse
 
 

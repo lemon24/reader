@@ -8,7 +8,6 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
-from typing import Callable
 from typing import Iterable
 from typing import Optional
 from typing import Tuple
@@ -22,6 +21,7 @@ from ._requests_utils import SessionWrapper
 from ._types import EntryData
 from ._types import FeedData
 from ._types import ParsedFeed
+from ._types import ParserType
 from .exceptions import _NotModified
 from .exceptions import ParseError
 from .types import Content
@@ -143,9 +143,6 @@ def _process_feed(
     return feed, entries
 
 
-ParserType = Callable[[str, Optional[str], Optional[str]], ParsedFeed]
-
-
 class Parser:
 
     user_agent = (
@@ -230,7 +227,7 @@ def _extract_path(url: str) -> str:
         return urllib.request.url2pathname(url_parsed.path)
 
     if url_parsed.scheme:
-        # on Windows, drive is the drive letter the UNC \\host\share;
+        # on Windows, drive is the drive letter or UNC \\host\share;
         # on POSIX, drive is always empty
         drive, _ = os.path.splitdrive(url)
 
@@ -306,8 +303,6 @@ def _resolve_root(root: str, path: str) -> str:
 
     if not path.startswith(root):
         raise ValueError(f"path is outside of root: {path!r}")
-
-    # FIXME: device files
 
     return path
 
@@ -427,11 +422,12 @@ class HTTPParser:
         return ParsedFeed(feed, entries, http_etag, http_last_modified)
 
 
-def default_parser() -> Parser:
+def default_parser(feed_root: Optional[str] = None) -> Parser:
     parser = Parser()
     http_parser = HTTPParser(parser.make_session)
     parser.mount_parser('https://', http_parser)
     parser.mount_parser('http://', http_parser)
-    # FIXME: #155, expose feed_root argument
-    parser.mount_parser('', FileParser(''))
+    if feed_root is not None:
+        # empty string means catch-all
+        parser.mount_parser('', FileParser(feed_root))
     return parser

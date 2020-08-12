@@ -1403,7 +1403,7 @@ def test_closed(reader):
 
 def test_direct_instantiation():
     with pytest.warns(UserWarning):
-        Reader('storage', 'search')
+        Reader('storage', 'search', 'parser')
 
 
 # BEGIN entry filtering tests

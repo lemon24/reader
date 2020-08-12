@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Callable
 from typing import Generic
 from typing import Iterable
 from typing import NamedTuple
@@ -230,3 +231,6 @@ class EntryFilterOptions(NamedTuple):
             raise ValueError("has_enclosures should be one of (None, False, True)")
 
         return cls(feed_url, entry_id, read, important, has_enclosures)
+
+
+ParserType = Callable[[str, Optional[str], Optional[str]], ParsedFeed]
