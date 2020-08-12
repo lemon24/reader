@@ -147,10 +147,6 @@ class Parser:
         self.parsers: 'OrderedDict[str, _ParserType]' = OrderedDict()
         self.session_hooks = SessionHooks()
 
-        self.mount_parser('https://', self._parse_http)
-        self.mount_parser('http://', self._parse_http)
-        self.mount_parser('', self._parse_file)
-
     def mount_parser(self, prefix: str, parser: _ParserType) -> None:
         self.parsers[prefix] = parser
         keys_to_move = [k for k in self.parsers if len(k) < len(prefix)]
@@ -263,3 +259,11 @@ class Parser:
 
         feed, entries = _process_feed(url, result)
         return ParsedFeed(feed, entries, http_etag, http_last_modified)
+
+
+def default_parser() -> Parser:
+    parser = Parser()
+    parser.mount_parser('https://', parser._parse_http)
+    parser.mount_parser('http://', parser._parse_http)
+    parser.mount_parser('', parser._parse_file)
+    return parser

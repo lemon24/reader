@@ -15,7 +15,7 @@ from typing import TypeVar
 from typing import Union
 
 import reader._updater
-from ._parser import Parser
+from ._parser import default_parser
 from ._search import Search
 from ._storage import Storage
 from ._types import EntryData
@@ -107,7 +107,7 @@ class Reader:
     ):
         self._storage = _storage
         self._search = _search
-        self._parser = Parser()
+        self._parser = default_parser()
         self._updater = reader._updater
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
 

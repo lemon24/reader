@@ -8,14 +8,14 @@ import requests
 from utils import make_url_base
 
 from reader import Feed
-from reader._parser import Parser
+from reader._parser import default_parser
 from reader.exceptions import _NotModified
 from reader.exceptions import ParseError
 
 
 @pytest.fixture
 def parse():
-    parse = Parser()
+    parse = default_parser()
     yield parse
 
 
@@ -330,7 +330,7 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
         request.url = request.url.replace('empty', 'full')
         return request
 
-    parse = Parser()
+    parse = default_parser()
     parse.session_hooks.request.append(req_plugin)
     parse.session_hooks.response.append(do_nothing_plugin)
     parse.session_hooks.response.append(rewrite_to_empty_plugin)
@@ -398,7 +398,7 @@ def test_missing_entry_id(parse):
     https://github.com/lemon24/reader/issues/170
 
     """
-    # TODO: this test is brittle, Parser accepting feed text is unintended
+    # TODO: this test is brittle, default_parser accepting feed text is unintended
     # and may be removed after https://github.com/lemon24/reader/issues/155
 
     # For RSS, when id is missing, parse() falls back to link.
