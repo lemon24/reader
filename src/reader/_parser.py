@@ -191,7 +191,7 @@ class FileParser:
 
     feed_root: str
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # give feed_root checks a chance to fail early
         self._normalize_url('known-good-feed-url')
 
@@ -249,34 +249,25 @@ def _extract_path(url: str) -> str:
 def _is_abs_path(path: str) -> bool:
     """Return True if path is an absolute pathname.
 
-    Unlike os.path.isabs(), return False if there's no drive (Windows).
+    Unlike os.path.isabs(), return False on Windows if there's no drive
+    (e.g. "\\path").
 
     """
-    if not os.path.isabs(path):
-        return False
-    if os.name == 'nt':
-        drive, _ = os.path.splitdrive(path)
-        # ntpath.isabs('\\aaa') -> True,
-        # even though it's relative to the current drive;
-        # https://devblogs.microsoft.com/oldnewthing/20101011-00/?p=12563
-        if not drive:
-            return False
-    return True
+    is_abs = os.path.isabs(path)
+    has_drive = os.name != 'nt' or os.path.splitdrive(path)[0]
+    return all([is_abs, has_drive])
 
 
 def _is_rel_path(path: str) -> bool:
     """Return True if path is a relative pathname.
 
-    Unlike "not os.path.isabs()", return False if there's a drive (Windows).
+    Unlike "not os.path.isabs()", return False on windows if there's a drive
+    (e.g. "C:path").
 
     """
-    if os.path.isabs(path):
-        return False
-    if os.name == 'nt':
-        drive, _ = os.path.splitdrive(path)
-        if drive:
-            return False
-    return True
+    is_abs = os.path.isabs(path)
+    has_drive = os.name == 'nt' and os.path.splitdrive(path)[0]
+    return not any([is_abs, has_drive])
 
 
 def _resolve_root(root: str, path: str) -> str:

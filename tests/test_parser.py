@@ -617,10 +617,26 @@ def test_feed_root_nonempty(data_dir, scheme):
     assert test_entries == [e._replace(feed_url=test_url) for e in good_entries]
 
 
-def test_feed_root_relative_root_error(data_dir):
-    relative_root = data_dir.relto(type(data_dir)())
+# os_name, root
+RELATIVE_ROOTS = [('nt', 'C:feeds'), ('nt', '\\feeds'),] + [
+    (os_name, root)
+    for os_name in ['nt', 'posix']
+    for root in ['feeds', './feeds', '../feeds']
+]
+
+
+@pytest.mark.parametrize('os_name, root', RELATIVE_ROOTS)
+def test_feed_root_relative_root_error(monkeypatch, os_name, root):
+    import ntpath, posixpath
+
+    monkeypatch.setattr('os.name', os_name)
+    monkeypatch.setattr('os.path', {'nt': ntpath, 'posix': posixpath}[os_name])
+
     with pytest.raises(ValueError) as excinfo:
-        default_parser(relative_root)
+        default_parser(root)
+
+    monkeypatch.undo()
+
     assert 'root must be absolute' in str(excinfo.value)
 
 
@@ -629,21 +645,21 @@ BAD_PATHS_BY_REASON = [
     (
         'path must be relative',
         [
-            '/full.rss',
-            'file:/full.rss',
-            'file:///full.rss',
-            'file://localhost/full.rss',
+            '/feed.rss',
+            'file:/feed.rss',
+            'file:///feed.rss',
+            'file://localhost/feed.rss',
         ],
     ),
-    ('path cannot be outside root', ['../full.rss', 'file:../full.rss']),
-    ('unknown authority', ['file://full.rss', 'file://whatever/full.rss']),
+    ('path cannot be outside root', ['../feed.rss', 'file:../feed.rss']),
+    ('unknown authority', ['file://feed.rss', 'file://whatever/feed.rss']),
     (
         'unknown scheme',
         [
-            'whatever:full.rss',
-            'whatever:/full.rss',
-            'whatever:///full.rss',
-            'whatever://localhost/full.rss',
+            'whatever:feed.rss',
+            'whatever:/feed.rss',
+            'whatever:///feed.rss',
+            'whatever://localhost/feed.rss',
         ],
     ),
 ]
@@ -659,8 +675,25 @@ def test_feed_root_nonenmpty_bad_paths(data_dir, url, reason):
     assert reason in str(excinfo.value.__cause__)
 
 
+BAD_PATHS_WINDOWS_BY_REASON = [
+    ('device file', ['NUL', 'CON']),
+    (
+        'path must be relative',
+        [
+            'C:\\feed.rss',
+            'file:/c:/feed.rss',
+            'C:feed.rss',
+            'file:/c:feed.rss',
+            '\\feed.rss',
+        ],
+    ),
+]
+
+
 BAD_PATHS_WITH_OS = [
     (os_name, url, reason) for os_name in ('nt', 'posix') for url, reason in BAD_PATHS
+] + [
+    ('nt', url, reason) for reason, urls in BAD_PATHS_WINDOWS_BY_REASON for url in urls
 ]
 
 
