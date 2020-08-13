@@ -1517,7 +1517,26 @@ def test_entries_filtering_error(reader, pre_stuff, call_method, kwargs):
 # END entry filtering tests
 
 
-@pytest.mark.xfail
-def test_make_reader_feed_root():
-    # FIXME
-    raise NotImplementedError
+@pytest.mark.parametrize(
+    'kwargs, feed_root',
+    [
+        (dict(), ''),
+        (dict(feed_root=None), None),
+        (dict(feed_root=''), ''),
+        (dict(feed_root='/path'), '/path'),
+    ],
+)
+def test_make_reader_feed_root(monkeypatch, kwargs, feed_root):
+    exc = Exception("whatever")
+
+    def default_parser(feed_root):
+        default_parser.feed_root = feed_root
+        raise exc
+
+    monkeypatch.setattr('reader.core.default_parser', default_parser)
+
+    with pytest.raises(Exception) as excinfo:
+        make_reader('', **kwargs)
+    assert excinfo.value is exc
+
+    assert default_parser.feed_root == feed_root
