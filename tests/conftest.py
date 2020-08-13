@@ -1,5 +1,6 @@
 import py.path
 import pytest
+from utils import reload_module
 
 from reader import make_reader
 from reader._storage import Storage

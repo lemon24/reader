@@ -1,7 +1,10 @@
 import functools
+import importlib
 import inspect
 import posixpath
 from urllib.parse import urlparse
+
+import pytest
 
 
 def make_url_base(feed_url):
@@ -34,3 +37,29 @@ def rename_argument(original, alias):
         return wrapper
 
     return decorator
+
+
+class Reloader:
+    def __init__(self, monkeypatch):
+        self.modules = []
+        self.monkeypatch = monkeypatch
+
+    def __call__(self, module):
+        self.modules.append(module)
+        return importlib.reload(module)
+
+    def undo(self):
+        # undo monkeypatches before reloading again,
+        # to ensure modules are reloaded from a "clean" environment
+        self.monkeypatch.undo()
+        while self.modules:
+            importlib.reload(self.modules.pop())
+
+
+@pytest.fixture
+def reload_module(monkeypatch):
+    reloader = Reloader(monkeypatch)
+    try:
+        yield reloader
+    finally:
+        reloader.undo()
