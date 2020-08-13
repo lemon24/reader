@@ -191,6 +191,10 @@ class FileParser:
 
     feed_root: str
 
+    def __post_init__(self):
+        # give feed_root checks a chance to fail early
+        self._normalize_url('known-good-feed-url')
+
     def __call__(self, url: str, *args: Any, **kwargs: Any) -> ParsedFeed:
         try:
             with open(self._normalize_url(url), 'rb') as file:

@@ -1519,4 +1519,5 @@ def test_entries_filtering_error(reader, pre_stuff, call_method, kwargs):
 
 @pytest.mark.xfail
 def test_make_reader_feed_root():
+    # FIXME
     raise NotImplementedError

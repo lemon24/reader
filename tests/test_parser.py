@@ -621,13 +621,9 @@ def test_feed_root_nonenmpty_bad_paths(data_dir, scheme):
     # TODO: this looks parametrizable
 
     relative_root = data_dir.relto(type(data_dir)())
-
-    # FIXME: this should fail early!
-    default_parser(relative_root)
-
-    with pytest.raises(ParseError) as excinfo:
-        default_parser(relative_root)(scheme + 'full.rss')
-    assert 'root must be absolute' in str(excinfo.value.__cause__)
+    with pytest.raises(ValueError) as excinfo:
+        default_parser(relative_root)
+    assert 'root must be absolute' in str(excinfo.value)
 
     with pytest.raises(ParseError) as excinfo:
         default_parser(data_dir)(scheme + '/full.rss')
