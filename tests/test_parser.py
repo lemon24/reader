@@ -541,3 +541,130 @@ def test_parsers(parse):
 
     with pytest.raises(ParseError):
         parse('file:unknown')
+
+
+@pytest.mark.parametrize('scheme', ['', 'file:', 'file://', 'file://localhost/'])
+@pytest.mark.parametrize('relative', [False, True])
+def test_feed_root_empty(data_dir, scheme, relative):
+    # TODO: this test looks a lot like test_feed_root_nonempty
+
+    if relative and scheme.startswith('file://'):
+        pytest.skip("can't have relative URIs with 'file://...'")
+
+    parse = default_parser('')
+
+    # we know this returns the right thing based on all of the tests above
+    good_path = data_dir.join('full.rss')
+    good_url = str(good_path)
+    good_result = parse(good_url)
+
+    test_path = data_dir.join('full.rss')
+    if relative:
+        test_path = test_path.relto(type(data_dir)())
+    test_url = scheme + str(test_path)
+    test_result = parse(test_url)
+
+    # sanity check
+    assert good_result.feed.url == good_url
+    good_entries = list(good_result.entries)
+    assert {e.feed_url for e in good_entries} == {
+        good_url,
+    }
+
+    assert test_result.feed.url == test_url
+    test_entries = list(test_result.entries)
+    assert {e.feed_url for e in test_entries} == {
+        test_url,
+    }
+
+    assert test_result.feed == good_result.feed._replace(url=test_url)
+    assert test_entries == [e._replace(feed_url=test_url) for e in good_entries]
+
+
+@pytest.mark.parametrize('scheme', ['', 'file:'])
+def test_feed_root_none(data_dir, scheme):
+    parse = default_parser(None)
+    url = scheme + str(data_dir.join('full.atom'))
+    with pytest.raises(ParseError) as excinfo:
+        parse(url)
+    # TODO: assert on message when we have one
+
+
+@pytest.mark.parametrize('scheme', ['', 'file:'])
+def test_feed_root_nonempty(data_dir, scheme):
+    # we know this returns the right thing based on all of the tests above
+    good_url = str(data_dir.join('full.rss'))
+    good_result = default_parser('')(good_url)
+
+    test_url = scheme + 'full.rss'
+    test_result = default_parser(data_dir)(test_url)
+
+    # sanity check
+    assert good_result.feed.url == good_url
+    good_entries = list(good_result.entries)
+    assert {e.feed_url for e in good_entries} == {
+        good_url,
+    }
+
+    assert test_result.feed.url == test_url
+    test_entries = list(test_result.entries)
+    assert {e.feed_url for e in test_entries} == {
+        test_url,
+    }
+
+    assert test_result.feed == good_result.feed._replace(url=test_url)
+    assert test_entries == [e._replace(feed_url=test_url) for e in good_entries]
+
+
+@pytest.mark.parametrize('scheme', ['', 'file:'])
+def test_feed_root_nonenmpty_bad_paths(data_dir, scheme):
+    # TODO: this looks parametrizable
+
+    relative_root = data_dir.relto(type(data_dir)())
+
+    # FIXME: this should fail early!
+    default_parser(relative_root)
+
+    with pytest.raises(ParseError) as excinfo:
+        default_parser(relative_root)(scheme + 'full.rss')
+    assert 'root must be absolute' in str(excinfo.value.__cause__)
+
+    with pytest.raises(ParseError) as excinfo:
+        default_parser(data_dir)(scheme + '/full.rss')
+    assert 'path must be relative' in str(excinfo.value.__cause__)
+
+    with pytest.raises(ParseError) as excinfo:
+        default_parser(data_dir)('file:///full.rss')
+    assert 'path must be relative' in str(excinfo.value.__cause__)
+
+    with pytest.raises(ParseError) as excinfo:
+        default_parser(data_dir)('file://localhost/full.rss')
+    assert 'path must be relative' in str(excinfo.value.__cause__)
+
+    with pytest.raises(ParseError) as excinfo:
+        default_parser(data_dir)(scheme + '../full.rss')
+    assert 'path cannot be outside root' in str(excinfo.value.__cause__)
+
+    with pytest.raises(ParseError) as excinfo:
+        default_parser(data_dir)('file://full.rss')
+    assert 'unknown authority' in str(excinfo.value.__cause__)
+
+    with pytest.raises(ParseError) as excinfo:
+        default_parser(data_dir)('file://whatever/full.rss')
+    assert 'unknown authority' in str(excinfo.value.__cause__)
+
+    with pytest.raises(ParseError) as excinfo:
+        default_parser(data_dir)('whatever:full.rss')
+    assert 'unknown scheme' in str(excinfo.value.__cause__)
+
+    with pytest.raises(ParseError) as excinfo:
+        default_parser(data_dir)('whatever:/full.rss')
+    assert 'unknown scheme' in str(excinfo.value.__cause__)
+
+    with pytest.raises(ParseError) as excinfo:
+        default_parser(data_dir)('whatever:///full.rss')
+    assert 'unknown scheme' in str(excinfo.value.__cause__)
+
+    with pytest.raises(ParseError) as excinfo:
+        default_parser(data_dir)('whatever://localhost/full.rss')
+    assert 'unknown scheme' in str(excinfo.value.__cause__)

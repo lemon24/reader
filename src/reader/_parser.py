@@ -233,7 +233,7 @@ def _extract_path(url: str) -> str:
 
         if not drive:
             # should end up as the same type as "no parsers were found", maybe
-            raise ValueError(f"unknown file URI scheme: {url!r}")
+            raise ValueError(f"unknown scheme for file URI: {url!r}")
 
         # we have a scheme, but we're on Windows and url looks like a path
         return url
@@ -302,7 +302,7 @@ def _resolve_root(root: str, path: str) -> str:
     # we should do it here.
 
     if not path.startswith(root):
-        raise ValueError(f"path is outside of root: {path!r}")
+        raise ValueError(f"path cannot be outside root: {path!r}")
 
     return path
 

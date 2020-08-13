@@ -110,6 +110,7 @@ class EntryData(Generic[_UpdatedType], _namedtuple_compat):
 class ParsedFeed(NamedTuple):
 
     feed: FeedData
+    # TODO: wrap entries in iter(entries) to ensure stuff doesn't rely on it being a list
     entries: Iterable[EntryData[Optional[datetime]]]
     http_etag: Optional[str] = None
     http_last_modified: Optional[str] = None
