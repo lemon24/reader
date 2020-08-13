@@ -511,6 +511,11 @@ class Reader:
 
             Random. At at most 256 entries will be returned.
 
+            .. versionadded:: 1.2
+
+        .. versionadded:: 1.2
+            The ``sort`` keyword argument.
+
         Args:
             feed (str or Feed or None): Only return the entries for this feed.
             entry (tuple(str, str) or Entry or None):
@@ -797,6 +802,8 @@ class Reader:
             Most recent first. See :meth:`~Reader.get_entries()`
             for details on what *recent* means.
 
+            .. versionadded:: 1.4
+
         Note:
             The query syntax is dependent on the search provider.
 
@@ -823,6 +830,9 @@ class Reader:
               and their feed title does not match "internet"
 
         Search must be enabled to call this method.
+
+        .. versionadded:: 1.4
+            The ``sort`` keyword argument.
 
         Args:
             query (str): The search query.

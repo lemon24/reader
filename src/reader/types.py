@@ -85,12 +85,18 @@ class Feed(_namedtuple_compat):
     # added is required, but we want it after feed data; the cast is for mypy.
 
     #: The date when the feed was added.
+    #:
+    #: .. versionadded:: 1.3
     added: datetime = cast(datetime, None)
 
     #: The date when the feed was last retrieved by reader.
+    #:
+    #: .. versionadded:: 1.3
     last_updated: Optional[datetime] = None
 
     #: If a :exc:`ParseError` happend during the last update, its cause.
+    #:
+    #: .. versionadded:: 1.3
     last_exception: Optional['ExceptionInfo'] = None
 
 
@@ -100,7 +106,11 @@ _EI = TypeVar('_EI', bound='ExceptionInfo')
 @dataclass(frozen=True)
 class ExceptionInfo(_namedtuple_compat):
 
-    """Data type representing information about an exception."""
+    """Data type representing information about an exception.
+
+    .. versionadded:: 1.3
+
+    """
 
     # Similar to traceback.TracebackException and boltons.tbutils.ExceptionInfo.
     # If ever make this richer, we might as well use one of them.
@@ -174,6 +184,8 @@ class Entry(_namedtuple_compat):
     important: bool = False
 
     #: The date when the entry was last updated by reader.
+    #:
+    #: .. versionadded:: 1.3
     last_updated: datetime = cast(datetime, None)
 
     # feed should not have a default, but I'd prefer objects that aren't
