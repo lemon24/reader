@@ -249,7 +249,7 @@ def _extract_path(url: str) -> str:
 def _is_abs_path(path: str) -> bool:
     """Return True if path is an absolute pathname.
 
-    Unlike os.path.isabs(), return False when there's no drive (Windows).
+    Unlike os.path.isabs(), return False if there's no drive (Windows).
 
     """
     if not os.path.isabs(path):
@@ -260,6 +260,21 @@ def _is_abs_path(path: str) -> bool:
         # even though it's relative to the current drive;
         # https://devblogs.microsoft.com/oldnewthing/20101011-00/?p=12563
         if not drive:
+            return False
+    return True
+
+
+def _is_rel_path(path: str) -> bool:
+    """Return True if path is a relative pathname.
+
+    Unlike "not os.path.isabs()", return False if there's a drive (Windows).
+
+    """
+    if os.path.isabs(path):
+        return False
+    if os.name == 'nt':
+        drive, _ = os.path.splitdrive(path)
+        if drive:
             return False
     return True
 
@@ -288,7 +303,7 @@ def _resolve_root(root: str, path: str) -> str:
 
     if not _is_abs_path(root):
         raise ValueError(f"root must be absolute: {root!r}")
-    if _is_abs_path(path):
+    if not _is_rel_path(path):
         raise ValueError(f"path must be relative: {path!r}")
 
     root = os.path.normcase(os.path.normpath(root))
@@ -331,12 +346,12 @@ def _is_windows_device_file(path: str) -> bool:
     if os.name != 'nt':
         return False
     filename = os.path.basename(os.path.normpath(path)).upper()
-    return filename not in _windows_device_files
+    return filename in _windows_device_files
 
 
 class _MakeSession(Protocol):
     # https://github.com/python/mypy/issues/708#issuecomment-647124281 workaround
-    def __call__(self) -> SessionWrapper:
+    def __call__(self) -> SessionWrapper:  # pragma: no cover
         ...
 
 

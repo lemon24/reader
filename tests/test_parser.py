@@ -9,6 +9,7 @@ from utils import make_url_base
 
 from reader import Feed
 from reader._parser import default_parser
+from reader._parser import FileParser
 from reader.exceptions import _NotModified
 from reader.exceptions import ParseError
 
@@ -616,51 +617,67 @@ def test_feed_root_nonempty(data_dir, scheme):
     assert test_entries == [e._replace(feed_url=test_url) for e in good_entries]
 
 
-@pytest.mark.parametrize('scheme', ['', 'file:'])
-def test_feed_root_nonenmpty_bad_paths(data_dir, scheme):
-    # TODO: this looks parametrizable
-
+def test_feed_root_relative_root_error(data_dir):
     relative_root = data_dir.relto(type(data_dir)())
     with pytest.raises(ValueError) as excinfo:
         default_parser(relative_root)
     assert 'root must be absolute' in str(excinfo.value)
 
-    with pytest.raises(ParseError) as excinfo:
-        default_parser(data_dir)(scheme + '/full.rss')
-    assert 'path must be relative' in str(excinfo.value.__cause__)
 
-    with pytest.raises(ParseError) as excinfo:
-        default_parser(data_dir)('file:///full.rss')
-    assert 'path must be relative' in str(excinfo.value.__cause__)
+# reason, [url, ...]
+BAD_PATHS_BY_REASON = [
+    (
+        'path must be relative',
+        [
+            '/full.rss',
+            'file:/full.rss',
+            'file:///full.rss',
+            'file://localhost/full.rss',
+        ],
+    ),
+    ('path cannot be outside root', ['../full.rss', 'file:../full.rss']),
+    ('unknown authority', ['file://full.rss', 'file://whatever/full.rss']),
+    (
+        'unknown scheme',
+        [
+            'whatever:full.rss',
+            'whatever:/full.rss',
+            'whatever:///full.rss',
+            'whatever://localhost/full.rss',
+        ],
+    ),
+]
 
-    with pytest.raises(ParseError) as excinfo:
-        default_parser(data_dir)('file://localhost/full.rss')
-    assert 'path must be relative' in str(excinfo.value.__cause__)
+# url, reason
+BAD_PATHS = [(url, reason) for reason, urls in BAD_PATHS_BY_REASON for url in urls]
 
-    with pytest.raises(ParseError) as excinfo:
-        default_parser(data_dir)(scheme + '../full.rss')
-    assert 'path cannot be outside root' in str(excinfo.value.__cause__)
 
+@pytest.mark.parametrize('url, reason', BAD_PATHS)
+def test_feed_root_nonenmpty_bad_paths(data_dir, url, reason):
     with pytest.raises(ParseError) as excinfo:
-        default_parser(data_dir)('file://full.rss')
-    assert 'unknown authority' in str(excinfo.value.__cause__)
+        default_parser(data_dir)(url)
+    assert reason in str(excinfo.value.__cause__)
 
-    with pytest.raises(ParseError) as excinfo:
-        default_parser(data_dir)('file://whatever/full.rss')
-    assert 'unknown authority' in str(excinfo.value.__cause__)
 
-    with pytest.raises(ParseError) as excinfo:
-        default_parser(data_dir)('whatever:full.rss')
-    assert 'unknown scheme' in str(excinfo.value.__cause__)
+BAD_PATHS_WITH_OS = [
+    (os_name, url, reason) for os_name in ('nt', 'posix') for url, reason in BAD_PATHS
+]
 
-    with pytest.raises(ParseError) as excinfo:
-        default_parser(data_dir)('whatever:/full.rss')
-    assert 'unknown scheme' in str(excinfo.value.__cause__)
 
-    with pytest.raises(ParseError) as excinfo:
-        default_parser(data_dir)('whatever:///full.rss')
-    assert 'unknown scheme' in str(excinfo.value.__cause__)
+@pytest.mark.parametrize('os_name, url, reason', BAD_PATHS_WITH_OS)
+def test_normalize_url_errors(monkeypatch, reload_module, os_name, url, reason):
+    import ntpath, posixpath, urllib.request
 
-    with pytest.raises(ParseError) as excinfo:
-        default_parser(data_dir)('whatever://localhost/full.rss')
-    assert 'unknown scheme' in str(excinfo.value.__cause__)
+    data_dir = {'nt': 'C:\\feeds', 'posix': '/feeds'}[os_name]
+
+    monkeypatch.setattr('os.name', os_name)
+    monkeypatch.setattr('os.path', {'nt': ntpath, 'posix': posixpath}[os_name])
+    # urllib.request.url2pathname differs based on os.name
+    reload_module(urllib.request)
+
+    with pytest.raises(ValueError) as excinfo:
+        FileParser(data_dir)._normalize_url(url)
+
+    reload_module.undo()
+
+    assert reason in str(excinfo.value)
