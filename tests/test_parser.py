@@ -2,11 +2,11 @@ import io
 import logging
 from unittest.mock import MagicMock
 
-import feedparser
 import pytest
 import requests
 from utils import make_url_base
 
+import reader._feedparser as feedparser
 from reader import Feed
 from reader._parser import default_parser
 from reader._parser import FileParser
@@ -139,7 +139,7 @@ def test_feedparser_exceptions(monkeypatch, parse, data_dir):
         rv['bozo_exception'] = feedparser_exception
         return rv
 
-    monkeypatch.setattr('feedparser.parse', feedparser_parse)
+    monkeypatch.setattr(feedparser, 'parse', feedparser_parse)
 
     with pytest.raises(ParseError) as excinfo:
         parse(str(data_dir.join('full.atom')))
@@ -163,7 +163,7 @@ def test_parse_survivable_feedparser_exceptions(
         rv['bozo_exception'] = exc_cls("whatever")
         return rv
 
-    monkeypatch.setattr('feedparser.parse', feedparser_parse)
+    monkeypatch.setattr(feedparser, 'parse', feedparser_parse)
 
     with caplog.at_level(logging.WARNING, logger="reader"):
         # shouldn't raise an exception
@@ -374,25 +374,30 @@ def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
     assert 'reader' not in headers['User-Agent']
 
 
-def test_make_feedparser_parse(monkeypatch, parse, data_dir):
-    # TODO: Remove this once we start using feedparser 6.0.
-    # UPDATE: ... or not? I'm not sure what it was supposed to be testing.
+def test_feedparser_parse_call(monkeypatch, parse, make_url, data_dir):
+    """feedparser.parse must always be called with True
+    resolve_relative_uris and sanitize_html.
 
+    https://github.com/lemon24/reader/issues/125#issuecomment-522333200
+
+    """
     exc = Exception("whatever")
 
-    def feedparser_parse(
-        *args, resolve_relative_uris=None, sanitize_html=None,
-    ):
-        feedparser_parse.kwargs = resolve_relative_uris, sanitize_html
+    def feedparser_parse(*args, **kwargs):
+        feedparser_parse.kwargs = kwargs
         raise exc
 
-    monkeypatch.setattr('feedparser.parse', feedparser_parse)
+    monkeypatch.setattr(feedparser, 'parse', feedparser_parse)
+
+    monkeypatch.chdir(data_dir.dirname)
+    feed_url = make_url(data_dir.join('full.atom'))
 
     with pytest.raises(ParseError) as excinfo:
-        parse(str(data_dir.join('full.atom')))
+        parse(feed_url)
     assert excinfo.value.__cause__ is exc
 
-    assert feedparser_parse.kwargs == (True, True)
+    assert feedparser_parse.kwargs['resolve_relative_uris'] == True
+    assert feedparser_parse.kwargs['sanitize_html'] == True
 
 
 def test_missing_entry_id(parse):
@@ -403,7 +408,7 @@ def test_missing_entry_id(parse):
     # TODO: this test is brittle, default_parser accepting feed text is unintended
     # and may be removed after https://github.com/lemon24/reader/issues/155
 
-    from reader._parser import feedparser, _process_feed, ParsedFeed
+    from reader._parser import _process_feed, ParsedFeed
 
     parse = lambda s: ParsedFeed(*_process_feed('', feedparser.parse(s)))
 
@@ -494,7 +499,7 @@ def test_response_headers(monkeypatch, make_http_set_headers_url, parse, data_di
 
     """
     mock = MagicMock(wraps=feedparser.parse)
-    monkeypatch.setattr('feedparser.parse', mock)
+    monkeypatch.setattr(feedparser, 'parse', mock)
 
     feed_url = make_http_set_headers_url(
         data_dir.join('empty.atom'), {'whatever': 'boo'}
@@ -512,7 +517,7 @@ def test_default_response_headers(
 
     """
     mock = MagicMock(wraps=feedparser.parse)
-    monkeypatch.setattr('feedparser.parse', mock)
+    monkeypatch.setattr(feedparser, 'parse', mock)
 
     feed_url = make_http_set_headers_url(data_dir.join('empty.atom'))
     parse(feed_url)

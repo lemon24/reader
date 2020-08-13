@@ -27,17 +27,17 @@ class _ReadWrapper:
 
 
 def parse(thing: Any, **kwargs: Any) -> Any:
+    # feedparser 6.0 doesn't decode the content.
+    # feedparser 5.* looks at thing.headers['content-encoding'].
+    if hasattr(thing, 'read'):
+        thing = _ReadWrapper(thing)
+
     try:
         return fp.parse(thing, **kwargs)
     except TypeError as e:
         unexpected_kw = 'parse() got' in str(e) and 'unexpected keyword' in str(e)
         if not unexpected_kw:  # pragma: no cover
             raise
-
-    # feedparser 6.0 doesn't decode the content.
-    # feedparser 5.* looks at thing.headers['content-encoding'].
-    if hasattr(thing, 'read'):
-        thing = _ReadWrapper(thing)
 
     # Best effort; still not safe if someone else changes the globals.
     with threading.Lock():
