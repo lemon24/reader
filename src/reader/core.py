@@ -66,11 +66,11 @@ def make_reader(
 ) -> 'Reader':
     """Create a new :class:`Reader`.
 
-    FIXME: repetition
+    *reader* can optionally parse local files, with the feed URL either
+    a bare path or a file URI.
 
-    The parsing of local feed files is controlled by ``feed_root``.
-    If enabled, the feed URL can be a bare path or a file URI.
-    Its interpretation depends on the value of ``feed_root``.
+    The interpretation of local feed URLs depends on the value of the
+    feed ``feed_root`` argument.
     It can be one of the following:
 
     ``None``

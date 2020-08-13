@@ -11,6 +11,13 @@ Version 1.6
 
 Unreleased
 
+* Add the ``feed_root`` argument to :func:`make_reader`,
+  which allows limiting local feed parsing to a specific directory
+  or disabling it altogether.
+  Using it is recommended, since by default *reader* will access
+  any local feed path
+  (in 2.0, local file parsing will be disabled by default).
+  (:issue:`155`)
 * Fail fast for feeds that return HTTP 4xx or 5xx status codes,
   instead of (likely) failing later with an ambiguous XML parsing error.
   The cause of the raised :exc:`ParseError` is now an instance of
