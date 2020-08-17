@@ -7,9 +7,8 @@ import traceback
 import click
 
 import reader
-from . import make_reader
 from . import StorageError
-from ._plugins import Loader
+from ._config import make_reader_from_config
 from ._plugins import LoaderError
 from ._sqlite_utils import DebugConnection
 
@@ -55,20 +54,13 @@ def make_reader_with_plugins(db_path, plugins, debug_storage):
         kwargs['_storage_factory'] = Connection
 
     try:
-        reader = make_reader(db_path, **kwargs)
+        return make_reader_from_config(url=db_path, plugins=plugins, **kwargs)
     except StorageError as e:
         abort("{}: {}: {}", db_path, e, e.__cause__)
+    except LoaderError as e:
+        abort("{}; original traceback follows\n\n{}", e, format_tb(e.__cause__ or e))
     except Exception as e:
         abort("unexpected error; original traceback follows\n\n{}", format_tb(e))
-
-    try:
-        loader = Loader(plugins)
-        loader.load_plugins(reader)
-    except LoaderError as e:
-        reader.close()
-        abort("{}; original traceback follows\n\n{}", e, format_tb(e.__cause__ or e))
-
-    return reader
 
 
 def setup_logging(verbose):
