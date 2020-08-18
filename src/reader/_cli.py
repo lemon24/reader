@@ -1,4 +1,3 @@
-import copy
 import functools
 import json
 import logging
@@ -14,6 +13,7 @@ from ._config import make_reader_from_config
 from ._config import merge_config
 from ._plugins import LoaderError
 from ._sqlite_utils import DebugConnection
+from .types import MISSING
 
 
 APP_NAME = reader.__name__
@@ -26,11 +26,11 @@ def get_default_db_path(create_dir=False):
     db_path = os.path.join(app_dir, 'db.sqlite')
     if create_dir:
         os.makedirs(app_dir, exist_ok=True)
-    return wrap_default(db_path)
+    return db_path
 
 
 def get_default_config_path():
-    return wrap_default(os.path.join(click.get_app_dir(APP_NAME), 'config.yaml'))
+    return os.path.join(click.get_app_dir(APP_NAME), 'config.yaml')
 
 
 def format_tb(e):
@@ -125,122 +125,59 @@ def log_command(fn):
     return wrapper
 
 
-# BEGIN config_option
+def get_dict_path(d, path):
+    for key in path[:-1]:
+        d = d.get(key, {})
+    return d.get(path[-1], MISSING)
 
 
-# stupid way of marking some values as defaults;
-# a better way would be to use a proxy;
-# FIXME: we should use https://wrapt.readthedocs.io/en/latest/wrappers.html
+def set_dict_path(d, path, value):
+    for key in path[:-1]:
+        d = d.setdefault(key, {})
+    d[path[-1]] = value
 
 
-class Default:
-    pass
+def config_option(*args, overrides=None, **kwargs):
+    """
+    Args:
+        overrides (dict(tuple, tuple)):
+            {<default_map dst path>: <config src path>}
+    """
+    overrides = overrides or {}
 
+    def callback(ctx, param, value):
+        # TODO: the default file is allowed to not exist, a user specified file must exist
+        try:
+            with open(value) as file:
+                config = load_config(file)
+        except FileNotFoundError as e:
+            if value != param.default:
+                raise click.BadParameter(str(e), ctx=ctx, param=param)
+            config = {}
 
-class Default_bool(int, Default):
-    # workaround for it not being possible to subclass bool.
-    # however, this breaks Click, see wrap_param_default() for details.
-    def __str__(self):
-        return str(bool(self))
+        ctx.default_map = config.get('cli', {}).pop('defaults', {})
 
+        # if we implement merging sections, it'll have to happen before this
+        for dst, src in overrides.items():
+            value = get_dict_path(config, src)
+            if value is MISSING:
+                continue
+            set_dict_path(ctx.default_map, dst, value)
 
-@functools.lru_cache()
-def make_default_wrapper(cls):
-    if cls is bool:
-        return Default_bool
-    return type('Default_' + cls.__name__, (cls, Default), {})
-
-
-def wrap_default(thing):
-    # assumes type(thing)(thing) will return another thing;
-    # to support other constructor types, we could
-    #   thing.__class__ = make_default_wrapper(type(thing))
-    # but that works only for heap types.
-    if is_default(thing):
-        return thing
-    assert type(thing) in (int, bool, float, str, bytes, list, tuple, dict), (
-        thing,
-        type(thing),
-    )
-    return make_default_wrapper(type(thing))(thing)
-
-
-def is_default(thing):
-    return isinstance(thing, Default)
-
-
-def split_defaults(dict):
-    defaults = {}
-    options = {}
-    for k, v in dict.items():
-        if not v:
-            continue
-        (defaults if is_default(v) else options)[k] = v
-    return defaults, options
-
-
-def wrap_param_default(param, value):
-    # can't use our Default_bool for click defaults, because
-    # BoolParamType calls isinstance(value, bool); if false,
-    # it assumes it's a string that looks like a boolean ("true", "yes" etc.),
-    # so we make our value look like that (while still marking it as default).
-    if isinstance(value, bool) and isinstance(param.type, click.types.BoolParamType):
-        return wrap_default(str(bool(value)).lower())
-    return wrap_default(value)
-
-
-def mark_command_defaults(command):
-    # decorator for commands with options that end up in the config
-    # passed to make_reader_from_config;
-    # if not used, the config order won't work properly
-    for param in command.params:
-        if param.default is not None:
-            param.default = wrap_param_default(param, param.default)
-    return command
-
-
-def mark_default_map_defaults(command, defaults):
-    for param in command.params:
-        if param.name in defaults:
-            defaults[param.name] = wrap_param_default(param, defaults[param.name])
-    for command_name, command in getattr(command, 'commands', {}).items():
-        mark_default_map_defaults(command, defaults.get(command_name, {}))
-
-
-def load_config_callback(ctx, param, value):
-    try:
-        with open(value) as file:
-            config = load_config(file)
-    except FileNotFoundError as e:
-        if not is_default(value):
-            raise click.BadParameter(str(e), ctx=ctx, param=param)
-        config = {}
-
-    ctx.default_map = copy.deepcopy(config.get('cli', {}).get('defaults', {}))
-
-    mark_default_map_defaults(ctx.command, ctx.default_map)
-
-    ctx.obj = config
-    return config
-
-
-def config_option(*args, **kwargs):
-    import click
+        ctx.obj = config
+        return config
 
     def inner(fn):
         return click.option(
             *args,
             type=click.Path(dir_okay=False),
-            callback=load_config_callback,
+            callback=callback,
             is_eager=True,
             expose_value=False,
             **kwargs,
         )(fn)
 
     return inner
-
-
-# END config_option
 
 
 def pass_reader(fn):
@@ -254,7 +191,15 @@ def pass_reader(fn):
     return wrapper
 
 
-@mark_command_defaults
+CONFIG_OVERRIDES = {
+    ('db',): ('reader', 'url'),
+    # these will likely lose the options
+    ('plugin',): ('reader', 'plugins'),
+    # this should be set only if the app cli can be imported, maybe
+    ('serve', 'plugin'): ('app', 'plugins'),
+}
+
+
 @click.group()
 @click.option(
     '--db',
@@ -272,6 +217,7 @@ def pass_reader(fn):
 )
 @config_option(
     '--config',
+    overrides=CONFIG_OVERRIDES,
     envvar=reader._CONFIG_ENVVAR,
     help="Path to the reader config.",
     default=get_default_config_path(),
@@ -286,28 +232,29 @@ def pass_reader(fn):
 @click.pass_obj
 def cli(config, db, plugin, debug_storage):
     # TODO: there's a better way of doing this
-    if db == get_default_config_path() and is_default(db):
+    if db == get_default_config_path():
         try:
             db = get_default_db_path(create_dir=True)
         except Exception as e:
             abort("{}", e)
 
-    default_options, user_options = split_defaults(
-        {
-            'url': db,
-            'plugins': {p: None for p in plugin},
-            # until we make debug_storage a proper make_reader argument,
-            # and we get rid of make_reader_with_plugins
-            'debug_storage': debug_storage,
-        }
-    )
+    # FIXME: maybe just say --db and --plugin ALWAYS override the config (same for wsgi envvars)
+    # and remove next version
+
+    options = {
+        'url': db,
+        'plugins': {p: None for p in plugin},
+        # until we make debug_storage a proper make_reader argument,
+        # and we get rid of make_reader_with_plugins
+        'debug_storage': debug_storage,
+    }
 
     for key in 'reader', 'cli', 'app':
         config.setdefault(key, {})
 
     # wrap reader section with options;
     # will be used by app to spawn non-app readers
-    config['reader'] = merge_config(default_options, config['reader'], user_options)
+    config['reader'] = merge_config(config['reader'], options)
 
 
 @cli.command()

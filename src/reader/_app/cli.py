@@ -1,13 +1,10 @@
 import click
 
 import reader
-from reader._cli import mark_command_defaults
 from reader._cli import setup_logging
-from reader._cli import split_defaults
 from reader._config import merge_config
 
 
-@mark_command_defaults
 @click.command()
 @click.pass_obj
 @click.option('-h', '--host', default='localhost', help="The interface to bind to.")
@@ -25,11 +22,11 @@ def serve(config, host, port, plugin, verbose):
     from werkzeug.serving import run_simple
     from . import create_app
 
-    default_options, user_options = split_defaults(
-        {'plugins': {p: None for p in plugin}}
-    )
-    config['app'] = merge_config(default_options, config['app'], user_options)
+    options = {'plugins': {p: None for p in plugin}}
+    config['app'] = merge_config(config['app'], options)
 
-    # FIXME: once create_app knows how to work from config, change these
+    # FIXME: remove this once we make debug_storage a storage_arg
+    config['reader'].pop('debug_storage', None)
+
     app = create_app(config)
     run_simple(host, port, app)

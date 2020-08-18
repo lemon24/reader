@@ -8,9 +8,10 @@ from utils import make_url_base
 from reader import Reader
 from reader._cli import cli
 from reader._cli import config_option
-from reader._cli import mark_command_defaults
-from reader._cli import split_defaults
+from reader._cli import get_dict_path
+from reader._cli import set_dict_path
 from reader._config import merge_config
+from reader.types import MISSING
 
 
 @pytest.mark.slow
@@ -163,6 +164,7 @@ def test_cli_app_plugin(db_path, monkeypatch):
     result = runner.invoke(
         cli,
         ['--db', db_path, 'serve', '--plugin', 'test_cli:raise_exception_app_plugin',],
+        catch_exceptions=False,
     )
 
     # it doesn't fail, just skips the plugin
@@ -192,32 +194,39 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
         runner.invoke(cli, ['--db', db_path, 'serve'], catch_exceptions=False)
 
     assert excinfo.value is exception
-    assert create_app.config == {'reader': {'url': db_path}, 'app': {}, 'cli': {}}
+    assert create_app.config == {
+        'reader': {'url': db_path, 'plugins': {}},
+        'app': {'plugins': {}},
+        'cli': {},
+    }
 
 
-@pytest.mark.xfail
 def test_config_option(tmpdir):
-    # and split_defaults and merge_config ...
-
     final_config = None
 
-    @mark_command_defaults
+    overrides = {
+        ('ccc',): ('command', 'ccc'),
+    }
+
     @click.command()
-    @config_option('--config')
+    @config_option('--config', overrides=overrides)
     @click.option('--aaa', default='aaa-cli-default')
     @click.option('--bbb/--no-bbb', default=False)
     @click.option('--ccc', type=int, default=1)
     @click.option('--ddd', default='ddd-cli-default')
+    @click.option('--eee', type=int, default=1)
     @click.pass_obj
-    def command(config, aaa, bbb, ccc, ddd, **kwargs):
-        default_options, user_options = split_defaults(
-            {'aaa': aaa, 'bbb': bbb, 'ccc': ccc, 'ddd': ddd,}
-        )
+    def command(config, aaa, bbb, ccc, ddd, eee, **kwargs):
+        options = {
+            'aaa': aaa,
+            'bbb': bbb,
+            'ccc': ccc,
+            'ddd': ddd,
+            'eee': eee,
+        }
 
         config.setdefault('command', {})
-        config['command'] = merge_config(
-            default_options, config['command'], user_options
-        )
+        config['command'] = merge_config(config['command'], options)
 
         nonlocal final_config
         final_config = config
@@ -226,9 +235,14 @@ def test_config_option(tmpdir):
     config_path.write(
         yaml.safe_dump(
             {
-                'command': {'ccc': 3, 'ddd': None, 'eee': 'eee-config-value',},
+                'command': {
+                    'ccc': 3,
+                    'eee': 3,
+                    'ddd': None,
+                    'fff': 'fff-config-value',
+                },
                 'cli': {
-                    'defaults': {'bbb': True, 'ccc': 2,},
+                    'defaults': {'bbb': True, 'ccc': 2, 'eee': 2,},
                     'other-cli-stuff': 'stuff',
                 },
             }
@@ -244,14 +258,30 @@ def test_config_option(tmpdir):
 
     # cli default < config[cli][defaults] < config[command] < cli envvar,option
     assert final_config['command'] == {
+        # cli default
         'aaa': 'aaa-cli-default',
+        # config[cli][defaults]
         'bbb': True,
+        # config[command], because there was an override
         'ccc': 3,
+        # cli option
         'ddd': 'ddd-user-value',
-        'eee': 'eee-config-value',
+        # config[cli][default], not config[command], because there was no override
+        'eee': 2,
+        # config[command], because it is not a CLI option
+        'fff': 'fff-config-value',
     }
 
-    # FIXME
-    # ccc returns int(2) because of https://github.com/pallets/click/blob/master/src/click/types.py#L313
-    # bbb returns bool(True) because we pass a 'true' (wrapped) string
-    # both are not detected as default_options
+
+def test_get_dict_path():
+    d = {'a': {'b': 'c'}}
+    assert get_dict_path(d, ('a', 'b')) == 'c'
+    assert get_dict_path(d, ('a', 'd', 'e')) is MISSING
+
+
+def test_set_dict_path():
+    d = {'a': {'b': 'c'}}
+    set_dict_path(d, ('a', 'b'), 'd')
+    assert d == {'a': {'b': 'd'}}
+    set_dict_path(d, ('a', 'e', 'f'), 'g')
+    assert d == {'a': {'b': 'd', 'e': {'f': 'g'}}}
