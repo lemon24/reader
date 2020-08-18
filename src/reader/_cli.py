@@ -125,7 +125,9 @@ def log_command(fn):
     return wrapper
 
 
-# BEGIN defaults
+# BEGIN config_option
+
+
 # stupid way of marking some values as defaults;
 # a better way would be to use a proxy;
 # FIXME: we should use https://wrapt.readthedocs.io/en/latest/wrappers.html
@@ -154,7 +156,12 @@ def wrap_default(thing):
     # to support other constructor types, we could
     #   thing.__class__ = make_default_wrapper(type(thing))
     # but that works only for heap types.
-    assert type(thing) in (int, bool, float, str, bytes, list, tuple, dict), thing
+    if is_default(thing):
+        return thing
+    assert type(thing) in (int, bool, float, str, bytes, list, tuple, dict), (
+        thing,
+        type(thing),
+    )
     return make_default_wrapper(type(thing))(thing)
 
 
@@ -200,9 +207,6 @@ def mark_default_map_defaults(command, defaults):
         mark_default_map_defaults(command, defaults.get(command_name, {}))
 
 
-# END defaults
-
-
 def load_config_callback(ctx, param, value):
     try:
         with open(value) as file:
@@ -212,13 +216,31 @@ def load_config_callback(ctx, param, value):
             raise click.BadParameter(str(e), ctx=ctx, param=param)
         config = {}
 
-    for key in 'reader', 'cli', 'app':
-        config.setdefault(key, {})
-
     ctx.default_map = copy.deepcopy(config.get('cli', {}).get('defaults', {}))
+
     mark_default_map_defaults(ctx.command, ctx.default_map)
+
     ctx.obj = config
     return config
+
+
+def config_option(*args, **kwargs):
+    import click
+
+    def inner(fn):
+        return click.option(
+            *args,
+            type=click.Path(dir_okay=False),
+            callback=load_config_callback,
+            is_eager=True,
+            expose_value=False,
+            **kwargs,
+        )(fn)
+
+    return inner
+
+
+# END config_option
 
 
 def pass_reader(fn):
@@ -232,6 +254,7 @@ def pass_reader(fn):
     return wrapper
 
 
+@mark_command_defaults
 @click.group()
 @click.option(
     '--db',
@@ -247,16 +270,12 @@ def pass_reader(fn):
     envvar=reader._PLUGIN_ENVVAR,
     help="Import path to a plug-in. Can be passed multiple times.",
 )
-@click.option(
+@config_option(
     '--config',
-    type=click.Path(dir_okay=False),
     envvar=reader._CONFIG_ENVVAR,
     help="Path to the reader config.",
     default=get_default_config_path(),
     show_default=True,
-    callback=load_config_callback,
-    is_eager=True,
-    expose_value=False,
 )
 @click.option(
     '--debug-storage/--no-debug-storage',
@@ -282,6 +301,9 @@ def cli(config, db, plugin, debug_storage):
             'debug_storage': debug_storage,
         }
     )
+
+    for key in 'reader', 'cli', 'app':
+        config.setdefault(key, {})
 
     # wrap reader section with options;
     # will be used by app to spawn non-app readers

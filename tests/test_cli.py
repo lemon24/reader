@@ -1,10 +1,16 @@
+import click
 import py.path
 import pytest
+import yaml
 from click.testing import CliRunner
 from utils import make_url_base
 
 from reader import Reader
 from reader._cli import cli
+from reader._cli import config_option
+from reader._cli import mark_command_defaults
+from reader._cli import split_defaults
+from reader._config import merge_config
 
 
 @pytest.mark.slow
@@ -187,3 +193,65 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
 
     assert excinfo.value is exception
     assert create_app.config == {'reader': {'url': db_path}, 'app': {}, 'cli': {}}
+
+
+@pytest.mark.xfail
+def test_config_option(tmpdir):
+    # and split_defaults and merge_config ...
+
+    final_config = None
+
+    @mark_command_defaults
+    @click.command()
+    @config_option('--config')
+    @click.option('--aaa', default='aaa-cli-default')
+    @click.option('--bbb/--no-bbb', default=False)
+    @click.option('--ccc', type=int, default=1)
+    @click.option('--ddd', default='ddd-cli-default')
+    @click.pass_obj
+    def command(config, aaa, bbb, ccc, ddd, **kwargs):
+        default_options, user_options = split_defaults(
+            {'aaa': aaa, 'bbb': bbb, 'ccc': ccc, 'ddd': ddd,}
+        )
+
+        config.setdefault('command', {})
+        config['command'] = merge_config(
+            default_options, config['command'], user_options
+        )
+
+        nonlocal final_config
+        final_config = config
+
+    config_path = tmpdir.join('config.yaml')
+    config_path.write(
+        yaml.safe_dump(
+            {
+                'command': {'ccc': 3, 'ddd': None, 'eee': 'eee-config-value',},
+                'cli': {
+                    'defaults': {'bbb': True, 'ccc': 2,},
+                    'other-cli-stuff': 'stuff',
+                },
+            }
+        )
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        command,
+        ['--config', str(config_path), '--ddd', 'ddd-user-value'],
+        catch_exceptions=False,
+    )
+
+    # cli default < config[cli][defaults] < config[command] < cli envvar,option
+    assert final_config['command'] == {
+        'aaa': 'aaa-cli-default',
+        'bbb': True,
+        'ccc': 3,
+        'ddd': 'ddd-user-value',
+        'eee': 'eee-config-value',
+    }
+
+    # FIXME
+    # ccc returns int(2) because of https://github.com/pallets/click/blob/master/src/click/types.py#L313
+    # bbb returns bool(True) because we pass a 'true' (wrapped) string
+    # both are not detected as default_options

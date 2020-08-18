@@ -1,11 +1,13 @@
 import click
 
 import reader
+from reader._cli import mark_command_defaults
 from reader._cli import setup_logging
 from reader._cli import split_defaults
 from reader._config import merge_config
 
 
+@mark_command_defaults
 @click.command()
 @click.pass_obj
 @click.option('-h', '--host', default='localhost', help="The interface to bind to.")
