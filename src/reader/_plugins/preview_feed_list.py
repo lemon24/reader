@@ -79,7 +79,9 @@ class GotPreviewParseError(Exception):
 
 @got_preview_parse_error.connect
 def raise_got_preview_parse_error(error):
-    raise GotPreviewParseError() from error
+    # TODO: it would be nice if we could distinguish http-related parse errors from other parse errors
+    if error.url.startswith('http:') or error.url.startswith('https:'):
+        raise GotPreviewParseError() from error
 
 
 @blueprint.app_errorhandler(GotPreviewParseError)
