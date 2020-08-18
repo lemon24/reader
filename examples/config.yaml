@@ -1,0 +1,47 @@
+reader:
+    # make_reader() keyword arguments
+
+    # url: db.sqlite
+
+    feed_root: /path/to/feeds
+
+    # reader plugins
+    # <plugin import path>: <plugin options>
+    # options are ignored at the moment
+    plugins:
+        'reader._plugins.regex_mark_as_read:regex_mark_as_read':
+        'reader._plugins.feed_entry_dedupe:feed_entry_dedupe':
+
+cli:
+    defaults:
+        # defaults for various CLI options, used as context default_map
+        # https://click.palletsprojects.com/en/7.x/commands/#overriding-defaults
+
+        # --plugin reader._plugins.enclosure_dedupe:enclosure_dedupe
+        plugin: [reader._plugins.enclosure_dedupe:enclosure_dedupe]
+
+        # add --update
+        add:
+            update: yes
+
+        # update --workers 10 -vv
+        update:
+            workers: 10
+            verbose: 2
+
+        search:
+            # search update -v
+            update:
+                verbose: 1
+
+        # serve --port 8888
+        serve:
+            port: 8888
+
+app:
+    # app plugins
+    # <plugin import path>: <plugin options>
+    # options are ignored at the moment
+    plugins:
+        'reader._plugins.enclosure_tags:init':
+        'reader._plugins.preview_feed_list:init':

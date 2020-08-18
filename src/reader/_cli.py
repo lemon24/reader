@@ -1,3 +1,4 @@
+import copy
 import functools
 import json
 import logging
@@ -8,7 +9,9 @@ import click
 
 import reader
 from . import StorageError
+from ._config import load_config
 from ._config import make_reader_from_config
+from ._config import merge_config
 from ._plugins import LoaderError
 from ._sqlite_utils import DebugConnection
 
@@ -23,7 +26,11 @@ def get_default_db_path(create_dir=False):
     db_path = os.path.join(app_dir, 'db.sqlite')
     if create_dir:
         os.makedirs(app_dir, exist_ok=True)
-    return db_path
+    return wrap_default(db_path)
+
+
+def get_default_config_path():
+    return wrap_default(os.path.join(click.get_app_dir(APP_NAME), 'config.yaml'))
 
 
 def format_tb(e):
@@ -34,9 +41,8 @@ def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
 
-def make_reader_with_plugins(db_path, plugins, debug_storage):
+def make_reader_with_plugins(*, debug_storage=False, **kwargs):
 
-    kwargs = {}
     if debug_storage:
         # TODO: the web app should be able to do this too
 
@@ -54,9 +60,9 @@ def make_reader_with_plugins(db_path, plugins, debug_storage):
         kwargs['_storage_factory'] = Connection
 
     try:
-        return make_reader_from_config(url=db_path, plugins=plugins, **kwargs)
+        return make_reader_from_config(**kwargs)
     except StorageError as e:
-        abort("{}: {}: {}", db_path, e, e.__cause__)
+        abort("{}: {}: {}", kwargs['url'], e, e.__cause__)
     except LoaderError as e:
         abort("{}; original traceback follows\n\n{}", e, format_tb(e.__cause__ or e))
     except Exception as e:
@@ -119,11 +125,107 @@ def log_command(fn):
     return wrapper
 
 
+# BEGIN defaults
+# stupid way of marking some values as defaults;
+# a better way would be to use a proxy;
+# FIXME: we should use https://wrapt.readthedocs.io/en/latest/wrappers.html
+
+
+class Default:
+    pass
+
+
+class Default_bool(int, Default):
+    # workaround for it not being possible to subclass bool.
+    # however, this breaks Click, see wrap_param_default() for details.
+    def __str__(self):
+        return str(bool(self))
+
+
+@functools.lru_cache()
+def make_default_wrapper(cls):
+    if cls is bool:
+        return Default_bool
+    return type('Default_' + cls.__name__, (cls, Default), {})
+
+
+def wrap_default(thing):
+    # assumes type(thing)(thing) will return another thing;
+    # to support other constructor types, we could
+    #   thing.__class__ = make_default_wrapper(type(thing))
+    # but that works only for heap types.
+    assert type(thing) in (int, bool, float, str, bytes, list, tuple, dict), thing
+    return make_default_wrapper(type(thing))(thing)
+
+
+def is_default(thing):
+    return isinstance(thing, Default)
+
+
+def split_defaults(dict):
+    defaults = {}
+    options = {}
+    for k, v in dict.items():
+        if not v:
+            continue
+        (defaults if is_default(v) else options)[k] = v
+    return defaults, options
+
+
+def wrap_param_default(param, value):
+    # can't use our Default_bool for click defaults, because
+    # BoolParamType calls isinstance(value, bool); if false,
+    # it assumes it's a string that looks like a boolean ("true", "yes" etc.),
+    # so we make our value look like that (while still marking it as default).
+    if isinstance(value, bool) and isinstance(param.type, click.types.BoolParamType):
+        return wrap_default(str(bool(value)).lower())
+    return wrap_default(value)
+
+
+def mark_command_defaults(command):
+    # decorator for commands with options that end up in the config
+    # passed to make_reader_from_config;
+    # if not used, the config order won't work properly
+    for param in command.params:
+        if param.default is not None:
+            param.default = wrap_param_default(param, param.default)
+    return command
+
+
+def mark_default_map_defaults(command, defaults):
+    for param in command.params:
+        if param.name in defaults:
+            defaults[param.name] = wrap_param_default(param, defaults[param.name])
+    for command_name, command in getattr(command, 'commands', {}).items():
+        mark_default_map_defaults(command, defaults.get(command_name, {}))
+
+
+# END defaults
+
+
+def load_config_callback(ctx, param, value):
+    try:
+        with open(value) as file:
+            config = load_config(file)
+    except FileNotFoundError as e:
+        if not is_default(value):
+            raise click.BadParameter(str(e), ctx=ctx, param=param)
+        config = {}
+
+    for key in 'reader', 'cli', 'app':
+        config.setdefault(key, {})
+
+    ctx.default_map = copy.deepcopy(config.get('cli', {}).get('defaults', {}))
+    mark_default_map_defaults(ctx.command, ctx.default_map)
+    ctx.obj = config
+    return config
+
+
 def pass_reader(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
-        ctx = click.get_current_context()
-        reader = make_reader_with_plugins(**ctx.obj)
+        ctx = click.get_current_context().find_root()
+        reader = make_reader_with_plugins(**ctx.obj['reader'])
         ctx.call_on_close(reader.close)
         return fn(reader, *args, **kwargs)
 
@@ -135,7 +237,9 @@ def pass_reader(fn):
     '--db',
     type=click.Path(dir_okay=False),
     envvar=reader._DB_ENVVAR,
-    help="Path to the reader database. Defaults to {}.".format(get_default_db_path()),
+    default=get_default_db_path(),
+    show_default=True,
+    help="Path to the reader database.",
 )
 @click.option(
     '--plugin',
@@ -144,19 +248,44 @@ def pass_reader(fn):
     help="Import path to a plug-in. Can be passed multiple times.",
 )
 @click.option(
+    '--config',
+    type=click.Path(dir_okay=False),
+    envvar=reader._CONFIG_ENVVAR,
+    help="Path to the reader config.",
+    default=get_default_config_path(),
+    show_default=True,
+    callback=load_config_callback,
+    is_eager=True,
+    expose_value=False,
+)
+@click.option(
     '--debug-storage/--no-debug-storage',
     hidden=True,
     help="NOT TESTED. With -vv, log storage database calls.",
 )
 @click.version_option(reader.__version__, message='%(prog)s %(version)s')
-@click.pass_context
-def cli(ctx, db, plugin, debug_storage):
-    if db is None:
+@click.pass_obj
+def cli(config, db, plugin, debug_storage):
+    # TODO: there's a better way of doing this
+    if db == get_default_config_path() and is_default(db):
         try:
             db = get_default_db_path(create_dir=True)
         except Exception as e:
             abort("{}", e)
-    ctx.obj = {'db_path': db, 'plugins': plugin, 'debug_storage': debug_storage}
+
+    default_options, user_options = split_defaults(
+        {
+            'url': db,
+            'plugins': {p: None for p in plugin},
+            # until we make debug_storage a proper make_reader argument,
+            # and we get rid of make_reader_with_plugins
+            'debug_storage': debug_storage,
+        }
+    )
+
+    # wrap reader section with options;
+    # will be used by app to spawn non-app readers
+    config['reader'] = merge_config(default_options, config['reader'], user_options)
 
 
 @cli.command()
@@ -206,12 +335,12 @@ def update(reader, url, new_only, workers):
         reader.update_feeds(new_only=new_only, workers=workers)
 
 
-@cli.group()
-def list():
+@cli.group('list')
+def list_cmd():
     """List feeds or entries."""
 
 
-@list.command()
+@list_cmd.command()
 @pass_reader
 def feeds(reader):
     """List all the feeds."""
@@ -219,7 +348,7 @@ def feeds(reader):
         click.echo(feed.url)
 
 
-@list.command()
+@list_cmd.command()
 @pass_reader
 def entries(reader):
     """List all the entries.

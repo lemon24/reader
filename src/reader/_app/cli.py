@@ -2,6 +2,8 @@ import click
 
 import reader
 from reader._cli import setup_logging
+from reader._cli import split_defaults
+from reader._config import merge_config
 
 
 @click.command()
@@ -15,11 +17,21 @@ from reader._cli import setup_logging
     help="Import path to a plug-in. Can be passed multiple times.",
 )
 @click.option('-v', '--verbose', count=True)
-def serve(kwargs, host, port, plugin, verbose):
+def serve(config, host, port, plugin, verbose):
     """Start a local HTTP reader server."""
     setup_logging(verbose)
     from werkzeug.serving import run_simple
     from . import create_app
 
-    app = create_app(kwargs['db_path'], kwargs['plugins'], plugin)
+    default_options, user_options = split_defaults(
+        {'plugins': {p: None for p in plugin}}
+    )
+    config['app'] = merge_config(default_options, config['app'], user_options)
+
+    # FIXME: once create_app knows how to work from config, change these
+    app = create_app(
+        config['reader']['url'],
+        tuple(config['reader'].get('plugins', ())),
+        tuple(config['app'].get('plugins', ())),
+    )
     run_simple(host, port, app)

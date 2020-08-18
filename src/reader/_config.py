@@ -4,9 +4,7 @@ Config file support.
 https://github.com/lemon24/reader/issues/177
 
 """
-from collections import defaultdict
 from collections.abc import Mapping
-from itertools import chain
 
 from reader import make_reader
 from reader._plugins import import_string
@@ -73,22 +71,6 @@ def load_config(thing):
         config = yaml.safe_load(thing)
         if not isinstance(config, Mapping):
             raise ValueError("config must be a mapping")
+
     # TODO: validate / raise nicer exceptions here
-    return Config(config)
-
-
-class Config(defaultdict):
-    def __init__(self, *args, **kwargs):
-        super().__init__(dict, *args, **kwargs)
-
-    def copy(self):
-        return type(self)(self)
-
-    def merge(self, *keys, defaults=None, overrides=None):
-        return merge_config(
-            chain(
-                [self['_defaults'], defaults or {}],
-                (self[k] for k in keys),
-                [self['_overrides'], overrides or {}],
-            )
-        )
+    return config

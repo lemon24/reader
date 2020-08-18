@@ -71,6 +71,7 @@ from .exceptions import (
 
 # For internal use only.
 
+_CONFIG_ENVVAR = 'READER_CONFIG'
 _DB_ENVVAR = 'READER_DB'
 _PLUGIN_ENVVAR = 'READER_PLUGIN'
 _APP_PLUGIN_ENVVAR = 'READER_APP_PLUGIN'
