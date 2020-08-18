@@ -174,14 +174,16 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
 
     exception = Exception("create_app error")
 
-    def create_app(*args):
-        assert args == (db_path, (), ())
+    def create_app(config):
+        create_app.config = config
         raise exception
 
     monkeypatch.setattr('reader._app.create_app', create_app)
 
     runner = CliRunner()
-    result = runner.invoke(cli, ['--db', db_path, 'serve'])
 
-    assert result.exit_code != 0
-    assert result.exception == exception
+    with pytest.raises(Exception) as excinfo:
+        runner.invoke(cli, ['--db', db_path, 'serve'], catch_exceptions=False)
+
+    assert excinfo.value is exception
+    assert create_app.config == {'reader': {'url': db_path}, 'app': {}, 'cli': {}}

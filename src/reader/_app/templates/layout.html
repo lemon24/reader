@@ -23,7 +23,9 @@ margin: 0;
 position: fixed;
 bottom: 0;
 right: 0;
-"><code>{{ config.READER_DB }}</code></p>
+"
+title='{{ config.READER_CONFIG | tojson(indent=4) | escape }}'
+><code>{{ config.READER_CONFIG.reader.url }}</code></p>
 {% endif %}
 
 

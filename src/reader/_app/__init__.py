@@ -28,9 +28,9 @@ from reader import Content
 from reader import Entry
 from reader import EntrySearchResult
 from reader import InvalidSearchQueryError
-from reader import make_reader
 from reader import ParseError
 from reader import ReaderError
+from reader._config import make_reader_from_config
 from reader._plugins import Loader
 from reader._plugins import LoaderError
 
@@ -47,9 +47,10 @@ got_preview_parse_error = signals.signal('preview-parse-error')
 
 def get_reader():
     if not hasattr(g, 'reader'):
-        reader = make_reader(current_app.config['READER_DB'])
-        current_app.reader_load_plugins(reader)
-        g.reader = reader
+        g.reader = make_reader_from_config(
+            plugin_loader_cls=FlaskPluginLoader,
+            **current_app.config['READER_CONFIG']['reader'],
+        )
     return g.reader
 
 
@@ -232,8 +233,12 @@ def preview():
     # TODO: maybe redirect to the feed we have if we already have it
 
     # TODO: maybe cache stuff
-    reader = make_reader(':memory:')
-    current_app.reader_load_plugins(reader)
+
+    # TODO: config should have a helper to do this
+    kwargs = current_app.config['READER_CONFIG']['reader'].copy()
+    kwargs['url'] = ':memory:'
+    current_app.config['READER_CONFIG']['reader']
+    reader = make_reader_from_config(**kwargs, plugin_loader_cls=FlaskPluginLoader)
 
     reader.add_feed(url)
 
@@ -439,25 +444,25 @@ class FlaskPluginLoader(Loader):
         )
 
 
-def create_app(db_path, plugins=(), app_plugins=()):
+def create_app(config):
     app = Flask(__name__)
     app.secret_key = 'secret'
 
-    app.config['READER_DB'] = db_path
+    app.config['READER_CONFIG'] = config
     app.teardown_appcontext(close_db)
+
+    # Force reader plugins to load, so we can fail fast for import errors
+    # (although some errors may just be logged while we use FlaskPluginLoader).
+    with app.app_context():
+        get_reader()
 
     app.register_blueprint(blueprint)
 
     # NOTE: this is part of the app extension API
     app.reader_additional_enclosure_links = []
 
-    app.reader_load_plugins = FlaskPluginLoader(plugins).load_plugins
-    # Force reader plugins to load, so we can fail fast for import errors.
-    with app.app_context():
-        get_reader()
-
     # app_context() needed for logging to work.
     with app.app_context():
-        FlaskPluginLoader(app_plugins).load_plugins(app)
+        FlaskPluginLoader(config.get('app', {}).get('plugins', {})).load_plugins(app)
 
     return app

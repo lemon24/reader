@@ -29,9 +29,5 @@ def serve(config, host, port, plugin, verbose):
     config['app'] = merge_config(default_options, config['app'], user_options)
 
     # FIXME: once create_app knows how to work from config, change these
-    app = create_app(
-        config['reader']['url'],
-        tuple(config['reader'].get('plugins', ())),
-        tuple(config['app'].get('plugins', ())),
-    )
+    app = create_app(config)
     run_simple(host, port, app)

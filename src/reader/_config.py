@@ -15,7 +15,7 @@ IMPORT_KWARGS = ('storage_cls', 'search_cls')
 MERGE_KWARGS = ('plugins',)
 
 
-def make_reader_from_config(*, plugins=None, **kwargs):
+def make_reader_from_config(*, plugins=None, plugin_loader_cls=Loader, **kwargs):
     """Like reader.make_reader(), but:
 
     * If *_cls arguments are str, import them.
@@ -32,7 +32,7 @@ def make_reader_from_config(*, plugins=None, **kwargs):
     reader = make_reader(**kwargs)
 
     try:
-        Loader(plugins).load_plugins(reader)
+        plugin_loader_cls(plugins).load_plugins(reader)
     except Exception:
         reader.close()
         raise
