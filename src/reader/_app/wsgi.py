@@ -10,6 +10,8 @@ To run a local development server:
 """
 import os
 
+import yaml
+
 import reader._app
 import reader._config
 
@@ -18,9 +20,9 @@ import reader._config
 
 if reader._CONFIG_ENVVAR in os.environ:
     with open(os.environ[reader._CONFIG_ENVVAR]) as file:
-        config = reader._config.load_config(file)
+        config = reader._config.make_reader_config(yaml.safe_load(file))
 else:
-    config = reader._config.load_config({})
+    config = reader._config.make_reader_config({})
 
 if reader._DB_ENVVAR in os.environ:
     config.all['reader']['url'] = os.environ[reader._DB_ENVVAR]

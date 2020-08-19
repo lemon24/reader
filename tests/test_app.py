@@ -8,13 +8,13 @@ from fakeparser import Parser
 
 from reader import make_reader
 from reader._app import create_app
-from reader._config import load_config
+from reader._config import make_reader_config
 from reader._config import make_reader_from_config
 
 
 @pytest.fixture
 def browser(db_path):
-    app = create_app(load_config({'reader': {'url': db_path}}))
+    app = create_app(make_reader_config({'reader': {'url': db_path}}))
     session = requests.Session()
     session.mount('http://app/', wsgiadapter.WSGIAdapter(app))
     browser = mechanicalsoup.StatefulBrowser(session)

@@ -33,8 +33,10 @@ setup(
     ],
     extras_require={
         'search': ['beautifulsoup4>=4.5'],
-        'cli': ['click>=7'],
-        'app': ['flask>=0.10', 'humanize'],
+        # PyYAML is for config;
+        # cli, app, and config all need the plugin infra;
+        'cli': ['click>=7', 'PyYAML', 'setuptools>=40'],
+        'app': ['flask>=0.10', 'humanize', 'PyYAML', 'setuptools>=40'],
         'plugins': ['setuptools>=40'],
         'enclosure-tags': ['requests', 'mutagen'],
         'preview-feed-list': ['requests', 'beautifulsoup4', 'blinker>=1.4'],

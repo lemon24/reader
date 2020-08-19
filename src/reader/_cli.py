@@ -5,10 +5,11 @@ import os.path
 import traceback
 
 import click
+import yaml
 
 import reader
 from . import StorageError
-from ._config import load_config
+from ._config import make_reader_config
 from ._config import make_reader_from_config
 from ._plugins import LoaderError
 from ._sqlite_utils import DebugConnection
@@ -128,11 +129,11 @@ def config_option(*args, **kwargs):
         # TODO: the default file is allowed to not exist, a user specified file must exist
         try:
             with open(value) as file:
-                config = load_config(file)
+                config = make_reader_config(yaml.safe_load(file))
         except FileNotFoundError as e:
             if value != param.default:
                 raise click.BadParameter(str(e), ctx=ctx, param=param)
-            config = load_config({})
+            config = make_reader_config({})
 
         ctx.default_map = config['cli'].get('defaults', {})
 

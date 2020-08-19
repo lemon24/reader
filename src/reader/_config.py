@@ -4,6 +4,7 @@ Config file support.
 https://github.com/lemon24/reader/issues/177
 
 """
+import copy
 from collections.abc import Mapping
 from dataclasses import dataclass
 from dataclasses import field
@@ -41,19 +42,13 @@ def make_reader_from_config(*, plugins=None, plugin_loader_cls=Loader, **kwargs)
     return reader
 
 
-def load_config(thing):
-    if isinstance(thing, Mapping):
-        config = thing
-    else:
-        import yaml
-
-        config = yaml.safe_load(thing)
-        if not isinstance(config, Mapping):
-            raise ValueError("config must be a mapping")
-
+def make_reader_config(thing):
+    if not isinstance(thing, Mapping):
+        raise ValueError("config must be a mapping")
     # TODO: validate / raise nicer exceptions here
-
-    return Config(config, sections={'cli', 'app'}, merge_keys={'reader', 'plugins'})
+    return Config(
+        copy.deepcopy(thing), sections={'cli', 'app'}, merge_keys={'reader', 'plugins'}
+    )
 
 
 def _merge_config(*configs, merge_keys=()):
