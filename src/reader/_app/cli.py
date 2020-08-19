@@ -2,7 +2,6 @@ import click
 
 import reader
 from reader._cli import setup_logging
-from reader._config import merge_config
 
 
 @click.command()
@@ -22,8 +21,8 @@ def serve(config, host, port, plugin, verbose):
     from werkzeug.serving import run_simple
     from . import create_app
 
-    options = {'plugins': {p: None for p in plugin}}
-    config['app'] = merge_config(config['app'], options)
+    if plugin:
+        config['app']['plugins'] = dict.fromkeys(plugin)
 
     # FIXME: remove this once we make debug_storage a storage_arg
     config['reader'].pop('debug_storage', None)

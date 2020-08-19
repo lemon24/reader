@@ -195,8 +195,8 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
 
     assert excinfo.value is exception
     assert create_app.config == {
-        'reader': {'url': db_path, 'plugins': {}},
-        'app': {'plugins': {}},
+        'reader': {'url': db_path},
+        'app': {},
         'cli': {},
     }
 
@@ -204,12 +204,8 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
 def test_config_option(tmpdir):
     final_config = None
 
-    overrides = {
-        ('ccc',): ('command', 'ccc'),
-    }
-
     @click.command()
-    @config_option('--config', overrides=overrides)
+    @config_option('--config')
     @click.option('--aaa', default='aaa-cli-default')
     @click.option('--bbb/--no-bbb', default=False)
     @click.option('--ccc', type=int, default=1)
@@ -252,18 +248,18 @@ def test_config_option(tmpdir):
     runner = CliRunner()
     result = runner.invoke(
         command,
-        ['--config', str(config_path), '--ddd', 'ddd-user-value'],
+        ['--config', str(config_path), '--ddd', 'ddd-user-value', '--no-bbb'],
         catch_exceptions=False,
     )
 
-    # cli default < config[cli][defaults] < config[command] < cli envvar,option
+    # config[command] < cli default < config[cli][defaults] < cli envvar,option
     assert final_config['command'] == {
         # cli default
         'aaa': 'aaa-cli-default',
+        # cli option
+        'bbb': False,
         # config[cli][defaults]
-        'bbb': True,
-        # config[command], because there was an override
-        'ccc': 3,
+        'ccc': 2,
         # cli option
         'ddd': 'ddd-user-value',
         # config[cli][default], not config[command], because there was no override

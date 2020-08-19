@@ -10,7 +10,6 @@ import reader
 from . import StorageError
 from ._config import load_config
 from ._config import make_reader_from_config
-from ._config import merge_config
 from ._plugins import LoaderError
 from ._sqlite_utils import DebugConnection
 from .types import MISSING
@@ -137,14 +136,7 @@ def set_dict_path(d, path, value):
     d[path[-1]] = value
 
 
-def config_option(*args, overrides=None, **kwargs):
-    """
-    Args:
-        overrides (dict(tuple, tuple)):
-            {<default_map dst path>: <config src path>}
-    """
-    overrides = overrides or {}
-
+def config_option(*args, **kwargs):
     def callback(ctx, param, value):
         # TODO: the default file is allowed to not exist, a user specified file must exist
         try:
@@ -155,14 +147,7 @@ def config_option(*args, overrides=None, **kwargs):
                 raise click.BadParameter(str(e), ctx=ctx, param=param)
             config = {}
 
-        ctx.default_map = config.get('cli', {}).pop('defaults', {})
-
-        # if we implement merging sections, it'll have to happen before this
-        for dst, src in overrides.items():
-            value = get_dict_path(config, src)
-            if value is MISSING:
-                continue
-            set_dict_path(ctx.default_map, dst, value)
+        ctx.default_map = config.get('cli', {}).get('defaults', {})
 
         ctx.obj = config
         return config
@@ -191,23 +176,13 @@ def pass_reader(fn):
     return wrapper
 
 
-CONFIG_OVERRIDES = {
-    ('db',): ('reader', 'url'),
-    # these will likely lose the options
-    ('plugin',): ('reader', 'plugins'),
-    # this should be set only if the app cli can be imported, maybe
-    ('serve', 'plugin'): ('app', 'plugins'),
-}
-
-
 @click.group()
 @click.option(
     '--db',
     type=click.Path(dir_okay=False),
     envvar=reader._DB_ENVVAR,
-    default=get_default_db_path(),
     show_default=True,
-    help="Path to the reader database.",
+    help=f"Path to the reader database. [default: {get_default_db_path()}]",
 )
 @click.option(
     '--plugin',
@@ -217,9 +192,8 @@ CONFIG_OVERRIDES = {
 )
 @config_option(
     '--config',
-    overrides=CONFIG_OVERRIDES,
     envvar=reader._CONFIG_ENVVAR,
-    help="Path to the reader config.",
+    help=f"Path to the reader config.",
     default=get_default_config_path(),
     show_default=True,
 )
@@ -231,30 +205,31 @@ CONFIG_OVERRIDES = {
 @click.version_option(reader.__version__, message='%(prog)s %(version)s')
 @click.pass_obj
 def cli(config, db, plugin, debug_storage):
-    # TODO: there's a better way of doing this
-    if db == get_default_config_path():
-        try:
-            db = get_default_db_path(create_dir=True)
-        except Exception as e:
-            abort("{}", e)
+    # TODO: mention in docs that --db/--plugin/envvars ALWAYS override the config
+    # (same for wsgi envvars)
+    # NOTE: we can never use click defaults for --db/--plugin, because they would override the config always
 
-    # FIXME: maybe just say --db and --plugin ALWAYS override the config (same for wsgi envvars)
-    # and remove next version
-
-    options = {
-        'url': db,
-        'plugins': {p: None for p in plugin},
-        # until we make debug_storage a proper make_reader argument,
-        # and we get rid of make_reader_with_plugins
-        'debug_storage': debug_storage,
-    }
-
+    # TODO: remove me after we have object
     for key in 'reader', 'cli', 'app':
         config.setdefault(key, {})
 
-    # wrap reader section with options;
-    # will be used by app to spawn non-app readers
-    config['reader'] = merge_config(config['reader'], options)
+    # TODO: if we ever merge sections, this needs to become: config[*]['reader']['url'] = ...
+    if db:
+        config['reader']['url'] = db
+    else:
+        if not config['reader'].get('url'):
+            try:
+                db = get_default_db_path(create_dir=True)
+            except Exception as e:
+                abort("{}", e)
+            config['reader']['url'] = db
+
+    if plugin:
+        config['reader']['plugins'] = dict.fromkeys(plugin)
+
+    # until we make debug_storage a proper make_reader argument,
+    # and we get rid of make_reader_with_plugins
+    config['reader']['debug_storage'] = debug_storage
 
 
 @cli.command()
