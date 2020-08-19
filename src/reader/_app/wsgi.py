@@ -20,17 +20,16 @@ if reader._CONFIG_ENVVAR in os.environ:
     with open(os.environ[reader._CONFIG_ENVVAR]) as file:
         config = reader._config.load_config(file)
 else:
-    config = reader._config.load_config({'reader': {}, 'app': {}})
+    config = reader._config.load_config({})
 
-# TODO: if we ever merge sections, this needs to become: config[*]['reader']['url'] = ...
 if reader._DB_ENVVAR in os.environ:
-    config['reader']['url'] = os.environ[reader._DB_ENVVAR]
+    config.all['reader']['url'] = os.environ[reader._DB_ENVVAR]
 if reader._PLUGIN_ENVVAR in os.environ:
-    config['reader']['plugins'] = dict.fromkeys(
+    config.all['reader']['plugins'] = dict.fromkeys(
         os.environ[reader._PLUGIN_ENVVAR].split()
     )
 if reader._APP_PLUGIN_ENVVAR in os.environ:
-    config['app']['plugins'] = dict.fromkeys(
+    config.data['app']['plugins'] = dict.fromkeys(
         os.environ[reader._APP_PLUGIN_ENVVAR].split()
     )
 

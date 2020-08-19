@@ -30,7 +30,6 @@ from reader import EntrySearchResult
 from reader import InvalidSearchQueryError
 from reader import ParseError
 from reader import ReaderError
-from reader._config import make_reader_from_config
 from reader._plugins import Loader
 from reader._plugins import LoaderError
 
@@ -47,9 +46,8 @@ got_preview_parse_error = signals.signal('preview-parse-error')
 
 def get_reader():
     if not hasattr(g, 'reader'):
-        g.reader = make_reader_from_config(
-            plugin_loader_cls=FlaskPluginLoader,
-            **current_app.config['READER_CONFIG']['reader'],
+        g.reader = current_app.config['READER_CONFIG'].make_reader(
+            'default', plugin_loader_cls=FlaskPluginLoader
         )
     return g.reader
 
@@ -234,11 +232,9 @@ def preview():
 
     # TODO: maybe cache stuff
 
-    # TODO: config should have a helper to do this
-    kwargs = current_app.config['READER_CONFIG']['reader'].copy()
-    kwargs['url'] = ':memory:'
-    current_app.config['READER_CONFIG']['reader']
-    reader = make_reader_from_config(**kwargs, plugin_loader_cls=FlaskPluginLoader)
+    reader = current_app.config['READER_CONFIG'].make_reader(
+        'default', url=':memory:', plugin_loader_cls=FlaskPluginLoader
+    )
 
     reader.add_feed(url)
 
@@ -463,6 +459,6 @@ def create_app(config):
 
     # app_context() needed for logging to work.
     with app.app_context():
-        FlaskPluginLoader(config.get('app', {}).get('plugins', {})).load_plugins(app)
+        FlaskPluginLoader(config.merged('app').get('plugins', {})).load_plugins(app)
 
     return app

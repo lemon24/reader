@@ -8,9 +8,6 @@ from utils import make_url_base
 from reader import Reader
 from reader._cli import cli
 from reader._cli import config_option
-from reader._cli import get_dict_path
-from reader._cli import set_dict_path
-from reader._config import merge_config
 from reader.types import MISSING
 
 
@@ -194,90 +191,100 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
         runner.invoke(cli, ['--db', db_path, 'serve'], catch_exceptions=False)
 
     assert excinfo.value is exception
-    assert create_app.config == {
+    assert create_app.config.merged('app') == {
         'reader': {'url': db_path},
-        'app': {},
-        'cli': {},
+    }
+    assert create_app.config.merged('default') == {
+        'reader': {'url': db_path},
     }
 
 
 def test_config_option(tmpdir):
     final_config = None
 
-    @click.command()
+    @click.group()
+    @click.option('--db')
+    @click.option('--plugin', multiple=True)
     @config_option('--config')
-    @click.option('--aaa', default='aaa-cli-default')
-    @click.option('--bbb/--no-bbb', default=False)
-    @click.option('--ccc', type=int, default=1)
-    @click.option('--ddd', default='ddd-cli-default')
-    @click.option('--eee', type=int, default=1)
     @click.pass_obj
-    def command(config, aaa, bbb, ccc, ddd, eee, **kwargs):
-        options = {
-            'aaa': aaa,
-            'bbb': bbb,
-            'ccc': ccc,
-            'ddd': ddd,
-            'eee': eee,
-        }
-
-        config.setdefault('command', {})
-        config['command'] = merge_config(config['command'], options)
-
+    def cli(config, db, plugin):
+        if db:
+            config.all['reader']['url'] = db
+        if plugin:
+            config.all['reader']['plugins'] = dict.fromkeys(plugin)
         nonlocal final_config
-        final_config = config
+        final_config = config.merged('cli')
+
+    @cli.command()
+    @click.pass_obj
+    def update(config):
+        pass
+
+    @cli.command()
+    @click.option('--plugin', multiple=True)
+    @click.pass_obj
+    def serve(config, plugin):
+        if plugin:
+            config.data['app']['plugins'] = dict.fromkeys(plugin)
+        nonlocal final_config
+        final_config = config.merged('app')
 
     config_path = tmpdir.join('config.yaml')
     config_path.write(
         yaml.safe_dump(
             {
-                'command': {
-                    'ccc': 3,
-                    'eee': 3,
-                    'ddd': None,
-                    'fff': 'fff-config-value',
+                'reader': {
+                    'url': 'config-reader-url',
+                    'plugins': {'config-reader-plugins': {}},
                 },
                 'cli': {
-                    'defaults': {'bbb': True, 'ccc': 2, 'eee': 2,},
-                    'other-cli-stuff': 'stuff',
+                    'reader': {'url': 'config-cli-url'},
+                    'defaults': {'serve': {'plugin': ['defaults-app-plugins']}},
                 },
+                'app': {'plugins': {'config-app-plugins': {}},},
             }
         )
     )
 
     runner = CliRunner()
-    result = runner.invoke(
-        command,
-        ['--config', str(config_path), '--ddd', 'ddd-user-value', '--no-bbb'],
-        catch_exceptions=False,
-    )
+    invoke = lambda *args: runner.invoke(*args, catch_exceptions=False)
 
-    # config[command] < cli default < config[cli][defaults] < cli envvar,option
-    assert final_config['command'] == {
-        # cli default
-        'aaa': 'aaa-cli-default',
-        # cli option
-        'bbb': False,
-        # config[cli][defaults]
-        'ccc': 2,
-        # cli option
-        'ddd': 'ddd-user-value',
-        # config[cli][default], not config[command], because there was no override
-        'eee': 2,
-        # config[command], because it is not a CLI option
-        'fff': 'fff-config-value',
+    invoke(cli, ['--config', str(config_path), 'update'])
+    assert final_config['reader'] == {
+        'url': 'config-cli-url',
+        'plugins': {'config-reader-plugins': {}},
     }
 
+    invoke(cli, ['--config', str(config_path), '--db', 'user-url', 'update'])
+    assert final_config['reader'] == {
+        'url': 'user-url',
+        'plugins': {'config-reader-plugins': {}},
+    }
 
-def test_get_dict_path():
-    d = {'a': {'b': 'c'}}
-    assert get_dict_path(d, ('a', 'b')) == 'c'
-    assert get_dict_path(d, ('a', 'd', 'e')) is MISSING
+    invoke(cli, ['--config', str(config_path), 'serve'])
+    assert final_config == {
+        'reader': {
+            'url': 'config-reader-url',
+            'plugins': {'config-reader-plugins': {}},
+        },
+        'plugins': {'defaults-app-plugins': None},
+    }
 
-
-def test_set_dict_path():
-    d = {'a': {'b': 'c'}}
-    set_dict_path(d, ('a', 'b'), 'd')
-    assert d == {'a': {'b': 'd'}}
-    set_dict_path(d, ('a', 'e', 'f'), 'g')
-    assert d == {'a': {'b': 'd', 'e': {'f': 'g'}}}
+    invoke(
+        cli,
+        [
+            '--config',
+            str(config_path),
+            '--db',
+            'user-url',
+            '--plugin',
+            'user-plugins',
+            'serve',
+            '--plugin',
+            'user-app-plugins',
+        ],
+    )
+    assert final_config == {
+        'reader': {'url': 'user-url', 'plugins': {'user-plugins': None},},
+        'plugins': {'user-app-plugins': None},
+    }

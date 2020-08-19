@@ -12,7 +12,6 @@ from ._config import load_config
 from ._config import make_reader_from_config
 from ._plugins import LoaderError
 from ._sqlite_utils import DebugConnection
-from .types import MISSING
 
 
 APP_NAME = reader.__name__
@@ -124,18 +123,6 @@ def log_command(fn):
     return wrapper
 
 
-def get_dict_path(d, path):
-    for key in path[:-1]:
-        d = d.get(key, {})
-    return d.get(path[-1], MISSING)
-
-
-def set_dict_path(d, path, value):
-    for key in path[:-1]:
-        d = d.setdefault(key, {})
-    d[path[-1]] = value
-
-
 def config_option(*args, **kwargs):
     def callback(ctx, param, value):
         # TODO: the default file is allowed to not exist, a user specified file must exist
@@ -145,9 +132,9 @@ def config_option(*args, **kwargs):
         except FileNotFoundError as e:
             if value != param.default:
                 raise click.BadParameter(str(e), ctx=ctx, param=param)
-            config = {}
+            config = load_config({})
 
-        ctx.default_map = config.get('cli', {}).get('defaults', {})
+        ctx.default_map = config['cli'].get('defaults', {})
 
         ctx.obj = config
         return config
@@ -169,7 +156,8 @@ def pass_reader(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         ctx = click.get_current_context().find_root()
-        reader = make_reader_with_plugins(**ctx.obj['reader'])
+        # TODO: replace with ctx.obj.make_reader('cli') when we get rid of debug_storage
+        reader = make_reader_with_plugins(**ctx.obj.merged('cli').get('reader', {}))
         ctx.call_on_close(reader.close)
         return fn(reader, *args, **kwargs)
 
@@ -209,27 +197,23 @@ def cli(config, db, plugin, debug_storage):
     # (same for wsgi envvars)
     # NOTE: we can never use click defaults for --db/--plugin, because they would override the config always
 
-    # TODO: remove me after we have object
-    for key in 'reader', 'cli', 'app':
-        config.setdefault(key, {})
-
-    # TODO: if we ever merge sections, this needs to become: config[*]['reader']['url'] = ...
     if db:
-        config['reader']['url'] = db
+        config.all['reader']['url'] = db
     else:
-        if not config['reader'].get('url'):
+        # ... could be the 'cli' section, maybe...
+        if not config['default'].get('reader', {}).get('url'):
             try:
                 db = get_default_db_path(create_dir=True)
             except Exception as e:
                 abort("{}", e)
-            config['reader']['url'] = db
+            config.all['reader']['url'] = db
 
     if plugin:
-        config['reader']['plugins'] = dict.fromkeys(plugin)
+        config.all['reader']['plugins'] = dict.fromkeys(plugin)
 
     # until we make debug_storage a proper make_reader argument,
     # and we get rid of make_reader_with_plugins
-    config['reader']['debug_storage'] = debug_storage
+    config['default']['reader']['debug_storage'] = debug_storage
 
 
 @cli.command()

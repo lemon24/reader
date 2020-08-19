@@ -8,12 +8,13 @@ from fakeparser import Parser
 
 from reader import make_reader
 from reader._app import create_app
+from reader._config import load_config
 from reader._config import make_reader_from_config
 
 
 @pytest.fixture
 def browser(db_path):
-    app = create_app({'reader': {'url': db_path}})
+    app = create_app(load_config({'reader': {'url': db_path}}))
     session = requests.Session()
     session.mount('http://app/', wsgiadapter.WSGIAdapter(app))
     browser = mechanicalsoup.StatefulBrowser(session)
@@ -106,7 +107,7 @@ def test_add_delete_feed(db_path, browser, monkeypatch):
         return reader
 
     # this is brittle, it may break if we change how we use make_reader in app
-    monkeypatch.setattr('reader._app.make_reader_from_config', app_make_reader)
+    monkeypatch.setattr('reader._config.make_reader_from_config', app_make_reader)
 
     reader = app_make_reader(url=db_path)
 

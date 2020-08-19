@@ -25,7 +25,7 @@ def serve(config, host, port, plugin, verbose):
         config['app']['plugins'] = dict.fromkeys(plugin)
 
     # FIXME: remove this once we make debug_storage a storage_arg
-    config['reader'].pop('debug_storage', None)
+    config['default']['reader'].pop('debug_storage', None)
 
     app = create_app(config)
     run_simple(host, port, app)
