@@ -341,6 +341,25 @@ def search_entries(reader, query):
         click.echo("{} {}".format(entry.feed.url, entry.link or entry.id))
 
 
+@cli.group()
+def config():
+    """Do various things related to config."""
+
+
+class Dumper(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        return True
+
+
+@config.command()
+@click.option('--merge/--no-merge')
+@click.pass_obj
+def dump(config, merge):
+    if merge:
+        config = config.merge_all()
+    click.echo(yaml.dump(config.data, sort_keys=False, Dumper=Dumper))
+
+
 try:
     from reader._app.cli import serve
 

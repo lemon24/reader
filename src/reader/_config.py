@@ -94,6 +94,11 @@ class Config:
                 section: self.data.pop(section) for section in unknown_sections
             }
 
+            # default is always first
+            for section in list(self.data):
+                if section != self.default_section:
+                    self.data[section] = self.data.pop(section)
+
         for section in self.sections:
             self.data.setdefault(section, {})
 
@@ -107,6 +112,13 @@ class Config:
             overrides or {},
             merge_keys=self.merge_keys,
         )
+
+    def merge_all(self):
+        config = copy.deepcopy(self)
+        for section in list(config.data):
+            if section != config.default_section:
+                config.data[section] = config.merged(section)
+        return config
 
     def make_reader(self, section, **kwargs):
         return make_reader_from_config(
