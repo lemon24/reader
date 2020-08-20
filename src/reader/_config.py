@@ -68,7 +68,7 @@ def _merge_config(*configs, merge_keys=()):
         rv.update(config)
 
     for name, dicts in to_merge.items():
-        rv[name] = _merge_config(*dicts, merge_keys=())
+        rv[name] = _merge_config(*dicts, merge_keys=merge_keys)
 
     return rv
 

@@ -50,6 +50,27 @@ def test_config_merged():
     }
 
 
+def test_config_merged_recursive():
+    config = Config(
+        {
+            'reader': {'plugins': {'default-reader-plugin': None}},
+            'plugins': {'default-plugin': None},
+            'app': {
+                'reader': {'plugins': {'app-reader-plugin': None}},
+                'plugins': {'app-plugin': None},
+            },
+        },
+        sections={'app',},
+        merge_keys={'reader', 'plugins'},
+    )
+    assert config.merged('app') == {
+        'reader': {
+            'plugins': {'default-reader-plugin': None, 'app-reader-plugin': None}
+        },
+        'plugins': {'default-plugin': None, 'app-plugin': None},
+    }
+
+
 def test_config_all():
     config = Config(
         {
