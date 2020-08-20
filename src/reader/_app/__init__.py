@@ -47,7 +47,7 @@ got_preview_parse_error = signals.signal('preview-parse-error')
 def get_reader():
     if not hasattr(g, 'reader'):
         g.reader = current_app.config['READER_CONFIG'].make_reader(
-            'default', plugin_loader_cls=FlaskPluginLoader
+            'app', plugin_loader_cls=FlaskPluginLoader
         )
     return g.reader
 
