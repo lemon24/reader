@@ -21,7 +21,15 @@ intersphinx_mapping = {
     "requests": ("https://requests.readthedocs.io/en/stable/", None),
 }
 
-autodoc_mock_imports = ['bs4', 'mutagen', 'flask', 'werkzeug', 'humanize', 'markupsafe']
+autodoc_mock_imports = [
+    'bs4',
+    'mutagen',
+    'flask',
+    'werkzeug',
+    'humanize',
+    'markupsafe',
+    'yaml',
+]
 
 # mock some things "by hand" to work around us importing stuff
 # in reader/_app/__init__.py, which means we can't import
