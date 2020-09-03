@@ -116,8 +116,6 @@ def maybe_highlighted_words_and_markers(draw, markers=st.text(min_size=1)):
 
 
 # TODO: maybe use hypothesis profiles
-
-
 @pytest.mark.slow
 @given(maybe_highlighted_words_and_markers())
 def test_highlighted_string_extract_fuzz(maybe_highlighted_words_and_markers):
@@ -196,6 +194,24 @@ def test_highlighted_string_apply(string, expected, expected_upper):
     assert string.apply('x', 'y', str.upper) == expected_upper
 
 
+@pytest.mark.slow
+@given(st.lists(st.tuples(st.text(), st.booleans())), st.text(), st.text())
+def test_highlighted_string_apply_fuzz(words, before, after):
+    slices = []
+    current_index = 0
+    for word, is_highlight in words:
+        next_index = current_index + len(word)
+        if is_highlight:
+            slices.append(slice(current_index, next_index))
+        current_index = next_index
+
+    string = HighlightedString(''.join(w for w, _ in words), slices)
+
+    expected = ''.join(f'{before}{w}{after}' if h else w for w, h in words)
+
+    assert string.apply(before, after) == expected
+
+
 @pytest.mark.parametrize('string', [t[0] for t in HS_SPLIT_APPLY_DATA])
 def test_highlighted_string_str(string):
     assert str(string) == string.value
@@ -209,6 +225,14 @@ def test_highlighted_string_str(string):
 )
 def test_highlighted_string_roundtrip(input, before, after):
     assert HighlightedString.extract(input, before, after).apply(before, after) == input
+
+
+@pytest.mark.slow
+@given(maybe_highlighted_words_and_markers())
+def test_highlighted_string_roundtrip_fuzz(maybe_highlighted_words_and_markers):
+    words, before, after = maybe_highlighted_words_and_markers
+    input = ''.join(f'{before}{w}{after}' if h else w for w, h in words)
+    test_highlighted_string_roundtrip(input, before, after)
 
 
 def test_missing():
