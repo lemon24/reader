@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from types import SimpleNamespace
 
+import hypothesis.strategies as st
 import pytest
+from hypothesis import given
 
 from reader import Entry
 from reader import EntrySearchResult
@@ -94,14 +96,36 @@ HS_EXTRACT_DATA = [
 
 
 @pytest.mark.parametrize('input, value, highlights', HS_EXTRACT_DATA)
-def test_highlighted_string_extract(input, value, highlights):
-    string = HighlightedString.extract(input, '>', '<')
+def test_highlighted_string_extract(input, value, highlights, before='>', after='<'):
+    string = HighlightedString.extract(input, before, after)
     assert string.value == value
     for hl in string.highlights:
         assert hl.start is not None
         assert hl.stop is not None
         assert hl.step is None
     assert [string.value[hl] for hl in string.highlights] == highlights
+
+
+@st.composite
+def maybe_highlighted_words_and_markers(draw, markers=st.text(min_size=1)):
+    before = draw(markers)
+    after = draw(markers.filter(lambda a: before not in a))
+    words = st.text().filter(lambda w: before not in w and after not in w)
+    maybe_highlighted_words = st.lists(st.tuples(words, st.booleans()))
+    return draw(maybe_highlighted_words), before, after
+
+
+# TODO: maybe use hypothesis profiles
+
+
+@pytest.mark.slow
+@given(maybe_highlighted_words_and_markers())
+def test_highlighted_string_extract_fuzz(maybe_highlighted_words_and_markers):
+    words, before, after = maybe_highlighted_words_and_markers
+    input = ''.join(f'{before}{w}{after}' if h else w for w, h in words)
+    value = ''.join(w for w, _ in words)
+    highlights = [w for w, h in words if h]
+    test_highlighted_string_extract(input, value, highlights, before, after)
 
 
 @pytest.mark.parametrize('input', ['>one', '>one >two<<', '<two', 'one>', 'two<'])

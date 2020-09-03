@@ -43,6 +43,7 @@ setup(
         'dev': [
             'pytest>=4',
             'pytest-randomly',
+            'hypothesis>=5',
             'coverage',
             'pytest-cov',
             'tox',
