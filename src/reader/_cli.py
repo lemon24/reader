@@ -177,7 +177,7 @@ def pass_reader(fn):
     '--plugin',
     multiple=True,
     envvar=reader._PLUGIN_ENVVAR,
-    help="Import path to a plug-in. Can be passed multiple times.",
+    help="Import path to a reader plug-in. Can be passed multiple times.",
 )
 @config_option(
     '--config',

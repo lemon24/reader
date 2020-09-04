@@ -34,6 +34,7 @@ User’s guide
     fts
     cli
     app
+    config
     plugins
 
 

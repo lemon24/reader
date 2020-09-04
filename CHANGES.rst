@@ -18,6 +18,8 @@ Unreleased
   any local feed path
   (in 2.0, local file parsing will be disabled by default).
   (:issue:`155`)
+* Support loading CLI and web application settings from a
+  :doc:`configuration file <config>`. (:issue:`177`)
 * Fail fast for feeds that return HTTP 4xx or 5xx status codes,
   instead of (likely) failing later with an ambiguous XML parsing error.
   The cause of the raised :exc:`ParseError` is now an instance of

@@ -12,7 +12,7 @@ from reader._cli import setup_logging
     '--plugin',
     multiple=True,
     envvar=reader._APP_PLUGIN_ENVVAR,
-    help="Import path to a plug-in. Can be passed multiple times.",
+    help="Import path to a web app plug-in. Can be passed multiple times.",
 )
 @click.option('-v', '--verbose', count=True)
 def serve(config, host, port, plugin, verbose):

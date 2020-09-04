@@ -1,32 +1,76 @@
-reader:
-    # make_reader() keyword arguments
+# Contexts are values of the top level map.
+# There are 3 known contexts: default, cli, and app.
+#
+# The default context can also be implicit: top level keys that don't
+# correspond to a known context are assumed to belong to the default context.
+#
+# Thus, the following are equivalent:
+#
+#   default:
+#       reader: ...
+#       something else: ...
+#
+#   ---
+#
+#   reader: ...
+#   something else: ...
+#
+# However, mixing them is an error:
+#
+#   default:
+#       reader: ...
+#   something else: ...
 
-    # url: db.sqlite
 
-    feed_root: /path/to/feeds
+# default context.
+#
+# Provides default settings for the other contexts.
 
-    # reader plugins
-    # <plugin import path>: <plugin options>
-    # options are ignored at the moment
-    plugins:
-        'reader._plugins.regex_mark_as_read:regex_mark_as_read':
-        'reader._plugins.feed_entry_dedupe:feed_entry_dedupe':
+default:
+    # The reader section contains make_reader() keyword arguments:
+    reader:
+        url: /path/to/db.sqlite
+        feed_root: /path/to/feeds
+
+        # Additionally, it's possible to specify reader plugins, as a
+        #   <plugin import path>: <plugin options>
+        # map; options are ignored at the moment.
+        # Note that unlike other settings, plugins are merged, not replaced.
+        plugins:
+            reader._plugins.tumblr_gdpr:tumblr_gdpr:
+            reader._plugins.cloudflare_ua_fix:init:
+
+
+# CLI context.
 
 cli:
-    defaults:
-        # defaults for various CLI options, used as context default_map
-        # https://click.palletsprojects.com/en/7.x/commands/#overriding-defaults
+    # When using the CLI, we want to use some additional reader plugins.
+    reader:
+        plugins:
+            reader._plugins.regex_mark_as_read:regex_mark_as_read:
+            reader._plugins.feed_entry_dedupe:feed_entry_dedupe:
 
+    # The cli context also allows changing the CLI defaults.
+    defaults:
+        # Note that while the --db and --plugin CLI options could appear here,
+        # doing it isn't very usful, since the CLI values (including defaults)
+        # always override the corresponding config file values.
+
+        # Options that can be passed multiple times take a list of values:
         # --plugin reader._plugins.enclosure_dedupe:enclosure_dedupe
-        plugin: [reader._plugins.enclosure_dedupe:enclosure_dedupe]
+        # plugin: [reader._plugins.enclosure_dedupe:enclosure_dedupe]
+
+        # Subcommand defaults can be given as nested maps:
 
         # add --update
         add:
+            # Flags take a boolean value:
             update: yes
 
         # update --workers 10 -vv
         update:
             workers: 10
+            # Flags that can be repeated take an integer:
             verbose: 2
 
         search:
@@ -38,10 +82,19 @@ cli:
         serve:
             port: 8888
 
+
+# Web application context.
+#
+# Used for both the serve command (`python -m reader serve`)
+# and when using the WSGI application (reader._app.wsgi:app) directly.
+
 app:
-    # app plugins
-    # <plugin import path>: <plugin options>
-    # options are ignored at the moment
+    # When using the web app, we want to use an additional reader plugin.
+    reader:
+        plugins:
+            reader._plugins.enclosure_dedupe:enclosure_dedupe:
+
+    # ... and some app plugins.
     plugins:
-        'reader._plugins.enclosure_tags:init':
-        'reader._plugins.preview_feed_list:init':
+        reader._plugins.enclosure_tags:init:
+        reader._plugins.preview_feed_list:init:

@@ -21,8 +21,9 @@ Serving the web application
 
 *reader* exposes a standard WSGI application as ``reader._app.wsgi:app``.
 See the `Flask documentation`_ for more details on how to deploy it.
-The path to the reader database can be configured through the ``READER_DB``
-environment variable.
+The path to the reader database can be configured through the
+:doc:`config file <config>`
+or the ``READER_DB`` environment variable.
 
 .. warning::
 
@@ -38,7 +39,7 @@ An example uWSGI configuration file (probably not idiomatic, from `here`_)::
     mount = /reader=reader._app.wsgi:app
     plugin = python3
     virtualenv = /apps/reader/
-    env = READER_DB=/data/www-data/reader.sqlite
+    env = READER_CONFIG=/apps/reader/reader.yaml
 
 
 You can also run the web application with the ``serve`` command.
@@ -50,7 +51,7 @@ If running on a personal computer, you can use cron to run ``serve`` at boot::
     @reboot     sleep 60; reader serve -p 8080 2>&1 ) >>"/tmp/$LOGNAME.reader.serve.boot.log"
 
 
-.. _here: https://github.com/lemon24/owncloud/blob/936b0aa6015eb8b4a42e37ff7dc8df2bae87263d/reader.yaml#L79
+.. _here: https://github.com/lemon24/owncloud/blob/b6a6ba28f84fa40a1a822c200c9e245bad84600b/reader.yaml#L77
 .. _Flask documentation: http://flask.pocoo.org/docs/1.0/deploying/
 .. _Werkzeug's development server: http://werkzeug.pocoo.org/docs/0.14/serving/#werkzeug.serving.run_simple
 
