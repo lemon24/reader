@@ -9,7 +9,7 @@ Changelog
 Version 1.6
 -----------
 
-Unreleased
+Released 2020-09-04
 
 * Add the ``feed_root`` argument to :func:`make_reader`,
   which allows limiting local feed parsing to a specific directory
