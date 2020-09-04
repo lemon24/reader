@@ -83,7 +83,8 @@ def make_reader(
         feed URLs is trusted.
 
         Both absolute and relative feed paths are supported.
-        The current working directory is honored.
+        The current working directory is used normally
+        (as if the path was passed to :func:`open`).
 
         Example: Assuming the current working directory is ``/feeds``,
         all of the following feed URLs correspond to ``/feeds/feed.xml``:
