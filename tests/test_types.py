@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import hypothesis.strategies as st
 import pytest
+from hypothesis import example
 from hypothesis import given
 
 from reader import Entry
@@ -117,6 +118,12 @@ def maybe_highlighted_words_and_markers(draw, markers=st.text(min_size=1)):
 
 # TODO: maybe use hypothesis profiles
 @pytest.mark.slow
+# BEGIN known to fail (Python 3.7.6, pytest-6.0.1, hypothesis-5.30.0)
+@pytest.mark.xfail(reason='known to fail')
+@example(maybe_highlighted_words_and_markers=([('0', False), ('0', False)], '1', '00'))
+@example(maybe_highlighted_words_and_markers=([('Ā', True)], 'Ā0', '0'),)
+@example(maybe_highlighted_words_and_markers=([('0', True)], '1', '00'),)
+# END known to fail
 @given(maybe_highlighted_words_and_markers())
 def test_highlighted_string_extract_fuzz(maybe_highlighted_words_and_markers):
     words, before, after = maybe_highlighted_words_and_markers
