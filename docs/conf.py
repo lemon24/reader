@@ -52,6 +52,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 todo_include_todos = False
 
 autodoc_member_order = 'bysource'
+autodoc_typehints = 'none'
 
 issues_github_path = 'lemon24/reader'
 
