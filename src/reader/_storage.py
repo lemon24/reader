@@ -55,6 +55,7 @@ def create_db(db: sqlite3.Connection) -> None:
     create_feeds(db)
     create_entries(db)
     create_feed_metadata(db)
+    create_feed_tags(db)
 
 
 def create_feeds(db: sqlite3.Connection, name: str = 'feeds') -> None:
@@ -133,6 +134,22 @@ def create_feed_metadata(db: sqlite3.Connection) -> None:
     )
 
 
+def create_feed_tags(db: sqlite3.Connection) -> None:
+    db.execute(
+        """
+        CREATE TABLE feed_tags (
+            feed TEXT NOT NULL,
+            tag TEXT NOT NULL,
+
+            PRIMARY KEY (feed, tag),
+            FOREIGN KEY (feed) REFERENCES feeds(url)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
+        );
+        """
+    )
+
+
 def update_from_17_to_18(db: sqlite3.Connection) -> None:  # pragma: no cover
     # for https://github.com/lemon24/reader/issues/125
     db.execute("UPDATE feeds SET stale = 1;")
@@ -192,7 +209,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=21,
+        version=22,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
@@ -200,6 +217,8 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             18: update_from_18_to_19,
             19: update_from_19_to_20,
             20: update_from_20_to_21,
+            # for https://github.com/lemon24/reader/issues/184
+            21: create_feed_tags,
         },
         # Row value support was added in 3.15.
         # TODO: Remove the Search.update() check once this gets bumped to >=3.18.
