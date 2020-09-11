@@ -14,6 +14,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx_click.ext',
     'sphinx_issues',
+    'hoverxref.extension',
 ]
 
 intersphinx_mapping = {
@@ -53,6 +54,9 @@ todo_include_todos = False
 autodoc_member_order = 'bysource'
 
 issues_github_path = 'lemon24/reader'
+
+hoverxref_auto_ref = True
+hoverxref_domains = ["py"]
 
 pygments_style = 'friendly'
 

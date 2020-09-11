@@ -75,6 +75,7 @@ setup(
             'click>=7',
             'sphinx-click',
             'sphinx-issues',
+            'sphinx-hoverxref',
         ],
     },
     description="A minimal feed reader library.",
