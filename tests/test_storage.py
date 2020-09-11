@@ -169,6 +169,18 @@ def delete_feed_metadata(storage, feed, __):
     storage.delete_feed_metadata(feed.url, 'key')
 
 
+def add_feed_tag(storage, feed, __):
+    storage.add_feed_tag(feed.url, 'tag')
+
+
+def remove_feed_tag(storage, feed, __):
+    storage.remove_feed_tag(feed.url, 'tag')
+
+
+def get_feed_tags(storage, feed, __):
+    list(storage.get_feed_tags(feed.url))
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     'do_stuff',
@@ -191,6 +203,9 @@ def delete_feed_metadata(storage, feed, __):
         iter_feed_metadata,
         set_feed_metadata,
         delete_feed_metadata,
+        add_feed_tag,
+        remove_feed_tag,
+        get_feed_tags,
     ],
 )
 def test_errors_locked(db_path, do_stuff):
@@ -269,6 +284,10 @@ def iter_iter_feed_metadata(storage):
     return storage.iter_feed_metadata_page('two', chunk_size=1)
 
 
+def iter_get_feed_tags(storage):
+    return storage.get_feed_tags('two')
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     'iter_stuff',
@@ -283,6 +302,7 @@ def iter_iter_feed_metadata(storage):
         iter_pagination_chunk_size_2,
         iter_pagination_chunk_size_3,
         iter_iter_feed_metadata,
+        iter_get_feed_tags,
     ],
 )
 def test_iter_locked(db_path, iter_stuff):
@@ -311,6 +331,8 @@ def check_iter_locked(db_path, pre_stuff, iter_stuff):
     )
     storage.set_feed_metadata('two', '1', 1)
     storage.set_feed_metadata('two', '2', 2)
+    storage.add_feed_tag('two', '1')
+    storage.add_feed_tag('two', '2')
 
     if pre_stuff:
         pre_stuff(storage)

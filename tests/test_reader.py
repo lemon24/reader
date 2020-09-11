@@ -1540,3 +1540,72 @@ def test_make_reader_feed_root(monkeypatch, kwargs, feed_root):
     assert excinfo.value is exc
 
     assert default_parser.feed_root == feed_root
+
+
+@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1])
+def test_tags_basic(reader, chunk_size):
+    reader._storage.chunk_size = chunk_size
+
+    with pytest.raises(FeedNotFoundError):
+        reader.add_feed_tag('one', 'tag')
+
+    # no-op
+    reader.remove_feed_tag('one', 'tag')
+
+    # also no-op
+    assert list(reader.get_feed_tags('one')) == []
+    assert list(reader.get_feed_tags()) == []
+
+    reader.add_feed('one')
+    reader.add_feed('two')
+
+    # no tags
+    assert list(reader.get_feed_tags('one')) == []
+    assert list(reader.get_feed_tags()) == []
+
+    reader.add_feed_tag('one', 'tag-1')
+    assert list(reader.get_feed_tags('one')) == ['tag-1']
+    assert list(reader.get_feed_tags()) == ['tag-1']
+
+    # no-op
+    reader.add_feed_tag('one', 'tag-1')
+
+    reader.add_feed_tag('two', 'tag-2-2')
+    reader.add_feed_tag('two', 'tag-2-1')
+    assert list(reader.get_feed_tags('one')) == ['tag-1']
+    assert list(reader.get_feed_tags('two')) == ['tag-2-1', 'tag-2-2']
+    assert list(reader.get_feed_tags()) == ['tag-1', 'tag-2-1', 'tag-2-2']
+
+    # no-op
+    reader.remove_feed_tag('one', 'tag-2-1')
+    assert list(reader.get_feed_tags('one')) == ['tag-1']
+    assert list(reader.get_feed_tags('two')) == ['tag-2-1', 'tag-2-2']
+    assert list(reader.get_feed_tags()) == ['tag-1', 'tag-2-1', 'tag-2-2']
+
+    reader.remove_feed_tag('two', 'tag-2-1')
+    assert list(reader.get_feed_tags('one')) == ['tag-1']
+    assert list(reader.get_feed_tags('two')) == ['tag-2-2']
+    assert list(reader.get_feed_tags()) == ['tag-1', 'tag-2-2']
+
+    reader.add_feed_tag('two', 'tag-2-3')
+    reader.add_feed_tag('two', 'tag-2-0')
+    reader.add_feed_tag('two', 'tag-2-1')
+    assert list(reader.get_feed_tags('one')) == ['tag-1']
+    assert list(reader.get_feed_tags('two')) == [
+        'tag-2-0',
+        'tag-2-1',
+        'tag-2-2',
+        'tag-2-3',
+    ]
+    assert list(reader.get_feed_tags()) == [
+        'tag-1',
+        'tag-2-0',
+        'tag-2-1',
+        'tag-2-2',
+        'tag-2-3',
+    ]
+
+    reader.remove_feed('two')
+    assert list(reader.get_feed_tags('one')) == ['tag-1']
+    assert list(reader.get_feed_tags('two')) == []
+    assert list(reader.get_feed_tags()) == ['tag-1']

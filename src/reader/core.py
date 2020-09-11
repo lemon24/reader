@@ -864,3 +864,53 @@ class Reader:
             raise ValueError("sort should be one of ('relevant', 'recent')")
         now = self._now()
         return self._search.search_entries(query, now, filter_options, sort)
+
+    def add_feed_tag(self, feed: FeedInput, tag: str) -> None:
+        """Add a tag to a feed.
+
+        Adding a tag that the feed already has is a no-op.
+
+        Args:
+            feed (str or Feed): The feed URL.
+            tag (str): The tag to add.
+
+        Raises:
+            FeedNotFoundError
+            StorageError
+
+        """
+        feed_url = _feed_argument(feed)
+        self._storage.add_feed_tag(feed_url, tag)
+
+    def remove_feed_tag(self, feed: FeedInput, tag: str) -> None:
+        """Remove a tag from a feed.
+
+        Removing a tag that the feed does not have is a no-op.
+
+        Args:
+            feed (str or Feed): The feed URL.
+            tag (str): The tag to remove.
+
+        Raises:
+            StorageError
+
+        """
+        # TODO: delete_feed_metadata() is not a no-op if the key does not exist; why?
+        feed_url = _feed_argument(feed)
+        self._storage.remove_feed_tag(feed_url, tag)
+
+    def get_feed_tags(self, feed: Optional[FeedInput] = None) -> Iterable[str]:
+        """Get all or some of the feed tags.
+
+        Args:
+            feed (str or Feed or None): Only return the tags for this feed.
+
+        Yields:
+            str: The tags, in alphabetical order.
+
+        Raises:
+            StorageError
+
+        """
+        feed_url = _feed_argument(feed) if feed is not None else feed
+        return self._storage.get_feed_tags(feed_url)

@@ -859,6 +859,54 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: MetadataNotFoundError(feed_url, key))
 
+    @wrap_exceptions(StorageError)
+    def add_feed_tag(self, feed_url: str, tag: str) -> None:
+        with self.db:
+            try:
+                self.db.execute("INSERT INTO feed_tags VALUES (?, ?);", (feed_url, tag))
+            except sqlite3.IntegrityError as e:
+                if "foreign key constraint failed" in str(e).lower():
+                    raise FeedNotFoundError(feed_url)
+                # tag exists is a no-op; it looks like:
+                # "UNIQUE constraint failed: feed_tags.feed, feed_tags.tag"
+
+    @wrap_exceptions(StorageError)
+    def remove_feed_tag(self, feed_url: str, tag: str) -> None:
+        with self.db:
+            self.db.execute(
+                "DELETE FROM feed_tags WHERE feed = ? AND tag = ?;", (feed_url, tag),
+            )
+
+    def get_feed_tags(self, feed_url: Optional[str]) -> Iterable[str]:
+        yield from join_paginated_iter(
+            partial(self.get_feed_tags_page, feed_url), self.chunk_size,
+        )
+
+    @wrap_exceptions_iter(StorageError)
+    def get_feed_tags_page(
+        self,
+        feed_url: Optional[str],
+        chunk_size: Optional[int] = None,
+        last: Optional[_T] = None,
+    ) -> Iterable[Tuple[str, Optional[_T]]]:
+        query = Query().SELECT("tag").FROM("feed_tags")
+        context: Dict[str, Any] = dict()
+
+        if feed_url is not None:
+            query.WHERE("feed = :feed_url")
+            context.update(feed_url=feed_url)
+
+        query.scrolling_window_order_by("tag")
+
+        def value_factory(t: Tuple[Any, ...]) -> str:
+            tag = t[0]
+            assert isinstance(tag, str)
+            return tag
+
+        yield from paginated_query(
+            self.db, query, context, value_factory, chunk_size, last
+        )
+
 
 def feed_factory(t: Tuple[Any, ...]) -> Feed:
     return Feed._make(t[:8] + (ExceptionInfo(**json.loads(t[8])) if t[8] else None,))
