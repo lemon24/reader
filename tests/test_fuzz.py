@@ -1,3 +1,5 @@
+import sys
+
 import hypothesis.strategies as st
 import pytest
 from fakeparser import Parser
@@ -44,7 +46,7 @@ def data_and_kwargs(draw):
 @pytest.mark.slow
 @with_call_entries_method
 @given(data_and_kwargs=data_and_kwargs())
-@settings(deadline=400)
+@settings(deadline=1000 if sys.implementation.name == 'pypy' else 400)
 def test_sort_and_filter_subset_basic(data_and_kwargs, pre_stuff, call_method):
     entry_data, kwargs, chunk_size = data_and_kwargs
 
