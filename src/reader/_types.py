@@ -6,8 +6,10 @@ from typing import Iterable
 from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
+from typing import Tuple
 from typing import Type
 from typing import TypeVar
+from typing import Union
 
 from .types import _entry_argument
 from .types import _feed_argument
@@ -19,6 +21,7 @@ from .types import EntryInput
 from .types import ExceptionInfo
 from .types import Feed
 from .types import FeedInput
+from .types import TagFilterInput
 
 
 # Private API
@@ -194,6 +197,52 @@ class EntryUpdateIntent(NamedTuple):
 # TODO: these should probably be in storage.py (along with some of the above)
 
 
+TagFilter = Union[bool, Sequence[Sequence[Tuple[bool, str]]]]
+
+
+def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
+    if tags is None:
+        return []
+    if tags is False or tags is True:
+        return tags
+    if not isinstance(tags, Sequence) or isinstance(tags, str):
+        raise ValueError(f"{name} must be none, bool, or a non-string sequence")
+
+    def normalize_tag(tag: str) -> Tuple[bool, str]:
+        if not isinstance(tag, str):
+            raise ValueError(
+                f"the elements of {name} must be strings or string sequences"
+            )
+
+        is_negation = False
+        if tag.startswith('-'):
+            is_negation = True
+            tag = tag[1:]
+
+        if not tag:
+            raise ValueError("tag strings must be non-empty")
+
+        return is_negation, tag
+
+    rv = []
+    for subtags in tags:
+        if isinstance(subtags, str):
+            rv.append([normalize_tag(subtags)])
+            continue
+
+        if not isinstance(subtags, Sequence):
+            raise ValueError(
+                f"the elements of {name} must be strings or string sequences"
+            )
+
+        if not subtags:
+            continue
+
+        rv.append(list(map(normalize_tag, subtags)))
+
+    return rv
+
+
 _EFO = TypeVar('_EFO', bound='EntryFilterOptions')
 
 
@@ -206,6 +255,7 @@ class EntryFilterOptions(NamedTuple):
     read: Optional[bool] = None
     important: Optional[bool] = None
     has_enclosures: Optional[bool] = None
+    feed_tags: TagFilter = ()
 
     @classmethod
     def from_args(
@@ -215,6 +265,7 @@ class EntryFilterOptions(NamedTuple):
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,
+        feed_tags: TagFilterInput = None,
     ) -> _EFO:
         feed_url = _feed_argument(feed) if feed is not None else None
 
@@ -231,7 +282,9 @@ class EntryFilterOptions(NamedTuple):
         if has_enclosures not in (None, False, True):
             raise ValueError("has_enclosures should be one of (None, False, True)")
 
-        return cls(feed_url, entry_id, read, important, has_enclosures)
+        feed_tag_filter = tag_filter_argument(feed_tags)
+
+        return cls(feed_url, entry_id, read, important, has_enclosures, feed_tag_filter)
 
 
 ParserType = Callable[[str, Optional[str], Optional[str]], ParsedFeed]

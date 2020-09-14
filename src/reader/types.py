@@ -485,6 +485,9 @@ def _entry_argument(entry: EntryInput) -> Tuple[str, str]:
     raise ValueError(f'invalid entry argument: {entry!r}')
 
 
+TagFilterInput = Union[None, bool, Sequence[Union[str, Sequence[str]]]]
+
+
 class MissingType:
     def __repr__(self) -> str:
         return "no value"

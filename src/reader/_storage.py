@@ -968,7 +968,7 @@ def apply_filter_options(
     query: Query, filter_options: EntryFilterOptions, keyword: str = 'WHERE'
 ) -> None:
     add = getattr(query, keyword)
-    feed_url, entry_id, read, important, has_enclosures = filter_options
+    feed_url, entry_id, read, important, has_enclosures, _ = filter_options
 
     if feed_url:
         add("entries.feed = :feed_url")
