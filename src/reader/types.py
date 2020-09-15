@@ -486,6 +486,7 @@ def _entry_argument(entry: EntryInput) -> Tuple[str, str]:
 
 
 TagFilterInput = Union[None, bool, Sequence[Union[str, Sequence[str]]]]
+# FIXME: should we allow tags=[[False, 'tag']] (has no tags or has 'tag')?
 
 
 class MissingType:

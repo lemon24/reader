@@ -1012,11 +1012,14 @@ def apply_filter_options(
                     "SELECT tag FROM feed_tags WHERE feed_tags.feed = entries.feed",
                 )
             )
+
+            next_tag_id = 0
             for subtags in feed_tags:
                 # TODO: Query() should allow building this kind of stuff.
                 or_parts = []
-                for i, (is_negation, tag) in enumerate(subtags):
-                    tag_name = f'__tag_{i}'
+                for is_negation, tag in subtags:
+                    tag_name = f'__tag_{next_tag_id}'
+                    next_tag_id += 1
                     context[tag_name] = tag
                     or_parts.append(
                         f":{tag_name} {'NOT' if is_negation else ''} IN tags"

@@ -1615,6 +1615,7 @@ ALL_IDS = {
     (1, 1),
     (1, 2),
     (2, 1),
+    (3, 1),
 }
 
 
@@ -1624,36 +1625,59 @@ ALL_IDS = {
     [
         ((), ALL_IDS),
         ((None,), ALL_IDS),
-        ((True,), {(1, 1), (1, 2)}),
-        ((False,), {(2, 1)}),
-        ((['tag'],), {(1, 1), (1, 2)}),
-        (([['tag']],), {(1, 1), (1, 2)}),
-        ((['tag', 'tag'],), {(1, 1), (1, 2)}),
-        (([['tag'], ['tag']],), {(1, 1), (1, 2)}),
-        (([['tag', 'tag']],), {(1, 1), (1, 2)}),
-        ((['not-tag'],), set()),
-        ((['-tag'],), {(2, 1)}),
+        (([],), ALL_IDS),
+        (([[]],), ALL_IDS),
+        ((True,), ALL_IDS - {(3, 1)}),
+        ((False,), {(3, 1)}),
+        ((['tag'],), ALL_IDS - {(3, 1)}),
+        (([['tag']],), ALL_IDS - {(3, 1)}),
+        ((['tag', 'tag'],), ALL_IDS - {(3, 1)}),
+        (([['tag'], ['tag']],), ALL_IDS - {(3, 1)}),
+        (([['tag', 'tag']],), ALL_IDS - {(3, 1)}),
+        ((['-tag'],), {(3, 1)}),
+        ((['unknown'],), set()),
+        ((['-unknown'],), ALL_IDS),
+        ((['first'],), {(1, 1), (1, 2)}),
+        ((['second'],), {(2, 1)}),
+        ((['first', 'second'],), set()),
+        (([['first'], ['second']],), set()),
+        (([['first', 'second']],), {(1, 1), (1, 2), (2, 1)}),
+        ((['first', 'tag'],), {(1, 1), (1, 2)}),
+        ((['second', 'tag'],), {(2, 1)}),
+        (([['first', 'second'], 'tag'],), {(1, 1), (1, 2), (2, 1)}),
+        (([['first'], ['tag']],), {(1, 1), (1, 2)}),
+        (([['first', 'tag']],), {(1, 1), (1, 2), (2, 1)}),
+        ((['-first', 'tag'],), {(2, 1)}),
+        (([['first', '-tag']],), ALL_IDS - {(2, 1)}),
     ],
 )
 def test_filtering_tags(reader, pre_stuff, call_method, args, expected):
     reader._parser = parser = Parser()
 
-    one = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.feed(1, datetime(2010, 1, 1))  # tag, first
     one_one = parser.entry(1, 1, datetime(2010, 1, 1))
     one_two = parser.entry(1, 2, datetime(2010, 2, 1))
-    two = parser.feed(2, datetime(2010, 1, 1))
+
+    two = parser.feed(2, datetime(2010, 1, 1))  # tag, second
     two_one = parser.entry(2, 1, datetime(2010, 1, 1))
+
+    three = parser.feed(3, datetime(2010, 1, 1))  # <no tags>
+    three_one = parser.entry(3, 1, datetime(2010, 1, 1))
 
     reader.add_feed(one)
     reader.add_feed(two)
+    reader.add_feed(three)
 
     reader.update_feeds()
 
     reader.add_feed_tag(one, 'tag')
+    reader.add_feed_tag(one, 'first')
+    reader.add_feed_tag(two, 'tag')
+    reader.add_feed_tag(two, 'second')
 
     pre_stuff(reader)
 
     # TODO: change the key when we also test get_feeds(tags=...) here
     kwargs = {'feed_tags': a for a in args}
 
-    assert {eval(e.id) for e in call_method(reader, **kwargs)} == expected
+    assert {eval(e.id) for e in call_method(reader, **kwargs)} == expected, kwargs
