@@ -197,12 +197,12 @@ class EntryUpdateIntent(NamedTuple):
 # TODO: these should probably be in storage.py (along with some of the above)
 
 
-TagFilter = Union[bool, Sequence[Sequence[Tuple[bool, str]]]]
+TagFilter = Union[None, bool, Sequence[Sequence[Tuple[bool, str]]]]
 
 
 def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
     if tags is None:
-        return []
+        return tags
     if tags is False or tags is True:
         return tags
     if not isinstance(tags, Sequence) or isinstance(tags, str):
@@ -240,7 +240,7 @@ def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
 
         rv.append(list(map(normalize_tag, subtags)))
 
-    return rv
+    return rv or None
 
 
 _EFO = TypeVar('_EFO', bound='EntryFilterOptions')

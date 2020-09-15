@@ -6,7 +6,7 @@ from reader._types import tag_filter_argument
 TAG_DATA = [
     (True, [True]),
     (False, [False]),
-    ([], [None, [], (), [[]], ((),), [[], []]]),
+    (None, [None, [], (), [[]], ((),), [[], []]]),
     ([[(False, 'one')]], [['one'], [['one']], ['one', []], [[], ['one'], []]]),
     ([[(False, 'one')], [(True, 'two')]], [['one', '-two'], [['one'], ['-two']],]),
     ([[(False, 'one'), (True, 'two')]], [[['one', '-two']],]),
