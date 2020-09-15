@@ -1424,7 +1424,7 @@ with_call_entries_method = pytest.mark.parametrize(
 
 
 # TODO: there should probably be a way to get this from the fakeparser
-ALL_IDS = all_ids = {
+ALL_IDS = {
     (1, 1),
     (1, 2),
     (1, 3),
@@ -1611,9 +1611,31 @@ def test_tags_basic(reader, chunk_size):
     assert list(reader.get_feed_tags()) == ['tag-1']
 
 
+ALL_IDS = {
+    (1, 1),
+    (1, 2),
+    (2, 1),
+}
+
+
 @with_call_entries_method
-def test_tag_filter_basic(reader, pre_stuff, call_method):
-    # FIXME: move this into filter test
+@pytest.mark.parametrize(
+    'args, expected',
+    [
+        ((), ALL_IDS),
+        ((None,), ALL_IDS),
+        ((True,), {(1, 1), (1, 2)}),
+        ((False,), {(2, 1)}),
+        ((['tag'],), {(1, 1), (1, 2)}),
+        (([['tag']],), {(1, 1), (1, 2)}),
+        ((['tag', 'tag'],), {(1, 1), (1, 2)}),
+        (([['tag'], ['tag']],), {(1, 1), (1, 2)}),
+        (([['tag', 'tag']],), {(1, 1), (1, 2)}),
+        ((['not-tag'],), set()),
+        ((['-tag'],), {(2, 1)}),
+    ],
+)
+def test_filtering_tags(reader, pre_stuff, call_method, args, expected):
     reader._parser = parser = Parser()
 
     one = parser.feed(1, datetime(2010, 1, 1))
@@ -1631,26 +1653,7 @@ def test_tag_filter_basic(reader, pre_stuff, call_method):
 
     pre_stuff(reader)
 
-    assert {eval(e.id) for e in call_method(reader)} == {(1, 1), (1, 2), (2, 1)}
-    assert {eval(e.id) for e in call_method(reader, feed_tags=True)} == {(1, 1), (1, 2)}
-    assert {eval(e.id) for e in call_method(reader, feed_tags=False)} == {(2, 1)}
+    # TODO: change the key when we also test get_feeds(tags=...) here
+    kwargs = {'feed_tags': a for a in args}
 
-    assert {eval(e.id) for e in call_method(reader, feed_tags=['tag'])} == {
-        (1, 1),
-        (1, 2),
-    }
-    assert {eval(e.id) for e in call_method(reader, feed_tags=[['tag']])} == {
-        (1, 1),
-        (1, 2),
-    }
-    assert {eval(e.id) for e in call_method(reader, feed_tags=['tag', 'tag'])} == {
-        (1, 1),
-        (1, 2),
-    }
-    assert {eval(e.id) for e in call_method(reader, feed_tags=[['tag', 'tag']])} == {
-        (1, 1),
-        (1, 2),
-    }
-
-    assert {eval(e.id) for e in call_method(reader, feed_tags=['not-tag'])} == set()
-    assert {eval(e.id) for e in call_method(reader, feed_tags=['-tag'])} == {(2, 1)}
+    assert {eval(e.id) for e in call_method(reader, **kwargs)} == expected
