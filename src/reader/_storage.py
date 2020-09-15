@@ -767,10 +767,12 @@ class Storage:
         # See this issue for some thoughts on the sort='random' implementation:
         # https://github.com/lemon24/reader/issues/105
 
-        query = make_get_entries_query(filter_options, sort)
+        query, query_context = make_get_entries_query(filter_options, sort)
 
         context = dict(
-            recent_threshold=now - self.recent_threshold, **filter_options._asdict(),
+            recent_threshold=now - self.recent_threshold,
+            **filter_options._asdict(),
+            **query_context,
         )
 
         def value_factory(t: Tuple[Any, ...]) -> Entry:
@@ -914,7 +916,7 @@ def feed_factory(t: Tuple[Any, ...]) -> Feed:
 
 def make_get_entries_query(
     filter_options: EntryFilterOptions, sort: EntrySortOrder,
-) -> Query:
+) -> Tuple[Query, Dict[str, Any]]:
     query = (
         Query()
         .SELECT(
@@ -946,7 +948,7 @@ def make_get_entries_query(
         .JOIN("feeds ON feeds.url = entries.feed")
     )
 
-    apply_filter_options(query, filter_options)
+    filter_context = apply_filter_options(query, filter_options)
 
     if sort == 'recent':
         apply_recent(query)
@@ -961,14 +963,14 @@ def make_get_entries_query(
 
     log.debug("_get_entries query\n%s\n", query)
 
-    return query
+    return query, filter_context
 
 
 def apply_filter_options(
     query: Query, filter_options: EntryFilterOptions, keyword: str = 'WHERE'
-) -> None:
+) -> Dict[str, Any]:
     add = getattr(query, keyword)
-    feed_url, entry_id, read, important, has_enclosures, _ = filter_options
+    feed_url, entry_id, read, important, has_enclosures, feed_tags = filter_options
 
     if feed_url:
         add("entries.feed = :feed_url")
@@ -989,6 +991,39 @@ def apply_filter_options(
                     OR json_array_length(entries.enclosures) = 0)
             """
         )
+
+    context = {}
+
+    if feed_tags is not None:
+        if isinstance(feed_tags, bool):
+            add(
+                f"""
+                {'NOT' if not feed_tags else ''} (
+                    SELECT count(tag)
+                    FROM feed_tags
+                    WHERE feed_tags.feed = entries.feed
+                )
+                """
+            )
+        else:
+            query.WITH(
+                (
+                    "tags",
+                    "SELECT tag FROM feed_tags WHERE feed_tags.feed = entries.feed",
+                )
+            )
+            for subtags in feed_tags:
+                # TODO: Query() should allow building this kind of stuff.
+                or_parts = []
+                for i, (is_negation, tag) in enumerate(subtags):
+                    tag_name = f'__tag_{i}'
+                    context[tag_name] = tag
+                    or_parts.append(
+                        f":{tag_name} {'NOT' if is_negation else ''} IN tags"
+                    )
+                add(f"({' OR '.join(or_parts)})")
+
+    return context
 
 
 def apply_recent(

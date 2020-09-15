@@ -1609,3 +1609,48 @@ def test_tags_basic(reader, chunk_size):
     assert list(reader.get_feed_tags('one')) == ['tag-1']
     assert list(reader.get_feed_tags('two')) == []
     assert list(reader.get_feed_tags()) == ['tag-1']
+
+
+@with_call_entries_method
+def test_tag_filter_basic(reader, pre_stuff, call_method):
+    # FIXME: move this into filter test
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    one_one = parser.entry(1, 1, datetime(2010, 1, 1))
+    one_two = parser.entry(1, 2, datetime(2010, 2, 1))
+    two = parser.feed(2, datetime(2010, 1, 1))
+    two_one = parser.entry(2, 1, datetime(2010, 1, 1))
+
+    reader.add_feed(one)
+    reader.add_feed(two)
+
+    reader.update_feeds()
+
+    reader.add_feed_tag(one, 'tag')
+
+    pre_stuff(reader)
+
+    assert {eval(e.id) for e in call_method(reader)} == {(1, 1), (1, 2), (2, 1)}
+    assert {eval(e.id) for e in call_method(reader, feed_tags=True)} == {(1, 1), (1, 2)}
+    assert {eval(e.id) for e in call_method(reader, feed_tags=False)} == {(2, 1)}
+
+    assert {eval(e.id) for e in call_method(reader, feed_tags=['tag'])} == {
+        (1, 1),
+        (1, 2),
+    }
+    assert {eval(e.id) for e in call_method(reader, feed_tags=[['tag']])} == {
+        (1, 1),
+        (1, 2),
+    }
+    assert {eval(e.id) for e in call_method(reader, feed_tags=['tag', 'tag'])} == {
+        (1, 1),
+        (1, 2),
+    }
+    assert {eval(e.id) for e in call_method(reader, feed_tags=[['tag', 'tag']])} == {
+        (1, 1),
+        (1, 2),
+    }
+
+    assert {eval(e.id) for e in call_method(reader, feed_tags=['not-tag'])} == set()
+    assert {eval(e.id) for e in call_method(reader, feed_tags=['-tag'])} == {(2, 1)}

@@ -732,7 +732,7 @@ class Search:
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[EntrySearchResult, Optional[_T]]]:
 
-        sql_query = make_search_entries_query(filter_options, sort)
+        sql_query, query_context = make_search_entries_query(filter_options, sort)
 
         random_mark = ''.join(
             random.choices(string.ascii_letters + string.digits, k=20)
@@ -743,6 +743,7 @@ class Search:
         context = dict(
             query=query,
             **filter_options._asdict(),
+            **query_context,
             before_mark=before_mark,
             after_mark=after_mark,
             # 255 letters / 4.7 letters per word (average in English)
@@ -812,7 +813,7 @@ class Search:
 
 def make_search_entries_query(
     filter_options: EntryFilterOptions, sort: SearchSortOrder
-) -> Query:
+) -> Tuple[Query, Dict[str, Any]]:
     search = (
         Query()
         .SELECT(
@@ -848,7 +849,7 @@ def make_search_entries_query(
         .LIMIT("-1 OFFSET 0")
     )
 
-    apply_filter_options(search, filter_options)
+    context = apply_filter_options(search, filter_options)
 
     query = (
         Query()
@@ -878,4 +879,4 @@ def make_search_entries_query(
 
     log.debug("_search_entries query\n%s\n", query)
 
-    return query
+    return query, context

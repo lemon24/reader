@@ -203,7 +203,7 @@ TagFilter = Union[None, bool, Sequence[Sequence[Tuple[bool, str]]]]
 def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
     if tags is None:
         return tags
-    if tags is False or tags is True:
+    if isinstance(tags, bool):
         return tags
     if not isinstance(tags, Sequence) or isinstance(tags, str):
         raise ValueError(f"{name} must be none, bool, or a non-string sequence")

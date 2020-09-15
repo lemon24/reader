@@ -45,6 +45,7 @@ from .types import JSONType
 from .types import MISSING
 from .types import MissingType
 from .types import SearchSortOrder
+from .types import TagFilterInput
 
 
 log = logging.getLogger('reader')
@@ -486,6 +487,7 @@ class Reader:
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,
+        feed_tags: TagFilterInput = None,
         sort: EntrySortOrder = 'recent',
     ) -> Iterable[Entry]:
         """Get all or some of the entries.
@@ -517,6 +519,9 @@ class Reader:
         .. versionadded:: 1.2
             The ``sort`` keyword argument.
 
+        .. versionadded:: 1.7
+            The ``feed_tags`` keyword argument.
+
         Args:
             feed (str or Feed or None): Only return the entries for this feed.
             entry (tuple(str, str) or Entry or None):
@@ -525,8 +530,44 @@ class Reader:
             important (bool or None): Only return (un)important entries.
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
+
+            feed_tags (None or bool or list(str or list(str))):
+                Only return the entries from feeds matching these tags.
+
+                Special values :const:`True` and :const:`False`
+                match feeds with any tags and no tags, respectively.
+
+                Multiple tags are interpreted as a conjunction (AND).
+                To use a disjunction (OR), use a nested list.
+                To negate a tag, prefix the tag value with a minus sign (``-``).
+                Examples:
+
+                ``['one']``
+
+                    one
+
+                ``['one', 'two']``
+                ``[['one'], ['two']]``
+
+                    one AND two
+
+                ``[['one', 'two']]``
+
+                    one OR two
+
+                ``[['one', 'two'], 'three']``
+
+                    (one OR two) AND three
+
+                ``['one', '-two']``
+
+                    one AND NOT two
+
             sort (str): How to order entries; one of ``'recent'`` (default)
                 or ``'random'``.
+
+        .. todo::
+            FIXME: when we add get_feeds(tags=), add the detailed description there.
 
         Yields:
             :class:`Entry`: Sorted according to ``sort``.
@@ -540,7 +581,7 @@ class Reader:
         # https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
 
         filter_options = EntryFilterOptions.from_args(
-            feed, entry, read, important, has_enclosures
+            feed, entry, read, important, has_enclosures, feed_tags
         )
         if sort not in ('recent', 'random'):
             raise ValueError("sort should be one of ('recent', 'random')")
@@ -788,6 +829,7 @@ class Reader:
         read: Optional[bool] = None,
         important: Optional[bool] = None,
         has_enclosures: Optional[bool] = None,
+        feed_tags: TagFilterInput = None,
         sort: SearchSortOrder = 'relevant',
     ) -> Iterable[EntrySearchResult]:
         """Get entries matching a full-text search query.
@@ -835,6 +877,9 @@ class Reader:
         .. versionadded:: 1.4
             The ``sort`` keyword argument.
 
+        .. versionadded:: 1.7
+            The ``feed_tags`` keyword argument.
+
         Args:
             query (str): The search query.
             feed (str or Feed or None): Only search the entries for this feed.
@@ -844,6 +889,9 @@ class Reader:
             important (bool or None): Only search (un)important entries.
             has_enclosures (bool or None): Only search entries that (don't)
                 have enclosures.
+            feed_tags (None or bool or list(str or list(str))):
+                Only return the entries from feeds matching these tags.
+                See the :meth:`~Reader.get_entries()` docstring for details.
             sort (str): How to order results; one of ``'relevant'`` (default)
                 or ``'recent'``.
 
@@ -858,7 +906,7 @@ class Reader:
 
         """
         filter_options = EntryFilterOptions.from_args(
-            feed, entry, read, important, has_enclosures
+            feed, entry, read, important, has_enclosures, feed_tags
         )
         if sort not in ('relevant', 'recent'):
             raise ValueError("sort should be one of ('relevant', 'recent')")
