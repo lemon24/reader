@@ -29,6 +29,7 @@ from ._types import EntryUpdateIntent
 from ._types import FeedFilterOptions
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
+from ._types import TagFilter
 from ._utils import chunks
 from ._utils import join_paginated_iter
 from .exceptions import EntryNotFoundError
@@ -342,7 +343,7 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[Feed, Optional[_T]]]:
-        (url,) = filter_options
+        url, tags = filter_options
 
         query = (
             Query()
@@ -364,6 +365,8 @@ class Storage:
         if url:
             query.WHERE("url = :url")
             context.update(url=url)
+
+        context.update(apply_feed_tags_filter_options(query, tags, 'feeds.url'))
 
         # sort by url at the end to make sure the order is deterministic
         if sort == 'title':
@@ -997,16 +1000,28 @@ def apply_filter_options(
             """
         )
 
+    context = apply_feed_tags_filter_options(
+        query, feed_tags, 'entries.feed', keyword=keyword
+    )
+
+    return context
+
+
+def apply_feed_tags_filter_options(
+    query: Query, tags: TagFilter, url_column: str, keyword: str = 'WHERE',
+) -> Dict[str, Any]:
+    add = getattr(query, keyword)
+
     context = {}
 
-    if feed_tags is not None:
-        if isinstance(feed_tags, bool):
+    if tags is not None:
+        if isinstance(tags, bool):
             add(
                 f"""
-                {'NOT' if not feed_tags else ''} (
+                {'NOT' if not tags else ''} (
                     SELECT count(tag)
                     FROM feed_tags
-                    WHERE feed_tags.feed = entries.feed
+                    WHERE feed_tags.feed = {url_column}
                 )
                 """
             )
@@ -1014,12 +1029,12 @@ def apply_filter_options(
             query.WITH(
                 (
                     "tags",
-                    "SELECT tag FROM feed_tags WHERE feed_tags.feed = entries.feed",
+                    f"SELECT tag FROM feed_tags WHERE feed_tags.feed = {url_column}",
                 )
             )
 
             next_tag_id = 0
-            for subtags in feed_tags:
+            for subtags in tags:
                 # TODO: Query() should allow building this kind of stuff.
                 or_parts = []
                 for is_negation, tag in subtags:

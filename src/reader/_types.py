@@ -295,13 +295,15 @@ class FeedFilterOptions(NamedTuple):
     """Options for filtering the results of the "get feed" storage methods."""
 
     feed_url: Optional[str] = None
-    # TODO: feed_tags: TagFilter = ()
+    tags: TagFilter = ()
 
     @classmethod
-    def from_args(cls: Type[_FFO], feed: Optional[FeedInput] = None,) -> _FFO:
+    def from_args(
+        cls: Type[_FFO], feed: Optional[FeedInput] = None, tags: TagFilterInput = None,
+    ) -> _FFO:
         feed_url = _feed_argument(feed) if feed is not None else None
-
-        return cls(feed_url)
+        tag_filter = tag_filter_argument(tags)
+        return cls(feed_url, tag_filter)
 
 
 ParserType = Callable[[str, Optional[str], Optional[str]], ParsedFeed]

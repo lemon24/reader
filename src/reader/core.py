@@ -234,12 +234,50 @@ class Reader:
         self._storage.remove_feed(url)
 
     def get_feeds(
-        self, *, feed: Optional[FeedInput] = None, sort: FeedSortOrder = 'title'
+        self,
+        *,
+        feed: Optional[FeedInput] = None,
+        tags: TagFilterInput = None,
+        sort: FeedSortOrder = 'title',
     ) -> Iterable[Feed]:
         """Get all or some of the feeds.
 
+        The ``tags`` argument can be a list of one or more feed tags.
+        Multiple tags are interpreted as a conjunction (AND).
+        To use a disjunction (OR), use a nested list.
+        To negate a tag, prefix the tag value with a minus sign (``-``).
+        Examples:
+
+        ``['one']``
+
+            one
+
+        ``['one', 'two']``
+        ``[['one'], ['two']]``
+
+            one AND two
+
+        ``[['one', 'two']]``
+
+            one OR two
+
+        ``[['one', 'two'], 'three']``
+
+            (one OR two) AND three
+
+        ``['one', '-two']``
+
+            one AND NOT two
+
+        Special values :const:`True` and :const:`False`
+        match feeds with any tags and no tags, respectively.
+
+        .. todo:: FIXME example
+
         Args:
             feed (str or Feed or None): Only return the feed with this URL.
+            tags (None or bool or list(str or list(str))):
+                Only return feeds matching these tags.
             sort (str): How to order feeds; one of ``'title'`` (by
                 :attr:`~Feed.user_title` or :attr:`~Feed.title`, case
                 insensitive; default), or ``'added'`` (last added first).
@@ -250,8 +288,11 @@ class Reader:
         Raises:
             StorageError
 
+        .. versionadded:: 1.7
+            The ``tags`` keyword argument.
+
         """
-        filter_options = FeedFilterOptions.from_args(feed)
+        filter_options = FeedFilterOptions.from_args(feed, tags)
 
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
@@ -526,44 +567,11 @@ class Reader:
             important (bool or None): Only return (un)important entries.
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
-
             feed_tags (None or bool or list(str or list(str))):
-                Only return the entries from feeds matching these tags.
-
-                Special values :const:`True` and :const:`False`
-                match feeds with any tags and no tags, respectively.
-
-                Multiple tags are interpreted as a conjunction (AND).
-                To use a disjunction (OR), use a nested list.
-                To negate a tag, prefix the tag value with a minus sign (``-``).
-                Examples:
-
-                ``['one']``
-
-                    one
-
-                ``['one', 'two']``
-                ``[['one'], ['two']]``
-
-                    one AND two
-
-                ``[['one', 'two']]``
-
-                    one OR two
-
-                ``[['one', 'two'], 'three']``
-
-                    (one OR two) AND three
-
-                ``['one', '-two']``
-
-                    one AND NOT two
-
+                Only return the entries from feeds matching these tags;
+                works like the :meth:`~Reader.get_feeds()` ``tags`` argument.
             sort (str): How to order entries; one of ``'recent'`` (default)
                 or ``'random'``.
-
-        .. todo::
-            FIXME: when we add get_feeds(tags=), move the detailed description there.
 
         Yields:
             :class:`Entry`: Sorted according to ``sort``.
@@ -886,8 +894,8 @@ class Reader:
             has_enclosures (bool or None): Only search entries that (don't)
                 have enclosures.
             feed_tags (None or bool or list(str or list(str))):
-                Only return the entries from feeds matching these tags.
-                See the :meth:`~Reader.get_entries()` docstring for details.
+                Only return the entries from feeds matching these tags;
+                works like the :meth:`~Reader.get_feeds()` ``tags`` argument.
             sort (str): How to order results; one of ``'relevant'`` (default)
                 or ``'recent'``.
 

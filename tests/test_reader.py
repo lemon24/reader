@@ -1611,6 +1611,48 @@ def test_tags_basic(reader, chunk_size):
     assert list(reader.get_feed_tags()) == ['tag-1']
 
 
+def get_entry_id(entry):
+    return eval(entry.id)
+
+
+def noop(thing):
+    return thing
+
+
+def get_feeds(reader, **kwargs):
+    return reader.get_feeds(**kwargs)
+
+
+def get_feed_url(feed):
+    return eval(feed.url)
+
+
+# like with_call_entries_method, but include get_feeds()
+with_call_feed_tags_method = pytest.mark.parametrize(
+    'pre_stuff, call_method, tags_arg_name, id_from_object, id_from_expected',
+    [
+        (lambda _: None, get_entries_recent, 'feed_tags', get_entry_id, noop),
+        (lambda _: None, get_entries_random, 'feed_tags', get_entry_id, noop),
+        (
+            enable_and_update_search,
+            search_entries_relevant,
+            'feed_tags',
+            get_entry_id,
+            noop,
+        ),
+        (
+            enable_and_update_search,
+            search_entries_recent,
+            'feed_tags',
+            get_entry_id,
+            noop,
+        ),
+        # TODO: maybe test all the get_feeds sort orders
+        (lambda _: None, get_feeds, 'tags', get_feed_url, lambda t: t[0]),
+    ],
+)
+
+
 ALL_IDS = {
     (1, 1),
     (1, 2),
@@ -1619,7 +1661,7 @@ ALL_IDS = {
 }
 
 
-@with_call_entries_method
+@with_call_feed_tags_method
 @pytest.mark.parametrize(
     'args, expected',
     [
@@ -1651,7 +1693,16 @@ ALL_IDS = {
         (([['first', '-tag']],), ALL_IDS - {(2, 1)}),
     ],
 )
-def test_filtering_tags(reader, pre_stuff, call_method, args, expected):
+def test_filtering_tags(
+    reader,
+    pre_stuff,
+    call_method,
+    tags_arg_name,
+    id_from_object,
+    id_from_expected,
+    args,
+    expected,
+):
     reader._parser = parser = Parser()
 
     one = parser.feed(1, datetime(2010, 1, 1))  # tag, first
@@ -1677,7 +1728,9 @@ def test_filtering_tags(reader, pre_stuff, call_method, args, expected):
 
     pre_stuff(reader)
 
-    # TODO: change the key when we also test get_feeds(tags=...) here
-    kwargs = {'feed_tags': a for a in args}
+    assert len(args) <= 1
+    kwargs = {tags_arg_name: a for a in args}
 
-    assert {eval(e.id) for e in call_method(reader, **kwargs)} == expected, kwargs
+    actual_set = set(map(id_from_object, call_method(reader, **kwargs)))
+    expected_set = set(map(id_from_expected, expected))
+    assert actual_set == expected_set, kwargs
