@@ -22,6 +22,7 @@ from ._storage import Storage
 from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import EntryUpdateIntent
+from ._types import FeedFilterOptions
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import ParsedFeed
@@ -250,10 +251,12 @@ class Reader:
             StorageError
 
         """
-        url = _feed_argument(feed) if feed else None
+        filter_options = FeedFilterOptions.from_args(feed)
+
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
-        return self._storage.get_feeds(url, sort)
+
+        return self._storage.get_feeds(filter_options, sort)
 
     @overload
     def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
@@ -926,7 +929,6 @@ class Reader:
             StorageError
 
         .. versionadded:: 1.7
-
 
         """
         feed_url = _feed_argument(feed)

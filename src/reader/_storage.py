@@ -26,6 +26,7 @@ from ._sqlite_utils import wrap_exceptions_iter
 from ._types import EntryFilterOptions
 from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
+from ._types import FeedFilterOptions
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._utils import chunks
@@ -325,20 +326,24 @@ class Storage:
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     def get_feeds(
-        self, url: Optional[str] = None, sort: FeedSortOrder = 'title',
+        self,
+        filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
+        sort: FeedSortOrder = 'title',
     ) -> Iterable[Feed]:
         yield from join_paginated_iter(
-            partial(self.get_feeds_page, url, sort), self.chunk_size,
+            partial(self.get_feeds_page, filter_options, sort), self.chunk_size,
         )
 
     @wrap_exceptions_iter(StorageError)
     def get_feeds_page(
         self,
-        url: Optional[str] = None,
+        filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
         sort: FeedSortOrder = 'title',
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[Feed, Optional[_T]]]:
+        (url,) = filter_options
+
         query = (
             Query()
             .SELECT(

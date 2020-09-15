@@ -287,4 +287,21 @@ class EntryFilterOptions(NamedTuple):
         return cls(feed_url, entry_id, read, important, has_enclosures, feed_tag_filter)
 
 
+_FFO = TypeVar('_FFO', bound='FeedFilterOptions')
+
+
+class FeedFilterOptions(NamedTuple):
+
+    """Options for filtering the results of the "get feed" storage methods."""
+
+    feed_url: Optional[str] = None
+    # TODO: feed_tags: TagFilter = ()
+
+    @classmethod
+    def from_args(cls: Type[_FFO], feed: Optional[FeedInput] = None,) -> _FFO:
+        feed_url = _feed_argument(feed) if feed is not None else None
+
+        return cls(feed_url)
+
+
 ParserType = Callable[[str, Optional[str], Optional[str]], ParsedFeed]
