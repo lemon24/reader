@@ -112,14 +112,6 @@ def make_reader(
 
         Accessing device files on Windows is an error.
 
-    .. versionadded:: 1.6
-        The ``feed_root`` keyword argument.
-
-    .. versionchanged:: 2.0
-        The default ``feed_root`` behavior will change from
-        *full filesystem access* (``''``) to
-        *don't open local feeds* (``None``).
-
     Args:
         url (str): Path to the reader database.
         feed_root (str or None):
@@ -128,12 +120,19 @@ def make_reader(
             ``''`` (full filesystem access; default), or
             ``'/path/to/feed/root'`` (an absolute path that feed paths are relative to).
 
-
     Returns:
         Reader: The reader.
 
     Raises:
         StorageError
+
+    .. versionadded:: 1.6
+        The ``feed_root`` keyword argument.
+
+    .. versionchanged:: 2.0
+        The default ``feed_root`` behavior will change from
+        *full filesystem access* (``''``) to
+        *don't open local feeds* (``None``).
 
     """
 
@@ -516,12 +515,6 @@ class Reader:
 
             .. versionadded:: 1.2
 
-        .. versionadded:: 1.2
-            The ``sort`` keyword argument.
-
-        .. versionadded:: 1.7
-            The ``feed_tags`` keyword argument.
-
         Args:
             feed (str or Feed or None): Only return the entries for this feed.
             entry (tuple(str, str) or Entry or None):
@@ -567,13 +560,19 @@ class Reader:
                 or ``'random'``.
 
         .. todo::
-            FIXME: when we add get_feeds(tags=), add the detailed description there.
+            FIXME: when we add get_feeds(tags=), move the detailed description there.
 
         Yields:
             :class:`Entry`: Sorted according to ``sort``.
 
         Raises:
             StorageError
+
+        .. versionadded:: 1.2
+            The ``sort`` keyword argument.
+
+        .. versionadded:: 1.7
+            The ``feed_tags`` keyword argument.
 
         """
 
@@ -874,12 +873,6 @@ class Reader:
 
         Search must be enabled to call this method.
 
-        .. versionadded:: 1.4
-            The ``sort`` keyword argument.
-
-        .. versionadded:: 1.7
-            The ``feed_tags`` keyword argument.
-
         Args:
             query (str): The search query.
             feed (str or Feed or None): Only search the entries for this feed.
@@ -904,6 +897,12 @@ class Reader:
             SearchError
             StorageError
 
+        .. versionadded:: 1.4
+            The ``sort`` keyword argument.
+
+        .. versionadded:: 1.7
+            The ``feed_tags`` keyword argument.
+
         """
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
@@ -926,6 +925,9 @@ class Reader:
             FeedNotFoundError
             StorageError
 
+        .. versionadded:: 1.7
+
+
         """
         feed_url = _feed_argument(feed)
         self._storage.add_feed_tag(feed_url, tag)
@@ -941,6 +943,8 @@ class Reader:
 
         Raises:
             StorageError
+
+        .. versionadded:: 1.7
 
         """
         # TODO: delete_feed_metadata() is not a no-op if the key does not exist; why?
@@ -958,6 +962,8 @@ class Reader:
 
         Raises:
             StorageError
+
+        .. versionadded:: 1.7
 
         """
         feed_url = _feed_argument(feed) if feed is not None else feed
