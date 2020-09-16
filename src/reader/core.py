@@ -973,7 +973,6 @@ class Reader:
         .. versionadded:: 1.7
 
         """
-        # TODO: delete_feed_metadata() is not a no-op if the key does not exist; why?
         feed_url = _feed_argument(feed)
         self._storage.remove_feed_tag(feed_url, tag)
 
