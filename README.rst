@@ -13,8 +13,8 @@ and without enforcing a dependency on a particular framework.
 
 |build-status| |code-coverage| |documentation-status| |pypi-status| |type-checking| |code-style|
 
-.. |build-status| image:: https://travis-ci.org/lemon24/reader.svg?branch=master
-  :target: https://travis-ci.org/lemon24/reader
+.. |build-status| image:: https://travis-ci.com/lemon24/reader.svg?branch=master
+  :target: https://travis-ci.com/lemon24/reader
   :alt: build status
 
 .. |code-coverage| image:: https://codecov.io/github/lemon24/reader/coverage.svg?branch=master
