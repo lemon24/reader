@@ -15,6 +15,10 @@ Unreleased
   :meth:`~Reader.remove_feed_tag`, and :meth:`~Reader.get_feed_tags`.
   Allow filtering feeds and entries by their feed tags.
   (:issue:`184`)
+* feedparser 5.* support is deprecated in favor of feedparser 6.*.
+  Using feedparser 5.* will raise a deprecation warning in version 1.7,
+  and support will be removed the following version.
+  (:issue:`190`)
 
 
 Version 1.6

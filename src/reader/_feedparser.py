@@ -6,6 +6,7 @@ and we bump our install_requires dependency to it.
 
 """
 import threading
+import warnings
 from typing import Any
 
 import feedparser as fp  # type: ignore
@@ -27,6 +28,15 @@ class _ReadWrapper:
 
 
 def parse(thing: Any, **kwargs: Any) -> Any:
+    fp_major_version = int(fp.__version__.partition('.')[0])
+    if fp_major_version < 6:
+        warnings.warn(
+            "feedparser 5.* reader support is deprecated, "
+            "and will be removed in reader 1.8. "
+            "Use the newer feedparser 6.* instead.",
+            DeprecationWarning,
+        )
+
     # feedparser 6.0 doesn't decode the content.
     # feedparser 5.* looks at thing.headers['content-encoding'].
     if hasattr(thing, 'read'):
