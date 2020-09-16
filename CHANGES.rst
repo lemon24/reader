@@ -11,6 +11,11 @@ Version 1.7
 
 Unreleased
 
+* Add new methods to support feed tags: :meth:`~Reader.add_feed_tag`,
+  :meth:`~Reader.remove_feed_tag`, and :meth:`~Reader.get_feed_tags`.
+  Allow filtering feeds and entries by their feed tags.
+  (:issue:`184`)
+
 
 Version 1.6
 -----------

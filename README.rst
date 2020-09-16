@@ -44,6 +44,8 @@ Features:
 
 * Stand-alone library with stable, clearly documented API, and excellent test coverage.
 * Full-text search.
+* User-defined feed tags and metadata.
+* Feed and entry filtering.
 * Minimal web interface that works even with text-only browsers.
 
   * ... with automatic tag fixing for podcasts (MP3 enclosures).
