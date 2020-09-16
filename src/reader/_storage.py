@@ -1014,37 +1014,41 @@ def apply_feed_tags_filter_options(
 
     context = {}
 
-    if tags is not None:
-        if isinstance(tags, bool):
-            add(
-                f"""
-                {'NOT' if not tags else ''} (
-                    SELECT count(tag)
-                    FROM feed_tags
-                    WHERE feed_tags.feed = {url_column}
-                )
-                """
-            )
-        else:
-            query.WITH(
-                (
-                    "tags",
-                    f"SELECT tag FROM feed_tags WHERE feed_tags.feed = {url_column}",
-                )
-            )
+    add_tags_cte = False
+    add_tags_count_cte = False
 
-            next_tag_id = 0
-            for subtags in tags:
-                # TODO: Query() should allow building this kind of stuff.
-                or_parts = []
-                for is_negation, tag in subtags:
-                    tag_name = f'__tag_{next_tag_id}'
-                    next_tag_id += 1
-                    context[tag_name] = tag
-                    or_parts.append(
-                        f":{tag_name} {'NOT' if is_negation else ''} IN tags"
-                    )
-                add(f"({' OR '.join(or_parts)})")
+    next_tag_id = 0
+
+    for subtags in tags:
+        # TODO: Query() should allow building this kind of stuff.
+        or_parts = []
+        for maybe_tag in subtags:
+            if isinstance(maybe_tag, bool):
+                or_parts.append(
+                    f"{'NOT' if not maybe_tag else ''} (SELECT * FROM tags_count)"
+                )
+                add_tags_count_cte = True
+                continue
+
+            is_negation, tag = maybe_tag
+            tag_name = f'__tag_{next_tag_id}'
+            next_tag_id += 1
+            context[tag_name] = tag
+            or_parts.append(f":{tag_name} {'NOT' if is_negation else ''} IN tags")
+            add_tags_cte = True
+
+        add(f"({' OR '.join(or_parts)})")
+
+    if add_tags_cte:
+        query.WITH(("tags", f"SELECT tag FROM feed_tags WHERE feed = {url_column}"))
+
+    if add_tags_count_cte:
+        query.WITH(
+            (
+                "tags_count",
+                f"SELECT count(tag) FROM feed_tags WHERE feed = {url_column}",
+            )
+        )
 
     return context
 

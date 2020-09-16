@@ -4,12 +4,16 @@ from reader._types import tag_filter_argument
 
 
 TAG_DATA = [
-    (True, [True]),
-    (False, [False]),
-    (None, [None, [], (), [[]], ((),), [[], []]]),
+    ([], [None, [], (), [[]], ((),), [[], []]]),
+    ([[True]], [True, [True], [[True]]]),
+    ([[False]], [False, [False], [[False]]]),
+    ([[True], [False]], [[True, False], [[True], [False]]]),
+    ([[True, False]], [[[True, False]]]),
     ([[(False, 'one')]], [['one'], [['one']], ['one', []], [[], ['one'], []]]),
-    ([[(False, 'one')], [(True, 'two')]], [['one', '-two'], [['one'], ['-two']],]),
-    ([[(False, 'one'), (True, 'two')]], [[['one', '-two']],]),
+    ([[(False, 'one')], [(True, 'two')]], [['one', '-two'], [['one'], ['-two']]]),
+    ([[(False, 'one'), (True, 'two')]], [[['one', '-two']]]),
+    ([[True], [(False, 'one')]], [[True, 'one'], [True, ['one']], [[True], 'one']]),
+    ([[(False, 'one'), False]], [[['one', False]]]),
 ]
 TAG_DATA_FLAT = [(input, expected) for expected, inputs in TAG_DATA for input in inputs]
 

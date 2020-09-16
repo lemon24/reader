@@ -272,11 +272,27 @@ class Reader:
         Special values :const:`True` and :const:`False`
         match feeds with any tags and no tags, respectively.
 
-        .. todo:: FIXME example
+        ``True``
+        ``[True]``
+
+            *any tags*
+
+        ``False``
+        ``[False]``
+
+            *no tags*
+
+        ``[True, '-one']``
+
+            *any tags* AND NOT one
+
+        ``[[False, 'one']]``
+
+            *no tags* OR one
 
         Args:
             feed (str or Feed or None): Only return the feed with this URL.
-            tags (None or bool or list(str or list(str))):
+            tags (None or bool or list(str or bool or list(str or bool))):
                 Only return feeds matching these tags.
             sort (str): How to order feeds; one of ``'title'`` (by
                 :attr:`~Feed.user_title` or :attr:`~Feed.title`, case
@@ -567,7 +583,7 @@ class Reader:
             important (bool or None): Only return (un)important entries.
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
-            feed_tags (None or bool or list(str or list(str))):
+            feed_tags (None or bool or list(str or bool or list(str or bool))):
                 Only return the entries from feeds matching these tags;
                 works like the :meth:`~Reader.get_feeds()` ``tags`` argument.
             sort (str): How to order entries; one of ``'recent'`` (default)
@@ -893,7 +909,7 @@ class Reader:
             important (bool or None): Only search (un)important entries.
             has_enclosures (bool or None): Only search entries that (don't)
                 have enclosures.
-            feed_tags (None or bool or list(str or list(str))):
+            feed_tags (None or bool or list(str or bool or list(str or bool))):
                 Only return the entries from feeds matching these tags;
                 works like the :meth:`~Reader.get_feeds()` ``tags`` argument.
             sort (str): How to order results; one of ``'relevant'`` (default)

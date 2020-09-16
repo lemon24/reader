@@ -197,21 +197,24 @@ class EntryUpdateIntent(NamedTuple):
 # TODO: these should probably be in storage.py (along with some of the above)
 
 
-TagFilter = Union[None, bool, Sequence[Sequence[Tuple[bool, str]]]]
+TagFilter = Sequence[Sequence[Union[bool, Tuple[bool, str]]]]
 
 
 def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
     if tags is None:
-        return tags
+        return []
     if isinstance(tags, bool):
-        return tags
+        return [[tags]]
     if not isinstance(tags, Sequence) or isinstance(tags, str):
         raise ValueError(f"{name} must be none, bool, or a non-string sequence")
 
-    def normalize_tag(tag: str) -> Tuple[bool, str]:
+    def normalize_tag(tag: Union[str, bool]) -> Union[bool, Tuple[bool, str]]:
+        if isinstance(tag, bool):
+            return tag
+
         if not isinstance(tag, str):
             raise ValueError(
-                f"the elements of {name} must be strings or string sequences"
+                f"the elements of {name} must be strings, bool or string/bool sequences"
             )
 
         is_negation = False
@@ -226,13 +229,13 @@ def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
 
     rv = []
     for subtags in tags:
-        if isinstance(subtags, str):
+        if isinstance(subtags, (bool, str)):
             rv.append([normalize_tag(subtags)])
             continue
 
         if not isinstance(subtags, Sequence):
             raise ValueError(
-                f"the elements of {name} must be strings or string sequences"
+                f"the elements of {name} must be strings, bool or string/bool sequences"
             )
 
         if not subtags:
@@ -240,7 +243,7 @@ def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
 
         rv.append(list(map(normalize_tag, subtags)))
 
-    return rv or None
+    return rv
 
 
 _EFO = TypeVar('_EFO', bound='EntryFilterOptions')
@@ -282,7 +285,7 @@ class EntryFilterOptions(NamedTuple):
         if has_enclosures not in (None, False, True):
             raise ValueError("has_enclosures should be one of (None, False, True)")
 
-        feed_tag_filter = tag_filter_argument(feed_tags)
+        feed_tag_filter = tag_filter_argument(feed_tags, 'feed_tags')
 
         return cls(feed_url, entry_id, read, important, has_enclosures, feed_tag_filter)
 

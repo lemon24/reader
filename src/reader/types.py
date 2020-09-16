@@ -485,8 +485,11 @@ def _entry_argument(entry: EntryInput) -> Tuple[str, str]:
     raise ValueError(f'invalid entry argument: {entry!r}')
 
 
-TagFilterInput = Union[None, bool, Sequence[Union[str, Sequence[str]]]]
-# FIXME: should we allow tags=[[False, 'tag']] (has no tags or has 'tag')?
+# str explicitly excluded, to allow for a string-based query language;
+# https://github.com/lemon24/reader/issues/184#issuecomment-689587006
+TagFilterInput = Union[
+    None, bool, Sequence[Union[str, bool, Sequence[Union[str, bool]]]]
+]
 
 
 class MissingType:

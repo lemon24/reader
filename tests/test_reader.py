@@ -1670,7 +1670,11 @@ ALL_IDS = {
         (([],), ALL_IDS),
         (([[]],), ALL_IDS),
         ((True,), ALL_IDS - {(3, 1)}),
+        (([True],), ALL_IDS - {(3, 1)}),
         ((False,), {(3, 1)}),
+        (([False],), {(3, 1)}),
+        (([True, False],), set()),
+        (([[True, False]],), ALL_IDS),
         ((['tag'],), ALL_IDS - {(3, 1)}),
         (([['tag']],), ALL_IDS - {(3, 1)}),
         ((['tag', 'tag'],), ALL_IDS - {(3, 1)}),
@@ -1691,6 +1695,8 @@ ALL_IDS = {
         (([['first', 'tag']],), {(1, 1), (1, 2), (2, 1)}),
         ((['-first', 'tag'],), {(2, 1)}),
         (([['first', '-tag']],), ALL_IDS - {(2, 1)}),
+        (([[False, 'first']],), {(1, 1), (1, 2), (3, 1)}),
+        (([True, '-first'],), {(2, 1)}),
     ],
 )
 def test_filtering_tags(
