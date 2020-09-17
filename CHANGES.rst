@@ -19,6 +19,8 @@ Unreleased
   Using feedparser 5.* will raise a deprecation warning in version 1.7,
   and support will be removed the following version.
   (:issue:`190`)
+* In the ``preview_feed_list`` plugin, add ``<meta name="alternate" ...>``
+  to the feed detection heuristics.
 
 
 Version 1.6

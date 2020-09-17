@@ -56,7 +56,9 @@ def feed_list():
 
     soup = bs4.BeautifulSoup(response.content)
     alternates = []
-    for element in soup.select('link[rel=alternate]'):
+    for element in soup.select('link[rel=alternate]') + soup.select(
+        'meta[name=alternate]'
+    ):
         attrs = dict(element.attrs)
         if 'href' not in attrs:
             continue
