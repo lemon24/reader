@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% import "macros.html" as macros %}
+
+
+{% block page_title %}Tags{% endblock %}
+{% block main_title %}Tags{% endblock %}
+
+
+{% block body %}
+
+<div id="update-tags">
+<ul class="controls">
+
+{# nothing here yet, maybe if we add a sort option #}
+
+{% if error %}
+<li class="error"><b>error</b>: {{ error }}
+{% endif %}
+
+</ul>
+</div>
+
+
+<ul>
+
+<li>
+    <p>feeds with:
+    <a href="{{ url_for('.feeds', tags=[true] | tojson) }}">any tags</a>
+    <a href="{{ url_for('.feeds', tags=[false] | tojson) }}">no tags</a>
+
+{% for tag in tags %}
+<li id="tag-{{ loop.index }}">
+    <p><a href="{{ url_for('.feeds', tags=[tag] | tojson) }}" class="tag">{{ tag }}</a>
+
+{% else %}
+
+{% if not error %}
+<p>no tags</p>
+{% endif %}
+
+{% endfor %}
+</ul>
+
+{% endblock %}
