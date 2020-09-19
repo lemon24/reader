@@ -14,6 +14,9 @@
     {% if feed %}
         <b title="{{ macros.feed_title_secondary(feed) }}">{{ macros.feed_title(feed) }}</b>
     {% endif %}
+    {% if request.args.tags %}
+        in feeds tagged <b>{{ request.args.tags }}</b>
+    {% endif %}
 {% endmacro %}
 
 
@@ -77,6 +80,21 @@
     context=context,
     autocomplete=true,
 ) }}
+
+
+{% if not feed %}
+{% set context = request.args.copy() %}
+{% set _ = context.pop('tags', none) %}
+
+{{ macros.text_input_button_get(
+    '.entries', 'filter by tag', 'tags', '["one", "two"]', request.args.tags,
+    input_type='search',
+    context=context,
+    autocomplete=true,
+) }}
+
+{% endif %}
+
 
 {% endif %}
 

@@ -187,8 +187,30 @@ def entries():
     # TODO: catch and flash syntax errors
     # TODO: don't show search box if search is not enabled
 
+    tags_str = tags = args.pop('tags', None)
+    print(args)
+
+    if tags is None:
+        pass
+    elif not tags:
+        # if tags is '', it's not a tag filter
+        return redirect(url_for('.entries', **args))
+    else:
+
+        try:
+            tags = json.loads(tags)
+        except json.JSONDecodeError as e:
+            error = f"invalid tag query: invalid JSON: {e}: {tags_str}"
+            return stream_template(
+                'entries.html', feed=feed, feed_tags=feed_tags, error=error
+            )
+
     entries = get_entries(
-        read=read, feed=feed_url, has_enclosures=has_enclosures, important=important
+        read=read,
+        feed=feed_url,
+        has_enclosures=has_enclosures,
+        important=important,
+        feed_tags=tags,
     )
 
     error = None
@@ -199,6 +221,12 @@ def entries():
         pass
     except InvalidSearchQueryError as e:
         error = f"invalid search query: {e}"
+    except ValueError as e:
+        # TODO: there should be a better way of matching this kind of error
+        if 'tag' in str(e).lower():
+            error = f"invalid tag query: {e}: {tags_str}"
+        else:
+            raise
 
     limit = request.args.get('limit', type=int)
     if limit:
