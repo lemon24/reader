@@ -11,10 +11,6 @@ Version 1.7
 
 Unreleased
 
-* feedparser 5.* support is deprecated in favor of feedparser 6.*.
-  Using feedparser 5.* will raise a deprecation warning in version 1.7,
-  and support will be removed the following version.
-  (:issue:`190`)
 * Add new methods to support feed tags: :meth:`~Reader.add_feed_tag`,
   :meth:`~Reader.remove_feed_tag`, and :meth:`~Reader.get_feed_tags`.
   Allow filtering feeds and entries by their feed tags.
@@ -23,17 +19,21 @@ Unreleased
   which allows getting only feeds that failed / did not fail
   during the last update.
   (:issue:`189`)
+* feedparser 5.* support is deprecated in favor of feedparser 6.*.
+  Using feedparser 5.* will raise a deprecation warning in version 1.7,
+  and support will be removed the following version.
+  (:issue:`190`)
 * Tag-related web application features:
   show tags in the feed list;
   allow adding/removing tags;
   allow filtering feeds and entries by their feed tag;
   add a page that lists all tags.
   (:issue:`184`)
-* Allow filtering feeds by update success in the web application.
+* In the web application, allow showing only feeds that failed / did not fail.
   (:issue:`189`)
-* In the ``preview_feed_list`` plugin, add ``<meta name="alternate" ...>``
-  to the feed detection heuristics.
-
+* In the ``preview_feed_list`` plugin, add ``<meta>`` tags as
+  a feed detection heuristic.
+* Add a few property-based tests. (:issue:`188`)
 
 Version 1.6
 -----------
