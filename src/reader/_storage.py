@@ -902,7 +902,7 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[str, Optional[_T]]]:
-        query = Query().SELECT("tag").FROM("feed_tags")
+        query = Query().SELECT_DISTINCT("tag").FROM("feed_tags")
         context: Dict[str, Any] = dict()
 
         if feed_url is not None:

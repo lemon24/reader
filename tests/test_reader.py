@@ -1590,12 +1590,16 @@ def test_tags_basic(reader, chunk_size):
     reader.add_feed_tag('two', 'tag-2-3')
     reader.add_feed_tag('two', 'tag-2-0')
     reader.add_feed_tag('two', 'tag-2-1')
-    assert list(reader.get_feed_tags('one')) == ['tag-1']
+    reader.add_feed_tag('one', 'tag-common')
+    reader.add_feed_tag('two', 'tag-common')
+
+    assert list(reader.get_feed_tags('one')) == ['tag-1', 'tag-common']
     assert list(reader.get_feed_tags('two')) == [
         'tag-2-0',
         'tag-2-1',
         'tag-2-2',
         'tag-2-3',
+        'tag-common',
     ]
     assert list(reader.get_feed_tags()) == [
         'tag-1',
@@ -1603,12 +1607,13 @@ def test_tags_basic(reader, chunk_size):
         'tag-2-1',
         'tag-2-2',
         'tag-2-3',
+        'tag-common',
     ]
 
     reader.remove_feed('two')
-    assert list(reader.get_feed_tags('one')) == ['tag-1']
+    assert list(reader.get_feed_tags('one')) == ['tag-1', 'tag-common']
     assert list(reader.get_feed_tags('two')) == []
-    assert list(reader.get_feed_tags()) == ['tag-1']
+    assert list(reader.get_feed_tags()) == ['tag-1', 'tag-common']
 
 
 def get_entry_id(entry):

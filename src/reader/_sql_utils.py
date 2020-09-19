@@ -76,7 +76,10 @@ class BaseQuery(_BQBase):
             if not things:
                 continue
 
-            yield keyword + '\n'
+            if keyword == 'SELECT' and getattr(self, 'distinct', None):
+                yield 'SELECT DISTINCT\n'
+            else:
+                yield keyword + '\n'
 
             for i, maybe_thing in enumerate(things, 1):
                 fmt = self._keyword_formats[len(maybe_thing)][keyword]
@@ -128,6 +131,15 @@ class BaseQuery(_BQBase):
             return ' ' + self.default_separators[keyword]
         except KeyError:
             return ','
+
+    def SELECT(self: _Q, *things: _QArg, distinct: Optional[bool] = None) -> _Q:
+        if distinct is not None:
+            # TODO: HACK: this flag should be in the dict somewhere, not an attribute
+            self.distinct = distinct
+        return self.add('SELECT', *things)
+
+    def SELECT_DISTINCT(self: _Q, *things: _QArg) -> _Q:
+        return self.SELECT(*things, distinct=True)
 
 
 if TYPE_CHECKING:  # pragma: no cover
