@@ -189,10 +189,11 @@ def entries():
 
     error = None
 
+    # TODO: duplicated from feeds()
     tags_str = tags = args.pop('tags', None)
     if tags is None:
         pass
-    elif not tags:
+    elif not tags.strip():
         # if tags is '', it's not a tag filter
         return redirect(url_for('.entries', **args))
     else:
@@ -301,7 +302,7 @@ def feeds():
     tags_str = tags = args.pop('tags', None)
     if tags is None:
         pass
-    elif not tags:
+    elif not tags.strip():
         # if tags is '', it's not a tag filter
         return redirect(url_for('.feeds', **args))
     else:

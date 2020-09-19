@@ -111,6 +111,18 @@
 
 
 </div>
+
+
+{% else %}
+
+{% if not error %}
+    {% if not request.args.tags %}
+        <p>no feeds</p>
+    {% else %}
+        <p>no results for this query</p>
+    {% endif %}
+{% endif %}
+
 {% endfor %}
 
 {% endblock %}
