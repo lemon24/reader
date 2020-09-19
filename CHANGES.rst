@@ -9,7 +9,7 @@ Changelog
 Version 1.7
 -----------
 
-Unreleased
+Released 2020-09-19
 
 * Add new methods to support feed tags: :meth:`~Reader.add_feed_tag`,
   :meth:`~Reader.remove_feed_tag`, and :meth:`~Reader.get_feed_tags`.
