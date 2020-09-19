@@ -9,8 +9,14 @@
 
 {% block body %}
 
-<div id="update-entries">
+<div id="update-feeds">
 <ul class="controls">
+
+{{ macros.radio_links('broken', [
+    ('yes', none),
+    ('no', none),
+    (none, "don't care"),
+], none, '.feeds', 'broken') }}
 
 {{ macros.radio_links('sort', [
     ('title', none),

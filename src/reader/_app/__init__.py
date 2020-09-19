@@ -258,10 +258,13 @@ def preview():
 
 @blueprint.route('/feeds')
 def feeds():
+    broken = request.args.get('broken')
+    broken = {None: None, 'no': False, 'yes': True}[broken]
+
     sort = request.args.get('sort', 'title')
     assert sort in ('title', 'added')
 
-    feeds = get_reader().get_feeds(sort=sort)
+    feeds = get_reader().get_feeds(sort=sort, broken=broken)
 
     # Ensure flashed messages get removed from the session.
     # https://github.com/lemon24/reader/issues/81
