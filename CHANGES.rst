@@ -19,6 +19,10 @@ Unreleased
   Using feedparser 5.* will raise a deprecation warning in version 1.7,
   and support will be removed the following version.
   (:issue:`190`)
+* Add the ``broken`` argument to :meth:`~Reader.get_feeds`,
+  which allows getting only feeds that failed / did not fail
+  during the last update.
+  (:issue:`189`)
 * In the ``preview_feed_list`` plugin, add ``<meta name="alternate" ...>``
   to the feed detection heuristics.
 

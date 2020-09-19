@@ -1721,9 +1721,8 @@ def test_filtering_tags(
     three = parser.feed(3, datetime(2010, 1, 1))  # <no tags>
     three_one = parser.entry(3, 1, datetime(2010, 1, 1))
 
-    reader.add_feed(one)
-    reader.add_feed(two)
-    reader.add_feed(three)
+    for feed in one, two, three:
+        reader.add_feed(feed)
 
     reader.update_feeds()
 
@@ -1740,3 +1739,49 @@ def test_filtering_tags(
     actual_set = set(map(id_from_object, call_method(reader, **kwargs)))
     expected_set = set(map(id_from_expected, expected))
     assert actual_set == expected_set, kwargs
+
+
+ALL_IDS = {1, 2, 3}
+
+
+@pytest.mark.parametrize(
+    'kwargs, expected',
+    [
+        (dict(), ALL_IDS),
+        (dict(feed='1'), {1}),
+        (dict(feed=Feed('1')), {1}),
+        (dict(broken=None), ALL_IDS),
+        (dict(broken=True), {2}),
+        (dict(broken=False), ALL_IDS - {2}),
+    ],
+)
+def test_feeds_filtering(reader, kwargs, expected):
+    reader._parser = parser = FailingParser(condition=lambda url: url == '2')
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 1, 1))
+    three = parser.feed(3, datetime(2010, 1, 1))
+
+    for feed in one, two, three:
+        reader.add_feed(feed)
+
+    reader.update_feeds()
+
+    assert {eval(f.url) for f in reader.get_feeds(**kwargs)} == expected
+
+    # TODO: how do we test the combinations between arguments?
+
+
+@pytest.mark.parametrize(
+    'kwargs', [dict(feed=object()), dict(broken=object()),],
+)
+def test_feeds_filtering_error(reader, kwargs):
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+
+    reader.add_feed(one)
+    reader.update_feeds()
+
+    with pytest.raises(ValueError):
+        list(reader.get_feeds(**kwargs))

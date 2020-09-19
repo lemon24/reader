@@ -238,6 +238,7 @@ class Reader:
         *,
         feed: Optional[FeedInput] = None,
         tags: TagFilterInput = None,
+        broken: Optional[bool] = None,
         sort: FeedSortOrder = 'title',
     ) -> Iterable[Feed]:
         """Get all or some of the feeds.
@@ -294,6 +295,7 @@ class Reader:
             feed (str or Feed or None): Only return the feed with this URL.
             tags (None or bool or list(str or bool or list(str or bool))):
                 Only return feeds matching these tags.
+            broken (bool or None): Only return broken / healthy feeds.
             sort (str): How to order feeds; one of ``'title'`` (by
                 :attr:`~Feed.user_title` or :attr:`~Feed.title`, case
                 insensitive; default), or ``'added'`` (last added first).
@@ -307,8 +309,11 @@ class Reader:
         .. versionadded:: 1.7
             The ``tags`` keyword argument.
 
+        .. versionadded:: 1.7
+            The ``broken`` keyword argument.
+
         """
-        filter_options = FeedFilterOptions.from_args(feed, tags)
+        filter_options = FeedFilterOptions.from_args(feed, tags, broken)
 
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
