@@ -24,8 +24,8 @@ position: fixed;
 bottom: 0;
 right: 0;
 "
-title='{{ config.READER_CONFIG | tojson(indent=4) | escape }}'
-><code>{{ config.READER_CONFIG.reader.url }}</code></p>
+title='{{ config.READER_CONFIG.data | tojson(indent=4) | escape }}'
+><code>{{ config.READER_CONFIG.merged('app').reader.url }}</code></p>
 {% endif %}
 
 
