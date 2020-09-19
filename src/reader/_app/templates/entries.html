@@ -117,8 +117,7 @@
 {# duplicated from feeds.html #}
 <li>
     {% for tag in feed_tags %}
-    {# TODO: link to feeds filtered by tag #}
-    <span class="tag">{{ tag }}</span>
+    <small><a href="{{ url_for('.feeds', tags=[tag] | tojson) }}" class="tag">{{ tag }}</a></small>
     {% endfor %}
 
 {# TODO read_only != preview, we should be more specific #}

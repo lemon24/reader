@@ -370,6 +370,12 @@ def entry():
     return render_template('entry.html', entry=entry)
 
 
+@blueprint.route('/tags')
+def tags():
+    reader = get_reader()
+    return render_template('tags.html', tags=reader.get_feed_tags())
+
+
 form_api = APIThing(blueprint, '/form-api', 'form_api')
 
 

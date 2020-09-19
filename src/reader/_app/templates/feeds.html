@@ -76,8 +76,7 @@
 
 <li>
     {% for tag in feed_tags %}
-    {# TODO: link to feeds filtered by tag #}
-    <span class="tag">{{ tag }}</span>
+    <small><a href="{{ url_for('.feeds', tags=[tag] | tojson) }}" class="tag">{{ tag }}</a></small>
     {% endfor %}
 
 {% set next = url_for('.feeds', **request.args) + '#feed-' + ((loop.index if not loop.last else loop.index - 1) | string) %}

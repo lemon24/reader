@@ -35,6 +35,7 @@ title='{{ config.READER_CONFIG.data | tojson(indent=4) | escape }}'
 <li>
 <a href="{{ url_for('reader.entries') }}">entries</a>
 <a href="{{ url_for('reader.feeds') }}">feeds</a>
+<a href="{{ url_for('reader.tags') }}">tags</a>
 
 {{ macros.text_input_button_get(
     'reader.preview', 'add feed', 'url', 'url',
