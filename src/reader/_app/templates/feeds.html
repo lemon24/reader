@@ -2,8 +2,15 @@
 
 {% import "macros.html" as macros %}
 
-{% block page_title %}Feeds{% endblock %}
-{% block main_title %}Feeds{% endblock %}
+{% macro make_title() %}
+    Feeds
+    {% if request.args.tags %}
+        tagged <b>{{ request.args.tags }}</b>
+    {% endif %}
+{% endmacro %}
+
+{% block page_title %}{{ make_title() | striptags }}{% endblock %}
+{% block main_title %}{{ make_title() }}{% endblock %}
 
 
 
@@ -22,6 +29,22 @@
     ('title', none),
     ('added', none),
 ], 'title', '.feeds', 'sort by') }}
+
+
+{% set context = request.args.copy() %}
+{% set _ = context.pop('tags', none) %}
+
+{{ macros.text_input_button_get(
+    '.feeds', 'filter by tag', 'tags', '["one", "two"]', request.args.tags,
+    input_type='search',
+    context=context,
+    autocomplete=true,
+) }}
+
+
+{% if error %}
+<li class="error"><b>error</b>: {{ error }}
+{% endif %}
 
 </ul>
 </div>

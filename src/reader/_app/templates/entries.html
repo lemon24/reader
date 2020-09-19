@@ -19,7 +19,6 @@
     {% endif %}
 {% endmacro %}
 
-
 {% block page_title %}{{ make_title() | striptags }}{% endblock %}
 {% block main_title %}{{ make_title() }}{% endblock %}
 
@@ -277,7 +276,7 @@ untitled
 {% else %}
 
 {% if not error %}
-    {% if not request.args.q %}
+    {% if not request.args.q and not request.args.tags %}
         <p>no {% if current_what != 'all' %}{{ current_what }} {% endif %}entries for this feed</p>
     {% else %}
         <p>no results for this query</p>

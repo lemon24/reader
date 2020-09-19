@@ -187,9 +187,9 @@ def entries():
     # TODO: catch and flash syntax errors
     # TODO: don't show search box if search is not enabled
 
-    tags_str = tags = args.pop('tags', None)
-    print(args)
+    error = None
 
+    tags_str = tags = args.pop('tags', None)
     if tags is None:
         pass
     elif not tags:
@@ -213,7 +213,6 @@ def entries():
         feed_tags=tags,
     )
 
-    error = None
     try:
         first = next(entries)
         entries = itertools.chain([first], entries)
@@ -295,16 +294,42 @@ def feeds():
     sort = request.args.get('sort', 'title')
     assert sort in ('title', 'added')
 
+    error = None
+
+    args = request.args.copy()
+
+    tags_str = tags = args.pop('tags', None)
+    if tags is None:
+        pass
+    elif not tags:
+        # if tags is '', it's not a tag filter
+        return redirect(url_for('.feeds', **args))
+    else:
+
+        try:
+            tags = json.loads(tags)
+        except json.JSONDecodeError as e:
+            error = f"invalid tag query: invalid JSON: {e}: {tags_str}"
+            return stream_template('feeds.html', feed_data=[], error=error)
+
     reader = get_reader()
 
-    feeds = reader.get_feeds(sort=sort, broken=broken)
-    feed_data = ((feed, list(reader.get_feed_tags(feed))) for feed in feeds)
+    feed_data = []
+    try:
+        feeds = reader.get_feeds(sort=sort, broken=broken, tags=tags)
+        feed_data = ((feed, list(reader.get_feed_tags(feed))) for feed in feeds)
+    except ValueError as e:
+        # TODO: there should be a better way of matching this kind of error
+        if 'tag' in str(e).lower():
+            error = f"invalid tag query: {e}: {tags_str}"
+        else:
+            raise
 
     # Ensure flashed messages get removed from the session.
     # https://github.com/lemon24/reader/issues/81
     get_flashed_messages()
 
-    return stream_template('feeds.html', feed_data=feed_data)
+    return stream_template('feeds.html', feed_data=feed_data, error=error)
 
 
 @blueprint.route('/metadata')
