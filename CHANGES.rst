@@ -22,7 +22,10 @@ Unreleased
 * Add the ``broken`` argument to :meth:`~Reader.get_feeds`,
   which allows getting only feeds that failed / did not fail
   during the last update.
-  Allow filtering feeds by update success in the web application.
+  (:issue:`189`)
+* In the web application, show feed tags and allow changing them.
+  (:issue:`184`)
+* Allow filtering feeds by update success in the web application.
   (:issue:`189`)
 * In the ``preview_feed_list`` plugin, add ``<meta name="alternate" ...>``
   to the feed detection heuristics.

@@ -150,6 +150,14 @@ ul.controls .collapsible {
 }
 
 
+.tag {
+    border-radius: 1em;
+    padding: .4em .6em .2em .6em;
+    border: .1px solid silver;
+    font-size: x-small;
+}
+
+
 /* TODO: same for <strong>? */
 h1 b,
 h2 b,

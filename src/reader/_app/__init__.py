@@ -158,10 +158,12 @@ def entries():
 
     feed_url = request.args.get('feed')
     feed = None
+    feed_tags = None
     if feed_url:
         feed = reader.get_feed(feed_url, None)
         if not feed:
             abort(404)
+        feed_tags = list(reader.get_feed_tags(feed))
 
     args = request.args.copy()
     query = args.pop('q', None)
@@ -218,6 +220,7 @@ def entries():
         'entries.html',
         entries=entries,
         feed=feed,
+        feed_tags=feed_tags,
         entries_data=entries_data,
         error=error,
     )
@@ -264,13 +267,16 @@ def feeds():
     sort = request.args.get('sort', 'title')
     assert sort in ('title', 'added')
 
-    feeds = get_reader().get_feeds(sort=sort, broken=broken)
+    reader = get_reader()
+
+    feeds = reader.get_feeds(sort=sort, broken=broken)
+    feed_data = ((feed, list(reader.get_feed_tags(feed))) for feed in feeds)
 
     # Ensure flashed messages get removed from the session.
     # https://github.com/lemon24/reader/issues/81
     get_flashed_messages()
 
-    return stream_template('feeds.html', feeds=feeds)
+    return stream_template('feeds.html', feed_data=feed_data)
 
 
 @blueprint.route('/metadata')
@@ -426,6 +432,21 @@ def delete_metadata(data):
     feed_url = data['feed-url']
     key = data['key']
     get_reader().delete_feed_metadata(feed_url, key)
+
+
+@form_api
+@readererror_to_apierror()
+def update_feed_tags(data):
+    feed_url = data['feed-url']
+    feed_tags = set(data['feed-tags'].split())
+
+    reader = get_reader()
+    tags = set(reader.get_feed_tags(feed_url))
+
+    for tag in tags - feed_tags:
+        reader.remove_feed_tag(feed_url, tag)
+    for tag in feed_tags - tags:
+        reader.add_feed_tag(feed_url, tag)
 
 
 # for some reason, @blueprint.app_template_global does not work

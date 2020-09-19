@@ -97,6 +97,13 @@
         not updated
     {% endif %}
 
+{# duplicated from feeds.html #}
+<li>
+    {% for tag in feed_tags %}
+    {# TODO: link to feeds filtered by tag #}
+    <span class="tag">{{ tag }}</span>
+    {% endfor %}
+
 {# TODO read_only != preview, we should be more specific #}
 {% if read_only %}
 {{ macros.simple_button(
@@ -123,6 +130,8 @@
 {{ macros.confirm_button('.form_api', 'delete-feed', 'delete feed', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
 
 {{ macros.text_input_button('.form_api', 'update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true, next=next, context={'feed-url': feed.url}, value=feed.user_title) }}
+
+{{ macros.text_input_button('.form_api', 'update-feed-tags', 'update feed tags', 'feed-tags', 'feed tags', leave_disabled=true, next=next, context={'feed-url': feed.url}, value=feed_tags | join(' ')) }}
 
 <li>
 <a href="{{ url_for('.metadata', feed=feed.url) }}">update metadata</a>
