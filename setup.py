@@ -27,7 +27,7 @@ setup(
     install_requires=[
         'dataclasses; python_version<"3.7"',
         'typing-extensions',
-        'feedparser>=5',
+        'feedparser>=6',
         'requests>=2.18',
         'sgmllib3k>=1',
     ],

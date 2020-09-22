@@ -2,11 +2,11 @@ import io
 import logging
 from unittest.mock import MagicMock
 
+import feedparser
 import pytest
 import requests
 from utils import make_url_base
 
-import reader._feedparser as feedparser
 from reader import Feed
 from reader._parser import default_parser
 from reader._parser import FileParser

@@ -12,10 +12,10 @@ from typing import Iterable
 from typing import Optional
 from typing import Tuple
 
+import feedparser  # type: ignore
 from typing_extensions import Protocol
 
 import reader
-from . import _feedparser as feedparser
 from ._requests_utils import SessionHooks
 from ._requests_utils import SessionWrapper
 from ._types import EntryData

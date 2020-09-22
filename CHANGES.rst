@@ -11,6 +11,10 @@ Version 1.8
 
 Unreleased
 
+* Drop feedparser 5.x support (deprecated in 1.7);
+  use feedparser 6.x instead.
+  (:issue:`190`)
+
 
 Version 1.7
 -----------
@@ -25,8 +29,8 @@ Released 2020-09-19
   which allows getting only feeds that failed / did not fail
   during the last update.
   (:issue:`189`)
-* feedparser 5.* support is deprecated in favor of feedparser 6.*.
-  Using feedparser 5.* will raise a deprecation warning in version 1.7,
+* feedparser 5.x support is deprecated in favor of feedparser 6.x.
+  Using feedparser 5.x will raise a deprecation warning in version 1.7,
   and support will be removed the following version.
   (:issue:`190`)
 * Tag-related web application features:
