@@ -111,9 +111,6 @@ _THINGS_WE_CARE_ABOUT_BUT_ARE_SURVIVABLE = (
 )
 
 
-# FIXME: #155, expose _process feed so we can call it in tests
-
-
 def _process_feed(
     url: str, d: Any
 ) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
@@ -141,6 +138,24 @@ def _process_feed(
     entries = [_make_entry(url, e, is_rss) for e in d.entries]
 
     return feed, entries
+
+
+def parse_feed(
+    url: str, *args: Any, **kwargs: Any
+) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
+    """Like feedparser.parse(), but return a feed and entries,
+    and re-raise bozo_exception as ParseError.
+
+    url is NOT passed to feedparser; args and kwargs are.
+
+    """
+    # feedparser content sanitization and relative link resolution should be ON.
+    # https://github.com/lemon24/reader/issues/125
+    # https://github.com/lemon24/reader/issues/157
+    result = feedparser.parse(
+        *args, resolve_relative_uris=True, sanitize_html=True, **kwargs,
+    )
+    return _process_feed(url, result)
 
 
 class Parser:
@@ -198,15 +213,13 @@ class FileParser:
     def __call__(self, url: str, *args: Any, **kwargs: Any) -> ParsedFeed:
         try:
             with open(self._normalize_url(url), 'rb') as file:
-                # enable sanitization and relative link resolution, #125, #157.
-                # not sure if relative link resolution actually happens.
-                result = feedparser.parse(
-                    file, resolve_relative_uris=True, sanitize_html=True
-                )
+                feed, entries = parse_feed(url, file)
+        except ParseError:
+            raise
         except Exception as e:
+            # TODO: message: "while reading feed"
             raise ParseError(url) from e
 
-        feed, entries = _process_feed(url, result)
         return ParsedFeed(feed, entries)
 
     def _normalize_url(self, url: str) -> str:
@@ -384,51 +397,50 @@ class HTTPParser:
         if http_last_modified:
             request_headers['If-Modified-Since'] = http_last_modified
 
-        try:
-            # TODO: maybe share the session in the parser?
-            # TODO: timeouts!
-            with self.make_session() as session:
-                response = session.get(url, headers=request_headers, stream=True)
+        # TODO: maybe share the session in the parser?
+        # TODO: timeouts!
 
+        with self.make_session() as session:
+
+            try:
+                response = session.get(url, headers=request_headers, stream=True)
                 # TODO: the ParseError wrapping this should have a nice error message
                 response.raise_for_status()
+            except Exception as e:
+                raise ParseError(url) from e
 
-                response_headers = response.headers.copy()
-                response_headers.setdefault('content-location', response.url)
+            if response.status_code == 304:
+                raise _NotModified(url)
 
-                # Some feeds don't have a content type, which results in
-                # feedparser.NonXMLContentType being raised. There are valid feeds
-                # with no content type, so we set it anyway and hope feedparser
-                # fails in some other way if the feed really is broken.
-                # https://github.com/lemon24/reader/issues/108
-                response_headers.setdefault('content-type', 'text/xml')
+            response_headers = response.headers.copy()
+            response_headers.setdefault('content-location', response.url)
 
-                # The content is already decoded by requests/urllib3.
-                response_headers.pop('content-encoding', None)
+            # Some feeds don't have a content type, which results in
+            # feedparser.NonXMLContentType being raised. There are valid feeds
+            # with no content type, so we set it anyway and hope feedparser
+            # fails in some other way if the feed really is broken.
+            # https://github.com/lemon24/reader/issues/108
+            response_headers.setdefault('content-type', 'text/xml')
 
+            # The content is already decoded by requests/urllib3.
+            response_headers.pop('content-encoding', None)
+            response.raw.decode_content = True
+
+            try:
                 with response:
-                    response.raw.decode_content = True
-
-                    # feedparser content sanitization and relative link resolution should be ON.
-                    # https://github.com/lemon24/reader/issues/125
-                    # https://github.com/lemon24/reader/issues/157
-                    result = feedparser.parse(
-                        response.raw,
-                        response_headers=response_headers,
-                        resolve_relative_uris=True,
-                        sanitize_html=True,
+                    feed, entries = parse_feed(
+                        url, response.raw, response_headers=response_headers,
                     )
 
-        except Exception as e:
-            raise ParseError(url) from e
-
-        if response.status_code == 304:
-            raise _NotModified(url)
+            except ParseError:  # pragma: no cover
+                raise
+            except Exception as e:
+                # TODO: message: "while reading feed"
+                raise ParseError(url) from e
 
         http_etag = response.headers.get('ETag', http_etag)
         http_last_modified = response.headers.get('Last-Modified', http_last_modified)
 
-        feed, entries = _process_feed(url, result)
         return ParsedFeed(feed, entries, http_etag, http_last_modified)
 
 

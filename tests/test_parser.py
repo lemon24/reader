@@ -10,6 +10,8 @@ from utils import make_url_base
 from reader import Feed
 from reader._parser import default_parser
 from reader._parser import FileParser
+from reader._parser import parse_feed
+from reader._parser import SessionWrapper
 from reader.exceptions import _NotModified
 from reader.exceptions import ParseError
 
@@ -343,16 +345,17 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
     assert feed.link is not None
 
 
-def test_parse_requests_exception(monkeypatch, parse):
+def test_parse_requests_exception(monkeypatch):
     exc = Exception('exc')
 
-    def raise_exc(*_, **__):
-        raise exc
+    class BadWrapper(SessionWrapper):
+        def get(self, *args, **kwargs):
+            raise exc
 
-    monkeypatch.setattr('reader._parser.SessionWrapper', raise_exc)
+    monkeypatch.setattr('reader._parser.Parser.make_session', BadWrapper)
 
     with pytest.raises(ParseError) as excinfo:
-        parse('http://example.com')
+        default_parser('')('http://example.com')
 
     assert excinfo.value.__cause__ is exc
 
@@ -405,15 +408,9 @@ def test_missing_entry_id(parse):
     https://github.com/lemon24/reader/issues/170
 
     """
-    # TODO: this test is brittle, default_parser accepting feed text is unintended
-    # and may be removed after https://github.com/lemon24/reader/issues/155
-
-    from reader._parser import _process_feed, ParsedFeed
-
-    parse = lambda s: ParsedFeed(*_process_feed('', feedparser.parse(s)))
-
     # For RSS, when id is missing, parse() falls back to link.
-    result = parse(
+    feed, entries = parse_feed(
+        'url',
         """
         <?xml version="1.0" encoding="UTF-8" ?>
         <rss version="2.0">
@@ -426,14 +423,15 @@ def test_missing_entry_id(parse):
             </item>
         </channel>
         </rss>
-        """.strip()
+        """.strip(),
     )
-    (entry,) = list(result.entries)
+    (entry,) = list(entries)
     assert entry.id == entry.link
 
     # ... and only link.
     with pytest.raises(ParseError):
-        parse(
+        parse_feed(
+            'url',
             """
             <?xml version="1.0" encoding="UTF-8" ?>
             <rss version="2.0">
@@ -445,12 +443,13 @@ def test_missing_entry_id(parse):
                 </item>
             </channel>
             </rss>
-            """.strip()
+            """.strip(),
         )
 
     # There is no fallback for Atom.
     with pytest.raises(ParseError):
-        parse(
+        parse_feed(
+            'url',
             """
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
@@ -461,7 +460,7 @@ def test_missing_entry_id(parse):
                     <summary>Some text.</summary>
                 </entry>
             </feed>
-            """.strip()
+            """.strip(),
         )
 
 
@@ -470,16 +469,13 @@ def test_no_version(parse):
     there's no bozo_exception.
 
     """
-    from reader._parser import feedparser, _process_feed, ParsedFeed
-
-    parse = lambda s: ParsedFeed(*_process_feed('', feedparser.parse(s)))
-
     with pytest.raises(ParseError):
-        parse(
+        parse_feed(
+            'url',
             """
             <?xml version="1.0" encoding="utf-8"?>
             <element>aaa</element>
-            """.strip()
+            """.strip(),
         )
 
 
