@@ -362,6 +362,29 @@ class _MakeSession(Protocol):
 @dataclass
 class HTTPParser:
 
+    """
+    http(s):// parser that uses Requests.
+
+    Following the implementation in:
+    https://github.com/kurtmckee/feedparser/blob/develop/feedparser/http.py
+
+    "Porting" notes:
+
+    No need to add Accept-encoding (requests seems to do this already).
+
+    No need to add Referer / User-Agent / Authorization / custom request
+    headers, as they are not exposed in the Parser.__call__() interface
+    (not yet, at least).
+
+    We should add:
+
+    * If-None-Match (http_etag)
+    * If-Modified-Since (http_last_modified)
+    * Accept (feedparser.(html.)ACCEPT_HEADER)
+    * A-IM ("feed")
+
+    """
+
     make_session: _MakeSession
 
     def __call__(
@@ -370,27 +393,6 @@ class HTTPParser:
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
     ) -> ParsedFeed:
-        """
-        Following the implementation in:
-        https://github.com/kurtmckee/feedparser/blob/develop/feedparser/http.py
-
-        "Porting" notes:
-
-        No need to add Accept-encoding (requests seems to do this already).
-
-        No need to add Referer / User-Agent / Authorization / custom request
-        headers, as they are not exposed in the Parser.__call__() interface
-        (not yet, at least).
-
-        We should add:
-
-        * If-None-Match (http_etag)
-        * If-Modified-Since (http_last_modified)
-        * Accept (feedparser.(html.)ACCEPT_HEADER)
-        * A-IM ("feed")
-
-        """
-
         request_headers = {'Accept': feedparser.http.ACCEPT_HEADER, 'A-IM': 'feed'}
         if http_etag:
             request_headers['If-None-Match'] = http_etag
