@@ -24,8 +24,9 @@ In no particular order:
 
 * API to delete old entries. (:issue:`96`)
 * API to delete duplicate entries. (:issue:`140`)
-* Better handling of local feeds. (:issue:`155`)
 * Handle changing the feed URL. (:issue:`149`)
+* Batch get related resources API. (:issue:`191`)
+* Counts API. (:issue:`185`)
 
 * Various web application improvements.
 * Various search optimizations. (:issue:`122`)
@@ -34,7 +35,6 @@ In no particular order:
 * Plugin system / hooks stabilization. (:issue:`80`)
 * Internal API stabilization.
 * CLI stabilization.
-* Configuration file.
 * Web application stabilization.
 
 * (Some) Windows support. (:issue:`163`)
