@@ -51,6 +51,8 @@ class EntryError(ReaderError):
 class EntryNotFoundError(EntryError):
     """Entry not found."""
 
+    message = "no such entry"
+
 
 class MetadataError(ReaderError):
     """A feed metadata error occured."""
