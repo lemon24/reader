@@ -143,10 +143,13 @@ def test_feedparser_exceptions(monkeypatch, parse, data_dir):
 
     monkeypatch.setattr(feedparser, 'parse', feedparser_parse)
 
+    url = str(data_dir.join('full.atom'))
     with pytest.raises(ParseError) as excinfo:
-        parse(str(data_dir.join('full.atom')))
+        parse(url)
 
     assert excinfo.value.__cause__ is feedparser_exception
+    assert excinfo.value.url == url
+    assert 'while parsing feed' in excinfo.value.message
 
 
 @pytest.mark.parametrize(
@@ -210,6 +213,8 @@ def test_parse_bad_status(
         parse(feed_url)
 
     assert isinstance(excinfo.value.__cause__, requests.HTTPError)
+    assert excinfo.value.url == feed_url
+    assert 'bad HTTP status code' in excinfo.value.message
 
 
 @pytest.fixture
@@ -345,8 +350,9 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
     assert feed.link is not None
 
 
-def test_parse_requests_exception(monkeypatch):
-    exc = Exception('exc')
+@pytest.mark.parametrize('exc_cls', [Exception, OSError])
+def test_parse_requests_exception(monkeypatch, exc_cls):
+    exc = exc_cls('exc')
 
     class BadWrapper(SessionWrapper):
         def get(self, *args, **kwargs):
@@ -358,6 +364,8 @@ def test_parse_requests_exception(monkeypatch):
         default_parser('')('http://example.com')
 
     assert excinfo.value.__cause__ is exc
+    assert excinfo.value.url == 'http://example.com'
+    assert 'while getting feed' in excinfo.value.message
 
 
 def test_user_agent(parse, make_http_get_headers_url, data_dir):
@@ -377,14 +385,15 @@ def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
     assert 'reader' not in headers['User-Agent']
 
 
-def test_feedparser_parse_call(monkeypatch, parse, make_url, data_dir):
+@pytest.mark.parametrize('exc_cls', [Exception, OSError])
+def test_feedparser_parse_call(monkeypatch, parse, make_url, data_dir, exc_cls):
     """feedparser.parse must always be called with True
     resolve_relative_uris and sanitize_html.
 
     https://github.com/lemon24/reader/issues/125#issuecomment-522333200
 
     """
-    exc = Exception("whatever")
+    exc = exc_cls("whatever")
 
     def feedparser_parse(*args, **kwargs):
         feedparser_parse.kwargs = kwargs
@@ -398,6 +407,8 @@ def test_feedparser_parse_call(monkeypatch, parse, make_url, data_dir):
     with pytest.raises(ParseError) as excinfo:
         parse(feed_url)
     assert excinfo.value.__cause__ is exc
+    assert excinfo.value.url == feed_url
+    assert 'while reading feed' in excinfo.value.message
 
     assert feedparser_parse.kwargs['resolve_relative_uris'] == True
     assert feedparser_parse.kwargs['sanitize_html'] == True
@@ -429,7 +440,7 @@ def test_missing_entry_id(parse):
     assert entry.id == entry.link
 
     # ... and only link.
-    with pytest.raises(ParseError):
+    with pytest.raises(ParseError) as excinfo:
         parse_feed(
             'url',
             """
@@ -445,9 +456,11 @@ def test_missing_entry_id(parse):
             </rss>
             """.strip(),
         )
+    assert excinfo.value.url == 'url'
+    assert 'entry with no id' in excinfo.value.message
 
     # There is no fallback for Atom.
-    with pytest.raises(ParseError):
+    with pytest.raises(ParseError) as excinfo:
         parse_feed(
             'url',
             """
@@ -462,6 +475,8 @@ def test_missing_entry_id(parse):
             </feed>
             """.strip(),
         )
+    assert excinfo.value.url == 'url'
+    assert 'entry with no id' in excinfo.value.message
 
 
 def test_no_version(parse):
@@ -469,7 +484,7 @@ def test_no_version(parse):
     there's no bozo_exception.
 
     """
-    with pytest.raises(ParseError):
+    with pytest.raises(ParseError) as excinfo:
         parse_feed(
             'url',
             """
@@ -477,6 +492,8 @@ def test_no_version(parse):
             <element>aaa</element>
             """.strip(),
         )
+    assert excinfo.value.url == 'url'
+    assert 'unknown feed type' in excinfo.value.message
 
 
 @pytest.fixture
@@ -589,7 +606,8 @@ def test_feed_root_none(data_dir, scheme):
     url = scheme + str(data_dir.join('full.atom'))
     with pytest.raises(ParseError) as excinfo:
         parse(url)
-    # TODO: assert on message when we have one
+    assert excinfo.value.url == url
+    assert 'no parser' in excinfo.value.message
 
 
 @pytest.mark.parametrize('scheme', ['', 'file:'])
@@ -673,7 +691,8 @@ BAD_PATHS = [(url, reason) for reason, urls in BAD_PATHS_BY_REASON for url in ur
 def test_feed_root_nonenmpty_bad_paths(data_dir, url, reason):
     with pytest.raises(ParseError) as excinfo:
         default_parser(data_dir)(url)
-    assert reason in str(excinfo.value.__cause__)
+    assert excinfo.value.url == url
+    assert reason in excinfo.value.message
 
 
 BAD_PATHS_WINDOWS_BY_REASON = [

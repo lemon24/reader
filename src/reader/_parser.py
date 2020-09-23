@@ -69,9 +69,7 @@ def _make_entry(
         )
 
     if not id:
-        # TODO: Pass a message to ParseError explaining why this is an error.
-        # at the moment, the user just gets a "ParseError: <feed URL>" message.
-        raise ParseError(feed_url)
+        raise ParseError(feed_url, message="entry with no id or link fallback")
 
     updated, published = _get_updated_published(entry, is_rss)
 
@@ -120,11 +118,10 @@ def _process_feed(
         if isinstance(exception, _THINGS_WE_CARE_ABOUT_BUT_ARE_SURVIVABLE):
             log.warning("parse %s: got %r", url, exception)
         else:
-            raise ParseError(url) from exception
+            raise ParseError(url, message="error while parsing feed") from exception
 
     if not d.version:
-        # TODO: pass a message to ParseError explaining what's happening
-        raise ParseError(url)
+        raise ParseError(url, message="unknown feed type")
 
     is_rss = d.version.startswith('rss')
     updated, _ = _get_updated_published(d.feed, is_rss)
@@ -178,8 +175,7 @@ class Parser:
         for prefix, parser in self.parsers.items():
             if url.lower().startswith(prefix.lower()):
                 return parser
-        # FIXME: this is a parse error for url "no parsers were found ..."
-        raise ParseError(f"no parsers were found for {url!r}")
+        raise ParseError(url, message="no parser for URL")
 
     def __call__(
         self,
@@ -212,13 +208,18 @@ class FileParser:
 
     def __call__(self, url: str, *args: Any, **kwargs: Any) -> ParsedFeed:
         try:
-            with open(self._normalize_url(url), 'rb') as file:
+            normalized_url = self._normalize_url(url)
+        except ValueError as e:
+            raise ParseError(url, message=str(e)) from None
+        try:
+            with open(normalized_url, 'rb') as file:
                 feed, entries = parse_feed(url, file)
         except ParseError:
             raise
+        except OSError as e:
+            raise ParseError(url, message="error while reading feed") from e
         except Exception as e:
-            # TODO: message: "while reading feed"
-            raise ParseError(url) from e
+            raise ParseError(url, message="unexpected error while reading feed") from e
 
         return ParsedFeed(feed, entries)
 
@@ -227,7 +228,7 @@ class FileParser:
         if self.feed_root:
             path = _resolve_root(self.feed_root, path)
             if _is_windows_device_file(path):
-                raise ValueError(f"path must not be a device file: {url!r}")
+                raise ValueError("path must not be a device file")
         return path
 
 
@@ -238,7 +239,7 @@ def _extract_path(url: str) -> str:
 
     if url_parsed.scheme == 'file':
         if url_parsed.netloc not in ('', 'localhost'):
-            raise ValueError(f"unknown authority for file URI: {url!r}")
+            raise ValueError("unknown authority for file URI")
         # TODO: maybe disallow query, params, fragment too, to reserve for future uses
 
         return urllib.request.url2pathname(url_parsed.path)
@@ -250,7 +251,7 @@ def _extract_path(url: str) -> str:
 
         if not drive:
             # should end up as the same type as "no parsers were found", maybe
-            raise ValueError(f"unknown scheme for file URI: {url!r}")
+            raise ValueError("unknown scheme for file URI")
 
         # we have a scheme, but we're on Windows and url looks like a path
         return url
@@ -406,10 +407,18 @@ class HTTPParser:
 
             try:
                 response = session.get(url, headers=request_headers, stream=True)
-                # TODO: the ParseError wrapping this should have a nice error message
+            except OSError as e:
+                # requests.RequestException is a subclass of OSError
+                raise ParseError(url, message="error while getting feed") from e
+            except Exception as e:
+                raise ParseError(
+                    url, message="unexpected error while getting feed"
+                ) from e
+
+            try:
                 response.raise_for_status()
             except Exception as e:
-                raise ParseError(url) from e
+                raise ParseError(url, message="bad HTTP status code") from e
 
             if response.status_code == 304:
                 raise _NotModified(url)
@@ -436,9 +445,13 @@ class HTTPParser:
 
             except ParseError:  # pragma: no cover
                 raise
+            except OSError as e:
+                # requests.RequestException is a subclass of OSError
+                raise ParseError(url, message="error while reading feed") from e
             except Exception as e:
-                # TODO: message: "while reading feed"
-                raise ParseError(url) from e
+                raise ParseError(
+                    url, message="unexpected error while reading feed"
+                ) from e
 
         http_etag = response.headers.get('ETag', http_etag)
         http_last_modified = response.headers.get('Last-Modified', http_last_modified)
