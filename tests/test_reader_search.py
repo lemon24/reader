@@ -13,10 +13,20 @@ from reader import HighlightedString
 from reader import make_reader
 from reader import Reader
 from reader import ReaderError
+from reader import SearchError
 from reader import SearchNotEnabledError
 from reader import StorageError
 from reader._search import Search
 from reader._storage import Storage
+
+
+def test_closed(reader):
+    reader.close()
+    # TODO: Maybe parametrize with all the methods
+    # (also, unify with test_reader.py::test_closed)
+    with pytest.raises(SearchError) as excinfo:
+        reader.is_search_enabled()
+    assert 'closed' in excinfo.value.message
 
 
 @pytest.fixture(params=[False, True], ids=['without_entries', 'with_entries'])

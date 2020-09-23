@@ -24,10 +24,12 @@ from reader._types import FeedData
 from reader._types import FeedUpdateIntent
 
 
-def test_storage_errors_open(tmpdir):
+def test_storage_errors_connect(tmpdir):
     # try to open a directory
-    with pytest.raises(StorageError):
+    with pytest.raises(StorageError) as excinfo:
         Storage(str(tmpdir))
+    assert isinstance(excinfo.value.__cause__, sqlite3.OperationalError)
+    assert 'while opening' in excinfo.value.message
 
 
 @pytest.mark.parametrize('db_error_cls', reader._sqlite_utils.db_errors)
@@ -39,8 +41,10 @@ def test_db_errors(db_path, db_error_cls):
         def setup_db(*args, **kwargs):
             raise db_error_cls("whatever")
 
-    with pytest.raises(StorageError):
+    with pytest.raises(StorageError) as excinfo:
         MyStorage(db_path)
+    assert excinfo.value.__cause__ is None
+    assert 'whatever' in excinfo.value.message
 
 
 def test_path(db_path):

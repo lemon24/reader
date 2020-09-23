@@ -257,7 +257,7 @@ class Storage:
     recent_threshold = timedelta(7)
     chunk_size = 2 ** 8
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def __init__(
         self,
         path: str,
@@ -271,15 +271,20 @@ class Storage:
         if factory:  # pragma: no cover
             kwargs['factory'] = factory
 
-        db = self.connect(path, detect_types=sqlite3.PARSE_DECLTYPES, **kwargs)
-        try:
+        with wrap_exceptions(StorageError.with_message, "error while opening database"):
+            db = self.connect(path, detect_types=sqlite3.PARSE_DECLTYPES, **kwargs)
+
+        with wrap_exceptions(
+            StorageError.with_message, "error while setting up database"
+        ):
             try:
-                self.setup_db(db, wal_enabled)
-            except BaseException:
-                db.close()
-                raise
-        except DBError as e:
-            raise StorageError(str(e)) from e
+                try:
+                    self.setup_db(db, wal_enabled)
+                except BaseException:
+                    db.close()
+                    raise
+            except DBError as e:
+                raise StorageError(message=str(e))
 
         self.db: sqlite3.Connection = db
         self.path = path
@@ -289,7 +294,7 @@ class Storage:
     connect = staticmethod(sqlite3.connect)
     setup_db = staticmethod(setup_db)
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def close(self) -> None:
         # If "PRAGMA optimize" on every close becomes too expensive, we can
         # add an option to disable it, or call db.interrupt() after some time.
@@ -306,7 +311,7 @@ class Storage:
 
         self.db.close()
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def add_feed(self, url: str, added: datetime) -> None:
         with self.db:
             try:
@@ -315,11 +320,11 @@ class Storage:
                     dict(url=url, added=added),
                 )
             except sqlite3.IntegrityError as e:
-                if "unique constraint failed" not in str(e).lower():
+                if "unique constraint failed" not in str(e).lower():  # pragma: no cover
                     raise
                 raise FeedExistsError(url)
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def remove_feed(self, url: str) -> None:
         with self.db:
             cursor = self.db.execute(
@@ -336,7 +341,7 @@ class Storage:
             partial(self.get_feeds_page, filter_options, sort), self.chunk_size,
         )
 
-    @wrap_exceptions_iter(StorageError)
+    @wrap_exceptions_iter(StorageError.with_message)
     def get_feeds_page(
         self,
         filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
@@ -386,7 +391,7 @@ class Storage:
             self.db, query, context, feed_factory, chunk_size, last
         )
 
-    @wrap_exceptions_iter(StorageError)
+    @wrap_exceptions_iter(StorageError.with_message)
     def get_feeds_for_update(
         self, url: Optional[str] = None, new_only: bool = False,
     ) -> Iterable[FeedForUpdate]:
@@ -473,7 +478,7 @@ class Storage:
         # in this function (so get_entries_for_update() below can catch it).
         return (EntryForUpdate(updated) if exists else None for exists, updated in rows)
 
-    @wrap_exceptions_iter(StorageError)
+    @wrap_exceptions_iter(StorageError.with_message)
     def get_entries_for_update(
         self, entries: Iterable[Tuple[str, str]]
     ) -> Iterable[Optional[EntryForUpdate]]:
@@ -496,7 +501,7 @@ class Storage:
                 rv = list(rv)
             yield from rv
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def set_feed_user_title(self, url: str, title: Optional[str]) -> None:
         with self.db:
             cursor = self.db.execute(
@@ -505,7 +510,7 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def mark_as_stale(self, url: str) -> None:
         with self.db:
             cursor = self.db.execute(
@@ -513,7 +518,7 @@ class Storage:
             )
             rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def mark_as_read_unread(self, feed_url: str, entry_id: str, read: bool) -> None:
         with self.db:
             cursor = self.db.execute(
@@ -526,7 +531,7 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def mark_as_important_unimportant(
         self, feed_url: str, entry_id: str, important: bool
     ) -> None:
@@ -541,7 +546,7 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def update_feed(self, intent: FeedUpdateIntent) -> None:
         url, last_updated, feed, http_etag, http_last_modified, last_exception = intent
 
@@ -650,7 +655,7 @@ class Storage:
         )
         return context
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
         iterables = (
             chunks(self.chunk_size, entry_tuples)
@@ -732,7 +737,9 @@ class Storage:
                     make_params(),
                 )
             except sqlite3.IntegrityError as e:
-                if "foreign key constraint failed" not in str(e).lower():
+                if (
+                    "foreign key constraint failed" not in str(e).lower()
+                ):  # pragma: no cover
                     raise
                 feed_url = last_param['feed_url']
                 entry_id = last_param['id']
@@ -767,7 +774,7 @@ class Storage:
         else:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
-    @wrap_exceptions_iter(StorageError)
+    @wrap_exceptions_iter(StorageError.with_message)
     def get_entries_page(
         self,
         now: datetime,
@@ -810,7 +817,7 @@ class Storage:
             partial(self.iter_feed_metadata_page, feed_url, key), self.chunk_size,
         )
 
-    @wrap_exceptions_iter(StorageError)
+    @wrap_exceptions_iter(StorageError.with_message)
     def iter_feed_metadata_page(
         self,
         feed_url: str,
@@ -839,7 +846,7 @@ class Storage:
             self.db, query, context, value_factory, chunk_size, last
         )
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def set_feed_metadata(self, feed_url: str, key: str, value: JSONType) -> None:
         with self.db:
             try:
@@ -858,11 +865,13 @@ class Storage:
                     dict(feed_url=feed_url, key=key, value_json=json.dumps(value)),
                 )
             except sqlite3.IntegrityError as e:
-                if "foreign key constraint failed" not in str(e).lower():
+                if (
+                    "foreign key constraint failed" not in str(e).lower()
+                ):  # pragma: no cover
                     raise
                 raise FeedNotFoundError(feed_url)
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def delete_feed_metadata(self, feed_url: str, key: str) -> None:
         with self.db:
             cursor = self.db.execute(
@@ -874,7 +883,7 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: MetadataNotFoundError(feed_url, key))
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def add_feed_tag(self, feed_url: str, tag: str) -> None:
         with self.db:
             try:
@@ -885,7 +894,7 @@ class Storage:
                 # tag exists is a no-op; it looks like:
                 # "UNIQUE constraint failed: feed_tags.feed, feed_tags.tag"
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(StorageError.with_message)
     def remove_feed_tag(self, feed_url: str, tag: str) -> None:
         with self.db:
             self.db.execute(
@@ -897,7 +906,7 @@ class Storage:
             partial(self.get_feed_tags_page, feed_url), self.chunk_size,
         )
 
-    @wrap_exceptions_iter(StorageError)
+    @wrap_exceptions_iter(StorageError.with_message)
     def get_feed_tags_page(
         self,
         feed_url: Optional[str],

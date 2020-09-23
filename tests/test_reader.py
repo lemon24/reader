@@ -1417,10 +1417,12 @@ def test_close(reader):
 def test_closed(reader):
     reader.close()
     # TODO: Maybe parametrize with all the methods.
-    with pytest.raises(StorageError):
+    with pytest.raises(StorageError) as excinfo:
         reader.add_feed('one')
+    assert 'closed' in excinfo.value.message
     with pytest.raises(StorageError):
         list(reader.get_entries())
+    assert 'closed' in excinfo.value.message
     # however, we must be able to call close() again:
     reader.close()
 

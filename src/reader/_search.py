@@ -178,7 +178,7 @@ class Search:
     # but is part of the private API of this implementation.
     strip_html = staticmethod(strip_html)
 
-    @wrap_exceptions(SearchError)
+    @wrap_exceptions(SearchError.with_message)
     def enable(self) -> None:
         try:
             with ddl_transaction(self.db):
@@ -348,7 +348,7 @@ class Search:
             """
         )
 
-    @wrap_exceptions(SearchError)
+    @wrap_exceptions(SearchError.with_message)
     def disable(self) -> None:
         with ddl_transaction(self.db):
             self._disable()
@@ -372,7 +372,7 @@ class Search:
         self.db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
         self.db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")
 
-    @wrap_exceptions(SearchError)
+    @wrap_exceptions(SearchError.with_message)
     def is_enabled(self) -> bool:
         search_table_exists = (
             self.db.execute(
@@ -386,7 +386,7 @@ class Search:
         )
         return search_table_exists
 
-    @wrap_exceptions(SearchError)
+    @wrap_exceptions(SearchError.with_message)
     def update(self) -> None:
         try:
             return self._update()
@@ -721,7 +721,7 @@ class Search:
             self.chunk_size,
         )
 
-    @wrap_exceptions_iter(SearchError)
+    @wrap_exceptions_iter(SearchError.with_message)
     def search_entries_page(
         self,
         query: str,

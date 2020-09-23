@@ -13,6 +13,7 @@ from typing import no_type_check
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from typing import Type
 from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
@@ -197,6 +198,10 @@ class FancyExceptionMixin(MixinBase):
         super().__init__(*args, **kwargs)  # type: ignore
         if message:
             self.message = message
+
+    @classmethod
+    def with_message(cls: Type[_T], message: str, *args: Any, **kwargs: Any) -> _T:
+        return cls(*args, message=message, **kwargs)  # type: ignore
 
     @cached_property
     def __cause_name(self) -> Optional[str]:

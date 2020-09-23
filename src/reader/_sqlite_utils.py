@@ -19,7 +19,6 @@ from typing import no_type_check
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import Type
 from typing import TYPE_CHECKING
 from typing import TypeVar
 
@@ -83,7 +82,9 @@ def ddl_transaction(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
 
 
 @contextmanager
-def wrap_exceptions(exc_type: Type[Exception]) -> Iterator[None]:
+def wrap_exceptions(
+    exc_type: Callable[[str], Exception], message: str = "unexpected error"
+) -> Iterator[None]:
     """Wrap sqlite3 exceptions in a custom exception.
 
     Only wraps exceptions that are unlikely to be programming errors (bugs),
@@ -96,14 +97,13 @@ def wrap_exceptions(exc_type: Type[Exception]) -> Iterator[None]:
     Full discussion at https://github.com/lemon24/reader/issues/21
 
     """
-
     try:
         yield
     except sqlite3.OperationalError as e:
-        raise exc_type(f"sqlite3 error: {e}") from e
+        raise exc_type(message) from e
     except sqlite3.ProgrammingError as e:
         if "cannot operate on a closed database" in str(e).lower():
-            raise exc_type(f"sqlite3 error: {e}") from e
+            raise exc_type("operation on closed database")
         raise
 
 
@@ -111,7 +111,7 @@ FuncType = Callable[..., Any]
 F = TypeVar('F', bound=FuncType)
 
 
-def wrap_exceptions_iter(exc_type: Type[Exception]) -> Callable[[F], F]:
+def wrap_exceptions_iter(exc_type: Callable[[str], Exception]) -> Callable[[F], F]:
     """Like wrap_exceptions(), but for generators."""
 
     def decorator(fn: F) -> F:

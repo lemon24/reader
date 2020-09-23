@@ -82,13 +82,14 @@ class SomeError(Exception):
 def test_wrap_exceptions():
     db = sqlite3.connect('file::memory:?mode=ro', uri=True)
 
-    with pytest.raises(SomeError):
+    with pytest.raises(SomeError) as excinfo:
         with wrap_exceptions(SomeError):
-            # should raise OperationalError: unable to open database file
             db.execute('create table t (a)')
+    assert isinstance(excinfo.value.__cause__, sqlite3.OperationalError)
+    assert 'unexpected error' in str(excinfo.value)
 
     # non- "cannot operate on a closed database" ProgrammingError
-    with pytest.raises(sqlite3.Error):
+    with pytest.raises(sqlite3.Error) as excinfo:
         with wrap_exceptions(SomeError):
             db.execute('values (:a)', {})
 
@@ -97,9 +98,11 @@ def test_wrap_exceptions():
 
     # doesn't after closing
     db.close()
-    with pytest.raises(SomeError):
+    with pytest.raises(SomeError) as excinfo:
         with wrap_exceptions(SomeError):
             db.execute('values (1)')
+    assert excinfo.value.__cause__ is None
+    assert 'closed database' in str(excinfo.value)
 
 
 class WeirdError(Exception):
