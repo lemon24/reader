@@ -200,7 +200,7 @@ class FancyExceptionMixin(MixinBase):
             self.message = message
 
     @classmethod
-    def with_message(cls: Type[_T], message: str, *args: Any, **kwargs: Any) -> _T:
+    def from_message(cls: Type[_T], message: str, *args: Any, **kwargs: Any) -> _T:
         return cls(*args, message=message, **kwargs)  # type: ignore
 
     @cached_property
