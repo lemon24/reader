@@ -9,8 +9,8 @@ test:
 	pytest -v --runslow
 
 coverage:
-	pytest --cov -v --runslow
-	coverage html
+	pytest --cov --cov-context=test --runslow
+	coverage html --show-contexts
 	coverage report \
 		--include '*/reader/*' \
 		--omit '*/reader/_feedparser.py,*/reader/__main__.py,*/reader/_cli*,*/reader/_config*,*/reader/_app/*,*/reader/_plugins/*,tests/*' \
