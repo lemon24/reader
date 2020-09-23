@@ -1,6 +1,7 @@
 import itertools
 import logging
 import multiprocessing.dummy
+import sys
 from contextlib import contextmanager
 from queue import Queue
 from typing import Any
@@ -20,10 +21,13 @@ from .types import MISSING
 from .types import MissingType
 
 # TODO: remove backports when we drop Python 3.7 support
-try:
-    from functools import cached_property  # type: ignore
-except ImportError:  # pragma: no cover
-    from backports.cached_property import cached_property
+if sys.version_info >= (3, 8):  # pragma: no cover
+    from functools import cached_property
+else:  # pragma: no cover
+    from backports.cached_property import cached_property as _cprop
+
+    def cached_property(fn: 'F') -> 'F':
+        return cast('F', _cprop(fn))
 
 
 _T = TypeVar('_T')
@@ -194,14 +198,14 @@ class FancyExceptionMixin(MixinBase):
         if message:
             self.message = message
 
-    @cached_property  # type: ignore
+    @cached_property
     def __cause_name(self) -> Optional[str]:
         if not self.__cause__:
             return None
         t = type(self.__cause__)
         return f'{t.__module__}.{t.__qualname__}'
 
-    @cached_property  # type: ignore
+    @cached_property
     def __cause_str(self) -> Optional[str]:
         return str(self.__cause__) if self.__cause__ else None
 
@@ -212,4 +216,5 @@ class FancyExceptionMixin(MixinBase):
 
     def __str__(self) -> str:
         parts = [self.message, self._str, self.__cause_name, self.__cause_str]
-        return ': '.join(filter(None, parts))
+        # map is here to only to please mypy on python <3.8
+        return ': '.join(map(str, filter(None, parts)))
