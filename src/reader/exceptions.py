@@ -1,12 +1,15 @@
-class ReaderError(Exception):
+from ._utils import FancyExceptionMixin
+
+
+class ReaderError(FancyExceptionMixin, Exception):
     """Base for all public exceptions."""
 
 
 class FeedError(ReaderError):
     """A feed error occured."""
 
-    def __init__(self, url: str) -> None:
-        super().__init__(url)
+    def __init__(self, url: str, **kwargs: object) -> None:
+        super().__init__(url, **kwargs)  # type: ignore
 
         #: The feed URL.
         self.url = url
@@ -31,8 +34,8 @@ class ParseError(FeedError):
 class EntryError(ReaderError):
     """An entry error occured."""
 
-    def __init__(self, url: str, id: str) -> None:
-        super().__init__(url, id)
+    def __init__(self, url: str, id: str, **kwargs: object) -> None:
+        super().__init__(url, id, **kwargs)  # type: ignore
 
         #: The feed URL.
         self.url = url
@@ -48,8 +51,8 @@ class EntryNotFoundError(EntryError):
 class MetadataError(ReaderError):
     """A feed metadata error occured."""
 
-    def __init__(self, url: str, key: str) -> None:
-        super().__init__(url, key)
+    def __init__(self, url: str, key: str, **kwargs: object) -> None:
+        super().__init__(url, key, **kwargs)  # type: ignore
 
         #: The feed URL.
         self.url = url

@@ -12,11 +12,18 @@ from typing import no_type_check
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
 from .types import MISSING
 from .types import MissingType
+
+# TODO: remove backports when we drop Python 3.7 support
+try:
+    from functools import cached_property  # type: ignore
+except ImportError:
+    from backports.cached_property import cached_property
 
 
 _T = TypeVar('_T')
@@ -152,3 +159,57 @@ class PrefixLogger(logging.LoggerAdapter):
 
     def process(self, msg: str, kwargs: Any) -> Tuple[str, Any]:  # pragma: no cover
         return ': '.join(tuple(self._escape(p) for p in self.prefixes) + (msg,)), kwargs
+
+
+if TYPE_CHECKING:  # pragma: no cover
+    MixinBase = Exception
+else:
+    MixinBase = object
+
+
+class FancyExceptionMixin(MixinBase):
+
+    """Exception mixin that renders a message and __cause__ in str(e).
+
+    The message looks something like:
+
+        [message: ] parent as string[: CauseType: cause as string]
+
+    The resulting exception pickles successfully;
+    __cause__ still gets lost per https://bugs.python.org/issue29466,
+    but a string representation of it remains stored on the exception.
+
+    """
+
+    #: Message; overridable.
+    message: Optional[str] = None
+
+    @property
+    def _str(self) -> str:
+        """The exception's unique attributes, as string; overridable."""
+        return super().__str__()
+
+    def __init__(self, *args: Any, message: Optional[str] = None, **kwargs: Any):
+        super().__init__(*args, **kwargs)  # type: ignore
+        if message:
+            self.message = message
+
+    @cached_property  # type: ignore
+    def __cause_name(self) -> Optional[str]:
+        if not self.__cause__:
+            return None
+        t = type(self.__cause__)
+        return f'{t.__module__}.{t.__qualname__}'
+
+    @cached_property  # type: ignore
+    def __cause_str(self) -> Optional[str]:
+        return str(self.__cause__) if self.__cause__ else None
+
+    def __reduce__(self) -> Union[str, Tuple[Any, ...]]:
+        # "prime" the cached properties before pickling
+        str(self)
+        return super().__reduce__()
+
+    def __str__(self) -> str:
+        parts = [self.message, self._str, self.__cause_name, self.__cause_str]
+        return ': '.join(filter(None, parts))
