@@ -314,8 +314,9 @@ class Storage:
                     "INSERT INTO feeds (url, added) VALUES (:url, :added);",
                     dict(url=url, added=added),
                 )
-            except sqlite3.IntegrityError:
-                # FIXME: Match the error string.
+            except sqlite3.IntegrityError as e:
+                if "unique constraint failed" not in str(e).lower():
+                    raise
                 raise FeedExistsError(url)
 
     @wrap_exceptions(StorageError)
@@ -730,9 +731,9 @@ class Storage:
                     """,
                     make_params(),
                 )
-            except sqlite3.IntegrityError:
-                # FIXME: Match the error string.
-
+            except sqlite3.IntegrityError as e:
+                if "foreign key constraint failed" not in str(e).lower():
+                    raise
                 feed_url = last_param['feed_url']
                 entry_id = last_param['id']
                 log.debug(
@@ -856,8 +857,9 @@ class Storage:
                     """,
                     dict(feed_url=feed_url, key=key, value_json=json.dumps(value)),
                 )
-            except sqlite3.IntegrityError:
-                # FIXME: Match the error string.
+            except sqlite3.IntegrityError as e:
+                if "foreign key constraint failed" not in str(e).lower():
+                    raise
                 raise FeedNotFoundError(feed_url)
 
     @wrap_exceptions(StorageError)

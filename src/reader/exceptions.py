@@ -18,9 +18,13 @@ class FeedError(ReaderError):
 class FeedExistsError(FeedError):
     """Feed already exists."""
 
+    message = "feed exists"
+
 
 class FeedNotFoundError(FeedError):
     """Feed not found."""
+
+    message = "no such feed"
 
 
 class ParseError(FeedError):

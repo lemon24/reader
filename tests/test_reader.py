@@ -613,6 +613,7 @@ def test_update_feed_deleted(db_path, call_update_method, feed_action, entry_act
             with pytest.raises(FeedNotFoundError) as excinfo:
                 call_update_method(reader, feed.url)
             assert excinfo.value.url == feed.url
+            assert 'no such feed' in excinfo.value.message
         elif call_update_method.__name__.startswith('call_update_feeds'):
             # shouldn't raise an exception
             call_update_method(reader, feed.url)
@@ -1023,14 +1024,19 @@ def test_add_remove_get_feeds(reader, feed_arg):
     entry_two = parser.entry(2, 2, datetime(2010, 2, 1))
 
     assert set(reader.get_feeds()) == set()
-    with pytest.raises(FeedNotFoundError):
+    with pytest.raises(FeedNotFoundError) as excinfo:
         assert reader.get_feed(feed_arg(one))
+    assert excinfo.value.url == one.url
+    assert 'no such feed' in excinfo.value.message
+
     assert reader.get_feed(feed_arg(one), None) == None
     assert reader.get_feed(feed_arg(one), default=1) == 1
     assert set(reader.get_entries()) == set()
 
-    with pytest.raises(FeedNotFoundError):
+    with pytest.raises(FeedNotFoundError) as excinfo:
         reader.remove_feed(feed_arg(one))
+    assert excinfo.value.url == one.url
+    assert 'no such feed' in excinfo.value.message
 
     reader._now = lambda: datetime(2010, 1, 1)
     reader.add_feed(feed_arg(one))
@@ -1042,8 +1048,10 @@ def test_add_remove_get_feeds(reader, feed_arg):
     assert reader.get_feed(feed_arg(one)) == Feed(one.url, added=datetime(2010, 1, 1))
     assert set(reader.get_entries()) == set()
 
-    with pytest.raises(FeedExistsError):
+    with pytest.raises(FeedExistsError) as excinfo:
         reader.add_feed(feed_arg(one))
+    assert excinfo.value.url == one.url
+    assert 'feed exists' in excinfo.value.message
 
     reader._now = lambda: datetime(2010, 1, 2)
     reader.update_feeds()
@@ -1062,7 +1070,7 @@ def test_add_remove_get_feeds(reader, feed_arg):
     assert reader.get_feed(feed_arg(one), None) == None
     assert set(reader.get_entries()) == {entry_two}
 
-    with pytest.raises(FeedNotFoundError):
+    with pytest.raises(FeedNotFoundError) as excinfo:
         reader.remove_feed(feed_arg(one))
 
 
@@ -1168,8 +1176,10 @@ def test_set_feed_user_title(reader, feed_arg):
     one = parser.feed(1, datetime(2010, 1, 1), title='title')
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
-    with pytest.raises(FeedNotFoundError):
+    with pytest.raises(FeedNotFoundError) as excinfo:
         reader.set_feed_user_title(feed_arg(one), 'blah')
+    assert excinfo.value.url == one.url
+    assert 'no such feed' in excinfo.value.message
 
     reader.add_feed(one.url)
 
@@ -1270,8 +1280,10 @@ def test_integration(reader, feed_type, data_dir, monkeypatch):
 
 
 def test_feed_metadata(reader):
-    with pytest.raises(FeedNotFoundError):
+    with pytest.raises(FeedNotFoundError) as excinfo:
         reader.set_feed_metadata('one', 'key', 'value')
+    assert excinfo.value.url == 'one'
+    assert 'no such feed' in excinfo.value.message
 
     with pytest.raises(MetadataNotFoundError):
         reader.delete_feed_metadata('one', 'key')
@@ -1546,8 +1558,10 @@ def test_make_reader_feed_root(monkeypatch, kwargs, feed_root):
 def test_tags_basic(reader, chunk_size):
     reader._storage.chunk_size = chunk_size
 
-    with pytest.raises(FeedNotFoundError):
+    with pytest.raises(FeedNotFoundError) as excinfo:
         reader.add_feed_tag('one', 'tag')
+    assert excinfo.value.url == 'one'
+    assert 'no such feed' in excinfo.value.message
 
     # no-op
     reader.remove_feed_tag('one', 'tag')
