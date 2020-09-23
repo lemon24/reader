@@ -1291,14 +1291,18 @@ def test_feed_metadata(reader):
     assert excinfo.value.url == 'one'
     assert 'no such feed' in excinfo.value.message
 
-    with pytest.raises(MetadataNotFoundError):
+    with pytest.raises(MetadataNotFoundError) as excinfo:
         reader.delete_feed_metadata('one', 'key')
+    assert (excinfo.value.url, excinfo.value.key) == ('one', 'key')
+    assert 'no such metadata' in excinfo.value.message
 
     reader.add_feed('feed')
 
     assert set(reader.iter_feed_metadata('feed')) == set()
-    with pytest.raises(MetadataNotFoundError):
+    with pytest.raises(MetadataNotFoundError) as excinfo:
         reader.get_feed_metadata('feed', 'key')
+    assert (excinfo.value.url, excinfo.value.key) == ('feed', 'key')
+    assert 'no such metadata' in excinfo.value.message
     assert reader.get_feed_metadata('feed', 'key', None) is None
     assert reader.get_feed_metadata('feed', 'key', default=0) == 0
 

@@ -70,6 +70,8 @@ class MetadataError(ReaderError):
 class MetadataNotFoundError(MetadataError):
     """Feed metadata not found."""
 
+    message = "no such metadata"
+
 
 class StorageError(ReaderError):
     """An exception was raised by the underlying storage.
