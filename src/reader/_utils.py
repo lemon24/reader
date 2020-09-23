@@ -22,7 +22,7 @@ from .types import MissingType
 # TODO: remove backports when we drop Python 3.7 support
 try:
     from functools import cached_property  # type: ignore
-except ImportError:
+except ImportError:  # pragma: no cover
     from backports.cached_property import cached_property
 
 
