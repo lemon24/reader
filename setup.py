@@ -27,9 +27,9 @@ setup(
     install_requires=[
         'dataclasses; python_version<"3.7"',
         'typing-extensions',
+        # feedparser 6 already pulls in sgmllib3k
         'feedparser>=6',
         'requests>=2.18',
-        'sgmllib3k>=1',  # we may be able to remove this, feedparser 6 already depends on it
     ],
     extras_require={
         'search': ['beautifulsoup4>=4.5'],
