@@ -1,7 +1,6 @@
 import itertools
 import logging
 import multiprocessing.dummy
-import sys
 from contextlib import contextmanager
 from queue import Queue
 from typing import Any
@@ -25,16 +24,6 @@ F = TypeVar('F', bound=FuncType)
 
 _T = TypeVar('_T')
 _U = TypeVar('_U')
-
-
-# TODO: remove backports when we drop Python 3.7 support
-if sys.version_info >= (3, 8):  # pragma: no cover
-    from functools import cached_property
-else:  # pragma: no cover
-    from backports.cached_property import cached_property as _cprop
-
-    def cached_property(fn: 'F') -> 'F':
-        return cast('F', _cprop(fn))
 
 
 def zero_or_one(

@@ -13,7 +13,7 @@ coverage:
 	coverage html --show-contexts
 	coverage report \
 		--include '*/reader/*' \
-		--omit '*/reader/_feedparser.py,*/reader/__main__.py,*/reader/_cli*,*/reader/_config*,*/reader/_app/*,*/reader/_plugins/*,tests/*' \
+		--omit '*/reader/_vendor/*,*/reader/__main__.py,*/reader/_cli*,*/reader/_config*,*/reader/_app/*,*/reader/_plugins/*,tests/*' \
 		--fail-under 100
 
 cov: coverage

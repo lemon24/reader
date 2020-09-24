@@ -30,7 +30,6 @@ setup(
         'feedparser>=6',
         'requests>=2.18',
         'sgmllib3k>=1',  # we may be able to remove this, feedparser 6 already depends on it
-        'backports.cached_property; python_version<"3.8"',
     ],
     extras_require={
         'search': ['beautifulsoup4>=4.5'],
