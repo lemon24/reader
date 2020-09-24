@@ -13,13 +13,19 @@ from typing import no_type_check
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import Type
-from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
 from .types import MISSING
 from .types import MissingType
+
+
+FuncType = Callable[..., Any]
+F = TypeVar('F', bound=FuncType)
+
+_T = TypeVar('_T')
+_U = TypeVar('_U')
+
 
 # TODO: remove backports when we drop Python 3.7 support
 if sys.version_info >= (3, 8):  # pragma: no cover
@@ -29,10 +35,6 @@ else:  # pragma: no cover
 
     def cached_property(fn: 'F') -> 'F':
         return cast('F', _cprop(fn))
-
-
-_T = TypeVar('_T')
-_U = TypeVar('_U')
 
 
 def zero_or_one(
@@ -85,10 +87,6 @@ def join_paginated_iter(
 
         if len(things) < chunk_size:
             break
-
-
-FuncType = Callable[..., Any]
-F = TypeVar('F', bound=FuncType)
 
 
 def chunks(n: int, iterable: Iterable[_T]) -> Iterable[Iterable[_T]]:
@@ -164,62 +162,3 @@ class PrefixLogger(logging.LoggerAdapter):
 
     def process(self, msg: str, kwargs: Any) -> Tuple[str, Any]:  # pragma: no cover
         return ': '.join(tuple(self._escape(p) for p in self.prefixes) + (msg,)), kwargs
-
-
-if TYPE_CHECKING:  # pragma: no cover
-    MixinBase = Exception
-else:
-    MixinBase = object
-
-
-class FancyExceptionMixin(MixinBase):
-
-    """Exception mixin that renders a message and __cause__ in str(e).
-
-    The message looks something like:
-
-        [message: ] parent as string[: CauseType: cause as string]
-
-    The resulting exception pickles successfully;
-    __cause__ still gets lost per https://bugs.python.org/issue29466,
-    but a string representation of it remains stored on the exception.
-
-    """
-
-    #: Message; overridable.
-    message: Optional[str] = None
-
-    @property
-    def _str(self) -> str:
-        """The exception's unique attributes, as string; overridable."""
-        return super().__str__()
-
-    def __init__(self, *args: Any, message: Optional[str] = None, **kwargs: Any):
-        super().__init__(*args, **kwargs)  # type: ignore
-        if message:
-            self.message = message
-
-    @classmethod
-    def from_message(cls: Type[_T], message: str, *args: Any, **kwargs: Any) -> _T:
-        return cls(*args, message=message, **kwargs)  # type: ignore
-
-    @cached_property
-    def __cause_name(self) -> Optional[str]:
-        if not self.__cause__:
-            return None
-        t = type(self.__cause__)
-        return f'{t.__module__}.{t.__qualname__}'
-
-    @cached_property
-    def __cause_str(self) -> Optional[str]:
-        return str(self.__cause__) if self.__cause__ else None
-
-    def __reduce__(self) -> Union[str, Tuple[Any, ...]]:
-        # "prime" the cached properties before pickling
-        str(self)
-        return super().__reduce__()
-
-    def __str__(self) -> str:
-        parts = [self.message, self._str, self.__cause_name, self.__cause_str]
-        # map is here to only to please mypy on python <3.8
-        return ': '.join(map(str, filter(None, parts)))
