@@ -14,6 +14,9 @@ Unreleased
 * Drop feedparser 5.x support (deprecated in 1.7);
   use feedparser 6.x instead.
   (:issue:`190`)
+* Make the string representation of :exc:`ReaderError` and its subclasses
+  more consistent; add error messages and improve the existing ones.
+  (:issue:`190`)
 
 
 Version 1.7
