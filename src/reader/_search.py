@@ -392,7 +392,7 @@ class Search:
             return self._update()
         except sqlite3.OperationalError as e:
             if 'no such table' in str(e).lower():
-                raise SearchNotEnabledError() from e
+                raise SearchNotEnabledError()
             raise
 
     def _update(self) -> None:
@@ -400,9 +400,8 @@ class Search:
         # we get just a "user-defined function raised exception" SearchError.
         if not bs4:
             raise SearchError(
-                "could not import search dependencies; "
-                "use the 'search' extra to install them; "
-                f"original import error: {bs4_import_error}"
+                message="could not import search dependencies "
+                "(use the 'search' extra to install them)"
             ) from bs4_import_error
 
         # last_insert_rowid() / cursor.lastrowid works correctly for FTS5
@@ -411,7 +410,7 @@ class Search:
         try:
             require_version(self.db, (3, 18))
         except DBError as e:
-            raise SearchError(str(e)) from e
+            raise SearchError(message=str(e))
 
         self._delete_from_search()
         self._insert_into_search()
@@ -799,14 +798,14 @@ class Search:
             msg_lower = str(e).lower()
 
             if 'no such table' in msg_lower:
-                raise SearchNotEnabledError() from e
+                raise SearchNotEnabledError()
 
             is_query_error = any(
                 fragment in msg_lower
                 for fragment in self._query_error_message_fragments
             )
             if is_query_error:
-                raise InvalidSearchQueryError(str(e)) from e
+                raise InvalidSearchQueryError(message=str(e))
 
             raise
 

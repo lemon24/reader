@@ -429,15 +429,19 @@ def test_update_triggers_no_change(db_path, monkeypatch, set_user_title):
 
 @rename_argument('reader', 'reader_without_and_with_entries')
 def test_update_search_fails_if_not_enabled(reader):
-    with pytest.raises(SearchNotEnabledError):
+    with pytest.raises(SearchNotEnabledError) as excinfo:
         reader.update_search()
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.message
 
 
 @rename_argument('reader', 'reader_without_and_with_entries')
 @with_sort
 def test_search_entries_fails_if_not_enabled(reader, sort):
-    with pytest.raises(SearchNotEnabledError):
+    with pytest.raises(SearchNotEnabledError) as excinfo:
         list(reader.search_entries('one', sort=sort))
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.message
 
 
 @with_sort

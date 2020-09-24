@@ -93,6 +93,8 @@ class SearchError(ReaderError):
 class SearchNotEnabledError(SearchError):
     """A search-related method was called when search was not enabled."""
 
+    message = "operation not supported with search disabled"
+
 
 class InvalidSearchQueryError(SearchError):
     """The search query provided was somehow invalid."""

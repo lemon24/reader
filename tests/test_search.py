@@ -24,8 +24,8 @@ def test_bs4_import_error(storage, monkeypatch):
 
     with pytest.raises(SearchError) as excinfo:
         search.update()
-    assert 'search dependencies' in str(excinfo.value)
-    assert 'reason' in str(excinfo.value)
+    assert 'search dependencies' in str(excinfo.value.message)
+    assert isinstance(excinfo.value.__cause__, ImportError)
 
 
 STRIP_HTML_DATA = [(i, i) for i in [None, 10, 11.2, b'aabb', b'aa<br>bb']] + [
@@ -204,19 +204,24 @@ def test_invalid_search_query_error(storage, query, exc_type):
     # the invalid query strings are search-provider-dependent.
     search = Search(storage)
     search.enable()
-    with pytest.raises(exc_type):
+    with pytest.raises(exc_type) as excinfo:
         next(search.search_entries(query, datetime(2010, 1, 1)))
+    if isinstance(exc_type, tuple) and StopIteration in exc_type:
+        return
+    assert excinfo.value.message
+    assert excinfo.value.__cause__ is None
 
 
 def test_minimum_sqlite_version(storage, monkeypatch):
-    mock = MagicMock(wraps=require_version, side_effect=DBError)
+    mock = MagicMock(wraps=require_version, side_effect=DBError('version'))
     monkeypatch.setattr('reader._search.require_version', mock)
 
     search = Search(storage)
     search.enable()
 
-    with pytest.raises(SearchError):
+    with pytest.raises(SearchError) as excinfo:
         search.update()
+    assert 'version' in excinfo.value.message
 
     mock.assert_called_with(ANY, (3, 18))
 
