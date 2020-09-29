@@ -102,6 +102,7 @@ def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
             summary TEXT,
             content TEXT,
             enclosures TEXT,
+            original_feed TEXT,  -- null if the feed was never moved
 
             -- reader data
             read INTEGER NOT NULL DEFAULT 0,
@@ -206,11 +207,16 @@ def update_from_20_to_21(db: sqlite3.Connection) -> None:  # pragma: no cover
         search._create_triggers()
 
 
+def update_from_23_to_24(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/149
+    db.execute("ALTER TABLE entries ADD COLUMN original_feed TEXT;")
+
+
 def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=23,
+        version=24,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
@@ -223,6 +229,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             21: create_feed_tags,
             # for https://github.com/lemon24/reader/issues/149#issuecomment-700633577
             22: recreate_search_triggers,
+            23: update_from_23_to_24,
         },
         # Row value support was added in 3.15.
         # TODO: Remove the Search.update() check once this gets bumped to >=3.18.
@@ -691,6 +698,7 @@ class Storage:
                     INSERT OR REPLACE INTO entries (
                         id,
                         feed,
+                        --
                         title,
                         link,
                         updated,
@@ -703,7 +711,8 @@ class Storage:
                         important,
                         last_updated,
                         first_updated_epoch,
-                        feed_order
+                        feed_order,
+                        original_feed
                     ) VALUES (
                         :id,
                         :feed_url,
@@ -731,7 +740,8 @@ class Storage:
                             FROM entries
                             WHERE id = :id AND feed = :feed_url
                         )),
-                        :feed_order
+                        :feed_order,
+                        NULL
                     );
                     """,
                     make_params(),
@@ -802,6 +812,7 @@ class Storage:
                 t[18] == 1,
                 t[19] == 1,
                 t[20],
+                t[21] or feed.url,
                 feed,
             )
             return Entry._make(entry)
@@ -964,6 +975,7 @@ def make_get_entries_query(
             entries.read
             entries.important
             entries.last_updated
+            entries.original_feed
             """.split()
         )
         .FROM("entries")

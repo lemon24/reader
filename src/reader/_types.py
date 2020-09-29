@@ -105,8 +105,9 @@ class EntryData(Generic[_UpdatedType], _namedtuple_compat):
     def as_entry(self, **kwargs: object) -> Entry:
         """For testing."""
         attrs = dict(self.__dict__)
-        attrs.pop('feed_url')
+        feed_url = attrs.pop('feed_url')
         attrs.update(kwargs)
+        attrs.setdefault('original_feed_url', feed_url)
         return Entry(**attrs)
 
 

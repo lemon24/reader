@@ -142,7 +142,7 @@ class Entry(_namedtuple_compat):
 
     @property
     def feed_url(self) -> str:
-        """The feed url."""
+        """The feed URL."""
         return self.feed.url
 
     # TODO: .id and .updated will still be set to some default value if the entry doesn't have them; we should at least document this.
@@ -187,6 +187,13 @@ class Entry(_namedtuple_compat):
     #:
     #: .. versionadded:: 1.3
     last_updated: datetime = cast(datetime, None)
+
+    #: The URL of the original feed of the entry.
+    #:
+    #: If the feed URL never changed, the same as :attr:`~Entry.feed_url`.
+    #:
+    #: .. versionadded:: 1.8
+    original_feed_url: str = cast(str, None)
 
     # feed should not have a default, but I'd prefer objects that aren't
     # entry data to be at the end, and dataclasses don't support keyword-only
