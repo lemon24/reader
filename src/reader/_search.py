@@ -253,9 +253,6 @@ class Search:
 
         assert self.db.in_transaction
 
-        # TODO: what happens if the feed ID changes? can't happen yet;
-        # also see https://github.com/lemon24/reader/issues/149
-
         # We can't use just "INSERT INTO entries_search_sync_state (id, feed)",
         # because this trigger also gets called in case of
         # "INSERT OR REPLACE INTO entries" (REPLACE = DELETE + INSERT),
@@ -348,6 +345,32 @@ class Search:
             """
         )
 
+        self.db.execute(
+            """
+            CREATE TRIGGER entries_search_feeds_update_url
+            AFTER UPDATE
+
+            OF url ON feeds
+            WHEN new.url != old.url
+
+            BEGIN
+                UPDATE entries_search
+                SET _feed = new.url
+                WHERE rowid IN (
+                    SELECT value
+                    FROM entries_search_sync_state
+                    JOIN json_each(es_rowids)
+                    WHERE feed = old.url
+                );
+
+                UPDATE entries_search_sync_state
+                SET feed = new.url
+                WHERE feed = old.url;
+
+            END;
+            """
+        )
+
     @wrap_exceptions(SearchError)
     def disable(self) -> None:
         with ddl_transaction(self.db):
@@ -371,6 +394,7 @@ class Search:
         self.db.execute("DROP TRIGGER IF EXISTS entries_search_entries_update;")
         self.db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
         self.db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")
+        self.db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update_url;")
 
     @wrap_exceptions(SearchError)
     def is_enabled(self) -> bool:
