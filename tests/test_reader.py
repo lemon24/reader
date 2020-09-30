@@ -1828,12 +1828,12 @@ def test_change_feed_url(reader):
     TODO: break this into many tests:
     feed, feed for update, entries, tags, metadata, exceptions, search
 
-    FIXME: search tests
-
     """
     reader._parser = parser = FailingParser(condition=lambda url: False)
     parser.http_etag = 'etag'
     parser.http_last_modified = 'last-modified'
+
+    reader.enable_search()
 
     one = parser.feed(1, datetime(2010, 1, 1))
     one_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -1858,6 +1858,7 @@ def test_change_feed_url(reader):
     assert excinfo.value.url == '2'
 
     reader.update_feeds()
+    reader.update_search()
 
     def entry_data(feed):
         return {
@@ -1865,7 +1866,11 @@ def test_change_feed_url(reader):
             for e in reader.get_entries(feed=feed)
         }
 
+    def search_data(feed):
+        return {(e.feed_url, e.id) for e in reader.search_entries('entry', feed=feed)}
+
     assert entry_data(one) == {('1', '1, 1', '1'), ('1', '1, 2', '1')}
+    assert search_data(one) == {('1', '1, 1'), ('1', '1, 2')}
 
     reader.set_feed_user_title(one, 'user title')
     reader.add_feed_tag(one, 'tag')
@@ -1886,7 +1891,8 @@ def test_change_feed_url(reader):
     reader.change_feed_url('1', '3')
 
     assert not reader.get_feed(one, None)
-    assert not list(reader.get_entries(feed=one))
+    assert entry_data(one) == set()
+    assert search_data(one) == set()
     assert set(reader.get_feed_tags(one)) == set()
     assert dict(reader.iter_feed_metadata(one)) == {}
 
@@ -1894,6 +1900,8 @@ def test_change_feed_url(reader):
         url='3', last_updated=None, last_exception=None,
     )
     assert entry_data('3') == {('3', '1, 1', '1'), ('3', '1, 2', '1')}
+    assert search_data('3') == {('3', '1, 1'), ('3', '1, 2')}
+
     assert set(reader.get_feed_tags('3')) == {'tag'}
     assert dict(reader.iter_feed_metadata('3')) == {'key': 'value'}
 
