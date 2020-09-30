@@ -81,6 +81,9 @@ def create_feeds(db: sqlite3.Connection, name: str = 'feeds') -> None:
             added TIMESTAMP NOT NULL,
             last_exception TEXT
 
+            -- NOTE: when adding new fields, check if they should be set
+            -- to their defalt value in change_feed_url()
+
         );
         """
     )
@@ -339,6 +342,48 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
+    @wrap_exceptions(StorageError)
+    def change_feed_url(self, old: str, new: str) -> None:
+        with self.db:
+            try:
+                cursor = self.db.execute(
+                    "UPDATE feeds SET url = :new WHERE url = :old;",
+                    dict(old=old, new=new),
+                )
+            except sqlite3.IntegrityError as e:
+                if "unique constraint failed" not in str(e).lower():  # pragma: no cover
+                    raise
+                raise FeedExistsError(new)
+            else:
+                rowcount_exactly_one(cursor, lambda: FeedNotFoundError(old))
+
+            self.db.execute(
+                """
+                UPDATE feeds
+                SET
+                    http_etag = NULL,
+                    http_last_modified = NULL,
+                    stale = 0,
+                    last_updated = NULL,
+                    last_exception = NULL
+                WHERE url = ?;
+                """,
+                (new,),
+            )
+
+            self.db.execute(
+                """
+                UPDATE entries
+                SET original_feed = (
+                    SELECT coalesce(sub.original_feed, :old)
+                    FROM entries AS sub
+                    WHERE entries.id = sub.id AND entries.feed = sub.feed
+                )
+                WHERE feed = :new;
+                """,
+                dict(old=old, new=new),
+            )
+
     def get_feeds(
         self,
         filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
@@ -422,6 +467,8 @@ class Storage:
                 .FROM("feeds")
             )
             context: Dict[str, object] = {}
+
+            # TODO: stale and last_exception should be bool, not int
 
             if url:
                 query.WHERE("url = :url")

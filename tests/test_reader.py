@@ -1818,3 +1818,95 @@ def test_feeds_filtering_error(reader, kwargs):
 
     with pytest.raises(ValueError):
         list(reader.get_feeds(**kwargs))
+
+
+def test_change_feed_url(reader):
+    """Various behaviors related to change_feed_url().
+
+    https://github.com/lemon24/reader/issues/149#issuecomment-700532183
+
+    TODO: break this into many tests:
+    feed, feed for update, entries, tags, metadata, exceptions, search
+
+    FIXME: search tests
+
+    """
+    reader._parser = parser = FailingParser(condition=lambda url: False)
+    parser.http_etag = 'etag'
+    parser.http_last_modified = 'last-modified'
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    one_one = parser.entry(1, 1, datetime(2010, 1, 1))
+    one_two = parser.entry(1, 2, datetime(2010, 2, 1))
+
+    two = parser.feed(2, datetime(2010, 1, 1))
+    two_one = parser.entry(2, 1, datetime(2010, 1, 1))
+
+    for feed in one, two:
+        reader.add_feed(feed)
+
+    with pytest.raises(FeedNotFoundError) as excinfo:
+        reader.change_feed_url('0', '3')
+    assert excinfo.value.url == '0'
+
+    with pytest.raises(FeedNotFoundError) as excinfo:
+        reader.change_feed_url('0', '2')
+    assert excinfo.value.url == '0'
+
+    with pytest.raises(FeedExistsError) as excinfo:
+        reader.change_feed_url('1', '2')
+    assert excinfo.value.url == '2'
+
+    reader.update_feeds()
+
+    def entry_data(feed):
+        return {
+            (e.feed_url, e.id, e.original_feed_url)
+            for e in reader.get_entries(feed=feed)
+        }
+
+    assert entry_data(one) == {('1', '1, 1', '1'), ('1', '1, 2', '1')}
+
+    reader.set_feed_user_title(one, 'user title')
+    reader.add_feed_tag(one, 'tag')
+    reader.set_feed_metadata(one, 'key', 'value')
+
+    parser.condition = lambda url: url == '1'
+    reader.update_feeds()
+
+    old_one = reader.get_feed(one)
+
+    # TODO: this should probably be tested in test_storage.py
+    reader._storage.mark_as_stale('1')
+    old_one_for_update = next(reader._storage.get_feeds_for_update(url='1'))
+    assert old_one_for_update.http_etag == 'etag'
+    assert old_one_for_update.http_last_modified == 'last-modified'
+    assert old_one_for_update.stale
+
+    reader.change_feed_url('1', '3')
+
+    assert not reader.get_feed(one, None)
+    assert not list(reader.get_entries(feed=one))
+    assert set(reader.get_feed_tags(one)) == set()
+    assert dict(reader.iter_feed_metadata(one)) == {}
+
+    assert reader.get_feed('3') == old_one._replace(
+        url='3', last_updated=None, last_exception=None,
+    )
+    assert entry_data('3') == {('3', '1, 1', '1'), ('3', '1, 2', '1')}
+    assert set(reader.get_feed_tags('3')) == {'tag'}
+    assert dict(reader.iter_feed_metadata('3')) == {'key': 'value'}
+
+    assert next(
+        reader._storage.get_feeds_for_update(url='3')
+    ) == old_one_for_update._replace(
+        url='3',
+        last_updated=None,
+        last_exception=False,
+        stale=False,
+        http_etag=None,
+        http_last_modified=None,
+    )
+
+    reader.change_feed_url('3', '4')
+    assert entry_data('4') == {('4', '1, 1', '1'), ('4', '1, 2', '1')}

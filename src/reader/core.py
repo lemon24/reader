@@ -233,6 +233,31 @@ class Reader:
         url = _feed_argument(feed)
         self._storage.remove_feed(url)
 
+    def change_feed_url(self, old: FeedInput, new: FeedInput) -> None:
+        """Change the URL of a feed.
+
+        User-defined feed attributes are preserved:
+        :attr:`~Feed.added`, :attr:`~Feed.user_title`.
+        Feed-defined feed attributes are also preserved,
+        at least until the next update:
+        :attr:`~Feed.updated`, :attr:`~Feed.title`
+        :attr:`~Feed.link`, :attr:`~Feed.author`.
+        All other feed attributes are set to their default values.
+
+        The entries, tags and metadata are preserved.
+
+        Args:
+            old (str or Feed): The old feed; must exist.
+            new (str or Feed): The new feed; must not exist.
+
+        Raises:
+            FeedNotFoundError: If ``old`` does not exist.
+            FeedExistsError: If ``new`` already exists.
+            StorageError
+
+        """
+        self._storage.change_feed_url(_feed_argument(old), _feed_argument(new))
+
     def get_feeds(
         self,
         *,
