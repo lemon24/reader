@@ -78,7 +78,7 @@ def test_is_duplicate(one, two, result):
     assert bool(is_duplicate(one, two)) is bool(result)
 
 
-def test_feed_entry_dedupe(reader, monkeypatch, tmpdir):
+def test_feed_entry_dedupe(reader):
     parser = Parser()
     reader._parser = parser
 
@@ -89,34 +89,51 @@ def test_feed_entry_dedupe(reader, monkeypatch, tmpdir):
     unread_one = parser.entry(
         1, 4, datetime(2010, 1, 1), title='title', summary='unread'
     )
+    important_one = parser.entry(
+        1, 5, datetime(2010, 1, 1), title='important', summary='also important'
+    )
+
+    # TODO just use the feeds/entries as arguments
 
     reader.add_feed(one.url)
     reader.update_feeds()
     reader.mark_as_read((one.url, read_one.id))
+    reader.mark_as_important((one.url, important_one.id))
 
     feed_entry_dedupe(reader)
 
     one = parser.feed(1, datetime(2010, 1, 2))
-    new = parser.entry(1, 5, datetime(2010, 1, 2), title='title', summary='new')
-    title_only_two = parser.entry(1, 6, datetime(2010, 1, 2), title='title only')
-    read_two = parser.entry(1, 7, datetime(2010, 1, 2), title='title', summary='read')
+    new = parser.entry(1, 11, datetime(2010, 1, 2), title='title', summary='new')
+    title_only_two = parser.entry(1, 12, datetime(2010, 1, 2), title='title only')
+    read_two = parser.entry(1, 13, datetime(2010, 1, 2), title='title', summary='read')
     unread_two = parser.entry(
-        1, 8, datetime(2010, 1, 2), title='title', summary='unread'
+        1, 14, datetime(2010, 1, 2), title='title', summary='unread'
+    )
+    important_two = parser.entry(
+        1, 15, datetime(2010, 1, 2), title='important', summary='also important'
     )
 
     reader.update_feeds()
 
-    assert set((e.id, e.read) for e in reader.get_entries()) == {
-        # remain untouched
-        (old.id, False),
-        (new.id, False),
-        # also remain untouched
-        (title_only_one.id, False),
-        (title_only_two.id, False),
-        # the new one is marked as read because the old one was
-        (read_one.id, True),
-        (read_two.id, True),
-        # the old one is marked as read in favor of the new one
-        (unread_one.id, True),
-        (unread_two.id, False),
+    assert set((e.id, e.read, e.important) for e in reader.get_entries()) == {
+        t + (False,)
+        for t in {
+            # remain untouched
+            (old.id, False),
+            (new.id, False),
+            # also remain untouched
+            (title_only_one.id, False),
+            (title_only_two.id, False),
+            # the new one is marked as read because the old one was
+            (read_one.id, True),
+            (read_two.id, True),
+            # the old one is marked as read in favor of the new one
+            (unread_one.id, True),
+            (unread_two.id, False),
+        }
+    } | {
+        # the new one is important because the old one was;
+        # the old one is not important anymore
+        (important_one.id, True, False),
+        (important_two.id, False, True),
     }

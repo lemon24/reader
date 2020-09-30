@@ -16,7 +16,10 @@ Unreleased
   (:issue:`190`)
 * Make the string representation of :exc:`ReaderError` and its subclasses
   more consistent; add error messages and improve the existing ones.
-  (:issue:`190`)
+  (:issue:`173`)
+* In the ``feed_entry_dedupe`` plugin,
+  copy the important flag from the old entry to the new one.
+  (:issue:`140`)
 
 
 Version 1.7

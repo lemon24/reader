@@ -6,8 +6,39 @@ Deduplicate entries for the same feed.
 
 Duplicates are entries with the same title *and* summary/content.
 
-If the old entry is read, the new one will be too.
-If the old entry is unread, it will be marked as read in favor of the new one.
+.. module:: reader
+  :noindex:
+
+Entry "user attributes" are set as follows:
+
+:attr:`~Entry.read`
+
+    If the old entry is read, the new one will be too.
+    If the old entry is unread, it will be marked as read in favor of the new one.
+
+    =========== =========== ===========
+    before      after
+    ----------- -----------------------
+    old.read    old.read    new.read
+    =========== =========== ===========
+    True        True        True
+    False       True        False
+    =========== =========== ===========
+
+:attr:`~Entry.important`
+
+    If the old entry is important, it will be marked as unimporant,
+    and the new one will be marked as important.
+
+    =============== =============== ===============
+    before          after
+    --------------- -------------------------------
+    old.important   old.important   new.important
+    =============== =============== ===============
+    True            False           True
+    False           False           False
+    =============== =============== ===============
+
 
 To load::
 
@@ -73,8 +104,10 @@ def feed_entry_dedupe_plugin(reader, entry):
         for e in reader.get_entries(feed=entry.feed_url)
         if e.id != entry.id and is_duplicate(entry, e)
     ]
+
     if not duplicates:
         return
+
     if all(d.read for d in duplicates):
         log.info(
             "%r (%s): found read duplicates, marking this as read",
@@ -90,6 +123,17 @@ def feed_entry_dedupe_plugin(reader, entry):
             (entry.feed_url, entry.id),
             entry.title,
         )
+
+    if any(d.important for d in duplicates):
+        log.info(
+            "%r (%s): found important duplicates, "
+            "marking this as important and duplicates as unimportant",
+            (entry.feed_url, entry.id),
+            entry.title,
+        )
+        reader.mark_as_important(entry)
+        for duplicate in duplicates:
+            reader.mark_as_unimportant(duplicate)
 
 
 def feed_entry_dedupe(reader):
