@@ -17,6 +17,8 @@ Unreleased
 * Make the string representation of :exc:`ReaderError` and its subclasses
   more consistent; add error messages and improve the existing ones.
   (:issue:`173`)
+* Add method :meth:`~Reader.change_feed_url` to change the URL of a feed.
+  (:issue:`149`)
 * In the ``feed_entry_dedupe`` plugin,
   copy the important flag from the old entry to the new one.
   (:issue:`140`)
@@ -50,6 +52,7 @@ Released 2020-09-19
 * In the ``preview_feed_list`` plugin, add ``<meta>`` tags as
   a feed detection heuristic.
 * Add a few property-based tests. (:issue:`188`)
+
 
 Version 1.6
 -----------

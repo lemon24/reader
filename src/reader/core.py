@@ -255,6 +255,8 @@ class Reader:
             FeedExistsError: If ``new`` already exists.
             StorageError
 
+        .. versionadded:: 1.8
+
         """
         self._storage.change_feed_url(_feed_argument(old), _feed_argument(new))
 

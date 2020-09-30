@@ -24,9 +24,9 @@ In no particular order:
 
 * API to delete old entries. (:issue:`96`)
 * API to delete duplicate entries. (:issue:`140`)
-* Handle changing the feed URL. (:issue:`149`)
 * Batch get related resources API. (:issue:`191`)
 * Counts API. (:issue:`185`)
+* Pausing feed updates. (:issue:`187`)
 
 * Various web application improvements.
 * Various search optimizations. (:issue:`122`)
