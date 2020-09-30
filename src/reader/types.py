@@ -396,7 +396,7 @@ class HighlightedString:
 
 
 @dataclass(frozen=True)
-class EntrySearchResult:
+class EntrySearchResult(_namedtuple_compat):
 
     """Data type representing the result of an entry search.
 

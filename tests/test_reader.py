@@ -1857,7 +1857,6 @@ def test_change_feed_url_errors(reader):
 
 @rename_argument('reader', 'reader_with_two_feeds')
 def test_change_feed_url_feed(reader):
-    # TODO: maybe test user_title and last_exception in a different test
     reader.update_feeds()
 
     reader._parser.condition = lambda url: url == '1'
@@ -1876,7 +1875,7 @@ def test_change_feed_url_feed(reader):
 
 
 @rename_argument('reader', 'reader_with_two_feeds')
-def test_change_feed_url_feed_for_update(reader):
+def test_change_feed_url_feeds_for_update(reader):
     # TODO: this should probably be tested in test_storage.py
 
     reader._parser.http_etag = 'etag'
@@ -1911,43 +1910,56 @@ def test_change_feed_url_feed_for_update(reader):
 
 @rename_argument('reader', 'reader_with_two_feeds')
 def test_change_feed_url_entries(reader):
-    # TODO: maybe test original_feed_url in a different test
-    # TODO: maybe test more attributes
-
     reader.update_feeds()
 
-    def entry_data(feed):
-        return {
-            (e.feed_url, e.id, e.original_feed_url)
-            for e in reader.get_entries(feed=feed)
-        }
-
-    assert entry_data('1') == {('1', '1, 1', '1'), ('1', '1, 2', '1')}
+    old = set(reader.get_entries(feed='1'))
+    assert {e.id for e in old} == {'1, 1', '1, 2'}
 
     reader.change_feed_url('1', '3')
 
-    assert entry_data('1') == set()
-    assert entry_data('3') == {('3', '1, 1', '1'), ('3', '1, 2', '1')}
+    assert set(reader.get_entries(feed='1')) == set()
+
+    new = set(reader.get_entries(feed='3'))
+    assert {e.feed_url for e in new} == {'3'}
+
+    def drop_feed(entry):
+        return entry._replace(feed=None)
+
+    assert set(map(drop_feed, new)) == set(map(drop_feed, old))
+
+
+@rename_argument('reader', 'reader_with_two_feeds')
+def test_change_feed_url_original_feed_url(reader):
+    reader.update_feeds()
+
+    assert {e.original_feed_url for e in reader.get_entries(feed='1')} == {'1'}
+    reader.change_feed_url('1', '3')
+
+    assert {e.original_feed_url for e in reader.get_entries(feed='3')} == {'1'}
 
     reader.change_feed_url('3', '4')
-    assert entry_data('4') == {('4', '1, 1', '1'), ('4', '1, 2', '1')}
+    assert {e.original_feed_url for e in reader.get_entries(feed='4')} == {'1'}
 
 
 @rename_argument('reader', 'reader_with_two_feeds')
 def test_change_feed_url_search(reader):
-    reader.enable_search()
     reader.update_feeds()
+    reader.enable_search()
     reader.update_search()
 
-    def search_data(feed):
-        return {(e.feed_url, e.id) for e in reader.search_entries('entry', feed=feed)}
-
-    assert search_data('1') == {('1', '1, 1'), ('1', '1, 2')}
+    old = list(reader.search_entries('entry', feed='1'))
+    assert {e.id for e in old} == {'1, 1', '1, 2'}
+    assert {e.feed_url for e in old} == {'1'}
 
     reader.change_feed_url('1', '3')
 
-    assert search_data('1') == set()
-    assert search_data('3') == {('3', '1, 1'), ('3', '1, 2')}
+    # TODO: maybe we should add an update_search() here,
+    # to allow for the search results not being updated immediately
+
+    assert list(reader.search_entries('entry', feed='1')) == []
+
+    new = list(reader.search_entries('entry', feed='3'))
+    assert new == [e._replace(feed_url='3') for e in old]
 
 
 @rename_argument('reader', 'reader_with_two_feeds')
