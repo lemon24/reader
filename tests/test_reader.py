@@ -1826,7 +1826,7 @@ def reader_with_two_feeds(reader):
 
     one = parser.feed(1, datetime(2010, 1, 1))
     one_one = parser.entry(1, 1, datetime(2010, 1, 1))
-    one_two = parser.entry(1, 2, datetime(2010, 2, 1))
+    one_two = parser.entry(1, 2, datetime(2010, 1, 1))
 
     two = parser.feed(2, datetime(2010, 1, 1))
     two_one = parser.entry(2, 1, datetime(2010, 1, 1))
@@ -1984,6 +1984,8 @@ def test_change_feed_url_second_update(reader, new_feed_url):
 def test_change_feed_url_original_feed_url(reader):
     reader.update_feeds()
 
+    # Entry.original_feed_url should not change if the feed URL changes...
+
     assert {e.original_feed_url for e in reader.get_entries(feed='1')} == {'1'}
     reader.change_feed_url('1', '3')
 
@@ -1991,6 +1993,21 @@ def test_change_feed_url_original_feed_url(reader):
 
     reader.change_feed_url('3', '4')
     assert {e.original_feed_url for e in reader.get_entries(feed='4')} == {'1'}
+
+    # ... unless the entry appears with the same id in the new feed.
+
+    reader._parser.feed(5, datetime(2010, 1, 2))
+    reader._parser.entries[5].update(
+        {
+            e.id: e._replace(feed_url='5', updated=datetime(2010, 1, 2))
+            for e in reader._parser.entries[1].values()
+        }
+    )
+
+    reader.change_feed_url('4', '5')
+    assert {e.original_feed_url for e in reader.get_entries(feed='5')} == {'1'}
+    reader.update_feeds()
+    assert {e.original_feed_url for e in reader.get_entries(feed='5')} == {'5'}
 
 
 @rename_argument('reader', 'reader_with_two_feeds')
