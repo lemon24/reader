@@ -1870,7 +1870,7 @@ def test_change_feed_url_feed(reader):
 
     assert not reader.get_feed('1', None)
     assert reader.get_feed('3') == old_one._replace(
-        url='3', last_updated=None, last_exception=None,
+        url='3', updated=None, last_updated=None, last_exception=None,
     )
 
 
@@ -1900,6 +1900,7 @@ def test_change_feed_url_feeds_for_update(reader):
     assert not get_feed('1')
     assert get_feed('3') == old_one._replace(
         url='3',
+        updated=None,
         last_updated=None,
         last_exception=False,
         stale=False,
@@ -1926,6 +1927,48 @@ def test_change_feed_url_entries(reader):
         return entry._replace(feed=None)
 
     assert set(map(drop_feed, new)) == set(map(drop_feed, old))
+
+
+@rename_argument('reader', 'reader_with_two_feeds')
+def test_change_feed_url_second_update(reader):
+    reader._parser.feed(
+        1, datetime(2010, 1, 1), title='old title', author='old author', link='old link'
+    )
+    reader.update_feeds()
+
+    old_one = reader.get_feed('1')
+
+    reader.change_feed_url('1', '3')
+
+    assert reader.get_feed('3') == old_one._replace(
+        url='3', updated=None, last_updated=None,
+    )
+
+    reader._parser.feed(
+        3, datetime(2010, 1, 2), title='new title', author='new author', link='new link'
+    )
+    reader._parser.entry(3, 1, datetime(2010, 1, 1))
+
+    reader._now = lambda: datetime(2010, 1, 3)
+
+    reader.update_feeds()
+
+    assert reader.get_feed('3') == old_one._replace(
+        url='3',
+        updated=datetime(2010, 1, 2),
+        last_updated=datetime(2010, 1, 3),
+        title='new title',
+        author='new author',
+        link='new link',
+    )
+
+    new = set(reader.get_entries(feed='3'))
+    assert {e.feed_url for e in new} == {'3'}
+    assert {(e.id, e.original_feed_url) for e in new} == {
+        ('1, 1', '1'),
+        ('1, 2', '1'),
+        ('3, 1', '3'),
+    }
 
 
 @rename_argument('reader', 'reader_with_two_feeds')

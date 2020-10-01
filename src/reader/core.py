@@ -240,8 +240,8 @@ class Reader:
         :attr:`~Feed.added`, :attr:`~Feed.user_title`.
         Feed-defined feed attributes are also preserved,
         at least until the next update:
-        :attr:`~Feed.updated`, :attr:`~Feed.title`
-        :attr:`~Feed.link`, :attr:`~Feed.author`.
+        :attr:`~Feed.title`, :attr:`~Feed.link`, :attr:`~Feed.author`
+        (except :attr:`~Feed.updated`, which gets set to None).
         All other feed attributes are set to their default values.
 
         The entries, tags and metadata are preserved.

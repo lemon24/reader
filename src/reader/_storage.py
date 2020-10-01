@@ -361,6 +361,7 @@ class Storage:
                 """
                 UPDATE feeds
                 SET
+                    updated = NULL,
                     http_etag = NULL,
                     http_last_modified = NULL,
                     stale = 0,
