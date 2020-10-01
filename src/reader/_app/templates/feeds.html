@@ -42,6 +42,11 @@
 ) }}
 
 
+{% if request.args.tags %}
+<li>
+    <a href="{{ url_for('.entries', tags=request.args.tags) }}">entries with these tags</a>
+{% endif %}
+
 {% if error %}
 <li class="error"><b>error</b>: {{ error }}
 {% endif %}

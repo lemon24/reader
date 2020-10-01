@@ -92,6 +92,11 @@
     autocomplete=true,
 ) }}
 
+{% if request.args.tags %}
+<li>
+    <a href="{{ url_for('.feeds', tags=request.args.tags) }}">feeds with these tags</a>
+{% endif %}
+
 {% endif %}
 
 
