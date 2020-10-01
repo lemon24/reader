@@ -1980,6 +1980,62 @@ def test_change_feed_url_second_update(reader, new_feed_url):
     }
 
 
+def test_change_feed_url_search_entry_id_repeats(reader):
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    one_one = parser.entry(1, 1, datetime(2010, 1, 1))
+
+    two = parser.feed(2, datetime(2010, 1, 1))
+    parser.entries[2][1] = one_one._replace(feed_url='2')
+
+    for feed in one, two:
+        reader.add_feed(feed)
+    reader.update_feeds()
+
+    reader.enable_search()
+    reader.update_search()
+
+    # TODO: write another test to make sure things marked as to_update remain marked after change
+
+    reader.remove_feed(two)
+    reader.change_feed_url(one, two)
+
+    new = set(reader.get_entries(feed=two))
+    assert {(e.feed_url, e.id, e.original_feed_url) for e in new} == {
+        ('2', '1, 1', '1'),
+    }
+
+    parser.entries[2] = {
+        i: e._replace(updated=datetime(2010, 1, 2), title='new entry title')
+        for i, e in parser.entries[2].items()
+    }
+    reader.update_feeds()
+
+    new = set(reader.get_entries(feed=two))
+    assert {(e.feed_url, e.id, e.original_feed_url) for e in new} == {
+        ('2', '1, 1', '2'),
+    }
+
+    reader.update_search()
+
+    (entry,) = reader.get_entries()
+    (result,) = reader.search_entries('entry')
+    assert (entry.id, entry.feed_url) == (result.id, result.feed_url)
+    assert entry.title == result.metadata['.title'].value
+
+    assert (
+        reader._search.db.execute(
+            "select count(*) from entries_search_sync_state;"
+        ).fetchone()[0]
+        == 1
+    )
+    assert (
+        reader._search.db.execute("select count(*) from entries_search;").fetchone()[0]
+        == 1
+    )
+
+
 @rename_argument('reader', 'reader_with_two_feeds')
 def test_change_feed_url_original_feed_url(reader):
     reader.update_feeds()

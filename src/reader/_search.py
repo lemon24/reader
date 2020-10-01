@@ -345,6 +345,11 @@ class Search:
             """
         )
 
+        # We must delete stuff from the old feed early, before update().
+        # Otherwise, if the old feed was just deleted and had an entry
+        # with the same id as one from the new feed, we'll get an
+        # "UNIQUE constraint failed" for esss(id, feed)
+        # when we update esss.feed to new.url.
         self.db.execute(
             """
             CREATE TRIGGER entries_search_feeds_update_url
@@ -354,6 +359,16 @@ class Search:
             WHEN new.url != old.url
 
             BEGIN
+                DELETE FROM entries_search
+                WHERE rowid IN (
+                    SELECT value
+                    FROM entries_search_sync_state
+                    JOIN json_each(es_rowids)
+                    WHERE feed = new.url AND to_delete = 1
+                );
+                DELETE FROM entries_search_sync_state
+                WHERE feed = new.url AND to_delete = 1;
+
                 UPDATE entries_search
                 SET _feed = new.url
                 WHERE rowid IN (
@@ -362,7 +377,6 @@ class Search:
                     JOIN json_each(es_rowids)
                     WHERE feed = old.url
                 );
-
                 UPDATE entries_search_sync_state
                 SET feed = new.url
                 WHERE feed = old.url;
