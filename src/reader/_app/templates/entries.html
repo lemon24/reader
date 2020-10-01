@@ -152,6 +152,9 @@
 <li>
 <a href="{{ url_for('.metadata', feed=feed.url) }}">update metadata</a>
 
+{# <!-- TODO: how do we redirect to the new feed after url update? --> #}
+{{ macros.text_confirm_button('.form_api', 'change-feed-url', 'change feed URL', 'new-feed-url', 'new URL', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
+
 {% endif %}
 
 {% endif %}

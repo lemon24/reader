@@ -91,6 +91,8 @@
 <li>
 <a href="{{ url_for('.metadata', feed=feed.url) }}">update metadata</a>
 
+{{ macros.text_confirm_button('.form_api', 'change-feed-url', 'change feed URL', 'new-feed-url', 'new URL', loop.index, leave_disabled=true, next=next, context=context) }}
+
 {% for message in get_flashed_messages_by_prefix(
     ('delete-feed', feed.url),
     ('update-feed-title', feed.url),

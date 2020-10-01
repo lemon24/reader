@@ -19,6 +19,8 @@ Unreleased
   (:issue:`173`)
 * Add method :meth:`~Reader.change_feed_url` to change the URL of a feed.
   (:issue:`149`)
+* Allow changing the URL of a feed in the web application.
+  (:issue:`149`)
 * In the ``feed_entry_dedupe`` plugin,
   copy the important flag from the old entry to the new one.
   (:issue:`140`)

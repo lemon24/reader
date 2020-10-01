@@ -509,6 +509,16 @@ def update_feed_tags(data):
         reader.add_feed_tag(feed_url, tag)
 
 
+@form_api(really=True)
+@readererror_to_apierror()
+def change_feed_url(data):
+    feed_url = data['feed-url']
+    new_feed_url = data['new-feed-url'].strip()
+    # TODO: when there's a way to validate URLs, use it
+    # https://github.com/lemon24/reader/issues/155#issuecomment-673694472
+    get_reader().change_feed_url(feed_url, new_feed_url)
+
+
 # for some reason, @blueprint.app_template_global does not work
 @blueprint.app_template_global()
 def additional_enclosure_links(enclosure, entry):
