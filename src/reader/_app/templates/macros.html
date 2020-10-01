@@ -114,6 +114,40 @@ data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
 {%- endmacro %}
 
 
+{% macro text_confirm_button(form_view, action, label, name, placeholder, id=none, leave_disabled=false, next=none, context=none, js_enabled=True, value=none) -%}
+<li class="collapsible"
+
+data-button-type="text-confirm"
+
+{% if js_enabled %}
+
+data-callback="function callback(data, request_data) {
+
+{% if caller is defined %}{{ caller() | forceescape }}{% endif %}
+
+}; callback"
+
+data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
+
+{% endif %}
+>
+<form action="{{ url_for(form_view) }}" method="post" class="action-{{ action }}">
+    <span class="label">{{ label }}</span>
+    <span class="hidden">
+        <input type="text" name="{{ name }}" placeholder="{{ placeholder }}" value="{{ value or '' }}" autocomplete="off">
+
+        <input type="checkbox" id="really-{{ action }}{% if id is not none %}-{{ id }}{% endif %}" name="really-{{ action }}" value="really" autocomplete="off">
+        <label for="really-{{ action }}{% if id %}-{{ id }}{% endif %}">I really want to</label>
+
+        <button type="submit" name="action" value="{{ action }}" autocomplete="off">{{ label }}</button>
+    </span>
+    {% if next is not none %}<input type="hidden" name="next-{{ action }}" value='{{ next }}'>{% endif %}
+    {% for name, value in (context or {}) | dictsort -%}
+    <input type="hidden" name='{{ name }}' value='{{ value }}'>
+    {% endfor %}
+</form>
+{%- endmacro %}
+
 
 {% macro confirm_button(form_view, action, label, id=none, leave_disabled=false, next=none, context=none, js_enabled=True) -%}
 <li class="collapsible"

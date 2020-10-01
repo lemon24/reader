@@ -115,6 +115,8 @@ function register_confirm(endpoint, collapsible, callback, errback) {
     // Hold on to this in case we still need to submit the form normally.
     var really = collapsible.querySelector('input[name=really-confirm]');
 
+    // TODO: Would it not be easier to just remove what we know we don't need?
+
     var form = button.form;
     // form.children is a "live collection",
     // weird stuff happens if we mutate while iterating
@@ -260,6 +262,114 @@ function register_text_input(endpoint, collapsible, callback, errback) {
 }
 
 
+function register_text_confirm(endpoint, collapsible, callback, errback) {
+    // Hybrid of confirm and text_input; the two really weren't made composable.
+
+    if (collapsible.dataset.buttonType != 'text-confirm') { return; }
+    var button = collapsible.querySelector('button[name=action]');
+    var input = collapsible.querySelector('input[type=text]');
+    if (button === null || input === null) { return; };
+
+    // Hold on to this in case we still need to submit the form normally.
+    var really = collapsible.querySelector('input[name=really-text-confirm]');
+
+    // TODO: Would it not be easier to just remove what we know we don't need?
+
+    var hidden = collapsible.querySelector('.hidden');
+    // .children is a "live collection",
+    // weird stuff happens if we mutate while iterating
+    var children = Array.from(hidden.children);
+    for (var i = 0; i < children.length; i++) {
+        var child = children[i];
+        if (child.tagName == 'INPUT' && child.type == 'hidden') {
+            continue;
+        }
+        hidden.removeChild(child);
+    }
+    hidden.appendChild(input);
+    hidden.appendChild(button);
+
+    var state = 'none';
+    var original_text = button.innerHTML;
+    var timeout_id = null;
+
+    function reset_button () {
+        state = 'none';
+        button.innerHTML = original_text;
+        if (collapsible.dataset.leaveDisabled != "true") {
+            button.disabled = false;
+        }
+    }
+
+    button.onclick = function () {
+        if (state == 'none') {
+            state = 'sure';
+            button.innerHTML = 'sure?';
+            timeout_id = setTimeout(function () {
+                state = 'none';
+                reset_button();
+            }, 2000);
+        }
+
+        else if (state == 'sure') {
+            state = 'waiting';
+            clearTimeout(timeout_id);
+            timeout_id = null;
+            button.innerHTML = '...';
+
+            // Fall back to the default behavior (no JS callback);
+            // we still benefit from the JS cosmetic enhancement.
+            if (callback === undefined) {
+                if (really !== null) {
+                    really.checked = true;
+                    really.style.visibility = "hidden";
+                    hidden.appendChild(really);
+                }
+
+                // Should result in the form being submitted.
+                return true;
+            }
+
+            // We need to disable the button after we're sure we don't submit
+            // normally, otherwise it will not be included in the POST data.
+            button.disabled = true;
+
+            if (collapsible.dataset.leaveDisabled == "true") {
+                input.disabled = true;
+            }
+
+            var request_data = extract_form_data(button.form);
+            // We do this here to make sure the form data has the stuff from
+            // *our* control. If https://github.com/lemon24/reader/issues/69
+            // is implemented by having one form element per control,
+            // this won't be needed anymore.
+            update_object(request_data, {action: button.value});
+
+            do_json_request(endpoint, request_data, function (data) {
+                button.innerHTML = 'done';
+                if (collapsible.dataset.leaveDisabled != "true") {
+                    input.value = '';
+                }
+                callback(data, request_data);
+                setTimeout(reset_button, DONE_TIMEOUT);
+            }, function (message) {
+                button.innerHTML = 'error';
+                input.select();
+                errback(original_text + ': ' + message);
+                setTimeout(reset_button, ERROR_TIMEOUT);
+            });
+        }
+
+        else {
+            alert('should not happen');
+        }
+
+        return false;
+    };
+}
+
+
+
 function register_controls(endpoint, controls) {
 
     function errback(message) {
@@ -276,7 +386,7 @@ function register_controls(endpoint, controls) {
     }
 
     var collapsible_register_functions = [
-        register_simple, register_confirm, register_text_input
+        register_simple, register_confirm, register_text_input, register_text_confirm
     ];
 
     var collapsibles = controls.querySelectorAll('li');

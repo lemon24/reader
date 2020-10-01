@@ -53,3 +53,11 @@ def text(data):
     if text.startswith('err'):
         raise APIError(text, 'category')
     return 'text: %s' % text
+
+
+@form(really=True)
+def text_confirm(data):
+    text = data['text']
+    if text.startswith('err'):
+        raise APIError(text, 'category')
+    return 'text confirm: %s' % text

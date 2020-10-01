@@ -30,6 +30,12 @@ window.onload = function () {
 {% call macros.text_input_button('form', 'text', 'text', 'text', 'text', next=url_for('root', from_action='next-text')) %}
     document.querySelector('#out').innerHTML = "v1: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
 {% endcall %}
+{% call macros.text_confirm_button('form', 'text-confirm', 'text confirm', 'text', 'text confirm placeholder', 'text-confirm', next=url_for('root', from_action='next-text-confirm')) %}
+    document.querySelector('#out').innerHTML = "v1: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
+{% endcall %}
+
+</ul>
+<ul class="controls">
 
 {% call macros.simple_button('form', 'simple', 'simple2', leave_disabled=true, next=url_for('root', from_action='next-simple2')) %}
     document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
@@ -40,15 +46,26 @@ window.onload = function () {
 {% call macros.text_input_button('form', 'text', 'text2', 'text', 'text', leave_disabled=true, next=url_for('root', from_action='next-text2')) %}
     document.querySelector('#out').innerHTML = "v2: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
 {% endcall %}
+{% call macros.text_confirm_button('form', 'text-confirm', 'text confirm 2', 'text', 'text confirm placeholder', 'text-confirm2', leave_disabled=true, next=url_for('root', from_action='next-text-confirm2')) %}
+    document.querySelector('#out').innerHTML = "v1: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
+{% endcall %}
+
+</ul>
+<ul class="controls">
 
 {{ macros.simple_button('form', 'simple', 'simple3', next=url_for('root', from_action='next-simple3')) }}
 {{ macros.confirm_button('form', 'confirm', 'confirm3', 'confirm3', next=url_for('root', from_action='next-confirm3')) }}
 {{ macros.text_input_button('form', 'text', 'text3', 'text', 'text', next=url_for('root', from_action='next-text3')) }}
+{{ macros.text_confirm_button('form', 'text-confirm', 'text confirm 3', 'text', 'text confirm placeholder', 'text-confirm3', next=url_for('root', from_action='next-text-confirm-no-js')) }}
 
 {% call macros.simple_button('form', 'simple-next', 'simple next') %}
     document.querySelector('#out').innerHTML = "simple next: " + JSON.stringify(data) + "\n\nrequest data: " + JSON.stringify(request_data);
 {% endcall %}
 
+<input type="hidden" name="next" value='{{ url_for('root', from='next') }}'>
+
+</ul>
+<ul class="controls">
 
 {% call macros.simple_button('form', 'simple', 'simple no js', next=url_for('root', from_action='next-simple-no-js'), js_enabled=False) %}
     document.querySelector('#out').innerHTML = "no js, should not happen";
@@ -59,19 +76,25 @@ window.onload = function () {
 {% call macros.text_input_button('form', 'text', 'text no js', 'text', 'text', next=url_for('root', from_action='next-text-no-js'), js_enabled=False) %}
     document.querySelector('#out').innerHTML = "no js, should not happen";
 {% endcall %}
+{% call macros.text_confirm_button('form', 'text-confirm', 'text confirm no js', 'text', 'text confirm placeholder', 'text-confirm', next=url_for('root', from_action='next-text-confirm-no-js'), js_enabled = False) %}
+    document.querySelector('#out').innerHTML = "no js, should not happen";
+{% endcall %}
 
+</ul>
+<ul class="controls">
 
 {% for message in get_flashed_messages_by_prefix(
     'simple',
     'confirm',
     'text',
+    'text-confirm',
 ) %}
 <li class="error">{{ message }}
 {% endfor %}
 
 </ul>
 
-<input type="hidden" name="next" value='{{ url_for('root', from='next') }}'>
+
 
 
 

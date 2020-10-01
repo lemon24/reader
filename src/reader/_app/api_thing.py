@@ -70,6 +70,8 @@ class APIThing:
         )(get_flashed_messages_by_prefix)
 
     def dispatch_form(self):
+        print(request.form)
+        print(self.really)
         action = request.form['action']
         func = self.actions.get(action)
         if func is None:
