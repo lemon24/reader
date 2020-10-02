@@ -9,7 +9,7 @@ Changelog
 Version 1.8
 -----------
 
-Unreleased
+Released 2020-10-02
 
 * Drop feedparser 5.x support (deprecated in 1.7);
   use feedparser 6.x instead.
