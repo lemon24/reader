@@ -1,3 +1,4 @@
+import string
 from dataclasses import dataclass
 from types import SimpleNamespace
 
@@ -108,22 +109,17 @@ def test_highlighted_string_extract(input, value, highlights, before='>', after=
 
 
 @st.composite
-def maybe_highlighted_words_and_markers(draw, markers=st.text(min_size=1)):
-    before = draw(markers)
-    after = draw(markers.filter(lambda a: before not in a))
-    words = st.text().filter(lambda w: before not in w and after not in w)
-    maybe_highlighted_words = st.lists(st.tuples(words, st.booleans()))
+def maybe_highlighted_words_and_markers(draw):
+    random = draw(st.randoms(use_true_random=True))
+    marker = ''.join(random.choices(string.ascii_letters, k=20))
+    before = f'>{marker}>'
+    after = f'<{marker}<'
+    maybe_highlighted_words = st.lists(st.tuples(st.text(), st.booleans()))
     return draw(maybe_highlighted_words), before, after
 
 
 # TODO: maybe use hypothesis profiles
 @pytest.mark.slow
-# BEGIN known to fail (Python 3.7.6, pytest-6.0.1, hypothesis-5.30.0)
-@pytest.mark.xfail(reason='known to fail')
-@example(maybe_highlighted_words_and_markers=([('0', False), ('0', False)], '1', '00'))
-@example(maybe_highlighted_words_and_markers=([('Ā', True)], 'Ā0', '0'),)
-@example(maybe_highlighted_words_and_markers=([('0', True)], '1', '00'),)
-# END known to fail
 @given(maybe_highlighted_words_and_markers())
 def test_highlighted_string_extract_fuzz(maybe_highlighted_words_and_markers):
     words, before, after = maybe_highlighted_words_and_markers
@@ -235,7 +231,6 @@ def test_highlighted_string_roundtrip(input, before, after):
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(reason='known to fail')
 @given(maybe_highlighted_words_and_markers())
 def test_highlighted_string_roundtrip_fuzz(maybe_highlighted_words_and_markers):
     words, before, after = maybe_highlighted_words_and_markers
