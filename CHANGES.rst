@@ -11,6 +11,10 @@ Version 1.9
 
 Unreleased
 
+* Rename the ``cloudflare_ua_fix`` plugin to ``ua_fallback``.
+  Retry any feed that gets a 403, not just those served by Cloudflare.
+  (:issue:`181`)
+
 
 Version 1.8
 -----------
