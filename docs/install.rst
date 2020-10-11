@@ -42,7 +42,7 @@ As such, most dependencies are optional, and can be installed as `extras`_.
 
 As of version |version|, *reader* has the following extras:
 
-* ``search`` provides :doc:`full-text search <fts>` functionality;
+* ``search`` provides :ref:`full-text search <fts>` functionality;
   search also requires that the SQLite used by :mod:`sqlite3`
   was compiled with the `FTS5`_ extension, and is at least version 3.18.
 * ``cli`` installs the dependencies needed for the

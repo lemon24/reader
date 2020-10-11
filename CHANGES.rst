@@ -320,7 +320,7 @@ Version 0.19
 Released 2020-03-25
 
 * Support PyPy 3.6.
-* Allow :doc:`searching for entries <fts>`. (:issue:`122`)
+* Allow :ref:`searching for entries <fts>`. (:issue:`122`)
 * Stricter type checking for the core modules.
 * Various changes to the storage internal API.
 

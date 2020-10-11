@@ -66,7 +66,7 @@ You can update all feeds by using the :meth:`~Reader.update_feeds` method::
 
     Talk aobut swallowing exceptions;
     talk about new_only;
-    talk about HTTP headers;
+    talk about HTTP headers (move from tutorial);
     talk about update_feed().
 
 
@@ -84,6 +84,28 @@ You can get all the feeds by using the :meth:`~Reader.get_feeds` method::
 
 .. todo:: Talk about filtering and sorting.
 
+
+.. _fts:
+
+Full-text search
+----------------
+
+.. note::
+
+    The search functionality is optional, use the ``search`` extra to install
+    its :ref:`dependencies <Optional dependencies>`.
+
+.. todo:: Maybe make note a sidebar.
+
+*reader* supports full-text searches over the entries' content through the :meth:`~Reader.search_entries()` method.
+
+Since search adds some overhead, it needs to be enabled before being used by calling :meth:`~Reader.enable_search()`. This needs to be done only once (it is persistent across Reader instances using the same database).
+
+Also, once search is enabled, the search index is not updated automatically when feeds/entries change; :meth:`~Reader.update_search()` can be called regularly to keep it in sync.
+
+Enabling, disabling and updating the search index can also be done via the ``reader search`` :doc:`subcommand <cli>`.
+
+.. todo:: Code examples.
 
 
 
