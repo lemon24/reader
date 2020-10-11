@@ -31,6 +31,7 @@ User’s guide
 
     install
     tutorial
+    guide
     fts
     cli
     app
