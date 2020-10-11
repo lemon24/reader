@@ -220,7 +220,7 @@ class Reader:
     def remove_feed(self, feed: FeedInput) -> None:
         """Remove a feed.
 
-        Also removes all of the feed's entries.
+        Also removes all of the feed's entries, metadata, and tags.
 
         Args:
             feed (str or Feed): The feed URL.
