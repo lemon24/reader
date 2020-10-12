@@ -55,6 +55,8 @@ with more information about a feed::
 
 .. todo:: Talk about how you can also pass a feed object where a feed URL is expected.
 
+.. todo:: Talk about remove_feed().
+
 
 At the moment, most of the fields are empty,
 because the feed hasn't been updated yet.
@@ -97,15 +99,23 @@ Full-text search
 
 .. todo:: Maybe make note a sidebar.
 
-*reader* supports full-text searches over the entries' content through the :meth:`~Reader.search_entries()` method.
 
-Since search adds some overhead, it needs to be enabled before being used by calling :meth:`~Reader.enable_search()`. This needs to be done only once (it is persistent across Reader instances using the same database).
+*reader* supports full-text searches over the entries' content through the :meth:`~Reader.search_entries()` method::
 
-Also, once search is enabled, the search index is not updated automatically when feeds/entries change; :meth:`~Reader.update_search()` can be called regularly to keep it in sync.
+    >>> reader.enable_search()
+    >>> reader.update_search()
+    >>> for e in reader.search_entries('mars'):
+    ...     print(e.metadata['.title'].apply('*', '*'))
+    ...
+    H.I. #106: Water on *Mars*
 
-Enabling, disabling and updating the search index can also be done via the ``reader search`` :doc:`subcommand <cli>`.
-
-.. todo:: Code examples.
+Since search adds some overhead,
+it needs to be enabled first by calling :meth:`~Reader.enable_search()`;
+this is persistent across Reader instances using the same database,
+and only needs to be done once.
+Also, the search index must be kept in sync by calling
+:meth:`~Reader.update_search()` regularly
+(usually after updating the feeds).
 
 
 
