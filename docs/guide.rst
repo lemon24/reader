@@ -57,7 +57,7 @@ with more information about a feed::
 
 .. todo:: Talk about how you can also pass a feed object where a feed URL is expected.
 
-.. todo:: Talk about remove_feed().
+.. todo:: Talk about remove_feed() and change_feed_url().
 
 
 At the moment, most of the fields are empty,
@@ -111,6 +111,7 @@ so the entries will be pulled in memory only on-demand.
 You can filter entries by feed::
 
     >>> feed.title
+    'Hello Internet'
     >>> entries = list(reader.get_entries(feed=feed))
     >>> for entry in entries[:2]:
     ...     print(entry.feed.title, '-', entry.title)
@@ -178,10 +179,64 @@ you can sort them most-recent first by passing ``sort='recent'``.
 
 
 
+Feed metadata
+-------------
+
+Feeds can have metadata associated,
+key-value pairs where the values can be any JSON-serializable data.
+
+Common uses for metadata are plugin and UI settings.
+
+.. todo:: Link to some of the methods.
+
+::
+
+    >>> reader.get_feed_metadata(feed, 'key', 'default')
+    'default'
+    >>> reader.set_feed_metadata(feed, 'key', 'value')
+    >>> reader.get_feed_metadata(feed, 'key', 'default')
+    'value'
+    >>> reader.set_feed_metadata(feed, 'another', {'one': [2]})
+    >>> dict(reader.iter_feed_metadata(feed))
+    {'another': {'one': [2]}, 'key': 'value'}
+
+
+.. todo:: Mention reader doesn't restrict key characters, but the UI should.
+.. todo:: Mention reserved key prefixes (:issue:`186`).
+
+
+Feed tags
+---------
+
+Likewise, feeds can have tags, associated arbitrary strings::
+
+    >>> reader.add_feed_tag(feed, 'one')
+    >>> reader.add_feed_tag(feed, 'two')
+    >>> set(reader.get_feed_tags(feed))
+    {'one', 'two'}
+
+Unlike metadata, tags also allow filtering::
+
+    >>> # feeds that have the tag "one"
+    >>> [f.title for f in reader.get_feeds(tags=['one'])]
+    ['Hello Internet']
+    >>> # entries of feeds that have no tags
+    >>> [
+    ...     (e.feed.title, e.title)
+    ...     for e in reader.get_entries(feed_tags=[False])
+    ... ][:2]
+    [('Cortex', '106: Clear and Boring'), ('Cortex', '105: Atomic Notes')]
+
+See the :meth:`~Reader.get_feeds()` documentation for more complex tag filters.
+
+
+.. todo:: Mention reader doesn't restrict tag characters, but the UI should.
+.. todo:: Mention reserved tag prefixes (:issue:`186`).
+
+
 
 .. todo::
 
     feed operations (remove, filtering, user title)
-    feed metadata
-    feed tags
+    get_feeds() vs get_feed() (same for entry)
     errors
