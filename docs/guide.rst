@@ -31,22 +31,46 @@ to release resources associated with it::
     >>> reader.close()
 
 The default (and currently only) storage uses SQLite,
-so you can pass ``":memory:"`` as path to use a temporary in-memory database,
-or the empty string to use a temporary on-disk one.
+so you can pass ``":memory:"``/``""`` as path
+to use a temporary in-memory/on-disk database.
 In both cases, the data will disappear when the reader is closed.
-
 
 
 Working with feeds
 ------------------
 
+Adding feeds
+~~~~~~~~~~~~
+
 To add a feed, call the :meth:`~Reader.add_feed` method with the feed URL::
 
     >>> reader.add_feed("http://www.hellointernet.fm/podcast?format=rss")
     >>> reader.add_feed("https://www.relay.fm/cortex/feed")
+    >>> reader.add_feed("/path/to/feed.xml")
+    >>> reader.add_feed("file:/also/path/to/feed.xml")
 
-.. todo:: Talk about feed_root and filesystem access.
 
+File-system access
+~~~~~~~~~~~~~~~~~~
+
+*reader* supports *http(s)://* and local (*file:*) feeds.
+
+For security reasons, you might want to restrict file-system access
+to a single directory or prevent it entirely;
+you can do so by using the ``feed_root`` :func:`make_reader` argument::
+
+    >>> # local feed paths are relative to /path/to/feed/root
+    >>> reader = make_reader("db.sqlite", feed_root='/path/to/feed/root')
+    >>> # local paths will fail to update
+    >>> reader = make_reader("db.sqlite", feed_root=None)
+
+Note that it is still possible to `add <Adding feeds_>`_ local feeds;
+it is `updating <Updating feeds_>`_ them that will fail.
+
+
+
+Updating feeds
+~~~~~~~~~~~~~~
 
 The :meth:`~Reader.get_feed` method returns a :class:`Feed` object
 with more information about a feed::
@@ -56,9 +80,6 @@ with more information about a feed::
     Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=None, title=None, link=None, author=None, user_title=None, added=datetime.datetime(2020, 10, 10, 0, 0), last_updated=None, last_exception=None)
 
 .. todo:: Talk about how you can also pass a feed object where a feed URL is expected.
-
-.. todo:: Talk about remove_feed() and change_feed_url().
-
 
 At the moment, most of the fields are empty,
 because the feed hasn't been updated yet.
@@ -74,6 +95,11 @@ You can update all feeds by using the :meth:`~Reader.update_feeds` method::
     talk about update_feed().
 
 
+Getting feeds
+~~~~~~~~~~~~~
+
+.. todo:: Consolidate get_feed() and get_feeds().
+
 You can get all the feeds by using the :meth:`~Reader.get_feeds` method::
 
     >>> for feed in reader.get_feeds():
@@ -88,11 +114,11 @@ You can get all the feeds by using the :meth:`~Reader.get_feeds` method::
 
 .. todo:: Talk about filtering and sorting.
 
+.. todo:: Talk about remove_feed() and change_feed_url().
 
 
 Working with entries
 --------------------
-
 
 You can get all the entries, most-recent first,
 by using :meth:`~Reader.get_entries()`::
