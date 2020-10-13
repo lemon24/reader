@@ -50,8 +50,6 @@ Data objects
 Exceptions
 ----------
 
-All exceptions that :class:`Reader` explicitly raises inherit from :exc:`ReaderError`.
-
 .. autoexception:: ReaderError
     :members:
 

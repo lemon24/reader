@@ -235,8 +235,36 @@ See the :meth:`~Reader.get_feeds()` documentation for more complex tag filters.
 
 
 
+Errors and exceptions
+---------------------
+
+All exceptions that :class:`Reader` explicitly raises inherit from
+:exc:`ReaderError`.
+
+If there's an issue retrieving or parsing the feed,
+:meth:`~Reader.update_feed` will raise a :exc:`ParseError`
+with the original exception (if any) as cause.
+:meth:`~Reader.update_feeds` will just log the exception and move on.
+In both cases, information about the cause will be stored on the feed in
+:attr:`~Feed.last_exception`.
+
+Any unexpected exception raised by the underlying storage implementation
+will be reraised as a :exc:`StorageError`,
+with the original exception as cause.
+
+Search methods will raise a :exc:`SearchError`.
+Any unexpected exception raised by the underlying search implementation
+will be also be reraised as a :exc:`SearchError`,
+with the original exception as cause.
+
+When trying to create a feed, entry, metadata that already exists,
+or to operate on one that does not exist,
+a corresponding :exc:`*ExistsError` or :exc:`*NotFoundError`
+will be raised.
+
+
+
 .. todo::
 
     feed operations (remove, filtering, user title)
     get_feeds() vs get_feed() (same for entry)
-    errors
