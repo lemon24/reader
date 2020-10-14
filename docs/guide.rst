@@ -40,7 +40,7 @@ In both cases, the data will disappear when the reader is closed.
 
 
 File-system access
-~~~~~~~~~~~~~~~~~~
+------------------
 
 *reader* supports *http(s)://* and local (*file:*) feeds.
 
@@ -60,11 +60,8 @@ regardless of ``feed_root``;
 it is `updating <Updating feeds_>`_ them that will fail.
 
 
-Working with feeds
-------------------
-
 Adding feeds
-~~~~~~~~~~~~
+------------
 
 To add a feed, call the :meth:`~Reader.add_feed` method with the feed URL::
 
@@ -72,7 +69,7 @@ To add a feed, call the :meth:`~Reader.add_feed` method with the feed URL::
 
 
 Updating feeds
-~~~~~~~~~~~~~~
+--------------
 
 You can update all the feeds by using the :meth:`~Reader.update_feeds` method::
 
@@ -99,20 +96,22 @@ you can call this more often (e.g. every minute)::
 
 
 Getting feeds
-~~~~~~~~~~~~~
+-------------
 
 The :meth:`~Reader.get_feed` method returns a :class:`Feed` object
-with more information about a feed::
+with more information about a feed.
+
+If the feed was never updated, most fields are empty;
+after update, they'll be set with data from the retrieved feed::
 
     >>> reader.add_feed("http://www.hellointernet.fm/podcast?format=rss")
     >>> feed = reader.get_feed("http://www.hellointernet.fm/podcast?format=rss")
-    >>> feed
-    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=None, title=None, link=None, author=None, user_title=None, added=datetime.datetime(2020, 10, 10, 0, 0), last_updated=None, last_exception=None)
+    >>> print(feed)
+    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=None, title=None, ...)
+    >>> reader.update_feed(feed)
+    >>> reader.get_feed(feed)
+    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=datetime.datetime(2020, 2, 28, 9, 34, 2), title='Hello Internet', ...)
 
-At the moment, most of the fields are empty,
-because the feed hasn't been updated yet.
-
-.. todo:: Talk about how you can also pass a feed object where a feed URL is expected.
 
 You can get all the feeds by using the :meth:`~Reader.get_feeds` method::
 
@@ -125,6 +124,7 @@ You can get all the feeds by using the :meth:`~Reader.get_feeds` method::
     ...
     Cortex by Relay FM, updated on 2020-09-14 12:15:00
     Hello Internet by CGP Grey, updated on 2020-02-28 09:34:02
+
 
 .. todo:: Talk about filtering and sorting.
 
