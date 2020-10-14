@@ -82,7 +82,6 @@ You can also update a specific feed using :meth:`~Reader.update_feed`::
 If supported by the server, *reader* uses the ETag and Last-Modified headers
 to only retrieve feeds if they changed
 (`details <https://pythonhosted.org/feedparser/http-etag.html>`_).
-
 Even so, you should not update feeds *too* often,
 to avoid wasting the feed publisher's resources,
 and potentially getting banned;
@@ -131,8 +130,8 @@ You can get all the feeds by using the :meth:`~Reader.get_feeds` method::
 .. todo:: Talk about remove_feed() and change_feed_url().
 
 
-Working with entries
---------------------
+Getting entries
+---------------
 
 You can get all the entries, most-recent first,
 by using :meth:`~Reader.get_entries()`::
@@ -146,6 +145,8 @@ by using :meth:`~Reader.get_entries()`::
 
 :meth:`~Reader.get_entries()` generates :class:`Entry` objects lazily,
 so the entries will be pulled in memory only on-demand.
+
+.. todo:: Move ^ to a section of its own, maybe.
 
 
 You can filter entries by feed::
@@ -170,6 +171,7 @@ Also, you can mark entries as read or important, and filter by that::
     Hello Internet - H.I. #135: Place Your Bets
     Hello Internet - # H.I. 134: Boxing Day
 
+.. todo:: Move ^ to an "entry flags" section.
 
 
 .. _fts:
@@ -188,9 +190,9 @@ Full-text search
 *reader* supports full-text searches over the entries' content through the :meth:`~Reader.search_entries()` method.
 
 Since search adds some overhead,
-it needs to be enabled first by calling :meth:`~Reader.enable_search()`;
-this is persistent across Reader instances using the same database,
-and only needs to be done once.
+it needs to be enabled first by calling :meth:`~Reader.enable_search()`
+(this is persistent across Reader instances using the same database,
+and only needs to be done once).
 Also, the search index must be kept in sync by calling
 :meth:`~Reader.update_search()` regularly
 (usually after updating the feeds).
@@ -273,6 +275,17 @@ See the :meth:`~Reader.get_feeds()` documentation for more complex tag filters.
 .. todo:: Mention reader doesn't restrict tag characters, but the UI should.
 .. todo:: Mention reserved tag prefixes (:issue:`186`).
 
+
+Feed and entry arguments
+------------------------
+
+As you may have noticed in the examples above,
+feed URLs and :class:`Feed` objects can be used interchangeably
+as method arguments.
+This is by design.
+Likewise, wherever an entry argument is expected,
+you can either pass a *(feed URL, entry id)* tuple
+or an :class:`Entry` (or :class:`EntrySearchResult`) object.
 
 
 Errors and exceptions
