@@ -164,8 +164,10 @@ class Reader:
 
     """A feed reader.
 
-    Reader objects should be created using :func:`make_reader`; the Reader
-    constructor is not stable yet and may change without any notice.
+    .. important::
+
+        Reader objects should be created using :func:`make_reader`; the Reader
+        constructor is not stable yet and may change without any notice.
 
     """
 

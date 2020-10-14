@@ -63,8 +63,6 @@ Since we will run the script repeatedly to download new episodes,
 if the feed already exists, we can just move along.
 
 :meth:`~Reader.update_feeds` retrieves and stores all the added feeds.
-*reader* uses the ETag and Last-Modified headers to only retrieve feeds
-if they changed (if supported by the server).
 
 :meth:`~Reader.get_feed` returns a :class:`Feed` object that contains
 information about the feed.

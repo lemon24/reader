@@ -92,6 +92,17 @@ with `optional dependencies <Optional dependencies_>`_:
     pip install 'reader[some-extra,...]'
 
 
+Update reader
+~~~~~~~~~~~~~
+
+Use the following command to update *reader*
+(add any extras as needed):
+
+.. code-block:: bash
+
+    pip install --upgrade reader
+
+
 Living on the edge
 ~~~~~~~~~~~~~~~~~~
 

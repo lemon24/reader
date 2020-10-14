@@ -6,20 +6,23 @@ User guide
   :noindex:
 
 
-.. note:: This section of the documentation is a work in progress.
+This page gives a tour of *reader*'s features,
+and a few examples of how to use them.
 
-.. todo:: Install reader first.
+.. note::
+
+    Before starting, make sure that *reader* is :doc:`installed <install>`
+    and up-to-date.
 
 
+The Reader object
+-----------------
 
-The Reader
-----------
+Most *reader* functionality can be accessed through a :class:`Reader` instance,
+which persists feed and entry state, and provides operations on them.
 
-The :class:`Reader` object gives access to most *reader* functionality
-and persists the state related to feeds and entries.
-
-To create a new :class:`Reader`, use the :func:`make_reader` function,
-and pass it the path to a database file
+To create a new :class:`Reader`,
+call  :func:`make_reader` function with the path to a database file
 (if it doesn't exist it will be created automatically)::
 
     >>> from reader import make_reader
@@ -36,20 +39,6 @@ to use a temporary in-memory/on-disk database.
 In both cases, the data will disappear when the reader is closed.
 
 
-Working with feeds
-------------------
-
-Adding feeds
-~~~~~~~~~~~~
-
-To add a feed, call the :meth:`~Reader.add_feed` method with the feed URL::
-
-    >>> reader.add_feed("http://www.hellointernet.fm/podcast?format=rss")
-    >>> reader.add_feed("https://www.relay.fm/cortex/feed")
-    >>> reader.add_feed("/path/to/feed.xml")
-    >>> reader.add_feed("file:/also/path/to/feed.xml")
-
-
 File-system access
 ~~~~~~~~~~~~~~~~~~
 
@@ -61,44 +50,69 @@ you can do so by using the ``feed_root`` :func:`make_reader` argument::
 
     >>> # local feed paths are relative to /path/to/feed/root
     >>> reader = make_reader("db.sqlite", feed_root='/path/to/feed/root')
+    >>> reader.add_feed("feed.xml")
+    >>> reader.add_feed("file:also/feed.xml")
     >>> # local paths will fail to update
     >>> reader = make_reader("db.sqlite", feed_root=None)
 
-Note that it is still possible to `add <Adding feeds_>`_ local feeds;
+Note that it is still possible to `add <Adding feeds_>`_ local feeds
+regardless of ``feed_root``;
 it is `updating <Updating feeds_>`_ them that will fail.
 
+
+Working with feeds
+------------------
+
+Adding feeds
+~~~~~~~~~~~~
+
+To add a feed, call the :meth:`~Reader.add_feed` method with the feed URL::
+
+    >>> reader.add_feed("https://www.relay.fm/cortex/feed")
 
 
 Updating feeds
 ~~~~~~~~~~~~~~
 
-The :meth:`~Reader.get_feed` method returns a :class:`Feed` object
-with more information about a feed::
-
-    >>> feed = reader.get_feed("http://www.hellointernet.fm/podcast?format=rss")
-    >>> feed
-    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=None, title=None, link=None, author=None, user_title=None, added=datetime.datetime(2020, 10, 10, 0, 0), last_updated=None, last_exception=None)
-
-.. todo:: Talk about how you can also pass a feed object where a feed URL is expected.
-
-At the moment, most of the fields are empty,
-because the feed hasn't been updated yet.
-You can update all feeds by using the :meth:`~Reader.update_feeds` method::
+You can update all the feeds by using the :meth:`~Reader.update_feeds` method::
 
     >>> reader.update_feeds()
 
-.. todo::
+You can also update a specific feed using :meth:`~Reader.update_feed`::
 
-    Talk aobut swallowing exceptions;
-    talk about new_only;
-    talk about HTTP headers (move from tutorial);
-    talk about update_feed().
+    >>> reader.update_feed("https://www.relay.fm/cortex/feed")
+
+If supported by the server, *reader* uses the ETag and Last-Modified headers
+to only retrieve feeds if they changed
+(`details <https://pythonhosted.org/feedparser/http-etag.html>`_).
+
+Even so, you should not update feeds *too* often,
+to avoid wasting the feed publisher's resources,
+and potentially getting banned;
+every 30 minutes seems reasonable.
+
+To support updating newly-added feeds off the regular update schedule,
+you can use the ``new_only`` flag;
+you can call this more often (e.g. every minute)::
+
+    >>> reader.update_feeds(new_only=True)
 
 
 Getting feeds
 ~~~~~~~~~~~~~
 
-.. todo:: Consolidate get_feed() and get_feeds().
+The :meth:`~Reader.get_feed` method returns a :class:`Feed` object
+with more information about a feed::
+
+    >>> reader.add_feed("http://www.hellointernet.fm/podcast?format=rss")
+    >>> feed = reader.get_feed("http://www.hellointernet.fm/podcast?format=rss")
+    >>> feed
+    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=None, title=None, link=None, author=None, user_title=None, added=datetime.datetime(2020, 10, 10, 0, 0), last_updated=None, last_exception=None)
+
+At the moment, most of the fields are empty,
+because the feed hasn't been updated yet.
+
+.. todo:: Talk about how you can also pass a feed object where a feed URL is expected.
 
 You can get all the feeds by using the :meth:`~Reader.get_feeds` method::
 
