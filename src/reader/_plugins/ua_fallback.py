@@ -33,7 +33,7 @@ LOG_HEADERS = ['Server', 'X-Powered-By']
 
 
 def ua_fallback(session, response, request, **kwargs):
-    if not response.status_code == 403:
+    if response.status_code != 403:
         return None
 
     log_headers = {h: response.headers[h] for h in LOG_HEADERS if h in response.headers}

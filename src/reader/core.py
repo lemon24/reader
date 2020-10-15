@@ -151,8 +151,7 @@ def make_reader(
 
     parser = default_parser(feed_root)
 
-    reader = Reader(storage, search, parser, _called_directly=False)
-    return reader
+    return Reader(storage, search, parser, _called_directly=False)
 
 
 # If we ever want to implement metrics for Reader, see this comment:

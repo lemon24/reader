@@ -412,7 +412,7 @@ class Search:
 
     @wrap_exceptions(SearchError)
     def is_enabled(self) -> bool:
-        search_table_exists = (
+        return (
             self.db.execute(
                 """
                 SELECT name
@@ -422,7 +422,6 @@ class Search:
             ).fetchone()
             is not None
         )
-        return search_table_exists
 
     @wrap_exceptions(SearchError)
     def update(self) -> None:

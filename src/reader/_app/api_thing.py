@@ -51,9 +51,8 @@ class APIError(Exception):
     def __init__(self, message, category=None):
         super().__init__(message)
         self.message = message
-        if category is not None:
-            if not isinstance(category, tuple):
-                category = (category,)
+        if category is not None and not isinstance(category, tuple):
+            category = (category,)
         self.category = category
 
 

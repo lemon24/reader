@@ -32,7 +32,7 @@ def zero_or_one(
     default: Union[MissingType, _T] = MISSING,
 ) -> Union[_U, _T]:
     things = list(it)
-    if len(things) == 0:
+    if not things:
         if isinstance(default, MissingType):
             raise make_exc()
         return default

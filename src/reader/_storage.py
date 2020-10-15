@@ -735,8 +735,7 @@ class Storage:
 
         def make_params() -> Iterable[Mapping[str, Any]]:
             nonlocal last_param
-            for last_param in map(self._make_add_or_update_entries_args, entry_tuples):
-                yield last_param
+            yield from map(self._make_add_or_update_entries_args, entry_tuples)
 
         with self.db:
 
@@ -1074,11 +1073,9 @@ def apply_filter_options(
             """
         )
 
-    context = apply_feed_tags_filter_options(
+    return apply_feed_tags_filter_options(
         query, feed_tags, 'entries.feed', keyword=keyword
     )
-
-    return context
 
 
 def apply_feed_tags_filter_options(

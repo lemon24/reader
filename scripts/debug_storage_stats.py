@@ -109,11 +109,10 @@ def parse_results(lines):
 
 def make_table(ts):
     columns = list(zip(*ts))
-    rows = [
+    return [
         [fn] + [round(f(c), nd) for c, nd in zip(columns, value_ndigits.values())]
         for fn, f in agg_funcs.items()
     ]
-    return rows
 
 
 def make_tables(results):

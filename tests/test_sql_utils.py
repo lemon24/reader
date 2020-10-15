@@ -173,7 +173,7 @@ def test_scrolling_window():
 def test_scrolling_window_last():
     query = Query().SELECT()
     query.scrolling_window_order_by()
-    assert query.extract_last([1, 2, 3]) == None
+    assert query.extract_last([1, 2, 3]) is None
     assert dict(query.last_params(None)) == {}
 
     query = Query().SELECT('one', 'two', 'three')

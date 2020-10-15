@@ -44,9 +44,9 @@ def download_everything():
 
 
 def download_file(src_url, dst_path):
-    part_path = dst_path + '.part'
     with requests.get(src_url, stream=True) as response:
         response.raise_for_status()
+        part_path = dst_path + '.part'
         try:
             with open(part_path, 'wb') as file:
                 shutil.copyfileobj(response.raw, file)

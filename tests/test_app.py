@@ -17,8 +17,7 @@ def browser(db_path):
     app = create_app(make_reader_config({'reader': {'url': db_path}}))
     session = requests.Session()
     session.mount('http://app/', wsgiadapter.WSGIAdapter(app))
-    browser = mechanicalsoup.StatefulBrowser(session)
-    return browser
+    return mechanicalsoup.StatefulBrowser(session)
 
 
 @pytest.mark.slow

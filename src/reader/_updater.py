@@ -145,9 +145,9 @@ class _Updater:
             ), f'{new_entry.feed_url!r}, {self.url!r}'
 
             updated = self.should_update_entry(new_entry, old_entry)
-            entry_new = not old_entry
-
             if updated:
+
+                entry_new = not old_entry
 
                 yield EntryUpdateIntent(
                     EntryData(**new_entry._replace(updated=updated).__dict__),

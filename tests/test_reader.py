@@ -1035,7 +1035,7 @@ def test_add_remove_get_feeds(reader, feed_arg):
     assert excinfo.value.url == one.url
     assert 'no such feed' in excinfo.value.message
 
-    assert reader.get_feed(feed_arg(one), None) == None
+    assert reader.get_feed(feed_arg(one), None) is None
     assert reader.get_feed(feed_arg(one), default=1) == 1
     assert set(reader.get_entries()) == set()
 
@@ -1073,7 +1073,7 @@ def test_add_remove_get_feeds(reader, feed_arg):
 
     reader.remove_feed(feed_arg(one))
     assert set(reader.get_feeds()) == {two}
-    assert reader.get_feed(feed_arg(one), None) == None
+    assert reader.get_feed(feed_arg(one), None) is None
     assert set(reader.get_entries()) == {entry_two}
 
     with pytest.raises(FeedNotFoundError) as excinfo:
@@ -1111,12 +1111,12 @@ def test_get_feeds_order_title(reader):
     reader.add_feed(feed4.url)
     reader.add_feed(feed5.url)
 
-    assert list(f.url for f in reader.get_feeds()) == '1 2 3 4 5'.split()
+    assert [f.url for f in reader.get_feeds()] == '1 2 3 4 5'.split()
 
     reader.update_feeds()
     reader.set_feed_user_title(feed5, 'five')
 
-    assert list(f.url for f in reader.get_feeds()) == '4 5 1 3 2'.split()
+    assert [f.url for f in reader.get_feeds()] == '4 5 1 3 2'.split()
 
 
 def test_get_feeds_order_title_case_insensitive(reader):
@@ -1139,7 +1139,7 @@ def test_get_feeds_order_title_case_insensitive(reader):
 
     reader.update_feeds()
 
-    assert list(f.url for f in reader.get_feeds()) == '1 3 2'.split()
+    assert [f.url for f in reader.get_feeds()] == '1 3 2'.split()
 
 
 def test_get_feeds_order_added(reader):
@@ -1172,7 +1172,7 @@ def test_get_feeds_order_added(reader):
 
     reader.update_feeds()
 
-    assert list(f.url for f in reader.get_feeds(sort='added')) == '2 1 3'.split()
+    assert [f.url for f in reader.get_feeds(sort='added')] == '2 1 3'.split()
 
 
 def test_set_feed_user_title(reader, feed_arg):
