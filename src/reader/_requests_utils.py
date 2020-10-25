@@ -6,7 +6,6 @@ from dataclasses import astuple
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
-from typing import cast
 from typing import Mapping
 from typing import Optional
 from typing import Sequence
@@ -83,8 +82,9 @@ class SessionWrapper:
         for request_hook in self.hooks.request:
             request = request_hook(self.session, request, **kwargs) or request
 
-        response = self.session.send(  # type: ignore
-            self.session.prepare_request(request), **kwargs
+        response = self.session.send(
+            self.session.prepare_request(request),  # type: ignore
+            **kwargs,
         )
 
         for response_hook in self.hooks.response:
@@ -99,11 +99,12 @@ class SessionWrapper:
             assert isinstance(new_request, requests.Request)
 
             request = new_request
-            response = self.session.send(  # type: ignore
-                self.session.prepare_request(request), **kwargs
+            response = self.session.send(
+                self.session.prepare_request(request),  # type: ignore
+                **kwargs,
             )
 
-        return cast(requests.Response, response)
+        return response
 
     def __enter__(self: _T) -> _T:
         return self
