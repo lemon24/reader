@@ -1,0 +1,35 @@
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        python-version: ["3.6", "3.7", "3.8", "3.9", pypy3]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+        exclude:
+          - os: windows-latest
+            python-version: "3.6"
+          - os: windows-latest
+            python-version: "3.7"
+          - os: windows-latest
+            python-version: "3.8"
+
+    steps:
+
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - run: make install-dev
+      - run: make coverage typing
