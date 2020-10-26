@@ -11,6 +11,11 @@ from test_reader import with_call_entries_method
 from reader import make_reader
 
 
+# Skip on PyPy, as these tests are even slower there.
+# Reconsider when we start using hypothesis profiles.
+pytestmark = pytest.mark.skipif("sys.implementation.name == 'pypy'")
+
+
 @st.composite
 def data_and_kwargs(draw):
     data = draw(

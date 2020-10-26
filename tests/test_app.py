@@ -1,6 +1,6 @@
+import sys
 from datetime import datetime
 
-import mechanicalsoup
 import pytest
 import requests
 import wsgiadapter
@@ -10,6 +10,14 @@ from reader import make_reader
 from reader._app import create_app
 from reader._config import make_reader_config
 from reader._config import make_reader_from_config
+
+# mechanicalsoup depends on lxml, which doesn't build on pypy;
+# see the comments in setup.py for details.
+if sys.implementation.name != 'pypy':
+    import mechanicalsoup
+
+# We just don't run these tests on pypy because of it.
+pytestmark = pytest.mark.skipif("sys.implementation.name == 'pypy'")
 
 
 @pytest.fixture

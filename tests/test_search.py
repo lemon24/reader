@@ -2,6 +2,7 @@ from datetime import datetime
 from unittest.mock import ANY
 from unittest.mock import MagicMock
 
+import bs4
 import pytest
 from fakeparser import Parser
 
@@ -69,7 +70,18 @@ STRIP_HTML_DATA = [(i, i) for i in [None, 10, 11.2, b'aabb', b'aa<br>bb']] + [
 
 @pytest.mark.parametrize('input, expected_output', STRIP_HTML_DATA)
 # We test all bs4 parsers, since we don't know/care what the user has installed.
-@pytest.mark.parametrize('features', [None, 'lxml', 'html.parser', 'html5lib'])
+@pytest.mark.parametrize(
+    'features',
+    [
+        None,
+        # lxml fails to build on pypy, see the comments in setup.py for details.
+        pytest.param(
+            'lxml', marks=pytest.mark.skipif("sys.implementation.name == 'pypy'")
+        ),
+        'html.parser',
+        'html5lib',
+    ],
+)
 def test_strip_html(input, expected_output, features):
     output = strip_html(input, features)
     if isinstance(output, str):
@@ -77,7 +89,14 @@ def test_strip_html(input, expected_output, features):
 
     # Special-case different <noscript> handling by html5lib.
     # https://www.crummy.com/software/BeautifulSoup/bs4/doc/#differences-between-parsers
-    if features == 'html5lib' and isinstance(input, str) and '<noscript>' in input:
+    is_html5lib = any(
+        [
+            features == 'html5lib',
+            features is None
+            and 'html5lib' in type(bs4.BeautifulSoup('').builder).__module__,
+        ]
+    )
+    if is_html5lib and isinstance(input, str) and '<noscript>' in input:
         assert '<noscript>' not in output
         return
 

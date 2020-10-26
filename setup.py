@@ -48,10 +48,14 @@ setup(
             'pytest-cov',
             'tox',
             'requests-mock',
-            'mechanicalsoup',
+            # machanicalsoup hard-depends on lxml,
+            # which fails to build on pypy (see below).
+            'mechanicalsoup; implementation_name != "pypy"',
             'requests-wsgi-adapter',
             # We want to test all known Beautiful Soup parsers.
-            'lxml',
+            # lxml fails to build on pypy as of October 2020;
+            # https://github.com/lemon24/reader/actions/runs/328943935
+            'lxml; implementation_name != "pypy"',
             'html5lib',
             # mypy is not working on pypy as of January 2020
             # https://github.com/python/typed_ast/issues/97#issuecomment-484335190
