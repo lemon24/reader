@@ -310,6 +310,8 @@ def test_parse_returns_etag_last_modified(
 
 
 @pytest.mark.parametrize('tz', ['UTC', 'Europe/Helsinki'])
+# timt.tzset() does not exist on Windows
+@pytest.mark.skipif("os.name == 'nt'")
 def test_parse_local_timezone(monkeypatch, request, parse, tz, data_dir):
     """parse() return the correct dates regardless of the local timezone."""
 
