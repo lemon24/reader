@@ -1,21 +1,29 @@
 import functools
 import importlib
 import inspect
-import posixpath
+import os.path
 from urllib.parse import urlparse
 
 import pytest
 
 
 def make_url_base(feed_url):
-    url_base = urlparse(feed_url)
-    url_base = url_base._replace(
-        path=posixpath.dirname(url_base.path), params='', query='', fragment=''
-    ).geturl()
-    if url_base:
-        url_base = url_base.rstrip('/') + '/'
+    # FIXME: this is very brittle (broken query string and fragment support),
+    # and also very far away from test_parse where it's used.
 
-    rel_base = url_base if feed_url.startswith('http') else ''
+    if any(feed_url.startswith(p) for p in ['http:', 'https:', 'file:']):
+        sep = '/'
+        # ... but not really, we also support file:path\to\thing, I think
+    else:
+        sep = os.sep
+
+    url_base = sep.join(feed_url.split(sep)[:-1])
+    if url_base:
+        url_base = url_base.rstrip(sep) + sep
+
+    rel_base = (
+        url_base if any(feed_url.startswith(p) for p in ['http:', 'https:']) else ''
+    )
 
     return url_base, rel_base
 

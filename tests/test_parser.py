@@ -23,14 +23,20 @@ def parse():
 
 
 def _make_relative_path_url(**_):
-    return lambda feed_path: feed_path.relto(feed_path.join('../..'))
+    def make_url(feed_path):
+        return feed_path.relto(feed_path.join('../..'))
+
+    return make_url
 
 
 make_relative_path_url = pytest.fixture(_make_relative_path_url)
 
 
 def _make_absolute_path_url(**_):
-    return lambda feed_path: str(feed_path)
+    def make_url(feed_path):
+        return str(feed_path)
+
+    return make_url
 
 
 def _make_http_url(requests_mock, **_):
@@ -116,8 +122,14 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     monkeypatch.chdir(data_dir.dirname)
 
     feed_filename = '{}.{}'.format(data_file, feed_type)
+    # make_url receives an absolute path,
+    # and returns a relative-to-cwd or absolute path or a URL.
     feed_url = make_url(data_dir.join(feed_filename))
 
+    # the base of the feed URL, as the parser will set it;
+    # the base of files relative to this feed.
+    # TODO: why are they different?
+    # TODO: this is too magic / circular; it should be easier to understand/explain.
     url_base, rel_base = make_url_base(feed_url)
     expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(data_dir.join(feed_filename + '.py').read(), expected)
