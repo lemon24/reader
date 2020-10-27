@@ -576,7 +576,7 @@ def test_parsers(parse):
         parse('file:unknown')
 
 
-@pytest.mark.parametrize('scheme', ['', 'file:', 'file://', 'file://localhost/'])
+@pytest.mark.parametrize('scheme', ['', 'file:', 'file:///', 'file://localhost/'])
 @pytest.mark.parametrize('relative', [False, True])
 def test_feed_root_empty(data_dir, scheme, relative):
     # TODO: this test looks a lot like test_feed_root_nonempty
