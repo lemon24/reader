@@ -164,10 +164,20 @@ class Reader:
 
     """A feed reader.
 
+    Persists feed and entry state, provides operations on them,
+    and stores configuration.
+
+
     .. important::
 
         Reader objects should be created using :func:`make_reader`; the Reader
         constructor is not stable yet and may change without any notice.
+
+
+    The :class:`Reader` object is not thread safe;
+    its methods should be called only from the thread that created it.
+    To access the same database from multiple threads,
+    create one instance in each thread.
 
     """
 
