@@ -1,3 +1,6 @@
+import sqlite3
+import sys
+
 import py.path
 import pytest
 from utils import reload_module
@@ -13,6 +16,11 @@ def pytest_addoption(parser):
 
 
 def pytest_collection_modifyitems(config, items):  # pragma: no cover
+    apply_runslow(config, items)
+    apply_flaky_pypy_sqlite3(items)
+
+
+def apply_runslow(config, items):  # pragma: no cover
     if config.getoption("--runslow"):
         # --runslow given in cli: do not skip slow tests
         return
@@ -20,6 +28,21 @@ def pytest_collection_modifyitems(config, items):  # pragma: no cover
     for item in items:
         if "slow" in item.keywords:
             item.add_marker(skip_slow)
+
+
+def apply_flaky_pypy_sqlite3(items):  # pragma: no cover
+    # getting intermittent sqlite3 errors on pypy;
+    # https://github.com/lemon24/reader/issues/199#issuecomment-716475686
+
+    if sys.implementation.name != 'pypy':
+        return
+
+    def rerun_filter(err, *args):
+        return issubclass(err[0], sqlite3.InterfaceError)
+
+    sqlite3_flaky = pytest.mark.flaky(rerun_filter=rerun_filter)
+    for item in items:
+        item.add_marker(sqlite3_flaky)
 
 
 @pytest.fixture

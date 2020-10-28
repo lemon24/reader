@@ -43,6 +43,7 @@ setup(
         'dev': [
             'pytest>=4',
             'pytest-randomly',
+            'flaky',
             'hypothesis>=5',
             'coverage',
             'pytest-cov',
