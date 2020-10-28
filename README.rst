@@ -11,11 +11,15 @@ and without enforcing a dependency on a particular framework.
 .. end-intro
 
 
-|build-status| |code-coverage| |documentation-status| |pypi-status| |type-checking| |code-style|
+|build-status-travis| |build-status-github| |code-coverage| |documentation-status| |pypi-status| |type-checking| |code-style|
 
-.. |build-status| image:: https://travis-ci.com/lemon24/reader.svg?branch=master
+.. |build-status-travis| image:: https://travis-ci.com/lemon24/reader.svg?branch=master
   :target: https://travis-ci.com/lemon24/reader
-  :alt: build status
+  :alt: build status (Travis CI)
+
+.. |build-status-github| image:: https://github.com/lemon24/reader/workflows/build/badge.svg
+  :target: https://github.com/lemon24/reader/actions?query=workflow%3Abuild
+  :alt: build status (GitHub Actions)
 
 .. |code-coverage| image:: https://codecov.io/github/lemon24/reader/coverage.svg?branch=master
   :target: https://codecov.io/github/lemon24/reader?branch=master
