@@ -17,19 +17,18 @@ These packages will be installed automatically when installing *reader*:
 * `requests`_ retrieves feeds from the internet;
   it replaces feedparser's default use of :mod:`urllib`
   to make it easier to write plugins.
-* `sgmllib3k`_ is a Python 3 "forward-port" of the `sgmllib`_ Python 2
-  standard library module;
-  feedparser uses it for ill-formed XML parsing and content sanitizing.
 
 *reader* also depends on the :mod:`sqlite3` standard library module
 (at least SQLite 3.15), and on the `JSON1`_ SQLite extension.
 
 .. note::
 
-    The SQLite bundled with Python <= 3.8 on Windows
-    does **not** include the JSON1 extension.
-    As a consequence, *reader* may not work on Windows.
-    See :issue:`163` for details.
+    **reader works out of the box on Windows only starting with Python 3.9**,
+    because the SQLite bundled with the official Python distribution
+    does **not** include the JSON1 extension in earlier versions.
+    That said, it should be possible to build ``sqlite3``
+    with a newer version of SQLite;
+    see :issue:`163` for details.
 
 
 .. _optional dependencies:
