@@ -29,7 +29,10 @@ test-all:
 	tox
 
 docs:
-	 $(MAKE) -C docs html
+	$(MAKE) -C docs html
+
+docs-dev:
+	$(MAKE) -C docs clean; while true; do sleep 1; $(MAKE) -C docs html; done
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
