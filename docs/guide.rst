@@ -18,25 +18,41 @@ and a few examples of how to use them.
 The Reader object
 -----------------
 
-Most *reader* functionality can be accessed through a :class:`Reader` instance,
-which persists feed and entry state, and provides operations on them.
+The :class:`Reader` object persists feed and entry state
+and provides operations on them.
 
-To create a new :class:`Reader`,
-call  :func:`make_reader` function with the path to a database file
-(if it doesn't exist it will be created automatically)::
+
+To create a new Reader,
+call :func:`make_reader` with the path to a database file::
 
     >>> from reader import make_reader
     >>> reader = make_reader("db.sqlite")
 
-After you are done with the reader, call its :meth:`~Reader.close()` method
-to release resources associated with it::
+
+The default (and currently only) storage uses SQLite,
+so the path behaves like the ``database`` argument of :func:`sqlite3.connect`:
+
+* If the database does not exist, it will be created automatically.
+* You can pass ``":memory:"`` to use a temporary in-memory database;
+  the data will disappear when the reader is closed.
+
+
+After you are done with the reader,
+call :meth:`~Reader.close()` to release the resources associated with it::
 
     >>> reader.close()
 
-The default (and currently only) storage uses SQLite,
-so you can pass ``":memory:"``/``""`` as path
-to use a temporary in-memory/on-disk database.
-In both cases, the data will disappear when the reader is closed.
+While the same thing will eventually happen when the reader is garbage-collected,
+it is recommended to call :meth:`~Reader.close()` explicitly,
+especially in long-running processes
+or when you create multiple readers pointing to the same database.
+You can use :func:`contextlib.closing` to do this automatically::
+
+    >>> from contextlib import closing
+    >>> with closing(make_reader('db.sqlite')) as reader:
+    ...     ... # do stuff with reader
+    ...
+
 
 
 File-system access
