@@ -64,16 +64,21 @@ For security reasons, you might want to restrict file-system access
 to a single directory or prevent it entirely;
 you can do so by using the ``feed_root`` :func:`make_reader` argument::
 
-    >>> # local feed paths are relative to /path/to/feed/root
-    >>> reader = make_reader("db.sqlite", feed_root='/path/to/feed/root')
+    >>> # local feed paths are relative to /feeds
+    >>> reader = make_reader("db.sqlite", feed_root='/feeds')
+    >>> # ok, resolves to /feeds/feed.xml
     >>> reader.add_feed("feed.xml")
+    >>> # ok, resolves to /feeds/also/feed.xml
     >>> reader.add_feed("file:also/feed.xml")
-    >>> # local paths will fail to update
+    >>> # error on update, resolves to /feed.xml, which is above /feeds
+    >>> reader.add_feed("file:../feed.xml")
+    >>> # all local paths will fail to update
     >>> reader = make_reader("db.sqlite", feed_root=None)
 
 Note that it is still possible to `add <Adding feeds_>`_ local feeds
 regardless of ``feed_root``;
 it is `updating <Updating feeds_>`_ them that will fail.
+
 
 
 Adding feeds
@@ -82,6 +87,17 @@ Adding feeds
 To add a feed, call the :meth:`~Reader.add_feed` method with the feed URL::
 
     >>> reader.add_feed("https://www.relay.fm/cortex/feed")
+    >>> reader.add_feed("http://www.hellointernet.fm/podcast?format=rss")
+
+
+Most of the attributes of a new feed are empty::
+
+    >>> feed = reader.get_feed("http://www.hellointernet.fm/podcast?format=rss")
+    >>> print(feed)
+    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=None, title=None, ...)
+
+To retrieve the feed and populate them, it must be `updated <Updating feeds_>`_.
+
 
 
 Updating feeds
@@ -90,10 +106,12 @@ Updating feeds
 You can update all the feeds by using the :meth:`~Reader.update_feeds` method::
 
     >>> reader.update_feeds()
+    >>> reader.get_feed(feed)
+    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=datetime.datetime(2020, 2, 28, 9, 34, 2), title='Hello Internet', ...)
 
 You can also update a specific feed using :meth:`~Reader.update_feed`::
 
-    >>> reader.update_feed("https://www.relay.fm/cortex/feed")
+    >>> reader.update_feed("http://www.hellointernet.fm/podcast?format=rss")
 
 If supported by the server, *reader* uses the ETag and Last-Modified headers
 to only retrieve feeds if they changed
@@ -110,25 +128,15 @@ you can call this more often (e.g. every minute)::
     >>> reader.update_feeds(new_only=True)
 
 
+
 Getting feeds
 -------------
 
-The :meth:`~Reader.get_feed` method returns a :class:`Feed` object
+As seen in the previous sections,
+:meth:`~Reader.get_feed` returns a :class:`Feed` object
 with more information about a feed.
 
-If the feed was never updated, most fields are empty;
-after update, they'll be set with data from the retrieved feed::
-
-    >>> reader.add_feed("http://www.hellointernet.fm/podcast?format=rss")
-    >>> feed = reader.get_feed("http://www.hellointernet.fm/podcast?format=rss")
-    >>> print(feed)
-    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=None, title=None, ...)
-    >>> reader.update_feed(feed)
-    >>> reader.get_feed(feed)
-    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=datetime.datetime(2020, 2, 28, 9, 34, 2), title='Hello Internet', ...)
-
-
-You can get all the feeds by using the :meth:`~Reader.get_feeds` method::
+To get all the feeds, use the :meth:`~Reader.get_feeds` method::
 
     >>> for feed in reader.get_feeds():
     ...     print(
@@ -140,10 +148,14 @@ You can get all the feeds by using the :meth:`~Reader.get_feeds` method::
     Cortex by Relay FM, updated on 2020-09-14 12:15:00
     Hello Internet by CGP Grey, updated on 2020-02-28 09:34:02
 
+:meth:`~Reader.get_feeds` also allows
+filtering feeds by their last update status or `tags <Feed tags_>`_,
+and changing the feed sort order.
 
-.. todo:: Talk about filtering and sorting.
+
 
 .. todo:: Talk about remove_feed() and change_feed_url().
+
 
 
 Getting entries
