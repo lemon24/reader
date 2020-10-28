@@ -12,6 +12,8 @@ Version 1.9
 Unreleased
 
 * Support Python 3.9. (:issue:`199`)
+* Support Windows (requires Python >= 3.9). (:issue:`163`, :issue:`199`)
+* Use GitHub Actions to do macOS and Windows CI builds. (:issue:`199`)
 * Rename the ``cloudflare_ua_fix`` plugin to ``ua_fallback``.
   Retry any feed that gets a 403, not just those served by Cloudflare.
   (:issue:`181`)
