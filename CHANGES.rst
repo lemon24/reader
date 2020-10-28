@@ -9,7 +9,7 @@ Changelog
 Version 1.9
 -----------
 
-Unreleased
+Released 2020-10-28
 
 * Support Python 3.9. (:issue:`199`)
 * Support Windows (requires Python >= 3.9). (:issue:`163`)
