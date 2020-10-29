@@ -81,28 +81,34 @@ it is `updating <Updating feeds_>`_ them that will fail.
 
 
 
-Adding feeds
-------------
+Adding and removing feeds
+-------------------------
 
 To add a feed, call the :meth:`~Reader.add_feed` method with the feed URL::
 
     >>> reader.add_feed("https://www.relay.fm/cortex/feed")
     >>> reader.add_feed("http://www.hellointernet.fm/podcast?format=rss")
 
-
-Most of the attributes of a new feed are empty::
+Most of the attributes of a new feed are empty
+(to populate them, the feed must be `updated <Updating feeds_>`_)::
 
     >>> feed = reader.get_feed("http://www.hellointernet.fm/podcast?format=rss")
     >>> print(feed)
     Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=None, title=None, ...)
 
-To retrieve the feed and populate them, it must be `updated <Updating feeds_>`_.
+
+To remove a feed and all the data associated with it,
+use :meth:`~Reader.remove_feed`::
+
+    >>> reader.remove_feed("https://www.example.com/feed.xml")
 
 
 
 Updating feeds
 --------------
 
+To retrieve the latest version of a feed, along with any new entries,
+it must be updated.
 You can update all the feeds by using the :meth:`~Reader.update_feeds` method::
 
     >>> reader.update_feeds()
@@ -134,7 +140,28 @@ Getting feeds
 
 As seen in the previous sections,
 :meth:`~Reader.get_feed` returns a :class:`Feed` object
-with more information about a feed.
+with more information about a feed::
+
+    >>> from prettyprinter import pprint, install_extras;
+    >>> install_extras(include=['dataclasses'])
+    >>> feed = reader.get_feed(feed)
+    >>> pprint(feed)
+    reader.types.Feed(
+        url='http://www.hellointernet.fm/podcast?format=rss',
+        updated=datetime.datetime(
+            year=2020,
+            month=2,
+            day=28,
+            hour=9,
+            minute=34,
+            second=2
+        ),
+        title='Hello Internet',
+        link='http://www.hellointernet.fm/',
+        author='CGP Grey',
+        added=datetime.datetime(2020, 10, 12),
+        last_updated=datetime.datetime(2020, 10, 12)
+    )
 
 To get all the feeds, use the :meth:`~Reader.get_feeds` method::
 
@@ -154,7 +181,26 @@ and changing the feed sort order.
 
 
 
-.. todo:: Talk about remove_feed() and change_feed_url().
+Changing feed URLs
+------------------
+
+Sometimes, feeds move from one URL to another.
+
+This can be handled naively by removing the old feed and adding the new URL;
+however, all the data associated with the old feed would get lost,
+including any old entries (some feeds only have the last X entries).
+
+To change the URL of a feed in-place, use :meth:`~Reader.change_feed_url`::
+
+    >>> reader.change_feed_url(
+    ...     "https://www.example.com/old.xml",
+    ...     "https://www.example.com/new.xml"
+    ... )
+
+
+Sometimes, the id of the entries changes as well;
+you can handle duplicate entries by using a :doc:`plugin <plugins>`
+like ``feed_entry_dedupe``.
 
 
 
