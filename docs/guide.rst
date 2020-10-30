@@ -119,6 +119,12 @@ You can update all the feeds by using the :meth:`~Reader.update_feeds` method::
     >>> reader.get_feed(feed)
     Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=datetime.datetime(2020, 2, 28, 9, 34, 2), title='Hello Internet', ...)
 
+
+To retrive feeds in parallel, use the ``workers`` flag::
+
+    >>> reader.update_feeds(workers=10)
+
+
 You can also update a specific feed using :meth:`~Reader.update_feed`::
 
     >>> reader.update_feed("http://www.hellointernet.fm/podcast?format=rss")
@@ -366,8 +372,8 @@ or an :class:`Entry` (or :class:`EntrySearchResult`) object.
 
 
 
-Streaming
----------
+Streaming methods
+-----------------
 
 Most methods that return iterables
 (:meth:`~Reader.get_feeds()`, :meth:`~Reader.get_entries()` etc.)
