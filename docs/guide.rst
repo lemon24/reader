@@ -81,8 +81,8 @@ it is `updating <Updating feeds_>`_ them that will fail.
 
 
 
-Adding and removing feeds
--------------------------
+Adding feeds
+------------
 
 To add a feed, call the :meth:`~Reader.add_feed` method with the feed URL::
 
@@ -97,7 +97,11 @@ Most of the attributes of a new feed are empty
     Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=None, title=None, ...)
 
 
-To remove a feed and all the data associated with it,
+
+Deleting feeds
+--------------
+
+To delete a feed and all the data associated with it,
 use :meth:`~Reader.remove_feed`::
 
     >>> reader.remove_feed("https://www.example.com/feed.xml")
@@ -208,7 +212,8 @@ Getting entries
 ---------------
 
 You can get all the entries, most-recent first,
-by using :meth:`~Reader.get_entries()`::
+by using :meth:`~Reader.get_entries()`,
+which generates :class:`Entry` objects::
 
     >>> for entry, _ in zip(reader.get_entries(), range(10)):
     ...     print(entry.feed.title, '-', entry.title)
@@ -217,13 +222,11 @@ by using :meth:`~Reader.get_entries()`::
     ...
     Hello Internet - H.I. #136: Dog Bingo
 
-:meth:`~Reader.get_entries()` generates :class:`Entry` objects lazily,
-so the entries will be pulled in memory only on-demand.
 
-.. todo:: Move ^ to a section of its own, maybe.
-
-
-You can filter entries by feed::
+:meth:`~Reader.get_entries` allows filtering entries by their feed,
+`flags <Entry flags_>`_, `feed tags <Feed tags_>`_, or enclosures,
+and changing the entry sort order.
+Here is an example of getting entries for a single feed::
 
     >>> feed.title
     'Hello Internet'
@@ -235,7 +238,13 @@ You can filter entries by feed::
     Hello Internet - H.I. #135: Place Your Bets
 
 
-Also, you can mark entries as read or important, and filter by that::
+
+Entry flags
+-----------
+
+Entries can be marked as :meth:`read <Reader.mark_as_read>`
+or as :meth:`important <Reader.mark_as_important>`,
+which allows for enhanced filtering::
 
     >>> reader.mark_as_read(entries[0])
     >>> entries = list(reader.get_entries(feed=feed, read=False))
@@ -245,7 +254,6 @@ Also, you can mark entries as read or important, and filter by that::
     Hello Internet - H.I. #135: Place Your Bets
     Hello Internet - # H.I. 134: Boxing Day
 
-.. todo:: Move ^ to an "entry flags" section.
 
 
 .. _fts:
@@ -360,6 +368,14 @@ This is by design.
 Likewise, wherever an entry argument is expected,
 you can either pass a *(feed URL, entry id)* tuple
 or an :class:`Entry` (or :class:`EntrySearchResult`) object.
+
+
+
+
+.. todo:: Move to a section of its own, maybe. :meth:`~Reader.get_entries()`  lazily, so the entries will be pulled in memory only on-demand.
+
+
+
 
 
 Errors and exceptions
