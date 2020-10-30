@@ -890,7 +890,7 @@ def make_search_entries_query(
 
     query = (
         Query()
-        .WITH(("search", search.to_str(end='')))
+        .WITH(("search", str(search)))
         .SELECT(
             "search._id",
             "search._feed",

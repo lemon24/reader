@@ -20,7 +20,6 @@ def test_query_simple():
             join
         WHERE
             where
-        ;
         """
     )
 
@@ -103,7 +102,6 @@ def test_query_complicated():
             third
         LIMIT
             limit
-        ;
         """
     )
 

@@ -61,10 +61,7 @@ class BaseQuery(_BQBase):
         return functools.partial(self.add, name.replace('_', ' '))
 
     def __str__(self) -> str:
-        return self.to_str()
-
-    def to_str(self, end: str = ';\n') -> str:
-        return ''.join(self._lines()) + end
+        return ''.join(self._lines())
 
     def _clean_up(self, thing: str) -> str:
         return textwrap.dedent(thing.rstrip()).strip()
@@ -178,7 +175,7 @@ class ScrollingWindowMixin(_SWMBase):
 
         return self.add(
             self.__keyword,
-            Query().add('(', *self.__things).add(f') {op} (', *labels).to_str(end=')'),
+            str(Query().add('(', *self.__things).add(f') {op} (', *labels)) + ')',
         )
 
     def extract_last(self, result: Tuple[_T, ...]) -> Optional[Tuple[_T, ...]]:
