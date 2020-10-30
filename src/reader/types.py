@@ -62,7 +62,12 @@ class _namedtuple_compat:
 @dataclass(frozen=True)
 class Feed(_namedtuple_compat):
 
-    """Data type representing a feed."""
+    """Data type representing a feed.
+
+    All :class:`~datetime.datetime` attributes are timezone-naive,
+    and always represent UTC.
+
+    """
 
     #: The URL of the feed.
     url: str
@@ -136,7 +141,12 @@ class ExceptionInfo(_namedtuple_compat):
 @dataclass(frozen=True)
 class Entry(_namedtuple_compat):
 
-    """Data type representing an entry."""
+    """Data type representing an entry.
+
+    All :class:`~datetime.datetime` attributes are timezone-naive,
+    and always represent UTC.
+
+    """
 
     # WARNING: When changing attributes, keep Entry and EntryData in sync.
 
