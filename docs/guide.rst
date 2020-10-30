@@ -243,8 +243,9 @@ Entry flags
 -----------
 
 Entries can be marked as :meth:`read <Reader.mark_as_read>`
-or as :meth:`important <Reader.mark_as_important>`,
-which allows for enhanced filtering::
+or as :meth:`important <Reader.mark_as_important>`.
+
+These flags can be used for filtering::
 
     >>> reader.mark_as_read(entries[0])
     >>> entries = list(reader.get_entries(feed=feed, read=False))
@@ -266,13 +267,11 @@ Full-text search
     The search functionality is optional, use the ``search`` extra to install
     its :ref:`dependencies <Optional dependencies>`.
 
-.. todo:: Maybe make note a sidebar.
-
 
 *reader* supports full-text searches over the entries' content through the :meth:`~Reader.search_entries()` method.
 
 Since search adds some overhead,
-it needs to be enabled first by calling :meth:`~Reader.enable_search()`
+it needs to be enabled by calling :meth:`~Reader.enable_search()`
 (this is persistent across Reader instances using the same database,
 and only needs to be done once).
 Also, the search index must be kept in sync by calling
@@ -306,14 +305,8 @@ you can sort them most-recent first by passing ``sort='recent'``.
 Feed metadata
 -------------
 
-Feeds can have metadata associated,
-key-value pairs where the values can be any JSON-serializable data.
-
-Common uses for metadata are plugin and UI settings.
-
-.. todo:: Link to some of the methods.
-
-::
+Feeds can have metadata,
+key-value pairs where the values are any JSON-serializable data::
 
     >>> reader.get_feed_metadata(feed, 'key', 'default')
     'default'
@@ -325,21 +318,25 @@ Common uses for metadata are plugin and UI settings.
     {'another': {'one': [2]}, 'key': 'value'}
 
 
+Common uses for metadata are plugin and UI settings.
+
 .. todo:: Mention reader doesn't restrict key characters, but the UI should.
 .. todo:: Mention reserved key prefixes (:issue:`186`).
+
 
 
 Feed tags
 ---------
 
-Likewise, feeds can have tags, associated arbitrary strings::
+Feeds can also have tags::
 
     >>> reader.add_feed_tag(feed, 'one')
     >>> reader.add_feed_tag(feed, 'two')
     >>> set(reader.get_feed_tags(feed))
     {'one', 'two'}
 
-Unlike metadata, tags also allow filtering::
+Tags can be used for filtering feeds and entries
+(see the :meth:`~Reader.get_feeds()` documentation for more complex examples)::
 
     >>> # feeds that have the tag "one"
     >>> [f.title for f in reader.get_feeds(tags=['one'])]
@@ -351,11 +348,9 @@ Unlike metadata, tags also allow filtering::
     ... ][:2]
     [('Cortex', '106: Clear and Boring'), ('Cortex', '105: Atomic Notes')]
 
-See the :meth:`~Reader.get_feeds()` documentation for more complex tag filters.
-
-
 .. todo:: Mention reader doesn't restrict tag characters, but the UI should.
 .. todo:: Mention reserved tag prefixes (:issue:`186`).
+
 
 
 Feed and entry arguments
@@ -371,10 +366,22 @@ or an :class:`Entry` (or :class:`EntrySearchResult`) object.
 
 
 
+Streaming
+---------
 
-.. todo:: Move to a section of its own, maybe. :meth:`~Reader.get_entries()`  lazily, so the entries will be pulled in memory only on-demand.
+Most methods that return iterables
+(:meth:`~Reader.get_feeds()`, :meth:`~Reader.get_entries()` etc.)
+generate the results lazily.
 
 
+Some examples of how this is useful:
+
+* Consuming the first 100 entries
+  should take *roughly* the same amount of time,
+  whether you have 1000 or 100000 entries.
+* Likewise, if you don't keep the entries around (e.g. append them to a list),
+  memory usage should remain relatively constant
+  regardless of the total number of entries returned.
 
 
 
