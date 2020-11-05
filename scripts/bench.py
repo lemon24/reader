@@ -27,6 +27,7 @@ from fakeparser import Parser
 
 from reader import make_reader
 from reader._app import create_app, get_reader
+from reader._config import make_reader_config
 
 
 def get_params(fn):
@@ -101,7 +102,7 @@ def make_reader_with_entries(path, num_entries, num_feeds=NUM_FEEDS, text=False)
 
 
 def make_test_client(path):
-    app = create_app(path)
+    app = create_app(make_reader_config({'reader': {'url': path}}))
     client = app.test_client()
     with app.app_context():
         get_reader()
@@ -311,7 +312,7 @@ TIMINGS = OrderedDict(
 )
 TIMINGS_PARAMS_LIST = [(2 ** i,) for i in range(5, 12)]
 TIMINGS_NUMBER = 4
-PROFILE_PARAMS = (2 ** 11,)
+PROFILE_PARAMS = TIMINGS_PARAMS_LIST[-1]
 PARAM_IDS = ('num_entries',)
 
 
