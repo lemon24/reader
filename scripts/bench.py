@@ -115,8 +115,14 @@ def setup_db():
         yield os.path.join(tmpdir, 'db.sqlite')
 
 
+EXISTING_DB_PATH = None
+
+
 @contextmanager
 def setup_db_with_entries(num_entries):
+    if EXISTING_DB_PATH:
+        yield EXISTING_DB_PATH
+        return
     with setup_db() as path:
         make_reader_with_entries(path, num_entries).update_feeds()
         yield path
@@ -263,6 +269,9 @@ time_update_feed_old_fallback = inject(reader=setup_reader_feed_old_fallback)(
 
 @contextmanager
 def setup_reader_with_text_entries(num_entries):
+    if EXISTING_DB_PATH:
+        yield make_reader(EXISTING_DB_PATH)
+        return
     with setup_db() as path:
         reader = make_reader_with_entries(path, num_entries, text=True)
         reader.update_feeds()
@@ -271,6 +280,9 @@ def setup_reader_with_text_entries(num_entries):
 
 @contextmanager
 def setup_reader_with_search_and_some_read_entries(num_entries):
+    if EXISTING_DB_PATH:
+        yield make_reader(EXISTING_DB_PATH)
+        return
     with setup_reader_with_text_entries(num_entries) as reader:
         reader.enable_search()
         reader.update_search()
@@ -341,7 +353,13 @@ def make_row_fmt(extra, names, num_fmt='.3f'):
 @click.argument('which', nargs=-1)
 @click.option('-n', '--number', type=int, default=TIMINGS_NUMBER, show_default=True)
 @click.option('-r', '--repeat', type=int, show_default=True)
-def time(which, number, repeat):
+@click.option(
+    '--db',
+    type=click.Path(exists=True, dir_okay=False),
+    help="Use an existing database instead of generating ones of varying sizes. "
+    "WARNING: Benchmarks that mutate the database might not make sense.",
+)
+def time(which, number, repeat, db):
     if not which:
         which = ['*']
 
@@ -367,6 +385,14 @@ def time(which, number, repeat):
 
     header = make_header(extra, names)
     row_fmt = make_row_fmt(extra, names)
+
+    if db:
+        # HACK: use an existing DB
+        # (for which num_entries can't vary, since it exists already)
+        global EXISTING_DB_PATH
+        EXISTING_DB_PATH = db
+        global TIMINGS_PARAMS_LIST
+        TIMINGS_PARAMS_LIST = [(0,)]
 
     def get_results():
         for params in TIMINGS_PARAMS_LIST:
