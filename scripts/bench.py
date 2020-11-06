@@ -296,14 +296,26 @@ SEARCH_ENTRIES_QUERY = 'porta justo scelerisque dignissim convallis primis lacus
 
 
 @inject(reader=setup_reader_with_search_and_some_read_entries)
-def time_search_entries_all(reader):
+def time_search_entries_relevant_all(reader):
     for _ in reader.search_entries(SEARCH_ENTRIES_QUERY):
         pass
 
 
 @inject(reader=setup_reader_with_search_and_some_read_entries)
-def time_search_entries_read(reader):
+def time_search_entries_relevant_read(reader):
     for _ in reader.search_entries(SEARCH_ENTRIES_QUERY, read=True):
+        pass
+
+
+@inject(reader=setup_reader_with_search_and_some_read_entries)
+def time_search_entries_recent_all(reader):
+    for _ in reader.search_entries(SEARCH_ENTRIES_QUERY, sort='recent'):
+        pass
+
+
+@inject(reader=setup_reader_with_search_and_some_read_entries)
+def time_search_entries_recent_read(reader):
+    for _ in reader.search_entries(SEARCH_ENTRIES_QUERY, sort='recent', read=True):
         pass
 
 
