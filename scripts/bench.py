@@ -359,7 +359,8 @@ def make_row_fmt(extra, names, num_fmt='.3f'):
     help="Use an existing database instead of generating ones of varying sizes. "
     "WARNING: Benchmarks that mutate the database might not make sense.",
 )
-def time(which, number, repeat, db):
+@click.option('--query', help="Query for search_entries() timings; useful with --db.")
+def time(which, number, repeat, db, query):
     if not which:
         which = ['*']
 
@@ -393,6 +394,9 @@ def time(which, number, repeat, db):
         EXISTING_DB_PATH = db
         global TIMINGS_PARAMS_LIST
         TIMINGS_PARAMS_LIST = [(0,)]
+    if query:
+        global SEARCH_ENTRIES_QUERY
+        SEARCH_ENTRIES_QUERY = query
 
     def get_results():
         for params in TIMINGS_PARAMS_LIST:
