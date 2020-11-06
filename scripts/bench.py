@@ -1,5 +1,6 @@
 import cProfile
 import inspect
+import math
 import os.path
 import pstats
 import random
@@ -430,6 +431,13 @@ def time(which, number, repeat, db, query):
             print(row_fmt.format(*prefix, *params, *map(stat, results)))
 
 
+def fancy_division(a, b):
+    try:
+        return a / b
+    except ZeroDivisionError:
+        return math.copysign(float('inf'), a)
+
+
 @cli.command()
 @click.argument('before', type=click.File())
 @click.argument('after', type=click.File())
@@ -443,11 +451,11 @@ def time(which, number, repeat, db, query):
 def diff(before, after, format):
     if format == 'percent-decrease':
         row_num_fmt = '.1%'
-        func = lambda b, a: 1 - float(a) / float(b)
+        func = lambda b, a: 1 - fancy_division(float(a), float(b))
     elif format == 'times':
         # it would be nice if we could add an "x" after the number, but eh...
         row_num_fmt = '.2f'
-        func = lambda b, a: float(a) / float(b)
+        func = lambda b, a: fancy_division(float(a), float(b))
     else:
         assert False, "shouldn't happen"
 
