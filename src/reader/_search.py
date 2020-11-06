@@ -909,7 +909,6 @@ def make_search_entries_query(
             *"rank search._feed search._id".split(), keyword='HAVING'
         )
     elif sort == 'recent':
-        query.JOIN("entries ON (entries.id, entries.feed) = (_id, _feed)")
         apply_recent(query, keyword='HAVING', id_prefix='search._')
     else:
         assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover

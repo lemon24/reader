@@ -158,6 +158,7 @@ def create_feed_tags(db: sqlite3.Connection) -> None:
 
 
 def create_indexes(db: sqlite3.Connection) -> None:
+    # Speed up get_entries() queries that use apply_recent().
     db.execute(
         """
         CREATE INDEX entries_by_kinda_first_updated ON entries(
@@ -1063,7 +1064,7 @@ def make_get_entries_query(
     filter_context = apply_filter_options(query, filter_options)
 
     if sort == 'recent':
-        apply_recent_new(query)
+        apply_recent(query)
 
     elif sort == 'random':
         # TODO: "order by random()" always goes through the full result set, which is inefficient
@@ -1157,90 +1158,47 @@ def apply_feed_tags_filter_options(
     return context
 
 
-def apply_recent_old(
+def apply_recent(
     query: Query, keyword: str = 'WHERE', id_prefix: str = 'entries.'
 ) -> None:
-    query.SELECT(
-        "entries.last_updated",
-        (
-            "kinda_first_updated",
-            """
-            coalesce (
-                CASE
-                WHEN
-                    coalesce(entries.published, entries.updated)
-                        >= :recent_threshold
-                    THEN entries.first_updated_epoch
-                END,
-                entries.published, entries.updated
-            )
-            """,
-        ),
-        ("kinda_published", "coalesce(entries.published, entries.updated)"),
-        ("negative_feed_order", "- entries.feed_order"),
-    )
-    query.scrolling_window_order_by(
-        *f"""
-        kinda_first_updated
-        kinda_published
-        {id_prefix}feed
-        entries.last_updated
-        negative_feed_order
-        {id_prefix}id
-        """.split(),
-        desc=True,
-        keyword=keyword,
-    )
+    """Change query to sort entries by "recent"."""
 
+    # Version of apply_recent() that takes advantage of indexes, implemented in
+    # <https://github.com/lemon24/reader/issues/134#issuecomment-722454963>.
+    # An older version that does not can be found in reader 1.9.
+    #
+    # WARNING: Always keep the entries_by_kinda_* indexes in sync with the ORDER BY of the by_kinda_* CTEs below.
 
-def apply_recent_new(
-    query: Query, keyword: str = 'WHERE', id_prefix: str = 'entries.'
-) -> None:
-    # TODO: mention indexes etc
+    def make_by_kinda_cte(recent: bool) -> str:
+        if recent:
+            kinda_first_updated = 'first_updated_epoch'
+            sign = '>='
+        else:
+            kinda_first_updated = 'coalesce(published, updated)'
+            sign = '<'
+
+        return f"""
+            SELECT
+                feed,
+                id,
+                last_updated,
+                {kinda_first_updated} as kinda_first_updated,
+                coalesce(published, updated) as kinda_published,
+                - feed_order as negative_feed_order
+            FROM entries
+            WHERE kinda_published {sign} :recent_threshold
+            ORDER BY
+                kinda_first_updated DESC,
+                kinda_published DESC,
+                feed DESC,
+                last_updated DESC,
+                negative_feed_order DESC,
+                id DESC
+        """
 
     query.WITH(
-        (
-            'by_kinda_first_updated',
-            """
-            SELECT
-                feed,
-                id,
-                last_updated,
-                first_updated_epoch as kinda_first_updated,
-                coalesce(published, updated) as kinda_published,
-                - feed_order as negative_feed_order
-            FROM entries
-            WHERE kinda_published >= :recent_threshold
-            ORDER BY
-                kinda_first_updated DESC,
-                kinda_published DESC,
-                feed DESC,
-                last_updated DESC,
-                negative_feed_order DESC,
-                id DESC
-            """,
-        ),
-        (
-            'by_kinda_published',
-            """
-            SELECT
-                feed,
-                id,
-                last_updated,
-                coalesce(published, updated) as kinda_first_updated,
-                coalesce(published, updated) as kinda_published,
-                - feed_order as negative_feed_order
-            FROM entries
-            WHERE kinda_published < :recent_threshold
-            ORDER BY
-                kinda_first_updated DESC,
-                kinda_published DESC,
-                feed DESC,
-                last_updated DESC,
-                negative_feed_order DESC,
-                id DESC
-            """,
-        ),
+        ('by_kinda_first_updated', make_by_kinda_cte(recent=True)),
+        ('by_kinda_published', make_by_kinda_cte(recent=False)),
         (
             'ids',
             """
@@ -1250,30 +1208,24 @@ def apply_recent_new(
             """,
         ),
     )
-    query.JOIN("ids USING (feed, id)")
+    query.JOIN(f"ids ON (ids.id, ids.feed) = ({id_prefix}id, {id_prefix}feed)")
 
     query.SELECT(
-        "entries.last_updated",
+        "ids.last_updated",
         "kinda_first_updated",
         "kinda_published",
         "negative_feed_order",
     )
 
-    # TODO: it should be possible to remove id_prefix and just use "ids."
     query.scrolling_window_order_by(
         *f"""
         kinda_first_updated
         kinda_published
         {id_prefix}feed
-        entries.last_updated
+        ids.last_updated
         negative_feed_order
         {id_prefix}id
         """.split(),
         desc=True,
         keyword=keyword,
     )
-
-
-# TODO: if possible, switch search_entries() to apply_recent_new as well
-# (tests fail at the moment)
-apply_recent = apply_recent_old
