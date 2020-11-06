@@ -58,6 +58,7 @@ def create_db(db: sqlite3.Connection) -> None:
     create_entries(db)
     create_feed_metadata(db)
     create_feed_tags(db)
+    create_indexes(db)
 
 
 def create_feeds(db: sqlite3.Connection, name: str = 'feeds') -> None:
@@ -156,6 +157,33 @@ def create_feed_tags(db: sqlite3.Connection) -> None:
     )
 
 
+def create_indexes(db: sqlite3.Connection) -> None:
+    db.execute(
+        """
+        CREATE INDEX entries_by_kinda_first_updated ON entries(
+            first_updated_epoch,
+            coalesce(published, updated),
+            feed,
+            last_updated,
+            - feed_order,
+            id
+        );
+        """
+    )
+    db.execute(
+        """
+        CREATE INDEX entries_by_kinda_published ON entries (
+            coalesce(published, updated),
+            coalesce(published, updated),
+            feed,
+            last_updated,
+            - feed_order,
+            id
+        );
+        """
+    )
+
+
 def update_from_17_to_18(db: sqlite3.Connection) -> None:  # pragma: no cover
     # for https://github.com/lemon24/reader/issues/125
     db.execute("UPDATE feeds SET stale = 1;")
@@ -219,7 +247,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=24,
+        version=25,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
@@ -233,6 +261,8 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             # for https://github.com/lemon24/reader/issues/149#issuecomment-700633577
             22: recreate_search_triggers,
             23: update_from_23_to_24,
+            # for https://github.com/lemon24/reader/issues/134#issuecomment-722454963
+            24: create_indexes,
         },
         # Row value support was added in 3.15.
         # TODO: Remove the Search.update() check once this gets bumped to >=3.18.
@@ -1033,7 +1063,7 @@ def make_get_entries_query(
     filter_context = apply_filter_options(query, filter_options)
 
     if sort == 'recent':
-        apply_recent(query)
+        apply_recent_new(query)
 
     elif sort == 'random':
         # TODO: "order by random()" always goes through the full result set, which is inefficient
@@ -1127,7 +1157,7 @@ def apply_feed_tags_filter_options(
     return context
 
 
-def apply_recent(
+def apply_recent_old(
     query: Query, keyword: str = 'WHERE', id_prefix: str = 'entries.'
 ) -> None:
     query.SELECT(
@@ -1161,3 +1191,89 @@ def apply_recent(
         desc=True,
         keyword=keyword,
     )
+
+
+def apply_recent_new(
+    query: Query, keyword: str = 'WHERE', id_prefix: str = 'entries.'
+) -> None:
+    # TODO: mention indexes etc
+
+    query.WITH(
+        (
+            'by_kinda_first_updated',
+            """
+            SELECT
+                feed,
+                id,
+                last_updated,
+                first_updated_epoch as kinda_first_updated,
+                coalesce(published, updated) as kinda_published,
+                - feed_order as negative_feed_order
+            FROM entries
+            WHERE kinda_published >= :recent_threshold
+            ORDER BY
+                kinda_first_updated DESC,
+                kinda_published DESC,
+                feed DESC,
+                last_updated DESC,
+                negative_feed_order DESC,
+                id DESC
+            """,
+        ),
+        (
+            'by_kinda_published',
+            """
+            SELECT
+                feed,
+                id,
+                last_updated,
+                coalesce(published, updated) as kinda_first_updated,
+                coalesce(published, updated) as kinda_published,
+                - feed_order as negative_feed_order
+            FROM entries
+            WHERE kinda_published < :recent_threshold
+            ORDER BY
+                kinda_first_updated DESC,
+                kinda_published DESC,
+                feed DESC,
+                last_updated DESC,
+                negative_feed_order DESC,
+                id DESC
+            """,
+        ),
+        (
+            'ids',
+            """
+            SELECT * FROM by_kinda_first_updated
+            UNION ALL
+            SELECT * FROM by_kinda_published
+            """,
+        ),
+    )
+    query.JOIN("ids USING (feed, id)")
+
+    query.SELECT(
+        "entries.last_updated",
+        "kinda_first_updated",
+        "kinda_published",
+        "negative_feed_order",
+    )
+
+    # TODO: it should be possible to remove id_prefix and just use "ids."
+    query.scrolling_window_order_by(
+        *f"""
+        kinda_first_updated
+        kinda_published
+        {id_prefix}feed
+        entries.last_updated
+        negative_feed_order
+        {id_prefix}id
+        """.split(),
+        desc=True,
+        keyword=keyword,
+    )
+
+
+# TODO: if possible, switch search_entries() to apply_recent_new as well
+# (tests fail at the moment)
+apply_recent = apply_recent_old
