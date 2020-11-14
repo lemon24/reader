@@ -1067,9 +1067,7 @@ def make_get_entries_query(
         apply_recent(query)
 
     elif sort == 'random':
-        # TODO: "order by random()" always goes through the full result set, which is inefficient
-        # details here https://github.com/lemon24/reader/issues/105#issue-409493128
-        query.ORDER_BY("random()")
+        apply_random(query)
 
     else:
         assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
@@ -1229,3 +1227,14 @@ def apply_recent(
         desc=True,
         keyword=keyword,
     )
+
+
+def apply_random(query: Query) -> None:
+    # TODO: "order by random()" always goes through the full result set,
+    # which is inefficient; details:
+    # https://github.com/lemon24/reader/issues/105#issue-409493128
+    #
+    # This is a separate function in the hope that search
+    # can benefit from future optimizations.
+    #
+    query.ORDER_BY("random()")
