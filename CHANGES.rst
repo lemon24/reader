@@ -14,7 +14,9 @@ Unreleased
 * Use indexes for :meth:`~Reader.get_entries()` (recent order);
   should make calls 10-30% faster.
   (:issue:`134`)
-* Allow sorting :meth:`~Reader.search_entries` results randomly. (:issue:`200`)
+* Allow sorting :meth:`~Reader.search_entries` results randomly.
+  Allow sorting search results randomly in the web application.
+  (:issue:`200`)
 
 
 Version 1.9

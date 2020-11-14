@@ -152,7 +152,7 @@ def entries():
         assert sort in ('recent', 'random')
     else:
         sort = request.args.get('sort', 'relevant')
-        assert sort in ('recent', 'relevant')
+        assert sort in ('relevant', 'recent', 'random')
 
     reader = get_reader()
 
