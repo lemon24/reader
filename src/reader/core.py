@@ -917,6 +917,12 @@ class Reader:
 
             .. versionadded:: 1.4
 
+        ``'random'``
+
+            Random. At at most 256 entries will be returned.
+
+            .. versionadded:: 1.10
+
         Note:
             The query syntax is dependent on the search provider.
 
@@ -956,8 +962,8 @@ class Reader:
             feed_tags (None or bool or list(str or bool or list(str or bool))):
                 Only return the entries from feeds matching these tags;
                 works like the :meth:`~Reader.get_feeds()` ``tags`` argument.
-            sort (str): How to order results; one of ``'relevant'`` (default)
-                or ``'recent'``.
+            sort (str): How to order results; one of ``'relevant'`` (default),
+                ``'recent'``, or ``'random'``.
 
         Yields:
             :class:`EntrySearchResult`: Sorted according to ``sort``.
@@ -978,8 +984,8 @@ class Reader:
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
         )
-        if sort not in ('relevant', 'recent'):
-            raise ValueError("sort should be one of ('relevant', 'recent')")
+        if sort not in ('relevant', 'recent', 'random'):
+            raise ValueError("sort should be one of ('relevant', 'recent', 'random')")
         now = self._now()
         return self._search.search_entries(query, now, filter_options, sort)
 

@@ -30,6 +30,7 @@ from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
 from ._sqlite_utils import wrap_exceptions_iter
 from ._storage import apply_filter_options
+from ._storage import apply_random
 from ._storage import apply_recent
 from ._types import EntryFilterOptions
 from ._utils import join_paginated_iter
@@ -755,10 +756,20 @@ class Search:
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: SearchSortOrder = 'relevant',
     ) -> Iterable[EntrySearchResult]:
-        yield from join_paginated_iter(
-            partial(self.search_entries_page, query, now, filter_options, sort),
-            self.chunk_size,
-        )
+        # TODO: dupe of at least Storage.get_entries(), maybe deduplicate
+        if sort in ('relevant', 'recent'):
+            yield from join_paginated_iter(
+                partial(self.search_entries_page, query, now, filter_options, sort),
+                self.chunk_size,
+            )
+        elif sort == 'random':
+            it = self.search_entries_page(
+                query, now, filter_options, sort, self.chunk_size
+            )
+            for entry, _ in it:
+                yield entry
+        else:
+            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
     @wrap_exceptions_iter(SearchError)
     def search_entries_page(
@@ -912,6 +923,8 @@ def make_search_entries_query(
         )
     elif sort == 'recent':
         apply_recent(query, keyword='HAVING', id_prefix='search._')
+    elif sort == 'random':
+        apply_random(query)
     else:
         assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 

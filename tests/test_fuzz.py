@@ -6,6 +6,7 @@ from fakeparser import Parser
 from hypothesis import given
 from hypothesis import settings
 from test_reader import get_entries_random
+from test_reader import search_entries_random
 from test_reader import with_call_entries_method
 
 from reader import make_reader
@@ -80,7 +81,7 @@ def test_sort_and_filter_subset_basic(data_and_kwargs, pre_stuff, call_method):
 
     actual = [eval(e.id) for e in call_method(reader)]
 
-    if call_method is not get_entries_random:
+    if call_method not in (get_entries_random, search_entries_random):
         assert len(expected) == len(actual)
         assert set(expected) == set(actual)
     else:

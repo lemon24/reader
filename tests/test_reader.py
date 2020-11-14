@@ -756,6 +756,10 @@ def search_entries_recent(reader, **kwargs):
     return reader.search_entries('entry', sort='recent', **kwargs)
 
 
+def search_entries_random(reader, **kwargs):
+    return reader.search_entries('entry', sort='random', **kwargs)
+
+
 with_call_entries_recent_method = pytest.mark.parametrize(
     'pre_stuff, call_method',
     [
@@ -956,8 +960,18 @@ def test_get_entries_recent_feed_order(reader, chunk_size, pre_stuff, call_metho
     assert [eval(e.id)[1] for e in call_method(reader)] == [1, 4, 2, 3]
 
 
+with_call_entries_random_method = pytest.mark.parametrize(
+    'pre_stuff, call_method',
+    [
+        (lambda _: None, get_entries_random),
+        (enable_and_update_search, search_entries_random),
+    ],
+)
+
+
 @pytest.mark.parametrize('chunk_size', [1, 2, 3, 4])
-def test_get_entries_random(reader, chunk_size):
+@with_call_entries_random_method
+def test_get_entries_random(reader, chunk_size, pre_stuff, call_method):
     """Black box get_entries(sort='random') good enough™ test.
 
     To have a more open-box test we'd need to:
@@ -987,14 +1001,15 @@ def test_get_entries_random(reader, chunk_size):
     reader.add_feed(feed.url)
     reader.update_feeds()
 
+    pre_stuff(reader)
+
     # all possible get_entries(sort='random') results
     all_tuples = set(permutations({e.id for e in reader.get_entries()}, chunk_size))
 
     # some get_entries(sort='random') results
     # (we call it enough times so it's likely we get all the results)
     random_tuples = Counter(
-        tuple(e.id for e in reader.get_entries(sort='random'))
-        for _ in range(20 * len(all_tuples))
+        tuple(e.id for e in call_method(reader)) for _ in range(20 * len(all_tuples))
     )
 
     # check all results are chunk_size length
@@ -1445,6 +1460,7 @@ with_call_entries_method = pytest.mark.parametrize(
         (lambda _: None, get_entries_random),
         (enable_and_update_search, search_entries_relevant),
         (enable_and_update_search, search_entries_recent),
+        (enable_and_update_search, search_entries_random),
     ],
 )
 
@@ -1676,6 +1692,13 @@ with_call_feed_tags_method = pytest.mark.parametrize(
         (
             enable_and_update_search,
             search_entries_recent,
+            'feed_tags',
+            get_entry_id,
+            noop,
+        ),
+        (
+            enable_and_update_search,
+            search_entries_random,
             'feed_tags',
             get_entry_id,
             noop,

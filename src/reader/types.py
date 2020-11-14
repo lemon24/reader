@@ -446,7 +446,7 @@ class EntrySearchResult(_namedtuple_compat):
 # TODO: Could we use some kind of str-compatible enum here?
 FeedSortOrder = Literal['title', 'added']
 EntrySortOrder = Literal['recent', 'random']
-SearchSortOrder = Literal['relevant', 'recent']
+SearchSortOrder = Literal['relevant', 'recent', 'random']
 
 
 # https://github.com/python/typing/issues/182
