@@ -73,6 +73,8 @@ _T = TypeVar('_T')
 # Currently there's no way to allow users to pick a parser, and we don't want
 # to force a specific parser, so there's no point in warning.
 #
+# When changing this, also change the equivalent pytest.filterwarnings config.
+#
 # TODO: Expose BeautifulSoup(features=...) when we have a config system.
 #
 warnings.filterwarnings(
