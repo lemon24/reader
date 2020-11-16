@@ -73,8 +73,8 @@ def extract_text(soup):
 def make_entries(feed_url, url, soup):
     for title, fragment, content in extract_text(soup):
         try:
-            updated = datetime.fromisoformat(title.split()[0])
-        except ValueError:
+            updated = datetime.strptime(title.split()[0], '%Y-%m-%d')
+        except (ValueError, IndexError):
             continue
 
         link = urlunparse(urlparse(url)._replace(fragment=fragment))
