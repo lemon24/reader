@@ -40,6 +40,7 @@ setup(
         'plugins': ['setuptools>=40'],
         'enclosure-tags': ['requests', 'mutagen'],
         'preview-feed-list': ['requests', 'beautifulsoup4', 'blinker>=1.4'],
+        'sqlite-releases': ['beautifulsoup4'],
         'dev': [
             'pytest>=4',
             'pytest-randomly',

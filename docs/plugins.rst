@@ -40,3 +40,4 @@ Existing plugins
 .. automodule:: reader._plugins.enclosure_tags
 .. automodule:: reader._plugins.preview_feed_list
 .. automodule:: reader._plugins.ua_fallback
+.. automodule:: reader._plugins.sqlite_releases

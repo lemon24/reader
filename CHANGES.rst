@@ -19,6 +19,8 @@ Unreleased
   (:issue:`200`)
 * Reraise unexpected errors caused by parser bugs
   instead of replacing them with an :exc:`AssertionError`.
+* HTTP feed parser refactoring to allow reuse by custom parsers.
+* Add the ``sqlite_releases`` example plugin.
 
 
 Version 1.9
