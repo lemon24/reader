@@ -5,10 +5,12 @@ import time
 import urllib.parse
 import urllib.request
 from collections import OrderedDict
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from typing import Iterable
+from typing import Iterator
 from typing import Optional
 from typing import Tuple
 
@@ -192,6 +194,20 @@ class Parser:
         return session
 
 
+@contextmanager
+def wrap_exceptions(url: str, when: str) -> Iterator[None]:
+    try:
+        yield
+    except (ParseError, _NotModified):
+        # reader exceptions are pass-through
+        raise
+    except OSError as e:
+        # requests.RequestException is also a subclass of OSError
+        raise ParseError(url, message=f"error {when}") from e
+    except Exception as e:
+        raise ParseError(url, message=f"unexpected error {when}") from e
+
+
 @dataclass
 class FileParser:
 
@@ -211,15 +227,10 @@ class FileParser:
             normalized_url = self._normalize_url(url)
         except ValueError as e:
             raise ParseError(url, message=str(e)) from None
-        try:
+
+        with wrap_exceptions(url, "while reading feed"):
             with open(normalized_url, 'rb') as file:
                 feed, entries = parse_feed(url, file)
-        except ParseError:
-            raise
-        except OSError as e:
-            raise ParseError(url, message="error while reading feed") from e
-        except Exception as e:
-            raise ParseError(url, message="unexpected error while reading feed") from e
 
         return ParsedFeed(feed, entries)
 
@@ -395,6 +406,7 @@ class HTTPParser:
         http_last_modified: Optional[str] = None,
     ) -> ParsedFeed:
         request_headers = {'Accept': feedparser.http.ACCEPT_HEADER, 'A-IM': 'feed'}
+
         if http_etag:
             request_headers['If-None-Match'] = http_etag
         if http_last_modified:
@@ -404,16 +416,8 @@ class HTTPParser:
         # TODO: timeouts!
 
         with self.make_session() as session:
-
-            try:
+            with wrap_exceptions(url, "while getting feed"):
                 response = session.get(url, headers=request_headers, stream=True)
-            except OSError as e:
-                # requests.RequestException is a subclass of OSError
-                raise ParseError(url, message="error while getting feed") from e
-            except Exception as e:
-                raise ParseError(
-                    url, message="unexpected error while getting feed"
-                ) from e
 
             try:
                 response.raise_for_status()
@@ -437,21 +441,10 @@ class HTTPParser:
             response_headers.pop('content-encoding', None)
             response.raw.decode_content = True
 
-            try:
-                with response:
-                    feed, entries = parse_feed(
-                        url, response.raw, response_headers=response_headers,
-                    )
-
-            except ParseError:  # pragma: no cover
-                raise
-            except OSError as e:
-                # requests.RequestException is a subclass of OSError
-                raise ParseError(url, message="error while reading feed") from e
-            except Exception as e:
-                raise ParseError(
-                    url, message="unexpected error while reading feed"
-                ) from e
+            with wrap_exceptions(url, "while reading feed"), response:
+                feed, entries = parse_feed(
+                    url, response.raw, response_headers=response_headers,
+                )
 
         http_etag = response.headers.get('ETag', http_etag)
         http_last_modified = response.headers.get('Last-Modified', http_last_modified)
