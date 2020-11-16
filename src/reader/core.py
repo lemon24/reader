@@ -29,6 +29,7 @@ from ._types import ParsedFeed
 from ._utils import make_noop_context_manager
 from ._utils import make_pool_map
 from ._utils import zero_or_one
+from .exceptions import _NotModified
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
@@ -554,10 +555,10 @@ class Reader:
 
     def _parse_feed_for_update(
         self, feed: FeedForUpdate
-    ) -> Tuple[FeedForUpdate, Union[ParsedFeed, Exception]]:
+    ) -> Tuple[FeedForUpdate, Union[ParsedFeed, ParseError, _NotModified]]:
         try:
             return feed, self._parser(feed.url, feed.http_etag, feed.http_last_modified)
-        except Exception as e:
+        except (ParseError, _NotModified) as e:
             log.debug(
                 "_parse_feed_for_update exception, traceback follows", exc_info=True
             )

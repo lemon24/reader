@@ -17,6 +17,8 @@ Unreleased
 * Allow sorting :meth:`~Reader.search_entries` results randomly.
   Allow sorting search results randomly in the web application.
   (:issue:`200`)
+* Reraise unexpected errors caused by parser bugs
+  instead of replacing them with an :exc:`AssertionError`.
 
 
 Version 1.9
