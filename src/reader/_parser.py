@@ -15,6 +15,7 @@ from typing import Optional
 from typing import Tuple
 
 import feedparser  # type: ignore
+import requests
 from typing_extensions import Protocol
 
 import reader
@@ -371,6 +372,35 @@ class _MakeSession(Protocol):
         ...
 
 
+def caching_get(
+    session: SessionWrapper,
+    url: str,
+    http_etag: Optional[str] = None,
+    http_last_modified: Optional[str] = None,
+    **kwargs: Any,
+) -> Tuple[requests.Response, Optional[str], Optional[str]]:
+    headers = dict(kwargs.pop('headers', {}))
+    if http_etag:
+        headers.setdefault('If-None-Match', http_etag)
+    if http_last_modified:
+        headers.setdefault('If-Modified-Since', http_last_modified)
+
+    response = session.get(url, headers=headers, **kwargs)
+
+    try:
+        response.raise_for_status()
+    except Exception as e:
+        raise ParseError(url, message="bad HTTP status code") from e
+
+    if response.status_code == 304:
+        raise _NotModified(url)
+
+    http_etag = response.headers.get('ETag', http_etag)
+    http_last_modified = response.headers.get('Last-Modified', http_last_modified)
+
+    return response, http_etag, http_last_modified
+
+
 @dataclass
 class HTTPParser:
 
@@ -407,25 +437,19 @@ class HTTPParser:
     ) -> ParsedFeed:
         request_headers = {'Accept': feedparser.http.ACCEPT_HEADER, 'A-IM': 'feed'}
 
-        if http_etag:
-            request_headers['If-None-Match'] = http_etag
-        if http_last_modified:
-            request_headers['If-Modified-Since'] = http_last_modified
-
         # TODO: maybe share the session in the parser?
         # TODO: timeouts!
 
         with self.make_session() as session:
             with wrap_exceptions(url, "while getting feed"):
-                response = session.get(url, headers=request_headers, stream=True)
-
-            try:
-                response.raise_for_status()
-            except Exception as e:
-                raise ParseError(url, message="bad HTTP status code") from e
-
-            if response.status_code == 304:
-                raise _NotModified(url)
+                response, http_etag, http_last_modified = caching_get(
+                    session,
+                    url,
+                    http_etag,
+                    http_last_modified,
+                    headers=request_headers,
+                    stream=True,
+                )
 
             response_headers = response.headers.copy()
             response_headers.setdefault('content-location', response.url)
@@ -445,9 +469,6 @@ class HTTPParser:
                 feed, entries = parse_feed(
                     url, response.raw, response_headers=response_headers,
                 )
-
-        http_etag = response.headers.get('ETag', http_etag)
-        http_last_modified = response.headers.get('Last-Modified', http_last_modified)
 
         return ParsedFeed(feed, entries, http_etag, http_last_modified)
 
