@@ -18,11 +18,15 @@ Are you already working with with `feedparser`_, but:
 * want an easier way to store, filter, sort and search feeds and entries?
 * want to get back type-annotated objects instead of dicts?
 * want to restrict or deny file-system access?
+* want to change the way feeds are retrieved by using the more familiar `requests`_ library?
+
+... while still supporting all the feed types feedparser does?
 
 If you answered yes to any of the above, *reader* can help.
 
 
 .. _feedparser: https://pythonhosted.org/feedparser/
+.. _requests: https://requests.readthedocs.io
 
 
 
