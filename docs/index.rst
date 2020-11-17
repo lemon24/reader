@@ -29,6 +29,7 @@ User guide
 .. toctree::
     :maxdepth: 2
 
+    why
     install
     tutorial
     guide
