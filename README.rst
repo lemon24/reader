@@ -2,11 +2,9 @@
 
 **reader** is a Python feed reader library.
 
-*reader* can be used to retrieve, store, and manage Atom and RSS feeds.
 It is designed to allow writing feed reader applications
 without any business code,
 and without enforcing a dependency on a particular framework.
-
 
 .. end-intro
 
@@ -42,19 +40,35 @@ and without enforcing a dependency on a particular framework.
   :alt: code style: black
 
 
-Features:
-
 .. begin-features
 
-* Stand-alone library with stable, clearly documented API, and excellent test coverage.
-* Full-text search.
-* User-defined feed tags and metadata.
-* Feed and entry filtering.
-* Minimal web interface that works even with text-only browsers.
+*reader* allows you to:
 
-  * ... with automatic tag fixing for podcasts (MP3 enclosures).
+* retrieve, store, and manage Atom and RSS feeds
+* mark entries as read or important
+* add tags and metadata to feeds
+* filter feeds and articles
+* full-text search articles
+* skip all the low level stuff and focus on what makes your feed reader different
 
-* (Some) plugin support.
+...all these with a stable, clearly documented API, and excellent test coverage.
+
+What *reader* doesn't do:
+
+* provide an UI
+* provide a REST API (yet)
+* depend on a web framework
+* have an opinion of how/where you use it
+
+The following exist, but are optional (and frankly, a bit unpolished):
+
+* a minimal web interface
+
+  * that works even with text-only browsers
+  * with automatic tag fixing for podcasts (MP3 enclosures)
+
+* a command-line interface
+* (some) plugin support
 
 .. end-features
 

@@ -23,8 +23,8 @@ Quickstart
   :end-before: end-usage
 
 
-User’s guide
-------------
+User guide
+----------
 
 .. toctree::
     :maxdepth: 2
