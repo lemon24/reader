@@ -296,3 +296,17 @@ If you let it finish and run it again, it will only update the feed
 .. todo::
 
     Some ideas for what to try or where to go next.
+
+
+More examples
+-------------
+
+You can find more :gh:`examples <examples/>` of how to use *reader*
+in the repository:
+
+* :gh:`download all new episodes of a podcast <examples/podcast.py>` (the script from this tutorial)
+* :gh:`a simple terminal feed reader <examples/terminal.py>`
+
+.. todo::
+
+    The web app and CLI are also (complicated) examples.

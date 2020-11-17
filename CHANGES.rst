@@ -21,6 +21,8 @@ Unreleased
   instead of replacing them with an :exc:`AssertionError`.
 * Add the ``sqlite_releases`` custom parser plugin.
 * Refactor the HTTP feed sub-parser to allow reuse by custom parsers.
+* Add a user guide, and improve other parts of the documentation.
+  (:issue:`194`)
 
 
 Version 1.9
