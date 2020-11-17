@@ -18,6 +18,8 @@ Features
 Quickstart
 ----------
 
+What does it look like? Here is an example of *reader* in use:
+
 .. include:: ../README.rst
   :start-after: begin-usage
   :end-before: end-usage
@@ -26,6 +28,8 @@ Quickstart
 User guide
 ----------
 
+This part of the documentation guides you through all of the library’s usage patterns.
+
 .. toctree::
     :maxdepth: 2
 
@@ -33,19 +37,34 @@ User guide
     install
     tutorial
     guide
-    cli
-    app
-    config
-    plugins
 
 
 API reference
 -------------
 
+If you are looking for information on a specific function, class, or method,
+this part of the documentation is for you.
+
 .. toctree::
     :maxdepth: 2
 
     api
+
+
+Unstable features
+-----------------
+
+The following are optional features that are still being worked on.
+They may become their own packages, get merged into the main library,
+or be removed in the future.
+
+.. toctree::
+    :maxdepth: 2
+
+    cli
+    app
+    config
+    plugins
 
 
 Project information

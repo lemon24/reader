@@ -2,7 +2,7 @@
 
 **reader** is a Python feed reader library.
 
-It is designed to allow writing feed reader applications
+It aims to allow writing feed reader applications
 without any business code,
 and without enforcing a dependency on a particular framework.
 

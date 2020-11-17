@@ -375,7 +375,7 @@ or an :class:`Entry` (or :class:`EntrySearchResult`) object.
 Streaming methods
 -----------------
 
-Most methods that return iterables
+All methods that return iterables
 (:meth:`~Reader.get_feeds()`, :meth:`~Reader.get_entries()` etc.)
 generate the results lazily.
 

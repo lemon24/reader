@@ -4,19 +4,26 @@ Why *reader*?
 =============
 
 
-Why make a feed reader library?
--------------------------------
+Why use a feed reader library?
+------------------------------
 
-I wanted a feed reader that is:
+Have you been unhappy with existing feed readers and wanted to make your own, but:
 
-* accessible from multiple devices
-* fast
-* with a simple UI
-* self-hosted (for privacy reasons)
-* modular / easy to extend (so I can change stuff I don't like)
-* written in Python (see above)
+* never knew where to start?
+* it seemed like too much work?
+* you don't like to write backend code?
 
-The fact that I couldn't find one extensible enough bugged me so much that I decided to make my own; a few years later, I ended up with what I would've liked to use when I first started.
+Are you already working with with `feedparser`_, but:
+
+* want an easier way to store, filter, sort and search feeds and entries?
+* want to get back type-annotated objects instead of dicts?
+* want to restrict or deny file-system access?
+
+If you answered yes to any of the above, *reader* can help.
+
+
+.. _feedparser: https://pythonhosted.org/feedparser/
+
 
 
 Why make your own feed reader?
@@ -34,3 +41,19 @@ Obviously, this may not be your cup of tea, but if it is, *reader* can help.
 
 
 .. _easier than you think: https://rachelbythebay.com/w/2011/10/26/fred/
+
+
+
+Why make a feed reader library?
+-------------------------------
+
+I wanted a feed reader that is:
+
+* accessible from multiple devices
+* fast
+* with a simple UI
+* self-hosted (for privacy reasons)
+* modular / easy to extend (so I can change stuff I don't like)
+* written in Python (see above)
+
+The fact that I couldn't find one extensible enough bugged me so much that I decided to make my own; a few years later, I ended up with what I would've liked to use when I first started.
