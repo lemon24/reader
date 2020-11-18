@@ -27,17 +27,15 @@ In no particular order:
 * Batch get related resources API. (:issue:`191`)
 * Counts API. (:issue:`185`)
 * Pausing feed updates. (:issue:`187`)
+* Pagination. (:issue:`196`)
+* update_feeds() filtering. (:issue:`193`)
 
 * Various web application improvements.
-* Various search optimizations. (:issue:`122`)
-* Various storage optimizations. (:issue:`143`, :issue:`134`)
 
 * Plugin system / hooks stabilization. (:issue:`80`)
 * Internal API stabilization.
 * CLI stabilization.
 * Web application stabilization.
-
-* (Some) Windows support. (:issue:`163`)
 
 * OPML support. (:issue:`165`)
 
@@ -135,6 +133,50 @@ Making a release (from ``x`` to ``y`` == ``x + 1``):
 * build docs from latest and enable ``y`` docs version (should happen automatically after the first time)
 * (release.py) bump versions from ``y`` to ``(y + 1).dev0``, add ``(y + 1)`` changelog section
 * (release.py prompts) deactivate old versions in Read the Docs
+
+
+Design notes
+------------
+
+Folowing are various design notes that aren't captured somewhere else
+(either in the code, or in the issue where a feature was initially developed).
+
+
+Why use SQLite and not SQLAlchemy?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+tl;dr: For "historical reasons".
+
+In `the beginning`_:
+
+* I wanted to keep things as simple as possible, so I don't get demotivated
+  and stop working on it.
+  I also `wanted`_ to try out a "`problem-solution`_" approach.
+* I think by that time I was already a great SQLite fan,
+  and knew that because of the relatively single-user nature of the thing
+  I won't have to change databases because of concurrency issues.
+* The fact that I didn't know exactly where and how I would deploy the web app
+  (and that SQLite is in stdlib) kinda cemented that assumption.
+
+Since then, I did come up with some of my own complexity:
+there's a SQL query builder, a schema migration system,
+and there were *some* concurrency issues.
+SQLAlchemy would have likely helped with the first two,
+but not with the last one (not without dropping SQLite).
+
+Note that it is possible to use a different storage implementation;
+all storage stuff happens through a DAO-style interface,
+and SQLAlchemy was the main real alternative `I had in mind`_.
+The API is private at the moment (1.10),
+but if anyone wants to use it I can make it public.
+
+It is unlikely I'll write a SQLAlchemy storage myself,
+since I don't need it (yet),
+and I think testing it with multiple databases would take quite some time.
+
+.. _the beginning: https://github.com/lemon24/reader/tree/afbc10335a45ec449205d5757d09cc4a3c6596da/reader
+.. _wanted: https://github.com/lemon24/reader/blame/99077c7e56db968cb892353075426bc5b0b141f1/README.md#L9
+.. _I had in mind: https://github.com/lemon24/reader/issues/168#issuecomment-642002049
 
 
 .. Web application
