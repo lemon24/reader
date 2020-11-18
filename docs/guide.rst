@@ -375,7 +375,7 @@ or an :class:`Entry` (or :class:`EntrySearchResult`) object.
 Streaming methods
 -----------------
 
-All methods that return iterables
+All methods that return iterators
 (:meth:`~Reader.get_feeds()`, :meth:`~Reader.get_entries()` etc.)
 generate the results lazily.
 
@@ -388,6 +388,83 @@ Some examples of how this is useful:
 * Likewise, if you don't keep the entries around (e.g. append them to a list),
   memory usage should remain relatively constant
   regardless of the total number of entries returned.
+
+
+
+Advanced feedparser features
+----------------------------
+
+*reader* uses `feedparser`_ ("Universal Feed Parser") to parse feeds.
+It comes with a number of advanced features,
+most of which *reader* uses transparently.
+
+Two of these features are worth mentioning separately,
+since they change the content of the feed,
+and, although *always enabled* at the moment,
+they may become optional in the future;
+note that disabling them is not currently possible.
+
+.. _feedparser: https://pythonhosted.org/feedparser/
+
+
+Sanitization
+~~~~~~~~~~~~
+
+Quoting:
+
+    Most feeds embed HTML markup within feed elements.
+    Some feeds even embed other types of markup, such as SVG or MathML.
+    Since many feed aggregators use a web browser (or browser component)
+    to display content, Universal Feed Parser sanitizes embedded markup
+    to remove things that could pose security risks.
+
+
+You can find more details about which markup and elements are sanitized in
+`the feedparser documentation <https://pythonhosted.org/feedparser/html-sanitization.html>`_.
+
+The following corresponding *reader* attributes are sanitized:
+
+* :attr:`Entry.content` (:attr:`Content.value`)
+* :attr:`Entry.summary`
+* :attr:`Entry.title`
+* :attr:`Feed.title`
+
+
+Relative link resolution
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Quoting:
+
+    Many feed elements and attributes are URIs.
+    Universal Feed Parser resolves relative URIs
+    according to the XML:Base specification. [...]
+
+    In addition [to elements treated as URIs],
+    several feed elements may contain HTML or XHTML markup.
+    Certain elements and attributes in HTML can be relative URIs,
+    and Universal Feed Parser will resolve these URIs
+    according to the same rules as the feed elements listed above.
+
+
+You can find more details about which elements
+are treated as URIs and HTML markup in
+`the feedparser documentation <https://pythonhosted.org/feedparser/resolving-relative-links.html>`_.
+
+
+The following corresponding *reader* attributes are treated as URIs:
+
+* :attr:`Entry.enclosures` (:attr:`Enclosure.href`)
+* :attr:`Entry.id`
+* :attr:`Entry.link`
+* :attr:`Feed.link`
+
+The following corresponding *reader* attributes may be treated as HTML markup,
+depending on their type attribute or feedparser defaults:
+
+* :attr:`Entry.content` (:attr:`Content.value`)
+* :attr:`Entry.summary`
+* :attr:`Entry.title`
+* :attr:`Feed.title`
 
 
 

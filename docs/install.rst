@@ -56,8 +56,6 @@ As of version |version|, *reader* has the following extras:
 
 .. _feedparser: https://pythonhosted.org/feedparser/
 .. _requests: https://requests.readthedocs.io
-.. _sgmllib3k: https://pypi.org/project/sgmllib3k/
-.. _sgmllib: https://docs.python.org/2/library/sgmllib.html
 .. _JSON1: https://www.sqlite.org/json1.html
 .. _FTS5: https://www.sqlite.org/fts5.html
 
