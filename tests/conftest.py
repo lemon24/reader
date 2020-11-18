@@ -40,7 +40,7 @@ def apply_flaky_pypy_sqlite3(items):  # pragma: no cover
     def rerun_filter(err, *args):
         return issubclass(err[0], sqlite3.InterfaceError)
 
-    sqlite3_flaky = pytest.mark.flaky(rerun_filter=rerun_filter)
+    sqlite3_flaky = pytest.mark.flaky(rerun_filter=rerun_filter, max_runs=4)
     for item in items:
         item.add_marker(sqlite3_flaky)
 
