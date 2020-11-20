@@ -420,7 +420,7 @@ Quoting:
 
 
 You can find more details about which markup and elements are sanitized in
-`the feedparser documentation <https://pythonhosted.org/feedparser/html-sanitization.html>`_.
+`the feedparser documentation <https://pythonhosted.org/feedparser/html-sanitization.html>`__.
 
 The following corresponding *reader* attributes are sanitized:
 
@@ -448,7 +448,7 @@ Quoting:
 
 You can find more details about which elements
 are treated as URIs and HTML markup in
-`the feedparser documentation <https://pythonhosted.org/feedparser/resolving-relative-links.html>`_.
+`the feedparser documentation <https://pythonhosted.org/feedparser/resolving-relative-links.html>`__.
 
 
 The following corresponding *reader* attributes are treated as URIs:
