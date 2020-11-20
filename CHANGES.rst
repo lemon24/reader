@@ -9,7 +9,7 @@ Changelog
 Version 1.10
 ------------
 
-Unreleased
+Released 2020-11-20
 
 * Use indexes for :meth:`~Reader.get_entries()` (recent order);
   should make calls 10-30% faster.
