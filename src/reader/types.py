@@ -104,6 +104,11 @@ class Feed(_namedtuple_compat):
     #: .. versionadded:: 1.3
     last_exception: Optional['ExceptionInfo'] = None
 
+    #: Whether updates are enabled for this feed.
+    #:
+    #: .. versionadded:: 1.11
+    updates_enabled: bool = True
+
 
 _EI = TypeVar('_EI', bound='ExceptionInfo')
 

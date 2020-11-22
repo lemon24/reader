@@ -461,6 +461,7 @@ class Storage:
                 'added',
                 'last_updated',
                 'last_exception',
+                'updates_enabled',
             )
             .FROM("feeds")
         )
@@ -898,14 +899,14 @@ class Storage:
         )
 
         def value_factory(t: Tuple[Any, ...]) -> Entry:
-            feed = feed_factory(t[0:9])
-            entry = t[9:16] + (
-                tuple(Content(**d) for d in json.loads(t[16])) if t[16] else (),
-                tuple(Enclosure(**d) for d in json.loads(t[17])) if t[17] else (),
-                t[18] == 1,
+            feed = feed_factory(t[0:10])
+            entry = t[10:17] + (
+                tuple(Content(**d) for d in json.loads(t[17])) if t[17] else (),
+                tuple(Enclosure(**d) for d in json.loads(t[18])) if t[18] else (),
                 t[19] == 1,
-                t[20],
-                t[21] or feed.url,
+                t[20] == 1,
+                t[21],
+                t[22] or feed.url,
                 feed,
             )
             return Entry._make(entry)
@@ -1037,7 +1038,9 @@ class Storage:
 
 
 def feed_factory(t: Tuple[Any, ...]) -> Feed:
-    return Feed._make(t[:8] + (ExceptionInfo(**json.loads(t[8])) if t[8] else None,))
+    return Feed._make(
+        t[:8] + (ExceptionInfo(**json.loads(t[8])) if t[8] else None, t[9] == 1,)
+    )
 
 
 def make_get_entries_query(
@@ -1056,6 +1059,7 @@ def make_get_entries_query(
             feeds.added
             feeds.last_updated
             feeds.last_exception
+            feeds.updates_enabled
             entries.id
             entries.updated
             entries.title

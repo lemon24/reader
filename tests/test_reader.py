@@ -2131,3 +2131,9 @@ def test_change_feed_url_tags(reader):
 
 
 # END change_feed_url tests
+
+
+@rename_argument('reader', 'reader_with_one_feed')
+def test_updates_enabled(reader):
+    (feed,) = reader.get_feeds()
+    assert feed.updates_enabled is True
