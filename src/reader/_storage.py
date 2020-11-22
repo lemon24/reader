@@ -78,6 +78,7 @@ def create_feeds(db: sqlite3.Connection, name: str = 'feeds') -> None:
 
             -- reader data
             stale INTEGER NOT NULL DEFAULT 0,
+            updates_enabled INTEGER NOT NULL DEFAULT 1,
             last_updated TIMESTAMP,  -- null if the feed was never updated
             added TIMESTAMP NOT NULL,
             last_exception TEXT
@@ -244,11 +245,21 @@ def update_from_23_to_24(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute("ALTER TABLE entries ADD COLUMN original_feed TEXT;")
 
 
+def update_from_25_to_26(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/187
+    db.execute(
+        """
+        ALTER TABLE feeds
+        ADD COLUMN updates_enabled INTEGER NOT NULL DEFAULT 1;
+        """
+    )
+
+
 def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=25,
+        version=26,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
@@ -264,6 +275,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             23: update_from_23_to_24,
             # for https://github.com/lemon24/reader/issues/134#issuecomment-722454963
             24: create_indexes,
+            25: update_from_25_to_26,
         },
         # Row value support was added in 3.15.
         # TODO: Remove the Search.update() check once this gets bumped to >=3.18.
@@ -388,6 +400,8 @@ class Storage:
             else:
                 rowcount_exactly_one(cursor, lambda: FeedNotFoundError(old))
 
+            # Some of the fields are not kept from the old feed; details:
+            # https://github.com/lemon24/reader/issues/149#issuecomment-700532183
             self.db.execute(
                 """
                 UPDATE feeds
