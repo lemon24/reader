@@ -292,6 +292,9 @@ def feeds():
     broken = request.args.get('broken')
     broken = {None: None, 'no': False, 'yes': True}[broken]
 
+    updates_enabled = request.args.get('updates-enabled')
+    updates_enabled = {None: None, 'no': False, 'yes': True}[updates_enabled]
+
     sort = request.args.get('sort', 'title')
     assert sort in ('title', 'added')
 
@@ -317,7 +320,9 @@ def feeds():
 
     feed_data = []
     try:
-        feeds = reader.get_feeds(sort=sort, broken=broken, tags=tags)
+        feeds = reader.get_feeds(
+            sort=sort, broken=broken, tags=tags, updates_enabled=updates_enabled
+        )
         feed_data = ((feed, list(reader.get_feed_tags(feed))) for feed in feeds)
     except ValueError as e:
         # TODO: there should be a better way of matching this kind of error

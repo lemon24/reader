@@ -25,6 +25,12 @@
     (none, "don't care"),
 ], none, '.feeds', 'broken') }}
 
+{{ macros.radio_links('updates-enabled', [
+    ('yes', none),
+    ('no', none),
+    (none, "don't care"),
+], none, '.feeds', 'updates enabled') }}
+
 {{ macros.radio_links('sort', [
     ('title', none),
     ('added', none),
