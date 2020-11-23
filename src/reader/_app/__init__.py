@@ -519,6 +519,20 @@ def change_feed_url(data):
     get_reader().change_feed_url(feed_url, new_feed_url)
 
 
+@form_api
+@readererror_to_apierror()
+def enable_feed_updates(data):
+    feed_url = data['feed-url']
+    get_reader().enable_feed_updates(feed_url)
+
+
+@form_api
+@readererror_to_apierror()
+def disable_feed_updates(data):
+    feed_url = data['feed-url']
+    get_reader().disable_feed_updates(feed_url)
+
+
 # for some reason, @blueprint.app_template_global does not work
 @blueprint.app_template_global()
 def additional_enclosure_links(enclosure, entry):
