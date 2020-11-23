@@ -179,6 +179,15 @@ and I think testing it with multiple databases would take quite some time.
 .. _I had in mind: https://github.com/lemon24/reader/issues/168#issuecomment-642002049
 
 
+Disabling feed updates
+~~~~~~~~~~~~~~~~~~~~~~
+
+These two comments from the original issue:
+
+* :issue:`187#issuecomment-706539658`
+* :issue:`187#issuecomment-706593497`
+
+
 .. Web application
 .. ---------------
 
