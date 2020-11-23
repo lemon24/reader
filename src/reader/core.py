@@ -218,6 +218,8 @@ class Reader:
     def add_feed(self, feed: FeedInput) -> None:
         """Add a new feed.
 
+        Feed updates are enabled by default.
+
         Args:
             feed (str or Feed): The feed URL.
 
@@ -502,6 +504,8 @@ class Reader:
 
     def update_feed(self, feed: FeedInput) -> None:
         """Update a single feed.
+
+        The feed will be updated even if updates are disabled for it.
 
         Args:
             feed (str or Feed): The feed URL.

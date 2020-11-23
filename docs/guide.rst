@@ -145,6 +145,26 @@ you can call this more often (e.g. every minute)::
 
 
 
+Disabling feed updates
+----------------------
+
+Sometimes, it is useful to skip a feed when using :meth:`~Reader.update_feeds`;
+for example, the feed does not exist anymore,
+and you want to stop requesting it unnecessarily during regular updates,
+but still want to keep its entries (so you cannot remove it).
+
+:meth:`~Reader.disable_feed_updates` allows you to do exactly that::
+
+    >>> reader.disable_feed_updates(feed)
+
+You can check if updates are enabled for a feed by looking at its
+:attr:`~Feed.updates_enabled` attribute::
+
+    >>> reader.get_feed(feed).updates_enabled
+    False
+
+
+
 Getting feeds
 -------------
 
@@ -186,8 +206,8 @@ To get all the feeds, use the :meth:`~Reader.get_feeds` method::
     Hello Internet by CGP Grey, updated on 2020-02-28 09:34:02
 
 :meth:`~Reader.get_feeds` also allows
-filtering feeds by their last update status or `tags <Feed tags_>`_,
-and changing the feed sort order.
+filtering feeds by their `tags <Feed tags_>`_, if the last update succeeded,
+or if updates are enabled, and changing the feed sort order.
 
 
 

@@ -2183,6 +2183,8 @@ def test_updates_enabled(reader):
     assert reader.get_feed(one).updates_enabled is False
     # disable_feed_updates does not clear last_exception
     assert reader.get_feed(one).last_exception == last_exception
+    # disable_feed_updates can be called twice
+    reader.disable_feed_updates(one)
 
     one = parser.feed(1, datetime(2010, 1, 2))
     one_one = parser.entry(1, 1, datetime(2010, 1, 2))
@@ -2224,6 +2226,8 @@ def test_updates_enabled(reader):
     # enable_feed_updates sets updates_enabled to True
     reader.enable_feed_updates(one)
     assert reader.get_feed(one).updates_enabled is True
+    # enable_feed_updates can be called twice
+    reader.enable_feed_updates(one)
 
     # update_feeds updates newly-enabled feeds
     reader.update_feeds()
