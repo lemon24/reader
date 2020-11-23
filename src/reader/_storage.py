@@ -447,7 +447,7 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[Feed, Optional[_T]]]:
-        url, tags, broken = filter_options
+        url, tags, broken, updates_enabled = filter_options
 
         query = (
             Query()
@@ -474,7 +474,9 @@ class Storage:
         context.update(apply_feed_tags_filter_options(query, tags, 'feeds.url'))
 
         if broken is not None:
-            query.WHERE(f"last_exception IS {'NOT' if broken else ''}  NULL")
+            query.WHERE(f"last_exception IS {'NOT' if broken else ''} NULL")
+        if updates_enabled is not None:
+            query.WHERE(f"{'' if updates_enabled else 'NOT'} updates_enabled")
 
         # sort by url at the end to make sure the order is deterministic
         if sort == 'title':

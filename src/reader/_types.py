@@ -301,6 +301,7 @@ class FeedFilterOptions(NamedTuple):
     feed_url: Optional[str] = None
     tags: TagFilter = ()
     broken: Optional[bool] = None
+    updates_enabled: Optional[bool] = None
 
     @classmethod
     def from_args(
@@ -308,14 +309,17 @@ class FeedFilterOptions(NamedTuple):
         feed: Optional[FeedInput] = None,
         tags: TagFilterInput = None,
         broken: Optional[bool] = None,
+        updates_enabled: Optional[bool] = None,
     ) -> _FFO:
         feed_url = _feed_argument(feed) if feed is not None else None
         tag_filter = tag_filter_argument(tags)
 
         if broken not in (None, False, True):
             raise ValueError("broken should be one of (None, False, True)")
+        if updates_enabled not in (None, False, True):
+            raise ValueError("updates_enabled should be one of (None, False, True)")
 
-        return cls(feed_url, tag_filter, broken)
+        return cls(feed_url, tag_filter, broken, updates_enabled)
 
 
 ParserType = Callable[[str, Optional[str], Optional[str]], ParsedFeed]

@@ -1797,7 +1797,7 @@ def test_filtering_tags(
     assert actual_set == expected_set, kwargs
 
 
-ALL_IDS = {1, 2, 3}
+ALL_IDS = {1, 2, 3, 4}
 
 
 @pytest.mark.parametrize(
@@ -1809,6 +1809,9 @@ ALL_IDS = {1, 2, 3}
         (dict(broken=None), ALL_IDS),
         (dict(broken=True), {2}),
         (dict(broken=False), ALL_IDS - {2}),
+        (dict(updates_enabled=None), ALL_IDS),
+        (dict(updates_enabled=True), ALL_IDS - {4}),
+        (dict(updates_enabled=False), {4}),
     ],
 )
 def test_feeds_filtering(reader, kwargs, expected):
@@ -1817,9 +1820,12 @@ def test_feeds_filtering(reader, kwargs, expected):
     one = parser.feed(1, datetime(2010, 1, 1))
     two = parser.feed(2, datetime(2010, 1, 1))
     three = parser.feed(3, datetime(2010, 1, 1))
+    four = parser.feed(4, datetime(2010, 1, 1))
 
-    for feed in one, two, three:
+    for feed in one, two, three, four:
         reader.add_feed(feed)
+
+    reader.disable_feed_updates(four)
 
     reader.update_feeds()
 
@@ -1829,7 +1835,8 @@ def test_feeds_filtering(reader, kwargs, expected):
 
 
 @pytest.mark.parametrize(
-    'kwargs', [dict(feed=object()), dict(broken=object()),],
+    'kwargs',
+    [dict(feed=object()), dict(broken=object()), dict(updates_enabled=object()),],
 )
 def test_feeds_filtering_error(reader, kwargs):
     reader._parser = parser = Parser()
