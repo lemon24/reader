@@ -187,7 +187,7 @@
 
 
 {# duplicated from feeds.html #}
-{% if feed and feed.last_exception %}
+{% if feed and feed.last_exception and feed.updates_enabled %}
 <li class="error" title="{{ feed.last_exception.traceback_str }}">
 <b>update error</b>:
 {% set type_parts = feed.last_exception.type_name.partition('builtins.') %}
