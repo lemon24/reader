@@ -612,6 +612,15 @@ class Storage:
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     @wrap_exceptions(StorageError)
+    def set_feed_updates_enabled(self, url: str, enabled: bool) -> None:
+        with self.db:
+            cursor = self.db.execute(
+                "UPDATE feeds SET updates_enabled = :updates_enabled WHERE url = :url;",
+                dict(url=url, updates_enabled=enabled),
+            )
+            rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
+
+    @wrap_exceptions(StorageError)
     def mark_as_stale(self, url: str) -> None:
         with self.db:
             cursor = self.db.execute(

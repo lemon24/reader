@@ -411,6 +411,42 @@ class Reader:
         url = _feed_argument(feed)
         return self._storage.set_feed_user_title(url, title)
 
+    def enable_feed_updates(self, feed: FeedInput) -> None:
+        """Enable updates for a feed.
+
+        See :meth:`~Reader.update_feeds` for details.
+
+        Args:
+            feed (str or Feed): The feed URL.
+
+        Raises:
+            FeedNotFoundError
+            StorageError
+
+        .. versionadded:: 1.11
+
+        """
+        url = _feed_argument(feed)
+        self._storage.set_feed_updates_enabled(url, True)
+
+    def disable_feed_updates(self, feed: FeedInput) -> None:
+        """Disable updates for a feed.
+
+        See :meth:`~Reader.update_feeds` for details.
+
+        Args:
+            feed (str or Feed): The feed URL.
+
+        Raises:
+            FeedNotFoundError
+            StorageError
+
+        .. versionadded:: 1.11
+
+        """
+        url = _feed_argument(feed)
+        self._storage.set_feed_updates_enabled(url, False)
+
     def update_feeds(self, new_only: bool = False, workers: int = 1) -> None:
         """Update all the feeds.
 

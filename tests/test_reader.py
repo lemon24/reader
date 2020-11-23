@@ -2133,7 +2133,60 @@ def test_change_feed_url_tags(reader):
 # END change_feed_url tests
 
 
-@rename_argument('reader', 'reader_with_one_feed')
 def test_updates_enabled(reader):
-    (feed,) = reader.get_feeds()
-    assert feed.updates_enabled is True
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    one_one = parser.entry(1, 1, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 1, 1))
+    two_one = parser.entry(2, 1, datetime(2010, 1, 1))
+
+    for feed in one, two:
+        reader.add_feed(feed)
+
+    # updates_enabled is true by default
+    assert all(f.updates_enabled is True for f in reader.get_feeds())
+
+    # sanity check that feeds were not updated yet
+    assert all(f.updated is None for f in reader.get_feeds())
+    assert {e.id for e in reader.get_entries()} == set()
+
+    # sanity check that feeds update normally
+    reader.update_feeds()
+    assert all(f.updated == datetime(2010, 1, 1) for f in reader.get_feeds())
+    assert {e.id: e.updated for e in reader.get_entries()} == {
+        one_one.id: datetime(2010, 1, 1),
+        two_one.id: datetime(2010, 1, 1),
+    }
+
+    one = parser.feed(1, datetime(2010, 1, 2))
+    one_one = parser.entry(1, 1, datetime(2010, 1, 2))
+    two = parser.feed(2, datetime(2010, 1, 2))
+    two_one = parser.entry(2, 1, datetime(2010, 1, 2))
+
+    reader.disable_feed_updates(one)
+    assert reader.get_feed(one).updates_enabled is False
+
+    # reader.update_feeds()
+    # assert {f.url: f.updated for f in reader.get_feeds()} == {
+    # one.url: datetime(2010, 1, 1),
+    # two.url: datetime(2010, 1, 2),
+    # assert {e.id: e.updated for e in reader.get_entries()} == {
+    # one_one.id: datetime(2010, 1, 1),
+    # two_one.id: datetime(2010, 1, 2),
+    # }
+
+    reader.enable_feed_updates(one)
+    assert reader.get_feed(one).updates_enabled is True
+
+
+def test_updates_enabled_errors(reader):
+    with pytest.raises(FeedNotFoundError) as excinfo:
+        reader.enable_feed_updates('one')
+    assert excinfo.value.url == 'one'
+    assert 'no such feed' in excinfo.value.message
+
+    with pytest.raises(FeedNotFoundError) as excinfo:
+        reader.disable_feed_updates('one')
+    assert excinfo.value.url == 'one'
+    assert 'no such feed' in excinfo.value.message
