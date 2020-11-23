@@ -448,7 +448,9 @@ class Reader:
         self._storage.set_feed_updates_enabled(url, False)
 
     def update_feeds(self, new_only: bool = False, workers: int = 1) -> None:
-        """Update all the feeds.
+        """Update all the feeds that have updates enabled.
+
+        Silently skip feeds that raise :exc:`ParseError`.
 
         Args:
             new_only (bool): Only update feeds that have never been updated.
@@ -456,6 +458,9 @@ class Reader:
 
         Raises:
             StorageError
+
+        .. versionchanged:: 1.11
+            Only update the feeds that have updates enabled.
 
         """
 
@@ -500,7 +505,10 @@ class Reader:
 
         """
         url = _feed_argument(feed)
-        exc = zero_or_one(self._update_feeds(url=url), lambda: FeedNotFoundError(url),)
+        exc = zero_or_one(
+            self._update_feeds(url=url, enabled_only=False),
+            lambda: FeedNotFoundError(url),
+        )
         if exc:
             raise exc
 
@@ -521,6 +529,7 @@ class Reader:
         self,
         url: Optional[str] = None,
         new_only: bool = False,
+        enabled_only: bool = True,
         map: Callable[[Callable[[Any], Any], Iterable[Any]], Iterator[Any]] = map,
     ) -> Iterator[Optional[Exception]]:
 
@@ -552,7 +561,9 @@ class Reader:
         # It may make sense to also have _get_entries_for_update run in
         # parallel with a different (slower) storage, but for now we're good.
 
-        feeds_for_update = self._storage.get_feeds_for_update(url, new_only)
+        feeds_for_update = self._storage.get_feeds_for_update(
+            url, new_only, enabled_only
+        )
         feeds_for_update = builtins.map(
             self._updater.process_old_feed, feeds_for_update
         )

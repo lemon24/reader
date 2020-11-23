@@ -492,7 +492,10 @@ class Storage:
 
     @wrap_exceptions_iter(StorageError)
     def get_feeds_for_update(
-        self, url: Optional[str] = None, new_only: bool = False,
+        self,
+        url: Optional[str] = None,
+        new_only: bool = False,
+        enabled_only: bool = True,
     ) -> Iterable[FeedForUpdate]:
         # Reader shouldn't care this is paginated,
         # so we don't expose any pagination stuff.
@@ -522,6 +525,8 @@ class Storage:
                 context.update(url=url)
             if new_only:
                 query.WHERE("last_updated is NULL")
+            if enabled_only:
+                query.WHERE("updates_enabled")
 
             query.scrolling_window_order_by("url")
 

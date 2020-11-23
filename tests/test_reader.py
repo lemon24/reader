@@ -2134,7 +2134,12 @@ def test_change_feed_url_tags(reader):
 
 
 def test_updates_enabled(reader):
-    reader._parser = parser = Parser()
+    """Test Feed.updates_enabled functionality.
+
+    https://github.com/lemon24/reader/issues/187#issuecomment-706539658
+
+    """
+    reader._parser = parser = FailingParser(condition=lambda url: False)
 
     one = parser.feed(1, datetime(2010, 1, 1))
     one_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -2159,25 +2164,64 @@ def test_updates_enabled(reader):
         two_one.id: datetime(2010, 1, 1),
     }
 
+    # make one feed fail temporarily, so last_exception gets set
+    parser.condition = lambda url: url == one.url
+    reader.update_feeds()
+    last_exception = reader.get_feed(one).last_exception
+    assert last_exception is not None
+    parser.condition = lambda url: False
+
+    # disable_feed_updates sets updates_enabled to False
+    reader.disable_feed_updates(one)
+    assert reader.get_feed(one).updates_enabled is False
+    # disable_feed_updates does not clear last_exception
+    assert reader.get_feed(one).last_exception == last_exception
+
     one = parser.feed(1, datetime(2010, 1, 2))
     one_one = parser.entry(1, 1, datetime(2010, 1, 2))
     two = parser.feed(2, datetime(2010, 1, 2))
     two_one = parser.entry(2, 1, datetime(2010, 1, 2))
 
-    reader.disable_feed_updates(one)
-    assert reader.get_feed(one).updates_enabled is False
+    # update_feeds skips feeds with updates_enabled == False
+    reader.update_feeds()
+    assert {f.url: f.updated for f in reader.get_feeds()} == {
+        one.url: datetime(2010, 1, 1),
+        two.url: datetime(2010, 1, 2),
+    }
+    assert {e.id: e.updated for e in reader.get_entries()} == {
+        one_one.id: datetime(2010, 1, 1),
+        two_one.id: datetime(2010, 1, 2),
+    }
 
-    # reader.update_feeds()
-    # assert {f.url: f.updated for f in reader.get_feeds()} == {
-    # one.url: datetime(2010, 1, 1),
-    # two.url: datetime(2010, 1, 2),
-    # assert {e.id: e.updated for e in reader.get_entries()} == {
-    # one_one.id: datetime(2010, 1, 1),
-    # two_one.id: datetime(2010, 1, 2),
-    # }
+    # update_feed does not care about updates_enabled
+    reader.update_feed(one)
+    assert reader.get_feed(one).updated == datetime(2010, 1, 2)
+    assert reader.get_entry(one_one).updated == datetime(2010, 1, 2)
 
+    one = parser.feed(1, datetime(2010, 1, 3))
+    one_one = parser.entry(1, 1, datetime(2010, 1, 3))
+    two = parser.feed(2, datetime(2010, 1, 3))
+    two_one = parser.entry(2, 1, datetime(2010, 1, 3))
+
+    # update_feeds skips feeds with updates_enabled == False (again)
+    reader.update_feeds()
+    assert {f.url: f.updated for f in reader.get_feeds()} == {
+        one.url: datetime(2010, 1, 2),
+        two.url: datetime(2010, 1, 3),
+    }
+    assert {e.id: e.updated for e in reader.get_entries()} == {
+        one_one.id: datetime(2010, 1, 2),
+        two_one.id: datetime(2010, 1, 3),
+    }
+
+    # enable_feed_updates sets updates_enabled to True
     reader.enable_feed_updates(one)
     assert reader.get_feed(one).updates_enabled is True
+
+    # update_feeds updates newly-enabled feeds
+    reader.update_feeds()
+    assert reader.get_feed(one).updated == datetime(2010, 1, 3)
+    assert reader.get_entry(one_one).updated == datetime(2010, 1, 3)
 
 
 def test_updates_enabled_errors(reader):
