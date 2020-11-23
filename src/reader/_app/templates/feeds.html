@@ -122,7 +122,7 @@
 <li class="error">{{ message }}
 {% endfor %}
 
-{% if feed.last_exception %}
+{% if feed.last_exception and feed.updates_enabled %}
 <li class="error" title="{{ feed.last_exception.traceback_str }}">
 <b>update error</b>:
 {% set type_parts = feed.last_exception.type_name.partition('builtins.') %}
