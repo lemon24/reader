@@ -188,6 +188,13 @@ These two comments from the original issue:
 * :issue:`187#issuecomment-706593497`
 
 
+Batch update methods
+~~~~~~~~~~~~~~~~~~~~
+
+There's a discussion on why I want to postpone this in this comment: :issue:`187#issuecomment-700740251`.
+
+
+
 .. Web application
 .. ---------------
 
