@@ -179,6 +179,68 @@ and I think testing it with multiple databases would take quite some time.
 .. _I had in mind: https://github.com/lemon24/reader/issues/168#issuecomment-642002049
 
 
+Multiple storage implementations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Detailed requirements and API discussion: :issue:`168#issuecomment-642002049`.
+
+
+Query builder
+~~~~~~~~~~~~~
+
+Survey of possible options: :issue:`123#issuecomment-582307504`.
+
+
+Pagination for methods that return iterators
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Why do it for the private implementation: :issue:`167#issuecomment-626753299` (also a comment in storage code).
+
+Detailed requirements and API discussion for public pagination: :issue:`196#issuecomment-706038363`.
+
+
+Search
+~~~~~~
+
+From the initial issue:
+
+* detailed requirements and API discussion: :issue:`122#issuecomment-591302580`
+* discussion of possible backend-independent search queries: :issue:`122#issuecomment-508938311`
+
+
+reader types to Atom mapping
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This whole issue: :issue:`153`.
+
+
+Sort by random
+~~~~~~~~~~~~~~
+
+Some thoughts in the initial issue: :issue:`105`.
+
+
+Change feed URL
+~~~~~~~~~~~~~~~
+
+From the initial issue:
+
+* use cases: :issue:`149#issuecomment-700066794`
+* initial requirements: :issue:`149#issuecomment-700532183`
+
+
+Feed tags
+~~~~~~~~~
+
+Detailed requirements and API discussion: :issue:`184#issuecomment-689587006`.
+
+
+Concurrent updates
+~~~~~~~~~~~~~~~~~~
+
+Some thoughts about adding a ``map`` argument: :issue:`152#issuecomment-606636200`.
+
+
 Disabling feed updates
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -188,6 +250,12 @@ These two comments from the original issue:
 * :issue:`187#issuecomment-706593497`
 
 
+Counts API
+~~~~~~~~~~
+
+Detailed requirements and API discussion: :issue:`185#issuecomment-731743327`.
+
+
 Batch update methods
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -195,7 +263,8 @@ There's a discussion on why I want to postpone this in this comment: :issue:`187
 
 
 
-.. Web application
-.. ---------------
+Web application
+~~~~~~~~~~~~~~~
 
-.. include:: dev-app.rst
+.. toctree::
+    dev-app
