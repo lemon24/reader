@@ -31,6 +31,7 @@ Data objects
 .. autoclass:: ExceptionInfo
     :members:
 
+
 .. autoclass:: Entry
     :members:
 
@@ -44,6 +45,15 @@ Data objects
     :members:
 
 .. autoclass:: HighlightedString
+    :members:
+
+.. autoclass:: FeedCounts
+    :members:
+
+.. autoclass:: EntryCounts
+    :members:
+
+.. autoclass:: EntrySearchCounts
     :members:
 
 

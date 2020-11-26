@@ -521,3 +521,73 @@ class MissingType:
 
 #: Sentinel object used to detect if the `default` argument was provided."""
 MISSING = MissingType()
+
+
+@dataclass(frozen=True)
+class FeedCounts(_namedtuple_compat):
+
+    """Count information about feeds.
+
+    .. versionadded:: 1.11
+
+    """
+
+    #: Total number of feeds.
+    total: Optional[int] = None
+
+    #: Number of broken feeds.
+    broken: Optional[int] = None
+
+    #: Number of feeds that have updates enabled.
+    updates_enabled: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class EntryCounts(_namedtuple_compat):
+
+    """Count information about entries.
+
+    .. versionadded:: 1.11
+
+    """
+
+    #: Total number of entries.
+    total: Optional[int] = None
+
+    #: Number of read entries.
+    read: Optional[int] = None
+
+    #: Number of important entries.
+    important: Optional[int] = None
+
+    #: Number of entries that have enclosures.
+    has_enclosures: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class EntrySearchCounts(_namedtuple_compat):
+
+    """Count information about entry search results.
+
+    .. versionadded:: 1.11
+
+    """
+
+    # This could have inherited EntryCounts,
+    # but attribute docstrings won't show show up with autoclass;
+    # https://github.com/sphinx-doc/sphinx/issues/741
+
+    # We do want a different type in case we additional attributes
+    # related to search stuff (what matched etc.)
+
+    #: Total number of entries.
+    total: Optional[int] = None
+
+    #: Number of read entries.
+    read: Optional[int] = None
+
+    #: Number of important entries.
+    important: Optional[int] = None
+
+    #: Number of entries that have enclosures.
+    has_enclosures: Optional[int] = None

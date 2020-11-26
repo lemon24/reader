@@ -50,6 +50,9 @@ from .types import (
     Enclosure,
     EntrySearchResult,
     HighlightedString,
+    FeedCounts,
+    EntryCounts,
+    EntrySearchCounts,
 )
 
 from .exceptions import (
