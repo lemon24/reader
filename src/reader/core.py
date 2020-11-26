@@ -41,6 +41,7 @@ from .types import EntryInput
 from .types import EntrySearchResult
 from .types import EntrySortOrder
 from .types import Feed
+from .types import FeedCounts
 from .types import FeedInput
 from .types import FeedSortOrder
 from .types import JSONType
@@ -405,6 +406,40 @@ class Reader:
             lambda: FeedNotFoundError(_feed_argument(feed)),
             default,
         )
+
+    def get_feed_counts(
+        self,
+        *,
+        feed: Optional[FeedInput] = None,
+        tags: TagFilterInput = None,
+        broken: Optional[bool] = None,
+        updates_enabled: Optional[bool] = None,
+    ) -> FeedCounts:
+        """Count all or some of the feeds.
+
+        See :meth:`~Reader.get_feeds()` for details on how filtering works.
+
+        Args:
+            feed (str or Feed or None): Only count the feed with this URL.
+            tags (None or bool or list(str or bool or list(str or bool))):
+                Only count feeds matching these tags.
+            broken (bool or None): Only count broken / healthy feeds.
+            updates_enabled (bool or None):
+                Only count feeds that have updates enabled / disabled.
+
+        Returns:
+            :class:`FeedCounts`:
+
+        Raises:
+            StorageError
+
+        .. versionadded:: 1.11
+
+        """
+        filter_options = FeedFilterOptions.from_args(
+            feed, tags, broken, updates_enabled
+        )
+        return self._storage.get_feed_counts(filter_options)
 
     def set_feed_user_title(self, feed: FeedInput, title: Optional[str]) -> None:
         """Set a user-defined title for a feed.

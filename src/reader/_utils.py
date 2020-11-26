@@ -42,6 +42,14 @@ def zero_or_one(
         assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
 
+def exactly_one(it: Iterable[_U]) -> _U:
+    things = list(it)
+    if len(things) == 1:
+        return things[0]
+    else:
+        assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+
+
 def join_paginated_iter(
     get_things: Callable[[int, Optional[_T]], Iterable[Tuple[_U, _T]]], chunk_size: int,
 ) -> Iterable[_U]:

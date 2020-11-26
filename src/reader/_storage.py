@@ -31,6 +31,7 @@ from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import TagFilter
 from ._utils import chunks
+from ._utils import exactly_one
 from ._utils import join_paginated_iter
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
@@ -43,6 +44,7 @@ from .types import Entry
 from .types import EntrySortOrder
 from .types import ExceptionInfo
 from .types import Feed
+from .types import FeedCounts
 from .types import FeedSortOrder
 from .types import JSONType
 
@@ -447,8 +449,6 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[Feed, Optional[_T]]]:
-        url, tags, broken, updates_enabled = filter_options
-
         query = (
             Query()
             .SELECT(
@@ -465,18 +465,8 @@ class Storage:
             )
             .FROM("feeds")
         )
-        context: Dict[str, object] = {}
 
-        if url:
-            query.WHERE("url = :url")
-            context.update(url=url)
-
-        context.update(apply_feed_tags_filter_options(query, tags, 'feeds.url'))
-
-        if broken is not None:
-            query.WHERE(f"last_exception IS {'NOT' if broken else ''} NULL")
-        if updates_enabled is not None:
-            query.WHERE(f"{'' if updates_enabled else 'NOT'} updates_enabled")
+        context = apply_feed_filter_options(query, filter_options)
 
         # sort by url at the end to make sure the order is deterministic
         if sort == 'title':
@@ -491,6 +481,25 @@ class Storage:
         yield from paginated_query(
             self.db, query, context, feed_factory, chunk_size, last
         )
+
+    def get_feed_counts(
+        self, filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
+    ) -> FeedCounts:
+        query = (
+            Query()
+            .SELECT(
+                'count(*)',
+                'coalesce(sum(last_exception IS NOT NULL), 0)',
+                'coalesce(sum(updates_enabled == 1), 0)',
+            )
+            .FROM("feeds")
+        )
+
+        context = apply_feed_filter_options(query, filter_options)
+
+        row = exactly_one(self.db.execute(str(query), context))
+
+        return FeedCounts(*row)
 
     @wrap_exceptions_iter(StorageError)
     def get_feeds_for_update(
@@ -1059,6 +1068,27 @@ def feed_factory(t: Tuple[Any, ...]) -> Feed:
     )
 
 
+def apply_feed_filter_options(
+    query: Query, filter_options: FeedFilterOptions,
+) -> Dict[str, Any]:
+    url, tags, broken, updates_enabled = filter_options
+
+    context: Dict[str, object] = {}
+
+    if url:
+        query.WHERE("url = :url")
+        context.update(url=url)
+
+    context.update(apply_feed_tags_filter_options(query, tags, 'feeds.url'))
+
+    if broken is not None:
+        query.WHERE(f"last_exception IS {'NOT' if broken else ''} NULL")
+    if updates_enabled is not None:
+        query.WHERE(f"{'' if updates_enabled else 'NOT'} updates_enabled")
+
+    return context
+
+
 def make_get_entries_query(
     filter_options: EntryFilterOptions, sort: EntrySortOrder,
 ) -> Tuple[Query, Dict[str, Any]]:
@@ -1095,7 +1125,7 @@ def make_get_entries_query(
         .JOIN("feeds ON feeds.url = entries.feed")
     )
 
-    filter_context = apply_filter_options(query, filter_options)
+    filter_context = apply_entry_filter_options(query, filter_options)
 
     if sort == 'recent':
         apply_recent(query)
@@ -1111,7 +1141,7 @@ def make_get_entries_query(
     return query, filter_context
 
 
-def apply_filter_options(
+def apply_entry_filter_options(
     query: Query, filter_options: EntryFilterOptions, keyword: str = 'WHERE'
 ) -> Dict[str, Any]:
     add = getattr(query, keyword)

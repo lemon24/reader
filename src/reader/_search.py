@@ -29,7 +29,7 @@ from ._sqlite_utils import require_version
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
 from ._sqlite_utils import wrap_exceptions_iter
-from ._storage import apply_filter_options
+from ._storage import apply_entry_filter_options
 from ._storage import apply_random
 from ._storage import apply_recent
 from ._types import EntryFilterOptions
@@ -899,7 +899,7 @@ def make_search_entries_query(
         .LIMIT("-1 OFFSET 0")
     )
 
-    context = apply_filter_options(search, filter_options)
+    context = apply_entry_filter_options(search, filter_options)
 
     query = (
         Query()

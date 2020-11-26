@@ -19,6 +19,7 @@ from reader import Enclosure
 from reader import Entry
 from reader import EntryNotFoundError
 from reader import Feed
+from reader import FeedCounts
 from reader import FeedExistsError
 from reader import FeedNotFoundError
 from reader import make_reader
@@ -2245,3 +2246,38 @@ def test_updates_enabled_errors(reader):
         reader.disable_feed_updates('one')
     assert excinfo.value.url == 'one'
     assert 'no such feed' in excinfo.value.message
+
+
+@pytest.mark.parametrize(
+    'kwargs, expected',
+    [
+        (dict(), FeedCounts(3, broken=1, updates_enabled=2)),
+        (dict(feed='1'), FeedCounts(1, 0, 1)),
+        (dict(tags=['tag']), FeedCounts(2, broken=1, updates_enabled=2)),
+        (dict(broken=True), FeedCounts(1, broken=1, updates_enabled=1)),
+        (dict(broken=False), FeedCounts(2, broken=0, updates_enabled=1)),
+        (dict(updates_enabled=True), FeedCounts(2, broken=1, updates_enabled=2)),
+        (dict(updates_enabled=False), FeedCounts(1, broken=0, updates_enabled=0)),
+        (dict(broken=True, updates_enabled=False), FeedCounts(0, 0, 0)),
+    ],
+)
+def test_feed_counts(reader, kwargs, expected):
+    # TODO: fuzz get_feeds() == get_feed_counts()
+
+    reader._parser = parser = FailingParser(condition=lambda url: False)
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 1, 1))
+    three = parser.feed(3, datetime(2010, 1, 1))
+
+    for feed in one, two, three:
+        reader.add_feed(feed)
+
+    parser.condition = lambda url: url == two.url
+    reader.disable_feed_updates(three)
+    reader.add_feed_tag(one, 'tag')
+    reader.add_feed_tag(two, 'tag')
+
+    reader.update_feeds()
+
+    assert reader.get_feed_counts(**kwargs) == expected
