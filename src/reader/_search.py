@@ -6,6 +6,7 @@ import sqlite3
 import string
 import warnings
 from collections import OrderedDict
+from contextlib import contextmanager
 from datetime import datetime
 from datetime import timedelta
 from functools import partial
@@ -14,6 +15,7 @@ from types import MappingProxyType
 from typing import Any
 from typing import Dict
 from typing import Iterable
+from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -106,6 +108,34 @@ def strip_html(text: SQLiteType, features: Optional[str] = None) -> SQLiteType:
     assert isinstance(rv, str)
 
     return rv
+
+
+_QUERY_ERROR_MESSAGE_FRAGMENTS = [
+    "fts5: syntax error near",
+    "unknown special query",
+    "no such column",
+    "no such cursor",
+    "unterminated string",
+]
+
+
+@contextmanager
+def wrap_search_exceptions() -> Iterator[None]:
+    try:
+        yield
+    except sqlite3.OperationalError as e:
+        msg_lower = str(e).lower()
+
+        if 'no such table' in msg_lower:
+            raise SearchNotEnabledError()
+
+        is_query_error = any(
+            fragment in msg_lower for fragment in _QUERY_ERROR_MESSAGE_FRAGMENTS
+        )
+        if is_query_error:
+            raise InvalidSearchQueryError(message=str(e))
+
+        raise
 
 
 # When trying to fix "database is locked" errors or to optimize stuff,
@@ -745,14 +775,6 @@ class Search:
         log.debug("Search.update: _insert_into_search: chunk done")
         return True
 
-    _query_error_message_fragments = [
-        "fts5: syntax error near",
-        "unknown special query",
-        "no such column",
-        "no such cursor",
-        "unterminated string",
-    ]
-
     def search_entries(
         self,
         query: str,
@@ -843,27 +865,13 @@ class Search:
                 MappingProxyType(rv_content),
             )
 
-        try:
+        with wrap_search_exceptions():
             yield from paginated_query(
                 self.db, sql_query, context, value_factory, chunk_size, last
             )
 
-        except sqlite3.OperationalError as e:
-            msg_lower = str(e).lower()
-
-            if 'no such table' in msg_lower:
-                raise SearchNotEnabledError()
-
-            is_query_error = any(
-                fragment in msg_lower
-                for fragment in self._query_error_message_fragments
-            )
-            if is_query_error:
-                raise InvalidSearchQueryError(message=str(e))
-
-            raise
-
     @wrap_exceptions(SearchError)
+    @wrap_search_exceptions()
     def search_entry_counts(
         self,
         query: str,
@@ -872,23 +880,7 @@ class Search:
         sql_query, query_context = make_search_entry_counts_query(filter_options)
         context = dict(query=query, **query_context)
 
-        try:
-            row = exactly_one(self.db.execute(str(sql_query), context))
-        except sqlite3.OperationalError as e:
-            # TODO: dedupe with search_entries_page
-            msg_lower = str(e).lower()
-
-            if 'no such table' in msg_lower:
-                raise SearchNotEnabledError()
-
-            is_query_error = any(
-                fragment in msg_lower
-                for fragment in self._query_error_message_fragments
-            )
-            if is_query_error:
-                raise InvalidSearchQueryError(message=str(e))
-
-            raise
+        row = exactly_one(self.db.execute(str(sql_query), context))
 
         return EntrySearchCounts(*row)
 
