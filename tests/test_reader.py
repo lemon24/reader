@@ -19,6 +19,7 @@ from reader import Enclosure
 from reader import Entry
 from reader import EntryCounts
 from reader import EntryNotFoundError
+from reader import EntrySearchCounts
 from reader import Feed
 from reader import FeedCounts
 from reader import FeedExistsError
@@ -2284,6 +2285,23 @@ def test_feed_counts(reader, kwargs, expected):
     assert reader.get_feed_counts(**kwargs) == expected
 
 
+def get_entry_counts(reader, **kwargs):
+    return reader.get_entry_counts(**kwargs)
+
+
+def search_entry_counts(reader, **kwargs):
+    return reader.search_entry_counts('entry', **kwargs)
+
+
+with_call_entry_counts_method = pytest.mark.parametrize(
+    'pre_stuff, call_method, rv_type',
+    [
+        (lambda _: None, get_entry_counts, EntryCounts),
+        (enable_and_update_search, search_entry_counts, EntrySearchCounts),
+    ],
+)
+
+
 @pytest.mark.parametrize(
     'kwargs, expected',
     [
@@ -2320,7 +2338,8 @@ def test_feed_counts(reader, kwargs, expected):
         ),
     ],
 )
-def test_entry_counts(reader, kwargs, expected):
+@with_call_entry_counts_method
+def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type):
     # TODO: fuzz get_entries() == get_entry_counts()
 
     reader._parser = parser = Parser()
@@ -2328,7 +2347,13 @@ def test_entry_counts(reader, kwargs, expected):
     one = parser.feed(1, datetime(2010, 1, 3))
     two = parser.feed(2, datetime(2010, 1, 3))
     three = parser.feed(3, datetime(2010, 1, 1))
-    one_entries = [parser.entry(1, 1, datetime(2010, 1, 3))]
+    one_entry = parser.entry(
+        1,
+        1,
+        datetime(2010, 1, 3),
+        summary='summary',
+        content=(Content('value3', 'type', 'en'), Content('value2')),
+    )
     two_entries = [
         parser.entry(2, i, datetime(2010, 1, 3), enclosures=[]) for i in range(1, 1 + 8)
     ]
@@ -2343,10 +2368,14 @@ def test_entry_counts(reader, kwargs, expected):
         reader.add_feed(feed)
 
     reader.update_feeds()
+    pre_stuff(reader)
 
     for entry in two_entries[:2]:
         reader.mark_as_read(entry)
     for entry in two_entries[:4]:
         reader.mark_as_important(entry)
 
-    assert reader.get_entry_counts(**kwargs) == expected
+    rv = call_method(reader, **kwargs)
+    assert type(rv) is rv_type
+    # this isn't gonna work as well if the return types get different attributes
+    assert rv._asdict() == expected._asdict()

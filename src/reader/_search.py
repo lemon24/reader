@@ -33,10 +33,12 @@ from ._storage import apply_entry_filter_options
 from ._storage import apply_random
 from ._storage import apply_recent
 from ._types import EntryFilterOptions
+from ._utils import exactly_one
 from ._utils import join_paginated_iter
 from .exceptions import InvalidSearchQueryError
 from .exceptions import SearchError
 from .exceptions import SearchNotEnabledError
+from .types import EntrySearchCounts
 from .types import EntrySearchResult
 from .types import HighlightedString
 from .types import SearchSortOrder
@@ -109,6 +111,8 @@ def strip_html(text: SQLiteType, features: Optional[str] = None) -> SQLiteType:
 # When trying to fix "database is locked" errors or to optimize stuff,
 # have a look at the lessons here first:
 # https://github.com/lemon24/reader/issues/175#issuecomment-657495233
+
+# When adding a new method, add a new test_search.py::test_errors_locked test.
 
 
 class Search:
@@ -859,6 +863,35 @@ class Search:
 
             raise
 
+    @wrap_exceptions(SearchError)
+    def search_entry_counts(
+        self,
+        query: str,
+        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
+    ) -> EntrySearchCounts:
+        sql_query, query_context = make_search_entry_counts_query(filter_options)
+        context = dict(query=query, **query_context)
+
+        try:
+            row = exactly_one(self.db.execute(str(sql_query), context))
+        except sqlite3.OperationalError as e:
+            # TODO: dedupe with search_entries_page
+            msg_lower = str(e).lower()
+
+            if 'no such table' in msg_lower:
+                raise SearchNotEnabledError()
+
+            is_query_error = any(
+                fragment in msg_lower
+                for fragment in self._query_error_message_fragments
+            )
+            if is_query_error:
+                raise InvalidSearchQueryError(message=str(e))
+
+            raise
+
+        return EntrySearchCounts(*row)
+
 
 def make_search_entries_query(
     filter_options: EntryFilterOptions, sort: SearchSortOrder
@@ -928,5 +961,56 @@ def make_search_entries_query(
         assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
     log.debug("_search_entries query\n%s\n", query)
+
+    return query, context
+
+
+def make_search_entry_counts_query(
+    filter_options: EntryFilterOptions,
+) -> Tuple[Query, Dict[str, Any]]:
+    # FIXME: dedupe with make_search_entries_query
+    search = (
+        Query()
+        .SELECT("_id, _feed")
+        .FROM("entries_search")
+        .JOIN("entries ON (entries.id, entries.feed) = (_id, _feed)")
+        .WHERE("entries_search MATCH :query")
+        # https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html
+        # rule 14 https://www.sqlite.org/optoverview.html#subquery_flattening
+        .LIMIT("-1 OFFSET 0")
+    )
+
+    context = apply_entry_filter_options(search, filter_options)
+
+    search_grouped = (
+        Query()
+        .SELECT("_id, _feed")
+        .FROM("search")
+        .GROUP_BY("search._id", "search._feed")
+    )
+
+    query = (
+        Query()
+        .WITH(("search", str(search)), ("search_grouped", str(search_grouped)),)
+        .SELECT(
+            'count(*)',
+            'coalesce(sum(read == 1), 0)',
+            'coalesce(sum(important == 1), 0)',
+            """
+            coalesce(
+                sum(
+                    NOT (
+                        json_array_length(entries.enclosures) IS NULL OR json_array_length(entries.enclosures) = 0
+                    )
+                ), 0
+            )
+            """,
+        )
+        .FROM("entries")
+        # FIXME: is this better as a WHERE (entries.id, entries.feed) in ...?
+        .JOIN("search_grouped ON (id, feed) = (_id, _feed)")
+    )
+
+    log.debug("_search_entry_counts query\n%s\n", query)
 
     return query, context

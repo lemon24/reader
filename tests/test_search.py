@@ -131,6 +131,10 @@ def search_entries_chunk_size_1(storage, _, __):
     )
 
 
+def search_entry_counts(storage, _, __):
+    Search(storage).search_entry_counts('entry')
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     'pre_stuff, do_stuff',
@@ -141,6 +145,7 @@ def search_entries_chunk_size_1(storage, _, __):
         (enable_search, update_search),
         (enable_search, search_entries_chunk_size_0),
         (enable_search, search_entries_chunk_size_1),
+        (enable_search, search_entry_counts),
     ],
 )
 def test_errors_locked(db_path, pre_stuff, do_stuff):
@@ -204,28 +209,47 @@ def test_iter_locked(db_path, iter_stuff):
     check_iter_locked(db_path, enable_and_update_search, iter_stuff)
 
 
+class ActuallyOK(Exception):
+    pass
+
+
+def call_search_entries(search, query):
+    try:
+        next(search.search_entries(query, datetime(2010, 1, 1)))
+    except StopIteration:
+        raise ActuallyOK
+
+
+def call_search_entry_counts(search, query):
+    search.search_entry_counts(query)
+    raise ActuallyOK
+
+
 @pytest.mark.parametrize(
     'query, exc_type',
     [
         ('\x00', InvalidSearchQueryError),
         ('"', InvalidSearchQueryError),
         # For some reason, on CPython * works when the filtering is inside
-        # the CTE (it didn't when it was outside), hence the StopIteration.
+        # the CTE (it didn't when it was outside), hence the ActuallyOK.
         # On PyPy 7.3.1 we still get a InvalidSearchQueryError.
         # We're fine as long as we don't get another exception.
-        ('*', (StopIteration, InvalidSearchQueryError)),
+        ('*', (ActuallyOK, InvalidSearchQueryError)),
         ('O:', InvalidSearchQueryError),
         ('*p', InvalidSearchQueryError),
     ],
 )
-def test_invalid_search_query_error(storage, query, exc_type):
+@pytest.mark.parametrize(
+    'call_method', [call_search_entries, call_search_entry_counts,],
+)
+def test_invalid_search_query_error(storage, query, exc_type, call_method):
     # We're not testing this in test_reader_search.py because
     # the invalid query strings are search-provider-dependent.
     search = Search(storage)
     search.enable()
     with pytest.raises(exc_type) as excinfo:
-        next(search.search_entries(query, datetime(2010, 1, 1)))
-    if isinstance(exc_type, tuple) and StopIteration in exc_type:
+        call_method(search, query)
+    if isinstance(exc_type, tuple) and ActuallyOK in exc_type:
         return
     assert excinfo.value.message
     assert excinfo.value.__cause__ is None

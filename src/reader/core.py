@@ -39,6 +39,7 @@ from .types import _feed_argument
 from .types import Entry
 from .types import EntryCounts
 from .types import EntryInput
+from .types import EntrySearchCounts
 from .types import EntrySearchResult
 from .types import EntrySortOrder
 from .types import Feed
@@ -1124,6 +1125,54 @@ class Reader:
             raise ValueError("sort should be one of ('relevant', 'recent', 'random')")
         now = self._now()
         return self._search.search_entries(query, now, filter_options, sort)
+
+    def search_entry_counts(
+        self,
+        query: str,
+        *,
+        feed: Optional[FeedInput] = None,
+        entry: Optional[EntryInput] = None,
+        read: Optional[bool] = None,
+        important: Optional[bool] = None,
+        has_enclosures: Optional[bool] = None,
+        feed_tags: TagFilterInput = None,
+    ) -> EntrySearchCounts:
+        """Count entries matching a full-text search query.
+
+        See :meth:`~Reader.search_entries()` for details on how
+        the query syntax and filtering work.
+
+        Search must be enabled to call this method.
+
+        Args:
+            query (str): The search query.
+            feed (str or Feed or None): Only count the entries for this feed.
+            entry (tuple(str, str) or Entry or None):
+                Only count the entry with this (feed URL, entry id) tuple.
+            read (bool or None): Only count (un)read entries.
+            important (bool or None): Only count (un)important entries.
+            has_enclosures (bool or None): Only count entries that (don't)
+                have enclosures.
+            feed_tags (None or bool or list(str or bool or list(str or bool))):
+                Only count the entries from feeds matching these tags.
+
+        Returns:
+            :class:`EntrySearchCounts`:
+
+        Raises:
+            SearchNotEnabledError
+            InvalidSearchQueryError
+            SearchError
+            StorageError
+
+        .. versionadded:: 1.11
+
+        """
+
+        filter_options = EntryFilterOptions.from_args(
+            feed, entry, read, important, has_enclosures, feed_tags
+        )
+        return self._search.search_entry_counts(query, filter_options)
 
     def add_feed_tag(self, feed: FeedInput, tag: str) -> None:
         """Add a tag to a feed.

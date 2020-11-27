@@ -7,6 +7,7 @@ from utils import rename_argument
 
 from reader import Content
 from reader import Enclosure
+from reader import EntrySearchCounts
 from reader import EntrySearchResult
 from reader import FeedNotFoundError
 from reader import HighlightedString
@@ -444,6 +445,14 @@ def test_search_entries_fails_if_not_enabled(reader, sort):
     assert excinfo.value.message
 
 
+@rename_argument('reader', 'reader_without_and_with_entries')
+def test_search_entry_counts_fails_if_not_enabled(reader):
+    with pytest.raises(SearchNotEnabledError) as excinfo:
+        list(reader.search_entry_counts('one'))
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.message
+
+
 @with_sort
 def test_search_entries_basic(reader, sort):
     parser = Parser()
@@ -476,10 +485,12 @@ def test_search_entries_basic(reader, sort):
     reader.update_search()
 
     search = lambda *a, **kw: reader.search_entries(*a, sort=sort, **kw)
+    search_counts = lambda *a, **kw: reader.search_entry_counts(*a, **kw)
 
     # TODO: the asserts below look parametrizable
 
     assert list(search('zero')) == []
+    assert search_counts('zero') == EntrySearchCounts(0, 0, 0, 0)
     assert list(search('one')) == [
         EntrySearchResult(
             feed.url,
@@ -490,6 +501,7 @@ def test_search_entries_basic(reader, sort):
             },
         )
     ]
+    assert search_counts('one') == EntrySearchCounts(1, 0, 0, 0)
     assert list(search('two')) == [
         EntrySearchResult(
             feed.url,
@@ -562,6 +574,7 @@ def test_search_entries_basic(reader, sort):
             ),
         ]
     }
+    assert search_counts('summary') == EntrySearchCounts(3, 0, 0, 0)
 
 
 # search_entries() filtering is tested in test_reader.py::test_entries_filtering{,_error}
