@@ -37,6 +37,7 @@ from .exceptions import ParseError
 from .types import _entry_argument
 from .types import _feed_argument
 from .types import Entry
+from .types import EntryCounts
 from .types import EntryInput
 from .types import EntrySearchResult
 from .types import EntrySortOrder
@@ -788,6 +789,46 @@ class Reader:
             lambda: EntryNotFoundError(*_entry_argument(entry)),
             default,
         )
+
+    def get_entry_counts(
+        self,
+        *,
+        feed: Optional[FeedInput] = None,
+        entry: Optional[EntryInput] = None,
+        read: Optional[bool] = None,
+        important: Optional[bool] = None,
+        has_enclosures: Optional[bool] = None,
+        feed_tags: TagFilterInput = None,
+    ) -> EntryCounts:
+        """Count all or some of the entries.
+
+        See :meth:`~Reader.get_entries()` for details on how filtering works.
+
+        Args:
+            feed (str or Feed or None): Only count the entries for this feed.
+            entry (tuple(str, str) or Entry or None):
+                Only count the entry with this (feed URL, entry id) tuple.
+            read (bool or None): Only count (un)read entries.
+            important (bool or None): Only count (un)important entries.
+            has_enclosures (bool or None): Only count entries that (don't)
+                have enclosures.
+            feed_tags (None or bool or list(str or bool or list(str or bool))):
+                Only count the entries from feeds matching these tags.
+
+        Returns:
+            :class:`EntryCounts`:
+
+        Raises:
+            StorageError
+
+        .. versionadded:: 1.11
+
+        """
+
+        filter_options = EntryFilterOptions.from_args(
+            feed, entry, read, important, has_enclosures, feed_tags
+        )
+        return self._storage.get_entry_counts(filter_options)
 
     def mark_as_read(self, entry: EntryInput) -> None:
         """Mark an entry as read.

@@ -189,6 +189,14 @@ def get_feed_tags(storage, feed, __):
     list(storage.get_feed_tags(feed.url))
 
 
+def get_feed_counts(storage, _, __):
+    storage.get_feed_counts()
+
+
+def get_entry_counts(storage, _, __):
+    storage.get_entry_counts(),
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     'do_stuff',
@@ -215,6 +223,8 @@ def get_feed_tags(storage, feed, __):
         add_feed_tag,
         remove_feed_tag,
         get_feed_tags,
+        get_feed_counts,
+        get_entry_counts,
     ],
 )
 def test_errors_locked(db_path, do_stuff):

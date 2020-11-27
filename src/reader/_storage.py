@@ -41,6 +41,7 @@ from .exceptions import StorageError
 from .types import Content
 from .types import Enclosure
 from .types import Entry
+from .types import EntryCounts
 from .types import EntrySortOrder
 from .types import ExceptionInfo
 from .types import Feed
@@ -306,6 +307,8 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
 # have a look at the lessons here first:
 # https://github.com/lemon24/reader/issues/175#issuecomment-657495233
 
+# When adding a new method, add a new test_storage.py::test_errors_locked test.
+
 
 class Storage:
 
@@ -482,6 +485,7 @@ class Storage:
             self.db, query, context, feed_factory, chunk_size, last
         )
 
+    @wrap_exceptions(StorageError)
     def get_feed_counts(
         self, filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
     ) -> FeedCounts:
@@ -917,11 +921,7 @@ class Storage:
 
         query, query_context = make_get_entries_query(filter_options, sort)
 
-        context = dict(
-            recent_threshold=now - self.recent_threshold,
-            **filter_options._asdict(),
-            **query_context,
-        )
+        context = dict(recent_threshold=now - self.recent_threshold, **query_context,)
 
         def value_factory(t: Tuple[Any, ...]) -> Entry:
             feed = feed_factory(t[0:10])
@@ -939,6 +939,35 @@ class Storage:
         yield from paginated_query(
             self.db, query, context, value_factory, chunk_size, last
         )
+
+    @wrap_exceptions(StorageError)
+    def get_entry_counts(
+        self, filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
+    ) -> EntryCounts:
+        query = (
+            Query()
+            .SELECT(
+                'count(*)',
+                'coalesce(sum(read == 1), 0)',
+                'coalesce(sum(important == 1), 0)',
+                """
+                coalesce(
+                    sum(
+                        NOT (
+                            json_array_length(entries.enclosures) IS NULL OR json_array_length(entries.enclosures) = 0
+                        )
+                    ), 0
+                )
+                """,
+            )
+            .FROM("entries")
+        )
+
+        context = apply_entry_filter_options(query, filter_options)
+
+        row = exactly_one(self.db.execute(str(query), context))
+
+        return EntryCounts(*row)
 
     def iter_feed_metadata(
         self, feed_url: str, key: Optional[str] = None,
@@ -1147,10 +1176,14 @@ def apply_entry_filter_options(
     add = getattr(query, keyword)
     feed_url, entry_id, read, important, has_enclosures, feed_tags = filter_options
 
+    context = {}
+
     if feed_url:
         add("entries.feed = :feed_url")
+        context['feed_url'] = feed_url
         if entry_id:
             add("entries.id = :entry_id")
+            context['entry_id'] = entry_id
 
     if read is not None:
         add(f"{'' if read else 'NOT'} entries.read")
@@ -1167,8 +1200,10 @@ def apply_entry_filter_options(
             """
         )
 
-    context = apply_feed_tags_filter_options(
-        query, feed_tags, 'entries.feed', keyword=keyword
+    context.update(
+        apply_feed_tags_filter_options(
+            query, feed_tags, 'entries.feed', keyword=keyword
+        )
     )
 
     return context

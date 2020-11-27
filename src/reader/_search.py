@@ -792,7 +792,6 @@ class Search:
 
         context = dict(
             query=query,
-            **filter_options._asdict(),
             **query_context,
             before_mark=before_mark,
             after_mark=after_mark,

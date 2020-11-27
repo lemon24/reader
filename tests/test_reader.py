@@ -17,6 +17,7 @@ from utils import rename_argument
 from reader import Content
 from reader import Enclosure
 from reader import Entry
+from reader import EntryCounts
 from reader import EntryNotFoundError
 from reader import Feed
 from reader import FeedCounts
@@ -2281,3 +2282,71 @@ def test_feed_counts(reader, kwargs, expected):
     reader.update_feeds()
 
     assert reader.get_feed_counts(**kwargs) == expected
+
+
+@pytest.mark.parametrize(
+    'kwargs, expected',
+    [
+        (dict(), EntryCounts(9, read=2, important=4, has_enclosures=8)),
+        (dict(feed='1'), EntryCounts(1, read=0, important=0, has_enclosures=0)),
+        (dict(feed='2'), EntryCounts(8, read=2, important=4, has_enclosures=8)),
+        (
+            dict(entry=('1', '1, 1')),
+            EntryCounts(1, read=0, important=0, has_enclosures=0),
+        ),
+        (
+            dict(entry=('2', '2, 1')),
+            EntryCounts(1, read=1, important=1, has_enclosures=1),
+        ),
+        (
+            dict(entry=('2', '2, 3')),
+            EntryCounts(1, read=0, important=1, has_enclosures=1),
+        ),
+        (
+            dict(entry=('2', '2, 5')),
+            EntryCounts(1, read=0, important=0, has_enclosures=1),
+        ),
+        (dict(read=True), EntryCounts(2, read=2, important=2, has_enclosures=2)),
+        (dict(read=False), EntryCounts(7, read=0, important=2, has_enclosures=6)),
+        (dict(important=True), EntryCounts(4, read=2, important=4, has_enclosures=4)),
+        (dict(important=False), EntryCounts(5, read=0, important=0, has_enclosures=4)),
+        (
+            dict(has_enclosures=True),
+            EntryCounts(8, read=2, important=4, has_enclosures=8),
+        ),
+        (
+            dict(has_enclosures=False),
+            EntryCounts(1, read=0, important=0, has_enclosures=0),
+        ),
+    ],
+)
+def test_entry_counts(reader, kwargs, expected):
+    # TODO: fuzz get_entries() == get_entry_counts()
+
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1, datetime(2010, 1, 3))
+    two = parser.feed(2, datetime(2010, 1, 3))
+    three = parser.feed(3, datetime(2010, 1, 1))
+    one_entries = [parser.entry(1, 1, datetime(2010, 1, 3))]
+    two_entries = [
+        parser.entry(2, i, datetime(2010, 1, 3), enclosures=[]) for i in range(1, 1 + 8)
+    ]
+
+    # TODO: less overlap would be nice (e.g. some read that don't have enclosures)
+
+    for entry in two_entries[:8]:
+        int_feed_url, int_id = eval(entry.id)
+        parser.entries[int_feed_url][int_id].enclosures.append(Enclosure('http://e'))
+
+    for feed in one, two, three:
+        reader.add_feed(feed)
+
+    reader.update_feeds()
+
+    for entry in two_entries[:2]:
+        reader.mark_as_read(entry)
+    for entry in two_entries[:4]:
+        reader.mark_as_important(entry)
+
+    assert reader.get_entry_counts(**kwargs) == expected
