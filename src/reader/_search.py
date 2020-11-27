@@ -968,30 +968,19 @@ def make_search_entries_query(
 def make_search_entry_counts_query(
     filter_options: EntryFilterOptions,
 ) -> Tuple[Query, Dict[str, Any]]:
-    # FIXME: dedupe with make_search_entries_query
-    search = (
-        Query()
-        .SELECT("_id, _feed")
-        .FROM("entries_search")
-        .JOIN("entries ON (entries.id, entries.feed) = (_id, _feed)")
-        .WHERE("entries_search MATCH :query")
-        # https://www.mail-archive.com/sqlite-users@mailinglists.sqlite.org/msg115821.html
-        # rule 14 https://www.sqlite.org/optoverview.html#subquery_flattening
-        .LIMIT("-1 OFFSET 0")
-    )
-
-    context = apply_entry_filter_options(search, filter_options)
-
-    search_grouped = (
-        Query()
-        .SELECT("_id, _feed")
-        .FROM("search")
-        .GROUP_BY("search._id", "search._feed")
-    )
-
     query = (
         Query()
-        .WITH(("search", str(search)), ("search_grouped", str(search_grouped)),)
+        .WITH(
+            (
+                "search",
+                """
+                SELECT _id, _feed
+                FROM entries_search
+                WHERE entries_search MATCH :query
+                GROUP BY _id, _feed
+                """,
+            )
+        )
         .SELECT(
             'count(*)',
             'coalesce(sum(read == 1), 0)',
@@ -1007,10 +996,9 @@ def make_search_entry_counts_query(
             """,
         )
         .FROM("entries")
-        # FIXME: is this better as a WHERE (entries.id, entries.feed) in ...?
-        .JOIN("search_grouped ON (id, feed) = (_id, _feed)")
+        .JOIN("search ON (id, feed) = (_id, _feed)")
     )
 
-    log.debug("_search_entry_counts query\n%s\n", query)
+    context = apply_entry_filter_options(query, filter_options)
 
     return query, context
