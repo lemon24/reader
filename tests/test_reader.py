@@ -2336,6 +2336,10 @@ with_call_entry_counts_method = pytest.mark.parametrize(
             dict(has_enclosures=False),
             EntryCounts(1, read=0, important=0, has_enclosures=0),
         ),
+        (
+            dict(feed_tags=['tag']),
+            EntryCounts(1, read=0, important=0, has_enclosures=0),
+        ),
     ],
 )
 @with_call_entry_counts_method
@@ -2366,6 +2370,8 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
 
     for feed in one, two, three:
         reader.add_feed(feed)
+
+    reader.add_feed_tag(one, 'tag')
 
     reader.update_feeds()
     pre_stuff(reader)

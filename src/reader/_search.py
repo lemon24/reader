@@ -879,9 +879,7 @@ class Search:
     ) -> EntrySearchCounts:
         sql_query, query_context = make_search_entry_counts_query(filter_options)
         context = dict(query=query, **query_context)
-
         row = exactly_one(self.db.execute(str(sql_query), context))
-
         return EntrySearchCounts(*row)
 
 
