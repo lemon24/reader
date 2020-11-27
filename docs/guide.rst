@@ -379,6 +379,40 @@ Tags can be used for filtering feeds and entries
 
 
 
+Counting things
+---------------
+
+You can get aggregated feed and entry counts by using one of the
+:meth:`~Reader.get_feed_counts`,
+:meth:`~Reader.get_entry_counts`, or
+:meth:`~Reader.search_entry_counts` methods::
+
+    >>> reader.get_feed_counts()
+    FeedCounts(total=134, broken=3, updates_enabled=132)
+    >>> reader.get_entry_counts()
+    EntryCounts(total=11843, read=9762, important=45, has_enclosures=4273)
+    >>> reader.search_entry_counts('hello internet')
+    EntrySearchCounts(total=207, read=196, important=0, has_enclosures=172)
+
+The ``_counts`` methods support the same filtering arguments
+as their non-``_counts`` counterparts.
+The following example shows how to get counts only for feeds/entries
+with a specific tag::
+
+    >>> for tag in chain(reader.get_feed_tags(), [False]):
+    ...     feeds = reader.get_feed_counts(tags=[tag])
+    ...     entries = reader.get_entry_counts(feed_tags=[tag])
+    ...     print(f"{tag or '<no tag>'}: {feeds.total} feeds, {entries.total} entries ")
+    ...
+    podcast: 29 feeds, 4277 entries
+    python: 29 feeds, 1281 entries
+    self: 2 feeds, 67 entries
+    tech: 79 feeds, 5527 entries
+    webcomic: 6 feeds, 1609 entries
+    <no tag>: 22 feeds, 1118 entries
+
+
+
 Feed and entry arguments
 ------------------------
 
