@@ -9,7 +9,7 @@ Changelog
 Version 1.11
 ------------
 
-Unreleased
+Released 2020-11-28
 
 * Allow disabling feed updates for specific feeds. (:issue:`187`)
 * Add methods to get aggregated feed and entry counts. (:issue:`185`)
