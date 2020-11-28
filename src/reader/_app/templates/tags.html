@@ -24,23 +24,16 @@
 
 <ul>
 
-<li>
-    <p>
-        <a href="{{ url_for('.feeds', tags=[true] | tojson) }}">feeds</a> or
-        <a href="{{ url_for('.entries', tags=[true] | tojson) }}">entries</a>
-        with any tags
-<li>
-    <p>
-        <a href="{{ url_for('.feeds', tags=[false] | tojson) }}">feeds</a> or
-        <a href="{{ url_for('.entries', tags=[false] | tojson) }}">entries</a>
-        with no tags
-
 {% for tag in tags %}
 <li id="tag-{{ loop.index }}">
     <p>
         <a href="{{ url_for('.feeds', tags=[tag] | tojson) }}">feeds</a> or
         <a href="{{ url_for('.entries', tags=[tag] | tojson) }}">entries</a>
-        with <span class="tag">{{ tag }}</span>
+        with
+        {% if tag is true %} any tags
+        {% elif tag is false %} no tags
+        {% else %} <span class="tag">{{ tag }}</span>
+        {% endif %}
 {% else %}
 
 {% if not error %}
