@@ -172,6 +172,8 @@ def entries():
         def get_entries(**kwargs):
             yield from reader.get_entries(sort=sort, **kwargs)
 
+        get_entry_counts = reader.get_entry_counts
+
     elif not query:
         # if the query is '', it's not a search
         args.pop('sort', None)
@@ -182,6 +184,9 @@ def entries():
         def get_entries(**kwargs):
             for sr in reader.search_entries(query, sort=sort, **kwargs):
                 yield EntryProxy(sr, reader.get_entry(sr))
+
+        def get_entry_counts(**kwargs):
+            return reader.search_entry_counts(query, **kwargs)
 
     # TODO: render the actual search result, not the entry
     # TODO: catch and flash syntax errors
@@ -206,13 +211,18 @@ def entries():
                 'entries.html', feed=feed, feed_tags=feed_tags, error=error
             )
 
-    entries = get_entries(
-        read=read,
+    kwargs = dict(
         feed=feed_url,
+        read=read,
         has_enclosures=has_enclosures,
         important=important,
         feed_tags=tags,
     )
+    entries = get_entries(**kwargs)
+
+    with_counts = request.args.get('counts')
+    with_counts = {None: None, 'no': False, 'yes': True}[with_counts]
+    counts = get_entry_counts(**kwargs) if with_counts else None
 
     try:
         first = next(entries)
@@ -251,6 +261,7 @@ def entries():
         feed_tags=feed_tags,
         entries_data=entries_data,
         error=error,
+        counts=counts,
     )
 
 
@@ -318,12 +329,23 @@ def feeds():
 
     reader = get_reader()
 
+    kwargs = dict(broken=broken, tags=tags, updates_enabled=updates_enabled)
+
+    with_counts = request.args.get('counts')
+    with_counts = {None: None, 'no': False, 'yes': True}[with_counts]
+    counts = reader.get_feed_counts(**kwargs) if with_counts else None
+
     feed_data = []
     try:
-        feeds = reader.get_feeds(
-            sort=sort, broken=broken, tags=tags, updates_enabled=updates_enabled
+        feeds = reader.get_feeds(sort=sort, **kwargs)
+        feed_data = (
+            (
+                feed,
+                list(reader.get_feed_tags(feed)),
+                reader.get_entry_counts(feed=feed) if with_counts else None,
+            )
+            for feed in feeds
         )
-        feed_data = ((feed, list(reader.get_feed_tags(feed))) for feed in feeds)
     except ValueError as e:
         # TODO: there should be a better way of matching this kind of error
         if 'tag' in str(e).lower():
@@ -335,7 +357,9 @@ def feeds():
     # https://github.com/lemon24/reader/issues/81
     get_flashed_messages()
 
-    return stream_template('feeds.html', feed_data=feed_data, error=error)
+    return stream_template(
+        'feeds.html', feed_data=feed_data, error=error, counts=counts
+    )
 
 
 @blueprint.route('/metadata')

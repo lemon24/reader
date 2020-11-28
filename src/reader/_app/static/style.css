@@ -157,6 +157,13 @@ ul.controls .collapsible {
 }
 
 
+abbr[title]:hover::after,
+abbr[title]:focus::after {
+    content: attr(title);
+}
+
+
+
 /* TODO: same for <strong>? */
 h1 b,
 h2 b,

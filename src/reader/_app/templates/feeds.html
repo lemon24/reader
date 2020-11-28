@@ -61,7 +61,17 @@
 </div>
 
 
-{% for feed, feed_tags in feed_data %}
+
+{% if counts %}
+<p>
+    <abbr title='({{ counts.broken }} broken, {{ counts.total - counts.updates_enabled }} disabled )'>
+    {{ counts.total }} feeds
+    </abbr>
+{% endif %}
+
+
+
+{% for feed, feed_tags, entry_counts in feed_data %}
 <div id="feed-{{ loop.index }}" class="feed">
 
 <h2 title="{{ macros.feed_title_secondary(feed) }}">
@@ -84,6 +94,15 @@
     {% else %}
         not updated
     {% endif %}
+
+
+{% if entry_counts %}
+<li>
+    <abbr title='({{ entry_counts.read }} read, {{ entry_counts.important }} important )'>
+    {{ entry_counts.total }} entries
+    </abbr>
+{% endif %}
+
 
 <li>
     {% for tag in feed_tags %}
