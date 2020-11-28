@@ -21,6 +21,8 @@ Unreleased
 * In the web application,
   show feed and entry counts when ``?counts=yes`` is used.
   (:issue:`185`)
+* In the web application,
+  use YAML instead of JSON for the tags and metadata fields.
 
 
 Version 1.10

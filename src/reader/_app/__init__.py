@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import flask.signals
 import humanize
 import markupsafe
+import yaml
 from flask import abort
 from flask import Blueprint
 from flask import current_app
@@ -204,9 +205,9 @@ def entries():
     else:
 
         try:
-            tags = json.loads(tags)
-        except json.JSONDecodeError as e:
-            error = f"invalid tag query: invalid JSON: {e}: {tags_str}"
+            tags = yaml.safe_load(tags)
+        except yaml.YAMLError as e:
+            error = f"invalid tag query: invalid YAML: {e}: {tags_str}"
             return stream_template(
                 'entries.html', feed=feed, feed_tags=feed_tags, error=error
             )
@@ -322,9 +323,9 @@ def feeds():
     else:
 
         try:
-            tags = json.loads(tags)
-        except json.JSONDecodeError as e:
-            error = f"invalid tag query: invalid JSON: {e}: {tags_str}"
+            tags = yaml.safe_load(tags)
+        except yaml.YAMLError as e:
+            error = f"invalid tag query: invalid YAML: {e}: {tags_str}"
             return stream_template('feeds.html', feed_data=[], error=error)
 
     reader = get_reader()
@@ -381,7 +382,7 @@ def metadata():
         'metadata.html',
         feed=feed,
         metadata=metadata,
-        to_pretty_json=lambda t: json.dumps(t, sort_keys=True, indent=4),
+        to_pretty_json=lambda t: yaml.safe_dump(t),
     )
 
 
@@ -522,8 +523,8 @@ def update_metadata(data):
     feed_url = data['feed-url']
     key = data['key']
     try:
-        value = json.loads(data['value'])
-    except json.JSONDecodeError as e:
+        value = yaml.safe_load(data['value'])
+    except yaml.YAMLError as e:
         raise APIError("invalid JSON: {}".format(e), (feed_url, key))
     get_reader().set_feed_metadata(feed_url, key, value)
 
