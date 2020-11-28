@@ -12,11 +12,15 @@ Version 1.11
 Unreleased
 
 * Allow disabling feed updates for specific feeds. (:issue:`187`)
+* Add methods to get aggregated feed and entry counts. (:issue:`185`)
 * In the web application:
   allow disabling feed updates for a feed;
   allow filtering feeds by whether they have updates enabled;
   do not show feed update errors for feeds that have updates disabled.
   (:issue:`187`)
+* In the web application,
+  show feed and entry counts when ``?counts=yes`` is used.
+  (:issue:`185`)
 
 
 Version 1.10
