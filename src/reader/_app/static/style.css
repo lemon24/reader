@@ -157,9 +157,25 @@ ul.controls .collapsible {
 }
 
 
+.tag-list dt {
+    clear: left;
+    float: left;
+    min-width: 8em;
+}
+.tag-list dd {
+    display: inline;
+    margin-left: 1em;
+}
+.tag-list dd::after {
+    content: "";
+    display: block;
+    height: 1em;
+}
+
+
 abbr[title]:hover::after,
 abbr[title]:focus::after {
-    content: attr(title);
+    content: " " attr(title);
 }
 
 

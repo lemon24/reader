@@ -402,7 +402,19 @@ def entry():
 @blueprint.route('/tags')
 def tags():
     reader = get_reader()
-    tags = itertools.chain([True, False], reader.get_feed_tags())
+
+    with_counts = request.args.get('counts')
+    with_counts = {None: None, 'no': False, 'yes': True}[with_counts]
+
+    tags = (
+        (
+            tag,
+            reader.get_feed_counts(tags=[tag]) if with_counts else None,
+            reader.get_entry_counts(feed_tags=[tag]) if with_counts else None,
+        )
+        for tag in itertools.chain([True, False], reader.get_feed_tags())
+    )
+
     return render_template('tags.html', tags=tags)
 
 
