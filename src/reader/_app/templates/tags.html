@@ -26,8 +26,8 @@
 
 {% for tag, feed_counts, entry_counts in tags %}
 <dt id="tag-{{ loop.index }}">
-    {% if tag is true %} <span class="tag-text">any tags</span>
-    {% elif tag is false %} <span class="tag-text">no tags</span>
+    {% if tag == true %} <span class="tag-text">any tags</span>
+    {% elif tag == false %} <span class="tag-text">no tags</span>
     {% else %} <span class="tag">{{ tag }}</span>
     {% endif %}
 </dt>
