@@ -25,12 +25,10 @@ In no particular order:
 * API to delete old entries. (:issue:`96`)
 * API to delete duplicate entries. (:issue:`140`)
 * Batch get related resources API. (:issue:`191`)
-* Counts API. (:issue:`185`)
-* Pausing feed updates. (:issue:`187`)
 * Pagination. (:issue:`196`)
 * update_feeds() filtering. (:issue:`193`)
 
-* Various web application improvements.
+* Web application re-design.
 
 * Plugin system / hooks stabilization. (:issue:`80`)
 * Internal API stabilization.
