@@ -31,145 +31,145 @@
 
 {% if not read_only %}
 
-{{ macros.radio_links('show', [
-    ('unread', none),
-    ('read', none),
-    ('all', none),
-], 'unread', '.entries') }}
+    {{ macros.radio_links('show', [
+        ('unread', none),
+        ('read', none),
+        ('all', none),
+    ], 'unread', '.entries') }}
 
-{{ macros.radio_links('has-enclosures', [
-    ('yes', none),
-    ('no', none),
-    (none, "don't care"),
-], none, '.entries', 'has enclosures') }}
+    {{ macros.radio_links('has-enclosures', [
+        ('yes', none),
+        ('no', none),
+        (none, "don't care"),
+    ], none, '.entries', 'has enclosures') }}
 
-{{ macros.radio_links('important', [
-    ('yes', none),
-    ('no', none),
-    (none, "don't care"),
-], none, '.entries', 'important') }}
-
-
-{% if not request.args.q %}
-{{ macros.radio_links('sort', [
-    ('recent', none),
-    ('random', none),
-], 'recent', '.entries', 'sort by') }}
-{% else %}
-{{ macros.radio_links('sort', [
-    ('relevant', none),
-    ('recent', none),
-    ('random', none),
-], 'relevant', '.entries', 'sort by') }}
-{% endif %}
+    {{ macros.radio_links('important', [
+        ('yes', none),
+        ('no', none),
+        (none, "don't care"),
+    ], none, '.entries', 'important') }}
 
 
-{# TODO: maybe show it uncollapsed if we're on the search page #}
-{# TODO: maybe have a different template for search #}
-
-{% set context = request.args.copy() %}
-{% set _ = context.pop('q', none) %}
-
-{% if not request.args.q %}
-{% set _ = context.pop('sort', none) %}
-{% endif %}
-
-{{ macros.text_input_button_get(
-    '.entries', 'search', 'q', 'search', request.args.q,
-    input_type='search',
-    context=context,
-    autocomplete=true,
-) }}
+    {% if not request.args.q %}
+        {{ macros.radio_links('sort', [
+            ('recent', none),
+            ('random', none),
+        ], 'recent', '.entries', 'sort by') }}
+    {% else %}
+        {{ macros.radio_links('sort', [
+            ('relevant', none),
+            ('recent', none),
+            ('random', none),
+        ], 'relevant', '.entries', 'sort by') }}
+    {% endif %}
 
 
-{% if not feed %}
-{% set context = request.args.copy() %}
-{% set _ = context.pop('tags', none) %}
+    {# TODO: maybe show it uncollapsed if we're on the search page #}
+    {# TODO: maybe have a different template for search #}
 
-{{ macros.text_input_button_get(
-    '.entries', 'filter by tag', 'tags', '["one", "two"]', request.args.tags,
-    input_type='search',
-    context=context,
-    autocomplete=true,
-) }}
+    {% set context = request.args.copy() %}
+    {% set _ = context.pop('q', none) %}
 
-{% if request.args.tags %}
-<li>
-    <a href="{{ url_for('.feeds', tags=request.args.tags) }}">feeds with these tags</a>
-{% endif %}
+    {% if not request.args.q %}
+        {% set _ = context.pop('sort', none) %}
+    {% endif %}
 
-{% endif %}
+    {{ macros.text_input_button_get(
+        '.entries', 'search', 'q', 'search', request.args.q,
+        input_type='search',
+        context=context,
+        autocomplete=true,
+    ) }}
 
 
-{% endif %}
+    {% if not feed %}
+        {% set context = request.args.copy() %}
+        {% set _ = context.pop('tags', none) %}
+
+        {{ macros.text_input_button_get(
+            '.entries', 'filter by tag', 'tags', '["one", "two"]', request.args.tags,
+            input_type='search',
+            context=context,
+            autocomplete=true,
+        ) }}
+
+        {% if request.args.tags %}
+            <li>
+                <a href="{{ url_for('.feeds', tags=request.args.tags) }}">feeds with these tags</a>
+        {% endif %}
+
+    {% endif %}
+
+
+{% endif %} {# not read_only #}
 
 
 {% if feed %}
 
-<li>
-    {% if feed.link %}<a href="{{ feed.link }}">site</a>{% endif %}
-    <a href="{{ feed.url }}">feed</a>
+    <li>
+        {% if feed.link %}<a href="{{ feed.link }}">site</a>{% endif %}
+        <a href="{{ feed.url }}">feed</a>
 
-{# duplicated from feeds.html #}
-<li>
-    added <span title="{{ feed.added }}">{{ feed.added | humanize_naturaltime }}</span>;
-    {% if feed.updated %}
-        updated
-        <span title="{{ feed.updated }}">{{ feed.updated | humanize_naturaltime }}</span>
-    {% else %}
-        not updated
+    {# TODO: duplicated from feeds.html #}
+    <li>
+        added <span title="{{ feed.added }}">{{ feed.added | humanize_naturaltime }}</span>;
+        {% if feed.updated %}
+            updated
+            <span title="{{ feed.updated }}">{{ feed.updated | humanize_naturaltime }}</span>
+        {% else %}
+            not updated
+        {% endif %}
+
+    {# TODO: duplicated from feeds.html #}
+    <li>
+        {% for tag in feed_tags %}
+        <small><a href="{{ url_for('.feeds', tags=[tag] | tojson) }}" class="tag">{{ tag }}</a></small>
+        {% endfor %}
+
+    {# TODO: read_only != preview, we should be more specific #}
+    {% if read_only %}
+        {{ macros.simple_button(
+            '.form_api', 'add-feed', 'add feed',
+            leave_disabled=true,
+            next=url_for('.entries', feed=request.args.url),
+            context={'feed-url': request.args.url},
+            js_enabled=False,
+        ) }}
     {% endif %}
 
-{# duplicated from feeds.html #}
-<li>
-    {% for tag in feed_tags %}
-    <small><a href="{{ url_for('.feeds', tags=[tag] | tojson) }}" class="tag">{{ tag }}</a></small>
-    {% endfor %}
 
-{# TODO read_only != preview, we should be more specific #}
-{% if read_only %}
-{{ macros.simple_button(
-    '.form_api', 'add-feed', 'add feed',
-    leave_disabled=true,
-    next=url_for('.entries', feed=request.args.url),
-    context={'feed-url': request.args.url},
-    js_enabled=False,
-) }}
-{% endif %}
+    {% if not read_only %}
 
+        {% set next = url_for('.entries', **request.args) %}
 
-{% if not read_only %}
+        {% if current_what != 'read' %}
+            {{- macros.confirm_button('.form_api', 'mark-all-as-read', 'all read', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
+        {% endif %}
+        {% if current_what != 'unread' %}
+            {{- macros.confirm_button('.form_api', 'mark-all-as-unread', 'all unread', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
+        {% endif %}
 
-{% set next = url_for('.entries', **request.args) %}
+        {{ macros.confirm_button('.form_api', 'delete-feed', 'delete feed', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
 
-{% if current_what != 'read' %}
-{{- macros.confirm_button('.form_api', 'mark-all-as-read', 'all read', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
-{% endif %}
-{% if current_what != 'unread' %}
-{{- macros.confirm_button('.form_api', 'mark-all-as-unread', 'all unread', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
-{% endif %}
+        {{ macros.text_input_button('.form_api', 'update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true, next=next, context={'feed-url': feed.url}, value=feed.user_title) }}
 
-{{ macros.confirm_button('.form_api', 'delete-feed', 'delete feed', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
+        {{ macros.text_input_button('.form_api', 'update-feed-tags', 'update feed tags', 'feed-tags', 'feed tags', leave_disabled=true, next=next, context={'feed-url': feed.url}, value=feed_tags | join(' ')) }}
 
-{{ macros.text_input_button('.form_api', 'update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true, next=next, context={'feed-url': feed.url}, value=feed.user_title) }}
+        <li>
+        <a href="{{ url_for('.metadata', feed=feed.url) }}">update metadata</a>
 
-{{ macros.text_input_button('.form_api', 'update-feed-tags', 'update feed tags', 'feed-tags', 'feed tags', leave_disabled=true, next=next, context={'feed-url': feed.url}, value=feed_tags | join(' ')) }}
+        {# <!-- TODO: how do we redirect to the new feed after url update? --> #}
+        {{ macros.text_confirm_button('.form_api', 'change-feed-url', 'change feed URL', 'new-feed-url', 'new URL', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
 
-<li>
-<a href="{{ url_for('.metadata', feed=feed.url) }}">update metadata</a>
+        {% if feed.updates_enabled %}
+            {{ macros.simple_button('.form_api', 'disable-feed-updates', 'disable updates', leave_disabled=true, next=next, context={'feed-url': feed.url}) }}
+        {% else %}
+            {{ macros.simple_button('.form_api', 'enable-feed-updates', 'enable updates', leave_disabled=true, next=next, context={'feed-url': feed.url}) }}
+        {% endif %}
 
-{# <!-- TODO: how do we redirect to the new feed after url update? --> #}
-{{ macros.text_confirm_button('.form_api', 'change-feed-url', 'change feed URL', 'new-feed-url', 'new URL', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
+    {% endif %} {# not read_only #}
 
-{% if feed.updates_enabled %}
-{{ macros.simple_button('.form_api', 'disable-feed-updates', 'disable updates', leave_disabled=true, next=next, context={'feed-url': feed.url}) }}
-{% else %}
-{{ macros.simple_button('.form_api', 'enable-feed-updates', 'enable updates', leave_disabled=true, next=next, context={'feed-url': feed.url}) }}
-{% endif %}
-
-{% endif %}
-
-{% endif %}
+{% endif %} {# feed #}
 
 
 {% for message in get_flashed_messages_by_prefix(
@@ -186,18 +186,18 @@
 {% endfor %}
 
 
-{# duplicated from feeds.html #}
+{# TODO: duplicated from feeds.html #}
 {% if feed and feed.last_exception and feed.updates_enabled %}
-<li class="error" title="{{ feed.last_exception.traceback_str }}">
-<b>update error</b>:
-{% set type_parts = feed.last_exception.type_name.partition('builtins.') %}
-{{ feed.last_exception.type_name if type_parts[0] else type_parts[2] }}:
-{{ feed.last_exception.value_str }}
+    <li class="error" title="{{ feed.last_exception.traceback_str }}">
+    <b>update error</b>:
+    {% set type_parts = feed.last_exception.type_name.partition('builtins.') %}
+    {{ feed.last_exception.type_name if type_parts[0] else type_parts[2] }}:
+    {{ feed.last_exception.value_str }}
 {% endif %}
 
 
 {% if error %}
-<li class="error"><b>error</b>: {{ error }}
+    <li class="error"><b>error</b>: {{ error }}
 {% endif %}
 
 
@@ -242,22 +242,22 @@ untitled
 
 {% if not read_only %}
 
-{% set next = url_for('.entries', **request.args) + '#entry-' + ((loop.index if not loop.last else loop.index - 1) | string) %}
-{% set context = {'feed-url': feed.url, 'entry-id': entry.id} %}
+    {% set next = url_for('.entries', **request.args) + '#entry-' + ((loop.index if not loop.last else loop.index - 1) | string) %}
+    {% set context = {'feed-url': feed.url, 'entry-id': entry.id} %}
 
-{% if entry.read %}
-{{ macros.simple_button('.form_api', 'mark-as-unread', 'unread', leave_disabled=true, next=next, context=context) }}
-{% else %}
-{{ macros.simple_button('.form_api', 'mark-as-read', 'read', leave_disabled=true, next=next, context=context) }}
-{% endif %}
+    {% if entry.read %}
+        {{ macros.simple_button('.form_api', 'mark-as-unread', 'unread', leave_disabled=true, next=next, context=context) }}
+    {% else %}
+        {{ macros.simple_button('.form_api', 'mark-as-read', 'read', leave_disabled=true, next=next, context=context) }}
+    {% endif %}
 
-{% if entry.important %}
-{{ macros.simple_button('.form_api', 'mark-as-unimportant', 'unimportant', leave_disabled=true, next=next, context=context) }}
-{% else %}
-{{ macros.simple_button('.form_api', 'mark-as-important', 'important', leave_disabled=true, next=next, context=context) }}
-{% endif %}
+    {% if entry.important %}
+        {{ macros.simple_button('.form_api', 'mark-as-unimportant', 'unimportant', leave_disabled=true, next=next, context=context) }}
+    {% else %}
+        {{ macros.simple_button('.form_api', 'mark-as-important', 'important', leave_disabled=true, next=next, context=context) }}
+    {% endif %}
 
-{% endif %}
+{% endif %} {# not read only #}
 
 
 {% for message in get_flashed_messages_by_prefix(
