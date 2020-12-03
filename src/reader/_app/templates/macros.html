@@ -231,3 +231,22 @@ data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
 {%- if option != current_option %}</a> {% endif %}
 {% endfor %}
 {%- endmacro %}
+
+
+{% macro toggle_link(name, options, default, endpoint) %}
+{%- set (yes_option, yes_label), (no_option, no_label) = options -%}
+
+{%- set args = request.args.copy() -%}
+{%- set current_option = args.get(name, default) -%}
+{%- set option, option_label = options[ current_option == yes_option ] %}
+
+{% if option == default %}
+    {%- set _ = args.poplist(name) -%}
+{% else %}
+    {%- set _ = args.setlist(name, [option]) -%}
+{% endif %}
+
+<li>
+    <a href="{{ url_for(endpoint, **args) }}">{{ option_label or option }}</a>
+
+{% endmacro %}

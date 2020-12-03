@@ -53,6 +53,13 @@
     <a href="{{ url_for('.entries', tags=request.args.tags) }}">entries with these tags</a>
 {% endif %}
 
+
+{{ macros.toggle_link('counts', [
+    ('yes', 'counts'),
+    ('no', 'no counts'),
+], 'no', '.feeds') }}
+
+
 {% if error %}
 <li class="error"><b>error</b>: {{ error }}
 {% endif %}

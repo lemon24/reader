@@ -12,7 +12,10 @@
 <div id="update-tags">
 <ul class="controls">
 
-{# nothing here yet, maybe if we add a sort option #}
+{{ macros.toggle_link('counts', [
+    ('yes', 'counts'),
+    ('no', 'no counts'),
+], 'no', '.tags') }}
 
 {% if error %}
 <li class="error"><b>error</b>: {{ error }}

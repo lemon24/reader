@@ -104,6 +104,12 @@
 {% endif %} {# not read_only #}
 
 
+{{ macros.toggle_link('counts', [
+    ('yes', 'counts'),
+    ('no', 'no counts'),
+], 'no', '.entries') }}
+
+
 {% if feed %}
 
     <li>

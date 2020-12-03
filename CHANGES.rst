@@ -11,6 +11,8 @@ Version 1.12
 
 Unreleased
 
+* In the web application, add links to toggle feed/entry counts. (:issue:`185`)
+
 
 Version 1.11
 ------------
