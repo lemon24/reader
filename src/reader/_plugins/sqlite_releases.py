@@ -106,7 +106,8 @@ def make_parser(make_session):
 
             with wrap_exceptions(url, "while parsing page"):
                 feed = make_feed(url, FULL_URL, soup)
-                entries = make_entries(url, FULL_URL, soup)
+                entries = list(make_entries(url, FULL_URL, soup))
+                feed = feed._replace(updated=max(e.updated for e in entries))
 
         return ParsedFeed(feed, entries, http_etag, http_last_modified)
 
