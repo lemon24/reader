@@ -286,6 +286,7 @@ class Reader:
         broken: Optional[bool] = None,
         updates_enabled: Optional[bool] = None,
         sort: FeedSortOrder = 'title',
+        starting_after: Optional[FeedInput] = None,
     ) -> Iterable[Feed]:
         """Get all or some of the feeds.
 
@@ -347,12 +348,16 @@ class Reader:
             sort (str): How to order feeds; one of ``'title'`` (by
                 :attr:`~Feed.user_title` or :attr:`~Feed.title`, case
                 insensitive; default), or ``'added'`` (last added first).
+            starting_after (str or Feed or None):
+                A cursor for use in pagination;
+                a feed URL that defines your place in the list.
 
         Yields:
             :class:`Feed`: Sorted according to ``sort``.
 
         Raises:
             StorageError
+            FeedNotFoundError: If starting_after does not exist.
 
         .. versionadded:: 1.7
             The ``tags`` keyword argument.
@@ -363,6 +368,9 @@ class Reader:
         .. versionadded:: 1.11
             The ``updates_enabled`` keyword argument.
 
+        .. versionadded:: 1.11
+            The ``starting_after`` keyword argument.
+
         """
         filter_options = FeedFilterOptions.from_args(
             feed, tags, broken, updates_enabled
@@ -371,7 +379,11 @@ class Reader:
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
 
-        return self._storage.get_feeds(filter_options, sort)
+        return self._storage.get_feeds(
+            filter_options,
+            sort,
+            _feed_argument(starting_after) if starting_after else None,
+        )
 
     @overload
     def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
@@ -888,7 +900,10 @@ class Reader:
         self._storage.mark_as_important_unimportant(feed_url, entry_id, False)
 
     def iter_feed_metadata(
-        self, feed: FeedInput, *, key: Optional[str] = None,
+        self,
+        feed: FeedInput,
+        *,
+        key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
         """Get all or some of the metadata values for a feed.
 

@@ -51,14 +51,15 @@ def exactly_one(it: Iterable[_U]) -> _U:
 
 
 def join_paginated_iter(
-    get_things: Callable[[int, Optional[_T]], Iterable[Tuple[_U, _T]]], chunk_size: int,
+    get_things: Callable[[int, Optional[_T]], Iterable[Tuple[_U, _T]]],
+    chunk_size: int,
+    last: Optional[_T] = None,
 ) -> Iterable[_U]:
     # At the moment get_things must take positional arguments.
     # We could make it work with kwargs by using protocols,
     # but mypy gets confused about partials with kwargs.
     # https://github.com/python/mypy/issues/1484
 
-    last = None
     while True:
 
         things = get_things(chunk_size, last)

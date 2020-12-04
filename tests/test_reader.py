@@ -505,7 +505,12 @@ def raises_not_modified_parser(_):
 
 
 @pytest.mark.parametrize(
-    'make_new_parser', [same_parser, updated_feeds_parser, raises_not_modified_parser,]
+    'make_new_parser',
+    [
+        same_parser,
+        updated_feeds_parser,
+        raises_not_modified_parser,
+    ],
 )
 @rename_argument('reader', 'reader_with_one_feed')
 def test_last_exception_reset(reader, call_update_method, make_new_parser):
@@ -562,7 +567,10 @@ class EntryAction(Enum):
         (f, e)
         for f in FeedAction
         for e in EntryAction
-        if (f, e) not in {(FeedAction.none, EntryAction.none),}
+        if (f, e)
+        not in {
+            (FeedAction.none, EntryAction.none),
+        }
     ],
 )
 def test_update_feed_deleted(db_path, call_update_method, feed_action, entry_action):
@@ -1500,7 +1508,16 @@ ALL_IDS = {
         (dict(entry=None), ALL_IDS),
         (dict(entry=('1', '1, 1')), {(1, 1)}),
         (dict(entry=('1', '1, 2')), {(1, 2)}),
-        (dict(entry=Entry('1, 2', datetime(2010, 2, 1), feed=Feed('1'),)), {(1, 2)},),
+        (
+            dict(
+                entry=Entry(
+                    '1, 2',
+                    datetime(2010, 2, 1),
+                    feed=Feed('1'),
+                )
+            ),
+            {(1, 2)},
+        ),
         (dict(entry=('inexistent', 'also-inexistent')), set()),
     ],
 )
@@ -1839,7 +1856,11 @@ def test_feeds_filtering(reader, kwargs, expected):
 
 @pytest.mark.parametrize(
     'kwargs',
-    [dict(feed=object()), dict(broken=object()), dict(updates_enabled=object()),],
+    [
+        dict(feed=object()),
+        dict(broken=object()),
+        dict(updates_enabled=object()),
+    ],
 )
 def test_feeds_filtering_error(reader, kwargs):
     reader._parser = parser = Parser()
@@ -1903,7 +1924,10 @@ def test_change_feed_url_feed(reader):
 
     assert not reader.get_feed('1', None)
     assert reader.get_feed('3') == old_one._replace(
-        url='3', updated=None, last_updated=None, last_exception=None,
+        url='3',
+        updated=None,
+        last_updated=None,
+        last_exception=None,
     )
 
 
@@ -1979,7 +2003,9 @@ def test_change_feed_url_second_update(reader, new_feed_url):
     reader.change_feed_url('1', new_feed_url)
 
     assert reader.get_feed(new_feed_url) == old_one._replace(
-        url=new_feed_url, updated=None, last_updated=None,
+        url=new_feed_url,
+        updated=None,
+        last_updated=None,
     )
 
     reader._parser.feed(
@@ -2385,3 +2411,23 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
     assert type(rv) is rv_type
     # this isn't gonna work as well if the return types get different attributes
     assert rv._asdict() == expected._asdict()
+
+
+@rename_argument('reader', 'reader_with_two_feeds')
+@pytest.mark.parametrize('sort', ['title', 'added'])
+def test_get_feed_pagination_basic(reader, sort):
+    reader._parser.feed(3, datetime(2010, 1, 1))
+
+    # needed because of https://github.com/lemon24/reader/issues/203
+    reader.update_feeds()
+
+    get_feeds = lambda *args, **kwargs: reader.get_feeds(*args, sort=sort, **kwargs)
+
+    one, *rest = get_feeds()
+    assert [f.url for f in get_feeds(starting_after=one)] == [f.url for f in rest]
+    two, *rest = rest
+    assert [f.url for f in get_feeds(starting_after=two)] == [f.url for f in rest]
+
+    with pytest.raises(FeedNotFoundError) as excinfo:
+        list(get_feeds(starting_after='0'))
+    assert excinfo.value.url == '0'
