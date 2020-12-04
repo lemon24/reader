@@ -218,6 +218,12 @@ Sort by random
 Some thoughts in the initial issue: :issue:`105`.
 
 
+Entry/feed "primary key" attribute naming
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This whole issue: :issue:`159#issuecomment-612914956`.
+
+
 Change feed URL
 ~~~~~~~~~~~~~~~
 
