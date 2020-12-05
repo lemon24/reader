@@ -2,6 +2,7 @@ import builtins
 import datetime
 import itertools
 import logging
+import numbers
 import warnings
 from typing import Any
 from typing import Callable
@@ -286,6 +287,7 @@ class Reader:
         broken: Optional[bool] = None,
         updates_enabled: Optional[bool] = None,
         sort: FeedSortOrder = 'title',
+        limit: Optional[int] = None,
         starting_after: Optional[FeedInput] = None,
     ) -> Iterable[Feed]:
         """Get all or some of the feeds.
@@ -348,9 +350,10 @@ class Reader:
             sort (str): How to order feeds; one of ``'title'`` (by
                 :attr:`~Feed.user_title` or :attr:`~Feed.title`, case
                 insensitive; default), or ``'added'`` (last added first).
+            limit (int or None): A limit on the number of feeds to be returned;
+                by default, all feeds are returned.
             starting_after (str or Feed or None):
-                A cursor for use in pagination;
-                a feed URL that defines your place in the list.
+                Return feeds after this feed; a cursor for use in pagination.
 
         Yields:
             :class:`Feed`: Sorted according to ``sort``.
@@ -379,9 +382,14 @@ class Reader:
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
 
+        if limit is not None:
+            if not isinstance(limit, numbers.Integral) or limit < 1:
+                raise ValueError("limit should be a positive integer")
+
         return self._storage.get_feeds(
             filter_options,
             sort,
+            limit,
             _feed_argument(starting_after) if starting_after else None,
         )
 

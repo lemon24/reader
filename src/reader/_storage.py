@@ -5,6 +5,7 @@ from datetime import datetime
 from datetime import timedelta
 from functools import partial
 from itertools import chain
+from itertools import islice
 from itertools import repeat
 from typing import Any
 from typing import Dict
@@ -440,13 +441,21 @@ class Storage:
         self,
         filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
         sort: FeedSortOrder = 'title',
+        limit: Optional[int] = None,
         starting_after: Optional[str] = None,
     ) -> Iterable[Feed]:
-        yield from join_paginated_iter(
+        rv = join_paginated_iter(
             partial(self.get_feeds_page, filter_options, sort),  # type: ignore[arg-type]
             self.chunk_size,
             self.get_feeds_last(sort, starting_after) if starting_after else None,
         )
+
+        # FIXME: very wasteful (always requesting 1 page, even if limit < chunk_size); temporary implementation for #196
+
+        if limit:
+            rv = islice(rv, limit)
+
+        yield from rv
 
     def get_feeds_last(self, sort: str, url: str) -> Tuple[Any, ...]:
         # TODO: make this method private?

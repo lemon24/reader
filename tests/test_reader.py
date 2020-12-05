@@ -2413,21 +2413,49 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
     assert rv._asdict() == expected._asdict()
 
 
-@rename_argument('reader', 'reader_with_two_feeds')
 @pytest.mark.parametrize('sort', ['title', 'added'])
 def test_get_feed_pagination_basic(reader, sort):
-    reader._parser.feed(3, datetime(2010, 1, 1))
+    # TODO: maybe split up in smaller tests?
+
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 1, 1))
+    three = parser.feed(3, datetime(2010, 1, 1))
+
+    for feed in one, two, three:
+        reader.add_feed(feed)
 
     # needed because of https://github.com/lemon24/reader/issues/203
     reader.update_feeds()
 
-    get_feeds = lambda *args, **kwargs: reader.get_feeds(*args, sort=sort, **kwargs)
+    def get_feed_urls(*args, **kwargs):
+        return [f.url for f in reader.get_feeds(*args, sort=sort, **kwargs)]
 
-    one, *rest = get_feeds()
-    assert [f.url for f in get_feeds(starting_after=one)] == [f.url for f in rest]
-    two, *rest = rest
-    assert [f.url for f in get_feeds(starting_after=two)] == [f.url for f in rest]
+    urls = get_feed_urls()
+
+    assert get_feed_urls(starting_after=urls[0]) == urls[1:]
+    assert get_feed_urls(starting_after=urls[1]) == urls[2:]
+    assert get_feed_urls(starting_after=urls[2]) == urls[3:] == []
 
     with pytest.raises(FeedNotFoundError) as excinfo:
-        list(get_feeds(starting_after='0'))
+        get_feed_urls(starting_after='0')
     assert excinfo.value.url == '0'
+
+    assert get_feed_urls(limit=1) == urls[:1]
+    assert get_feed_urls(limit=2) == urls[:2]
+    assert get_feed_urls(limit=3) == urls[:3] == urls
+
+    assert get_feed_urls(limit=1, starting_after=urls[0]) == urls[1:2]
+    assert get_feed_urls(limit=2, starting_after=urls[0]) == urls[1:3]
+    assert get_feed_urls(limit=2, starting_after=urls[1]) == urls[2:]
+    assert get_feed_urls(limit=2, starting_after=urls[2]) == urls[3:] == []
+
+    with pytest.raises(ValueError):
+        get_feed_urls(limit=object())
+    with pytest.raises(ValueError):
+        get_feed_urls(limit=0)
+    with pytest.raises(ValueError):
+        get_feed_urls(limit=-1)
+    with pytest.raises(ValueError):
+        get_feed_urls(limit=1.0)
