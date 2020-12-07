@@ -260,6 +260,12 @@ Counts API
 Detailed requirements and API discussion: :issue:`185#issuecomment-731743327`.
 
 
+Using None as a special argument value
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This comment: :issue:`177#issuecomment-674786498`.
+
+
 Batch update methods
 ~~~~~~~~~~~~~~~~~~~~
 
