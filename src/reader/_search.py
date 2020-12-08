@@ -11,6 +11,7 @@ from datetime import datetime
 from datetime import timedelta
 from functools import partial
 from itertools import groupby
+from itertools import islice
 from types import MappingProxyType
 from typing import Any
 from typing import Dict
@@ -781,10 +782,11 @@ class Search:
         now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: SearchSortOrder = 'relevant',
+        limit: Optional[int] = None,
     ) -> Iterable[EntrySearchResult]:
         # TODO: dupe of at least Storage.get_entries(), maybe deduplicate
         if sort in ('relevant', 'recent'):
-            yield from join_paginated_iter(
+            rv = join_paginated_iter(
                 partial(self.search_entries_page, query, now, filter_options, sort),
                 self.chunk_size,
             )
@@ -792,10 +794,15 @@ class Search:
             it = self.search_entries_page(
                 query, now, filter_options, sort, self.chunk_size
             )
-            for entry, _ in it:
-                yield entry
+            rv = (entry for entry, _ in it)
         else:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+
+        # FIXME: very wasteful (always requesting 1 page, even if limit < chunk_size); temporary implementation for #196
+        if limit:
+            rv = islice(rv, limit)
+
+        yield from rv
 
     @wrap_exceptions_iter(SearchError)
     def search_entries_page(

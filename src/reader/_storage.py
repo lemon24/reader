@@ -451,7 +451,6 @@ class Storage:
         )
 
         # FIXME: very wasteful (always requesting 1 page, even if limit < chunk_size); temporary implementation for #196
-
         if limit:
             rv = islice(rv, limit)
 
@@ -924,19 +923,25 @@ class Storage:
         now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: EntrySortOrder = 'recent',
+        limit: Optional[int] = None,
     ) -> Iterable[Entry]:
         # TODO: deduplicate
         if sort == 'recent':
-            yield from join_paginated_iter(
+            rv = join_paginated_iter(
                 partial(self.get_entries_page, now, filter_options, sort),
                 self.chunk_size,
             )
         elif sort == 'random':
             it = self.get_entries_page(now, filter_options, sort, self.chunk_size)
-            for entry, _ in it:
-                yield entry
+            rv = (entry for entry, _ in it)
         else:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+
+        # FIXME: very wasteful (always requesting 1 page, even if limit < chunk_size); temporary implementation for #196
+        if limit:
+            rv = islice(rv, limit)
+
+        yield from rv
 
     @wrap_exceptions_iter(StorageError)
     def get_entries_page(

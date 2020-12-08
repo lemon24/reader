@@ -371,8 +371,8 @@ class Reader:
         .. versionadded:: 1.11
             The ``updates_enabled`` keyword argument.
 
-        .. versionadded:: 1.11
-            The ``starting_after`` keyword argument.
+        .. versionadded:: 1.12
+            The ``limit`` and ``starting_after`` keyword arguments.
 
         """
         filter_options = FeedFilterOptions.from_args(
@@ -709,6 +709,7 @@ class Reader:
         has_enclosures: Optional[bool] = None,
         feed_tags: TagFilterInput = None,
         sort: EntrySortOrder = 'recent',
+        limit: Optional[int] = None,
     ) -> Iterable[Entry]:
         """Get all or some of the entries.
 
@@ -749,6 +750,8 @@ class Reader:
                 works like the :meth:`~Reader.get_feeds()` ``tags`` argument.
             sort (str): How to order entries; one of ``'recent'`` (default)
                 or ``'random'``.
+            limit (int or None): A limit on the number of entries to be returned;
+                by default, all entries are returned.
 
         Yields:
             :class:`Entry`: Sorted according to ``sort``.
@@ -762,6 +765,9 @@ class Reader:
         .. versionadded:: 1.7
             The ``feed_tags`` keyword argument.
 
+        .. versionadded:: 1.12
+            The ``limit`` keyword argument.
+
         """
 
         # If we ever implement pagination, consider following the guidance in
@@ -770,10 +776,16 @@ class Reader:
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
         )
+
         if sort not in ('recent', 'random'):
             raise ValueError("sort should be one of ('recent', 'random')")
+
+        if limit is not None:
+            if not isinstance(limit, numbers.Integral) or limit < 1:
+                raise ValueError("limit should be a positive integer")
+
         now = self._now()
-        return self._storage.get_entries(now, filter_options, sort)
+        return self._storage.get_entries(now, filter_options, sort, limit)
 
     @overload
     def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover
@@ -1061,6 +1073,7 @@ class Reader:
         has_enclosures: Optional[bool] = None,
         feed_tags: TagFilterInput = None,
         sort: SearchSortOrder = 'relevant',
+        limit: Optional[int] = None,
     ) -> Iterable[EntrySearchResult]:
         """Get entries matching a full-text search query.
 
@@ -1124,6 +1137,8 @@ class Reader:
                 works like the :meth:`~Reader.get_feeds()` ``tags`` argument.
             sort (str): How to order results; one of ``'relevant'`` (default),
                 ``'recent'``, or ``'random'``.
+            limit (int or None): A limit on the number of results to be returned;
+                by default, all results are returned.
 
         Yields:
             :class:`EntrySearchResult`: Sorted according to ``sort``.
@@ -1140,14 +1155,23 @@ class Reader:
         .. versionadded:: 1.7
             The ``feed_tags`` keyword argument.
 
+        .. versionadded:: 1.12
+            The ``limit`` keyword argument.
+
         """
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
         )
+
         if sort not in ('relevant', 'recent', 'random'):
             raise ValueError("sort should be one of ('relevant', 'recent', 'random')")
+
+        if limit is not None:
+            if not isinstance(limit, numbers.Integral) or limit < 1:
+                raise ValueError("limit should be a positive integer")
+
         now = self._now()
-        return self._search.search_entries(query, now, filter_options, sort)
+        return self._search.search_entries(query, now, filter_options, sort, limit)
 
     def search_entry_counts(
         self,

@@ -2416,6 +2416,7 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
 @pytest.mark.parametrize('sort', ['title', 'added'])
 def test_get_feed_pagination_basic(reader, sort):
     # TODO: maybe split up in smaller tests?
+    # TODO: chunk_size 1, 2, n
 
     reader._parser = parser = Parser()
 
@@ -2459,3 +2460,65 @@ def test_get_feed_pagination_basic(reader, sort):
         get_feed_urls(limit=-1)
     with pytest.raises(ValueError):
         get_feed_urls(limit=1.0)
+
+
+with_call_entries_method_nonrandom = pytest.mark.parametrize(
+    'pre_stuff, call_method',
+    [
+        (lambda _: None, get_entries_recent),
+        (enable_and_update_search, search_entries_relevant),
+        (enable_and_update_search, search_entries_recent),
+    ],
+)
+
+
+@with_call_entries_method_nonrandom
+def test_get_entries_pagination_basic(reader, pre_stuff, call_method):
+    # TODO: maybe split up in smaller tests?
+    # TODO: chunk_size 1, 2, n
+    # TODO: looks a lot like test_get_entries_pagination_basic, maybe dedupe
+
+    reader._parser = parser = Parser()
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+
+    one = parser.entry(1, 1, datetime(2010, 1, 1))
+    two = parser.entry(1, 2, datetime(2010, 1, 1))
+    three = parser.entry(1, 3, datetime(2010, 1, 1))
+
+    reader.add_feed(feed)
+
+    reader.update_feeds()
+
+    pre_stuff(reader)
+
+    def get_ids(*args, **kwargs):
+        return [e.id for e in call_method(reader, *args, **kwargs)]
+
+    ids = get_ids()
+
+    # assert get_ids(starting_after=ids[0]) == ids[1:]
+    # assert get_ids(starting_after=ids[1]) == ids[2:]
+    # assert get_ids(starting_after=ids[2]) == ids[3:] == []
+
+    # with pytest.raises(EntryNotFoundError) as excinfo:
+    # get_ids(starting_after='0')
+    # assert excinfo.value.url == '0'
+
+    assert get_ids(limit=1) == ids[:1]
+    assert get_ids(limit=2) == ids[:2]
+    assert get_ids(limit=3) == ids[:3] == ids
+
+    # assert get_ids(limit=1, starting_after=ids[0]) == ids[1:2]
+    # assert get_ids(limit=2, starting_after=ids[0]) == ids[1:3]
+    # assert get_ids(limit=2, starting_after=ids[1]) == ids[2:]
+    # assert get_ids(limit=2, starting_after=ids[2]) == ids[3:] == []
+
+    with pytest.raises(ValueError):
+        get_ids(limit=object())
+    with pytest.raises(ValueError):
+        get_ids(limit=0)
+    with pytest.raises(ValueError):
+        get_ids(limit=-1)
+    with pytest.raises(ValueError):
+        get_ids(limit=1.0)
