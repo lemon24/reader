@@ -8,8 +8,10 @@ from hypothesis import example
 from hypothesis import given
 
 from reader import Entry
+from reader import EntryError
 from reader import EntrySearchResult
 from reader import Feed
+from reader import FeedError
 from reader._types import EntryData
 from reader._types import FeedData
 from reader.types import _entry_argument
@@ -71,6 +73,8 @@ def test_object_id():
     assert EntrySearchResult('url', 'entry').object_id == ('url', 'entry')
     assert FeedData('url').object_id == 'url'
     assert EntryData('url', 'entry', 'updated').object_id == ('url', 'entry')
+    assert FeedError('url').object_id == 'url'
+    assert EntryError('url', 'entry').object_id == ('url', 'entry')
 
 
 @pytest.mark.parametrize(

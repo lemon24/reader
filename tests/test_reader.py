@@ -2413,60 +2413,19 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
     assert rv._asdict() == expected._asdict()
 
 
-@pytest.mark.parametrize('sort', ['title', 'added'])
-@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2])
-def test_get_feed_pagination_basic(reader, sort, chunk_size):
-    # TODO: maybe split up in smaller tests?
-
-    reader._storage.chunk_size = chunk_size
-
-    reader._parser = parser = Parser()
-
-    one = parser.feed(1, datetime(2010, 1, 1))
-    two = parser.feed(2, datetime(2010, 1, 1))
-    three = parser.feed(3, datetime(2010, 1, 1))
-
-    for feed in one, two, three:
-        reader.add_feed(feed)
-
-    # needed because of https://github.com/lemon24/reader/issues/203
-    reader.update_feeds()
-
-    def get_feed_urls(*args, **kwargs):
-        return [f.url for f in reader.get_feeds(*args, sort=sort, **kwargs)]
-
-    urls = get_feed_urls()
-
-    assert get_feed_urls(starting_after=urls[0]) == urls[1:]
-    assert get_feed_urls(starting_after=urls[1]) == urls[2:]
-    assert get_feed_urls(starting_after=urls[2]) == urls[3:] == []
-
-    with pytest.raises(FeedNotFoundError) as excinfo:
-        get_feed_urls(starting_after='0')
-    assert excinfo.value.url == '0'
-
-    assert get_feed_urls(limit=1) == urls[:1]
-    assert get_feed_urls(limit=2) == urls[:2]
-    assert get_feed_urls(limit=3) == urls[:3] == urls
-
-    assert get_feed_urls(limit=1, starting_after=urls[0]) == urls[1:2]
-    assert get_feed_urls(limit=2, starting_after=urls[0]) == urls[1:3]
-    assert get_feed_urls(limit=2, starting_after=urls[1]) == urls[2:]
-    assert get_feed_urls(limit=2, starting_after=urls[2]) == urls[3:] == []
-
-    with pytest.raises(ValueError):
-        get_feed_urls(limit=object())
-    with pytest.raises(ValueError):
-        get_feed_urls(limit=0)
-    with pytest.raises(ValueError):
-        get_feed_urls(limit=-1)
-    with pytest.raises(ValueError):
-        get_feed_urls(limit=1.0)
+def get_feeds_title(reader, **kwargs):
+    return reader.get_feeds(sort='title', **kwargs)
 
 
-with_call_entries_method_nonrandom = pytest.mark.parametrize(
+def get_feeds_added(reader, **kwargs):
+    return reader.get_feeds(sort='added', **kwargs)
+
+
+with_call_paginated_method = pytest.mark.parametrize(
     'pre_stuff, call_method',
     [
+        (lambda _: None, get_feeds_title),
+        (lambda _: None, get_feeds_added),
         (lambda _: None, get_entries_recent),
         (enable_and_update_search, search_entries_relevant),
         (enable_and_update_search, search_entries_recent),
@@ -2474,40 +2433,33 @@ with_call_entries_method_nonrandom = pytest.mark.parametrize(
 )
 
 
-@with_call_entries_method_nonrandom
+@with_call_paginated_method
 @pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2])
 def test_get_entries_pagination_basic(reader, pre_stuff, call_method, chunk_size):
-    # TODO: maybe split up in smaller tests?
-    # TODO: looks a lot like test_get_entries_pagination_basic, maybe dedupe
-
     reader._storage.chunk_size = chunk_size
 
     reader._parser = parser = Parser()
 
-    feed = parser.feed(1, datetime(2010, 1, 1))
+    one = parser.feed(1, datetime(2010, 1, 1))
+    parser.entry(1, 1, datetime(2010, 1, 1))
+    parser.entry(1, 2, datetime(2010, 1, 1))
+    parser.entry(1, 3, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 1, 1))
+    three = parser.feed(3, datetime(2010, 1, 1))
 
-    one = parser.entry(1, 1, datetime(2010, 1, 1))
-    two = parser.entry(1, 2, datetime(2010, 1, 1))
-    three = parser.entry(1, 3, datetime(2010, 1, 1))
-
-    reader.add_feed(feed)
-
+    for feed in one, two, three:
+        reader.add_feed(feed)
     reader.update_feeds()
-
     pre_stuff(reader)
 
-    def get_ids(*args, **kwargs):
-        return [(e.feed_url, e.id) for e in call_method(reader, *args, **kwargs)]
+    def get_ids(**kwargs):
+        return [o.object_id for o in call_method(reader, **kwargs)]
 
     ids = get_ids()
 
     assert get_ids(starting_after=ids[0]) == ids[1:]
     assert get_ids(starting_after=ids[1]) == ids[2:]
     assert get_ids(starting_after=ids[2]) == ids[3:] == []
-
-    with pytest.raises(EntryNotFoundError) as excinfo:
-        get_ids(starting_after=('1', '1, 0'))
-    assert (excinfo.value.url, excinfo.value.id) == ('1', '1, 0')
 
     assert get_ids(limit=1) == ids[:1]
     assert get_ids(limit=2) == ids[:2]
@@ -2517,6 +2469,43 @@ def test_get_entries_pagination_basic(reader, pre_stuff, call_method, chunk_size
     assert get_ids(limit=2, starting_after=ids[0]) == ids[1:3]
     assert get_ids(limit=2, starting_after=ids[1]) == ids[2:]
     assert get_ids(limit=2, starting_after=ids[2]) == ids[3:] == []
+
+
+NOT_FOUND_ERROR_CLS = {
+    get_feeds_title: FeedNotFoundError,
+    get_feeds_added: FeedNotFoundError,
+    get_entries_recent: EntryNotFoundError,
+    search_entries_relevant: EntryNotFoundError,
+    search_entries_recent: EntryNotFoundError,
+}
+
+NOT_FOUND_STARTING_AFTER = {
+    get_feeds_title: '0',
+    get_feeds_added: '0',
+    get_entries_recent: ('1', '1, 0'),
+    search_entries_relevant: ('1', '1, 0'),
+    search_entries_recent: ('1', '1, 0'),
+}
+
+
+@with_call_paginated_method
+def test_starting_after_errors(reader, pre_stuff, call_method):
+    pre_stuff(reader)
+
+    error_cls = NOT_FOUND_ERROR_CLS[call_method]
+    starting_after = NOT_FOUND_STARTING_AFTER[call_method]
+
+    with pytest.raises(error_cls) as excinfo:
+        list(call_method(reader, starting_after=starting_after))
+    assert excinfo.value.object_id == starting_after
+
+
+@with_call_paginated_method
+def test_limit_errors(reader, pre_stuff, call_method):
+    pre_stuff(reader)
+
+    def get_ids(**kwargs):
+        return [o.object_id for o in call_method(reader, **kwargs)]
 
     with pytest.raises(ValueError):
         get_ids(limit=object())
