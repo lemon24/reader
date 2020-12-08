@@ -783,6 +783,7 @@ class Search:
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: SearchSortOrder = 'relevant',
         limit: Optional[int] = None,
+        starting_after: Optional[Tuple[str, str]] = None,
     ) -> Iterable[EntrySearchResult]:
         # TODO: dupe of at least Storage.get_entries(), maybe deduplicate
         if sort in ('relevant', 'recent'):

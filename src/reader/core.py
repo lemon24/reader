@@ -360,7 +360,7 @@ class Reader:
 
         Raises:
             StorageError
-            FeedNotFoundError: If starting_after does not exist.
+            FeedNotFoundError: If ``starting_after`` does not exist.
 
         .. versionadded:: 1.7
             The ``tags`` keyword argument.
@@ -710,6 +710,7 @@ class Reader:
         feed_tags: TagFilterInput = None,
         sort: EntrySortOrder = 'recent',
         limit: Optional[int] = None,
+        starting_after: Optional[EntryInput] = None,
     ) -> Iterable[Entry]:
         """Get all or some of the entries.
 
@@ -752,12 +753,15 @@ class Reader:
                 or ``'random'``.
             limit (int or None): A limit on the number of entries to be returned;
                 by default, all entries are returned.
+            starting_after (tuple(str, str) or Entry or None):
+                Return entries after this entry; a cursor for use in pagination.
 
         Yields:
             :class:`Entry`: Sorted according to ``sort``.
 
         Raises:
             StorageError
+            EntryNotFoundError: If ``starting_after`` does not exist.
 
         .. versionadded:: 1.2
             The ``sort`` keyword argument.
@@ -766,7 +770,7 @@ class Reader:
             The ``feed_tags`` keyword argument.
 
         .. versionadded:: 1.12
-            The ``limit`` keyword argument.
+            The ``limit`` and ``starting_after`` keyword arguments.
 
         """
 
@@ -784,8 +788,16 @@ class Reader:
             if not isinstance(limit, numbers.Integral) or limit < 1:
                 raise ValueError("limit should be a positive integer")
 
+        # TODO: raise is starting_after is given for sort=random?
+
         now = self._now()
-        return self._storage.get_entries(now, filter_options, sort, limit)
+        return self._storage.get_entries(
+            now,
+            filter_options,
+            sort,
+            limit,
+            _entry_argument(starting_after) if starting_after else None,
+        )
 
     @overload
     def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover
@@ -1074,6 +1086,7 @@ class Reader:
         feed_tags: TagFilterInput = None,
         sort: SearchSortOrder = 'relevant',
         limit: Optional[int] = None,
+        starting_after: Optional[EntryInput] = None,
     ) -> Iterable[EntrySearchResult]:
         """Get entries matching a full-text search query.
 
@@ -1139,6 +1152,8 @@ class Reader:
                 ``'recent'``, or ``'random'``.
             limit (int or None): A limit on the number of results to be returned;
                 by default, all results are returned.
+            starting_after (tuple(str, str) or Entry or None):
+                Return results after this entry; a cursor for use in pagination.
 
         Yields:
             :class:`EntrySearchResult`: Sorted according to ``sort``.
@@ -1148,6 +1163,7 @@ class Reader:
             InvalidSearchQueryError
             SearchError
             StorageError
+            EntryNotFoundError: If ``starting_after`` does not exist.
 
         .. versionadded:: 1.4
             The ``sort`` keyword argument.
@@ -1156,7 +1172,7 @@ class Reader:
             The ``feed_tags`` keyword argument.
 
         .. versionadded:: 1.12
-            The ``limit`` keyword argument.
+            The ``limit`` and ``starting_after`` keyword arguments.
 
         """
         filter_options = EntryFilterOptions.from_args(
@@ -1170,8 +1186,17 @@ class Reader:
             if not isinstance(limit, numbers.Integral) or limit < 1:
                 raise ValueError("limit should be a positive integer")
 
+        # TODO: raise is starting_after is given for sort=random?
+
         now = self._now()
-        return self._search.search_entries(query, now, filter_options, sort, limit)
+        return self._search.search_entries(
+            query,
+            now,
+            filter_options,
+            sort,
+            limit,
+            _entry_argument(starting_after) if starting_after else None,
+        )
 
     def search_entry_counts(
         self,

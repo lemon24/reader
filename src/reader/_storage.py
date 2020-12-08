@@ -447,7 +447,7 @@ class Storage:
         rv = join_paginated_iter(
             partial(self.get_feeds_page, filter_options, sort),  # type: ignore[arg-type]
             self.chunk_size,
-            self.get_feeds_last(sort, starting_after) if starting_after else None,
+            self.get_feed_last(sort, starting_after) if starting_after else None,
         )
 
         # FIXME: very wasteful (always requesting 1 page, even if limit < chunk_size); temporary implementation for #196
@@ -456,7 +456,8 @@ class Storage:
 
         yield from rv
 
-    def get_feeds_last(self, sort: str, url: str) -> Tuple[Any, ...]:
+    @wrap_exceptions(StorageError)
+    def get_feed_last(self, sort: str, url: str) -> Tuple[Any, ...]:
         # TODO: make this method private?
 
         query = Query().FROM("feeds").WHERE("url = :url")
@@ -924,14 +925,19 @@ class Storage:
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: EntrySortOrder = 'recent',
         limit: Optional[int] = None,
+        starting_after: Optional[Tuple[str, str]] = None,
     ) -> Iterable[Entry]:
         # TODO: deduplicate
         if sort == 'recent':
             rv = join_paginated_iter(
-                partial(self.get_entries_page, now, filter_options, sort),
+                partial(self.get_entries_page, now, filter_options, sort),  # type: ignore[arg-type]
                 self.chunk_size,
+                self.get_entry_last(now, sort, starting_after)
+                if starting_after
+                else None,
             )
         elif sort == 'random':
+            assert not starting_after
             it = self.get_entries_page(now, filter_options, sort, self.chunk_size)
             rv = (entry for entry, _ in it)
         else:
@@ -942,6 +948,36 @@ class Storage:
             rv = islice(rv, limit)
 
         yield from rv
+
+    @wrap_exceptions(StorageError)
+    def get_entry_last(
+        self, now: datetime, sort: str, entry: Tuple[str, str]
+    ) -> Tuple[Any, ...]:
+        # TODO: make this method private?
+
+        feed_url, entry_id = entry
+
+        query = Query().FROM("entries").WHERE("feed = :feed AND id = :id")
+
+        assert sort != 'random'
+
+        # TODO: kinda sorta duplicates the scrolling_window_order_by call
+        if sort == 'recent':
+            query.SELECT(*make_recent_last_select())
+        else:
+            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+
+        context = dict(
+            feed=feed_url,
+            id=entry_id,
+            # TODO: duplicated from get_entries_page()
+            recent_threshold=now - self.recent_threshold,
+        )
+
+        return zero_or_one(
+            self.db.execute(str(query), context),
+            lambda: EntryNotFoundError(feed_url, entry_id),
+        )
 
     @wrap_exceptions_iter(StorageError)
     def get_entries_page(
@@ -1307,6 +1343,30 @@ def apply_feed_tags_filter_options(
         )
 
     return context
+
+
+def make_recent_last_select(id_prefix: str = 'entries.') -> Sequence[Any]:
+    return [
+        (
+            'kinda_first_updated',
+            """
+            coalesce (
+                CASE
+                WHEN
+                    coalesce(entries.published, entries.updated)
+                        >= :recent_threshold
+                    THEN entries.first_updated_epoch
+                END,
+                entries.published, entries.updated
+            )
+            """,
+        ),
+        ('kinda_published', 'coalesce(published, updated)'),
+        f'{id_prefix}feed',
+        'last_updated',
+        ('negative_feed_order', '- feed_order'),
+        f'{id_prefix}id',
+    ]
 
 
 def apply_recent(
