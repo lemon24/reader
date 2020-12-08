@@ -2414,9 +2414,11 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
 
 
 @pytest.mark.parametrize('sort', ['title', 'added'])
-def test_get_feed_pagination_basic(reader, sort):
+@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2])
+def test_get_feed_pagination_basic(reader, sort, chunk_size):
     # TODO: maybe split up in smaller tests?
-    # TODO: chunk_size 1, 2, n
+
+    reader._storage.chunk_size = chunk_size
 
     reader._parser = parser = Parser()
 
@@ -2473,10 +2475,12 @@ with_call_entries_method_nonrandom = pytest.mark.parametrize(
 
 
 @with_call_entries_method_nonrandom
-def test_get_entries_pagination_basic(reader, pre_stuff, call_method):
+@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2])
+def test_get_entries_pagination_basic(reader, pre_stuff, call_method, chunk_size):
     # TODO: maybe split up in smaller tests?
-    # TODO: chunk_size 1, 2, n
     # TODO: looks a lot like test_get_entries_pagination_basic, maybe dedupe
+
+    reader._storage.chunk_size = chunk_size
 
     reader._parser = parser = Parser()
 
