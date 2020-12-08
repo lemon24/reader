@@ -52,6 +52,10 @@ class FeedData(_namedtuple_compat):
         attrs.update(kwargs)
         return Feed(**attrs)
 
+    @property
+    def object_id(self) -> str:
+        return self.url
+
 
 _UpdatedType = TypeVar('_UpdatedType', datetime, Optional[datetime])
 
@@ -109,6 +113,10 @@ class EntryData(Generic[_UpdatedType], _namedtuple_compat):
         attrs.update(kwargs)
         attrs.setdefault('original_feed_url', feed_url)
         return Entry(**attrs)
+
+    @property
+    def object_id(self) -> Tuple[str, str]:
+        return self.feed_url, self.id
 
 
 class ParsedFeed(NamedTuple):

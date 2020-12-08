@@ -10,6 +10,8 @@ from hypothesis import given
 from reader import Entry
 from reader import EntrySearchResult
 from reader import Feed
+from reader._types import EntryData
+from reader._types import FeedData
 from reader.types import _entry_argument
 from reader.types import _feed_argument
 from reader.types import _namedtuple_compat
@@ -61,6 +63,14 @@ def test__entry_argument():
         _entry_argument(('a', 2))
     with pytest.raises(ValueError):
         _entry_argument(('a', 'b', 'c'))
+
+
+def test_object_id():
+    assert Feed('url').object_id == 'url'
+    assert Entry('entry', 'updated', feed=Feed('url')).object_id == ('url', 'entry')
+    assert EntrySearchResult('url', 'entry').object_id == ('url', 'entry')
+    assert FeedData('url').object_id == 'url'
+    assert EntryData('url', 'entry', 'updated').object_id == ('url', 'entry')
 
 
 @pytest.mark.parametrize(

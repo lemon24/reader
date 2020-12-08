@@ -109,6 +109,15 @@ class Feed(_namedtuple_compat):
     #: .. versionadded:: 1.11
     updates_enabled: bool = True
 
+    @property
+    def object_id(self) -> str:
+        """Alias for :attr:`~Feed.url`.
+
+        .. versionadded:: 1.12
+
+        """
+        return self.url
+
 
 _EI = TypeVar('_EI', bound='ExceptionInfo')
 
@@ -221,6 +230,15 @@ class Entry(_namedtuple_compat):
 
     #: The entry's feed.
     feed: Feed = cast(Feed, None)
+
+    @property
+    def object_id(self) -> Tuple[str, str]:
+        """Alias for (:attr:`~Entry.feed_url`, :attr:`~Entry.id`).
+
+        .. versionadded:: 1.12
+
+        """
+        return self.feed_url, self.id
 
 
 @dataclass(frozen=True)
@@ -375,7 +393,10 @@ class HighlightedString:
         yield self.value[start:]
 
     def apply(
-        self, before: str, after: str, func: Optional[Callable[[str], str]] = None,
+        self,
+        before: str,
+        after: str,
+        func: Optional[Callable[[str], str]] = None,
     ) -> str:
         """Apply before/end markers on the highlighted string.
 
@@ -443,6 +464,15 @@ class EntrySearchResult(_namedtuple_compat):
     content: Mapping[str, HighlightedString] = MappingProxyType({})
 
     # TODO: entry: Optional[Entry]; model it through typing if possible
+
+    @property
+    def object_id(self) -> Tuple[str, str]:
+        """Alias for (:attr:`~EntrySearchResult.feed_url`, :attr:`~EntrySearchResult.id`).
+
+        .. versionadded:: 1.12
+
+        """
+        return self.feed_url, self.id
 
 
 # Semi-public API (typing support)
