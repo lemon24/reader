@@ -2497,26 +2497,22 @@ def test_get_entries_pagination_basic(reader, pre_stuff, call_method):
 
     ids = get_ids()
 
-    if not call_method.__name__.startswith('search_'):
+    assert get_ids(starting_after=ids[0]) == ids[1:]
+    assert get_ids(starting_after=ids[1]) == ids[2:]
+    assert get_ids(starting_after=ids[2]) == ids[3:] == []
 
-        assert get_ids(starting_after=ids[0]) == ids[1:]
-        assert get_ids(starting_after=ids[1]) == ids[2:]
-        assert get_ids(starting_after=ids[2]) == ids[3:] == []
-
-        with pytest.raises(EntryNotFoundError) as excinfo:
-            get_ids(starting_after=('1', '1, 0'))
-        assert (excinfo.value.url, excinfo.value.id) == ('1', '1, 0')
+    with pytest.raises(EntryNotFoundError) as excinfo:
+        get_ids(starting_after=('1', '1, 0'))
+    assert (excinfo.value.url, excinfo.value.id) == ('1', '1, 0')
 
     assert get_ids(limit=1) == ids[:1]
     assert get_ids(limit=2) == ids[:2]
     assert get_ids(limit=3) == ids[:3] == ids
 
-    if not call_method.__name__.startswith('search_'):
-
-        assert get_ids(limit=1, starting_after=ids[0]) == ids[1:2]
-        assert get_ids(limit=2, starting_after=ids[0]) == ids[1:3]
-        assert get_ids(limit=2, starting_after=ids[1]) == ids[2:]
-        assert get_ids(limit=2, starting_after=ids[2]) == ids[3:] == []
+    assert get_ids(limit=1, starting_after=ids[0]) == ids[1:2]
+    assert get_ids(limit=2, starting_after=ids[0]) == ids[1:3]
+    assert get_ids(limit=2, starting_after=ids[1]) == ids[2:]
+    assert get_ids(limit=2, starting_after=ids[2]) == ids[3:] == []
 
     with pytest.raises(ValueError):
         get_ids(limit=object())

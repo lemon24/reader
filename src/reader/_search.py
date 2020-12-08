@@ -35,9 +35,12 @@ from ._sqlite_utils import wrap_exceptions_iter
 from ._storage import apply_entry_filter_options
 from ._storage import apply_random
 from ._storage import apply_recent
+from ._storage import Storage
 from ._types import EntryFilterOptions
 from ._utils import exactly_one
 from ._utils import join_paginated_iter
+from ._utils import zero_or_one
+from .exceptions import EntryNotFoundError
 from .exceptions import InvalidSearchQueryError
 from .exceptions import SearchError
 from .exceptions import SearchNotEnabledError
@@ -787,15 +790,28 @@ class Search:
     ) -> Iterable[EntrySearchResult]:
         # TODO: dupe of at least Storage.get_entries(), maybe deduplicate
         if sort in ('relevant', 'recent'):
+
+            last = None
+            if starting_after:
+                if sort == 'recent':
+                    assert isinstance(self.storage, Storage)
+                    last = self.storage.get_entry_last(now, sort, starting_after)
+                else:
+                    last = self.search_entry_last(query, starting_after)
+
             rv = join_paginated_iter(
-                partial(self.search_entries_page, query, now, filter_options, sort),
+                partial(self.search_entries_page, query, now, filter_options, sort),  # type: ignore[arg-type]
                 self.chunk_size,
+                last,
             )
+
         elif sort == 'random':
+            assert not starting_after
             it = self.search_entries_page(
                 query, now, filter_options, sort, self.chunk_size
             )
             rv = (entry for entry, _ in it)
+
         else:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
@@ -804,6 +820,26 @@ class Search:
             rv = islice(rv, limit)
 
         yield from rv
+
+    @wrap_exceptions(SearchError)
+    def search_entry_last(self, query: str, entry: Tuple[str, str]) -> Tuple[Any, ...]:
+        feed_url, entry_id = entry
+
+        sql_query = (
+            Query()
+            .SELECT('min(rank)', '_feed', '_id')
+            .FROM("entries_search")
+            .WHERE("entries_search MATCH :query")
+            .WHERE("_feed = :feed AND _id = :id")
+            .GROUP_BY('_feed', '_id')
+        )
+
+        context = dict(feed=feed_url, id=entry_id, query=query)
+
+        return zero_or_one(
+            self.db.execute(str(sql_query), context),
+            lambda: EntryNotFoundError(feed_url, entry_id),
+        )
 
     @wrap_exceptions_iter(SearchError)
     def search_entries_page(

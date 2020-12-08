@@ -1152,8 +1152,8 @@ class Reader:
                 ``'recent'``, or ``'random'``.
             limit (int or None): A limit on the number of results to be returned;
                 by default, all results are returned.
-            starting_after (tuple(str, str) or Entry or None):
-                Return results after this entry; a cursor for use in pagination.
+            starting_after (tuple(str, str) or EntrySearchResult or None):
+                Return results after this result; a cursor for use in pagination.
 
         Yields:
             :class:`EntrySearchResult`: Sorted according to ``sort``.
