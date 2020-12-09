@@ -738,6 +738,9 @@ class FakeNow:
         return self.now
 
 
+# TODO: we could just parametrize sort as well here (see test_pagination_basic for details)
+
+
 def get_entries_default(reader, **kwargs):
     return reader.get_entries(**kwargs)
 
@@ -2413,24 +2416,26 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
     assert rv._asdict() == expected._asdict()
 
 
-def get_feeds_title(reader, **kwargs):
-    return reader.get_feeds(sort='title', **kwargs)
+def get_feeds(reader, **kwargs):
+    return reader.get_feeds(**kwargs)
 
 
-def get_feeds_added(reader, **kwargs):
-    return reader.get_feeds(sort='added', **kwargs)
+def get_entries(reader, **kwargs):
+    return reader.get_entries(**kwargs)
 
 
-# TODO: sort could be a separate argument here...
+def search_entries(reader, **kwargs):
+    return reader.search_entries('entry', **kwargs)
+
 
 with_call_paginated_method = pytest.mark.parametrize(
-    'pre_stuff, call_method',
+    'pre_stuff, call_method, sort',
     [
-        (lambda _: None, get_feeds_title),
-        (lambda _: None, get_feeds_added),
-        (lambda _: None, get_entries_recent),
-        (enable_and_update_search, search_entries_relevant),
-        (enable_and_update_search, search_entries_recent),
+        (lambda _: None, get_feeds, 'title'),
+        (lambda _: None, get_feeds, 'added'),
+        (lambda _: None, get_entries, 'recent'),
+        (enable_and_update_search, search_entries, 'relevant'),
+        (enable_and_update_search, search_entries, 'recent'),
     ],
 )
 
@@ -2455,14 +2460,14 @@ def reader_with_three_feeds(reader):
 @with_call_paginated_method
 @pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2])
 @rename_argument('reader', 'reader_with_three_feeds')
-def test_get_entries_pagination_basic(reader, pre_stuff, call_method, chunk_size):
+def test_pagination_basic(reader, pre_stuff, call_method, sort, chunk_size):
     reader._storage.chunk_size = chunk_size
 
     reader.update_feeds()
     pre_stuff(reader)
 
     def get_ids(**kwargs):
-        return [o.object_id for o in call_method(reader, **kwargs)]
+        return [o.object_id for o in call_method(reader, sort=sort, **kwargs)]
 
     ids = get_ids()
 
@@ -2483,23 +2488,22 @@ def test_get_entries_pagination_basic(reader, pre_stuff, call_method, chunk_size
 @pytest.mark.parametrize(
     'pre_stuff, call_method',
     [
-        (lambda _: None, get_entries_random),
-        (enable_and_update_search, search_entries_random),
+        (lambda _: None, get_entries),
+        (enable_and_update_search, search_entries),
     ],
 )
 @pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2])
 @rename_argument('reader', 'reader_with_three_feeds')
-def test_get_entries_pagination_random(reader, pre_stuff, call_method, chunk_size):
+def test_pagination_random(reader, pre_stuff, call_method, chunk_size):
     reader._storage.chunk_size = chunk_size
 
     reader.update_feeds()
     pre_stuff(reader)
 
     def get_ids(**kwargs):
-        return [o.object_id for o in call_method(reader, **kwargs)]
+        return [o.object_id for o in call_method(reader, sort='random', **kwargs)]
 
-    # TODO: we could just call_method() if sort was not hardcoded
-    ids = [o.object_id for o in reader.get_entries()]
+    ids = [o.object_id for o in call_method(reader)]
 
     assert len(get_ids(limit=1)) == min(1, chunk_size, len(ids))
     assert len(get_ids(limit=2)) == min(2, chunk_size, len(ids))
@@ -2513,40 +2517,36 @@ def test_get_entries_pagination_random(reader, pre_stuff, call_method, chunk_siz
 
 
 NOT_FOUND_ERROR_CLS = {
-    get_feeds_title: FeedNotFoundError,
-    get_feeds_added: FeedNotFoundError,
-    get_entries_recent: EntryNotFoundError,
-    search_entries_relevant: EntryNotFoundError,
-    search_entries_recent: EntryNotFoundError,
+    get_feeds: FeedNotFoundError,
+    get_entries: EntryNotFoundError,
+    search_entries: EntryNotFoundError,
 }
 
 NOT_FOUND_STARTING_AFTER = {
-    get_feeds_title: '0',
-    get_feeds_added: '0',
-    get_entries_recent: ('1', '1, 0'),
-    search_entries_relevant: ('1', '1, 0'),
-    search_entries_recent: ('1', '1, 0'),
+    get_feeds: '0',
+    get_entries: ('1', '1, 0'),
+    search_entries: ('1', '1, 0'),
 }
 
 
 @with_call_paginated_method
-def test_starting_after_errors(reader, pre_stuff, call_method):
+def test_starting_after_errors(reader, pre_stuff, call_method, sort):
     pre_stuff(reader)
 
     error_cls = NOT_FOUND_ERROR_CLS[call_method]
     starting_after = NOT_FOUND_STARTING_AFTER[call_method]
 
     with pytest.raises(error_cls) as excinfo:
-        list(call_method(reader, starting_after=starting_after))
+        list(call_method(reader, sort=sort, starting_after=starting_after))
     assert excinfo.value.object_id == starting_after
 
 
 @with_call_paginated_method
-def test_limit_errors(reader, pre_stuff, call_method):
+def test_limit_errors(reader, pre_stuff, call_method, sort):
     pre_stuff(reader)
 
     def get_ids(**kwargs):
-        return [o.object_id for o in call_method(reader, **kwargs)]
+        return [o.object_id for o in call_method(reader, sort=sort, **kwargs)]
 
     with pytest.raises(ValueError):
         get_ids(limit=object())
