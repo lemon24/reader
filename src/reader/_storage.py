@@ -33,6 +33,7 @@ from ._types import TagFilter
 from ._utils import chunks
 from ._utils import exactly_one
 from ._utils import join_paginated_iter
+from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
@@ -439,9 +440,33 @@ class Storage:
         self,
         filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
         sort: FeedSortOrder = 'title',
+        limit: Optional[int] = None,
+        starting_after: Optional[str] = None,
     ) -> Iterable[Feed]:
-        yield from join_paginated_iter(
-            partial(self.get_feeds_page, filter_options, sort), self.chunk_size,
+        rv = join_paginated_iter(
+            partial(self.get_feeds_page, filter_options, sort),  # type: ignore[arg-type]
+            self.chunk_size,
+            self.get_feed_last(sort, starting_after) if starting_after else None,
+            limit or 0,
+        )
+        yield from rv
+
+    @wrap_exceptions(StorageError)
+    def get_feed_last(self, sort: str, url: str) -> Tuple[Any, ...]:
+        # TODO: make this method private?
+
+        query = Query().FROM("feeds").WHERE("url = :url")
+
+        # TODO: kinda sorta duplicates the scrolling_window_order_by call
+        if sort == 'title':
+            query.SELECT(("kinda_title", "lower(coalesce(user_title, title))"), 'url')
+        elif sort == 'added':
+            query.SELECT("added", 'url')
+        else:
+            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+
+        return zero_or_one(
+            self.db.execute(str(query), dict(url=url)), lambda: FeedNotFoundError(url)
         )
 
     @wrap_exceptions_iter(StorageError)
@@ -487,7 +512,8 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def get_feed_counts(
-        self, filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
+        self,
+        filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
     ) -> FeedCounts:
         query = (
             Query()
@@ -893,19 +919,62 @@ class Storage:
         now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: EntrySortOrder = 'recent',
+        limit: Optional[int] = None,
+        starting_after: Optional[Tuple[str, str]] = None,
     ) -> Iterable[Entry]:
         # TODO: deduplicate
         if sort == 'recent':
-            yield from join_paginated_iter(
-                partial(self.get_entries_page, now, filter_options, sort),
+            rv = join_paginated_iter(
+                partial(self.get_entries_page, now, filter_options, sort),  # type: ignore[arg-type]
                 self.chunk_size,
+                self.get_entry_last(now, sort, starting_after)
+                if starting_after
+                else None,
+                limit or 0,
             )
         elif sort == 'random':
-            it = self.get_entries_page(now, filter_options, sort, self.chunk_size)
-            for entry, _ in it:
-                yield entry
+            assert not starting_after
+            it = self.get_entries_page(
+                now,
+                filter_options,
+                sort,
+                min(limit, self.chunk_size or limit) if limit else self.chunk_size,
+            )
+            rv = (entry for entry, _ in it)
         else:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+
+        yield from rv
+
+    @wrap_exceptions(StorageError)
+    def get_entry_last(
+        self, now: datetime, sort: str, entry: Tuple[str, str]
+    ) -> Tuple[Any, ...]:
+        # TODO: make this method private?
+
+        feed_url, entry_id = entry
+
+        query = Query().FROM("entries").WHERE("feed = :feed AND id = :id")
+
+        assert sort != 'random'
+
+        # TODO: kinda sorta duplicates the scrolling_window_order_by call
+        if sort == 'recent':
+            query.SELECT(*make_recent_last_select())
+        else:
+            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+
+        context = dict(
+            feed=feed_url,
+            id=entry_id,
+            # TODO: duplicated from get_entries_page()
+            recent_threshold=now - self.recent_threshold,
+        )
+
+        return zero_or_one(
+            self.db.execute(str(query), context),
+            lambda: EntryNotFoundError(feed_url, entry_id),
+        )
 
     @wrap_exceptions_iter(StorageError)
     def get_entries_page(
@@ -921,7 +990,10 @@ class Storage:
 
         query, query_context = make_get_entries_query(filter_options, sort)
 
-        context = dict(recent_threshold=now - self.recent_threshold, **query_context,)
+        context = dict(
+            recent_threshold=now - self.recent_threshold,
+            **query_context,
+        )
 
         def value_factory(t: Tuple[Any, ...]) -> Entry:
             feed = feed_factory(t[0:10])
@@ -942,7 +1014,8 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def get_entry_counts(
-        self, filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
+        self,
+        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
     ) -> EntryCounts:
         query = (
             Query()
@@ -970,10 +1043,13 @@ class Storage:
         return EntryCounts(*row)
 
     def iter_feed_metadata(
-        self, feed_url: str, key: Optional[str] = None,
+        self,
+        feed_url: str,
+        key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
         yield from join_paginated_iter(
-            partial(self.iter_feed_metadata_page, feed_url, key), self.chunk_size,
+            partial(self.iter_feed_metadata_page, feed_url, key),
+            self.chunk_size,
         )
 
     @wrap_exceptions_iter(StorageError)
@@ -1057,12 +1133,14 @@ class Storage:
     def remove_feed_tag(self, feed_url: str, tag: str) -> None:
         with self.db:
             self.db.execute(
-                "DELETE FROM feed_tags WHERE feed = ? AND tag = ?;", (feed_url, tag),
+                "DELETE FROM feed_tags WHERE feed = ? AND tag = ?;",
+                (feed_url, tag),
             )
 
     def get_feed_tags(self, feed_url: Optional[str]) -> Iterable[str]:
         yield from join_paginated_iter(
-            partial(self.get_feed_tags_page, feed_url), self.chunk_size,
+            partial(self.get_feed_tags_page, feed_url),
+            self.chunk_size,
         )
 
     @wrap_exceptions_iter(StorageError)
@@ -1093,12 +1171,17 @@ class Storage:
 
 def feed_factory(t: Tuple[Any, ...]) -> Feed:
     return Feed._make(
-        t[:8] + (ExceptionInfo(**json.loads(t[8])) if t[8] else None, t[9] == 1,)
+        t[:8]
+        + (
+            ExceptionInfo(**json.loads(t[8])) if t[8] else None,
+            t[9] == 1,
+        )
     )
 
 
 def apply_feed_filter_options(
-    query: Query, filter_options: FeedFilterOptions,
+    query: Query,
+    filter_options: FeedFilterOptions,
 ) -> Dict[str, Any]:
     url, tags, broken, updates_enabled = filter_options
 
@@ -1119,7 +1202,8 @@ def apply_feed_filter_options(
 
 
 def make_get_entries_query(
-    filter_options: EntryFilterOptions, sort: EntrySortOrder,
+    filter_options: EntryFilterOptions,
+    sort: EntrySortOrder,
 ) -> Tuple[Query, Dict[str, Any]]:
     query = (
         Query()
@@ -1210,7 +1294,10 @@ def apply_entry_filter_options(
 
 
 def apply_feed_tags_filter_options(
-    query: Query, tags: TagFilter, url_column: str, keyword: str = 'WHERE',
+    query: Query,
+    tags: TagFilter,
+    url_column: str,
+    keyword: str = 'WHERE',
 ) -> Dict[str, Any]:
     add = getattr(query, keyword)
 
@@ -1253,6 +1340,30 @@ def apply_feed_tags_filter_options(
         )
 
     return context
+
+
+def make_recent_last_select(id_prefix: str = 'entries.') -> Sequence[Any]:
+    return [
+        (
+            'kinda_first_updated',
+            """
+            coalesce (
+                CASE
+                WHEN
+                    coalesce(entries.published, entries.updated)
+                        >= :recent_threshold
+                    THEN entries.first_updated_epoch
+                END,
+                entries.published, entries.updated
+            )
+            """,
+        ),
+        ('kinda_published', 'coalesce(published, updated)'),
+        f'{id_prefix}feed',
+        'last_updated',
+        ('negative_feed_order', '- feed_order'),
+        f'{id_prefix}id',
+    ]
 
 
 def apply_recent(

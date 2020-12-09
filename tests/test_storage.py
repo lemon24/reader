@@ -197,6 +197,14 @@ def get_entry_counts(storage, _, __):
     storage.get_entry_counts(),
 
 
+def get_feed_last(storage, feed, __):
+    storage.get_feed_last('title', feed.url)
+
+
+def get_entry_last(storage, feed, entry):
+    storage.get_entry_last(datetime(2010, 1, 1), 'recent', (feed.url, entry.id))
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     'do_stuff',
@@ -225,6 +233,8 @@ def get_entry_counts(storage, _, __):
         get_feed_tags,
         get_feed_counts,
         get_entry_counts,
+        get_feed_last,
+        get_entry_last,
     ],
 )
 def test_errors_locked(db_path, do_stuff):

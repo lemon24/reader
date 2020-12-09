@@ -2,6 +2,7 @@ import builtins
 import datetime
 import itertools
 import logging
+import numbers
 import warnings
 from typing import Any
 from typing import Callable
@@ -286,6 +287,8 @@ class Reader:
         broken: Optional[bool] = None,
         updates_enabled: Optional[bool] = None,
         sort: FeedSortOrder = 'title',
+        limit: Optional[int] = None,
+        starting_after: Optional[FeedInput] = None,
     ) -> Iterable[Feed]:
         """Get all or some of the feeds.
 
@@ -347,12 +350,17 @@ class Reader:
             sort (str): How to order feeds; one of ``'title'`` (by
                 :attr:`~Feed.user_title` or :attr:`~Feed.title`, case
                 insensitive; default), or ``'added'`` (last added first).
+            limit (int or None): A limit on the number of feeds to be returned;
+                by default, all feeds are returned.
+            starting_after (str or Feed or None):
+                Return feeds after this feed; a cursor for use in pagination.
 
         Yields:
             :class:`Feed`: Sorted according to ``sort``.
 
         Raises:
             StorageError
+            FeedNotFoundError: If ``starting_after`` does not exist.
 
         .. versionadded:: 1.7
             The ``tags`` keyword argument.
@@ -363,6 +371,9 @@ class Reader:
         .. versionadded:: 1.11
             The ``updates_enabled`` keyword argument.
 
+        .. versionadded:: 1.12
+            The ``limit`` and ``starting_after`` keyword arguments.
+
         """
         filter_options = FeedFilterOptions.from_args(
             feed, tags, broken, updates_enabled
@@ -371,7 +382,16 @@ class Reader:
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
 
-        return self._storage.get_feeds(filter_options, sort)
+        if limit is not None:
+            if not isinstance(limit, numbers.Integral) or limit < 1:
+                raise ValueError("limit should be a positive integer")
+
+        return self._storage.get_feeds(
+            filter_options,
+            sort,
+            limit,
+            _feed_argument(starting_after) if starting_after else None,
+        )
 
     @overload
     def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
@@ -689,6 +709,8 @@ class Reader:
         has_enclosures: Optional[bool] = None,
         feed_tags: TagFilterInput = None,
         sort: EntrySortOrder = 'recent',
+        limit: Optional[int] = None,
+        starting_after: Optional[EntryInput] = None,
     ) -> Iterable[Entry]:
         """Get all or some of the entries.
 
@@ -712,7 +734,7 @@ class Reader:
 
         ``'random'``
 
-            Random. At at most 256 entries will be returned.
+            Random order (shuffled). At at most 256 entries will be returned.
 
             .. versionadded:: 1.2
 
@@ -729,18 +751,27 @@ class Reader:
                 works like the :meth:`~Reader.get_feeds()` ``tags`` argument.
             sort (str): How to order entries; one of ``'recent'`` (default)
                 or ``'random'``.
+            limit (int or None): A limit on the number of entries to be returned;
+                by default, all entries are returned.
+            starting_after (tuple(str, str) or Entry or None):
+                Return entries after this entry; a cursor for use in pagination.
+                Using ``starting_after`` with ``sort='random'`` is not supported.
 
         Yields:
             :class:`Entry`: Sorted according to ``sort``.
 
         Raises:
             StorageError
+            EntryNotFoundError: If ``starting_after`` does not exist.
 
         .. versionadded:: 1.2
             The ``sort`` keyword argument.
 
         .. versionadded:: 1.7
             The ``feed_tags`` keyword argument.
+
+        .. versionadded:: 1.12
+            The ``limit`` and ``starting_after`` keyword arguments.
 
         """
 
@@ -750,10 +781,25 @@ class Reader:
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
         )
+
         if sort not in ('recent', 'random'):
             raise ValueError("sort should be one of ('recent', 'random')")
+
+        if limit is not None:
+            if not isinstance(limit, numbers.Integral) or limit < 1:
+                raise ValueError("limit should be a positive integer")
+
+        if starting_after and sort == 'random':
+            raise ValueError("using starting_after with sort='random' not supported")
+
         now = self._now()
-        return self._storage.get_entries(now, filter_options, sort)
+        return self._storage.get_entries(
+            now,
+            filter_options,
+            sort,
+            limit,
+            _entry_argument(starting_after) if starting_after else None,
+        )
 
     @overload
     def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover
@@ -888,7 +934,10 @@ class Reader:
         self._storage.mark_as_important_unimportant(feed_url, entry_id, False)
 
     def iter_feed_metadata(
-        self, feed: FeedInput, *, key: Optional[str] = None,
+        self,
+        feed: FeedInput,
+        *,
+        key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
         """Get all or some of the metadata values for a feed.
 
@@ -1038,6 +1087,8 @@ class Reader:
         has_enclosures: Optional[bool] = None,
         feed_tags: TagFilterInput = None,
         sort: SearchSortOrder = 'relevant',
+        limit: Optional[int] = None,
+        starting_after: Optional[EntryInput] = None,
     ) -> Iterable[EntrySearchResult]:
         """Get entries matching a full-text search query.
 
@@ -1056,7 +1107,7 @@ class Reader:
 
         ``'random'``
 
-            Random. At at most 256 entries will be returned.
+            Random order (shuffled). At at most 256 entries will be returned.
 
             .. versionadded:: 1.10
 
@@ -1101,6 +1152,11 @@ class Reader:
                 works like the :meth:`~Reader.get_feeds()` ``tags`` argument.
             sort (str): How to order results; one of ``'relevant'`` (default),
                 ``'recent'``, or ``'random'``.
+            limit (int or None): A limit on the number of results to be returned;
+                by default, all results are returned.
+            starting_after (tuple(str, str) or EntrySearchResult or None):
+                Return results after this result; a cursor for use in pagination.
+                Using ``starting_after`` with ``sort='random'`` is not supported.
 
         Yields:
             :class:`EntrySearchResult`: Sorted according to ``sort``.
@@ -1110,6 +1166,7 @@ class Reader:
             InvalidSearchQueryError
             SearchError
             StorageError
+            EntryNotFoundError: If ``starting_after`` does not exist.
 
         .. versionadded:: 1.4
             The ``sort`` keyword argument.
@@ -1117,14 +1174,33 @@ class Reader:
         .. versionadded:: 1.7
             The ``feed_tags`` keyword argument.
 
+        .. versionadded:: 1.12
+            The ``limit`` and ``starting_after`` keyword arguments.
+
         """
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
         )
+
         if sort not in ('relevant', 'recent', 'random'):
             raise ValueError("sort should be one of ('relevant', 'recent', 'random')")
+
+        if limit is not None:
+            if not isinstance(limit, numbers.Integral) or limit < 1:
+                raise ValueError("limit should be a positive integer")
+
+        if starting_after and sort == 'random':
+            raise ValueError("using starting_after with sort='random' not supported")
+
         now = self._now()
-        return self._search.search_entries(query, now, filter_options, sort)
+        return self._search.search_entries(
+            query,
+            now,
+            filter_options,
+            sort,
+            limit,
+            _entry_argument(starting_after) if starting_after else None,
+        )
 
     def search_entry_counts(
         self,

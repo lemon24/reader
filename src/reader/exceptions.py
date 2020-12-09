@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from ._vendor.cached_property import cached_property
 
 
@@ -66,6 +68,15 @@ class FeedError(ReaderError):
     def _str(self) -> str:
         return repr(self.url)
 
+    @property
+    def object_id(self) -> str:
+        """Alias for :attr:`~FeedError.url`.
+
+        .. versionadded:: 1.12
+
+        """
+        return self.url
+
 
 class FeedExistsError(FeedError):
     """Feed already exists."""
@@ -93,6 +104,8 @@ class EntryError(ReaderError):
     def __init__(self, url: str, id: str, message: str = '') -> None:
         super().__init__(message)
 
+        # TODO: .url should be .feed_url
+
         #: The feed URL.
         self.url = url
 
@@ -102,6 +115,15 @@ class EntryError(ReaderError):
     @property
     def _str(self) -> str:
         return repr((self.url, self.id))
+
+    @property
+    def object_id(self) -> Tuple[str, str]:
+        """Alias for (:attr:`~EntryError.url`, :attr:`~EntryError.id`).
+
+        .. versionadded:: 1.12
+
+        """
+        return self.url, self.id
 
 
 class EntryNotFoundError(EntryError):

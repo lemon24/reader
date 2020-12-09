@@ -123,17 +123,18 @@ def test_scrolling_window():
     assert str(query) == str(make_query(BaseQuery).ORDER_BY('one ASC'))
 
     query = make_query()
-    query.LIMIT('limit', last=False)
+    query.LIMIT('limit')
     assert str(query) == str(make_query(BaseQuery).LIMIT('limit'))
 
     query = make_query()
     query.scrolling_window_order_by('one')
-    query.LIMIT('limit', last=False)
+    query.LIMIT('limit')
     assert str(query) == str(make_query(BaseQuery).ORDER_BY('one ASC').LIMIT('limit'))
 
     query = make_query()
     query.scrolling_window_order_by('one')
-    query.LIMIT('limit', last=True)
+    query.LIMIT('limit')
+    query.add_last()
     assert str(query) == str(
         make_query(BaseQuery)
         .WHERE(
@@ -151,7 +152,8 @@ def test_scrolling_window():
 
     query = make_query()
     query.scrolling_window_order_by('one', desc=True, keyword='HAVING')
-    query.LIMIT('limit', last=True)
+    query.LIMIT('limit')
+    query.add_last()
     assert str(query) == str(
         make_query(BaseQuery)
         .HAVING(

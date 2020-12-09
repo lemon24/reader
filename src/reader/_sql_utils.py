@@ -86,7 +86,9 @@ class BaseQuery(_BQBase):
 
                 yield self._indent(
                     fmt.format(
-                        name=name, thing=thing, indented_thing=self._indent(thing),
+                        name=name,
+                        thing=thing,
+                        indented_thing=self._indent(thing),
                     )
                 )
 
@@ -116,7 +118,10 @@ class BaseQuery(_BQBase):
 
     _keyword_formats: Mapping[int, Mapping[str, str]] = {
         1: collections.defaultdict(lambda: '{thing}'),
-        2: dict(SELECT='{thing} AS {name}', WITH='{name} AS (\n{indented_thing}\n)',),
+        2: dict(
+            SELECT='{thing} AS {name}',
+            WITH='{name} AS (\n{indented_thing}\n)',
+        ),
     }
 
     _indent = functools.partial(textwrap.indent, prefix='    ')
@@ -164,15 +169,9 @@ class ScrollingWindowMixin(_SWMBase):
 
     __make_label = 'last_{}'.format
 
-    def LIMIT(self: _SWM, *things: str, last: object = False) -> _SWM:
-        self.add('LIMIT', *things)
-
-        if not last:
-            return self
-
+    def add_last(self: _SWM) -> _SWM:
         op = '<' if self.__desc else '>'
         labels = (':' + self.__make_label(i) for i in range(len(self.__things)))
-
         return self.add(
             self.__keyword,
             str(Query().add('(', *self.__things).add(f') {op} (', *labels)) + ')',

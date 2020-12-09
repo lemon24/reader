@@ -505,7 +505,12 @@ def raises_not_modified_parser(_):
 
 
 @pytest.mark.parametrize(
-    'make_new_parser', [same_parser, updated_feeds_parser, raises_not_modified_parser,]
+    'make_new_parser',
+    [
+        same_parser,
+        updated_feeds_parser,
+        raises_not_modified_parser,
+    ],
 )
 @rename_argument('reader', 'reader_with_one_feed')
 def test_last_exception_reset(reader, call_update_method, make_new_parser):
@@ -562,7 +567,10 @@ class EntryAction(Enum):
         (f, e)
         for f in FeedAction
         for e in EntryAction
-        if (f, e) not in {(FeedAction.none, EntryAction.none),}
+        if (f, e)
+        not in {
+            (FeedAction.none, EntryAction.none),
+        }
     ],
 )
 def test_update_feed_deleted(db_path, call_update_method, feed_action, entry_action):
@@ -730,7 +738,14 @@ class FakeNow:
         return self.now
 
 
-def get_entries_default(reader, **kwargs):
+# TODO: we could just parametrize sort as well here (see test_pagination_basic for details)
+
+
+def get_feeds(reader, **kwargs):
+    return reader.get_feeds(**kwargs)
+
+
+def get_entries(reader, **kwargs):
     return reader.get_entries(**kwargs)
 
 
@@ -747,7 +762,7 @@ def enable_and_update_search(reader):
     reader.update_search()
 
 
-def search_entries_default(reader, **kwargs):
+def search_entries(reader, **kwargs):
     return reader.search_entries('entry', **kwargs)
 
 
@@ -766,7 +781,7 @@ def search_entries_random(reader, **kwargs):
 with_call_entries_recent_method = pytest.mark.parametrize(
     'pre_stuff, call_method',
     [
-        (lambda _: None, get_entries_default),
+        (lambda _: None, get_entries),
         (lambda _: None, get_entries_recent),
         (enable_and_update_search, search_entries_recent),
     ],
@@ -963,17 +978,14 @@ def test_get_entries_recent_feed_order(reader, chunk_size, pre_stuff, call_metho
     assert [eval(e.id)[1] for e in call_method(reader)] == [1, 4, 2, 3]
 
 
-with_call_entries_random_method = pytest.mark.parametrize(
+@pytest.mark.parametrize('chunk_size', [1, 2, 3, 4])
+@pytest.mark.parametrize(
     'pre_stuff, call_method',
     [
-        (lambda _: None, get_entries_random),
-        (enable_and_update_search, search_entries_random),
+        (lambda _: None, get_entries),
+        (enable_and_update_search, search_entries),
     ],
 )
-
-
-@pytest.mark.parametrize('chunk_size', [1, 2, 3, 4])
-@with_call_entries_random_method
 def test_get_entries_random(reader, chunk_size, pre_stuff, call_method):
     """Black box get_entries(sort='random') good enough™ test.
 
@@ -1012,7 +1024,8 @@ def test_get_entries_random(reader, chunk_size, pre_stuff, call_method):
     # some get_entries(sort='random') results
     # (we call it enough times so it's likely we get all the results)
     random_tuples = Counter(
-        tuple(e.id for e in call_method(reader)) for _ in range(20 * len(all_tuples))
+        tuple(e.id for e in call_method(reader, sort='random'))
+        for _ in range(20 * len(all_tuples))
     )
 
     # check all results are chunk_size length
@@ -1500,7 +1513,16 @@ ALL_IDS = {
         (dict(entry=None), ALL_IDS),
         (dict(entry=('1', '1, 1')), {(1, 1)}),
         (dict(entry=('1', '1, 2')), {(1, 2)}),
-        (dict(entry=Entry('1, 2', datetime(2010, 2, 1), feed=Feed('1'),)), {(1, 2)},),
+        (
+            dict(
+                entry=Entry(
+                    '1, 2',
+                    datetime(2010, 2, 1),
+                    feed=Feed('1'),
+                )
+            ),
+            {(1, 2)},
+        ),
         (dict(entry=('inexistent', 'also-inexistent')), set()),
     ],
 )
@@ -1839,7 +1861,11 @@ def test_feeds_filtering(reader, kwargs, expected):
 
 @pytest.mark.parametrize(
     'kwargs',
-    [dict(feed=object()), dict(broken=object()), dict(updates_enabled=object()),],
+    [
+        dict(feed=object()),
+        dict(broken=object()),
+        dict(updates_enabled=object()),
+    ],
 )
 def test_feeds_filtering_error(reader, kwargs):
     reader._parser = parser = Parser()
@@ -1903,7 +1929,10 @@ def test_change_feed_url_feed(reader):
 
     assert not reader.get_feed('1', None)
     assert reader.get_feed('3') == old_one._replace(
-        url='3', updated=None, last_updated=None, last_exception=None,
+        url='3',
+        updated=None,
+        last_updated=None,
+        last_exception=None,
     )
 
 
@@ -1979,7 +2008,9 @@ def test_change_feed_url_second_update(reader, new_feed_url):
     reader.change_feed_url('1', new_feed_url)
 
     assert reader.get_feed(new_feed_url) == old_one._replace(
-        url=new_feed_url, updated=None, last_updated=None,
+        url=new_feed_url,
+        updated=None,
+        last_updated=None,
     )
 
     reader._parser.feed(
@@ -2385,3 +2416,136 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
     assert type(rv) is rv_type
     # this isn't gonna work as well if the return types get different attributes
     assert rv._asdict() == expected._asdict()
+
+
+with_call_paginated_method = pytest.mark.parametrize(
+    'pre_stuff, call_method, sort_kwargs',
+    [
+        (lambda _: None, get_feeds, {}),
+        (lambda _: None, get_feeds, dict(sort='title')),
+        (lambda _: None, get_feeds, dict(sort='added')),
+        (lambda _: None, get_entries, {}),
+        (lambda _: None, get_entries, dict(sort='recent')),
+        (enable_and_update_search, search_entries, {}),
+        (enable_and_update_search, search_entries, dict(sort='relevant')),
+        (enable_and_update_search, search_entries, dict(sort='recent')),
+    ],
+)
+
+
+@pytest.fixture
+def reader_with_three_feeds(reader):
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    parser.entry(1, 1, datetime(2010, 1, 1))
+    parser.entry(1, 2, datetime(2010, 1, 1))
+    parser.entry(1, 3, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 1, 1))
+    three = parser.feed(3, datetime(2010, 1, 1))
+
+    for feed in one, two, three:
+        reader.add_feed(feed)
+
+    return reader
+
+
+@with_call_paginated_method
+@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 0, 1, 2])
+@rename_argument('reader', 'reader_with_three_feeds')
+def test_pagination_basic(reader, pre_stuff, call_method, sort_kwargs, chunk_size):
+    reader._storage.chunk_size = chunk_size
+
+    reader.update_feeds()
+    pre_stuff(reader)
+
+    def get_ids(**kwargs):
+        return [o.object_id for o in call_method(reader, **sort_kwargs, **kwargs)]
+
+    ids = get_ids()
+
+    assert get_ids(starting_after=ids[0]) == ids[1:]
+    assert get_ids(starting_after=ids[1]) == ids[2:]
+    assert get_ids(starting_after=ids[2]) == ids[3:] == []
+
+    assert get_ids(limit=1) == ids[:1]
+    assert get_ids(limit=2) == ids[:2]
+    assert get_ids(limit=3) == ids[:3] == ids
+
+    assert get_ids(limit=1, starting_after=ids[0]) == ids[1:2]
+    assert get_ids(limit=2, starting_after=ids[0]) == ids[1:3]
+    assert get_ids(limit=2, starting_after=ids[1]) == ids[2:]
+    assert get_ids(limit=2, starting_after=ids[2]) == ids[3:] == []
+
+
+@pytest.mark.parametrize(
+    'pre_stuff, call_method',
+    [
+        (lambda _: None, get_entries),
+        (enable_and_update_search, search_entries),
+    ],
+)
+@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 0, 1, 2])
+@rename_argument('reader', 'reader_with_three_feeds')
+def test_pagination_random(reader, pre_stuff, call_method, chunk_size):
+    reader._storage.chunk_size = chunk_size
+
+    reader.update_feeds()
+    pre_stuff(reader)
+
+    def get_ids(**kwargs):
+        return [o.object_id for o in call_method(reader, sort='random', **kwargs)]
+
+    ids = [o.object_id for o in call_method(reader)]
+
+    assert len(get_ids(limit=1)) == min(1, chunk_size or 1, len(ids))
+    assert len(get_ids(limit=2)) == min(2, chunk_size or 2, len(ids))
+    assert len(get_ids(limit=3)) == min(3, chunk_size or 3, len(ids))
+
+    with pytest.raises(ValueError):
+        get_ids(starting_after=ids[0])
+
+    with pytest.raises(ValueError):
+        get_ids(limit=1, starting_after=ids[0])
+
+
+NOT_FOUND_ERROR_CLS = {
+    get_feeds: FeedNotFoundError,
+    get_entries: EntryNotFoundError,
+    search_entries: EntryNotFoundError,
+}
+
+NOT_FOUND_STARTING_AFTER = {
+    get_feeds: '0',
+    get_entries: ('1', '1, 0'),
+    search_entries: ('1', '1, 0'),
+}
+
+
+@with_call_paginated_method
+def test_starting_after_errors(reader, pre_stuff, call_method, sort_kwargs):
+    pre_stuff(reader)
+
+    error_cls = NOT_FOUND_ERROR_CLS[call_method]
+    starting_after = NOT_FOUND_STARTING_AFTER[call_method]
+
+    with pytest.raises(error_cls) as excinfo:
+        list(call_method(reader, **sort_kwargs, starting_after=starting_after))
+    assert excinfo.value.object_id == starting_after
+
+
+@with_call_paginated_method
+def test_limit_errors(reader, pre_stuff, call_method, sort_kwargs):
+    pre_stuff(reader)
+
+    def get_ids(**kwargs):
+        return [o.object_id for o in call_method(reader, **sort_kwargs, **kwargs)]
+
+    with pytest.raises(ValueError):
+        get_ids(limit=object())
+    with pytest.raises(ValueError):
+        get_ids(limit=0)
+    with pytest.raises(ValueError):
+        get_ids(limit=-1)
+    with pytest.raises(ValueError):
+        get_ids(limit=1.0)

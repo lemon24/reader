@@ -135,6 +135,10 @@ def search_entry_counts(storage, _, __):
     Search(storage).search_entry_counts('entry')
 
 
+def search_entry_last(storage, feed, entry):
+    Search(storage).search_entry_last('entry', (feed.url, entry.id))
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     'pre_stuff, do_stuff',
@@ -146,6 +150,7 @@ def search_entry_counts(storage, _, __):
         (enable_search, search_entries_chunk_size_0),
         (enable_search, search_entries_chunk_size_1),
         (enable_search, search_entry_counts),
+        (enable_search, search_entry_last),
     ],
 )
 def test_errors_locked(db_path, pre_stuff, do_stuff):
@@ -240,7 +245,11 @@ def call_search_entry_counts(search, query):
     ],
 )
 @pytest.mark.parametrize(
-    'call_method', [call_search_entries, call_search_entry_counts,],
+    'call_method',
+    [
+        call_search_entries,
+        call_search_entry_counts,
+    ],
 )
 def test_invalid_search_query_error(storage, query, exc_type, call_method):
     # We're not testing this in test_reader_search.py because
