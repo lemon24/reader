@@ -11,7 +11,6 @@ from datetime import datetime
 from datetime import timedelta
 from functools import partial
 from itertools import groupby
-from itertools import islice
 from types import MappingProxyType
 from typing import Any
 from typing import Dict
@@ -803,21 +802,22 @@ class Search:
                 partial(self.search_entries_page, query, now, filter_options, sort),  # type: ignore[arg-type]
                 self.chunk_size,
                 last,
+                limit or 0,
             )
 
         elif sort == 'random':
             assert not starting_after
             it = self.search_entries_page(
-                query, now, filter_options, sort, self.chunk_size
+                query,
+                now,
+                filter_options,
+                sort,
+                min(limit, self.chunk_size or limit) if limit else self.chunk_size,
             )
             rv = (entry for entry, _ in it)
 
         else:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
-
-        # FIXME: very wasteful (always requesting 1 page, even if limit < chunk_size); temporary implementation for #196
-        if limit:
-            rv = islice(rv, limit)
 
         yield from rv
 

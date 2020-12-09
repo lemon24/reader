@@ -354,8 +354,10 @@ def paginated_query(
     # We need the cast to/from _U until we find a better way of typing last.
 
     if chunk_size:
-        query.LIMIT(":chunk_size", last=last)
+        query.LIMIT(":chunk_size")
         context['chunk_size'] = chunk_size
+    if last:
+        query.add_last()
         context.update(query.last_params(cast(Optional[Tuple[Any, ...]], last)))
 
     rv = (

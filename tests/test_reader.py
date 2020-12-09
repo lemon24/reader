@@ -2451,7 +2451,7 @@ def reader_with_three_feeds(reader):
 
 
 @with_call_paginated_method
-@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2])
+@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 0, 1, 2])
 @rename_argument('reader', 'reader_with_three_feeds')
 def test_pagination_basic(reader, pre_stuff, call_method, sort_kwargs, chunk_size):
     reader._storage.chunk_size = chunk_size
@@ -2485,7 +2485,7 @@ def test_pagination_basic(reader, pre_stuff, call_method, sort_kwargs, chunk_siz
         (enable_and_update_search, search_entries),
     ],
 )
-@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2])
+@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 0, 1, 2])
 @rename_argument('reader', 'reader_with_three_feeds')
 def test_pagination_random(reader, pre_stuff, call_method, chunk_size):
     reader._storage.chunk_size = chunk_size
@@ -2498,9 +2498,9 @@ def test_pagination_random(reader, pre_stuff, call_method, chunk_size):
 
     ids = [o.object_id for o in call_method(reader)]
 
-    assert len(get_ids(limit=1)) == min(1, chunk_size, len(ids))
-    assert len(get_ids(limit=2)) == min(2, chunk_size, len(ids))
-    assert len(get_ids(limit=3)) == min(3, chunk_size, len(ids))
+    assert len(get_ids(limit=1)) == min(1, chunk_size or 1, len(ids))
+    assert len(get_ids(limit=2)) == min(2, chunk_size or 2, len(ids))
+    assert len(get_ids(limit=3)) == min(3, chunk_size or 3, len(ids))
 
     with pytest.raises(ValueError):
         get_ids(starting_after=ids[0])

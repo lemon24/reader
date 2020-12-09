@@ -5,7 +5,6 @@ from datetime import datetime
 from datetime import timedelta
 from functools import partial
 from itertools import chain
-from itertools import islice
 from itertools import repeat
 from typing import Any
 from typing import Dict
@@ -448,12 +447,8 @@ class Storage:
             partial(self.get_feeds_page, filter_options, sort),  # type: ignore[arg-type]
             self.chunk_size,
             self.get_feed_last(sort, starting_after) if starting_after else None,
+            limit or 0,
         )
-
-        # FIXME: very wasteful (always requesting 1 page, even if limit < chunk_size); temporary implementation for #196
-        if limit:
-            rv = islice(rv, limit)
-
         yield from rv
 
     @wrap_exceptions(StorageError)
@@ -935,17 +930,19 @@ class Storage:
                 self.get_entry_last(now, sort, starting_after)
                 if starting_after
                 else None,
+                limit or 0,
             )
         elif sort == 'random':
             assert not starting_after
-            it = self.get_entries_page(now, filter_options, sort, self.chunk_size)
+            it = self.get_entries_page(
+                now,
+                filter_options,
+                sort,
+                min(limit, self.chunk_size or limit) if limit else self.chunk_size,
+            )
             rv = (entry for entry, _ in it)
         else:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
-
-        # FIXME: very wasteful (always requesting 1 page, even if limit < chunk_size); temporary implementation for #196
-        if limit:
-            rv = islice(rv, limit)
 
         yield from rv
 
