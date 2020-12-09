@@ -2419,13 +2419,16 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
 
 
 with_call_paginated_method = pytest.mark.parametrize(
-    'pre_stuff, call_method, sort',
+    'pre_stuff, call_method, sort_kwargs',
     [
-        (lambda _: None, get_feeds, 'title'),
-        (lambda _: None, get_feeds, 'added'),
-        (lambda _: None, get_entries, 'recent'),
-        (enable_and_update_search, search_entries, 'relevant'),
-        (enable_and_update_search, search_entries, 'recent'),
+        (lambda _: None, get_feeds, {}),
+        (lambda _: None, get_feeds, dict(sort='title')),
+        (lambda _: None, get_feeds, dict(sort='added')),
+        (lambda _: None, get_entries, {}),
+        (lambda _: None, get_entries, dict(sort='recent')),
+        (enable_and_update_search, search_entries, {}),
+        (enable_and_update_search, search_entries, dict(sort='relevant')),
+        (enable_and_update_search, search_entries, dict(sort='recent')),
     ],
 )
 
@@ -2450,14 +2453,14 @@ def reader_with_three_feeds(reader):
 @with_call_paginated_method
 @pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2])
 @rename_argument('reader', 'reader_with_three_feeds')
-def test_pagination_basic(reader, pre_stuff, call_method, sort, chunk_size):
+def test_pagination_basic(reader, pre_stuff, call_method, sort_kwargs, chunk_size):
     reader._storage.chunk_size = chunk_size
 
     reader.update_feeds()
     pre_stuff(reader)
 
     def get_ids(**kwargs):
-        return [o.object_id for o in call_method(reader, sort=sort, **kwargs)]
+        return [o.object_id for o in call_method(reader, **sort_kwargs, **kwargs)]
 
     ids = get_ids()
 
@@ -2520,23 +2523,23 @@ NOT_FOUND_STARTING_AFTER = {
 
 
 @with_call_paginated_method
-def test_starting_after_errors(reader, pre_stuff, call_method, sort):
+def test_starting_after_errors(reader, pre_stuff, call_method, sort_kwargs):
     pre_stuff(reader)
 
     error_cls = NOT_FOUND_ERROR_CLS[call_method]
     starting_after = NOT_FOUND_STARTING_AFTER[call_method]
 
     with pytest.raises(error_cls) as excinfo:
-        list(call_method(reader, sort=sort, starting_after=starting_after))
+        list(call_method(reader, **sort_kwargs, starting_after=starting_after))
     assert excinfo.value.object_id == starting_after
 
 
 @with_call_paginated_method
-def test_limit_errors(reader, pre_stuff, call_method, sort):
+def test_limit_errors(reader, pre_stuff, call_method, sort_kwargs):
     pre_stuff(reader)
 
     def get_ids(**kwargs):
-        return [o.object_id for o in call_method(reader, sort=sort, **kwargs)]
+        return [o.object_id for o in call_method(reader, **sort_kwargs, **kwargs)]
 
     with pytest.raises(ValueError):
         get_ids(limit=object())
