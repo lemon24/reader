@@ -734,7 +734,7 @@ class Reader:
 
         ``'random'``
 
-            Random. At at most 256 entries will be returned.
+            Random order (shuffled). At at most 256 entries will be returned.
 
             .. versionadded:: 1.2
 
@@ -755,6 +755,7 @@ class Reader:
                 by default, all entries are returned.
             starting_after (tuple(str, str) or Entry or None):
                 Return entries after this entry; a cursor for use in pagination.
+                Using ``starting_after`` with ``sort='random'`` is not supported.
 
         Yields:
             :class:`Entry`: Sorted according to ``sort``.
@@ -788,7 +789,8 @@ class Reader:
             if not isinstance(limit, numbers.Integral) or limit < 1:
                 raise ValueError("limit should be a positive integer")
 
-        # TODO: raise is starting_after is given for sort=random?
+        if starting_after and sort == 'random':
+            raise ValueError("using starting_after with sort='random' not supported")
 
         now = self._now()
         return self._storage.get_entries(
@@ -1105,7 +1107,7 @@ class Reader:
 
         ``'random'``
 
-            Random. At at most 256 entries will be returned.
+            Random order (shuffled). At at most 256 entries will be returned.
 
             .. versionadded:: 1.10
 
@@ -1154,6 +1156,7 @@ class Reader:
                 by default, all results are returned.
             starting_after (tuple(str, str) or EntrySearchResult or None):
                 Return results after this result; a cursor for use in pagination.
+                Using ``starting_after`` with ``sort='random'`` is not supported.
 
         Yields:
             :class:`EntrySearchResult`: Sorted according to ``sort``.
@@ -1186,7 +1189,8 @@ class Reader:
             if not isinstance(limit, numbers.Integral) or limit < 1:
                 raise ValueError("limit should be a positive integer")
 
-        # TODO: raise is starting_after is given for sort=random?
+        if starting_after and sort == 'random':
+            raise ValueError("using starting_after with sort='random' not supported")
 
         now = self._now()
         return self._search.search_entries(

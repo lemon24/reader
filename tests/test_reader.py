@@ -2421,6 +2421,8 @@ def get_feeds_added(reader, **kwargs):
     return reader.get_feeds(sort='added', **kwargs)
 
 
+# TODO: sort could be a separate argument here...
+
 with_call_paginated_method = pytest.mark.parametrize(
     'pre_stuff, call_method',
     [
@@ -2433,11 +2435,8 @@ with_call_paginated_method = pytest.mark.parametrize(
 )
 
 
-@with_call_paginated_method
-@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2])
-def test_get_entries_pagination_basic(reader, pre_stuff, call_method, chunk_size):
-    reader._storage.chunk_size = chunk_size
-
+@pytest.fixture
+def reader_with_three_feeds(reader):
     reader._parser = parser = Parser()
 
     one = parser.feed(1, datetime(2010, 1, 1))
@@ -2449,6 +2448,16 @@ def test_get_entries_pagination_basic(reader, pre_stuff, call_method, chunk_size
 
     for feed in one, two, three:
         reader.add_feed(feed)
+
+    return reader
+
+
+@with_call_paginated_method
+@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2])
+@rename_argument('reader', 'reader_with_three_feeds')
+def test_get_entries_pagination_basic(reader, pre_stuff, call_method, chunk_size):
+    reader._storage.chunk_size = chunk_size
+
     reader.update_feeds()
     pre_stuff(reader)
 
@@ -2469,6 +2478,38 @@ def test_get_entries_pagination_basic(reader, pre_stuff, call_method, chunk_size
     assert get_ids(limit=2, starting_after=ids[0]) == ids[1:3]
     assert get_ids(limit=2, starting_after=ids[1]) == ids[2:]
     assert get_ids(limit=2, starting_after=ids[2]) == ids[3:] == []
+
+
+@pytest.mark.parametrize(
+    'pre_stuff, call_method',
+    [
+        (lambda _: None, get_entries_random),
+        (enable_and_update_search, search_entries_random),
+    ],
+)
+@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2])
+@rename_argument('reader', 'reader_with_three_feeds')
+def test_get_entries_pagination_random(reader, pre_stuff, call_method, chunk_size):
+    reader._storage.chunk_size = chunk_size
+
+    reader.update_feeds()
+    pre_stuff(reader)
+
+    def get_ids(**kwargs):
+        return [o.object_id for o in call_method(reader, **kwargs)]
+
+    # TODO: we could just call_method() if sort was not hardcoded
+    ids = [o.object_id for o in reader.get_entries()]
+
+    assert len(get_ids(limit=1)) == min(1, chunk_size, len(ids))
+    assert len(get_ids(limit=2)) == min(2, chunk_size, len(ids))
+    assert len(get_ids(limit=3)) == min(3, chunk_size, len(ids))
+
+    with pytest.raises(ValueError):
+        get_ids(starting_after=ids[0])
+
+    with pytest.raises(ValueError):
+        get_ids(limit=1, starting_after=ids[0])
 
 
 NOT_FOUND_ERROR_CLS = {
