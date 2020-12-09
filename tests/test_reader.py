@@ -741,7 +741,11 @@ class FakeNow:
 # TODO: we could just parametrize sort as well here (see test_pagination_basic for details)
 
 
-def get_entries_default(reader, **kwargs):
+def get_feeds(reader, **kwargs):
+    return reader.get_feeds(**kwargs)
+
+
+def get_entries(reader, **kwargs):
     return reader.get_entries(**kwargs)
 
 
@@ -758,7 +762,7 @@ def enable_and_update_search(reader):
     reader.update_search()
 
 
-def search_entries_default(reader, **kwargs):
+def search_entries(reader, **kwargs):
     return reader.search_entries('entry', **kwargs)
 
 
@@ -777,7 +781,7 @@ def search_entries_random(reader, **kwargs):
 with_call_entries_recent_method = pytest.mark.parametrize(
     'pre_stuff, call_method',
     [
-        (lambda _: None, get_entries_default),
+        (lambda _: None, get_entries),
         (lambda _: None, get_entries_recent),
         (enable_and_update_search, search_entries_recent),
     ],
@@ -974,17 +978,14 @@ def test_get_entries_recent_feed_order(reader, chunk_size, pre_stuff, call_metho
     assert [eval(e.id)[1] for e in call_method(reader)] == [1, 4, 2, 3]
 
 
-with_call_entries_random_method = pytest.mark.parametrize(
+@pytest.mark.parametrize('chunk_size', [1, 2, 3, 4])
+@pytest.mark.parametrize(
     'pre_stuff, call_method',
     [
-        (lambda _: None, get_entries_random),
-        (enable_and_update_search, search_entries_random),
+        (lambda _: None, get_entries),
+        (enable_and_update_search, search_entries),
     ],
 )
-
-
-@pytest.mark.parametrize('chunk_size', [1, 2, 3, 4])
-@with_call_entries_random_method
 def test_get_entries_random(reader, chunk_size, pre_stuff, call_method):
     """Black box get_entries(sort='random') good enough™ test.
 
@@ -1023,7 +1024,8 @@ def test_get_entries_random(reader, chunk_size, pre_stuff, call_method):
     # some get_entries(sort='random') results
     # (we call it enough times so it's likely we get all the results)
     random_tuples = Counter(
-        tuple(e.id for e in call_method(reader)) for _ in range(20 * len(all_tuples))
+        tuple(e.id for e in call_method(reader, sort='random'))
+        for _ in range(20 * len(all_tuples))
     )
 
     # check all results are chunk_size length
@@ -2414,18 +2416,6 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
     assert type(rv) is rv_type
     # this isn't gonna work as well if the return types get different attributes
     assert rv._asdict() == expected._asdict()
-
-
-def get_feeds(reader, **kwargs):
-    return reader.get_feeds(**kwargs)
-
-
-def get_entries(reader, **kwargs):
-    return reader.get_entries(**kwargs)
-
-
-def search_entries(reader, **kwargs):
-    return reader.search_entries('entry', **kwargs)
 
 
 with_call_paginated_method = pytest.mark.parametrize(
