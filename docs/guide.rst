@@ -413,6 +413,36 @@ with a specific tag::
 
 
 
+Pagination
+----------
+
+:meth:`~Reader.get_feeds`, :meth:`~Reader.get_entries`,
+and :meth:`~Reader.search_entries`
+can be used in a paginated fashion.
+
+The ``limit`` argument allows limiting the number of results returned;
+the ``starting_after`` argument allows skipping results until after
+a specific one.
+
+To get the first page, use only ``limit``::
+
+    >>> for entry in reader.get_entries(limit=2):
+    ...     print(entry.title)
+    ...
+    H.I. #136: Dog Bingo
+    H.I. #135: Place Your Bets
+
+To get the next page, use the last result from a call as
+``starting_after`` in the next call::
+
+    >>> for entry in reader.get_entries(limit=2, starting_after=entry):
+    ...     print(entry.title)
+    ...
+    # H.I. 134: Boxing Day
+    Star Wars: The Rise of Skywalker, Hello Internet Christmas Special
+
+
+
 Feed and entry arguments
 ------------------------
 
@@ -423,6 +453,12 @@ This is by design.
 Likewise, wherever an entry argument is expected,
 you can either pass a *(feed URL, entry id)* tuple
 or an :class:`Entry` (or :class:`EntrySearchResult`) object.
+
+You can get this unique identifier in a uniform way by using the ``object_id``
+property.
+This is useful when you need to refer to a *reader* object in a generic way
+from outside Python (e.g. to make a link to the next :ref:`page <pagination>`
+of feeds/entries in a web application).
 
 
 

@@ -11,6 +11,14 @@ Version 1.12
 
 Unreleased
 
+* Add the ``limit`` and ``starting_after`` arguments to
+  :meth:`~Reader.get_feeds`, :meth:`~Reader.get_entries`,
+  and :meth:`~Reader.search_entries`,
+  allowing them to be used in a paginated fashion.
+  (:issue:`196`)
+* Add the :attr:`~Entry.object_id` property that allows
+  getting the unique identifier of a data object in a uniform way.
+  (:issue:`196`)
 * In the web application, add links to toggle feed/entry counts. (:issue:`185`)
 
 
