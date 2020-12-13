@@ -218,6 +218,7 @@ def entries():
         has_enclosures=has_enclosures,
         important=important,
         feed_tags=tags,
+        limit=request.args.get('limit', type=int),
     )
     entries = get_entries(**kwargs)
 
@@ -238,10 +239,6 @@ def entries():
             error = f"invalid tag query: {e}: {tags_str}"
         else:
             raise
-
-    limit = request.args.get('limit', type=int)
-    if limit:
-        entries = itertools.islice(entries, limit)
 
     entries = list(entries)
 
