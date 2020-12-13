@@ -9,7 +9,7 @@ Changelog
 Version 1.12
 ------------
 
-Unreleased
+Released 2020-12-13
 
 * Add the ``limit`` and ``starting_after`` arguments to
   :meth:`~Reader.get_feeds`, :meth:`~Reader.get_entries`,
