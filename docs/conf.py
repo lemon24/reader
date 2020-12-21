@@ -54,6 +54,20 @@ todo_include_todos = False
 autodoc_member_order = 'bysource'
 autodoc_typehints = 'none'
 
+
+rst_prolog = ""
+
+
+GOOGLE_SITE_VERIFICATION = os.environ.get('GOOGLE_SITE_VERIFICATION')
+if GOOGLE_SITE_VERIFICATION:
+    rst_prolog += f"""
+
+.. meta::
+    :google-site-verification: {GOOGLE_SITE_VERIFICATION.strip()}
+
+"""
+
+
 issues_github_path = 'lemon24/reader'
 
 hoverxref_auto_ref = True

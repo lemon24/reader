@@ -1,7 +1,3 @@
-.. meta::
-
-    :google-site-verification: fEn4grXJiyIiq3cT_qThgdBvB5w6eqjjxfYW7d76kVA
-
 
 reader
 ======
