@@ -17,30 +17,27 @@ import os
 import sys
 import textwrap
 import time
+import itertools
 
 from reader import make_reader
-
-
-def limit(it, n):
-    """list(limit('abcd', 2)) -> ['a', 'b']"""
-    return (e for e, _ in zip(it, range(n)))
 
 
 def get_lines(reader):
     size = os.get_terminal_size()
 
     # Only take as many entries as we have lines.
-    entries = limit(reader.get_entries(), size.lines - 1)
+    entries = reader.get_entries(limit=size.lines - 1)
 
     lines = (
-        l
-        for e in entries
-        for l in textwrap.wrap(
-            f"{(e.published or e.updated).date()} - {e.feed.title} - {e.title}",
+        line
+        for entry in entries
+        for line in textwrap.wrap(
+            f"{(entry.published or entry.updated).date()} - "
+            f"{entry.feed.title} - {entry.title}",
             width=size.columns,
         )
     )
-    return limit(lines, size.lines - 1)
+    return itertools.islice(lines, size.lines - 1)
 
 
 def print_status_line(message, seconds):
