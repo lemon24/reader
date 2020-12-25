@@ -218,9 +218,8 @@ def entries():
         has_enclosures=has_enclosures,
         important=important,
         feed_tags=tags,
-        limit=request.args.get('limit', type=int),
     )
-    entries = get_entries(**kwargs)
+    entries = get_entries(**kwargs, limit=request.args.get('limit', type=int))
 
     with_counts = request.args.get('counts')
     with_counts = {None: None, 'no': False, 'yes': True}[with_counts]
