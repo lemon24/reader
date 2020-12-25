@@ -37,6 +37,36 @@ from reader._app import got_preview_parse_error
 blueprint = Blueprint('preview_feed_list', __name__, template_folder='templates')
 
 
+ALTERNATE_SELECTORS = [
+    'link[rel=alternate]',
+    'meta[name=alternate]',
+    'link[rel=alternative]',
+]
+
+
+def get_alternates(session, url):
+    response = session.get(url)
+    response.raise_for_status()
+
+    soup = bs4.BeautifulSoup(response.content)
+
+    for selector in ALTERNATE_SELECTORS:
+        for element in soup.select(selector):
+            attrs = dict(element.attrs)
+            if 'href' not in attrs:
+                continue
+            if not any(t in attrs.get('type', '').lower() for t in ('rss', 'atom')):
+                continue
+
+            # this may not work correctly for relative paths, e.g. should
+            # http://example.com/foo + bar.xml result in
+            # http://example.com/bar.xml (now) or
+            # http://example.com/foo/bar.xml?
+            attrs['href'] = urllib.parse.urljoin(url, attrs['href'])
+
+            yield attrs
+
+
 @blueprint.route('/preview-feed-list')
 def feed_list():
     url = request.args['url']
@@ -48,29 +78,10 @@ def feed_list():
     # we should delegate to the parser "give me the content of this URL"
 
     try:
-        response = session.get(url)
-        response.raise_for_status()
+        alternates = list(get_alternates(session, url))
     except requests.RequestException as e:
         # TODO: maybe handle this with flash + 404 (and let the handler show the message)
         return render_template('preview_feed_list.html', url=url, errors=[str(e)])
-
-    soup = bs4.BeautifulSoup(response.content)
-    alternates = []
-    for element in soup.select('link[rel=alternate]') + soup.select(
-        'meta[name=alternate]'
-    ):
-        attrs = dict(element.attrs)
-        if 'href' not in attrs:
-            continue
-        if not any(t in attrs.get('type', '').lower() for t in ('rss', 'atom')):
-            continue
-
-        # this may not work correctly for relative paths, e.g. should
-        # http://example.com/foo + bar.xml result in
-        # http://example.com/bar.xml (now) or
-        # http://example.com/foo/bar.xml?
-        attrs['href'] = urllib.parse.urljoin(url, attrs['href'])
-        alternates.append(attrs)
 
     return render_template('preview_feed_list.html', url=url, alternates=alternates)
 

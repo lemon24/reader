@@ -11,6 +11,9 @@ Version 1.13
 
 Unreleased
 
+* In the ``preview_feed_list`` plugin, add ``<link rel=alternative ...>``
+  tags as a feed detection heuristic.
+
 
 Version 1.12
 ------------
