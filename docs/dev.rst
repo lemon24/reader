@@ -272,6 +272,12 @@ Batch update methods
 There's a discussion on why I want to postpone this in this comment: :issue:`187#issuecomment-700740251`.
 
 
+Using a single Reader objects from multiple threads
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Some thoughts on why it's difficult to do: :issue:`206#issuecomment-751383418`.
+
+
 
 Web application
 ~~~~~~~~~~~~~~~
