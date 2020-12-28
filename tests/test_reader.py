@@ -2549,3 +2549,10 @@ def test_limit_errors(reader, pre_stuff, call_method, sort_kwargs):
         get_ids(limit=-1)
     with pytest.raises(ValueError):
         get_ids(limit=1.0)
+
+
+def test_logging_defaults():
+    logger = logging.getLogger('reader')
+    assert logger.level == logging.NOTSET
+    assert len(logger.handlers) == 1
+    assert isinstance(logger.handlers[0], logging.NullHandler)

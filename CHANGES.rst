@@ -11,6 +11,8 @@ Version 1.13
 
 Unreleased
 
+* Prevent any logging output from the ``reader`` logger by default.
+  (:issue:`207`)
 * In the ``preview_feed_list`` plugin, add ``<link rel=alternative ...>``
   tags as a feed detection heuristic.
 * In the web application, fix bug causing the entries page to crash

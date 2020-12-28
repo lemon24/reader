@@ -1,3 +1,5 @@
+import logging
+
 import click
 import py.path
 import pytest
@@ -9,6 +11,32 @@ from reader import Reader
 from reader._cli import cli
 from reader._cli import config_option
 from reader.types import MISSING
+
+
+@pytest.fixture(autouse=True)
+def reset_logging(pytestconfig):
+    # from https://github.com/pallets/flask/blob/1.1.x/tests/test_logging.py#L20
+
+    root_handlers = logging.root.handlers[:]
+    logging.root.handlers = []
+    root_level = logging.root.level
+
+    logger = logging.getLogger("reader")
+    handlers = logger.handlers[:]
+    level = logger.level
+
+    logging_plugin = pytestconfig.pluginmanager.unregister(name="logging-plugin")
+
+    yield
+
+    logging.root.handlers[:] = root_handlers
+    logging.root.setLevel(root_level)
+
+    logger.handlers[:] = handlers
+    logger.setLevel(level)
+
+    if logging_plugin:
+        pytestconfig.pluginmanager.register(logging_plugin, "logging-plugin")
 
 
 @pytest.mark.slow
@@ -160,7 +188,13 @@ def test_cli_app_plugin(db_path, monkeypatch):
     runner = CliRunner()
     result = runner.invoke(
         cli,
-        ['--db', db_path, 'serve', '--plugin', 'test_cli:raise_exception_app_plugin',],
+        [
+            '--db',
+            db_path,
+            'serve',
+            '--plugin',
+            'test_cli:raise_exception_app_plugin',
+        ],
         catch_exceptions=False,
     )
 
@@ -241,7 +275,9 @@ def test_config_option(tmpdir):
                     'reader': {'url': 'config-cli-url'},
                     'defaults': {'serve': {'plugin': ['defaults-app-plugins']}},
                 },
-                'app': {'plugins': {'config-app-plugins': {}},},
+                'app': {
+                    'plugins': {'config-app-plugins': {}},
+                },
             }
         )
     )
@@ -285,6 +321,9 @@ def test_config_option(tmpdir):
         ],
     )
     assert final_config == {
-        'reader': {'url': 'user-url', 'plugins': {'user-plugins': None},},
+        'reader': {
+            'url': 'user-url',
+            'plugins': {'user-plugins': None},
+        },
         'plugins': {'user-app-plugins': None},
     }

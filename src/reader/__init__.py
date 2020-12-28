@@ -39,7 +39,6 @@ Print the titles of the unread entries::
 
 __version__ = '1.13.dev0'
 
-
 from .core import Reader, make_reader
 
 from .types import (
@@ -78,3 +77,11 @@ _CONFIG_ENVVAR = 'READER_CONFIG'
 _DB_ENVVAR = 'READER_DB'
 _PLUGIN_ENVVAR = 'READER_PLUGIN'
 _APP_PLUGIN_ENVVAR = 'READER_APP_PLUGIN'
+
+
+# Prevent any logging output by default. If no handler is set,
+# the messages bubble up to the root logger and get printed on stderr.
+# https://docs.python.org/3/howto/logging.html#library-config
+import logging  # noqa: E402
+
+logging.getLogger('reader').addHandler(logging.NullHandler())
