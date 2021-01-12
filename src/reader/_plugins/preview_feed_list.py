@@ -21,6 +21,7 @@ Implemented for https://github.com/lemon24/reader/issues/150.
 
 """
 import urllib.parse
+import warnings
 
 import bs4
 import requests
@@ -37,34 +38,65 @@ from reader._app import got_preview_parse_error
 blueprint = Blueprint('preview_feed_list', __name__, template_folder='templates')
 
 
-ALTERNATE_SELECTORS = [
-    'link[rel=alternate]',
-    'meta[name=alternate]',
-    'link[rel=alternative]',
+ATTRS = ['type', 'href', 'title', 'text']
+MARKERS = ['rss', 'atom', 'feed']
+
+SELECTORS = [
+    'link[href][rel=alternate], meta[href][name=alternate], link[href][rel=alternative]',
+    # fallback
+    'a[href]',
 ]
 
 
-def get_alternates(session, url):
-    response = session.get(url)
-    response.raise_for_status()
+warnings.filterwarnings(
+    'ignore',
+    message='No parser was explicitly specified',
+    module='reader._plugins.preview_feed_list',
+)
 
-    soup = bs4.BeautifulSoup(response.content)
 
-    for selector in ALTERNATE_SELECTORS:
-        for element in soup.select(selector):
-            attrs = dict(element.attrs)
-            if 'href' not in attrs:
-                continue
-            if not any(t in attrs.get('type', '').lower() for t in ('rss', 'atom')):
-                continue
+def get_alternates(content, url):
+    soup = bs4.BeautifulSoup(content)
+    for selector in SELECTORS:
+        alternates = list(_get_alternates(soup, url, selector))
+        if alternates:
+            return alternates
+    return []
 
-            # this may not work correctly for relative paths, e.g. should
-            # http://example.com/foo + bar.xml result in
-            # http://example.com/bar.xml (now) or
-            # http://example.com/foo/bar.xml?
-            attrs['href'] = urllib.parse.urljoin(url, attrs['href'])
 
-            yield attrs
+def _get_alternates(soup, url, selector):
+    for element in soup.select(selector):
+        attrs = dict(element.attrs)
+
+        href = attrs.get('href')
+        if not href:
+            continue
+
+        text = ' '.join(element.stripped_strings)
+        if text:
+            attrs['text'] = text
+
+        for attr in ATTRS:
+            value = attrs.get(attr, '').lower()
+            if any(marker in value for marker in MARKERS):
+                break
+        else:
+            continue
+
+        # this may not work correctly for relative paths, e.g. should
+        # http://example.com/foo + bar.xml result in
+        # http://example.com/bar.xml (now) or
+        # http://example.com/foo/bar.xml?
+        rv = {'href': urllib.parse.urljoin(url, attrs['href'])}
+
+        if 'type' in attrs:
+            rv['type'] = attrs['type']
+        if 'text' in attrs:
+            rv['title'] = attrs['text']
+        elif 'title' in attrs:
+            rv['title'] = attrs['title']
+
+        yield rv
 
 
 @blueprint.route('/preview-feed-list')
@@ -78,10 +110,13 @@ def feed_list():
     # we should delegate to the parser "give me the content of this URL"
 
     try:
-        alternates = list(get_alternates(session, url))
+        response = session.get(url)
+        response.raise_for_status()
     except requests.RequestException as e:
         # TODO: maybe handle this with flash + 404 (and let the handler show the message)
         return render_template('preview_feed_list.html', url=url, errors=[str(e)])
+
+    alternates = list(get_alternates(response.content, url))
 
     return render_template('preview_feed_list.html', url=url, alternates=alternates)
 

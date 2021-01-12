@@ -15,6 +15,8 @@ Unreleased
   (:issue:`207`)
 * In the ``preview_feed_list`` plugin, add ``<link rel=alternative ...>``
   tags as a feed detection heuristic.
+* In the ``preview_feed_list`` plugin, add ``<a>`` tags as
+  a *fallback* feed detection heuristic.
 * In the web application, fix bug causing the entries page to crash
   when counts are enabled.
 
