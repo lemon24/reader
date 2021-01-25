@@ -9,8 +9,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from typing import BinaryIO
+from typing import Callable
+from typing import ContextManager
 from typing import Iterable
 from typing import Iterator
+from typing import Mapping
+from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
 
@@ -24,7 +29,6 @@ from ._requests_utils import SessionWrapper
 from ._types import EntryData
 from ._types import FeedData
 from ._types import ParsedFeed
-from ._types import ParserType
 from .exceptions import _NotModified
 from .exceptions import ParseError
 from .types import Content
@@ -130,7 +134,11 @@ def _process_feed(
     updated, _ = _get_updated_published(d.feed, is_rss)
 
     feed = FeedData(
-        url, updated, d.feed.get('title'), d.feed.get('link'), d.feed.get('author'),
+        url,
+        updated,
+        d.feed.get('title'),
+        d.feed.get('link'),
+        d.feed.get('author'),
     )
     # This must be a list, not a generator expression,
     # otherwise the user may get a ParseError when calling
@@ -153,9 +161,24 @@ def parse_feed(
     # https://github.com/lemon24/reader/issues/125
     # https://github.com/lemon24/reader/issues/157
     result = feedparser.parse(
-        *args, resolve_relative_uris=True, sanitize_html=True, **kwargs,
+        *args,
+        resolve_relative_uris=True,
+        sanitize_html=True,
+        **kwargs,
     )
     return _process_feed(url, result)
+
+
+class RetrieveResult(NamedTuple):
+    file: BinaryIO
+    http_etag: Optional[str] = None
+    http_last_modified: Optional[str] = None
+    headers: Optional[Mapping[str, str]] = None
+
+
+ParserType = Callable[
+    [str, Optional[str], Optional[str]], ContextManager[RetrieveResult]
+]
 
 
 class Parser:
@@ -186,7 +209,14 @@ class Parser:
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
     ) -> ParsedFeed:
-        return self.get_parser(url)(url, http_etag, http_last_modified)
+        parser = self.get_parser(url)
+        with parser(url, http_etag, http_last_modified) as result:
+            feed, entries = parse_feed(
+                url,
+                result.file,
+                response_headers=result.headers,
+            )
+        return ParsedFeed(feed, entries, result.http_etag, result.http_last_modified)
 
     def make_session(self) -> SessionWrapper:
         session = SessionWrapper(hooks=self.session_hooks.copy())
@@ -223,7 +253,8 @@ class FileParser:
         # give feed_root checks a chance to fail early
         self._normalize_url('known-good-feed-url')
 
-    def __call__(self, url: str, *args: Any, **kwargs: Any) -> ParsedFeed:
+    @contextmanager
+    def __call__(self, url: str, *args: Any, **kwargs: Any) -> Iterator[RetrieveResult]:
         try:
             normalized_url = self._normalize_url(url)
         except ValueError as e:
@@ -231,9 +262,7 @@ class FileParser:
 
         with wrap_exceptions(url, "while reading feed"):
             with open(normalized_url, 'rb') as file:
-                feed, entries = parse_feed(url, file)
-
-        return ParsedFeed(feed, entries)
+                yield RetrieveResult(file)
 
     def _normalize_url(self, url: str) -> str:
         path = _extract_path(url)
@@ -429,12 +458,13 @@ class HTTPParser:
 
     make_session: _MakeSession
 
+    @contextmanager
     def __call__(
         self,
         url: str,
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
-    ) -> ParsedFeed:
+    ) -> Iterator[RetrieveResult]:
         request_headers = {'Accept': feedparser.http.ACCEPT_HEADER, 'A-IM': 'feed'}
 
         # TODO: maybe share the session in the parser?
@@ -466,11 +496,9 @@ class HTTPParser:
             response.raw.decode_content = True
 
             with wrap_exceptions(url, "while reading feed"), response:
-                feed, entries = parse_feed(
-                    url, response.raw, response_headers=response_headers,
+                yield RetrieveResult(
+                    response.raw, http_etag, http_last_modified, response_headers
                 )
-
-        return ParsedFeed(feed, entries, http_etag, http_last_modified)
 
 
 def default_parser(feed_root: Optional[str] = None) -> Parser:

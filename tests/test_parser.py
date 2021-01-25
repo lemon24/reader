@@ -1,5 +1,6 @@
 import io
 import logging
+from contextlib import contextmanager
 from unittest.mock import MagicMock
 
 import feedparser
@@ -11,6 +12,7 @@ from reader import Feed
 from reader._parser import default_parser
 from reader._parser import FileParser
 from reader._parser import parse_feed
+from reader._parser import RetrieveResult
 from reader._parser import SessionWrapper
 from reader.exceptions import _NotModified
 from reader.exceptions import ParseError
@@ -251,7 +253,10 @@ def make_http_get_headers_url(requests_mock):
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_parse_sends_etag_last_modified(
-    parse, make_http_get_headers_url, data_dir, feed_type,
+    parse,
+    make_http_get_headers_url,
+    data_dir,
+    feed_type,
 ):
     feed_url = make_http_get_headers_url(data_dir.join('full.' + feed_type))
     parse(feed_url, 'etag', 'last_modified')
@@ -553,11 +558,25 @@ def test_default_response_headers(
     assert mock.call_args[1]['response_headers']['Content-Type'] == 'text/xml'
 
 
-def test_parsers(parse):
+def test_parsers(parse, monkeypatch):
     parse.parsers.clear()
 
-    parse.mount_parser('http://', lambda *args: ('generic', *args))
-    parse.mount_parser('http://specific.com', lambda *args: ('specific', *args))
+    def make_parser(name):
+        @contextmanager
+        def parser(*args):
+            # temporary, until we split parsers and retrievers
+            monkeypatch.setattr(
+                'reader._parser.parse_feed', lambda *a, **kw: (name, args[0])
+            )
+            try:
+                yield RetrieveResult(name, *args[1:])
+            finally:
+                monkeypatch.undo()
+
+        return parser
+
+    parse.mount_parser('http://', make_parser('generic'))
+    parse.mount_parser('http://specific.com', make_parser('specific'))
 
     assert parse('http://generic.com/', 'etag', None) == (
         'generic',

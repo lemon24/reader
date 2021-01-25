@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable
 from typing import Generic
 from typing import Iterable
 from typing import NamedTuple
@@ -328,6 +327,3 @@ class FeedFilterOptions(NamedTuple):
             raise ValueError("updates_enabled should be one of (None, False, True)")
 
         return cls(feed_url, tag_filter, broken, updates_enabled)
-
-
-ParserType = Callable[[str, Optional[str], Optional[str]], ParsedFeed]
