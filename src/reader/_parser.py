@@ -176,7 +176,7 @@ class RetrieveResult(NamedTuple):
     headers: Optional[Mapping[str, str]] = None
 
 
-ParserType = Callable[
+RetriverType = Callable[
     [str, Optional[str], Optional[str]], ContextManager[RetrieveResult]
 ]
 
@@ -188,20 +188,20 @@ class Parser:
     )
 
     def __init__(self) -> None:
-        self.parsers: 'OrderedDict[str, ParserType]' = OrderedDict()
+        self.retrievers: 'OrderedDict[str, RetriverType]' = OrderedDict()
         self.session_hooks = SessionHooks()
 
-    def mount_parser(self, prefix: str, parser: ParserType) -> None:
-        self.parsers[prefix] = parser
-        keys_to_move = [k for k in self.parsers if len(k) < len(prefix)]
+    def mount_retriever(self, prefix: str, retriever: RetriverType) -> None:
+        self.retrievers[prefix] = retriever
+        keys_to_move = [k for k in self.retrievers if len(k) < len(prefix)]
         for key in keys_to_move:
-            self.parsers[key] = self.parsers.pop(key)
+            self.retrievers[key] = self.retrievers.pop(key)
 
-    def get_parser(self, url: str) -> ParserType:
-        for prefix, parser in self.parsers.items():
+    def get_retriever(self, url: str) -> RetriverType:
+        for prefix, retriever in self.retrievers.items():
             if url.lower().startswith(prefix.lower()):
-                return parser
-        raise ParseError(url, message="no parser for URL")
+                return retriever
+        raise ParseError(url, message="no retriever for URL")
 
     def __call__(
         self,
@@ -209,7 +209,7 @@ class Parser:
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
     ) -> ParsedFeed:
-        parser = self.get_parser(url)
+        parser = self.get_retriever(url)
         with parser(url, http_etag, http_last_modified) as result:
             feed, entries = parse_feed(
                 url,
@@ -240,7 +240,7 @@ def wrap_exceptions(url: str, when: str) -> Iterator[None]:
 
 
 @dataclass
-class FileParser:
+class FileRetriever:
 
     """Bare path and file:// URI parser, with support for feed roots,
     per https://github.com/lemon24/reader/issues/155
@@ -431,7 +431,7 @@ def caching_get(
 
 
 @dataclass
-class HTTPParser:
+class HTTPRetriever:
 
     """
     http(s):// parser that uses Requests.
@@ -503,10 +503,10 @@ class HTTPParser:
 
 def default_parser(feed_root: Optional[str] = None) -> Parser:
     parser = Parser()
-    http_parser = HTTPParser(parser.make_session)
-    parser.mount_parser('https://', http_parser)
-    parser.mount_parser('http://', http_parser)
+    http_parser = HTTPRetriever(parser.make_session)
+    parser.mount_retriever('https://', http_parser)
+    parser.mount_retriever('http://', http_parser)
     if feed_root is not None:
         # empty string means catch-all
-        parser.mount_parser('', FileParser(feed_root))
+        parser.mount_retriever('', FileRetriever(feed_root))
     return parser

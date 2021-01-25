@@ -10,7 +10,7 @@ from utils import make_url_base
 
 from reader import Feed
 from reader._parser import default_parser
-from reader._parser import FileParser
+from reader._parser import FileRetriever
 from reader._parser import parse_feed
 from reader._parser import RetrieveResult
 from reader._parser import SessionWrapper
@@ -558,10 +558,10 @@ def test_default_response_headers(
     assert mock.call_args[1]['response_headers']['Content-Type'] == 'text/xml'
 
 
-def test_parsers(parse, monkeypatch):
-    parse.parsers.clear()
+def test_retrievers(parse, monkeypatch):
+    parse.retrievers.clear()
 
-    def make_parser(name):
+    def make_retriever(name):
         @contextmanager
         def parser(*args):
             # temporary, until we split parsers and retrievers
@@ -575,8 +575,8 @@ def test_parsers(parse, monkeypatch):
 
         return parser
 
-    parse.mount_parser('http://', make_parser('generic'))
-    parse.mount_parser('http://specific.com', make_parser('specific'))
+    parse.mount_retriever('http://', make_retriever('generic'))
+    parse.mount_retriever('http://specific.com', make_retriever('specific'))
 
     assert parse('http://generic.com/', 'etag', None) == (
         'generic',
@@ -640,7 +640,7 @@ def test_feed_root_none(data_dir, scheme):
     with pytest.raises(ParseError) as excinfo:
         parse(url)
     assert excinfo.value.url == url
-    assert 'no parser' in excinfo.value.message
+    assert 'no retriever' in excinfo.value.message
 
 
 @pytest.mark.parametrize('scheme', ['', 'file:'])
@@ -762,7 +762,7 @@ def test_normalize_url_errors(monkeypatch, reload_module, os_name, url, reason):
     reload_module(urllib.request)
 
     with pytest.raises(ValueError) as excinfo:
-        FileParser(data_dir)._normalize_url(url)
+        FileRetriever(data_dir)._normalize_url(url)
 
     reload_module.undo()
 
