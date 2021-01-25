@@ -285,8 +285,14 @@ class Parser:
 
     def make_session(self) -> SessionWrapper:
         session = SessionWrapper(hooks=self.session_hooks.copy())
+
+        session.session.headers['Accept'] = MIMEAccept(
+            mime_type for accept, _ in self.parsers_by_mime_type for mime_type in accept
+        ).to_header()
+
         if self.user_agent:
             session.session.headers['User-Agent'] = self.user_agent
+
         return session
 
 
@@ -530,8 +536,7 @@ class HTTPRetriever:
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
     ) -> Iterator[RetrieveResult]:
-        # FIXME: Accept should be an argument
-        request_headers = {'Accept': feedparser.http.ACCEPT_HEADER, 'A-IM': 'feed'}
+        request_headers = {'A-IM': 'feed'}
 
         # TODO: maybe share the session in the parser?
         # TODO: timeouts!
