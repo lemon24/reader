@@ -154,25 +154,37 @@ def _process_feed(
     return feed, entries
 
 
-def parse_feed(
-    url: str, *args: Any, **kwargs: Any
-) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
-    """Like feedparser.parse(), but return a feed and entries,
-    and re-raise bozo_exception as ParseError.
+class FeedparserParser:
 
-    url is NOT passed to feedparser; args and kwargs are.
+    # Everything *except* the wildcard, which gets added back explicitly later on.
+    accept_header = feedparser.http.ACCEPT_HEADER.partition(',*/*')[0]
 
-    """
-    # feedparser content sanitization and relative link resolution should be ON.
-    # https://github.com/lemon24/reader/issues/125
-    # https://github.com/lemon24/reader/issues/157
-    result = feedparser.parse(
-        *args,
-        resolve_relative_uris=True,
-        sanitize_html=True,
-        **kwargs,
-    )
-    return _process_feed(url, result)
+    def __call__(
+        self,
+        url: str,
+        file: BinaryIO,
+        headers: Optional[Mapping[str, str]] = None,
+    ) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
+        """Like feedparser.parse(), but return a feed and entries,
+        and re-raise bozo_exception as ParseError.
+
+        url is NOT passed to feedparser; file and headers are.
+
+        """
+        # feedparser content sanitization and relative link resolution should be ON.
+        # https://github.com/lemon24/reader/issues/125
+        # https://github.com/lemon24/reader/issues/157
+        result = feedparser.parse(
+            file,
+            resolve_relative_uris=True,
+            sanitize_html=True,
+            response_headers=headers,
+        )
+        return _process_feed(url, result)
+
+
+# mainly for testing convenience
+feedparser_parse = FeedparserParser()
 
 
 class RetrieveResult(NamedTuple):
@@ -200,12 +212,6 @@ class AwareParserType(ParserType, Protocol):
     @property
     def accept_header(self) -> str:  # pragma: no cover
         pass
-
-
-def feedparser_parse(
-    url: str, file: BinaryIO, headers: Optional[Mapping[str, str]]
-) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
-    return parse_feed(url, file, response_headers=headers)
 
 
 class Parser:
@@ -578,6 +584,7 @@ class HTTPRetriever:
 
 def default_parser(feed_root: Optional[str] = None) -> Parser:
     parser = Parser()
+
     http_retriever = HTTPRetriever(parser.make_session)
     parser.mount_retriever('https://', http_retriever)
     parser.mount_retriever('http://', http_retriever)
@@ -585,5 +592,9 @@ def default_parser(feed_root: Optional[str] = None) -> Parser:
         # empty string means catch-all
         parser.mount_retriever('', FileRetriever(feed_root))
 
-    parser.mount_parser_by_mime_type(feedparser_parse, feedparser.http.ACCEPT_HEADER)
+    parser.mount_parser_by_mime_type(feedparser_parse)
+    # fall back to feedparser if there's no better match
+    # (replicates feedparser's original behavior)
+    parser.mount_parser_by_mime_type(feedparser_parse, '*/*;q=0.1')
+
     return parser

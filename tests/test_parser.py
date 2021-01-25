@@ -10,8 +10,8 @@ from utils import make_url_base
 
 from reader import Feed
 from reader._parser import default_parser
+from reader._parser import feedparser_parse
 from reader._parser import FileRetriever
-from reader._parser import parse_feed
 from reader._parser import RetrieveResult
 from reader._parser import SessionWrapper
 from reader.exceptions import _NotModified
@@ -46,7 +46,7 @@ def _make_http_url(requests_mock, **_):
         url = 'http://example.com/' + feed_path.basename
         headers = {}
         if feed_path.ext == '.rss':
-            headers['Content-Type'] = 'application/x-rss+xml'
+            headers['Content-Type'] = 'application/rss+xml'
         elif feed_path.ext == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
         requests_mock.get(url, text=feed_path.read(), headers=headers)
@@ -63,7 +63,7 @@ def _make_https_url(requests_mock, **_):
         url = 'https://example.com/' + feed_path.basename
         headers = {}
         if feed_path.ext == '.rss':
-            headers['Content-Type'] = 'application/x-rss+xml'
+            headers['Content-Type'] = 'application/rss+xml'
         elif feed_path.ext == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
         requests_mock.get(url, text=feed_path.read(), headers=headers)
@@ -77,7 +77,7 @@ def _make_http_gzip_url(requests_mock, **_):
         url = 'http://example.com/' + feed_path.basename
         headers = {}
         if feed_path.ext == '.rss':
-            headers['Content-Type'] = 'application/x-rss+xml'
+            headers['Content-Type'] = 'application/rss+xml'
         elif feed_path.ext == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
         headers['Content-Encoding'] = 'gzip'
@@ -237,7 +237,7 @@ def make_http_get_headers_url(requests_mock):
         url = 'http://example.com/' + feed_path.basename
         headers = {}
         if feed_path.ext == '.rss':
-            headers['Content-Type'] = 'application/x-rss+xml'
+            headers['Content-Type'] = 'application/rss+xml'
         elif feed_path.ext == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
 
@@ -273,7 +273,7 @@ def make_http_etag_last_modified_url(requests_mock):
         url = 'http://example.com/' + feed_path.basename
         headers = {'ETag': make_url.etag, 'Last-Modified': make_url.last_modified}
         if feed_path.ext == '.rss':
-            headers['Content-Type'] = 'application/x-rss+xml'
+            headers['Content-Type'] = 'application/rss+xml'
         elif feed_path.ext == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
         requests_mock.get(url, text=feed_path.read(), headers=headers)
@@ -439,7 +439,7 @@ def test_missing_entry_id(parse):
 
     """
     # For RSS, when id is missing, parse() falls back to link.
-    feed, entries = parse_feed(
+    feed, entries = feedparser_parse(
         'url',
         """
         <?xml version="1.0" encoding="UTF-8" ?>
@@ -460,7 +460,7 @@ def test_missing_entry_id(parse):
 
     # ... and only link.
     with pytest.raises(ParseError) as excinfo:
-        parse_feed(
+        feedparser_parse(
             'url',
             """
             <?xml version="1.0" encoding="UTF-8" ?>
@@ -480,7 +480,7 @@ def test_missing_entry_id(parse):
 
     # There is no fallback for Atom.
     with pytest.raises(ParseError) as excinfo:
-        parse_feed(
+        feedparser_parse(
             'url',
             """
             <?xml version="1.0" encoding="utf-8"?>
@@ -504,7 +504,7 @@ def test_no_version(parse):
 
     """
     with pytest.raises(ParseError) as excinfo:
-        parse_feed(
+        feedparser_parse(
             'url',
             """
             <?xml version="1.0" encoding="utf-8"?>
@@ -764,3 +764,6 @@ def test_normalize_url_errors(monkeypatch, reload_module, os_name, url, reason):
     reload_module.undo()
 
     assert reason in str(excinfo.value)
+
+
+# FIXME: test no mimetype (#205)
