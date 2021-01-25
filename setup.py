@@ -61,7 +61,8 @@ setup(
             'html5lib',
             # mypy is not working on pypy as of January 2020
             # https://github.com/python/typed_ast/issues/97#issuecomment-484335190
-            'mypy; implementation_name!="pypy"',
+            # pinned temporarily to 0.790 for https://github.com/lemon24/reader/issues/213
+            'mypy==0.790; implementation_name!="pypy"',
             # docs
             'sphinx',
             'sphinx_rtd_theme',
