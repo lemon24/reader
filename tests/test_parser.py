@@ -555,7 +555,6 @@ def test_default_response_headers(
     parse(feed_url)
 
     assert mock.call_args[1]['response_headers']['Content-Location'] == feed_url
-    assert mock.call_args[1]['response_headers']['Content-Type'] == 'text/xml'
 
 
 def test_retrievers(parse, monkeypatch):

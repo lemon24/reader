@@ -555,14 +555,6 @@ class HTTPRetriever:
             response_headers = response.headers.copy()
             response_headers.setdefault('content-location', response.url)
 
-            # FIXME: move to parse_feed; should only be enabled for the fallback
-            # Some feeds don't have a content type, which results in
-            # feedparser.NonXMLContentType being raised. There are valid feeds
-            # with no content type, so we set it anyway and hope feedparser
-            # fails in some other way if the feed really is broken.
-            # https://github.com/lemon24/reader/issues/108
-            response_headers.setdefault('content-type', 'text/xml')
-
             # The content is already decoded by requests/urllib3.
             response_headers.pop('content-encoding', None)
             response.raw.decode_content = True
