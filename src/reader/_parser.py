@@ -1,5 +1,6 @@
 import calendar
 import logging
+import mimetypes
 import os.path
 import time
 import urllib.parse
@@ -14,6 +15,7 @@ from typing import Callable
 from typing import ContextManager
 from typing import Iterable
 from typing import Iterator
+from typing import List
 from typing import Mapping
 from typing import NamedTuple
 from typing import Optional
@@ -22,6 +24,10 @@ from typing import Tuple
 import feedparser  # type: ignore
 import requests
 from typing_extensions import Protocol
+from typing_extensions import runtime_checkable
+from werkzeug.datastructures import MIMEAccept
+from werkzeug.http import parse_accept_header
+from werkzeug.http import parse_options_header
 
 import reader
 from ._requests_utils import SessionHooks
@@ -171,6 +177,7 @@ def parse_feed(
 
 class RetrieveResult(NamedTuple):
     file: BinaryIO
+    mime_type: Optional[str] = None
     http_etag: Optional[str] = None
     http_last_modified: Optional[str] = None
     headers: Optional[Mapping[str, str]] = None
@@ -181,6 +188,26 @@ RetriverType = Callable[
 ]
 
 
+class ParserType(Protocol):
+    def __call__(
+        self, url: str, file: BinaryIO, headers: Optional[Mapping[str, str]]
+    ) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:  # pragma: no cover
+        pass
+
+
+@runtime_checkable
+class AwareParserType(ParserType, Protocol):
+    @property
+    def accept_header(self) -> str:  # pragma: no cover
+        pass
+
+
+def feedparser_parse(
+    url: str, file: BinaryIO, headers: Optional[Mapping[str, str]]
+) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
+    return parse_feed(url, file, response_headers=headers)
+
+
 class Parser:
 
     user_agent = (
@@ -189,6 +216,7 @@ class Parser:
 
     def __init__(self) -> None:
         self.retrievers: 'OrderedDict[str, RetriverType]' = OrderedDict()
+        self.parsers_by_mime_type: 'List[Tuple[MIMEAccept, ParserType]]' = []
         self.session_hooks = SessionHooks()
 
     def mount_retriever(self, prefix: str, retriever: RetriverType) -> None:
@@ -203,18 +231,55 @@ class Parser:
                 return retriever
         raise ParseError(url, message="no retriever for URL")
 
+    def get_parser(
+        self, url: str, mime_type: Optional[str]
+    ) -> ParserType:  # pragma: no cover
+        if not mime_type:
+            raise TypeError("mime_type currently required")
+        parser = self.get_parser_by_mime_type(mime_type)
+        if not parser:
+            raise ParseError(url, message=f"no parser for MIME type {mime_type!r}")
+        return parser
+
+    def get_parser_by_mime_type(
+        self, mime_type: str
+    ) -> Optional[ParserType]:  # pragma: no cover
+        for accept, parser in self.parsers_by_mime_type:
+            if accept.best_match([mime_type]):
+                return parser
+        return None
+
+    def mount_parser_by_mime_type(
+        self, parser: ParserType, accept_header: Optional[str] = None
+    ) -> None:  # pragma: no cover
+        if accept_header:
+            accept = parse_accept_header(accept_header, MIMEAccept)
+        else:
+            if not isinstance(parser, AwareParserType):
+                raise TypeError("unaware parser type with no accept_header given")
+            accept = parse_accept_header(parser.accept_header, MIMEAccept)
+
+        parsers = self.parsers_by_mime_type
+        # TODO: maybe have some logic so non-wildcard are always before wildcard
+        parsers.append((accept, parser))
+
     def __call__(
         self,
         url: str,
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
     ) -> ParsedFeed:
-        parser = self.get_retriever(url)
-        with parser(url, http_etag, http_last_modified) as result:
-            feed, entries = parse_feed(
+        retriever = self.get_retriever(url)
+        with retriever(url, http_etag, http_last_modified) as result:
+            mime_type = result.mime_type
+            if not mime_type:
+                mime_type, _ = mimetypes.guess_type(url)
+            # FIXME: at this point mime_type might still be none, we should have a way to fall back to something
+            parser = self.get_parser(url, mime_type)
+            feed, entries = parser(
                 url,
                 result.file,
-                response_headers=result.headers,
+                result.headers,
             )
         return ParsedFeed(feed, entries, result.http_etag, result.http_last_modified)
 
@@ -465,6 +530,7 @@ class HTTPRetriever:
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
     ) -> Iterator[RetrieveResult]:
+        # FIXME: Accept should be an argument
         request_headers = {'Accept': feedparser.http.ACCEPT_HEADER, 'A-IM': 'feed'}
 
         # TODO: maybe share the session in the parser?
@@ -484,6 +550,7 @@ class HTTPRetriever:
             response_headers = response.headers.copy()
             response_headers.setdefault('content-location', response.url)
 
+            # FIXME: move to parse_feed; should only be enabled for the fallback
             # Some feeds don't have a content type, which results in
             # feedparser.NonXMLContentType being raised. There are valid feeds
             # with no content type, so we set it anyway and hope feedparser
@@ -495,18 +562,31 @@ class HTTPRetriever:
             response_headers.pop('content-encoding', None)
             response.raw.decode_content = True
 
+            content_type = response_headers.get('content-type')
+            mime_type: Optional[str]
+            if content_type:  # pragma: no cover
+                mime_type, _ = parse_options_header(content_type)
+            else:  # pragma: no cover
+                mime_type = None
+
             with wrap_exceptions(url, "while reading feed"), response:
                 yield RetrieveResult(
-                    response.raw, http_etag, http_last_modified, response_headers
+                    response.raw,
+                    mime_type,
+                    http_etag,
+                    http_last_modified,
+                    response_headers,
                 )
 
 
 def default_parser(feed_root: Optional[str] = None) -> Parser:
     parser = Parser()
-    http_parser = HTTPRetriever(parser.make_session)
-    parser.mount_retriever('https://', http_parser)
-    parser.mount_retriever('http://', http_parser)
+    http_retriever = HTTPRetriever(parser.make_session)
+    parser.mount_retriever('https://', http_retriever)
+    parser.mount_retriever('http://', http_retriever)
     if feed_root is not None:
         # empty string means catch-all
         parser.mount_retriever('', FileRetriever(feed_root))
+
+    parser.mount_parser_by_mime_type(feedparser_parse, feedparser.http.ACCEPT_HEADER)
     return parser

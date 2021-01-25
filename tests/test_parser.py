@@ -560,23 +560,21 @@ def test_default_response_headers(
 
 def test_retrievers(parse, monkeypatch):
     parse.retrievers.clear()
+    parse.parsers_by_mime_type.clear()
 
     def make_retriever(name):
         @contextmanager
-        def parser(*args):
-            # temporary, until we split parsers and retrievers
-            monkeypatch.setattr(
-                'reader._parser.parse_feed', lambda *a, **kw: (name, args[0])
-            )
-            try:
-                yield RetrieveResult(name, *args[1:])
-            finally:
-                monkeypatch.undo()
+        def retriever(*args):
+            yield RetrieveResult(name, 'type/subtype', *args[1:])
 
-        return parser
+        return retriever
+
+    def parser(url, file, headers):
+        return file, url
 
     parse.mount_retriever('http://', make_retriever('generic'))
     parse.mount_retriever('http://specific.com', make_retriever('specific'))
+    parse.mount_parser_by_mime_type(parser, '*/*')
 
     assert parse('http://generic.com/', 'etag', None) == (
         'generic',
