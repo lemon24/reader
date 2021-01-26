@@ -5,6 +5,19 @@ import unittest.mock
 import packaging.version
 
 sys.path.insert(0, os.path.abspath('../src'))
+
+# mock some things "by hand", so we can import reader below without any dependencies
+for name in [
+    'humanize',
+    'flask',
+    'flask.signals',
+    'werkzeug',
+    'werkzeug.datastructures',
+    'werkzeug.http',
+    'yaml',
+]:
+    sys.modules[name] = unittest.mock.Mock()
+
 import reader
 
 extensions = [
@@ -31,12 +44,6 @@ autodoc_mock_imports = [
     'markupsafe',
     'yaml',
 ]
-
-# mock some things "by hand" to work around us importing stuff
-# in reader/_app/__init__.py, which means we can't import
-# reader._app.cli without pulling them in
-for name in ['humanize', 'flask', 'flask.signals', 'werkzeug.datastructures', 'yaml']:
-    sys.modules[name] = unittest.mock.Mock()
 
 master_doc = 'index'
 
