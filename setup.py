@@ -59,6 +59,8 @@ setup(
             # https://github.com/lemon24/reader/actions/runs/328943935
             'lxml; implementation_name != "pypy"',
             'html5lib',
+            # for parser tests
+            'werkzeug',
             # mypy is not working on pypy as of January 2020
             # https://github.com/python/typed_ast/issues/97#issuecomment-484335190
             # pinned temporarily to 0.790 for https://github.com/lemon24/reader/issues/213
