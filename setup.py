@@ -30,6 +30,11 @@ setup(
         # feedparser 6 already pulls in sgmllib3k
         'feedparser>=6',
         'requests>=2.18',
+        # http utils used by parser;
+        # any "recent" version should do (0.9 is from 2013);
+        # we may choose to vendor this later on,
+        # but we probably shouldn't, since it has no other dependencies
+        'werkzeug>=0.9',
     ],
     extras_require={
         'search': ['beautifulsoup4>=4.5'],
