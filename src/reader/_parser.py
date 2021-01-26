@@ -13,6 +13,7 @@ from typing import Any
 from typing import BinaryIO
 from typing import Callable
 from typing import ContextManager
+from typing import Dict
 from typing import Iterable
 from typing import Iterator
 from typing import List
@@ -214,6 +215,10 @@ class AwareParserType(ParserType, Protocol):
         pass
 
 
+def unparse_accept_header(values: Iterable[Tuple[str, float]]) -> str:
+    return MIMEAccept(values).to_header()
+
+
 class Parser:
 
     user_agent = (
@@ -222,7 +227,7 @@ class Parser:
 
     def __init__(self) -> None:
         self.retrievers: 'OrderedDict[str, RetriverType]' = OrderedDict()
-        self.parsers_by_mime_type: 'List[Tuple[MIMEAccept, ParserType]]' = []
+        self.parsers_by_mime_type: Dict[str, List[Tuple[float, ParserType]]] = {}
         self.session_hooks = SessionHooks()
 
     def mount_retriever(self, prefix: str, retriever: RetriverType) -> None:
@@ -240,23 +245,32 @@ class Parser:
     def get_parser_by_mime_type(
         self, mime_type: str
     ) -> Optional[ParserType]:  # pragma: no cover
-        for accept, parser in self.parsers_by_mime_type:
-            if accept.best_match([mime_type]):
-                return parser
+        parsers = self.parsers_by_mime_type.get(mime_type, ())
+        if not parsers:
+            parsers = self.parsers_by_mime_type.get('*/*', ())
+        if parsers:
+            return parsers[-1][1]
         return None
 
     def mount_parser_by_mime_type(
         self, parser: ParserType, accept_header: Optional[str] = None
     ) -> None:  # pragma: no cover
-        if accept_header:
-            accept = parse_accept_header(accept_header, MIMEAccept)
-        else:
+        if not accept_header:
             if not isinstance(parser, AwareParserType):
                 raise TypeError("unaware parser type with no accept_header given")
-            accept = parse_accept_header(parser.accept_header, MIMEAccept)
+            accept_header = parser.accept_header
 
-        parsers = self.parsers_by_mime_type
-        parsers.append((accept, parser))
+        for mime_type, quality in parse_accept_header(accept_header):
+            if not quality:
+                continue
+
+            parsers = self.parsers_by_mime_type.setdefault(mime_type, [])
+
+            existing_qualities = sorted(
+                (q, i) for i, (q, _) in enumerate(parsers) if q > quality
+            )
+            index = existing_qualities[0][1] if existing_qualities else 0
+            parsers.insert(index, (quality, parser))
 
     def __call__(
         self,
@@ -270,11 +284,11 @@ class Parser:
 
         http_accept: Optional[str]
         if not parser:
-            http_accept = MIMEAccept(
-                mime_type
-                for accept, _ in self.parsers_by_mime_type
-                for mime_type in accept
-            ).to_header()
+            http_accept = unparse_accept_header(
+                (mime_type, quality)
+                for mime_type, parsers in self.parsers_by_mime_type.items()
+                for quality, _ in parsers
+            )
         else:
             # URL parsers get the default session / requests Accept (*/*);
             # later, we may use parser.accept_header, if it exists, but YAGNI

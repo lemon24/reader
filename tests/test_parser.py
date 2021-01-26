@@ -12,6 +12,7 @@ from reader import Feed
 from reader._parser import default_parser
 from reader._parser import feedparser_parse
 from reader._parser import FileRetriever
+from reader._parser import Parser
 from reader._parser import RetrieveResult
 from reader._parser import SessionWrapper
 from reader.exceptions import _NotModified
@@ -764,6 +765,27 @@ def test_normalize_url_errors(monkeypatch, reload_module, os_name, url, reason):
     reload_module.undo()
 
     assert reason in str(excinfo.value)
+
+
+def test_parser_mount_order():
+    p = Parser()
+    p.mount_parser_by_mime_type('P0', 'one/two;q=0.0')
+    p.mount_parser_by_mime_type('P1', 'one/two')
+    p.mount_parser_by_mime_type('P2', 'one/two;q=0.1')
+    p.mount_parser_by_mime_type('P3', 'one/two;q=0.1')
+    p.mount_parser_by_mime_type('P4', 'one/two;q=0.4')
+    p.mount_parser_by_mime_type('P5', 'one/two;q=0.5')
+    p.mount_parser_by_mime_type('P6', 'one/two;q=0.3')
+    assert p.parsers_by_mime_type == {
+        'one/two': [
+            (0.1, 'P2'),
+            (0.1, 'P3'),
+            (0.3, 'P6'),
+            (0.4, 'P4'),
+            (0.5, 'P5'),
+            (1, 'P1'),
+        ]
+    }
 
 
 # FIXME: test no mimetype (#205)
