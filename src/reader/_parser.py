@@ -196,7 +196,7 @@ class RetrieveResult(NamedTuple):
 
 
 RetriverType = Callable[
-    [str, Optional[str], Optional[str]], ContextManager[RetrieveResult]
+    [str, Optional[str], Optional[str], Optional[str]], ContextManager[RetrieveResult]
 ]
 
 
@@ -237,16 +237,6 @@ class Parser:
                 return retriever
         raise ParseError(url, message="no retriever for URL")
 
-    def get_parser(
-        self, url: str, mime_type: Optional[str]
-    ) -> ParserType:  # pragma: no cover
-        if not mime_type:
-            raise TypeError("mime_type currently required")
-        parser = self.get_parser_by_mime_type(mime_type)
-        if not parser:
-            raise ParseError(url, message=f"no parser for MIME type {mime_type!r}")
-        return parser
-
     def get_parser_by_mime_type(
         self, mime_type: str
     ) -> Optional[ParserType]:  # pragma: no cover
@@ -266,7 +256,6 @@ class Parser:
             accept = parse_accept_header(parser.accept_header, MIMEAccept)
 
         parsers = self.parsers_by_mime_type
-        # TODO: maybe have some logic so non-wildcard are always before wildcard
         parsers.append((accept, parser))
 
     def __call__(
@@ -275,30 +264,57 @@ class Parser:
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
     ) -> ParsedFeed:
+
+        # FIXME: URL parser selection goes here
+        parser: Optional[ParserType] = None
+
+        http_accept: Optional[str]
+        if not parser:
+            http_accept = MIMEAccept(
+                mime_type
+                for accept, _ in self.parsers_by_mime_type
+                for mime_type in accept
+            ).to_header()
+        else:
+            # URL parsers get the default session / requests Accept (*/*);
+            # later, we may use parser.accept_header, if it exists, but YAGNI
+            http_accept = None
+
         retriever = self.get_retriever(url)
-        with retriever(url, http_etag, http_last_modified) as result:
-            mime_type = result.mime_type
-            if not mime_type:
-                mime_type, _ = mimetypes.guess_type(url)
-            # FIXME: at this point mime_type might still be none, we should have a way to fall back to something
-            parser = self.get_parser(url, mime_type)
+
+        with retriever(url, http_etag, http_last_modified, http_accept) as result:
+            if not parser:
+                mime_type = result.mime_type
+                if not mime_type:
+                    mime_type, _ = mimetypes.guess_type(url)
+
+                # https://tools.ietf.org/html/rfc7231#section-3.1.1.5
+                #
+                # > If a Content-Type header field is not present, the recipient
+                # > MAY either assume a media type of "application/octet-stream"
+                # > ([RFC2046], Section 4.5.1) or examine the data to determine its type.
+                #
+                if not mime_type:
+                    mime_type = 'application/octet-stream'
+
+                parser = self.get_parser_by_mime_type(mime_type)
+                if not parser:
+                    raise ParseError(
+                        url, message=f"no parser for MIME type {mime_type!r}"
+                    )
+
             feed, entries = parser(
                 url,
                 result.file,
                 result.headers,
             )
+
         return ParsedFeed(feed, entries, result.http_etag, result.http_last_modified)
 
     def make_session(self) -> SessionWrapper:
         session = SessionWrapper(hooks=self.session_hooks.copy())
-
-        session.session.headers['Accept'] = MIMEAccept(
-            mime_type for accept, _ in self.parsers_by_mime_type for mime_type in accept
-        ).to_header()
-
         if self.user_agent:
             session.session.headers['User-Agent'] = self.user_agent
-
         return session
 
 
@@ -488,6 +504,8 @@ def caching_get(
     headers = dict(kwargs.pop('headers', {}))
     if http_etag:
         headers.setdefault('If-None-Match', http_etag)
+        # https://tools.ietf.org/html/rfc3229#section-10.5.3
+        headers.setdefault('A-IM', 'feed')
     if http_last_modified:
         headers.setdefault('If-Modified-Since', http_last_modified)
 
@@ -510,8 +528,7 @@ def caching_get(
 @dataclass
 class HTTPRetriever:
 
-    """
-    http(s):// parser that uses Requests.
+    """http(s):// retriever that uses Requests.
 
     Following the implementation in:
     https://github.com/kurtmckee/feedparser/blob/develop/feedparser/http.py
@@ -531,6 +548,8 @@ class HTTPRetriever:
     * Accept (feedparser.(html.)ACCEPT_HEADER)
     * A-IM ("feed")
 
+    NOTE: This is a very old docstring, header setting is spread in multiple places
+
     """
 
     make_session: _MakeSession
@@ -541,8 +560,11 @@ class HTTPRetriever:
         url: str,
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
+        http_accept: Optional[str] = None,
     ) -> Iterator[RetrieveResult]:
-        request_headers = {'A-IM': 'feed'}
+        request_headers = {}
+        if http_accept:
+            request_headers['Accept'] = http_accept
 
         # TODO: maybe share the session in the parser?
         # TODO: timeouts!
