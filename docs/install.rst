@@ -17,7 +17,6 @@ These packages will be installed automatically when installing *reader*:
 * `requests`_ retrieves feeds from the internet;
   it replaces feedparser's default use of :mod:`urllib`
   to make it easier to write plugins.
-* `werkzeug`_ provides HTTP utilities.
 
 *reader* also depends on the :mod:`sqlite3` standard library module
 (at least SQLite 3.15), and on the `JSON1`_ SQLite extension.
@@ -57,7 +56,6 @@ As of version |version|, *reader* has the following extras:
 
 .. _feedparser: https://pythonhosted.org/feedparser/
 .. _requests: https://requests.readthedocs.io
-.. _werkzeug: https://werkzeug.palletsprojects.com
 .. _JSON1: https://www.sqlite.org/json1.html
 .. _FTS5: https://www.sqlite.org/fts5.html
 
