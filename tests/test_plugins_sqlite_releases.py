@@ -7,9 +7,13 @@ from reader._plugins.sqlite_releases import init
 def test_sqlite_releases(reader, requests_mock, data_dir):
     init(reader)
 
+    # we're not using .read_binary() because it messes with line endings on windows
+    with open(str(data_dir.join('sqlite_releases.html')), 'rb') as f:
+        content = f.read()
+
     requests_mock.get(
         FULL_URL,
-        content=data_dir.join('sqlite_releases.html').read_binary(),
+        content=content,
         headers={
             "Last-Modified": "Thu, 21 Jan 2021 01:23:58 +0000",
             "ETag": "m6008d7aes58501",
