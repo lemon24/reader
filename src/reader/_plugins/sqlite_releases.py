@@ -29,11 +29,9 @@ from urllib.parse import urlunparse
 
 import bs4
 
-from reader._parser import caching_get
 from reader._parser import wrap_exceptions
 from reader._types import EntryData
 from reader._types import FeedData
-from reader._types import ParsedFeed
 
 warnings.filterwarnings(
     'ignore',
@@ -93,28 +91,16 @@ def make_feed(feed_url, url, soup):
     return FeedData(url=feed_url, title=soup.title and soup.title.text, link=url)
 
 
-def make_parser(make_session):
-    def parse(url, http_etag=None, http_last_modified=None):
-        with make_session() as session:
-            with wrap_exceptions(url, "while getting feed"):
-                response, http_etag, http_last_modified = caching_get(
-                    session, FULL_URL, http_etag, http_last_modified, stream=True,
-                )
-
-            with wrap_exceptions(url, "while reading feed"), response:
-                soup = bs4.BeautifulSoup(response.raw)
-
-            with wrap_exceptions(url, "while parsing page"):
-                feed = make_feed(url, FULL_URL, soup)
-                entries = list(make_entries(url, FULL_URL, soup))
-                feed = feed._replace(updated=max(e.updated for e in entries))
-
-        return ParsedFeed(feed, entries, http_etag, http_last_modified)
-
-    return parse
+def parse(url, file, headers):
+    with wrap_exceptions(url, "while reading feed"):
+        soup = bs4.BeautifulSoup(file)
+    with wrap_exceptions(url, "while parsing page"):
+        feed = make_feed(url, FULL_URL, soup)
+        entries = list(make_entries(url, FULL_URL, soup))
+        feed = feed._replace(updated=max(e.updated for e in entries))
+    return feed, entries
 
 
 def init(reader):
-    parser = make_parser(reader._parser.make_session)
     for url in URLS:
-        reader._parser.mount_parser(url, parser)
+        reader._parser.mount_parser_by_url(url, parse)

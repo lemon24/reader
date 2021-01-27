@@ -225,6 +225,7 @@ class Parser:
     def __init__(self) -> None:
         self.retrievers: 'OrderedDict[str, RetrieverType]' = OrderedDict()
         self.parsers_by_mime_type: Dict[str, List[Tuple[float, ParserType]]] = {}
+        self.parsers_by_url: Dict[str, ParserType] = {}
         self.session_hooks = SessionHooks()
 
     def mount_retriever(self, prefix: str, retriever: RetrieverType) -> None:
@@ -267,15 +268,20 @@ class Parser:
             index = existing_qualities[0][1] if existing_qualities else 0
             parsers.insert(index, (quality, parser))
 
+    def get_parser_by_url(self, url: str) -> Optional[ParserType]:
+        # we might change this to have some smarter matching, but YAGNI
+        return self.parsers_by_url.get(url)
+
+    def mount_parser_by_url(self, url: str, parser: ParserType) -> None:
+        self.parsers_by_url[url] = parser
+
     def __call__(
         self,
         url: str,
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
     ) -> ParsedFeed:
-
-        # FIXME: URL parser selection goes here
-        parser: Optional[ParserType] = None
+        parser = self.get_parser_by_url(url)
 
         http_accept: Optional[str]
         if not parser:
