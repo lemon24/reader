@@ -158,7 +158,8 @@ def _process_feed(
 class FeedparserParser:
 
     # Everything *except* the wildcard, which gets added back explicitly later on.
-    accept_header = feedparser.http.ACCEPT_HEADER.partition(',*/*')[0]
+    # TODO: use parse_accept_header...
+    http_accept = feedparser.http.ACCEPT_HEADER.partition(',*/*')[0]
 
     def __call__(
         self,
@@ -196,7 +197,7 @@ class RetrieveResult(NamedTuple):
     headers: Optional[Mapping[str, str]] = None
 
 
-RetriverType = Callable[
+RetrieverType = Callable[
     [str, Optional[str], Optional[str], Optional[str]], ContextManager[RetrieveResult]
 ]
 
@@ -211,7 +212,7 @@ class ParserType(Protocol):
 @runtime_checkable
 class AwareParserType(ParserType, Protocol):
     @property
-    def accept_header(self) -> str:  # pragma: no cover
+    def http_accept(self) -> str:  # pragma: no cover
         pass
 
 
@@ -222,25 +223,23 @@ class Parser:
     )
 
     def __init__(self) -> None:
-        self.retrievers: 'OrderedDict[str, RetriverType]' = OrderedDict()
+        self.retrievers: 'OrderedDict[str, RetrieverType]' = OrderedDict()
         self.parsers_by_mime_type: Dict[str, List[Tuple[float, ParserType]]] = {}
         self.session_hooks = SessionHooks()
 
-    def mount_retriever(self, prefix: str, retriever: RetriverType) -> None:
+    def mount_retriever(self, prefix: str, retriever: RetrieverType) -> None:
         self.retrievers[prefix] = retriever
         keys_to_move = [k for k in self.retrievers if len(k) < len(prefix)]
         for key in keys_to_move:
             self.retrievers[key] = self.retrievers.pop(key)
 
-    def get_retriever(self, url: str) -> RetriverType:
+    def get_retriever(self, url: str) -> RetrieverType:
         for prefix, retriever in self.retrievers.items():
             if url.lower().startswith(prefix.lower()):
                 return retriever
         raise ParseError(url, message="no retriever for URL")
 
-    def get_parser_by_mime_type(
-        self, mime_type: str
-    ) -> Optional[ParserType]:  # pragma: no cover
+    def get_parser_by_mime_type(self, mime_type: str) -> Optional[ParserType]:
         parsers = self.parsers_by_mime_type.get(mime_type, ())
         if not parsers:
             parsers = self.parsers_by_mime_type.get('*/*', ())
@@ -249,14 +248,14 @@ class Parser:
         return None
 
     def mount_parser_by_mime_type(
-        self, parser: ParserType, accept_header: Optional[str] = None
-    ) -> None:  # pragma: no cover
-        if not accept_header:
+        self, parser: ParserType, http_accept: Optional[str] = None
+    ) -> None:
+        if not http_accept:
             if not isinstance(parser, AwareParserType):
-                raise TypeError("unaware parser type with no accept_header given")
-            accept_header = parser.accept_header
+                raise TypeError("unaware parser type with no http_accept given")
+            http_accept = parser.http_accept
 
-        for mime_type, quality in parse_accept_header(accept_header):
+        for mime_type, quality in parse_accept_header(http_accept):
             if not quality:
                 continue
 
@@ -287,7 +286,7 @@ class Parser:
             )
         else:
             # URL parsers get the default session / requests Accept (*/*);
-            # later, we may use parser.accept_header, if it exists, but YAGNI
+            # later, we may use parser.http_accept, if it exists, but YAGNI
             http_accept = None
 
         retriever = self.get_retriever(url)
@@ -599,9 +598,9 @@ class HTTPRetriever:
 
             content_type = response_headers.get('content-type')
             mime_type: Optional[str]
-            if content_type:  # pragma: no cover
+            if content_type:
                 mime_type, _ = parse_options_header(content_type)
-            else:  # pragma: no cover
+            else:
                 mime_type = None
 
             with wrap_exceptions(url, "while reading feed"), response:

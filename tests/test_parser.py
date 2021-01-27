@@ -558,41 +558,6 @@ def test_default_response_headers(
     assert mock.call_args[1]['response_headers']['Content-Location'] == feed_url
 
 
-def test_retrievers(parse, monkeypatch):
-    parse.retrievers.clear()
-    parse.parsers_by_mime_type.clear()
-
-    def make_retriever(name):
-        @contextmanager
-        def retriever(*args):
-            yield RetrieveResult(name, 'type/subtype', *args[1:])
-
-        return retriever
-
-    def parser(url, file, headers):
-        return file, url
-
-    parse.mount_retriever('http://', make_retriever('generic'))
-    parse.mount_retriever('http://specific.com', make_retriever('specific'))
-    parse.mount_parser_by_mime_type(parser, '*/*')
-
-    assert parse('http://generic.com/', 'etag', None) == (
-        'generic',
-        'http://generic.com/',
-        'etag',
-        None,
-    )
-    assert parse('http://specific.com/', None, 'last_modified') == (
-        'specific',
-        'http://specific.com/',
-        None,
-        'last_modified',
-    )
-
-    with pytest.raises(ParseError):
-        parse('file:unknown')
-
-
 @pytest.mark.parametrize('scheme', ['', 'file:', 'file:///', 'file://localhost/'])
 @pytest.mark.parametrize('relative', [False, True])
 def test_feed_root_empty(data_dir, scheme, relative):
@@ -768,15 +733,15 @@ def test_normalize_url_errors(monkeypatch, reload_module, os_name, url, reason):
 
 
 def test_parser_mount_order():
-    p = Parser()
-    p.mount_parser_by_mime_type('P0', 'one/two;q=0.0')
-    p.mount_parser_by_mime_type('P1', 'one/two')
-    p.mount_parser_by_mime_type('P2', 'one/two;q=0.1')
-    p.mount_parser_by_mime_type('P3', 'one/two;q=0.1')
-    p.mount_parser_by_mime_type('P4', 'one/two;q=0.4')
-    p.mount_parser_by_mime_type('P5', 'one/two;q=0.5')
-    p.mount_parser_by_mime_type('P6', 'one/two;q=0.3')
-    assert p.parsers_by_mime_type == {
+    parse = Parser()
+    parse.mount_parser_by_mime_type('P0', 'one/two;q=0.0')
+    parse.mount_parser_by_mime_type('P1', 'one/two')
+    parse.mount_parser_by_mime_type('P2', 'one/two;q=0.1')
+    parse.mount_parser_by_mime_type('P3', 'one/two;q=0.1')
+    parse.mount_parser_by_mime_type('P4', 'one/two;q=0.4')
+    parse.mount_parser_by_mime_type('P5', 'one/two;q=0.5')
+    parse.mount_parser_by_mime_type('P6', 'one/two;q=0.3')
+    assert parse.parsers_by_mime_type == {
         'one/two': [
             (0.1, 'P2'),
             (0.1, 'P3'),
@@ -788,4 +753,111 @@ def test_parser_mount_order():
     }
 
 
-# FIXME: test no mimetype (#205)
+def make_dummy_retriever(name, mime_type='type/subtype', headers=None):
+    @contextmanager
+    def retriever(url, http_etag, http_last_modified, http_accept):
+        retriever.last_http_accept = http_accept
+        yield RetrieveResult(name, mime_type, http_etag, http_last_modified, headers)
+
+    return retriever
+
+
+def make_dummy_parser(prefix='', http_accept=None):
+    def parser(url, file, headers):
+        parser.last_headers = headers
+        return prefix + file, url
+
+    if http_accept:
+        parser.http_accept = http_accept
+
+    return parser
+
+
+def test_parser_selection():
+    parse = Parser()
+
+    http_retriever = make_dummy_retriever('http', 'type/http', 'headers')
+    parse.mount_retriever('http:', http_retriever)
+    file_retriever = make_dummy_retriever('file', 'type/file')
+    parse.mount_retriever('file:', file_retriever)
+    nomt_retriever = make_dummy_retriever('nomt', None)
+    parse.mount_retriever('nomt:', nomt_retriever)
+    parse.mount_retriever('unkn:', make_dummy_retriever('unkn', 'type/unknown'))
+
+    http_parser = make_dummy_parser('httpp-', 'type/http')
+    parse.mount_parser_by_mime_type(http_parser)
+    assert parse('http:one', 'etag', None) == (
+        'httpp-http',
+        'http:one',
+        'etag',
+        None,
+    )
+    assert http_retriever.last_http_accept == 'type/http'
+    assert http_parser.last_headers == 'headers'
+
+    with pytest.raises(ParseError) as excinfo:
+        parse('file:one', None, 'last-modified')
+    assert excinfo.value.url == 'file:one'
+    assert 'no parser for MIME type' in excinfo.value.message
+    assert 'type/file' in excinfo.value.message
+
+    file_parser = make_dummy_parser('filep-')
+    parse.mount_parser_by_mime_type(file_parser, 'type/file, text/plain;q=0.8')
+    assert parse('file:one', None, 'last-modified') == (
+        'filep-file',
+        'file:one',
+        None,
+        'last-modified',
+    )
+    assert file_retriever.last_http_accept == 'type/http,type/file,text/plain;q=0.8'
+    assert file_parser.last_headers is None
+
+    with pytest.raises(ParseError) as excinfo:
+        parse('nomt:one', None, None)
+    assert excinfo.value.url == 'nomt:one'
+    assert 'no parser for MIME type' in excinfo.value.message
+    assert 'application/octet-stream' in excinfo.value.message
+
+    with pytest.raises(ParseError) as excinfo:
+        parse('nomt:one.html', None, None)
+    assert excinfo.value.url == 'nomt:one.html'
+    assert 'no parser for MIME type' in excinfo.value.message
+    assert 'text/html' in excinfo.value.message
+
+    with pytest.raises(ParseError) as excinfo:
+        parse('unkn:one', None, None)
+    assert excinfo.value.url == 'unkn:one'
+    assert 'no parser for MIME type' in excinfo.value.message
+    assert 'type/unknown' in excinfo.value.message
+
+    parse.mount_parser_by_mime_type(make_dummy_parser('fallbackp-'), '*/*')
+    assert parse('nomt:one', None, None) == ('fallbackp-nomt', 'nomt:one', None, None)
+    assert parse('unkn:one', None, None) == ('fallbackp-unkn', 'unkn:one', None, None)
+
+    assert nomt_retriever.last_http_accept == 'type/http,type/file,*/*,text/plain;q=0.8'
+
+
+def test_retriever_selection():
+    parse = Parser()
+
+    parse.mount_retriever('http://', make_dummy_retriever('generic'))
+    parse.mount_retriever('http://specific.com', make_dummy_retriever('specific'))
+    parse.mount_parser_by_mime_type(make_dummy_parser(), '*/*')
+
+    assert parse('http://generic.com/', 'etag', None) == (
+        'generic',
+        'http://generic.com/',
+        'etag',
+        None,
+    )
+    assert parse('http://specific.com/', None, 'last-modified') == (
+        'specific',
+        'http://specific.com/',
+        None,
+        'last-modified',
+    )
+
+    with pytest.raises(ParseError) as excinfo:
+        parse('file:unknown')
+    assert excinfo.value.url == 'file:unknown'
+    assert 'no retriever' in excinfo.value.message
