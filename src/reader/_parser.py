@@ -216,6 +216,11 @@ class AwareParserType(ParserType, Protocol):
         pass
 
 
+def normalize_url(url: str) -> str:
+    # TODO: maybe normalize path as well?
+    return urllib.parse.urlunparse(urllib.parse.urlparse(url))
+
+
 class Parser:
 
     user_agent = (
@@ -270,9 +275,11 @@ class Parser:
 
     def get_parser_by_url(self, url: str) -> Optional[ParserType]:
         # we might change this to have some smarter matching, but YAGNI
+        url = normalize_url(url)
         return self.parsers_by_url.get(url)
 
     def mount_parser_by_url(self, url: str, parser: ParserType) -> None:
+        url = normalize_url(url)
         self.parsers_by_url[url] = parser
 
     def __call__(

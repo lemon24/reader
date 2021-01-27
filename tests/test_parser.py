@@ -795,6 +795,11 @@ def test_parser_selection():
     assert http_retriever.last_http_accept == 'type/http'
     assert http_parser.last_headers == 'headers'
 
+    # this should not get in the way of anything else;
+    # it's mounted with "o" to check we do exact match, and not prefix match
+    url_parser = make_dummy_parser('urlp-')
+    parse.mount_parser_by_url('file:o', url_parser)
+
     with pytest.raises(ParseError) as excinfo:
         parse('file:one', None, 'last-modified')
     assert excinfo.value.url == 'file:one'
@@ -813,28 +818,35 @@ def test_parser_selection():
     assert file_parser.last_headers is None
 
     with pytest.raises(ParseError) as excinfo:
-        parse('nomt:one', None, None)
+        parse('nomt:one')
     assert excinfo.value.url == 'nomt:one'
     assert 'no parser for MIME type' in excinfo.value.message
     assert 'application/octet-stream' in excinfo.value.message
 
     with pytest.raises(ParseError) as excinfo:
-        parse('nomt:one.html', None, None)
+        parse('nomt:one.html')
     assert excinfo.value.url == 'nomt:one.html'
     assert 'no parser for MIME type' in excinfo.value.message
     assert 'text/html' in excinfo.value.message
 
     with pytest.raises(ParseError) as excinfo:
-        parse('unkn:one', None, None)
+        parse('unkn:one')
     assert excinfo.value.url == 'unkn:one'
     assert 'no parser for MIME type' in excinfo.value.message
     assert 'type/unknown' in excinfo.value.message
 
-    parse.mount_parser_by_mime_type(make_dummy_parser('fallbackp-'), '*/*')
-    assert parse('nomt:one', None, None) == ('fallbackp-nomt', 'nomt:one', None, None)
-    assert parse('unkn:one', None, None) == ('fallbackp-unkn', 'unkn:one', None, None)
+    with pytest.raises(TypeError) as excinfo:
+        parse.mount_parser_by_mime_type(make_dummy_parser('fallbackp-'))
+    assert "unaware parser" in str(excinfo.value)
 
+    parse.mount_parser_by_mime_type(make_dummy_parser('fallbackp-'), '*/*')
+    assert parse('nomt:one') == ('fallbackp-nomt', 'nomt:one', None, None)
+    assert parse('unkn:one') == ('fallbackp-unkn', 'unkn:one', None, None)
     assert nomt_retriever.last_http_accept == 'type/http,type/file,*/*,text/plain;q=0.8'
+
+    assert parse('file:o') == ('urlp-file', 'file:o', None, None)
+    assert file_retriever.last_http_accept is None
+    assert parse('file:///o') == ('urlp-file', 'file:///o', None, None)
 
 
 def test_retriever_selection():
