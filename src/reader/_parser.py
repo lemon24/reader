@@ -2,10 +2,7 @@ import calendar
 import json
 import logging
 import mimetypes
-import os.path
 import time
-import urllib.parse
-import urllib.request
 from collections import OrderedDict
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -43,6 +40,10 @@ from ._requests_utils import SessionWrapper
 from ._types import EntryData
 from ._types import FeedData
 from ._types import ParsedFeed
+from ._url_utils import extract_path
+from ._url_utils import is_windows_device_file
+from ._url_utils import normalize_url
+from ._url_utils import resolve_root
 from .exceptions import _NotModified
 from .exceptions import ParseError
 from .types import Content
@@ -383,11 +384,6 @@ class AwareParserType(ParserType, Protocol):
         pass
 
 
-def normalize_url(url: str) -> str:
-    # TODO: maybe normalize path as well?
-    return urllib.parse.urlunparse(urllib.parse.urlparse(url))
-
-
 class Parser:
 
     user_agent = (
@@ -547,134 +543,12 @@ class FileRetriever:
                 yield RetrieveResult(file)
 
     def _normalize_url(self, url: str) -> str:
-        path = _extract_path(url)
+        path = extract_path(url)
         if self.feed_root:
-            path = _resolve_root(self.feed_root, path)
-            if _is_windows_device_file(path):
+            path = resolve_root(self.feed_root, path)
+            if is_windows_device_file(path):
                 raise ValueError("path must not be a device file")
         return path
-
-
-def _extract_path(url: str) -> str:
-    """Transform a file URI or a path to a path."""
-
-    url_parsed = urllib.parse.urlparse(url)
-
-    if url_parsed.scheme == 'file':
-        if url_parsed.netloc not in ('', 'localhost'):
-            raise ValueError("unknown authority for file URI")
-        # TODO: maybe disallow query, params, fragment too, to reserve for future uses
-
-        return urllib.request.url2pathname(url_parsed.path)
-
-    if url_parsed.scheme:
-        # on Windows, drive is the drive letter or UNC \\host\share;
-        # on POSIX, drive is always empty
-        drive, _ = os.path.splitdrive(url)
-
-        if not drive:
-            # should end up as the same type as "no parsers were found", maybe
-            raise ValueError("unknown scheme for file URI")
-
-        # we have a scheme, but we're on Windows and url looks like a path
-        return url
-
-    # no scheme, treat as a path
-    return url
-
-
-def _is_abs_path(path: str) -> bool:
-    """Return True if path is an absolute pathname.
-
-    Unlike os.path.isabs(), return False on Windows if there's no drive
-    (e.g. "\\path").
-
-    """
-    is_abs = os.path.isabs(path)
-    has_drive = os.name != 'nt' or os.path.splitdrive(path)[0]
-    return all([is_abs, has_drive])
-
-
-def _is_rel_path(path: str) -> bool:
-    """Return True if path is a relative pathname.
-
-    Unlike "not os.path.isabs()", return False on windows if there's a drive
-    (e.g. "C:path").
-
-    """
-    is_abs = os.path.isabs(path)
-    has_drive = os.name == 'nt' and os.path.splitdrive(path)[0]
-    return not any([is_abs, has_drive])
-
-
-def _resolve_root(root: str, path: str) -> str:
-    """Resolve a path relative to a root, and normalize the result.
-
-    This is a path computation, there's no checks perfomed on the arguments.
-
-    It works like os.normcase(os.path.normpath(os.path.join(root, path))),
-    but with additional restrictions:
-
-    * root must be absolute.
-    * path must be relative.
-    * Directory traversal above the root is not allowed;
-      https://en.wikipedia.org/wiki/Directory_traversal_attack
-
-    Symlinks are allowed, as long as they're under the root.
-
-    Note that the '..' components are collapsed with no regard for symlinks.
-
-    """
-
-    # this implementation is based on the requirements / notes in
-    # https://github.com/lemon24/reader/issues/155#issuecomment-672324186
-
-    if not _is_abs_path(root):
-        raise ValueError(f"root must be absolute: {root!r}")
-    if not _is_rel_path(path):
-        raise ValueError(f"path must be relative: {path!r}")
-
-    root = os.path.normcase(os.path.normpath(root))
-
-    # we normalize the path **before** symlinks are resolved;
-    # i.e. it behaves as realpath -L (logical), not realpath -P (physical).
-    # https://docs.python.org/3/library/os.path.html#os.path.normpath
-    # https://stackoverflow.com/questions/34865153/os-path-normpath-and-symbolic-links
-    path = os.path.normcase(os.path.normpath(os.path.join(root, path)))
-
-    # this means we support symlinks, as long as they're under the root
-    # (the target itself may be outside).
-
-    # if we want to prevent symlink targets outside root,
-    # we should do it here.
-
-    if not path.startswith(root):
-        raise ValueError(f"path cannot be outside root: {path!r}")
-
-    return path
-
-
-# from https://github.com/pallets/werkzeug/blob/b45ac05b7feb30d4611d6b754bd94334ece4b1cd/src/werkzeug/utils.py#L40
-_windows_device_files = (
-    "CON",
-    "AUX",
-    "COM1",
-    "COM2",
-    "COM3",
-    "COM4",
-    "LPT1",
-    "LPT2",
-    "LPT3",
-    "PRN",
-    "NUL",
-)
-
-
-def _is_windows_device_file(path: str) -> bool:
-    if os.name != 'nt':
-        return False
-    filename = os.path.basename(os.path.normpath(path)).upper()
-    return filename in _windows_device_files
 
 
 class _MakeSession(Protocol):
