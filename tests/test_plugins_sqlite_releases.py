@@ -34,34 +34,36 @@ def test_sqlite_releases(reader, requests_mock, data_dir):
     assert feed_for_update.http_last_modified == 'Thu, 21 Jan 2021 01:23:58 +0000'
 
     entries = list(reader.get_entries())
-    entry_data = [(e.id, e.updated, e.title, e.link, e.summary) for e in entries]
+    entry_data = [
+        (e.id, e.updated, e.title, e.link, e.summary.strip()) for e in entries
+    ]
     assert entry_data == [
         (
             '2021-01-20 (3.34.1)',
             datetime(2021, 1, 20, 0, 0),
             '2021-01-20 (3.34.1)',
             'https://www.sqlite.org/changes.html#version_3_34_1',
-            '<p></p><ol class="lessindent">\n<li>Fix a potential use-after-free bug.\n</li></ol>\n',
+            'Fix a potential use-after-free bug.',
         ),
         (
             '2020-12-01 (3.34.0)',
             datetime(2020, 12, 1, 0, 0),
             '2020-12-01 (3.34.0)',
             'https://www.sqlite.org/changes.html#version_3_34_0',
-            '<p>\nAdded the <a href="c3ref/txn_state.html">sqlite3_txn_state()</a> interface.\n</p>\n',
+            '<p>\nAdded the <a href="c3ref/txn_state.html">sqlite3_txn_state()</a> interface.\n</p>',
         ),
         (
             '2000-05-30',
             datetime(2000, 5, 30, 0, 0),
             '2000-05-30',
             'https://www.sqlite.org/changes.html',
-            '\nAdded the <b>LIKE</b> operator.\n',
+            'Added the <b>LIKE</b> operator.',
         ),
         (
             '2000-05-29',
             datetime(2000, 5, 29, 0, 0),
             '2000-05-29',
             'https://www.sqlite.org/changes.html',
-            '\nInitial Public Release of Alpha code\n\n\n',
+            'Initial Public Release of Alpha code',
         ),
     ]
