@@ -1,4 +1,5 @@
 import calendar
+import json
 import logging
 import mimetypes
 import os.path
@@ -9,6 +10,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
+from datetime import timezone
 from typing import Any
 from typing import BinaryIO
 from typing import Callable
@@ -23,6 +25,7 @@ from typing import Optional
 from typing import Tuple
 
 import feedparser  # type: ignore
+import iso8601
 import requests
 from typing_extensions import Protocol
 from typing_extensions import runtime_checkable
@@ -187,6 +190,149 @@ class FeedparserParser:
 
 # mainly for testing convenience
 feedparser_parse = FeedparserParser()
+
+
+def _dict_get(d, key, value_type):
+    value = d.get(key)
+    if value is not None:
+        if not isinstance(value, value_type):
+            # TODO: maybe warn?
+            return None
+    return value
+
+
+def _jsonfeed_author(d):
+    # from the spec:
+    #
+    # > JSON Feed version 1 specified a singular author field
+    # > instead of the authors array used in version 1.1.
+    # > New feeds should use authors, even if only 1 author is needed.
+    # > Existing feeds can include both author and authors
+    # > for compatibility with existing feed readers.
+    # > Feed readers should always prefer authors if present.
+
+    authors = _dict_get(d, 'authors', list)
+    if not authors:
+        author = _dict_get(d, 'author', dict)
+    else:
+        author = authors[0]
+    if not author:
+        return None
+
+    # we only have one for now, it'll be the first one
+    return (
+        _dict_get(author, 'name', str)
+        # fall back to the URL, at least until we have Feed.authors
+        or _dict_get(author, 'url', str)
+    )
+
+
+def _parse_jsonfeed_date(s):
+    return iso8601.parse_date(s).astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def _make_jsonfeed_entry(feed_url: str, d: Any, feed_lang: Optional[str]) -> EntryData:
+    updated_str = _dict_get(d, 'date_modified', str)
+    updated = _parse_jsonfeed_date(updated_str) if updated_str else None
+    published_str = _dict_get(d, 'date_published', str)
+    published = _parse_jsonfeed_date(published_str) if published_str else None
+
+    # from the spec:
+    #
+    # > That said, there is one thing we insist on:
+    # > any item without an id must be discarded.
+    #
+    # > If an id is presented as a number, a JSON Feed reader
+    # > should coerce it to a string.
+    # > If an id is blank or can’t be coerced to a valid string,
+    # > the item must be discarded.
+
+    id = _dict_get(d, 'id', (str, int, float))
+    if id is not None:
+        id = str(id).strip()
+    if not id:
+        # for now, we'll error out, like we do for feedparser;
+        # if we decide to skip, we should do it for *all of them* later
+        raise ParseError(feed_url, message="entry with no id")
+
+    lang = _dict_get(d, 'language', str) or feed_lang
+    content = []
+
+    content_html = _dict_get(d, 'content_html', str)
+    if content_html:
+        content.append(Content(content_html, 'text/html', lang))
+    content_text = _dict_get(d, 'content_text', str)
+    if content_text:
+        content.append(Content(content_text, 'text/plain', lang))
+
+    enclosures = []
+    for attd in _dict_get(d, 'attachments', list) or ():
+        if not isinstance(attd, dict):
+            continue
+        url = _dict_get(attd, 'url', str)
+        if not url:
+            continue
+        size_in_bytes = _dict_get(attd, 'size_in_bytes', (int, float))
+        if size_in_bytes is not None:
+            size_in_bytes = int(size_in_bytes)
+        enclosures.append(
+            Enclosure(url, _dict_get(attd, 'mime_type', str), size_in_bytes)
+        )
+
+    return EntryData(
+        feed_url=feed_url,
+        id=id,
+        updated=updated,
+        title=_dict_get(d, 'title', str),
+        link=_dict_get(d, 'url', str),
+        author=_jsonfeed_author(d),
+        published=published,
+        summary=_dict_get(d, 'summary', str),
+        content=tuple(content),
+        enclosures=tuple(enclosures),
+    )
+
+
+def _process_jsonfeed_feed(
+    url: str, d: Any
+) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
+    # FIXME: check version, maybe
+    # "version": "https://jsonfeed.org/version/1.1",
+    # "version": "https://jsonfeed.org/version/1",
+
+    feed = FeedData(
+        url=url,
+        updated=None,
+        title=_dict_get(d, 'title', str),
+        link=_dict_get(d, 'home_page_url', str),
+        author=_jsonfeed_author(d),
+    )
+    lang = _dict_get(d, 'language', str)
+
+    entry_dicts = _dict_get(d, 'items', list) or ()
+    entries = [_make_jsonfeed_entry(url, e, lang) for e in entry_dicts]
+
+    return feed, entries
+
+
+class JSONFeedParser:
+
+    """https://jsonfeed.org/version/1.1"""
+
+    http_accept = 'application/feed+json,application/json;q=0.9'
+
+    def __call__(
+        self,
+        url: str,
+        file: BinaryIO,
+        headers: Optional[Mapping[str, str]] = None,
+    ) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
+
+        # FIXME: catch exception
+        result = json.load(file)
+
+        # FIXME: catch valueerrors
+        return _process_jsonfeed_feed(url, result)
 
 
 class RetrieveResult(NamedTuple):
@@ -637,6 +783,7 @@ def default_parser(feed_root: Optional[str] = None) -> Parser:
         parser.mount_retriever('', FileRetriever(feed_root))
 
     parser.mount_parser_by_mime_type(feedparser_parse)
+    parser.mount_parser_by_mime_type(JSONFeedParser())
     # fall back to feedparser if there's no better match
     # (replicates feedparser's original behavior)
     parser.mount_parser_by_mime_type(feedparser_parse, '*/*;q=0.1')

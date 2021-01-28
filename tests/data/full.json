@@ -1,0 +1,65 @@
+{
+    "version": "https://jsonfeed.org/version/1.1",
+    "title": "My Example Feed",
+    "home_page_url": "https://example.org/",
+    "feed_url": "https://example.org/feed.json",
+    "authors": [
+        {
+            "name": "Joe",
+            "url": "mailto:joe@example.com"
+        },
+        {
+            "name": "Jane"
+        }
+    ],
+    "language": "en",
+    "items": [
+        {
+            "id": "2",
+            "title": "Title",
+            "content_text": "Content with no link",
+            "content_html": "Content with <a href=\"http://example.com/\">link</a>",
+            "summary": "A summary",
+            "date_published": "2020-01-02T14:00:00-07:00",
+            "date_modified": "2020-01-04T01:00:00+0100",
+            "url": "https://example.org/second-item",
+            "language": "de",
+            "authors": [
+                {
+                    "url": "mailto:joe@example.com"
+                }
+            ],
+            "attachments": [
+                {
+                    "url": "http://example.com/downloads/file.m4a",
+                    "mime_type": "audio/x-m4a",
+                    "size_in_bytes": 12345678,
+                    "duration_in_seconds": 1234
+                },
+                {
+                    "url": "http://example.com/downloads/another.mp3"
+                },
+                {
+                    "url": "",
+                    "mime_type": "audio/x-m4a",
+                    "size_in_bytes": 12345678,
+                    "duration_in_seconds": 1234
+                },
+                {
+                    "mime_type": "audio/x-m4a",
+                    "size_in_bytes": 12345678,
+                    "duration_in_seconds": 1234
+                }
+            ]
+        },
+        {
+            "id": "1",
+            "content_html": "<p>Hello, world!</p>",
+            "url": "https://example.org/initial-post",
+            "date_published": "2020-01-02T12:00:00Z",
+            "author": {
+                "name": "Jane"
+            }
+        }
+    ]
+}

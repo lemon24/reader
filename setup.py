@@ -30,6 +30,8 @@ setup(
         # feedparser 6 already pulls in sgmllib3k
         'feedparser>=6',
         'requests>=2.18',
+        # for JSON Feed date parsing
+        'iso8601',
     ],
     extras_require={
         'search': ['beautifulsoup4>=4.5'],

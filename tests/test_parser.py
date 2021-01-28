@@ -144,6 +144,13 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     assert entries == expected['entries']
 
 
+def test_parse_jsonfeed(monkeypatch, parse, make_url, data_dir):
+    # temp until all are done
+    feed_type = 'json'
+    data_file = 'full'
+    test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir)
+
+
 def test_feedparser_exceptions(monkeypatch, parse, data_dir):
     """parse() should reraise most feedparser exceptions."""
 
