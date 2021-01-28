@@ -14,6 +14,7 @@ from datetime import timezone
 from typing import Any
 from typing import BinaryIO
 from typing import Callable
+from typing import cast
 from typing import ContextManager
 from typing import Dict
 from typing import Iterable
@@ -23,9 +24,12 @@ from typing import Mapping
 from typing import NamedTuple
 from typing import Optional
 from typing import Tuple
+from typing import Type
+from typing import TypeVar
+from typing import Union
 
 import feedparser  # type: ignore
-import iso8601
+import iso8601  # type: ignore
 import requests
 from typing_extensions import Protocol
 from typing_extensions import runtime_checkable
@@ -188,15 +192,26 @@ class FeedparserParser:
         return _process_feed(url, result)
 
 
-def _dict_get(d, key, value_type):
+_T = TypeVar('_T')
+_U = TypeVar('_U')
+_V = TypeVar('_V')
+
+
+def _dict_get(
+    d: Any,
+    key: str,
+    value_type: Union[
+        Type[_T], Tuple[Type[_T], Type[_U]], Tuple[Type[_T], Type[_U], Type[_V]]
+    ],
+) -> Optional[Union[_T, _U, _V]]:
     value = d.get(key)
     if value is not None:
         if not isinstance(value, value_type):
             return None
-    return value
+    return cast(Union[_T, _U, _V], value)
 
 
-def _jsonfeed_author(d):
+def _jsonfeed_author(d: Any) -> Optional[str]:
     # from the spec:
     #
     # > JSON Feed version 1 specified a singular author field
@@ -206,11 +221,14 @@ def _jsonfeed_author(d):
     # > for compatibility with existing feed readers.
     # > Feed readers should always prefer authors if present.
 
-    authors = _dict_get(d, 'authors', list)
-    if not authors:
-        author = _dict_get(d, 'author', dict)
+    author: Optional[Dict[Any, Any]]
+    for maybe_author in _dict_get(d, 'authors', list) or ():
+        if isinstance(maybe_author, dict):
+            author = maybe_author
+            break
     else:
-        author = authors[0]
+        author = _dict_get(d, 'author', dict)
+
     if not author:
         return None
 
@@ -222,15 +240,18 @@ def _jsonfeed_author(d):
     )
 
 
-def _parse_jsonfeed_date(s):
+def _parse_jsonfeed_date(s: str) -> Optional[datetime]:
     try:
         dt = iso8601.parse_date(s)
     except iso8601.ParseError:
         return None
+    assert isinstance(dt, datetime)
     return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
-def _make_jsonfeed_entry(feed_url: str, d: Any, feed_lang: Optional[str]) -> EntryData:
+def _make_jsonfeed_entry(
+    feed_url: str, d: Any, feed_lang: Optional[str]
+) -> EntryData[Optional[datetime]]:
     updated_str = _dict_get(d, 'date_modified', str)
     updated = _parse_jsonfeed_date(updated_str) if updated_str else None
     published_str = _dict_get(d, 'date_published', str)

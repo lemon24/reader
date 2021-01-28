@@ -53,4 +53,10 @@ entries = [
         id='author empty list',
         updated=None,
     ),
+    EntryData(
+        feed_url=feed.url,
+        id='second author is good',
+        updated=None,
+        author='Jane',
+    ),
 ]
