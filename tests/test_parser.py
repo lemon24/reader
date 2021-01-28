@@ -70,8 +70,9 @@ def _make_http_url(requests_mock, **_):
             headers['Content-Type'] = 'application/atom+xml'
         elif feed_path.ext == '.json':
             headers['Content-Type'] = 'application/feed+json'
-
-        requests_mock.get(url, text=feed_path.read(), headers=headers)
+        with open(str(feed_path), 'rb') as f:
+            body = f.read()
+        requests_mock.get(url, content=body, headers=headers)
         return url
 
     return make_url
@@ -90,7 +91,9 @@ def _make_https_url(requests_mock, **_):
             headers['Content-Type'] = 'application/atom+xml'
         elif feed_path.ext == '.json':
             headers['Content-Type'] = 'application/feed+json'
-        requests_mock.get(url, text=feed_path.read(), headers=headers)
+        with open(str(feed_path), 'rb') as f:
+            body = f.read()
+        requests_mock.get(url, content=body, headers=headers)
         return url
 
     return make_url
@@ -107,12 +110,14 @@ def _make_http_gzip_url(requests_mock, **_):
         elif feed_path.ext == '.json':
             headers['Content-Type'] = 'application/feed+json'
         headers['Content-Encoding'] = 'gzip'
+        with open(str(feed_path), 'rb') as f:
+            body = f.read()
 
         import io, gzip
 
         compressed_file = io.BytesIO()
         gz = gzip.GzipFile(fileobj=compressed_file, mode='wb')
-        gz.write(feed_path.read_binary())
+        gz.write(body)
         gz.close()
 
         requests_mock.get(url, content=compressed_file.getvalue(), headers=headers)
@@ -124,7 +129,9 @@ def _make_http_gzip_url(requests_mock, **_):
 def _make_http_url_missing_content_type(requests_mock, **_):
     def make_url(feed_path):
         url = 'http://example.com/' + feed_path.basename
-        requests_mock.get(url, text=feed_path.read())
+        with open(str(feed_path), 'rb') as f:
+            body = f.read()
+        requests_mock.get(url, content=body)
         return url
 
     return make_url
