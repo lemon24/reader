@@ -1,0 +1,70 @@
+{
+    "version": "https://jsonfeed.org/version/1.1",
+    "title": ["not a string"],
+    "home_page_url": {"not": "a dict"},
+    "feed_url": {"not": "a dict"},
+    "authors": {"not": "a list"},
+    "language": {"bad": "language"},
+    "items": [
+        {
+            "id": "2",
+            "title": 1000,
+            "content_text": ["not a string"],
+            "content_html": true,
+            "summary": true,
+            "date_published": "not a date",
+            "date_modified": {},
+            "url": 1.2,
+            "language": true,
+            "authors": "not a list",
+            "attachments": [
+                {
+                    "url": "control",
+                    "duration_in_seconds": "no one cares"
+                },
+                {
+                    "url": "",
+                    "size_in_bytes": 12345678
+                },
+                {
+                    "mime_type": "audio/x-m4a",
+                    "size_in_bytes": 12345678
+                },
+                {
+                    "url": "float size",
+                    "size_in_bytes": 100.123456
+                },
+                {
+                    "url": "non-number size",
+                    "size_in_bytes": {}
+                },
+                "not a dict"
+            ]
+        },
+        {
+            "id": 3.1415,
+            "title": "float id",
+            "author": "not a dict"
+        },
+        {
+            "id": "author name",
+            "authors": [{"name": []}]
+        },
+        {
+            "id": "author url",
+            "authors": [{ "url": []}]
+        },
+        {
+            "id": "author name fallback",
+            "authors": [{"name": [], "url": "mailto:joe@example.com"}]
+        },
+        {
+            "id": "author empty dict",
+            "authors": [{}]
+        },
+        {
+            "id": "author empty list",
+            "authors": []
+        }
+    ]
+}

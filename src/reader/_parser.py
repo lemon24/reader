@@ -188,15 +188,10 @@ class FeedparserParser:
         return _process_feed(url, result)
 
 
-# mainly for testing convenience
-feedparser_parse = FeedparserParser()
-
-
 def _dict_get(d, key, value_type):
     value = d.get(key)
     if value is not None:
         if not isinstance(value, value_type):
-            # TODO: maybe warn?
             return None
     return value
 
@@ -228,7 +223,11 @@ def _jsonfeed_author(d):
 
 
 def _parse_jsonfeed_date(s):
-    return iso8601.parse_date(s).astimezone(timezone.utc).replace(tzinfo=None)
+    try:
+        dt = iso8601.parse_date(s)
+    except iso8601.ParseError:
+        return None
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def _make_jsonfeed_entry(feed_url: str, d: Any, feed_lang: Optional[str]) -> EntryData:
@@ -296,9 +295,9 @@ def _make_jsonfeed_entry(feed_url: str, d: Any, feed_lang: Optional[str]) -> Ent
 def _process_jsonfeed_feed(
     url: str, d: Any
 ) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
-    # FIXME: check version, maybe
-    # "version": "https://jsonfeed.org/version/1.1",
-    # "version": "https://jsonfeed.org/version/1",
+    version = _dict_get(d, 'version', str) or ''
+    if not version.lower().startswith('https://jsonfeed.org/version/'):
+        raise ParseError(url, "missing or bad JSON Feed version")
 
     feed = FeedData(
         url=url,
@@ -328,10 +327,11 @@ class JSONFeedParser:
         headers: Optional[Mapping[str, str]] = None,
     ) -> Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]:
 
-        # FIXME: catch exception
-        result = json.load(file)
+        try:
+            result = json.load(file)
+        except json.JSONDecodeError as e:
+            raise ParseError(url, "invalid JSON") from e
 
-        # FIXME: catch valueerrors
         return _process_jsonfeed_feed(url, result)
 
 
@@ -782,10 +782,11 @@ def default_parser(feed_root: Optional[str] = None) -> Parser:
         # empty string means catch-all
         parser.mount_retriever('', FileRetriever(feed_root))
 
-    parser.mount_parser_by_mime_type(feedparser_parse)
+    feedparser_parser = FeedparserParser()
+    parser.mount_parser_by_mime_type(feedparser_parser)
     parser.mount_parser_by_mime_type(JSONFeedParser())
     # fall back to feedparser if there's no better match
     # (replicates feedparser's original behavior)
-    parser.mount_parser_by_mime_type(feedparser_parse, '*/*;q=0.1')
+    parser.mount_parser_by_mime_type(feedparser_parser, '*/*;q=0.1')
 
     return parser

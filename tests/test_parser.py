@@ -1,4 +1,5 @@
 import io
+import json
 import logging
 from contextlib import contextmanager
 from unittest.mock import MagicMock
@@ -10,11 +11,13 @@ from utils import make_url_base
 
 from reader import Feed
 from reader._parser import default_parser
-from reader._parser import feedparser_parse
+from reader._parser import FeedparserParser
 from reader._parser import FileRetriever
+from reader._parser import JSONFeedParser
 from reader._parser import Parser
 from reader._parser import RetrieveResult
 from reader._parser import SessionWrapper
+from reader._types import FeedData
 from reader.exceptions import _NotModified
 from reader.exceptions import ParseError
 
@@ -23,6 +26,21 @@ from reader.exceptions import ParseError
 def parse():
     parse = default_parser('')
     yield parse
+
+
+def str_bytes_parser(parse):
+    def wrapper(url, file, headers=None):
+        if isinstance(file, str):
+            file = io.BytesIO(file.encode('utf-8'))
+        elif isinstance(file, bytes):
+            file = io.BytesIO(file)
+        return parse(url, file, headers)
+
+    return wrapper
+
+
+feedparser_parse = str_bytes_parser(FeedparserParser())
+jsonfeed_parse = str_bytes_parser(JSONFeedParser())
 
 
 def _make_relative_path_url(**_):
@@ -50,6 +68,9 @@ def _make_http_url(requests_mock, **_):
             headers['Content-Type'] = 'application/rss+xml'
         elif feed_path.ext == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
+        elif feed_path.ext == '.json':
+            headers['Content-Type'] = 'application/feed+json'
+
         requests_mock.get(url, text=feed_path.read(), headers=headers)
         return url
 
@@ -67,6 +88,8 @@ def _make_https_url(requests_mock, **_):
             headers['Content-Type'] = 'application/rss+xml'
         elif feed_path.ext == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
+        elif feed_path.ext == '.json':
+            headers['Content-Type'] = 'application/feed+json'
         requests_mock.get(url, text=feed_path.read(), headers=headers)
         return url
 
@@ -81,6 +104,8 @@ def _make_http_gzip_url(requests_mock, **_):
             headers['Content-Type'] = 'application/rss+xml'
         elif feed_path.ext == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
+        elif feed_path.ext == '.json':
+            headers['Content-Type'] = 'application/feed+json'
         headers['Content-Encoding'] = 'gzip'
 
         import io, gzip
@@ -119,8 +144,11 @@ def make_url(request, requests_mock):
     return request.param(requests_mock=requests_mock)
 
 
-@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
-@pytest.mark.parametrize('data_file', ['full', 'empty', 'relative'])
+@pytest.mark.parametrize(
+    'feed_type, data_file',
+    [(ft, df) for ft in ['rss', 'atom'] for df in ['full', 'empty', 'relative']]
+    + [('json', df) for df in ['full', 'empty', 'invalid']],
+)
 def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     monkeypatch.chdir(data_dir.dirname)
 
@@ -144,11 +172,26 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     assert entries == expected['entries']
 
 
-def test_parse_jsonfeed(monkeypatch, parse, make_url, data_dir):
-    # temp until all are done
-    feed_type = 'json'
-    data_file = 'full'
-    test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir)
+def test_no_mime_type(monkeypatch, parse, make_url, data_dir):
+    """Like test_parse with _make_http_url_missing_content_type,
+    but with an URL parser.
+    """
+    monkeypatch.chdir(data_dir.dirname)
+    feed_path = data_dir.join('custom')
+    feed_url = make_url(feed_path)
+
+    def custom_parser(url, file, headers=None):
+        return FeedData(url=url, title=file.read().decode('utf-8')), []
+
+    parse.mount_parser_by_url(feed_url, custom_parser)
+
+    feed, entries, _, _ = parse(feed_url)
+
+    with open(str(feed_path), encoding='utf-8') as f:
+        expected_feed = FeedData(url=feed_url, title=f.read())
+
+    assert feed == expected_feed
+    assert entries == []
 
 
 def test_feedparser_exceptions(monkeypatch, parse, data_dir):
@@ -259,7 +302,7 @@ def make_http_get_headers_url(requests_mock):
     yield make_url
 
 
-@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
+@pytest.mark.parametrize('feed_type', ['rss', 'atom', 'json'])
 def test_parse_sends_etag_last_modified(
     parse,
     make_http_get_headers_url,
@@ -290,7 +333,7 @@ def make_http_etag_last_modified_url(requests_mock):
     yield make_url
 
 
-@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
+@pytest.mark.parametrize('feed_type', ['rss', 'atom', 'json'])
 def test_parse_returns_etag_last_modified(
     monkeypatch,
     parse,
@@ -441,7 +484,7 @@ def test_feedparser_parse_call(monkeypatch, parse, make_url, data_dir, exc_cls):
     assert feedparser_parse.kwargs['sanitize_html'] == True
 
 
-def test_missing_entry_id(parse):
+def test_missing_entry_id():
     """Handle RSS entries without guid.
     https://github.com/lemon24/reader/issues/170
 
@@ -505,8 +548,40 @@ def test_missing_entry_id(parse):
     assert excinfo.value.url == 'url'
     assert 'entry with no id' in excinfo.value.message
 
+    # Same for JSON Feed.
+    with pytest.raises(ParseError) as excinfo:
+        jsonfeed_parse(
+            'url',
+            """
+            {
+                "version": "https://jsonfeed.org/version/1.1",
+                "items": [
+                    {"content_text": "content"}
+                ]
+            }
+            """,
+        )
+    assert excinfo.value.url == 'url'
+    assert 'entry with no id' in excinfo.value.message
 
-def test_no_version(parse):
+    # Non-string, non-number id is treated as missing for JSON Feed.
+    with pytest.raises(ParseError) as excinfo:
+        jsonfeed_parse(
+            'url',
+            """
+            {
+                "version": "https://jsonfeed.org/version/1.1",
+                "items": [
+                    {"id": {"not": "a string"}, "content_text": "content"}
+                ]
+            }
+            """,
+        )
+    assert excinfo.value.url == 'url'
+    assert 'entry with no id' in excinfo.value.message
+
+
+def test_no_version():
     """Raise ParseError if feedparser can't detect the feed type and
     there's no bozo_exception.
 
@@ -521,6 +596,29 @@ def test_no_version(parse):
         )
     assert excinfo.value.url == 'url'
     assert 'unknown feed type' in excinfo.value.message
+
+    with pytest.raises(ParseError) as excinfo:
+        jsonfeed_parse(
+            'url',
+            """
+            {
+                "version": "https://bad.version/",
+                "items": [
+                    {"id": "1", "content_text": "content"}
+                ]
+            }
+            """,
+        )
+    assert excinfo.value.url == 'url'
+    assert 'missing or bad JSON Feed version' in excinfo.value.message
+
+
+def test_jsonfeed_invalid_json():
+    with pytest.raises(ParseError) as excinfo:
+        jsonfeed_parse('url', "malformed JSON")
+    assert excinfo.value.url == 'url'
+    assert 'invalid JSON' in excinfo.value.message
+    assert isinstance(excinfo.value.__cause__, json.JSONDecodeError)
 
 
 @pytest.fixture
