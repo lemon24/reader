@@ -9,7 +9,7 @@ Changelog
 Version 1.13
 ------------
 
-Unreleased
+Released 2021-01-29
 
 * JSON Feed support. (:issue:`206`)
 * Split feed retrieval from parsing;
