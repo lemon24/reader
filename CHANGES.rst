@@ -11,6 +11,10 @@ Version 1.13
 
 Unreleased
 
+* JSON Feed support. (:issue:`206`)
+* Split feed retrieval from parsing;
+  should make it easier to add new/custom parsers.
+  (:issue:`206`)
 * Prevent any logging output from the ``reader`` logger by default.
   (:issue:`207`)
 * In the ``preview_feed_list`` plugin, add ``<link rel=alternative ...>``

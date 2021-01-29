@@ -19,15 +19,16 @@ Are you already working with `feedparser`_, but:
 * want to get back type-annotated objects instead of dicts?
 * want to restrict or deny file-system access?
 * want to change the way feeds are retrieved by using the more familiar `requests`_ library?
+* want to also support `JSON Feed`_?
 
 ... while still supporting all the feed types feedparser does?
 
 If you answered yes to any of the above, *reader* can help.
 
 
-.. _feedparser: https://pythonhosted.org/feedparser/
+.. _feedparser: https://feedparser.readthedocs.io/en/latest/
 .. _requests: https://requests.readthedocs.io
-
+.. _JSON Feed: https://jsonfeed.org/
 
 
 Why make your own feed reader?

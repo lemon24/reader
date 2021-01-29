@@ -55,7 +55,7 @@ As of version |version|, *reader* has the following extras:
   refer to their documentation for details.
 
 
-.. _feedparser: https://pythonhosted.org/feedparser/
+.. _feedparser: https://feedparser.readthedocs.io/en/latest/
 .. _requests: https://requests.readthedocs.io/
 .. _iso8601: http://pyiso8601.readthedocs.org/
 .. _JSON1: https://www.sqlite.org/json1.html

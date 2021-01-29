@@ -172,17 +172,29 @@ class Reader:
     Persists feed and entry state, provides operations on them,
     and stores configuration.
 
+    Currently, the following feed types are supported:
+
+    * Atom (provided by `feedparser`_)
+    * RSS (provided by `feedparser`_)
+    * JSON Feed
+
+    .. _feedparser: https://feedparser.readthedocs.io/en/latest/
+
 
     .. important::
 
         Reader objects should be created using :func:`make_reader`; the Reader
         constructor is not stable yet and may change without any notice.
 
+    .. important::
 
-    The :class:`Reader` object is not thread safe;
-    its methods should be called only from the thread that created it.
-    To access the same database from multiple threads,
-    create one instance in each thread.
+        The :class:`Reader` object is not thread safe;
+        its methods should be called only from the thread that created it.
+
+        To access the same database from multiple threads,
+        create one instance in each thread.
+        If you have a strong use case preventing you to do so,
+        please +1 / comment in :issue:`206`.
 
     """
 

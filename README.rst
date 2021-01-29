@@ -44,14 +44,18 @@ and without enforcing a dependency on a particular framework.
 
 *reader* allows you to:
 
-* retrieve, store, and manage Atom and RSS feeds
+* retrieve, store, and manage **Atom**, **RSS**, and **JSON** feeds
 * mark entries as read or important
 * add tags and metadata to feeds
 * filter feeds and articles
 * full-text search articles
 * skip all the low level stuff and focus on what makes your feed reader different
 
-...all these with a stable, clearly documented API, and excellent test coverage.
+...all these with:
+
+* a stable, clearly documented API
+* excellent test coverage
+* fully typed Python
 
 What *reader* doesn't do:
 

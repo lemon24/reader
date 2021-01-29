@@ -427,7 +427,7 @@ class FeedparserParser:
         return _process_feedparser_dict(url, result)
 
 
-# https://pythonhosted.org/feedparser/character-encoding.html#handling-incorrectly-declared-encodings
+# https://feedparser.readthedocs.io/en/latest/character-encoding.html#handling-incorrectly-declared-encodings
 _survivable_feedparser_exceptions = (
     feedparser.CharacterEncodingOverride,
     feedparser.NonXMLContentType,

@@ -131,7 +131,7 @@ You can also update a specific feed using :meth:`~Reader.update_feed`::
 
 If supported by the server, *reader* uses the ETag and Last-Modified headers
 to only retrieve feeds if they changed
-(`details <https://pythonhosted.org/feedparser/http-etag.html>`_).
+(`details <https://feedparser.readthedocs.io/en/latest/http-etag.html>`_).
 Even so, you should not update feeds *too* often,
 to avoid wasting the feed publisher's resources,
 and potentially getting banned;
@@ -496,7 +496,7 @@ and, although *always enabled* at the moment,
 they may become optional in the future;
 note that disabling them is not currently possible.
 
-.. _feedparser: https://pythonhosted.org/feedparser/
+.. _feedparser: https://feedparser.readthedocs.io/en/latest/
 
 
 Sanitization
@@ -512,7 +512,7 @@ Quoting:
 
 
 You can find more details about which markup and elements are sanitized in
-`the feedparser documentation <https://pythonhosted.org/feedparser/html-sanitization.html>`__.
+`the feedparser documentation <https://feedparser.readthedocs.io/en/latest/html-sanitization.html>`__.
 
 The following corresponding *reader* attributes are sanitized:
 
@@ -540,7 +540,7 @@ Quoting:
 
 You can find more details about which elements
 are treated as URIs and HTML markup in
-`the feedparser documentation <https://pythonhosted.org/feedparser/resolving-relative-links.html>`__.
+`the feedparser documentation <https://feedparser.readthedocs.io/en/latest/resolving-relative-links.html>`__.
 
 
 The following corresponding *reader* attributes are treated as URIs:
