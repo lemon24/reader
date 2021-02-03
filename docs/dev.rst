@@ -182,6 +182,24 @@ Multiple storage implementations
 
 Detailed requirements and API discussion: :issue:`168#issuecomment-642002049`.
 
+Parser
+~~~~~~
+
+file:// handling, feed root, per-URL-prefix parsers (later retrievers, see below):
+
+* requirements: :issue:`155#issuecomment-667970956`
+* detailed requirements: :issue:`155#issuecomment-672324186`
+* method for URL validation (not added, as of 1.13): :issue:`155#issuecomment-673694472`
+
+Requests session plugins:
+
+* requirements: :issue:`155#issuecomment-667970956`
+* why the Session wrapper exists: :issue:`155#issuecomment-668716387` and :issue:`155#issuecomment-669164351`
+
+Retriever / parser split:
+
+* :issue:`205#issuecomment-766321855`
+
 
 Query builder
 ~~~~~~~~~~~~~
