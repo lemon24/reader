@@ -247,8 +247,8 @@ def test_migration_integrity_error(migration_cls):
         migration.migrate(db)
 
 
-@pytest.mark.parametrize('version', [-1, []])
-def test_migration_invalid_version(migration_cls, version):
+@pytest.mark.parametrize('version', [-1, 0, []])
+def test_migration_version_valuerror(migration_cls, version):
     db = sqlite3.connect(':memory:')
     migration = migration_cls(create_db_1, version, {})
     with pytest.raises(ValueError) as excinfo:
@@ -338,7 +338,7 @@ def test_setup_db_wal_enabled(db_path, wal_enabled, expected_mode):
     setup_db(
         db,
         create=lambda db: None,
-        version=0,
+        version=1,
         migrations={},
         minimum_sqlite_version=(3, 15, 0),
         wal_enabled=wal_enabled,

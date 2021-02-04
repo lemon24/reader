@@ -247,18 +247,18 @@ class NewMigration:
                     ) from None
 
     @staticmethod
-    def get_version(db: sqlite3.Connection) -> Optional[int]:
+    def get_version(db: sqlite3.Connection) -> int:
         (version,) = db.execute("PRAGMA user_version;").fetchone()
         if not version:
             # this includes 0 (the default user_version) on purpose
-            return None
+            return 0
         assert isinstance(version, int), version
         return version
 
     @classmethod
     def set_version(cls, db: sqlite3.Connection, version: int) -> None:
-        if not isinstance(version, int) or version < 0:
-            raise ValueError(f"version must be an integer >= 0, got {version!r}")
+        if not isinstance(version, int) or version < 1:
+            raise ValueError(f"version must be a positive integer, got {version!r}")
         db.execute(f"PRAGMA user_version = {version};")
 
 
@@ -267,13 +267,13 @@ class OldMigration(NewMigration):
     # TODO: delete in 2.0
 
     @staticmethod
-    def get_version(db: sqlite3.Connection) -> Optional[int]:
+    def get_version(db: sqlite3.Connection) -> int:
         try:
             # TODO: this assignment should fail with DBError
             (version,) = db.execute("SELECT MAX(version) FROM version;").fetchone()
         except sqlite3.OperationalError as e:
             if "no such table" in str(e).lower():
-                return None
+                return 0
             raise SchemaVersionError(f"cannot get current version: {e}") from e
         assert isinstance(version, int), version
         return version
@@ -300,7 +300,7 @@ class HeavyMigration(NewMigration):
 
     def migrate(self, db: sqlite3.Connection) -> None:
         old_version = OldMigration.get_version(db)
-        if old_version is not None:
+        if old_version:
             with ddl_transaction(db):
                 OldMigration.del_version(db)
                 super().set_version(db, old_version)
