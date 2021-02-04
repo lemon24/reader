@@ -218,8 +218,16 @@ class HeavyMigration:
             if "no such table" in str(e).lower():
                 return None
             raise SchemaVersionError(f"cannot get current version: {e}") from e
-        assert isinstance(version, int)
+        assert isinstance(version, int), version
         return version
+
+    @classmethod
+    def set_version(cls, db: sqlite3.Connection, version: int) -> None:
+        if cls.get_version(db) is None:
+            db.execute("CREATE TABLE IF NOT EXISTS version (version INTEGER NOT NULL);")
+            db.execute("INSERT INTO version VALUES (?);", (version,))
+        else:
+            db.execute("UPDATE version SET version = ?;", (version,))
 
     def migrate(self, db: sqlite3.Connection) -> None:
         with foreign_keys_off(db), ddl_transaction(db):
@@ -227,8 +235,7 @@ class HeavyMigration:
 
             if version is None:
                 self.create(db)
-                db.execute("CREATE TABLE version (version INTEGER NOT NULL);")
-                db.execute("INSERT INTO version VALUES (?);", (self.version,))
+                self.set_version(db, self.version)
                 return
 
             if version == self.version:
@@ -249,10 +256,7 @@ class HeavyMigration:
                         f"later than {version}"
                     )
 
-                db.execute(
-                    "UPDATE version SET version = :to_version;",
-                    dict(to_version=to_version),
-                )
+                self.set_version(db, to_version)
                 migration(db)
 
                 try:
