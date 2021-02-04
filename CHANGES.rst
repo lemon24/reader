@@ -11,6 +11,8 @@ Version 1.14
 
 Unreleased
 
+* Use ``PRAGMA user_version`` instead of a version table. (:issue:`210`)
+
 
 Version 1.13
 ------------
