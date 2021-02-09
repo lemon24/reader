@@ -12,6 +12,7 @@ Version 1.14
 Unreleased
 
 * Use ``PRAGMA user_version`` instead of a version table. (:issue:`210`)
+* Fix broken Mypy config following 0.800 release. (:issue:`213`)
 
 
 Version 1.13
