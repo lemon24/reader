@@ -192,6 +192,10 @@ class RequirementError(DBError):
     display_name = "database requirement error"
 
 
+class IdError(DBError):
+    display_name = "application id error"
+
+
 db_errors = [DBError, SchemaVersionError, IntegrityError, RequirementError]
 
 
@@ -208,23 +212,50 @@ class NewMigration:
     create: _DBFunction
     version: int  # must be positive
     migrations: Dict[int, _DBFunction]
+    id: int = 0
 
     def migrate(self, db: sqlite3.Connection) -> None:
+        # pseudo-code for how the application_id is handled:
+        # https://github.com/lemon24/reader/issues/211#issuecomment-778392468
+        # unlike there, we allow bypassing it for testing
+
         with foreign_keys_off(db), ddl_transaction(db):
+            if self.id:
+                id = self.get_id(db)
+                if id and id != self.id:
+                    raise IdError(f"invalid id: 0x{id:x}")
+
             version = self.get_version(db)
 
             if not version:
+                # avoid clobbering a database with application_id
+                if table_count(db) != 0:
+                    raise DBError("database with no version already has tables")
+
                 self.create(db)
                 self.set_version(db, self.version)
+                self.set_id(db, self.id)
                 return
 
             if version == self.version:
+                if self.id:
+                    if not id:
+                        raise IdError("database with version has missing id")
                 return
 
             if version > self.version:
                 raise SchemaVersionError(f"invalid version: {version}")
 
             # version < self.version
+
+            # the actual migration code;
+            #
+            # might clobber a database if all of the below are true:
+            #
+            # * an application_id was not used from the start
+            # * the database has a non-zero version which predates
+            #   the migration which set application_id
+            # * all of the migrations succeed
 
             for from_version in range(version, self.version):
                 to_version = from_version + 1
@@ -246,6 +277,11 @@ class NewMigration:
                         f"after migrating to version {to_version}: {e}"
                     ) from None
 
+            if self.id:
+                id = self.get_id(db)
+                if id != self.id:
+                    raise IdError(f"missing or invalid id after migration: 0x{id:x}")
+
     @staticmethod
     def get_version(db: sqlite3.Connection) -> int:
         return get_int_pragma(db, 'user_version')
@@ -253,6 +289,14 @@ class NewMigration:
     @staticmethod
     def set_version(db: sqlite3.Connection, version: int) -> None:
         set_int_pragma(db, 'user_version', version)
+
+    @staticmethod
+    def get_id(db: sqlite3.Connection) -> int:
+        return get_int_pragma(db, 'application_id')
+
+    @staticmethod
+    def set_id(db: sqlite3.Connection, id: int) -> None:
+        set_int_pragma(db, 'application_id', id)
 
 
 def get_int_pragma(db: sqlite3.Connection, pragma: str) -> int:
@@ -270,6 +314,12 @@ def set_int_pragma(
         raise ValueError(f"{pragma} must be >={lower_bound}, got {value!r}")
 
     db.execute(f"PRAGMA {pragma} = {value};")
+
+
+def table_count(db: sqlite3.Connection) -> int:
+    (value,) = db.execute("select count(*) from sqlite_master;").fetchone()
+    assert isinstance(value, int), value  # for mypy
+    return value
 
 
 class OldMigration(NewMigration):
