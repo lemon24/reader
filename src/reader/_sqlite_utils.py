@@ -192,7 +192,7 @@ class RequirementError(DBError):
     display_name = "database requirement error"
 
 
-db_errors = [DBError, SchemaVersionError, RequirementError]
+db_errors = [DBError, SchemaVersionError, IntegrityError, RequirementError]
 
 
 class _DBFunction(Protocol):  # pragma: no cover
@@ -248,18 +248,28 @@ class NewMigration:
 
     @staticmethod
     def get_version(db: sqlite3.Connection) -> int:
-        (version,) = db.execute("PRAGMA user_version;").fetchone()
-        if not version:
-            # this includes 0 (the default user_version) on purpose
-            return 0
-        assert isinstance(version, int), version
-        return version
+        return get_int_pragma(db, 'user_version')
 
-    @classmethod
-    def set_version(cls, db: sqlite3.Connection, version: int) -> None:
-        if not isinstance(version, int) or version < 1:
-            raise ValueError(f"version must be a positive integer, got {version!r}")
-        db.execute(f"PRAGMA user_version = {version};")
+    @staticmethod
+    def set_version(db: sqlite3.Connection, version: int) -> None:
+        set_int_pragma(db, 'user_version', version)
+
+
+def get_int_pragma(db: sqlite3.Connection, pragma: str) -> int:
+    (value,) = db.execute(f"PRAGMA {pragma};").fetchone()
+    assert isinstance(value, int), value  # for mypy
+    return value
+
+
+def set_int_pragma(
+    db: sqlite3.Connection, pragma: str, value: int, lower_bound: int = 0
+) -> None:
+    if not isinstance(value, int):
+        raise ValueError(f"{pragma} must be an integer, got {value!r}")
+    if lower_bound is not None and value < lower_bound:
+        raise ValueError(f"{pragma} must be >={lower_bound}, got {value!r}")
+
+    db.execute(f"PRAGMA {pragma} = {value};")
 
 
 class OldMigration(NewMigration):

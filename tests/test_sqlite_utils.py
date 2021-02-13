@@ -247,7 +247,7 @@ def test_migration_integrity_error(migration_cls):
         migration.migrate(db)
 
 
-@pytest.mark.parametrize('version', [-1, 0, []])
+@pytest.mark.parametrize('version', [-1, []])
 def test_migration_version_valuerror(migration_cls, version):
     db = sqlite3.connect(':memory:')
     migration = migration_cls(create_db_1, version, {})
