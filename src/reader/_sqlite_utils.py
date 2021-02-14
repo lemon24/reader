@@ -230,6 +230,7 @@ class NewMigration:
             if not version:
                 # avoid clobbering a database with application_id
                 if table_count(db) != 0:
+                    # TODO: maybe use a custom exception here?
                     raise DBError("database with no version already has tables")
 
                 self.create(db)
