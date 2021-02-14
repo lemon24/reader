@@ -10,6 +10,9 @@ python:
     - "nightly"
     - "pypy3"  # 3.6, per https://docs.travis-ci.com/user/languages/python/#pypy-support
 
+cache:
+    - pip
+    - cargo
 
 matrix:
     allow_failures:
