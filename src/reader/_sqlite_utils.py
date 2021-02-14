@@ -400,6 +400,7 @@ def setup_db(
     create: _DBFunction,
     version: int,
     migrations: Dict[int, _DBFunction],
+    id: int,
     minimum_sqlite_version: Tuple[int, ...],
     required_sqlite_compile_options: Sequence[str] = (),
     wal_enabled: Optional[bool] = None,
@@ -424,7 +425,7 @@ def setup_db(
             else:
                 cursor.execute("PRAGMA journal_mode = DELETE;")
 
-    migration = HeavyMigration(create, version, migrations)
+    migration = HeavyMigration(create, version, migrations, id)
     migration.migrate(db)
 
 

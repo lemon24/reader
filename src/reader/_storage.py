@@ -50,6 +50,8 @@ from .types import FeedCounts
 from .types import FeedSortOrder
 from .types import JSONType
 
+APPLICATION_ID = int(''.join(f'{ord(c):x}' for c in 'read'), 16)
+
 
 log = logging.getLogger('reader')
 
@@ -259,11 +261,16 @@ def update_from_25_to_26(db: sqlite3.Connection) -> None:  # pragma: no cover
     )
 
 
+def update_from_26_to_27(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/211
+    db.execute(f"PRAGMA application_id = {APPLICATION_ID};")
+
+
 def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=26,
+        version=27,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
@@ -280,7 +287,9 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             # for https://github.com/lemon24/reader/issues/134#issuecomment-722454963
             24: create_indexes,
             25: update_from_25_to_26,
+            26: update_from_26_to_27,
         },
+        id=APPLICATION_ID,
         # Row value support was added in 3.15.
         # TODO: Remove the Search.update() check once this gets bumped to >=3.18.
         minimum_sqlite_version=(3, 15),

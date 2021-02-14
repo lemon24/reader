@@ -61,7 +61,7 @@ def make_reader_with_plugins(*, debug_storage=False, **kwargs):
     try:
         return make_reader_from_config(**kwargs)
     except StorageError as e:
-        abort("{}: {}: {}", kwargs['url'], e, e.__cause__)
+        abort("{}: {}", kwargs['url'], e)
     except LoaderError as e:
         abort("{}; original traceback follows\n\n{}", e, format_tb(e.__cause__ or e))
     except Exception as e:
@@ -182,7 +182,7 @@ def pass_reader(fn):
 @config_option(
     '--config',
     envvar=reader._CONFIG_ENVVAR,
-    help=f"Path to the reader config.",
+    help="Path to the reader config.",
     default=get_default_config_path(),
     show_default=True,
 )

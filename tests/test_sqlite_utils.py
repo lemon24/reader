@@ -393,6 +393,7 @@ def test_setup_db_wal_enabled(db_path, wal_enabled, expected_mode):
         create=lambda db: None,
         version=1,
         migrations={},
+        id=1234,
         minimum_sqlite_version=(3, 15, 0),
         wal_enabled=wal_enabled,
     )

@@ -12,6 +12,9 @@ Version 1.14
 Unreleased
 
 * Use ``PRAGMA user_version`` instead of a version table. (:issue:`210`)
+* Use ``PRAGMA application_id`` to identify reader databases;
+  the id is 0x66656564 – ``read`` in ASCII / UTF-8.
+  (:issue:`211`)
 * Fix broken Mypy config following 0.800 release. (:issue:`213`)
 
 
