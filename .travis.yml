@@ -16,6 +16,14 @@ matrix:
         - python: "nightly"
 
 install:
+    # cryptography needs rust on pypy
+    # https://github.com/pyca/cryptography/issues/5806#issuecomment-776623111
+    - >
+      test "$TRAVIS_PYTHON_VERSION" = pypy3
+      && sh <(curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs) -y
+      && export PATH=${PATH}:${HOME}/.cargo/bin
+      || true
+
     - make install-dev
     - pip install codecov
 
