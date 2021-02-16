@@ -257,10 +257,14 @@ Feed tags
 Detailed requirements and API discussion: :issue:`184#issuecomment-689587006`.
 
 
-Concurrent updates
-~~~~~~~~~~~~~~~~~~
+Feed updates
+~~~~~~~~~~~~
 
 Some thoughts about adding a ``map`` argument: :issue:`152#issuecomment-606636200`.
+
+How ``update_feeds()`` is like a pipeline: `comment <https://github.com/lemon24/reader/blob/1.13/src/reader/core.py#L629-L643>`_.
+
+Data flow diagram for the update process, as of v1.13: :issue:`204#issuecomment-779709824`.
 
 
 Disabling feed updates
@@ -284,8 +288,8 @@ Using None as a special argument value
 This comment: :issue:`177#issuecomment-674786498`.
 
 
-Batch update methods
-~~~~~~~~~~~~~~~~~~~~
+Batch update (set) methods
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There's a discussion on why I want to postpone this in this comment: :issue:`187#issuecomment-700740251`.
 
