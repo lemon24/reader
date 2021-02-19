@@ -27,8 +27,8 @@ from ._types import FeedFilterOptions
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import ParsedFeed
-from ._utils import make_noop_context_manager
 from ._utils import make_pool_map
+from ._utils import nullcontext
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
@@ -544,11 +544,7 @@ class Reader:
         if workers < 1:
             raise ValueError("workers must be a positive integer")
 
-        make_map = (
-            make_noop_context_manager(builtins.map)
-            if workers == 1
-            else make_pool_map(workers)
-        )
+        make_map = nullcontext(builtins.map) if workers == 1 else make_pool_map(workers)
 
         with make_map as map:
             exceptions = self._update_feeds(new_only=new_only, map=map)

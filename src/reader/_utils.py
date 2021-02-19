@@ -166,10 +166,16 @@ def wrap_map(map: F, workers: int) -> F:
     return cast(F, wrapper)
 
 
-@contextmanager
-def make_noop_context_manager(thing: _T) -> Iterator[_T]:
-    # TODO: when we drop Python 3.6 support, use contextlib.nullcontext instead
-    yield thing
+# TODO: remove this when we drop Python 3.6 support
+try:
+    from contextlib import nullcontext as _nc
+
+    nullcontext = _nc
+except ImportError:
+
+    @contextmanager
+    def nullcontext(thing: _T) -> Iterator[_T]:
+        yield thing
 
 
 class enter_context(Generic[_T]):
