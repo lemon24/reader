@@ -43,17 +43,12 @@ from ._url_utils import extract_path
 from ._url_utils import is_windows_device_file
 from ._url_utils import normalize_url
 from ._url_utils import resolve_root
-from ._utils import enter_context
 from .exceptions import ParseError
 from .types import Content
 from .types import Enclosure
 
 
 log = logging.getLogger('reader')
-
-
-class NotModified(Exception):
-    """Signaling exception used internally by Parser."""
 
 
 Headers = Mapping[str, str]
@@ -74,7 +69,7 @@ class RetrieverType(Protocol):
         http_etag: Optional[str],
         http_last_modified: Optional[str],
         http_accept: Optional[str],
-    ) -> ContextManager[RetrieveResult]:  # pragma: no cover
+    ) -> ContextManager[Optional[RetrieveResult]]:  # pragma: no cover
         ...
 
 
@@ -151,14 +146,10 @@ class Parser:
 
         retriever = self.get_retriever(url)
 
-        try:
-            context = enter_context(
-                retriever(url, http_etag, http_last_modified, http_accept)
-            )
-        except NotModified:
-            return None
+        with retriever(url, http_etag, http_last_modified, http_accept) as result:
+            if not result:
+                return None
 
-        with context as result:
             if not parser:
                 mime_type = result.mime_type
                 if not mime_type:
@@ -247,7 +238,7 @@ class Parser:
 def wrap_exceptions(url: str, when: str) -> Iterator[None]:
     try:
         yield
-    except (ParseError, NotModified):
+    except ParseError:
         # reader exceptions are pass-through
         raise
     except OSError as e:
@@ -333,7 +324,7 @@ class HTTPRetriever:
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
         http_accept: Optional[str] = None,
-    ) -> Iterator[RetrieveResult]:
+    ) -> Iterator[Optional[RetrieveResult]]:
         request_headers = {}
         if http_accept:
             request_headers['Accept'] = http_accept
@@ -351,6 +342,11 @@ class HTTPRetriever:
                     headers=request_headers,
                     stream=True,
                 )
+
+            if response.status_code == 304:
+                response.close()
+                yield None
+                return
 
             response_headers = response.headers.copy()
             response_headers.setdefault('content-location', response.url)
@@ -397,10 +393,6 @@ def _caching_get(
         response.raise_for_status()
     except Exception as e:
         raise ParseError(url, message="bad HTTP status code") from e
-
-    if response.status_code == 304:
-        response.close()
-        raise NotModified(url)
 
     http_etag = response.headers.get('ETag', http_etag)
     http_last_modified = response.headers.get('Last-Modified', http_last_modified)
