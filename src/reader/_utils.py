@@ -165,15 +165,9 @@ def wrap_map(map: F, workers: int) -> F:
 
 
 # TODO: remove this when we drop Python 3.6 support
-try:
-    from contextlib import nullcontext as _nc
-
-    nullcontext = _nc
-except ImportError:
-
-    @contextmanager
-    def nullcontext(thing: _T) -> Iterator[_T]:
-        yield thing
+@contextmanager
+def nullcontext(thing: _T) -> Iterator[_T]:
+    yield thing
 
 
 class PrefixLogger(logging.LoggerAdapter):
