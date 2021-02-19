@@ -18,7 +18,6 @@ from reader._parser import Parser
 from reader._parser import RetrieveResult
 from reader._parser import SessionWrapper
 from reader._types import FeedData
-from reader.exceptions import _NotModified
 from reader.exceptions import ParseError
 
 
@@ -265,11 +264,9 @@ def make_http_url_bad_status(requests_mock):
 
 
 def test_parse_not_modified(monkeypatch, parse, make_http_url_bad_status, data_dir):
-    """parse() should raise _NotModified for unchanged feeds."""
-
+    """parse() should return None for unchanged feeds."""
     feed_url = make_http_url_bad_status(data_dir.join('full.atom'), 304)
-    with pytest.raises(_NotModified):
-        parse(feed_url)
+    assert parse(feed_url) is None
 
 
 @pytest.mark.parametrize('status', [404, 503])

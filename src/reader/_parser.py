@@ -5,6 +5,7 @@ import mimetypes
 import time
 from collections import OrderedDict
 from contextlib import contextmanager
+from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
@@ -43,13 +44,16 @@ from ._url_utils import extract_path
 from ._url_utils import is_windows_device_file
 from ._url_utils import normalize_url
 from ._url_utils import resolve_root
-from .exceptions import _NotModified
 from .exceptions import ParseError
 from .types import Content
 from .types import Enclosure
 
 
 log = logging.getLogger('reader')
+
+
+class NotModified(Exception):
+    """Signaling exception used internally by Parser."""
 
 
 Headers = Mapping[str, str]
@@ -130,7 +134,7 @@ class Parser:
         url: str,
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
-    ) -> ParsedFeed:
+    ) -> Optional[ParsedFeed]:
         parser = self.get_parser_by_url(url)
 
         http_accept: Optional[str]
@@ -147,7 +151,17 @@ class Parser:
 
         retriever = self.get_retriever(url)
 
-        with retriever(url, http_etag, http_last_modified, http_accept) as result:
+        # FIXME: move this into an "autoentercontextmanager" decorator
+        # https://docs.python.org/3/library/contextlib.html#catching-exceptions-from-enter-methods
+        stack = ExitStack()
+        try:
+            result = stack.enter_context(
+                retriever(url, http_etag, http_last_modified, http_accept)
+            )
+        except NotModified:
+            return None
+
+        with stack:
             if not parser:
                 mime_type = result.mime_type
                 if not mime_type:
@@ -236,7 +250,7 @@ class Parser:
 def wrap_exceptions(url: str, when: str) -> Iterator[None]:
     try:
         yield
-    except (ParseError, _NotModified):
+    except (ParseError, NotModified):
         # reader exceptions are pass-through
         raise
     except OSError as e:
@@ -388,7 +402,8 @@ def _caching_get(
         raise ParseError(url, message="bad HTTP status code") from e
 
     if response.status_code == 304:
-        raise _NotModified(url)
+        response.close()
+        raise NotModified(url)
 
     http_etag = response.headers.get('ETag', http_etag)
     http_last_modified = response.headers.get('Last-Modified', http_last_modified)

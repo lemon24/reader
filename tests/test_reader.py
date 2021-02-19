@@ -7,9 +7,9 @@ from enum import Enum
 from itertools import permutations
 
 import pytest
-from fakeparser import _NotModifiedParser
 from fakeparser import BlockingParser
 from fakeparser import FailingParser
+from fakeparser import NotModifiedParser
 from fakeparser import Parser
 from utils import make_url_base
 from utils import rename_argument
@@ -241,7 +241,7 @@ def test_update_not_modified(reader, call_update_method):
     parser.feed(1, datetime(2010, 1, 2))
     parser.entry(1, 1, datetime(2010, 1, 2))
 
-    not_modified_parser = _NotModifiedParser.from_parser(parser)
+    not_modified_parser = NotModifiedParser.from_parser(parser)
     reader._parser = not_modified_parser
 
     # shouldn't raise an exception
@@ -318,7 +318,7 @@ def test_update_new_only_not_modified(reader):
     https://github.com/lemon24/reader/issues/95
 
     """
-    parser = _NotModifiedParser()
+    parser = NotModifiedParser()
     reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
@@ -501,7 +501,7 @@ def updated_feeds_parser(parser):
 
 
 def raises_not_modified_parser(_):
-    return _NotModifiedParser()
+    return NotModifiedParser()
 
 
 @pytest.mark.parametrize(

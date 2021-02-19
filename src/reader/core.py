@@ -30,7 +30,6 @@ from ._types import ParsedFeed
 from ._utils import make_noop_context_manager
 from ._utils import make_pool_map
 from ._utils import zero_or_one
-from .exceptions import _NotModified
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
@@ -656,7 +655,7 @@ class Reader:
                 # give storage a chance to consume the entries in a streaming fashion;
                 parsed_entries = itertools.tee(
                     parse_result.entries
-                    if not isinstance(parse_result, Exception)
+                    if parse_result and not isinstance(parse_result, Exception)
                     else ()
                 )
                 entry_pairs = zip(
@@ -682,10 +681,10 @@ class Reader:
 
     def _parse_feed_for_update(
         self, feed: FeedForUpdate
-    ) -> Tuple[FeedForUpdate, Union[ParsedFeed, ParseError, _NotModified]]:
+    ) -> Tuple[FeedForUpdate, Union[ParsedFeed, None, ParseError]]:
         try:
             return feed, self._parser(feed.url, feed.http_etag, feed.http_last_modified)
-        except (ParseError, _NotModified) as e:
+        except ParseError as e:
             log.debug(
                 "_parse_feed_for_update exception, traceback follows", exc_info=True
             )

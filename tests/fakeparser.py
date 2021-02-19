@@ -5,7 +5,6 @@ from reader import Feed
 from reader import ParseError
 from reader._types import EntryData
 from reader._types import ParsedFeed
-from reader.exceptions import _NotModified
 from reader.types import _entry_argument
 
 
@@ -95,10 +94,9 @@ class FailingParser(Parser):
         return super().__call__(url, http_etag, http_last_modified)
 
 
-# FIXME: this is prefixed by an underscore by mistake
-class _NotModifiedParser(Parser):
+class NotModifiedParser(Parser):
     def __call__(self, *args, **kwargs):
-        raise _NotModified(None)
+        return None
 
 
 class ParserThatRemembers(Parser):
