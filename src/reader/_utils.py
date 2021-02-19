@@ -6,6 +6,8 @@ from queue import Queue
 from typing import Any
 from typing import Callable
 from typing import cast
+from typing import ContextManager
+from typing import Generic
 from typing import Iterable
 from typing import Iterator
 from typing import no_type_check
@@ -166,7 +168,28 @@ def wrap_map(map: F, workers: int) -> F:
 
 @contextmanager
 def make_noop_context_manager(thing: _T) -> Iterator[_T]:
+    # TODO: when we drop Python 3.6 support, use contextlib.nullcontext instead
     yield thing
+
+
+class enter_context(Generic[_T]):
+
+    """Wrap a context manager and run its __enter__ immediately.
+
+    Less clunky version of
+    https://docs.python.org/3/library/contextlib.html#catching-exceptions-from-enter-methods
+
+    """
+
+    def __init__(self, context_manager: ContextManager[_T]):
+        self.context_manager = context_manager
+        self.enter_result = context_manager.__enter__()
+
+    def __enter__(self) -> _T:
+        return self.enter_result
+
+    def __exit__(self, *args: Any) -> Any:
+        return self.context_manager.__exit__(*args)
 
 
 class PrefixLogger(logging.LoggerAdapter):

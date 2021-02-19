@@ -5,7 +5,6 @@ import mimetypes
 import time
 from collections import OrderedDict
 from contextlib import contextmanager
-from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
@@ -44,6 +43,7 @@ from ._url_utils import extract_path
 from ._url_utils import is_windows_device_file
 from ._url_utils import normalize_url
 from ._url_utils import resolve_root
+from ._utils import enter_context
 from .exceptions import ParseError
 from .types import Content
 from .types import Enclosure
@@ -151,17 +151,14 @@ class Parser:
 
         retriever = self.get_retriever(url)
 
-        # FIXME: move this into an "autoentercontextmanager" decorator
-        # https://docs.python.org/3/library/contextlib.html#catching-exceptions-from-enter-methods
-        stack = ExitStack()
         try:
-            result = stack.enter_context(
+            context = enter_context(
                 retriever(url, http_etag, http_last_modified, http_accept)
             )
         except NotModified:
             return None
 
-        with stack:
+        with context as result:
             if not parser:
                 mime_type = result.mime_type
                 if not mime_type:
