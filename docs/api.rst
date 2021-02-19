@@ -31,7 +31,6 @@ Data objects
 .. autoclass:: ExceptionInfo
     :members:
 
-
 .. autoclass:: Entry
     :members:
 
@@ -54,6 +53,9 @@ Data objects
     :members:
 
 .. autoclass:: EntrySearchCounts
+    :members:
+
+.. autoclass:: UpdatedFeed
     :members:
 
 

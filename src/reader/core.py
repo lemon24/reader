@@ -51,6 +51,7 @@ from .types import MISSING
 from .types import MissingType
 from .types import SearchSortOrder
 from .types import TagFilterInput
+from .types import UpdatedFeed
 
 
 log = logging.getLogger('reader')
@@ -460,7 +461,7 @@ class Reader:
                 Only count feeds that have updates enabled / disabled.
 
         Returns:
-            :class:`FeedCounts`:
+            FeedCounts:
 
         Raises:
             StorageError
@@ -547,10 +548,10 @@ class Reader:
         make_map = nullcontext(builtins.map) if workers == 1 else make_pool_map(workers)
 
         with make_map as map:
-            exceptions = self._update_feeds(new_only=new_only, map=map)
+            results = self._update_feeds(new_only=new_only, map=map)
 
-            for exc in exceptions:
-                if not exc:
+            for exc in results:
+                if not isinstance(exc, Exception):
                     continue
                 if isinstance(exc, FeedNotFoundError):
                     log.info("update feed %r: feed removed during update", exc.url)
@@ -565,7 +566,7 @@ class Reader:
                 else:
                     raise exc
 
-    def update_feed(self, feed: FeedInput) -> None:
+    def update_feed(self, feed: FeedInput) -> Optional[UpdatedFeed]:
         """Update a single feed.
 
         The feed will be updated even if updates are disabled for it.
@@ -573,19 +574,29 @@ class Reader:
         Args:
             feed (str or Feed): The feed URL.
 
+        Returns:
+            UpdatedFeed or None:
+            A summary of the updated feed or None,
+            if the server indicated the feed has not changed
+            since the last update.
+
         Raises:
             FeedNotFoundError
             ParseError
             StorageError
 
+        .. versionchanged:: 1.14
+            The method now returns UpdatedFeed or None instead of None.
+
         """
         url = _feed_argument(feed)
-        exc = zero_or_one(
+        rv = zero_or_one(
             self._update_feeds(url=url, enabled_only=False),
             lambda: FeedNotFoundError(url),
         )
-        if exc:
-            raise exc
+        if isinstance(rv, Exception):
+            raise rv
+        return rv
 
     @staticmethod
     def _now() -> datetime.datetime:
@@ -606,7 +617,7 @@ class Reader:
         new_only: bool = False,
         enabled_only: bool = True,
         map: Callable[[Callable[[Any], Any], Iterable[Any]], Iterator[Any]] = map,
-    ) -> Iterator[Optional[Exception]]:
+    ) -> Iterator[Union[UpdatedFeed, None, Exception]]:
 
         # global_now is used as first_updated_epoch for all new entries,
         # so that the subset of new entries from an update appears before
@@ -670,8 +681,15 @@ class Reader:
                     feed_for_update, now, global_now, parse_result, entry_pairs
                 )
 
-                self._update_feed(feed_to_update, entries_to_update)
-                yield exception
+                counts = self._update_feed(feed_to_update, entries_to_update)
+
+                if exception:
+                    yield exception
+                elif parse_result:
+                    yield UpdatedFeed(feed_for_update.url, *counts)
+                else:
+                    yield None
+
             except Exception as e:
                 yield e
 
@@ -690,7 +708,7 @@ class Reader:
         self,
         feed_to_update: Optional[FeedUpdateIntent],
         entries_to_update: Iterable[EntryUpdateIntent],
-    ) -> None:
+    ) -> Tuple[int, int]:
         if feed_to_update:
             if entries_to_update:
                 self._storage.add_or_update_entries(entries_to_update)
@@ -699,11 +717,19 @@ class Reader:
         # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
 
+        new_count = 0
+        updated_count = 0
         for entry in entries_to_update:
+            if entry.new:
+                new_count += 1
+            else:
+                updated_count += 1
             if not entry.new:
                 continue
             for plugin in self._post_entry_add_plugins:
                 plugin(self, entry.entry)
+
+        return new_count, updated_count
 
     def get_entries(
         self,
@@ -869,7 +895,7 @@ class Reader:
                 Only count the entries from feeds matching these tags.
 
         Returns:
-            :class:`EntryCounts`:
+            EntryCounts:
 
         Raises:
             StorageError
@@ -1239,7 +1265,7 @@ class Reader:
                 Only count the entries from feeds matching these tags.
 
         Returns:
-            :class:`EntrySearchCounts`:
+            EntrySearchCounts:
 
         Raises:
             SearchNotEnabledError

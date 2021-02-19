@@ -621,3 +621,21 @@ class EntrySearchCounts(_namedtuple_compat):
 
     #: Number of entries that have enclosures.
     has_enclosures: Optional[int] = None
+
+
+@dataclass(frozen=True)
+class UpdatedFeed:
+    """The result of a successful feed update.
+
+    .. versionadded:: 1.14
+
+    """
+
+    #: The URL of the feed.
+    url: str
+
+    #: The number of new entries.
+    new: int
+
+    #: The number of updated entries.
+    updated: int

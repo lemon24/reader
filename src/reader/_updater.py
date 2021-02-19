@@ -163,26 +163,17 @@ class _Updater:
         parsed_feed: ParsedFeed,
         entries_to_update: Sequence[EntryUpdateIntent],
     ) -> Optional[FeedUpdateIntent]:
-        new_count = sum(e.new for e in entries_to_update)
-        updated_count = len(entries_to_update) - new_count
-
-        self.log.info("updated (updated %d, new %d)", updated_count, new_count)
-
-        feed_to_update: Optional[FeedUpdateIntent]
         if self.should_update_feed(parsed_feed.feed):
-            feed_to_update = FeedUpdateIntent(
+            return FeedUpdateIntent(
                 self.url,
                 self.now,
                 parsed_feed.feed,
                 parsed_feed.http_etag,
                 parsed_feed.http_last_modified,
             )
-        elif new_count or updated_count:
-            feed_to_update = FeedUpdateIntent(self.url, self.now)
-        else:
-            feed_to_update = None
-
-        return feed_to_update
+        if entries_to_update:
+            return FeedUpdateIntent(self.url, self.now)
+        return None
 
     def update(
         self,
@@ -194,17 +185,20 @@ class _Updater:
         Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent], Optional[ParseError]
     ]:
         if not parsed_feed:
-            self.log.info("feed not modified, skipping")
-            # The feed shouldn't be considered new anymore.
+            # Not modified.
+
+            # New feed shouldn't be considered new anymore.
             if not self.old_feed.last_updated:
                 return FeedUpdateIntent(self.url, self.now), (), None
-            # Clear last_exception.
+
+            # Clear last_exception, if any.
             if self.old_feed.last_exception:
                 return (
                     FeedUpdateIntent(self.url, self.old_feed.last_updated),
                     (),
                     None,
                 )
+
             return None, (), None
 
         if isinstance(parsed_feed, ParseError):
