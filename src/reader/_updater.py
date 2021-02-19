@@ -48,9 +48,7 @@ def make_update_intents(
     entry_pairs: Iterable[
         Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]
     ],
-) -> Tuple[
-    Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent], Optional[ParseError]
-]:
+) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
     updater = _Updater(
         old_feed,
         now,
@@ -181,35 +179,26 @@ class _Updater:
         entry_pairs: Iterable[
             Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]
         ],
-    ) -> Tuple[
-        Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent], Optional[ParseError]
-    ]:
+    ) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
+
+        # Not modified.
         if not parsed_feed:
-            # Not modified.
 
             # New feed shouldn't be considered new anymore.
             if not self.old_feed.last_updated:
-                return FeedUpdateIntent(self.url, self.now), (), None
+                return FeedUpdateIntent(self.url, self.now), ()
 
-            # Clear last_exception, if any.
+            # Clear last_exception.
             if self.old_feed.last_exception:
-                return (
-                    FeedUpdateIntent(self.url, self.old_feed.last_updated),
-                    (),
-                    None,
-                )
+                return FeedUpdateIntent(self.url, self.old_feed.last_updated), ()
 
-            return None, (), None
+            return None, ()
 
         if isinstance(parsed_feed, ParseError):
             exc_info = ExceptionInfo.from_exception(
                 parsed_feed.__cause__ or parsed_feed
             )
-            return (
-                FeedUpdateIntent(self.url, None, last_exception=exc_info),
-                (),
-                parsed_feed,
-            )
+            return FeedUpdateIntent(self.url, None, last_exception=exc_info), ()
 
         entries_to_update = list(self.get_entries_to_update(entry_pairs))
         feed_to_update = self.get_feed_to_update(parsed_feed, entries_to_update)
@@ -219,4 +208,4 @@ class _Updater:
             # TODO: Maybe be more explicit about this? (i.e. have a storage method for it)
             feed_to_update = FeedUpdateIntent(self.url, self.old_feed.last_updated)
 
-        return feed_to_update, entries_to_update, None
+        return feed_to_update, entries_to_update

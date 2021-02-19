@@ -676,15 +676,14 @@ class Reader:
                 (
                     feed_to_update,
                     entries_to_update,
-                    exception,
                 ) = self._updater.make_update_intents(
                     feed_for_update, now, global_now, parse_result, entry_pairs
                 )
 
                 counts = self._update_feed(feed_to_update, entries_to_update)
 
-                if exception:
-                    yield exception
+                if isinstance(parse_result, Exception):
+                    yield parse_result
                 elif parse_result:
                     yield UpdatedFeed(feed_for_update.url, *counts)
                 else:
