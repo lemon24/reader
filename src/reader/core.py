@@ -160,11 +160,6 @@ def make_reader(
     return reader
 
 
-# If we ever want to implement metrics for Reader, see this comment:
-# https://github.com/lemon24/reader/issues/68#issuecomment-450025175
-# TODO: gather all the design notes in one place
-
-
 class Reader:
 
     """A feed reader.
@@ -195,6 +190,10 @@ class Reader:
         create one instance in each thread.
         If you have a strong use case preventing you to do so,
         please +1 / comment in :issue:`206`.
+
+
+    .. versionadded:: 1.13
+        JSON Feed support.
 
     """
 

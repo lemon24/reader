@@ -201,6 +201,12 @@ Retriever / parser split:
 * :issue:`205#issuecomment-766321855`
 
 
+Metrics
+~~~~~~~
+
+Some thoughts on implementing metrics: :issue:`68#issuecomment-450025175`.
+
+
 Query builder
 ~~~~~~~~~~~~~
 
@@ -265,6 +271,11 @@ Some thoughts about adding a ``map`` argument: :issue:`152#issuecomment-60663620
 How ``update_feeds()`` is like a pipeline: `comment <https://github.com/lemon24/reader/blob/1.13/src/reader/core.py#L629-L643>`_.
 
 Data flow diagram for the update process, as of v1.13: :issue:`204#issuecomment-779709824`.
+
+``update_feeds_iter()``:
+
+* use case: :issue:`204#issuecomment-779893386` and :issue:`204#issuecomment-780541740`
+* return type: :issue:`204#issuecomment-780553373`
 
 
 Disabling feed updates
