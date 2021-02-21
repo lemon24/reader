@@ -52,6 +52,7 @@ from .types import MissingType
 from .types import SearchSortOrder
 from .types import TagFilterInput
 from .types import UpdatedFeed
+from .types import UpdateResult
 
 
 log = logging.getLogger('reader')
@@ -530,6 +531,8 @@ class Reader:
 
         Silently skip feeds that raise :exc:`ParseError`.
 
+        Roughly equivalent to ``for _ in reader.update_feed_iter(...): pass``.
+
         Args:
             new_only (bool): Only update feeds that have never been updated.
             workers (int): Number of threads to use when getting the feeds.
@@ -541,7 +544,47 @@ class Reader:
             Only update the feeds that have updates enabled.
 
         """
+        for url, value in self.update_feeds_iter(new_only, workers):
+            if isinstance(value, ParseError):
+                log.exception(
+                    "update feed %r: error while getting/parsing feed, "
+                    "skipping; exception: %r",
+                    url,
+                    value.__cause__,
+                    exc_info=value,
+                )
+                continue
 
+            assert not isinstance(value, Exception), value
+
+    def update_feeds_iter(
+        self, new_only: bool = False, workers: int = 1
+    ) -> Iterable[UpdateResult]:
+        """Update all the feeds that have updates enabled.
+
+        Args:
+            new_only (bool): Only update feeds that have never been updated.
+            workers (int): Number of threads to use when getting the feeds.
+
+        Yields:
+            :class:`UpdateResult`:
+                An (url, value) pair; the value is one of:
+
+                * a summary of the updated feed, if the update was successful
+                * None, if the server indicated the feed has not changed
+                  since the last update
+                * an exception instance
+
+                Currently, the exception is always a :exc:`ParseError`,
+                but other :exc:`ReaderError` subclasses may be yielded
+                in the future.
+
+        Raises:
+            StorageError
+
+        .. versionadded:: 1.14
+
+        """
         if workers < 1:
             raise ValueError("workers must be a positive integer")
 
@@ -550,21 +593,16 @@ class Reader:
         with make_map as map:
             results = self._update_feeds(new_only=new_only, map=map)
 
-            for exc in results:
-                if not isinstance(exc, Exception):
+            for url, value in results:
+                if isinstance(value, FeedNotFoundError):
+                    log.info("update feed %r: feed removed during update", url)
                     continue
-                if isinstance(exc, FeedNotFoundError):
-                    log.info("update feed %r: feed removed during update", exc.url)
-                elif isinstance(exc, ParseError):
-                    log.exception(
-                        "update feed %r: error while getting/parsing feed, "
-                        "skipping; exception: %r",
-                        exc.url,
-                        exc.__cause__,
-                        exc_info=exc,
-                    )
-                else:
-                    raise exc
+
+                if isinstance(value, Exception):
+                    if not isinstance(value, ParseError):
+                        raise value
+
+                yield UpdateResult(url, value)
 
     def update_feed(self, feed: FeedInput) -> Optional[UpdatedFeed]:
         """Update a single feed.
@@ -590,7 +628,7 @@ class Reader:
 
         """
         url = _feed_argument(feed)
-        rv = zero_or_one(
+        _, rv = zero_or_one(
             self._update_feeds(url=url, enabled_only=False),
             lambda: FeedNotFoundError(url),
         )
@@ -617,7 +655,7 @@ class Reader:
         new_only: bool = False,
         enabled_only: bool = True,
         map: Callable[[Callable[[Any], Any], Iterable[Any]], Iterator[Any]] = map,
-    ) -> Iterator[Union[UpdatedFeed, None, Exception]]:
+    ) -> Iterator[Tuple[str, Union[UpdatedFeed, None, Exception]]]:
 
         # global_now is used as first_updated_epoch for all new entries,
         # so that the subset of new entries from an update appears before
@@ -657,6 +695,7 @@ class Reader:
         pairs = map(self._parse_feed_for_update, feeds_for_update)
 
         for feed_for_update, parse_result in pairs:
+            rv: Union[UpdatedFeed, None, Exception]
 
             try:
                 # give storage a chance to consume the entries in a streaming fashion;
@@ -683,14 +722,16 @@ class Reader:
                 counts = self._update_feed(feed_to_update, entries_to_update)
 
                 if isinstance(parse_result, Exception):
-                    yield parse_result
+                    rv = parse_result
                 elif parse_result:
-                    yield UpdatedFeed(feed_for_update.url, *counts)
+                    rv = UpdatedFeed(feed_for_update.url, *counts)
                 else:
-                    yield None
+                    rv = None
 
             except Exception as e:
-                yield e
+                rv = e
+
+            yield feed_for_update.url, rv
 
     def _parse_feed_for_update(
         self, feed: FeedForUpdate

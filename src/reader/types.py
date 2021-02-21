@@ -645,7 +645,7 @@ class UpdatedFeed:
 
 
 class UpdateResult(NamedTuple):
-    """The result of a feed update.
+    """Named tuple representing the result of a feed update.
 
     .. versionadded:: 1.14
 
