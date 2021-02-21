@@ -261,6 +261,16 @@ def green(text):
     return click.style(str(text), fg='bright_green')
 
 
+def get_update_status(value):
+    if value is None:
+        return None
+    if isinstance(value, Exception):
+        return False
+    if not value.new or value.updated:
+        return None
+    return True
+
+
 def iter_update_status(it, length):
     start = datetime.now()
 
@@ -268,15 +278,14 @@ def iter_update_status(it, length):
         elapsed = datetime.now() - start
         pos = f"{i}/{length or '?'}"
 
-        if value is None:
+        update_status = get_update_status(value)
+
+        if update_status is None:
             status = 'not modified'
-        elif isinstance(value, Exception):
+        elif not update_status:
             status = red(value)
         else:
-            if not value.new and not value.updated:
-                status = 'not modified'
-            else:
-                status = green(f"{value.new} new, {value.updated} updated")
+            status = green(f"{value.new} new, {value.updated} updated")
 
         click.echo(f"{elapsed}\t{pos}\t{url}\t{status}")
 
@@ -337,8 +346,12 @@ def update(reader, url, new_only, workers, verbose):
         if width < 80:
             return ''
         if width < 105:
-            return f"{green(ok_count)}/{not_modified_count}/{red(error_count)}"
-        return f"{green(f'{ok_count} ok')}, {not_modified_count} not modified, {red(f'{error_count} error')}"
+            return f"{green(ok_count)}/{red(error_count)}/{not_modified_count}"
+        return (
+            f"{green(f'{ok_count} ok') if ok_count else '0 ok'}, "
+            f"{red(f'{error_count} error') if error_count else '0 error'}, "
+            f"{not_modified_count} not modified"
+        )
 
     if url:
         length = 1
@@ -366,9 +379,10 @@ def update(reader, url, new_only, workers, verbose):
     try:
         with bar_context as bar:
             for _, value in bar:
-                if value is None:
+                update_status = get_update_status(value)
+                if update_status is None:
                     not_modified_count += 1
-                elif isinstance(value, Exception):
+                elif not update_status:
                     error_count += 1
                 else:
                     ok_count += 1
