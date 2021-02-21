@@ -29,6 +29,8 @@ from reader import MetadataNotFoundError
 from reader import ParseError
 from reader import Reader
 from reader import StorageError
+from reader import UpdatedFeed
+from reader import UpdateResult
 from reader._storage import Storage
 from reader._types import FeedUpdateIntent
 
@@ -675,6 +677,100 @@ def test_update_feed(reader, feed_arg):
 
     with pytest.raises(ParseError):
         reader.update_feed(feed_arg(one))
+
+
+def call_update_feeds_iter(reader):
+    yield from reader.update_feeds_iter()
+
+
+def call_update_feed_iter(reader):
+    for feed in reader.get_feeds(updates_enabled=True):
+        print(feed)
+        try:
+            yield feed.url, reader.update_feed(feed)
+        except ParseError as e:
+            yield feed.url, e
+
+
+@pytest.fixture(
+    params=[
+        call_update_feeds_iter,
+        call_update_feed_iter,
+    ]
+)
+def call_update_iter_method(request):
+    return request.param
+
+
+def test_update_feeds_iter(reader, call_update_iter_method):
+    reader._parser = parser = FailingParser(condition=lambda url: url == '3')
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    one_one = parser.entry(1, 1, datetime(2010, 1, 1))
+    one_two = parser.entry(1, 2, datetime(2010, 2, 1))
+    two = parser.feed(2, datetime(2010, 1, 1))
+    two_one = parser.entry(2, 1, datetime(2010, 2, 1))
+
+    for feed in one, two:
+        reader.add_feed(feed)
+
+    assert dict(call_update_iter_method(reader)) == {
+        '1': UpdatedFeed(url='1', new=2, updated=0),
+        '2': UpdatedFeed(url='2', new=1, updated=0),
+    }
+
+    assert next(call_update_iter_method(reader)) == UpdateResult(
+        '1', UpdatedFeed(url='1', new=0, updated=0)
+    )
+
+    one_two = parser.entry(1, 2, datetime(2010, 2, 2), title='new title')
+    one_three = parser.entry(1, 3, datetime(2010, 2, 1))
+    one_four = parser.entry(1, 4, datetime(2010, 2, 1))
+    three = parser.feed(3, datetime(2010, 1, 1))
+
+    reader.add_feed(three)
+
+    rv = dict(call_update_iter_method(reader))
+    assert set(rv) == set('123')
+
+    assert rv['1'] == UpdatedFeed(url='1', new=2, updated=1)
+    assert rv['2'] == UpdatedFeed(url='2', new=0, updated=0)
+
+    assert isinstance(rv['3'], ParseError)
+    assert rv['3'].url == '3'
+    assert rv['3'].__cause__ is parser.exception
+
+    reader._parser = parser = NotModifiedParser()
+
+    assert dict(call_update_iter_method(reader)) == dict.fromkeys('123')
+
+
+@pytest.mark.parametrize('exc_type', [StorageError, Exception])
+def test_update_feeds_iter_raised_exception(reader, exc_type, call_update_iter_method):
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 1, 1))
+    three = parser.feed(3, datetime(2010, 1, 1))
+
+    for feed in one, two, three:
+        reader.add_feed(feed)
+
+    original_storage_update_feed = reader._storage.update_feed
+
+    def storage_update_feed(intent):
+        if intent.url == '2':
+            raise exc_type('message')
+        return original_storage_update_feed(intent)
+
+    reader._storage.update_feed = storage_update_feed
+
+    rv = {}
+    with pytest.raises(exc_type) as excinfo:
+        rv.update(call_update_iter_method(reader))
+    assert 'message' in str(excinfo.value)
+
+    assert rv == {'1': UpdatedFeed(url='1', new=0, updated=0)}
 
 
 def test_mark_as_read_unread(reader, entry_arg):

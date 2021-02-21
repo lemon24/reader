@@ -63,6 +63,16 @@ def call_update_feeds_workers(reader, _):
     reader.update_feeds(workers=2)
 
 
+def call_update_feeds_iter(reader, _):
+    for _ in reader.update_feeds_iter():
+        pass
+
+
+def call_update_feeds_iter_workers(reader, _):
+    for _ in reader.update_feeds_iter(workers=2):
+        pass
+
+
 def call_update_feed(reader, url):
     reader.update_feed(url)
 
@@ -71,6 +81,8 @@ def call_update_feed(reader, url):
     params=[
         call_update_feeds,
         pytest.param(call_update_feeds_workers, marks=pytest.mark.slow),
+        call_update_feeds_iter,
+        pytest.param(call_update_feeds_iter_workers, marks=pytest.mark.slow),
         call_update_feed,
     ]
 )
