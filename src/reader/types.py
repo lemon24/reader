@@ -11,6 +11,7 @@ from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Mapping
+from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -21,6 +22,8 @@ from typing import Union
 from typing_extensions import Literal
 from typing_extensions import Protocol
 from typing_extensions import runtime_checkable
+
+from reader.exceptions import ReaderError
 
 
 _T = TypeVar('_T')
@@ -639,3 +642,39 @@ class UpdatedFeed:
 
     #: The number of updated entries.
     updated: int
+
+
+class UpdateResult(NamedTuple):
+    """The result of a feed update.
+
+    .. versionadded:: 1.14
+
+    """
+
+    #: The URL of the feed.
+    url: str
+
+    #: One of:
+    #:
+    #: :class:`UpdatedFeed`
+    #:
+    #:  If the update was successful; a summary of the updated feed.
+    #:
+    #: :obj:`None`
+    #:
+    #:  If the server indicated the feed has not changed
+    #:  since the last update.
+    #:
+    #: :exc:`ReaderError`
+    #:
+    #:  If there was an error while updating the feed.
+    #:
+    value: Union[UpdatedFeed, None, ReaderError]
+
+    # The exception type is ReaderError and not ParseError
+    # to allow suppressing new errors without breaking the API:
+    # adding a new type to the union breaks the API,
+    # not raising an exception type anymore doesn't.
+    # Currently, storage or plugin-raised exceptions
+    # prevent updates for the following feeds (:issue:`218`),
+    # but that's not necessarily by design.

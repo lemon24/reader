@@ -55,6 +55,9 @@ Data objects
 .. autoclass:: EntrySearchCounts
     :members:
 
+.. autoclass:: UpdateResult
+    :members:
+
 .. autoclass:: UpdatedFeed
     :members:
 

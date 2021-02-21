@@ -52,6 +52,7 @@ from .types import (
     FeedCounts,
     EntryCounts,
     EntrySearchCounts,
+    UpdateResult,
     UpdatedFeed,
 )
 
