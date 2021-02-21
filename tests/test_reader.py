@@ -685,7 +685,6 @@ def call_update_feeds_iter(reader):
 
 def call_update_feed_iter(reader):
     for feed in reader.get_feeds(updates_enabled=True):
-        print(feed)
         try:
             yield feed.url, reader.update_feed(feed)
         except ParseError as e:

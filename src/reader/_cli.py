@@ -2,17 +2,22 @@ import functools
 import json
 import logging
 import os.path
+import sys
 import traceback
+from datetime import datetime
 
 import click
 import yaml
 
 import reader
+from . import ParseError
+from . import ReaderError
 from . import StorageError
 from ._config import make_reader_config
 from ._config import make_reader_from_config
 from ._plugins import LoaderError
 from ._sqlite_utils import DebugConnection
+from ._utils import nullcontext
 
 
 APP_NAME = reader.__name__
@@ -69,6 +74,8 @@ def make_reader_with_plugins(*, debug_storage=False, **kwargs):
 
 
 def setup_logging(verbose):
+    if verbose < 0:
+        return
     if verbose == 0:
         level = logging.WARNING
     elif verbose == 1:
@@ -84,18 +91,25 @@ def setup_logging(verbose):
     logging.getLogger('reader').addHandler(handler)
 
 
-def log_verbose(fn):
-    @click.option('-v', '--verbose', count=True)
-    @functools.wraps(fn)
-    def wrapper(*args, verbose, **kwargs):
-        setup_logging(verbose)
-        return fn(*args, **kwargs)
+def make_log_verbose(expose_value=False, initial=0):
+    def log_verbose(fn):
+        @click.option('-v', '--verbose', count=True)
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            setup_logging(kwargs['verbose'] + initial)
+            if not expose_value:
+                del kwargs['verbose']
+            return fn(*args, **kwargs)
 
-    return wrapper
+        return wrapper
+
+    return log_verbose
+
+
+log_verbose = make_log_verbose()
 
 
 def log_command(fn):
-    @log_verbose
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         ctx = click.get_current_context()
@@ -112,13 +126,14 @@ def log_command(fn):
             rv = fn(*args, **kwargs)
             log.info("command finished successfully")
             return rv
-
         except Exception as e:
             log.critical(
                 "command failed due to unexpected error: %s; traceback follows",
                 e,
                 exc_info=True,
             )
+            if not isinstance(e, ReaderError):
+                raise
             click.get_current_context().exit(1)
 
     return wrapper
@@ -238,6 +253,36 @@ def remove(reader, url):
     reader.remove_feed(url)
 
 
+def red(text):
+    return click.style(str(text), fg='bright_red')
+
+
+def green(text):
+    return click.style(str(text), fg='bright_green')
+
+
+def iter_update_status(it, length):
+    start = datetime.now()
+
+    for i, (url, value) in enumerate(it):
+        elapsed = datetime.now() - start
+        pos = f"{i}/{length or '?'}"
+
+        if value is None:
+            status = 'not modified'
+        elif isinstance(value, Exception):
+            status = red(value)
+        else:
+            if not value.new and not value.updated:
+                status = 'not modified'
+            else:
+                status = green(f"{value.new} new, {value.updated} updated")
+
+        click.echo(f"{elapsed}\t{pos}\t{url}\t{status}")
+
+        yield url, value
+
+
 @cli.command()
 @click.argument('url', required=False)
 @click.option(
@@ -250,18 +295,89 @@ def remove(reader, url):
     show_default=True,
     help="Number of threads to use when getting the feeds.",
 )
+@make_log_verbose(True, -2)
 @log_command
 @pass_reader
-def update(reader, url, new_only, workers):
+def update(reader, url, new_only, workers, verbose):
     """Update one or all feeds.
 
     If URL is not given, update all the feeds.
 
+    Verbosity works like this:
+
+    \b
+        : progress bar + final status
+        -v: + lines
+        -vv: + warnings
+        -vvv: + info
+        -vvvv: + debug
+
     """
     if url:
-        reader.update_feed(url)
+
+        def make_it():
+            try:
+                yield url, reader.update_feed(url)
+            except ParseError as e:
+                yield url, e
+
+        it = make_it()
     else:
-        reader.update_feeds(new_only=new_only, workers=workers)
+        it = reader.update_feeds_iter(new_only=new_only, workers=workers)
+
+    ok_count = 0
+    not_modified_count = 0
+    error_count = 0
+    new_count = 0
+    updated_count = 0
+
+    def feed_stats(width=None):
+        if not width:
+            width, _ = click.get_terminal_size()
+        if width < 80:
+            return ''
+        if width < 105:
+            return f"{green(ok_count)}/{not_modified_count}/{red(error_count)}"
+        return f"{green(f'{ok_count} ok')}, {not_modified_count} not modified, {red(f'{error_count} error')}"
+
+    if url:
+        length = 1
+    else:
+        if not new_only:
+            length = reader.get_feed_counts(updates_enabled=True).total
+        else:
+            # TODO: pending https://github.com/lemon24/reader/issues/217
+            length = None
+
+    if not verbose:
+        bar_context = click.progressbar(
+            it,
+            length=length,
+            label='update',
+            show_pos=True,
+            show_eta=True,
+            item_show_func=lambda _: feed_stats(),
+            file=sys.stderr,
+        )
+
+    else:
+        bar_context = nullcontext(iter_update_status(it, length))
+
+    try:
+        with bar_context as bar:
+            for _, value in bar:
+                if value is None:
+                    not_modified_count += 1
+                elif isinstance(value, Exception):
+                    error_count += 1
+                else:
+                    ok_count += 1
+                    new_count += value.new
+                    updated_count += value.updated
+    finally:
+        click.echo(
+            f"{feed_stats(9999)}; entries: {new_count} new, {updated_count} updated"
+        )
 
 
 @cli.group('list')
@@ -318,6 +434,7 @@ def search_disable(reader):
 
 
 @search.command('update')
+@log_verbose
 @log_command
 @pass_reader
 def search_update(reader):
