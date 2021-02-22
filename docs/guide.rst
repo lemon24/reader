@@ -144,6 +144,24 @@ you can call this more often (e.g. every minute)::
     >>> reader.update_feeds(new_only=True)
 
 
+If you need the status of each feed as it gets updated
+(for instance, to update a progress bar),
+you can use :meth:`~Reader.update_feeds_iter`
+to get (url, updated feed or none or exception) pairs::
+
+    >>> for url, value in reader.update_feeds_iter():
+    ...     if value is None:
+    ...         print(url, "not modified")
+    ...     elif isinstance(value, Exception):
+    ...         print(url, "error:", value)
+    ...     else:
+    ...         print(url, value.new, "new,", value.updated, "updated")
+    ...
+    http://www.hellointernet.fm/podcast?format=rss 100 new, 0 updated
+    https://www.relay.fm/cortex/feed not modified
+
+
+
 
 Disabling feed updates
 ----------------------
