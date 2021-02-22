@@ -9,7 +9,7 @@ Changelog
 Version 1.14
 ------------
 
-Unreleased
+Released 2021-02-22
 
 * Add the :meth:`~Reader.update_feeds_iter` method,
   which yields the update status of each feed as it gets updated.
