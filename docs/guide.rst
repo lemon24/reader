@@ -146,8 +146,8 @@ you can call this more often (e.g. every minute)::
 
 If you need the status of each feed as it gets updated
 (for instance, to update a progress bar),
-you can use :meth:`~Reader.update_feeds_iter`
-to get (url, updated feed or none or exception) pairs::
+you can use :meth:`~Reader.update_feeds_iter` instead,
+and get a (url, updated feed or none or exception) pair for each feed::
 
     >>> for url, value in reader.update_feeds_iter():
     ...     if value is None:
@@ -159,7 +159,6 @@ to get (url, updated feed or none or exception) pairs::
     ...
     http://www.hellointernet.fm/podcast?format=rss 100 new, 0 updated
     https://www.relay.fm/cortex/feed not modified
-
 
 
 

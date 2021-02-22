@@ -13,8 +13,16 @@ Unreleased
 
 * Use ``PRAGMA user_version`` instead of a version table. (:issue:`210`)
 * Use ``PRAGMA application_id`` to identify reader databases;
-  the id is 0x66656564 – ``read`` in ASCII / UTF-8.
-  (:issue:`211`)
+  the id is ``0x66656564`` – ``read`` in ASCII / UTF-8. (:issue:`211`)
+* Add the :meth:`~Reader.update_feeds_iter` method,
+  which yields the update status of each feed as it gets updated.
+  (:issue:`204`)
+* Change the return type of :meth:`~Reader.update_feed`
+  from ``None`` to ``Optional[UpdatedFeed]``.
+  (:issue:`204`)
+* Change the ``reader update`` command to show a progress bar
+  and update summary (with colors), instead of plain log output.
+  (:issue:`204`)
 * Fix broken Mypy config following 0.800 release. (:issue:`213`)
 
 
