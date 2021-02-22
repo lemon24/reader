@@ -9,10 +9,11 @@ from typing import Any
 from typing import Mapping
 from typing import Optional
 from typing import Sequence
+from typing import Tuple
 from typing import TypeVar
 from typing import Union
 
-import requests
+import requests.adapters
 from typing_extensions import Protocol
 
 
@@ -21,7 +22,10 @@ _T = TypeVar('_T')
 
 class _RequestPlugin(Protocol):
     def __call__(
-        self, session: requests.Session, request: requests.Request, **kwargs: Any,
+        self,
+        session: requests.Session,
+        request: requests.Request,
+        **kwargs: Any,
     ) -> Optional[requests.Request]:  # pragma: no cover
         ...
 
@@ -111,3 +115,26 @@ class SessionWrapper:
 
     def __exit__(self, *args: Any) -> None:
         self.session.close()
+
+
+TimeoutType = Union[None, float, Tuple[float, float], Tuple[float, None]]
+
+
+class TimeoutHTTPAdapter(requests.adapters.HTTPAdapter):
+
+    """Add a default timeout to requests.
+
+    https://requests.readthedocs.io/en/master/user/advanced/#timeouts
+    https://github.com/psf/requests/issues/3070#issuecomment-205070203
+
+    TODO: Remove when psf/requests#3070 gets fixed.
+
+    """
+
+    def __init__(self, timeout: TimeoutType, *args: Any, **kwargs: Any):
+        self.__timeout = timeout
+        super().__init__(*args, **kwargs)
+
+    def send(self, *args: Any, **kwargs: Any) -> Any:
+        kwargs.setdefault('timeout', self.__timeout)
+        return super().send(*args, **kwargs)

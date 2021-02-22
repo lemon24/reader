@@ -36,6 +36,8 @@ from ._http_utils import parse_options_header
 from ._http_utils import unparse_accept_header
 from ._requests_utils import SessionHooks
 from ._requests_utils import SessionWrapper
+from ._requests_utils import TimeoutHTTPAdapter
+from ._requests_utils import TimeoutType
 from ._types import EntryData
 from ._types import FeedData
 from ._types import ParsedFeed
@@ -90,8 +92,14 @@ class AwareParserType(ParserType, Protocol):
         ...
 
 
-def default_parser(feed_root: Optional[str] = None) -> 'Parser':
+SESSION_TIMEOUT = (3.05, 60)
+
+
+def default_parser(
+    feed_root: Optional[str] = None, session_timeout: TimeoutType = SESSION_TIMEOUT
+) -> 'Parser':
     parser = Parser()
+    parser.session_timeout = session_timeout
 
     http_retriever = HTTPRetriever(parser.make_session)
     parser.mount_retriever('https://', http_retriever)
@@ -123,6 +131,7 @@ class Parser:
         self.parsers_by_mime_type: Dict[str, List[Tuple[float, ParserType]]] = {}
         self.parsers_by_url: Dict[str, ParserType] = {}
         self.session_hooks = SessionHooks()
+        self.session_timeout: TimeoutType = None
 
     def __call__(
         self,
@@ -229,8 +238,13 @@ class Parser:
 
     def make_session(self) -> SessionWrapper:
         session = SessionWrapper(hooks=self.session_hooks.copy())
+
+        session.session.mount('https://', TimeoutHTTPAdapter(self.session_timeout))
+        session.session.mount('http://', TimeoutHTTPAdapter(self.session_timeout))
+
         if self.user_agent:
             session.session.headers['User-Agent'] = self.user_agent
+
         return session
 
 
@@ -330,7 +344,6 @@ class HTTPRetriever:
             request_headers['Accept'] = http_accept
 
         # TODO: maybe share the session in the parser?
-        # TODO: timeouts!
 
         with self.make_session() as session:
             with wrap_exceptions(url, "while getting feed"):

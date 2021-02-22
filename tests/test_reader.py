@@ -14,6 +14,7 @@ from fakeparser import Parser
 from utils import make_url_base
 from utils import rename_argument
 
+import reader._parser
 from reader import Content
 from reader import Enclosure
 from reader import Entry
@@ -1691,7 +1692,7 @@ def test_entries_filtering_error(reader, pre_stuff, call_method, kwargs):
 def test_make_reader_feed_root(monkeypatch, kwargs, feed_root):
     exc = Exception("whatever")
 
-    def default_parser(feed_root):
+    def default_parser(feed_root, **kwargs):
         default_parser.feed_root = feed_root
         raise exc
 
@@ -2651,3 +2652,25 @@ def test_logging_defaults():
     assert logger.level == logging.NOTSET
     assert len(logger.handlers) == 1
     assert isinstance(logger.handlers[0], logging.NullHandler)
+
+
+@pytest.mark.parametrize(
+    'kwargs, expected_timeout',
+    [
+        ({}, reader._parser.SESSION_TIMEOUT),
+        ({'session_timeout': (1.234, 324.1)}, (1.234, 324.1)),
+    ],
+)
+def test_session_timeout(monkeypatch, kwargs, expected_timeout):
+    def send(*args, timeout=None, **kwargs):
+        raise Exception('timeout', timeout)
+
+    monkeypatch.setattr('requests.adapters.HTTPAdapter.send', send)
+
+    reader = make_reader(':memory:', **kwargs)
+    reader.add_feed('http://www.example.com')
+
+    with pytest.raises(ParseError) as exc_info:
+        reader.update_feed('http://www.example.com')
+
+    assert exc_info.value.__cause__.args == ('timeout', expected_timeout)

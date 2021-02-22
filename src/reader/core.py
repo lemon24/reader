@@ -18,6 +18,8 @@ from typing import Union
 import reader._updater
 from ._parser import default_parser
 from ._parser import Parser
+from ._parser import SESSION_TIMEOUT
+from ._requests_utils import TimeoutType
 from ._search import Search
 from ._storage import Storage
 from ._types import EntryData
@@ -69,6 +71,7 @@ def make_reader(
     url: str,
     *,
     feed_root: Optional[str] = '',
+    session_timeout: TimeoutType = SESSION_TIMEOUT,
     _storage: Optional[Storage] = None,
     _storage_factory: Any = None,
 ) -> 'Reader':
@@ -126,6 +129,13 @@ def make_reader(
             One of ``None`` (don't open local feeds),
             ``''`` (full filesystem access; default), or
             ``'/path/to/feed/root'`` (an absolute path that feed paths are relative to).
+        session_timeout (float or tuple(float, float) or None):
+            When retrieving HTTP(S) feeds,
+            how many seconds to wait for the server to send data,
+            as a float, or a (connect timeout, read timeout) tuple.
+            Passed to the underlying `Requests session`_.
+
+    .. _Requests session: https://requests.readthedocs.io/en/master/user/advanced/#timeouts
 
     Returns:
         Reader: The reader.
@@ -141,6 +151,11 @@ def make_reader(
         *full filesystem access* (``''``) to
         *don't open local feeds* (``None``).
 
+    .. versionadded:: 1.14
+        The ``session_timeout`` keyword argument,
+        with a default of (3.05, 60) seconds;
+        the previous behavior was to *never time out*.
+
     """
 
     # If we ever need to change the signature of make_reader(),
@@ -155,7 +170,7 @@ def make_reader(
     # For now, we're using a storage-bound search provider.
     search = Search(storage)
 
-    parser = default_parser(feed_root)
+    parser = default_parser(feed_root, session_timeout=session_timeout)
 
     reader = Reader(storage, search, parser, _called_directly=False)
     return reader
