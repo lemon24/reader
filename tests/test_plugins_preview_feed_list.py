@@ -2,6 +2,8 @@ import pytest
 
 from reader._plugins.preview_feed_list import get_alternates
 
+pytestmark = pytest.mark.filterwarnings("ignore:No parser was explicitly specified")
+
 
 MAIN_IN = """\
 <link rel=alternate type=rss href=1 />

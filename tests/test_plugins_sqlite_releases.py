@@ -1,9 +1,12 @@
 from datetime import datetime
 
+import pytest
+
 from reader._plugins.sqlite_releases import FULL_URL
 from reader._plugins.sqlite_releases import init
 
 
+@pytest.mark.filterwarnings("ignore:No parser was explicitly specified")
 def test_sqlite_releases(reader, requests_mock, data_dir):
     init(reader)
 
