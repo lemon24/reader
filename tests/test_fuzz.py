@@ -1,20 +1,35 @@
+import string
 import sys
 
 import hypothesis.strategies as st
 import pytest
 from fakeparser import Parser
+from hypothesis import example
 from hypothesis import given
 from hypothesis import settings
 from test_reader import get_entries_random
 from test_reader import search_entries_random
 from test_reader import with_call_entries_method
+from test_types import test_highlighted_string_extract
+from test_types import test_highlighted_string_roundtrip
 
 from reader import make_reader
+from reader.types import HighlightedString
 
 
-# Skip on PyPy, as these tests are even slower there.
-# Reconsider when we start using hypothesis profiles.
-pytestmark = pytest.mark.skipif("sys.implementation.name == 'pypy'")
+# Skip, since these add about 10s to the test suite
+# and fail intermittently because the deadline gets exceeded.
+# Especially skip on PyPy, since they're even slower there,
+# and also increase the likelyhood of tests failing due to sqlite3 brittleness.
+#
+# Things to do when we reconsider:
+#
+# * use hypothesis profiles
+# * write better tests, so we can actually get value from this
+#
+# Existing issue: https://github.com/lemon24/reader/issues/188
+#
+pytestmark = pytest.mark.skip()
 
 
 @st.composite
@@ -89,3 +104,49 @@ def test_sort_and_filter_subset_basic(data_and_kwargs, pre_stuff, call_method):
 
     actual = [eval(e.id) for e in call_method(reader, **kwargs)]
     assert set(expected) >= set(actual)
+
+
+@st.composite
+def maybe_highlighted_words_and_markers(draw):
+    random = draw(st.randoms(use_true_random=True))
+    marker = ''.join(random.choices(string.ascii_letters, k=20))
+    before = f'>{marker}>'
+    after = f'<{marker}<'
+    maybe_highlighted_words = st.lists(st.tuples(st.text(), st.booleans()))
+    return draw(maybe_highlighted_words), before, after
+
+
+@pytest.mark.slow
+@given(maybe_highlighted_words_and_markers())
+def test_highlighted_string_extract_fuzz(maybe_highlighted_words_and_markers):
+    words, before, after = maybe_highlighted_words_and_markers
+    input = ''.join(f'{before}{w}{after}' if h else w for w, h in words)
+    value = ''.join(w for w, _ in words)
+    highlights = [w for w, h in words if h]
+    test_highlighted_string_extract(input, value, highlights, before, after)
+
+
+@pytest.mark.slow
+@given(st.lists(st.tuples(st.text(), st.booleans())), st.text(), st.text())
+def test_highlighted_string_apply_fuzz(words, before, after):
+    slices = []
+    current_index = 0
+    for word, is_highlight in words:
+        next_index = current_index + len(word)
+        if is_highlight:
+            slices.append(slice(current_index, next_index))
+        current_index = next_index
+
+    string = HighlightedString(''.join(w for w, _ in words), slices)
+
+    expected = ''.join(f'{before}{w}{after}' if h else w for w, h in words)
+
+    assert string.apply(before, after) == expected
+
+
+@pytest.mark.slow
+@given(maybe_highlighted_words_and_markers())
+def test_highlighted_string_roundtrip_fuzz(maybe_highlighted_words_and_markers):
+    words, before, after = maybe_highlighted_words_and_markers
+    input = ''.join(f'{before}{w}{after}' if h else w for w, h in words)
+    test_highlighted_string_roundtrip(input, before, after)

@@ -1074,6 +1074,12 @@ def test_get_entries_recent_feed_order(reader, chunk_size, pre_stuff, call_metho
     assert [eval(e.id)[1] for e in call_method(reader)] == [1, 4, 2, 3]
 
 
+# sqlite3 on PyPy can be brittle
+# (spurious "InterfaceError: Error binding parameter X")
+# and we're doing lots of tiny queries here which may trigger it,
+# so don't bother
+@pytest.mark.skipif("sys.implementation.name == 'pypy'")
+@pytest.mark.slow
 @pytest.mark.parametrize('chunk_size', [1, 2, 3, 4])
 @pytest.mark.parametrize(
     'pre_stuff, call_method',
