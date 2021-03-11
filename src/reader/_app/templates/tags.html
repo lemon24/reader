@@ -29,23 +29,26 @@
 
 {% for tag, feed_counts, entry_counts in tags %}
 <dt id="tag-{{ loop.index }}">
-    {% if tag == true %} <span class="tag-text">any tags</span>
+    {% if tag == none %} <span class="tag-text">all</span>
+    {% elif tag == true %} <span class="tag-text">any tags</span>
     {% elif tag == false %} <span class="tag-text">no tags</span>
     {% else %} <span class="tag">{{ tag }}</span>
     {% endif %}
 </dt>
 
 <dd>
+    {% set url_kwargs = {'tags': [tag] | tojson } if tag is not none else {} %}
+
     {% if feed_counts %}
         <abbr title='({{ feed_counts.broken }} broken, {{ feed_counts.total - feed_counts.updates_enabled }} disabled)'>{{ feed_counts.total }}
     {% endif %}
-    <a href="{{ url_for('.feeds', tags=[tag] | tojson) }}">feeds</a>
+    <a href="{{ url_for('.feeds', **url_kwargs) }}">feeds</a>
     {%- if feed_counts %}</abbr>{% endif -%}
     ,
     {% if entry_counts %}
         <abbr title='({{ entry_counts.read }} read, {{ entry_counts.important }} important)'>{{ entry_counts.total }}
     {% endif %}
-    <a href="{{ url_for('.entries', tags=[tag] | tojson) }}">entries</a>
+    <a href="{{ url_for('.entries', **url_kwargs) }}">entries</a>
     {% if entry_counts %}</abbr>{% endif %}
 </dd>
 

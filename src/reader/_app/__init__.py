@@ -403,16 +403,19 @@ def tags():
     with_counts = request.args.get('counts')
     with_counts = {None: None, 'no': False, 'yes': True}[with_counts]
 
-    tags = (
-        (
-            tag,
-            reader.get_feed_counts(tags=[tag]) if with_counts else None,
-            reader.get_entry_counts(feed_tags=[tag]) if with_counts else None,
-        )
-        for tag in itertools.chain([True, False], reader.get_feed_tags())
-    )
+    def iter_tags():
+        for tag in itertools.chain([None, True, False], reader.get_feed_tags()):
+            feed_counts = None
+            entry_counts = None
 
-    return render_template('tags.html', tags=tags)
+            if with_counts:
+                tags_arg = [tag] if tag is not None else tag
+                feed_counts = reader.get_feed_counts(tags=tags_arg)
+                entry_counts = reader.get_entry_counts(feed_tags=tags_arg)
+
+            yield tag, feed_counts, entry_counts
+
+    return render_template('tags.html', tags=iter_tags())
 
 
 form_api = APIThing(blueprint, '/form-api', 'form_api')

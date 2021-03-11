@@ -11,6 +11,8 @@ Version 1.15
 
 Unreleased
 
+* Minor web application improvements.
+
 
 Version 1.14
 ------------
