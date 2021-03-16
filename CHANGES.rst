@@ -11,6 +11,11 @@ Version 1.15
 
 Unreleased
 
+* Fix bug causing entries that don't have ``updated`` set
+  to not be updated if a feed is marked as stale.
+  Feed staleness is an internal feature used during storage migrations;
+  the bug could only manifest when migrating from 0.22 to 1.x.
+  (found during :issue:`179`)
 * Minor web application improvements.
 
 

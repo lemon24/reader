@@ -112,15 +112,19 @@ class _Updater:
         def debug(msg: str, *args: Any) -> None:
             self.log.debug("entry %r: " + msg, new.id, *args)
 
-        updated = new.updated
         old_updated = old.updated if old else None
+
+        if not new.updated:
+            debug("has no updated, updating but not changing updated")
+            debug("entry added/updated")
+            return old_updated or self.now
 
         if self.stale:
             debug("feed marked as stale, updating anyway")
-        elif not new.updated:
-            debug("has no updated, updating but not changing updated")
-            updated = old_updated or self.now
-        elif old_updated and new.updated <= old_updated:
+            debug("entry added/updated")
+            return new.updated
+
+        if old_updated and new.updated <= old_updated:
             debug(
                 "entry not updated, skipping (old updated %s, new updated %s)",
                 old_updated,
@@ -129,7 +133,7 @@ class _Updater:
             return None
 
         debug("entry added/updated")
-        return updated
+        return new.updated
 
     def get_entries_to_update(
         self,

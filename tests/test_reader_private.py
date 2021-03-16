@@ -11,7 +11,8 @@ from reader import make_reader
 from reader._storage import Storage
 
 
-def test_update_stale(reader, call_update_method):
+@pytest.mark.parametrize('entry_updated', [datetime(2010, 1, 1), None])
+def test_update_stale(reader, call_update_method, entry_updated):
     """When a feed is marked as stale feeds/entries should be updated
     regardless of their .updated or caching headers.
 
@@ -22,7 +23,7 @@ def test_update_stale(reader, call_update_method):
     reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
-    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, entry_updated)
 
     with pytest.raises(FeedNotFoundError):
         reader._storage.mark_as_stale(feed.url)
@@ -41,18 +42,19 @@ def test_update_stale(reader, call_update_method):
     }
 
     new_feed = parser.feed(1, datetime(2010, 1, 1), title="new feed title")
-    new_entry = parser.entry(1, 1, datetime(2010, 1, 1), title="new entry title")
+    new_entry = parser.entry(1, 1, entry_updated, title="new entry title")
 
-    # nothing changes after update
-    reader._now = lambda: datetime(2010, 1, 2)
-    call_update_method(reader, feed.url)
-    assert set((f.url, f.title, f.last_updated) for f in reader.get_feeds()) == {
-        (feed.url, feed.title, datetime(2010, 1, 1))
-    }
-    # FIXME: use entry.last_updated once we have it
-    assert set((e.id, e.title) for e in reader.get_entries()) == {
-        (entry.id, entry.title)
-    }
+    if entry_updated:
+        # nothing changes after update
+        reader._now = lambda: datetime(2010, 1, 2)
+        call_update_method(reader, feed.url)
+        assert set((f.url, f.title, f.last_updated) for f in reader.get_feeds()) == {
+            (feed.url, feed.title, datetime(2010, 1, 1))
+        }
+        # FIXME: use entry.last_updated once we have it
+        assert set((e.id, e.title) for e in reader.get_entries()) == {
+            (entry.id, entry.title)
+        }
 
     # but it does if we mark the feed as stale
     parser.calls[:] = []

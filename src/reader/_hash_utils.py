@@ -32,7 +32,6 @@ from typing import Tuple
 
 
 _VERSION = 0
-assert _VERSION.bit_length() <= 8
 
 
 def get_hash(thing: object) -> bytes:
