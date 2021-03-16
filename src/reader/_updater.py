@@ -85,55 +85,73 @@ class _Updater:
 
         if not old.last_updated:
             self.log.info("feed has no last_updated, treating as updated")
-            feed_was_updated = True
-
             assert not old.updated, "updated must be None if last_updated is None"
-
-        elif not new.updated:
-            self.log.info("feed has no updated, treating as updated")
-            feed_was_updated = True
-        else:
-            feed_was_updated = not (
-                new.updated and old.updated and new.updated <= old.updated
-            )
-
-        should_be_updated = self.stale or feed_was_updated
-
-        if not should_be_updated:
-            # Some feeds have entries newer than the feed.
-            # https://github.com/lemon24/reader/issues/76
-            self.log.info("feed not updated, updating entries anyway")
-
-        return should_be_updated
-
-    def should_update_entry(
-        self, new: EntryData[Optional[datetime]], old: Optional[EntryForUpdate]
-    ) -> Optional[datetime]:
-        def debug(msg: str, *args: Any) -> None:
-            self.log.debug("entry %r: " + msg, new.id, *args)
-
-        old_updated = old.updated if old else None
+            return True
 
         if not new.updated:
+            self.log.info("feed has no updated, treating as updated")
+            return True
+
+        if not old.updated and self.stale:
+            # logging for stale happened in process_old_feed()
+            return True
+
+        if not old.updated or new.updated > old.updated:
+            self.log.info("feed updated")
+            return True
+
+        """
+        if not check_hash(new, old.hash):
+            self.log.debug("feed hash changed, treating as updated")
+            return True
+        """
+
+        # Some feeds have entries newer than the feed.
+        # https://github.com/lemon24/reader/issues/76
+        self.log.info("feed not updated, updating entries anyway")
+
+        return False
+
+    def compute_entry_updated(
+        self, id: str, new: Optional[datetime], old: Optional[datetime]
+    ) -> Optional[datetime]:
+        def debug(msg: str, *args: Any) -> None:
+            self.log.debug("entry %r: " + msg, id, *args)
+
+        if not new:
             debug("has no updated, updating but not changing updated")
             debug("entry added/updated")
-            return old_updated or self.now
+            return old or self.now
 
         if self.stale:
             debug("feed marked as stale, updating anyway")
             debug("entry added/updated")
-            return new.updated
+            return new
 
-        if old_updated and new.updated <= old_updated:
+        if old and new <= old:
             debug(
-                "entry not updated, skipping (old updated %s, new updated %s)",
-                old_updated,
-                new.updated,
+                "entry not updated, skipping (old updated %s, new updated %s)", old, new
             )
             return None
 
-        debug("entry added/updated")
-        return new.updated
+        return new
+
+    def should_update_entry(
+        self, new: EntryData[Optional[datetime]], old: Optional[EntryForUpdate]
+    ) -> Optional[EntryData[datetime]]:
+
+        updated = self.compute_entry_updated(new.id, new.updated, old and old.updated)
+
+        if updated:
+            return EntryData(**new._replace(updated=updated).__dict__)
+
+        """
+        if not check_hash(new, old.hash):
+            self.log.debug("entry %r: entry hash changed, updating", new.id)
+            return new
+        """
+
+        return None
 
     def get_entries_to_update(
         self,
@@ -148,13 +166,12 @@ class _Updater:
                 new_entry.feed_url == self.url
             ), f'{new_entry.feed_url!r}, {self.url!r}'
 
-            updated = self.should_update_entry(new_entry, old_entry)
             entry_new = not old_entry
+            processed_new_entry = self.should_update_entry(new_entry, old_entry)
 
-            if updated:
-
+            if processed_new_entry:
                 yield EntryUpdateIntent(
-                    EntryData(**new_entry._replace(updated=updated).__dict__),
+                    processed_new_entry,
                     last_updated,
                     self.global_now if entry_new else None,
                     feed_order,
