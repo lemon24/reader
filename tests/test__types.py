@@ -1,5 +1,7 @@
 import pytest
 
+from reader._types import EntryData
+from reader._types import FeedData
 from reader._types import tag_filter_argument
 
 

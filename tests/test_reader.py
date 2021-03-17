@@ -1377,6 +1377,33 @@ def test_data_roundtrip(reader):
         )
     ]
 
+    # TODO: this should be a different test
+    (feed_for_update,) = reader._storage.get_feeds_for_update(url=feed.url)
+    assert feed.hash == feed_for_update.hash
+    (entry_for_update,) = reader._storage.get_entries_for_update(
+        [(entry.feed_url, entry.id)]
+    )
+    assert entry.hash == entry_for_update.hash
+
+
+def test_data_hashes_remain_stable():
+    # TODO: note the duplication from test_data_roundtrip()
+
+    parser = Parser()
+    feed = parser.feed(1, datetime(2010, 1, 1), author='feed author')
+    entry = parser.entry(
+        1,
+        1,
+        datetime(2010, 1, 1),
+        author='entry author',
+        summary='summary',
+        content=(Content('value3', 'type', 'en'), Content('value2')),
+        enclosures=(Enclosure('http://e1', 'type', 1000), Enclosure('http://e2')),
+    )
+
+    assert feed.hash == b'\x00\x03\x7f\x84\x16\xea\xcb\xb6\xc2G\xd9\xdd\xf8+\xbdr'
+    assert entry.hash == b'\x00\xd9\xbd\x01\xf0Ro\xdb\xf0\xcfT\xda\x97\xfa\xdb\x17'
+
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_integration(reader, feed_type, data_dir, monkeypatch):
@@ -1398,7 +1425,8 @@ def test_integration(reader, feed_type, data_dir, monkeypatch):
         class datetime_mock(datetime):
             pass
 
-        monkeypatch.setattr('datetime.datetime', datetime_mock)
+        # reader.core must "from datetime import datetime" !
+        monkeypatch.setattr('reader.core.datetime', datetime_mock)
 
     monkeypatch.setattr(datetime_mock, 'utcnow', lambda: datetime(2010, 1, 1))
     reader.add_feed(feed_url)

@@ -1,9 +1,9 @@
 import builtins
-import datetime
 import itertools
 import logging
 import numbers
 import warnings
+from datetime import datetime
 from typing import Any
 from typing import Callable
 from typing import Collection
@@ -64,7 +64,7 @@ _T = TypeVar('_T')
 _U = TypeVar('_U')
 
 
-_PostEntryAddPluginType = Callable[['Reader', EntryData[datetime.datetime]], None]
+_PostEntryAddPluginType = Callable[['Reader', EntryData[datetime]], None]
 
 
 def make_reader(
@@ -652,8 +652,8 @@ class Reader:
         return rv
 
     @staticmethod
-    def _now() -> datetime.datetime:
-        return datetime.datetime.utcnow()
+    def _now() -> datetime:
+        return datetime.utcnow()
 
     # The type of map should be
     #

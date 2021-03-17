@@ -49,6 +49,7 @@ class FeedData(_namedtuple_compat):
     def as_feed(self, **kwargs: object) -> Feed:
         """For testing."""
         attrs = dict(self.__dict__)
+        attrs.pop('hash', None)
         attrs.update(kwargs)
         return Feed(**attrs)
 
@@ -59,7 +60,7 @@ class FeedData(_namedtuple_compat):
     _hash_exclude_ = frozenset({'url'})
 
     @cached_property
-    def hash(self) -> bytes:  # pragma: no cover
+    def hash(self) -> bytes:
         return get_hash(self)
 
 
@@ -116,6 +117,7 @@ class EntryData(Generic[_UpdatedType], _namedtuple_compat):
         """For testing."""
         attrs = dict(self.__dict__)
         feed_url = attrs.pop('feed_url')
+        attrs.pop('hash', None)
         attrs.update(kwargs)
         attrs.setdefault('original_feed_url', feed_url)
         return Entry(**attrs)
@@ -127,7 +129,7 @@ class EntryData(Generic[_UpdatedType], _namedtuple_compat):
     _hash_exclude_ = frozenset({'feed_url', 'id'})
 
     @cached_property
-    def hash(self) -> bytes:  # pragma: no cover
+    def hash(self) -> bytes:
         return get_hash(self)
 
 
@@ -159,8 +161,11 @@ class FeedForUpdate(NamedTuple):
     #: The date the feed was last updated, according to reader; none if never.
     last_updated: Optional[datetime]
 
-    # Whether the feed had an exception at the last update.
+    #: Whether the feed had an exception at the last update.
     last_exception: bool
+
+    #: The hash of the corresponding FeedData.
+    hash: Optional[bytes]
 
 
 class EntryForUpdate(NamedTuple):
@@ -169,6 +174,9 @@ class EntryForUpdate(NamedTuple):
 
     #: The date the entry was last updated, according to the entry.
     updated: datetime
+
+    #: The hash of the corresponding EntryData.
+    hash: Optional[bytes]
 
 
 class FeedUpdateIntent(NamedTuple):

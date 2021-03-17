@@ -81,6 +81,7 @@ def create_feeds(db: sqlite3.Connection, name: str = 'feeds') -> None:
             user_title TEXT,  -- except this one, which comes from reader
             http_etag TEXT,
             http_last_modified TEXT,
+            data_hash BLOB,  -- derived from feed data
 
             -- reader data
             stale INTEGER NOT NULL DEFAULT 0,
@@ -90,7 +91,7 @@ def create_feeds(db: sqlite3.Connection, name: str = 'feeds') -> None:
             last_exception TEXT
 
             -- NOTE: when adding new fields, check if they should be set
-            -- to their defalt value in change_feed_url()
+            -- to their default value in change_feed_url()
 
         );
         """
@@ -114,6 +115,7 @@ def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
             content TEXT,
             enclosures TEXT,
             original_feed TEXT,  -- null if the feed was never moved
+            data_hash BLOB,  -- derived from entry data
 
             -- reader data
             read INTEGER NOT NULL DEFAULT 0,
@@ -263,6 +265,18 @@ def update_from_25_to_26(db: sqlite3.Connection) -> None:  # pragma: no cover
 
 def update_from_26_to_27(db: sqlite3.Connection) -> None:  # pragma: no cover
     # for https://github.com/lemon24/reader/issues/211
+
+    db.execute("ALTER TABLE feeds ADD COLUMN data_hash BLOB;")
+    db.execute("ALTER TABLE entries ADD COLUMN data_hash BLOB;")
+
+    # force the hash to be set on the next full update;
+    # otherwise, for some feeds it'll be set only after
+    # their caching headers change, which is less predictable
+    db.execute("UPDATE feeds SET stale = 1;")
+
+
+def update_from_27_to_28(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/179
     db.execute(f"PRAGMA application_id = {APPLICATION_ID};")
 
 
@@ -270,7 +284,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=27,
+        version=28,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
@@ -288,6 +302,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             24: create_indexes,
             25: update_from_25_to_26,
             26: update_from_26_to_27,
+            27: update_from_27_to_28,
         },
         id=APPLICATION_ID,
         # Row value support was added in 3.15.
@@ -563,6 +578,7 @@ class Storage:
                     'stale',
                     'last_updated',
                     ('last_exception', 'last_exception IS NOT NULL'),
+                    'data_hash',
                 )
                 .FROM("feeds")
             )
@@ -596,14 +612,14 @@ class Storage:
                 context = dict(feed_url=feed_url, id=id)
                 row = self.db.execute(
                     """
-                    SELECT updated
+                    SELECT updated, data_hash
                     FROM entries
                     WHERE feed = :feed_url
                         AND id = :id;
                     """,
                     context,
                 ).fetchone()
-                yield EntryForUpdate(row[0]) if row else None
+                yield EntryForUpdate._make(row) if row else None
 
     def _get_entries_for_update_one_query(
         self, entries: Sequence[Tuple[str, str]]
@@ -622,7 +638,8 @@ class Storage:
                 )
             SELECT
                 entries.id IS NOT NULL,
-                entries.updated
+                entries.updated,
+                entries.data_hash
             FROM input
             LEFT JOIN entries
                 ON (input.id, input.feed) == (entries.id, entries.feed);
@@ -632,7 +649,10 @@ class Storage:
 
         # This can't be a generator because we need to get OperationalError
         # in this function (so get_entries_for_update() below can catch it).
-        return (EntryForUpdate(updated) if exists else None for exists, updated in rows)
+        return (
+            EntryForUpdate(updated, data_hash) if exists else None
+            for exists, updated, data_hash in rows
+        )
 
     @wrap_exceptions_iter(StorageError)
     def get_entries_for_update(
@@ -745,7 +765,7 @@ class Storage:
         assert feed is not None
         context.pop('last_exception')
 
-        context.update(feed._asdict())
+        context.update(feed._asdict(), data_hash=feed.hash)
 
         with self.db:
             cursor = self.db.execute(
@@ -758,6 +778,7 @@ class Storage:
                     author = :author,
                     http_etag = :http_etag,
                     http_last_modified = :http_last_modified,
+                    data_hash = :data_hash,
                     stale = 0,
                     last_updated = :last_updated,
                     last_exception = NULL
@@ -802,8 +823,8 @@ class Storage:
     ) -> Mapping[str, Any]:
         context = intent._asdict()
         entry = context.pop('entry')
-        context.update(entry._asdict())
         context.update(
+            entry._asdict(),
             content=(
                 json.dumps([t._asdict() for t in entry.content])
                 if entry.content
@@ -814,6 +835,7 @@ class Storage:
                 if entry.enclosures
                 else None
             ),
+            data_hash=entry.hash,
         )
         return context
 
@@ -867,7 +889,8 @@ class Storage:
                         last_updated,
                         first_updated_epoch,
                         feed_order,
-                        original_feed
+                        original_feed,
+                        data_hash
                     ) VALUES (
                         :id,
                         :feed_url,
@@ -896,7 +919,8 @@ class Storage:
                             WHERE id = :id AND feed = :feed_url
                         )),
                         :feed_order,
-                        NULL
+                        NULL, -- original_feed
+                        :data_hash
                     );
                     """,
                     make_params(),

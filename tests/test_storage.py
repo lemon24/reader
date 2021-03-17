@@ -437,9 +437,10 @@ class StorageAlwaysGetEntriesForUpdateFallback(Storage):
 def test_get_entries_for_update(storage_cls):
     storage = storage_cls(':memory:')
     storage.add_feed('feed', datetime(2010, 1, 1))
+    entry = EntryData('feed', 'one', datetime(2010, 1, 1))
     storage.add_or_update_entry(
         EntryUpdateIntent(
-            EntryData('feed', 'one', datetime(2010, 1, 1)),
+            entry,
             datetime(2010, 1, 2),
             datetime(2010, 1, 1),
             0,
@@ -447,7 +448,7 @@ def test_get_entries_for_update(storage_cls):
     )
 
     assert list(storage.get_entries_for_update([('feed', 'one'), ('feed', 'two')])) == [
-        EntryForUpdate(datetime(2010, 1, 1)),
+        EntryForUpdate(datetime(2010, 1, 1), entry.hash),
         None,
     ]
 
