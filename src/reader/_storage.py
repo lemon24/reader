@@ -265,6 +265,11 @@ def update_from_25_to_26(db: sqlite3.Connection) -> None:  # pragma: no cover
 
 def update_from_26_to_27(db: sqlite3.Connection) -> None:  # pragma: no cover
     # for https://github.com/lemon24/reader/issues/211
+    db.execute(f"PRAGMA application_id = {APPLICATION_ID};")
+
+
+def update_from_27_to_28(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/179
 
     db.execute("ALTER TABLE feeds ADD COLUMN data_hash BLOB;")
     db.execute("ALTER TABLE entries ADD COLUMN data_hash BLOB;")
@@ -273,11 +278,6 @@ def update_from_26_to_27(db: sqlite3.Connection) -> None:  # pragma: no cover
     # otherwise, for some feeds it'll be set only after
     # their caching headers change, which is less predictable
     db.execute("UPDATE feeds SET stale = 1;")
-
-
-def update_from_27_to_28(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/179
-    db.execute(f"PRAGMA application_id = {APPLICATION_ID};")
 
 
 def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
