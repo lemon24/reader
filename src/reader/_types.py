@@ -10,6 +10,8 @@ from typing import Type
 from typing import TypeVar
 from typing import Union
 
+from ._hash_utils import get_hash
+from ._vendor.cached_property import cached_property
 from .types import _entry_argument
 from .types import _feed_argument
 from .types import _namedtuple_compat
@@ -21,7 +23,6 @@ from .types import ExceptionInfo
 from .types import Feed
 from .types import FeedInput
 from .types import TagFilterInput
-
 
 # Private API
 # https://github.com/lemon24/reader/issues/111
@@ -54,6 +55,12 @@ class FeedData(_namedtuple_compat):
     @property
     def object_id(self) -> str:
         return self.url
+
+    _hash_exclude_ = frozenset({'url'})
+
+    @cached_property
+    def hash(self) -> bytes:  # pragma: no cover
+        return get_hash(self)
 
 
 _UpdatedType = TypeVar('_UpdatedType', datetime, Optional[datetime])
@@ -116,6 +123,12 @@ class EntryData(Generic[_UpdatedType], _namedtuple_compat):
     @property
     def object_id(self) -> Tuple[str, str]:
         return self.feed_url, self.id
+
+    _hash_exclude_ = frozenset({'feed_url', 'id'})
+
+    @cached_property
+    def hash(self) -> bytes:  # pragma: no cover
+        return get_hash(self)
 
 
 class ParsedFeed(NamedTuple):

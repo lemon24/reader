@@ -20,12 +20,23 @@ class DataTwo:
     three: object = None
 
 
-def three_factory(one, value):
+def two_factory(one, value):
     return DataTwo(one, three=value)
 
 
+@dataclass
+class DataThree:
+    one: object
+    two: object = None
+    _hash_exclude_ = frozenset(
+        {
+            'one',
+        }
+    )
+
+
 @pytest.mark.parametrize('value', ['', [], (), {}, None])
-@pytest.mark.parametrize('factory', [DataOne, DataTwo, three_factory])
+@pytest.mark.parametrize('factory', [DataOne, DataTwo, two_factory])
 def test_empty(value, factory):
     assert get_hash(DataOne(1)) == get_hash(factory(1, value))
     assert get_hash(DataOne(1, factory(2, value))) == get_hash(
@@ -70,3 +81,13 @@ def test_hash(thing, hash):
 def test_hash_error(thing):
     with pytest.raises(TypeError):
         get_hash(DataOne(thing))
+    with pytest.raises(TypeError):
+        get_hash(DataOne)
+
+
+def test_exclude():
+    assert get_hash(DataTwo(None, 2)) == get_hash(DataThree(1, 2))
+    assert get_hash(DataTwo(1, 2)) != get_hash(DataThree(1, 2))
+    assert get_hash(DataOne(DataTwo(None, 2), 'one')) == get_hash(
+        DataOne(DataThree(1, 2), 'one')
+    )

@@ -27,11 +27,10 @@ from collections.abc import Mapping
 from collections.abc import Sequence
 from typing import Any
 from typing import Dict
-from typing import Iterable
-from typing import Tuple
 
 
 _VERSION = 0
+_EXCLUDE = '_hash_exclude_'
 
 
 def get_hash(thing: object) -> bytes:
@@ -57,19 +56,40 @@ def _json_dumps(thing: object) -> str:
     )
 
 
+def _dataclass_dict(thing: object) -> Dict[str, Any]:
+    # we could have used dataclasses.asdict()
+    # with a dict_factory that drops empty values,
+    # but asdict() is recursive and we need to intercept and check
+    # the _hash_exclude_ of nested dataclasses;
+    # this way, json.dumps() does the recursion instead of asdict()
+
+    # raises TypeError for non-dataclasses
+    fields = dataclasses.fields(thing)
+    # ... but doesn't for dataclass *types*
+    if isinstance(thing, type):
+        raise TypeError("got type, expected instance")
+
+    exclude = getattr(thing, _EXCLUDE, ())
+
+    rv = {}
+    for field in fields:
+        if field.name in exclude:
+            continue
+
+        value = getattr(thing, field.name)
+        if value is None or not value and isinstance(value, (Sequence, Mapping)):
+            continue
+
+        rv[field.name] = value
+
+    return rv
+
+
 def _json_default(thing: object) -> Any:
     try:
-        return dataclasses.asdict(thing, dict_factory=_dict_drop_empty)
+        return _dataclass_dict(thing)
     except TypeError:
         pass
     if isinstance(thing, datetime.datetime):
         return thing.isoformat(timespec='microseconds')
     raise TypeError(f"Object of type {type(thing).__name__} is not JSON serializable")
-
-
-def _dict_drop_empty(it: Iterable[Tuple[str, Any]]) -> Dict[str, Any]:
-    return dict(
-        (k, v)
-        for k, v in it
-        if not (v is None or not v and isinstance(v, (Sequence, Mapping)))
-    )
