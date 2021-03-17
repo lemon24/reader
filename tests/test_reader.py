@@ -1404,6 +1404,18 @@ def test_data_hashes_remain_stable():
     assert feed.hash == b'\x00\x03\x7f\x84\x16\xea\xcb\xb6\xc2G\xd9\xdd\xf8+\xbdr'
     assert entry.hash == b'\x00\xd9\xbd\x01\xf0Ro\xdb\xf0\xcfT\xda\x97\xfa\xdb\x17'
 
+    assert feed._replace(url='x').hash == feed.hash
+    assert (
+        feed._replace(title='x').hash
+        == b'\x00\x95\x89w\x84}\x99\xce\x12\xfd,\x0f\x833\xfb\\'
+    )
+
+    assert entry._replace(feed_url='x', id='x').hash == entry.hash
+    assert (
+        entry._replace(title='x').hash
+        == b'\x00\x86\n4_\x9a>c\x9d\x03+\x8c\xee\xb1c\x10'
+    )
+
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 def test_integration(reader, feed_type, data_dir, monkeypatch):
