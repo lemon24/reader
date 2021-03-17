@@ -745,10 +745,7 @@ class Storage:
         assert feed is not None
         context.pop('last_exception')
 
-        # TODO: can't use context.update(feed._asdict()) because for some tests intent.feed is Feed instead of FeedData
-        context.update(
-            updated=feed.updated, title=feed.title, link=feed.link, author=feed.author
-        )
+        context.update(feed._asdict())
 
         with self.db:
             cursor = self.db.execute(

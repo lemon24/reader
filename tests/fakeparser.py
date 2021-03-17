@@ -1,15 +1,15 @@
 import threading
 from collections import OrderedDict
 
-from reader import Feed
 from reader import ParseError
 from reader._types import EntryData
+from reader._types import FeedData
 from reader._types import ParsedFeed
 from reader.types import _entry_argument
 
 
 def _make_feed(number, updated=None, **kwargs):
-    return Feed(
+    return FeedData(
         f'{number}',
         updated,
         kwargs.pop('title', f'Feed #{number}'),
