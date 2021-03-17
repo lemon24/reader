@@ -40,35 +40,45 @@ from reader._types import FeedUpdateIntent
 # TODO: testing added/last_updated everywhere is kinda ugly
 
 
-def test_update_feed_updated(reader, call_update_method):
-    """If a feed is not newer than the stored one, it should not be updated,
-    but its entries should be processed anyway.
+def test_update_feed_updated(reader, call_update_method, caplog):
+    """If a feed is not newer than the stored one,
+    it should be updated only if its content (hash) changed.
+
+    Its entries should be processed anyway.
 
     Details in https://github.com/lemon24/reader/issues/76
 
     """
-
     parser = Parser()
     reader._parser = parser
 
+    # Initial update.
     old_feed = parser.feed(1, datetime(2010, 1, 1), title='old')
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
 
     reader._now = lambda: datetime(2010, 1, 1)
     reader.add_feed(old_feed.url)
     reader._now = lambda: datetime(2010, 1, 2)
-    call_update_method(reader, old_feed.url)
+
+    with caplog.at_level(logging.DEBUG, 'reader'):
+        call_update_method(reader, old_feed.url)
+
     feed = old_feed.as_feed(
         added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2)
     )
     assert set(reader.get_entries()) == {
         entry_one.as_entry(feed=feed, last_updated=datetime(2010, 1, 2))
     }
+    assert "feed has no last_updated, treating as updated" in caplog.text
+    caplog.clear()
 
-    parser.feed(1, datetime(2010, 1, 1), title='old-different-title')
+    # Entries should be processed anyway.
     entry_two = parser.entry(1, 2, datetime(2010, 2, 1))
     reader._now = lambda: datetime(2010, 1, 3)
-    call_update_method(reader, old_feed.url)
+
+    with caplog.at_level(logging.DEBUG, logger='reader'):
+        call_update_method(reader, old_feed.url)
+
     feed = old_feed.as_feed(
         added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 3)
     )
@@ -76,11 +86,33 @@ def test_update_feed_updated(reader, call_update_method):
         entry_one.as_entry(feed=feed, last_updated=datetime(2010, 1, 2)),
         entry_two.as_entry(feed=feed, last_updated=datetime(2010, 1, 3)),
     }
+    assert "feed not updated, updating entries anyway" in caplog.text
+    caplog.clear()
 
-    even_older_feed = parser.feed(1, datetime(2009, 1, 1), title='even-older')
+    # Feed gets updated because content (hash) changed.
+    old_feed = parser.feed(1, datetime(2010, 1, 1), title='old-different-title')
+    reader._now = lambda: datetime(2010, 1, 3, 12)
+
+    with caplog.at_level(logging.DEBUG, logger='reader'):
+        call_update_method(reader, old_feed.url)
+
+    feed = old_feed.as_feed(
+        added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 3, 12)
+    )
+    assert reader.get_feed(feed) == feed
+    assert "feed hash changed, treating as updated" in caplog.text
+    caplog.clear()
+
+    # The feed doesn't change because it is newer,
+    # but because its hash changed (.updated is still part of feed content).
+    # Entries get updated regardless.
+    old_feed = parser.feed(1, datetime(2009, 1, 1), title='old-different-title')
     entry_three = parser.entry(1, 3, datetime(2010, 2, 1))
     reader._now = lambda: datetime(2010, 1, 4)
-    call_update_method(reader, old_feed.url)
+
+    with caplog.at_level(logging.DEBUG, logger='reader'):
+        call_update_method(reader, old_feed.url)
+
     feed = old_feed.as_feed(
         added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 4)
     )
@@ -89,59 +121,106 @@ def test_update_feed_updated(reader, call_update_method):
         entry_two.as_entry(feed=feed, last_updated=datetime(2010, 1, 3)),
         entry_three.as_entry(feed=feed, last_updated=datetime(2010, 1, 4)),
     }
+    assert "feed hash changed, treating as updated" in caplog.text
+    caplog.clear()
 
+    # The feeds changes because it is newer.
+    # Entries get updated regardless.
     new_feed = parser.feed(1, datetime(2010, 1, 2), title='new')
     entry_four = parser.entry(1, 4, datetime(2010, 2, 1))
     reader._now = lambda: datetime(2010, 1, 5)
     feed = new_feed.as_feed(
         added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 5)
     )
-    call_update_method(reader, old_feed.url)
+
+    with caplog.at_level(logging.DEBUG, logger='reader'):
+        call_update_method(reader, old_feed.url)
+
     assert set(reader.get_entries()) == {
         entry_one.as_entry(feed=feed, last_updated=datetime(2010, 1, 2)),
         entry_two.as_entry(feed=feed, last_updated=datetime(2010, 1, 3)),
         entry_three.as_entry(feed=feed, last_updated=datetime(2010, 1, 4)),
         entry_four.as_entry(feed=feed, last_updated=datetime(2010, 1, 5)),
     }
+    assert "feed updated" in caplog.text
+    caplog.clear()
 
 
-def test_update_entry_updated(reader, call_update_method):
-    """An entry should be updated only if it is newer than the stored one."""
+def test_update_entry_updated(reader, call_update_method, caplog):
+    """An entry should be updated only if
+    it is newer than the stored one OR its content (hash) changed.
 
+    """
     parser = Parser()
     reader._parser = parser
 
+    # Initial update.
     feed = parser.feed(1, datetime(2010, 1, 1))
     old_entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
     reader._now = lambda: datetime(2010, 2, 1)
     reader.add_feed(feed.url)
     reader._now = lambda: datetime(2010, 2, 2)
-    call_update_method(reader, feed.url)
+
+    with caplog.at_level(logging.DEBUG, logger='reader'):
+        call_update_method(reader, feed.url)
+
     feed = feed.as_feed(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 2))
     assert set(reader.get_entries()) == {
         old_entry.as_entry(feed=feed, last_updated=datetime(2010, 2, 2))
     }
+    assert "entry updated" in caplog.text
+    caplog.clear()
 
+    # Feed newer, entry remains unchanged.
     feed = parser.feed(1, datetime(2010, 1, 2))
-    new_entry = old_entry._replace(title='New Entry')
-    parser.entries[1][1] = new_entry
     reader._now = lambda: datetime(2010, 2, 3)
-    call_update_method(reader, feed.url)
+
+    with caplog.at_level(logging.DEBUG, logger='reader'):
+        call_update_method(reader, feed.url)
+
     feed = feed.as_feed(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 3))
     assert set(reader.get_entries()) == {
         old_entry.as_entry(feed=feed, last_updated=datetime(2010, 2, 2))
     }
+    assert "entry not updated, skipping" in caplog.text
+    assert "entry hash changed, updating" not in caplog.text
+    caplog.clear()
 
+    # Feed does not change, entry hash changes.
+    feed = parser.feed(1, datetime(2010, 1, 2))
+    new_entry = old_entry._replace(title='New Entry')
+    parser.entries[1][1] = new_entry
+    reader._now = lambda: datetime(2010, 2, 3, 12)
+
+    with caplog.at_level(logging.DEBUG, logger='reader'):
+        call_update_method(reader, feed.url)
+
+    feed = feed.as_feed(
+        added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 3, 12)
+    )
+    assert set(reader.get_entries()) == {
+        new_entry.as_entry(feed=feed, last_updated=datetime(2010, 2, 3, 12))
+    }
+    assert "entry not updated, skipping" in caplog.text
+    assert "entry hash changed, updating" in caplog.text
+    caplog.clear()
+
+    # Entry is newer.
     feed = parser.feed(1, datetime(2010, 1, 3))
     new_entry = new_entry._replace(updated=datetime(2010, 1, 2))
     parser.entries[1][1] = new_entry
     reader._now = lambda: datetime(2010, 2, 4)
-    call_update_method(reader, feed.url)
+
+    with caplog.at_level(logging.DEBUG, logger='reader'):
+        call_update_method(reader, feed.url)
+
     feed = feed.as_feed(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 4))
     assert set(reader.get_entries()) == {
         new_entry.as_entry(feed=feed, last_updated=datetime(2010, 2, 4))
     }
+    assert "entry updated" in caplog.text
+    caplog.clear()
 
 
 @pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1])

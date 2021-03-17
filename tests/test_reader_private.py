@@ -36,13 +36,18 @@ def test_update_stale(reader, call_update_method, entry_updated):
     assert set((f.url, f.title, f.last_updated) for f in reader.get_feeds()) == {
         (feed.url, feed.title, datetime(2010, 1, 1))
     }
-    # FIXME: use entry.last_updated once we have it
-    assert set((e.id, e.title) for e in reader.get_entries()) == {
-        (entry.id, entry.title)
+    assert set((e.id, e.title, e.last_updated) for e in reader.get_entries()) == {
+        (entry.id, entry.title, datetime(2010, 1, 1))
     }
 
-    new_feed = parser.feed(1, datetime(2010, 1, 1), title="new feed title")
-    new_entry = parser.entry(1, 1, entry_updated, title="new entry title")
+    # we can't change feed/entry here because their hash would change,
+    # resulting in an update;
+    # the only way to check they were updated is through last_updated
+
+    # should we deprecate the staleness API? maybe:
+    # https://github.com/lemon24/reader/issues/179#issuecomment-663840297
+    # OTOH, we may still want an update to happen for other side-effects,
+    # even if the hash doesn't change
 
     if entry_updated:
         # nothing changes after update
@@ -51,9 +56,8 @@ def test_update_stale(reader, call_update_method, entry_updated):
         assert set((f.url, f.title, f.last_updated) for f in reader.get_feeds()) == {
             (feed.url, feed.title, datetime(2010, 1, 1))
         }
-        # FIXME: use entry.last_updated once we have it
-        assert set((e.id, e.title) for e in reader.get_entries()) == {
-            (entry.id, entry.title)
+        assert set((e.id, e.title, e.last_updated) for e in reader.get_entries()) == {
+            (entry.id, entry.title, datetime(2010, 1, 1))
         }
 
     # but it does if we mark the feed as stale
@@ -63,11 +67,10 @@ def test_update_stale(reader, call_update_method, entry_updated):
     call_update_method(reader, feed.url)
     assert parser.calls == [(feed.url, None, None)]
     assert set((f.url, f.title, f.last_updated) for f in reader.get_feeds()) == {
-        (feed.url, new_feed.title, datetime(2010, 1, 3))
+        (feed.url, feed.title, datetime(2010, 1, 3))
     }
-    # FIXME: use entry.last_updated once we have it
-    assert set((e.id, e.title) for e in reader.get_entries()) == {
-        (entry.id, new_entry.title)
+    assert set((e.id, e.title, e.last_updated) for e in reader.get_entries()) == {
+        (entry.id, entry.title, datetime(2010, 1, 3))
     }
 
 

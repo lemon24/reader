@@ -8,6 +8,7 @@ from typing import Sequence
 from typing import Tuple
 from typing import Union
 
+from ._hash_utils import check_hash
 from ._types import EntryData
 from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
@@ -100,11 +101,9 @@ class _Updater:
             self.log.info("feed updated")
             return True
 
-        """
-        if not check_hash(new, old.hash):
+        if not old.hash or not check_hash(new, old.hash):
             self.log.debug("feed hash changed, treating as updated")
             return True
-        """
 
         # Some feeds have entries newer than the feed.
         # https://github.com/lemon24/reader/issues/76
@@ -134,6 +133,7 @@ class _Updater:
             )
             return None
 
+        debug("entry updated")
         return new
 
     def should_update_entry(
@@ -145,11 +145,20 @@ class _Updater:
         if updated:
             return EntryData(**new._replace(updated=updated).__dict__)
 
-        """
-        if not check_hash(new, old.hash):
+        # At this point, new should have .updated is not None.
+        # otherwise, compute_entry_updated() would have returned
+        # either old.updated or self.now.
+        # Remove this when it stops doing that, as proposed in this comment:
+        # https://github.com/lemon24/reader/issues/179#issuecomment-663840297
+        assert new.updated is not None
+
+        # If old is None, compute_entry_updated() returned something.
+        assert old is not None
+
+        if not old.hash or not check_hash(new, old.hash):
             self.log.debug("entry %r: entry hash changed, updating", new.id)
-            return new
-        """
+            # mypy does not automatically "cast" new to EntryData[datetime]
+            return EntryData(**new.__dict__)
 
         return None
 
