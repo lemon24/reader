@@ -266,7 +266,7 @@ def get_update_status(value):
         return None
     if isinstance(value, Exception):
         return False
-    if not value.new or value.updated:
+    if not (value.new or value.updated):
         return None
     return True
 
