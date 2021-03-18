@@ -57,6 +57,16 @@ def _json_dumps(thing: object) -> str:
     )
 
 
+def _json_default(thing: object) -> Any:
+    try:
+        return _dataclass_dict(thing)
+    except TypeError:
+        pass
+    if isinstance(thing, datetime.datetime):
+        return thing.isoformat(timespec='microseconds')
+    raise TypeError(f"Object of type {type(thing).__name__} is not JSON serializable")
+
+
 def _dataclass_dict(thing: object) -> Dict[str, Any]:
     # we could have used dataclasses.asdict()
     # with a dict_factory that drops empty values,
@@ -84,13 +94,3 @@ def _dataclass_dict(thing: object) -> Dict[str, Any]:
         rv[field.name] = value
 
     return rv
-
-
-def _json_default(thing: object) -> Any:
-    try:
-        return _dataclass_dict(thing)
-    except TypeError:
-        pass
-    if isinstance(thing, datetime.datetime):
-        return thing.isoformat(timespec='microseconds')
-    raise TypeError(f"Object of type {type(thing).__name__} is not JSON serializable")
