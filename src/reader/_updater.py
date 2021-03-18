@@ -2,13 +2,13 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from typing import cast
 from typing import Iterable
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
 from typing import Union
 
-from ._hash_utils import check_hash
 from ._types import EntryData
 from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
@@ -101,7 +101,7 @@ class _Updater:
             self.log.info("feed updated")
             return True
 
-        if not old.hash or not check_hash(new, old.hash):
+        if not old.hash or new.hash != old.hash:
             self.log.debug("feed hash changed, treating as updated")
             return True
 
@@ -155,10 +155,10 @@ class _Updater:
         # If old is None, compute_entry_updated() returned something.
         assert old is not None
 
-        if not old.hash or not check_hash(new, old.hash):
+        if not old.hash or new.hash != old.hash:
             self.log.debug("entry %r: entry hash changed, updating", new.id)
             # mypy does not automatically "cast" new to EntryData[datetime]
-            return EntryData(**new.__dict__)
+            return cast(EntryData[datetime], new)
 
         return None
 

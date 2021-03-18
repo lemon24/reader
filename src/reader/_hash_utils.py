@@ -12,12 +12,6 @@ the hash changing. Empty means one of: None, '', (), [], or {}.
 The dataclass type is ignored: two instances of different types
 will have the same hash if they have the same attribute/value pairs.
 
-The hash is versioned to allow upgrading the implementation
-without changing existing hashes. For this reason,
-check_hash() should be used instead of plain equality checking.
-
-Implemented for https://github.com/lemon24/reader/issues/179
-
 """
 import dataclasses
 import datetime
@@ -29,6 +23,18 @@ from typing import Any
 from typing import Dict
 
 
+# Implemented for https://github.com/lemon24/reader/issues/179
+
+
+# The first byte of the hash contains its version,
+# to allow upgrading the implementation without changing existing hashes.
+# (In practice, it's likely we'll just let the hash change and update
+# the affected objects again; nevertheless, it's good to have the option.)
+#
+# A previous version recommended using a check_hash(thing, hash) -> bool
+# function instead of direct equality checking; it was removed because
+# it did not allow objects to cache the hash.
+
 _VERSION = 0
 _EXCLUDE = '_hash_exclude_'
 
@@ -37,11 +43,6 @@ def get_hash(thing: object) -> bytes:
     prefix = _VERSION.to_bytes(1, 'big')
     digest = hashlib.md5(_json_dumps(thing).encode('utf-8')).digest()
     return prefix + digest[:-1]
-
-
-def check_hash(thing: object, hash: bytes) -> bool:
-    # TODO (but YAGNI): check hash version and length
-    return get_hash(thing) == hash
 
 
 def _json_dumps(thing: object) -> str:

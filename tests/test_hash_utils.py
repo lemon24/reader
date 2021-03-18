@@ -3,7 +3,6 @@ from datetime import datetime
 
 import pytest
 
-from reader._hash_utils import check_hash
 from reader._hash_utils import get_hash
 
 
@@ -71,9 +70,6 @@ def test_empty(value, factory):
     ],
 )
 def test_hash(thing, hash):
-    assert check_hash(thing, hash) is True
-    assert check_hash(thing, bytes(16)) is False
-    # for version 0 this is true
     assert get_hash(thing) == hash
 
 
