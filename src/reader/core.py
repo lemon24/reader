@@ -558,6 +558,10 @@ class Reader:
         .. versionchanged:: 1.11
             Only update the feeds that have updates enabled.
 
+        .. versionchanged:: 1.15
+            Update entries whenever their content changes,
+            regardless of their :attr:`~Entry.updated` date.
+
         """
         for url, value in self.update_feeds_iter(new_only, workers):
             if isinstance(value, ParseError):
@@ -598,6 +602,10 @@ class Reader:
             StorageError
 
         .. versionadded:: 1.14
+
+        .. versionchanged:: 1.15
+            Update entries whenever their content changes,
+            regardless of their :attr:`~Entry.updated` date.
 
         """
         if workers < 1:
@@ -640,6 +648,10 @@ class Reader:
 
         .. versionchanged:: 1.14
             The method now returns UpdatedFeed or None instead of None.
+
+        .. versionchanged:: 1.15
+            Update entries whenever their content changes,
+            regardless of their :attr:`~Entry.updated` date.
 
         """
         url = _feed_argument(feed)

@@ -11,10 +11,15 @@ Version 1.15
 
 Unreleased
 
-* Fix bug causing entries that don't have ``updated`` set
-  to not be updated if a feed is marked as stale.
+* Update entries whenever their content changes,
+  regardless of their :attr:`~Entry.updated` date.
+  Previously, they would be updated only if the
+  feed ``updated`` was *newer* than the stored one.
+  (:issue:`179`)
+* Fix bug causing entries that don't have :attr:`~Entry.updated`
+  set in the feed to not be updated if the feed is marked as stale.
   Feed staleness is an internal feature used during storage migrations;
-  the bug could only manifest when migrating from 0.22 to 1.x.
+  this bug could only manifest when migrating from 0.22 to 1.x.
   (found during :issue:`179`)
 * Minor web application improvements.
 

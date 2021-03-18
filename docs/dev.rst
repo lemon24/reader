@@ -182,6 +182,7 @@ Multiple storage implementations
 
 Detailed requirements and API discussion: :issue:`168#issuecomment-642002049`.
 
+
 Parser
 ~~~~~~
 
@@ -277,14 +278,17 @@ Data flow diagram for the update process, as of v1.13: :issue:`204#issuecomment-
 * use case: :issue:`204#issuecomment-779893386` and :issue:`204#issuecomment-780541740`
 * return type: :issue:`204#issuecomment-780553373`
 
-
-Disabling feed updates
-~~~~~~~~~~~~~~~~~~~~~~
-
-These two comments from the original issue:
+Disabling updates:
 
 * :issue:`187#issuecomment-706539658`
 * :issue:`187#issuecomment-706593497`
+
+Updating entries based on a hash of their content (regardless of ``updated``):
+
+* stable hasing of Python data objects:
+  :issue:`179#issuecomment-796868555`, the :mod:`reader._hash_utils` module,
+  `death and gravity article <https://death.andgravity.com/stable-hashing>`_
+* ideas for how to deal with spurious hash changes: :issue:`179#issuecomment-801327048`
 
 
 Counts API

@@ -25,7 +25,7 @@ log = logging.getLogger("reader")
 
 def process_old_feed(feed: FeedForUpdate) -> FeedForUpdate:
     if feed.stale:
-        # db_updated=None not ot tested (removing it causes no tests to fail).
+        # db_updated=None not tested (removing it causes no tests to fail).
         #
         # This only matters if last_updated is None *and* db_updated is
         # not None. The way the code is, this shouldn't be possible
@@ -154,6 +154,10 @@ class _Updater:
 
         # If old is None, compute_entry_updated() returned something.
         assert old is not None
+
+        # Checking the hash leads to spurious updates for some feeds.
+        # See this comment for some ideas on how to address it:
+        # https://github.com/lemon24/reader/issues/179#issuecomment-801327048
 
         if not old.hash or new.hash != old.hash:
             self.log.debug("entry %r: entry hash changed, updating", new.id)
