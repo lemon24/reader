@@ -17,8 +17,7 @@ import dataclasses
 import datetime
 import hashlib
 import json
-from collections.abc import Mapping
-from collections.abc import Sequence
+from collections.abc import Collection
 from typing import Any
 from typing import Dict
 
@@ -88,7 +87,7 @@ def _dataclass_dict(thing: object) -> Dict[str, Any]:
             continue
 
         value = getattr(thing, field.name)
-        if value is None or not value and isinstance(value, (Sequence, Mapping)):
+        if value is None or not value and isinstance(value, Collection):
             continue
 
         rv[field.name] = value
