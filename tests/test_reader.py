@@ -1480,19 +1480,15 @@ def test_data_hashes_remain_stable():
         enclosures=(Enclosure('http://e1', 'type', 1000), Enclosure('http://e2')),
     )
 
-    assert feed.hash == b'\x00\x03\x7f\x84\x16\xea\xcb\xb6\xc2G\xd9\xdd\xf8+\xbdr'
-    assert entry.hash == b'\x00\xd9\xbd\x01\xf0Ro\xdb\xf0\xcfT\xda\x97\xfa\xdb\x17'
+    assert feed.hash == b'\x00\xad\xf9\xa0\x0c"(\xb1\xbfF:\xc4\x916/\xd7'
+    assert entry.hash == b'\x00\xbcKt2w\xe5\xb4ws\xe0$\xbc\xd36_'
 
     assert feed._replace(url='x').hash == feed.hash
-    assert (
-        feed._replace(title='x').hash
-        == b'\x00\x95\x89w\x84}\x99\xce\x12\xfd,\x0f\x833\xfb\\'
-    )
+    assert feed._replace(title='x').hash == b'\x00wN\xf34R\xbeb\x02\xacbf\x08\x18\xe0 '
 
     assert entry._replace(feed_url='x', id='x').hash == entry.hash
     assert (
-        entry._replace(title='x').hash
-        == b'\x00\x86\n4_\x9a>c\x9d\x03+\x8c\xee\xb1c\x10'
+        entry._replace(title='x').hash == b'\x00\xafAk<c\xa929\xa7\xf3\x90\x87\x1f\xebN'
     )
 
 

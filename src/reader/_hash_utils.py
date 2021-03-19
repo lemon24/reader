@@ -52,7 +52,7 @@ def _json_dumps(thing: object) -> str:
         # force formatting-related options to known values
         ensure_ascii=False,
         sort_keys=True,
-        indent=0,
+        indent=None,
         separators=(',', ':'),
     )
 
