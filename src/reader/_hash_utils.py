@@ -12,6 +12,10 @@ the hash changing. Empty means one of: None, '', (), [], or {}.
 The dataclass type is ignored: two instances of different types
 will have the same hash if they have the same attribute/value pairs.
 
+Design choices explained in https://death.andgravity.com/stable-hashing
+
+Implemented for https://github.com/lemon24/reader/issues/179
+
 """
 import dataclasses
 import datetime
@@ -20,9 +24,6 @@ import json
 from collections.abc import Collection
 from typing import Any
 from typing import Dict
-
-
-# Implemented for https://github.com/lemon24/reader/issues/179
 
 
 # The first byte of the hash contains its version,
