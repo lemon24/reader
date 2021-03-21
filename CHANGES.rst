@@ -9,7 +9,7 @@ Changelog
 Version 1.15
 ------------
 
-Unreleased
+Released 2021-03-21
 
 * Update entries whenever their content changes,
   regardless of their :attr:`~Entry.updated` date.
