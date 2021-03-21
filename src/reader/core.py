@@ -562,6 +562,14 @@ class Reader:
             Update entries whenever their content changes,
             regardless of their :attr:`~Entry.updated` date.
 
+            Content-only updates (not due to an :attr:`~Entry.updated` change)
+            are limited to 24 consecutive updates,
+            to prevent spurious updates for entries whose content changes
+            excessively (for example, because it includes the current time).
+
+            Previously, entries would be updated only if the
+            entry :attr:`~Entry.updated` was *newer* than the stored one.
+
         """
         for url, value in self.update_feeds_iter(new_only, workers):
             if isinstance(value, ParseError):
@@ -604,8 +612,8 @@ class Reader:
         .. versionadded:: 1.14
 
         .. versionchanged:: 1.15
-            Update entries whenever their content changes,
-            regardless of their :attr:`~Entry.updated` date.
+            Update entries whenever their content changes.
+            See :meth:`~Reader.update_feeds` for details.
 
         """
         if workers < 1:
@@ -650,8 +658,8 @@ class Reader:
             The method now returns UpdatedFeed or None instead of None.
 
         .. versionchanged:: 1.15
-            Update entries whenever their content changes,
-            regardless of their :attr:`~Entry.updated` date.
+            Update entries whenever their content changes.
+            See :meth:`~Reader.update_feeds` for details.
 
         """
         url = _feed_argument(feed)

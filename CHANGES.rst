@@ -13,15 +13,24 @@ Unreleased
 
 * Update entries whenever their content changes,
   regardless of their :attr:`~Entry.updated` date.
-  Previously, they would be updated only if the
-  feed ``updated`` was *newer* than the stored one.
   (:issue:`179`)
+
+  Limit content-only updates (not due to an :attr:`~Entry.updated` change)
+  to 24 consecutive updates,
+  to prevent spurious updates for entries whose content changes
+  excessively (for example, because it includes the current time).
+  (:issue:`225`)
+
+  Previously, entries would be updated only if the
+  entry :attr:`~Entry.updated` was *newer* than the stored one.
+
 * Fix bug causing entries that don't have :attr:`~Entry.updated`
   set in the feed to not be updated if the feed is marked as stale.
   Feed staleness is an internal feature used during storage migrations;
   this bug could only manifest when migrating from 0.22 to 1.x.
   (found during :issue:`179`)
 * Minor web application improvements.
+* Minor CLI improvements.
 
 
 Version 1.14

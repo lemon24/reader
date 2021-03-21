@@ -22,6 +22,8 @@ from .types import ExceptionInfo
 
 log = logging.getLogger("reader")
 
+HASH_CHANGED_LIMIT = 24
+
 
 def process_old_feed(feed: FeedForUpdate) -> FeedForUpdate:
     if feed.stale:
@@ -138,12 +140,12 @@ class _Updater:
 
     def should_update_entry(
         self, new: EntryData[Optional[datetime]], old: Optional[EntryForUpdate]
-    ) -> Optional[EntryData[datetime]]:
+    ) -> Tuple[Optional[EntryData[datetime]], bool]:
 
         updated = self.compute_entry_updated(new.id, new.updated, old and old.updated)
 
         if updated:
-            return EntryData(**new._replace(updated=updated).__dict__)
+            return EntryData(**new._replace(updated=updated).__dict__), False
 
         # At this point, new should have .updated is not None.
         # otherwise, compute_entry_updated() would have returned
@@ -160,11 +162,19 @@ class _Updater:
         # https://github.com/lemon24/reader/issues/179#issuecomment-801327048
 
         if not old.hash or new.hash != old.hash:
-            self.log.debug("entry %r: entry hash changed, updating", new.id)
-            # mypy does not automatically "cast" new to EntryData[datetime]
-            return cast(EntryData[datetime], new)
+            if (old.hash_changed or 0) < HASH_CHANGED_LIMIT:
+                self.log.debug("entry %r: entry hash changed, updating", new.id)
+                # mypy does not automatically "cast" new to EntryData[datetime]
+                return cast(EntryData[datetime], new), True
+            else:
+                self.log.debug(
+                    "entry %r: entry hash changed, "
+                    "but exceeds the update limit (%i); skipping",
+                    new.id,
+                    HASH_CHANGED_LIMIT,
+                )
 
-        return None
+        return None, False
 
     def get_entries_to_update(
         self,
@@ -180,7 +190,9 @@ class _Updater:
             ), f'{new_entry.feed_url!r}, {self.url!r}'
 
             entry_new = not old_entry
-            processed_new_entry = self.should_update_entry(new_entry, old_entry)
+            processed_new_entry, due_to_hash_changed = self.should_update_entry(
+                new_entry, old_entry
+            )
 
             if processed_new_entry:
                 yield EntryUpdateIntent(
@@ -188,6 +200,9 @@ class _Updater:
                     last_updated,
                     self.global_now if entry_new else None,
                     feed_order,
+                    0
+                    if not due_to_hash_changed
+                    else ((old_entry and old_entry.hash_changed or 0) + 1),
                 )
 
     def get_feed_to_update(

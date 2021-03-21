@@ -116,6 +116,7 @@ def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
             enclosures TEXT,
             original_feed TEXT,  -- null if the feed was never moved
             data_hash BLOB,  -- derived from entry data
+            data_hash_changed INTEGER,  -- metadata about data_hash
 
             -- reader data
             read INTEGER NOT NULL DEFAULT 0,
@@ -280,11 +281,16 @@ def update_from_27_to_28(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute("UPDATE feeds SET stale = 1;")
 
 
+def update_from_28_to_29(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/225
+    db.execute("ALTER TABLE entries ADD COLUMN data_hash_changed INTEGER;")
+
+
 def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=28,
+        version=29,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
@@ -303,6 +309,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             25: update_from_25_to_26,
             26: update_from_26_to_27,
             27: update_from_27_to_28,
+            28: update_from_28_to_29,
         },
         id=APPLICATION_ID,
         # Row value support was added in 3.15.
@@ -612,7 +619,7 @@ class Storage:
                 context = dict(feed_url=feed_url, id=id)
                 row = self.db.execute(
                     """
-                    SELECT updated, data_hash
+                    SELECT updated, data_hash, data_hash_changed
                     FROM entries
                     WHERE feed = :feed_url
                         AND id = :id;
@@ -639,7 +646,8 @@ class Storage:
             SELECT
                 entries.id IS NOT NULL,
                 entries.updated,
-                entries.data_hash
+                entries.data_hash,
+                entries.data_hash_changed
             FROM input
             LEFT JOIN entries
                 ON (input.id, input.feed) == (entries.id, entries.feed);
@@ -650,8 +658,7 @@ class Storage:
         # This can't be a generator because we need to get OperationalError
         # in this function (so get_entries_for_update() below can catch it).
         return (
-            EntryForUpdate(updated, data_hash) if exists else None
-            for exists, updated, data_hash in rows
+            EntryForUpdate._make(rest) if exists else None for exists, *rest in rows
         )
 
     @wrap_exceptions_iter(StorageError)
@@ -836,6 +843,7 @@ class Storage:
                 else None
             ),
             data_hash=entry.hash,
+            data_hash_changed=context.pop('hash_changed'),
         )
         return context
 
@@ -890,7 +898,8 @@ class Storage:
                         first_updated_epoch,
                         feed_order,
                         original_feed,
-                        data_hash
+                        data_hash,
+                        data_hash_changed
                     ) VALUES (
                         :id,
                         :feed_url,
@@ -920,7 +929,8 @@ class Storage:
                         )),
                         :feed_order,
                         NULL, -- original_feed
-                        :data_hash
+                        :data_hash,
+                        :data_hash_changed
                     );
                     """,
                     make_params(),

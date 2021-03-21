@@ -146,7 +146,7 @@ def test_update_feed_updated(reader, call_update_method, caplog):
     caplog.clear()
 
 
-def test_update_entry_updated(reader, call_update_method, caplog):
+def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
     """An entry should be updated only if
     it is newer than the stored one OR its content (hash) changed.
 
@@ -220,6 +220,21 @@ def test_update_entry_updated(reader, call_update_method, caplog):
         new_entry.as_entry(feed=feed, last_updated=datetime(2010, 2, 4))
     }
     assert "entry updated" in caplog.text
+    caplog.clear()
+
+    # Entry hash changes, but reaches the update limit.
+    reader._now = lambda: datetime(2010, 2, 5)
+    monkeypatch.setattr('reader._updater.HASH_CHANGED_LIMIT', 3)
+
+    with caplog.at_level(logging.DEBUG, logger='reader'):
+        for i in range(1, 6):
+            new_entry = new_entry._replace(title=f"Even Newer: change #{i}")
+            parser.entries[1][1] = new_entry
+            call_update_method(reader, feed.url)
+
+    assert set(e.title for e in reader.get_entries()) == {"Even Newer: change #3"}
+    assert caplog.text.count("entry hash changed, updating") == 3
+    assert caplog.text.count("entry hash changed, but exceeds the update limit") == 2
     caplog.clear()
 
 

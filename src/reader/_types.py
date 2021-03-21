@@ -178,6 +178,10 @@ class EntryForUpdate(NamedTuple):
     #: The hash of the corresponding EntryData.
     hash: Optional[bytes]
 
+    #: The number of updates due to a different ``hash``
+    #: since the last time ``updated`` changed.
+    hash_changed: Optional[int]
+
 
 class FeedUpdateIntent(NamedTuple):
 
@@ -216,6 +220,9 @@ class EntryUpdateIntent(NamedTuple):
 
     #: The index of the entry in the feed (zero-based).
     feed_order: int
+
+    #: Same as EntryForUpdate.hash_changed.
+    hash_changed: Optional[int]
 
     @property
     def new(self) -> bool:

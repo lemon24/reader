@@ -288,7 +288,7 @@ Updating entries based on a hash of their content (regardless of ``updated``):
 * stable hasing of Python data objects:
   :issue:`179#issuecomment-796868555`, the :mod:`reader._hash_utils` module,
   `death and gravity article <https://death.andgravity.com/stable-hashing>`_
-* ideas for how to deal with spurious hash changes: :issue:`179#issuecomment-801327048`
+* ideas for how to deal with spurious hash changes: :issue:`225`
 
 
 Counts API
