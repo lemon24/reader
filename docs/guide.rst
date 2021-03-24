@@ -604,6 +604,10 @@ or to operate on one that does not exist,
 a corresponding :exc:`*ExistsError` or :exc:`*NotFoundError`
 will be raised.
 
+All functions and methods may raise
+:exc:`ValueError` or :exc:`TypeError`
+if passed invalid arguments.
+
 
 
 .. todo::

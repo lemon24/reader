@@ -178,5 +178,13 @@ class SearchNotEnabledError(SearchError):
     message = "operation not supported with search disabled"
 
 
-class InvalidSearchQueryError(SearchError):
+class InvalidSearchQueryError(SearchError, ValueError):
     """The search query provided was somehow invalid."""
+
+
+class PluginError(ReaderError):
+    """A plugin-related exception."""
+
+
+class InvalidPluginError(PluginError, ValueError):
+    """An invalid plugin was provided."""

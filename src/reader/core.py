@@ -34,8 +34,10 @@ from ._utils import nullcontext
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedNotFoundError
+from .exceptions import InvalidPluginError
 from .exceptions import MetadataNotFoundError
 from .exceptions import ParseError
+from .plugins import _PLUGINS
 from .types import _entry_argument
 from .types import _feed_argument
 from .types import Entry
@@ -63,7 +65,7 @@ log = logging.getLogger('reader')
 _T = TypeVar('_T')
 _U = TypeVar('_U')
 
-
+ReaderPluginType = Callable[['Reader'], None]
 _PostEntryAddPluginType = Callable[['Reader', EntryData[datetime]], None]
 
 
@@ -71,6 +73,7 @@ def make_reader(
     url: str,
     *,
     feed_root: Optional[str] = '',
+    plugins: Iterable[Union[str, ReaderPluginType]] = (),
     session_timeout: TimeoutType = SESSION_TIMEOUT,
     _storage: Optional[Storage] = None,
     _storage_factory: Any = None,
@@ -124,11 +127,19 @@ def make_reader(
 
     Args:
         url (str): Path to the reader database.
+
         feed_root (str or None):
             Directory where to look for local feeds.
             One of ``None`` (don't open local feeds),
             ``''`` (full filesystem access; default), or
             ``'/path/to/feed/root'`` (an absolute path that feed paths are relative to).
+
+        plugins (iterable(str or callable(Reader))):
+            An iterable of built-in plugin names or
+            `plugin(reader) --> None` callables.
+            The callables are called with the reader object
+            before it is returned.
+
         session_timeout (float or tuple(float, float) or None):
             When retrieving HTTP(S) feeds,
             how many seconds to wait for the server to send data,
@@ -142,6 +153,7 @@ def make_reader(
 
     Raises:
         StorageError
+        InvalidPluginError: If an invalid plugin name is passed to ``plugins``.
 
     .. versionadded:: 1.6
         The ``feed_root`` keyword argument.
@@ -155,6 +167,15 @@ def make_reader(
         The ``session_timeout`` keyword argument,
         with a default of (3.05, 60) seconds;
         the previous behavior was to *never time out*.
+
+    .. versionadded:: 1.16
+        The ``plugins`` keyword argument.
+
+    .. versionchanged:: 1.16
+        Raise :exc:`InvalidPluginError`.
+        Not a backwards compatibility break because
+        it is a :exc:`ValueError` subclass,
+        which :func:`make_reader` already raises implicitly.
 
     """
 
@@ -173,6 +194,18 @@ def make_reader(
     parser = default_parser(feed_root, session_timeout=session_timeout)
 
     reader = Reader(storage, search, parser, _called_directly=False)
+
+    for plugin in plugins:
+        if isinstance(plugin, str):
+            if plugin not in _PLUGINS:
+                raise InvalidPluginError(f"no such built-in plugin: {plugin!r}")
+
+            plugin_func = _PLUGINS[plugin]
+        else:
+            plugin_func = plugin
+
+        plugin_func(reader)
+
     return reader
 
 

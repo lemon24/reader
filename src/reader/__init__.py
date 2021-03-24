@@ -70,6 +70,8 @@ from .exceptions import (
     SearchError,
     SearchNotEnabledError,
     InvalidSearchQueryError,
+    PluginError,
+    InvalidPluginError,
 )
 
 
