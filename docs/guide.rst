@@ -480,6 +480,14 @@ from outside Python (e.g. to make a link to the next :ref:`page <pagination>`
 of feeds/entries in a web application).
 
 
+.. _plugins:
+
+Plugins
+-------
+
+TBD.
+
+
 
 Streaming methods
 -----------------

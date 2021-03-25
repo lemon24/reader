@@ -12,9 +12,12 @@ Version 1.16
 Unreleased
 
 * Allow :func:`make_reader` to load plugins through the ``plugins`` argument.
-  The function may raise :exc:`InvalidPluginError` for invalid plugin names
-  (a :exc:`ValueError` subclass,
-  which :func:`make_reader` already raises implicitly).
+  Enable the ``ua_fallback`` plugin by default.
+
+  :func:`make_reader` may raise :exc:`InvalidPluginError`
+  (a :exc:`ValueError` subclass, which it already raises implicitly)
+  for invalid plugin names.
+
   (:issue:`229`)
 
 * Mention in the :doc:`guide` that all *reader* functions/methods can raise

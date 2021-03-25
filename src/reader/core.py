@@ -37,6 +37,7 @@ from .exceptions import FeedNotFoundError
 from .exceptions import InvalidPluginError
 from .exceptions import MetadataNotFoundError
 from .exceptions import ParseError
+from .plugins import _DEFAULT_PLUGINS
 from .plugins import _PLUGINS
 from .types import _entry_argument
 from .types import _feed_argument
@@ -73,7 +74,7 @@ def make_reader(
     url: str,
     *,
     feed_root: Optional[str] = '',
-    plugins: Iterable[Union[str, ReaderPluginType]] = (),
+    plugins: Iterable[Union[str, ReaderPluginType]] = _DEFAULT_PLUGINS,
     session_timeout: TimeoutType = SESSION_TIMEOUT,
     _storage: Optional[Storage] = None,
     _storage_factory: Any = None,
@@ -134,12 +135,13 @@ def make_reader(
             ``''`` (full filesystem access; default), or
             ``'/path/to/feed/root'`` (an absolute path that feed paths are relative to).
 
-        plugins (iterable(str or callable(Reader))):
+        plugins (iterable(str or callable(Reader)) or None):
             An iterable of built-in plugin names or
             `plugin(reader) --> None` callables.
             The callables are called with the reader object
             before it is returned.
             Exceptions from plugin code will propagate to the caller.
+            The only plugin used by default is ``reader.ua_fallback``.
 
         session_timeout (float or tuple(float, float) or None):
             When retrieving HTTP(S) feeds,
@@ -200,7 +202,7 @@ def make_reader(
         else:
             plugin_func = plugin
 
-        plugin_func(reader)
+        plugin_func(reader)  # type: ignore
 
     return reader
 
