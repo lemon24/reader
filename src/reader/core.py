@@ -139,6 +139,7 @@ def make_reader(
             `plugin(reader) --> None` callables.
             The callables are called with the reader object
             before it is returned.
+            Exceptions from plugin code will propagate to the caller.
 
         session_timeout (float or tuple(float, float) or None):
             When retrieving HTTP(S) feeds,
@@ -169,13 +170,8 @@ def make_reader(
         the previous behavior was to *never time out*.
 
     .. versionadded:: 1.16
-        The ``plugins`` keyword argument.
-
-    .. versionchanged:: 1.16
-        Raise :exc:`InvalidPluginError`.
-        Not a backwards compatibility break because
-        it is a :exc:`ValueError` subclass,
-        which :func:`make_reader` already raises implicitly.
+        The ``plugins`` keyword argument. Using an invalid plugin name
+        raises :exc:`InvalidPluginError`, a :exc:`ValueError` subclass.
 
     """
 

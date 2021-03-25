@@ -11,6 +11,17 @@ Version 1.16
 
 Unreleased
 
+* Allow :func:`make_reader` to load plugins through the ``plugins`` argument.
+  The function may raise :exc:`InvalidPluginError` for invalid plugin names
+  (a :exc:`ValueError` subclass,
+  which :func:`make_reader` already raises implicitly).
+  (:issue:`229`)
+
+* Mention in the :doc:`guide` that all *reader* functions/methods can raise
+  :exc:`ValueError` or :exc:`TypeError` if passed invalid arguments.
+  There is no behavior change, this is just documenting existing,
+  previously undocumented behavior.
+
 
 Version 1.15
 ------------

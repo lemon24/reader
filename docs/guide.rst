@@ -605,7 +605,7 @@ a corresponding :exc:`*ExistsError` or :exc:`*NotFoundError`
 will be raised.
 
 All functions and methods may raise
-:exc:`ValueError` or :exc:`TypeError`
+:exc:`ValueError` or :exc:`TypeError` implicitly or explicitly
 if passed invalid arguments.
 
 
