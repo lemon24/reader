@@ -5,13 +5,13 @@ from fakeparser import Parser
 
 from reader import Content
 from reader import Entry
-from reader._plugins.feed_entry_dedupe import feed_entry_dedupe
-from reader._plugins.feed_entry_dedupe import is_duplicate
-from reader._plugins.feed_entry_dedupe import normalize
+from reader import make_reader
+from reader.plugins.entry_dedupe import _is_duplicate
+from reader.plugins.entry_dedupe import _normalize
 
 
 def test_normalize():
-    assert normalize('\n\n<B>whatever</B>&nbsp; Blah </p>') == 'whatever blah'
+    assert _normalize('\n\n<B>whatever</B>&nbsp; Blah </p>') == 'whatever blah'
 
 
 def make_entry(title=None, summary=None, content=None):
@@ -75,10 +75,11 @@ IS_DUPLICATE_DATA = [
 
 @pytest.mark.parametrize('one, two, result', IS_DUPLICATE_DATA)
 def test_is_duplicate(one, two, result):
-    assert bool(is_duplicate(one, two)) is bool(result)
+    assert bool(_is_duplicate(one, two)) is bool(result)
 
 
-def test_feed_entry_dedupe(reader):
+def test_plugin():
+    reader = make_reader(':memory:', plugins=['reader.entry_dedupe'])
     parser = Parser()
     reader._parser = parser
 
@@ -99,8 +100,6 @@ def test_feed_entry_dedupe(reader):
     reader.update_feeds()
     reader.mark_as_read((one.url, read_one.id))
     reader.mark_as_important((one.url, important_one.id))
-
-    feed_entry_dedupe(reader)
 
     one = parser.feed(1, datetime(2010, 1, 2))
     new = parser.entry(1, 11, datetime(2010, 1, 2), title='title', summary='new')

@@ -6,7 +6,7 @@ from reader import Enclosure
 from reader import make_reader
 
 
-def test_enclosure_dedupe():
+def test_plugin():
     reader = make_reader(':memory:', plugins=['reader.enclosure_dedupe'])
     reader._parser = parser = Parser()
 

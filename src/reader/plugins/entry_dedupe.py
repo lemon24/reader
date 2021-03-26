@@ -1,15 +1,28 @@
 """
-feed_entry_dedupe
-~~~~~~~~~~~~~~~~~
+reader.entry_dedupe
+~~~~~~~~~~~~~~~~~~~
 
-Deduplicate entries for the same feed.
+Deduplicate the entries of a feed.
 
-Duplicates are entries with the same title *and* summary/content.
+Sometimes, the format of the entry id changes for all the entries in a feed,
+for example from ``example.com/123`` to ``example.com/entry``.
+Because the entry id is used to uniquely identify entries,
+normally this results in the entry being added again with the new id.
 
-.. module:: reader
-  :noindex:
+This plugin addresses this by copying entry user attributes
+like *read* or *important* from the old entry to the new one.
 
-Entry "user attributes" are set as follows:
+.. note::
+
+    There are plans to *delete* the old entry after copying user attributes;
+    please +1 / comment in :issue:`140` if you need this.
+
+
+Duplicates are entries with the same title *and* the same summary/content,
+after all HTML tags and whitespace have been stripped.
+
+
+Entry user attributes are set as follows:
 
 :attr:`~Entry.read`
 
@@ -40,22 +53,22 @@ Entry "user attributes" are set as follows:
     =============== =============== ===============
 
 
-To load::
-
-    READER_PLUGIN='reader._plugins.feed_entry_dedupe:feed_entry_dedupe' \\
-    python -m reader update -v
-
-Implemented for https://github.com/lemon24/reader/issues/79.
-
 .. todo::
 
     Some possible optimizations:
 
     1.  Do this once per feed (now it's one ``get_entries(feed=...)`` per entry).
     2.  Only get entries with the same title (not possible with the current API).
+
+        **2021 update**: We can use the full-text search if it's enabled.
+
     3.  Add the entry directly as read instead of marking it afterwards
         (requires a new hook to process the entry before it is added,
         and Storage support).
+
+..
+    Implemented for https://github.com/lemon24/reader/issues/79.
+
 
 """
 import logging
@@ -64,45 +77,45 @@ import re
 log = logging.getLogger('reader._plugins.feed_entry_dedupe')
 
 
-XML_TAG_RE = re.compile(r'<[^<]+?>', re.I)
-XML_ENTITY_RE = re.compile(r'&[^\s;]+?;', re.I)
-WHITESPACE_RE = re.compile(r'\s+')
+_XML_TAG_RE = re.compile(r'<[^<]+?>', re.I)
+_XML_ENTITY_RE = re.compile(r'&[^\s;]+?;', re.I)
+_WHITESPACE_RE = re.compile(r'\s+')
 
 
-def normalize(text):
-    text = XML_TAG_RE.sub(' ', text)
-    text = XML_ENTITY_RE.sub(' ', text)
-    text = WHITESPACE_RE.sub(' ', text).strip()
+def _normalize(text):
+    text = _XML_TAG_RE.sub(' ', text)
+    text = _XML_ENTITY_RE.sub(' ', text)
+    text = _WHITESPACE_RE.sub(' ', text).strip()
     text = text.lower()
     return text
 
 
-def first_content(entry):
+def _first_content(entry):
     return next((c.value for c in (entry.content or ()) if c.type == 'text/html'), None)
 
 
-def is_duplicate(one, two):
+def _is_duplicate(one, two):
     same_title = False
     if one.title and two.title:
-        same_title = normalize(one.title or '') == normalize(two.title or '')
+        same_title = _normalize(one.title or '') == _normalize(two.title or '')
 
     same_text = False
     if one.summary and two.summary:
-        same_text = normalize(one.summary) == normalize(two.summary)
+        same_text = _normalize(one.summary) == _normalize(two.summary)
     else:
-        one_content = first_content(one)
-        two_content = first_content(two)
+        one_content = _first_content(one)
+        two_content = _first_content(two)
         if one_content and two_content:
-            same_text = normalize(one_content) == normalize(two_content)
+            same_text = _normalize(one_content) == _normalize(two_content)
 
     return same_title and same_text
 
 
-def feed_entry_dedupe_plugin(reader, entry):
+def _entry_dedupe_plugin(reader, entry):
     duplicates = [
         e
         for e in reader.get_entries(feed=entry.feed_url)
-        if e.id != entry.id and is_duplicate(entry, e)
+        if e.id != entry.id and _is_duplicate(entry, e)
     ]
 
     if not duplicates:
@@ -136,5 +149,5 @@ def feed_entry_dedupe_plugin(reader, entry):
             reader.mark_as_unimportant(duplicate)
 
 
-def feed_entry_dedupe(reader):
-    reader._post_entry_add_plugins.append(feed_entry_dedupe_plugin)
+def init_reader(reader):
+    reader._post_entry_add_plugins.append(_entry_dedupe_plugin)
