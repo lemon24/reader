@@ -31,6 +31,9 @@ Unreleased
     reader._plugins.feed_entry_dedupe:feed_entry_dedupe -> reader.entry_dedupe
     reader._plugins.ua_fallback:init                    -> reader.ua_fallback
 
+* Remove the ``plugins`` extra;
+  plugin loading machinery does not have additional dependencies anymore.
+
 * Mention in the :doc:`guide` that all *reader* functions/methods can raise
   :exc:`ValueError` or :exc:`TypeError` if passed invalid arguments.
   There is no behavior change, this is just documenting existing,

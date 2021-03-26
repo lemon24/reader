@@ -30,10 +30,6 @@ There is experimental support of plugins in the CLI and the web application.
 
     The plugin system/hooks are not stable yet and may change without any notice.
 
-.. note::
-
-    Plugin loading machinery is optional, use the ``plugins`` extra to install
-    its :ref:`dependencies <Optional dependencies>`.
 
 To load plugins, set the ``READER_PLUGIN`` environment variable to the plugin
 entry point (e.g. ``package.module:entry_point``); multiple entry points should

@@ -11,7 +11,7 @@ from typing import TypeVar
 from typing import Union
 
 from ._hash_utils import get_hash
-from ._vendor.cached_property import cached_property
+from ._vendor.functools import cached_property
 from .types import _entry_argument
 from .types import _feed_argument
 from .types import _namedtuple_compat

@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from ._vendor.cached_property import cached_property
+from ._vendor.functools import cached_property
 
 
 class _FancyExceptionBase(Exception):

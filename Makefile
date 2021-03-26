@@ -3,7 +3,7 @@
 all: test
 
 install-dev:
-	pip install -e '.[search,cli,app,plugins,enclosure-tags,preview-feed-list,dev,docs]'
+	pip install -e '.[search,cli,app,enclosure-tags,preview-feed-list,dev,docs]'
 
 test:
 	pytest -v --runslow

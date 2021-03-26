@@ -49,8 +49,6 @@ As of version |version|, *reader* has the following extras:
   :doc:`command-line interface <cli>`.
 * ``app`` installs the dependencies needed for the
   :doc:`web application <app>`.
-* ``plugins`` installs the dependencies needed for
-  :doc:`plugin <plugins>` loading machinery.
 * Specific plugins may require additional dependencies;
   refer to their documentation for details.
 

@@ -58,7 +58,7 @@ Testing
 First, install the testing dependencies::
 
     make install-dev        # or
-    pip install '.[search,cli,app,plugins,enclosure-tags,preview-feed-list,dev,docs]'
+    pip install '.[search,cli,app,enclosure-tags,preview-feed-list,dev,docs]'
 
 Run tests using the current Python interpreter::
 
