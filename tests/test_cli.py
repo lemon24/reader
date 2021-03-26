@@ -144,11 +144,7 @@ def raise_exception_plugin(thing):
 
 @pytest.mark.slow
 def test_cli_plugin(db_path, monkeypatch):
-    import sys
-
-    monkeypatch.setattr(
-        sys, 'path', [str(py.path.local(__file__).dirpath())] + sys.path
-    )
+    monkeypatch.syspath_prepend(str(py.path.local(__file__).dirpath()))
 
     runner = CliRunner()
     result = runner.invoke(
@@ -165,6 +161,38 @@ def test_cli_plugin(db_path, monkeypatch):
 
     assert result.exit_code != 0
     assert "plug-in error" in result.output
+
+
+store_reader_plugin = None
+
+
+@pytest.mark.slow
+def test_cli_plugin_builtin_and_import_path(db_path, monkeypatch):
+    monkeypatch.syspath_prepend(str(py.path.local(__file__).dirpath()))
+
+    def store_reader_plugin(reader):
+        store_reader_plugin.reader = reader
+
+    monkeypatch.setattr('test_cli.store_reader_plugin', store_reader_plugin)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        [
+            '--db',
+            db_path,
+            '--plugin',
+            'test_cli:store_reader_plugin',
+            '--plugin',
+            'reader.ua_fallback',
+            '--plugin',
+            'reader.plugins.ua_fallback:init_reader',
+            'list',
+            'feeds',
+        ],
+    )
+
+    assert len(store_reader_plugin.reader._parser.session_hooks.response) == 2
 
 
 def raise_exception_app_plugin(thing):

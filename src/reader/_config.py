@@ -9,6 +9,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from dataclasses import field
 
+from .plugins import _DEFAULT_PLUGINS
+from .plugins import _PLUGINS
 from reader import make_reader
 from reader._plugins import import_string
 from reader._plugins import Loader
@@ -24,12 +26,20 @@ def make_reader_from_config(*, plugins=None, plugin_loader_cls=Loader, **kwargs)
     * Load plugins.
 
     """
-    plugins = plugins or {}
 
     for name in MAKE_READER_IMPORT_KWARGS:
         thing = kwargs.get(name)
         if thing and isinstance(thing, str):
             kwargs[name] = import_string(thing)
+
+    plugins = plugins if plugins is not None else dict.fromkeys(_DEFAULT_PLUGINS)
+
+    plugins_arg = kwargs['plugins'] = []
+
+    for plugin in list(plugins):
+        if plugin in _PLUGINS:
+            plugins_arg.append(plugin)
+            plugins.pop(plugin)
 
     reader = make_reader(**kwargs)
 
