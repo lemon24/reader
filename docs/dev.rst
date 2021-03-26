@@ -25,7 +25,6 @@ In no particular order:
 * API to delete old entries. (:issue:`96`)
 * API to delete duplicate entries. (:issue:`140`)
 * Batch get related resources API. (:issue:`191`)
-* Pagination. (:issue:`196`)
 * update_feeds() filtering. (:issue:`193`)
 
 * Web application re-design.
@@ -314,6 +313,13 @@ Using a single Reader objects from multiple threads
 
 Some thoughts on why it's difficult to do: :issue:`206#issuecomment-751383418`.
 
+
+Plugins
+~~~~~~~
+
+List of hooks (unmaintained as of 2021): :issue:`80`.
+
+Minimal plugin API (case study and considetrations for the built-in plugin naming scheme): `229#issuecomment-803870781`.
 
 
 Web application
