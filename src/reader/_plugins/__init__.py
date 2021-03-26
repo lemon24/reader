@@ -26,11 +26,15 @@ class Loader:
     def __init__(self, import_names):
         self.import_names = import_names
 
+    # TODO: break this up between load_plugins (used with reader) and apply_plugins (used with app)
+    # TODO: for reader, load_plugins should wrap the plugins to always raise LoaderError (because reader itself just lets the exception propagate); we can't make it do it because of backwards compatibility
+    # TODO: OTOH, handle_error should be removed; hell knows in what state target is left after installing a plugin fails; we should not guess
+
     def load_plugins(self, target):
         for name in self.import_names:
             try:
                 plugin = resolve_name(name)
-            except ImportError as e:
+            except (ImportError, AttributeError, ValueError) as e:
                 self.handle_error(
                     LoaderError("could not import plugin {}".format(name)), e
                 )

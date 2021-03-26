@@ -202,7 +202,13 @@ def make_reader(
         else:
             plugin_func = plugin
 
-        plugin_func(reader)  # type: ignore
+        try:
+            plugin_func(reader)  # type: ignore
+        except Exception:  # pragma: no cover
+            # TODO: this whole branch is not tested
+            reader.close()
+            # TODO: this should raise a custom exception (but can't because of backwards compatibility)
+            raise
 
     return reader
 
