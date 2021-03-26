@@ -50,6 +50,7 @@ and without enforcing a dependency on a particular framework.
 * filter feeds and articles
 * full-text search articles
 * skip all the low level stuff and focus on what makes your feed reader different
+* write plugins to extend its functionality
 
 ...all these with:
 
@@ -72,7 +73,6 @@ The following exist, but are optional (and frankly, a bit unpolished):
   * with automatic tag fixing for podcasts (MP3 enclosures)
 
 * a command-line interface
-* (some) plugin support
 
 .. end-features
 
