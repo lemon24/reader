@@ -38,7 +38,7 @@ default:
         # Note that unlike other settings, plugins are merged, not replaced.
         plugins:
             reader._plugins.tumblr_gdpr:tumblr_gdpr:
-            reader._plugins.cloudflare_ua_fix:init:
+            reader.ua_fallback:
 
 
 # CLI context.
@@ -48,7 +48,7 @@ cli:
     reader:
         plugins:
             reader._plugins.regex_mark_as_read:regex_mark_as_read:
-            reader._plugins.feed_entry_dedupe:feed_entry_dedupe:
+            reader.entry_dedupe:
 
     # The cli context also allows changing the CLI defaults.
     defaults:
@@ -92,7 +92,7 @@ app:
     # When using the web app, we want to use an additional reader plugin.
     reader:
         plugins:
-            reader._plugins.enclosure_dedupe:enclosure_dedupe:
+            reader.enclosure_dedupe:
 
     # ... and some app plugins.
     plugins:

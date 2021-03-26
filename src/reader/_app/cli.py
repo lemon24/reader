@@ -28,4 +28,5 @@ def serve(config, host, port, plugin, verbose):
     config['default']['reader'].pop('debug_storage', None)
 
     app = create_app(config)
+
     run_simple(host, port, app)

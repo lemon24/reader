@@ -358,3 +358,26 @@ def test_config_option(tmpdir):
         },
         'plugins': {'user-app-plugins': None},
     }
+
+
+def test_config_example(db_path, monkeypatch):
+    runner = CliRunner()
+
+    command_base = ['--db', db_path, '--config']
+    command_base.append(
+        str(py.path.local(__file__).dirpath().join('../examples/config.yaml'))
+    )
+
+    result = runner.invoke(cli, command_base + ['list', 'feeds'])
+    assert result.exit_code == 0
+
+    def run_simple(host, port, app):
+        app.test_client().get('/')
+
+    monkeypatch.setattr('werkzeug.serving.run_simple', run_simple)
+
+    result = runner.invoke(cli, command_base + ['serve'])
+    assert result.exit_code == 0
+    print(result.output)
+    assert 'ERROR' not in result.output
+    assert 'Traceback' not in result.output

@@ -36,7 +36,9 @@ def test_config_merged():
             'app': {'plugins': {'app-plugin': None, 'another-plugin': 2}},
         },
         sections={'cli', 'app'},
-        merge_keys={'plugins',},
+        merge_keys={
+            'plugins',
+        },
     )
 
     assert config.merged('cli') == {
@@ -60,7 +62,9 @@ def test_config_merged_recursive():
                 'plugins': {'app-plugin': None},
             },
         },
-        sections={'app',},
+        sections={
+            'app',
+        },
         merge_keys={'reader', 'plugins'},
     )
     assert config.merged('app') == {
@@ -76,21 +80,37 @@ def test_config_all():
         {
             'url': 'default-url',
             'nested': {'default-key': 'default-nested'},
-            'cli': {'url': 'cli-url', 'nested': {'cli-key': 'cli-nested'},},
+            'cli': {
+                'url': 'cli-url',
+                'nested': {'cli-key': 'cli-nested'},
+            },
         },
         sections={'cli', 'app'},
-        merge_keys={'nested',},
+        merge_keys={
+            'nested',
+        },
     )
 
     config.all['url'] = 'new-url'
     assert config.data == {
-        'default': {'url': 'new-url', 'nested': {'default-key': 'default-nested'},},
-        'cli': {'url': 'new-url', 'nested': {'cli-key': 'cli-nested'},},
-        'app': {'url': 'new-url',},
+        'default': {
+            'url': 'new-url',
+            'nested': {'default-key': 'default-nested'},
+        },
+        'cli': {
+            'url': 'new-url',
+            'nested': {'cli-key': 'cli-nested'},
+        },
+        'app': {
+            'url': 'new-url',
+        },
     }
 
     config.all['nested'] = {'new-key': 'new-value'}
     assert config.data == dict.fromkeys(
         ('default', 'cli', 'app'),
-        {'url': 'new-url', 'nested': {'new-key': 'new-value'},},
+        {
+            'url': 'new-url',
+            'nested': {'new-key': 'new-value'},
+        },
     )
