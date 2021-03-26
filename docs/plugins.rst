@@ -6,6 +6,8 @@ Plugins
   :noindex:
 
 
+.. _built-in plugins:
+
 Built-in plugins
 ----------------
 

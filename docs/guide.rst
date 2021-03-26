@@ -480,12 +480,58 @@ from outside Python (e.g. to make a link to the next :ref:`page <pagination>`
 of feeds/entries in a web application).
 
 
+
 .. _plugins:
 
 Plugins
 -------
 
-TBD.
+*reader* supports plugins as a way to extend its default behavior.
+
+To use a built-in plugin, pass the plugin name to :func:`make_reader`::
+
+    >>> reader = make_reader("db.sqlite", plugins=[
+    ...     "reader.enclosure_dedupe",
+    ...     "reader.entry_dedupe",
+    ... ])
+
+
+You can find the full list of built-in plugins :ref:`here <built-in plugins>`.
+By default, only :mod:`reader.ua_fallback <reader.plugins.ua_fallback>` is enabled.
+
+
+Custom plugins
+~~~~~~~~~~~~~~
+
+In addition to built-in plugins, reader also supports *custom plugins*.
+
+A custom plugin is any callable that takes a :class:`Reader` instance
+and potentially modifies it in some (useful) way.
+To use custom plugins, pass them to :func:`make_reader`::
+
+    >>> def function_plugin(reader):
+    ...     print(f"got {reader}")
+    ...
+    >>> class ClassPlugin:
+    ...     def __init__(self, **options):
+    ...         self.options = options
+    ...     def __call__(self, reader):
+    ...         print(f"got options {self.options} and {reader}")
+    ...
+    >>> reader = make_reader("db.sqlite", plugins=[
+    ...     function_plugin,
+    ...     ClassPlugin(option=1),
+    ... ])
+    got <reader.core.Reader object at 0x7f8897824a00>
+    got options {'option': 1} and <reader.core.Reader object at 0x7f8897824a00>
+
+
+For a real-world example, see the implementation of the
+:gh:`enclosure_dedupe <src/reader/plugins/enclosure_dedupe.py>`
+built-in plugin. Using it as a custom plugin looks like this::
+
+    >>> from reader.plugins import enclosure_dedupe
+    >>> reader = make_reader("db.sqlite", plugins=[enclosure_dedupe.init_reader])
 
 
 
