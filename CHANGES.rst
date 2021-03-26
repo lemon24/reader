@@ -12,13 +12,24 @@ Version 1.16
 Unreleased
 
 * Allow :func:`make_reader` to load plugins through the ``plugins`` argument.
+  (:issue:`229`)
+
   Enable the ``ua_fallback`` plugin by default.
 
-  :func:`make_reader` may raise :exc:`InvalidPluginError`
+  :func:`make_reader` may now raise :exc:`InvalidPluginError`
   (a :exc:`ValueError` subclass, which it already raises implicitly)
   for invalid plugin names.
 
+* The ``enclosure_dedupe``, ``feed_entry_dedupe``, and ``ua_fallback`` plugins
+  are now :ref:`built-in <built-in plugins>`.
   (:issue:`229`)
+
+  To use them with the CLI / web application,
+  use the plugin name instead of the entry point::
+
+    reader._plugins.enclosure_dedupe:enclosure_dedupe   -> reader.enclosure_dedupe
+    reader._plugins.feed_entry_dedupe:feed_entry_dedupe -> reader.entry_dedupe
+    reader._plugins.ua_fallback:init                    -> reader.ua_fallback
 
 * Mention in the :doc:`guide` that all *reader* functions/methods can raise
   :exc:`ValueError` or :exc:`TypeError` if passed invalid arguments.

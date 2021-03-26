@@ -500,6 +500,8 @@ You can find the full list of built-in plugins :ref:`here <built-in plugins>`.
 By default, only :mod:`reader.ua_fallback <reader.plugins.ua_fallback>` is enabled.
 
 
+.. _custom plugins:
+
 Custom plugins
 ~~~~~~~~~~~~~~
 

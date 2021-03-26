@@ -13,7 +13,7 @@ Built-in plugins
 
 This is a list of built-in plugins that are considered stable.
 
-See the :ref:`Plugins <plugins>` section of the :doc:`guide`
+See the :ref:`Plugins <plugins>` section of the user guide
 for details on how built-in plugins are loaded.
 
 .. automodule:: reader.plugins.enclosure_dedupe
@@ -42,20 +42,29 @@ be separated by one space::
     READER_PLUGIN='first.plugin:entry_point second_plugin:main' \
     python -m reader some-command
 
-For `built-in plugins`_, it is enough to use the plugin name (``reader.XYZ``).
-
 To load web application plugins, set the ``READER_APP_PLUGIN`` environment
 variable in a similar way.
 
-Currently plugins are loaded through the CLI and web application only
-(they won't be loaded when importing :class:`Reader`).
+For `built-in plugins`_, it is enough to use the plugin name (``reader.XYZ``).
+
+.. note::
+
+    :func:`make_reader()` ignores the plugin environment variables.
 
 
 Experimental plugins
 --------------------
 
 *reader* also ships with a number of experimental plugins.
-These *must* be loaded via their entry points.
+
+For these, the full entry point *must* be specified.
+
+To use them from within Python code,
+use the entry point as a :ref:`custom plugin <custom plugins>`::
+
+    >>> from reader._plugins.regex_mark_as_read import regex_mark_as_read
+    >>> reader = make_reader("db.sqlite", plugins=[regex_mark_as_read])
+
 
 .. automodule:: reader._plugins.regex_mark_as_read
 .. automodule:: reader._plugins.tumblr_gdpr
