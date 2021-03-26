@@ -5,9 +5,9 @@ reader.ua_fallback
 Retry feed requests that get ``403 Forbidden``
 with a different user agent.
 
-Sometimes, servers blocks requests coming from *reader*,
-based on its user agent.
-This plugin retries the request with feedparser's user agent string,
+Sometimes, servers blocks requests coming from *reader*
+based on the user agent.
+This plugin retries the request with feedparser's user agent,
 which seems to be more widely accepted.
 
 Servers/CDNs known to not accept the *reader* UA: Cloudflare, WP Engine.
@@ -18,7 +18,7 @@ Servers/CDNs known to not accept the *reader* UA: Cloudflare, WP Engine.
     and change the UA on the first request instead of retrying.
 
 ..
-    Implemented for :issue:`181`.
+    Implemented for https://github.com/lemon24/reader/issues/181
 
 """
 import logging

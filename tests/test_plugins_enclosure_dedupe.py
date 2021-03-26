@@ -3,10 +3,11 @@ from datetime import datetime
 from fakeparser import Parser
 
 from reader import Enclosure
-from reader._plugins.enclosure_dedupe import enclosure_dedupe
+from reader import make_reader
 
 
-def test_enclosure_dedupe(reader):
+def test_enclosure_dedupe():
+    reader = make_reader(':memory:', plugins=['reader.enclosure_dedupe'])
     reader._parser = parser = Parser()
 
     feed = parser.feed(1, datetime(2010, 1, 1))
@@ -26,8 +27,6 @@ def test_enclosure_dedupe(reader):
 
     reader.add_feed(feed.url)
     reader.update_feeds()
-
-    enclosure_dedupe(reader)
 
     assert set((e.id, e.enclosures) for e in reader.get_entries()) == {
         (one.id, one.enclosures),
