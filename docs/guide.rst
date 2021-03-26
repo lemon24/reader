@@ -462,25 +462,6 @@ To get the next page, use the last result from a call as
 
 
 
-Feed and entry arguments
-------------------------
-
-As you may have noticed in the examples above,
-feed URLs and :class:`Feed` objects can be used interchangeably
-as method arguments.
-This is by design.
-Likewise, wherever an entry argument is expected,
-you can either pass a *(feed URL, entry id)* tuple
-or an :class:`Entry` (or :class:`EntrySearchResult`) object.
-
-You can get this unique identifier in a uniform way by using the ``object_id``
-property.
-This is useful when you need to refer to a *reader* object in a generic way
-from outside Python (e.g. to make a link to the next :ref:`page <pagination>`
-of feeds/entries in a web application).
-
-
-
 .. _plugins:
 
 Plugins
@@ -534,6 +515,25 @@ built-in plugin. Using it as a custom plugin looks like this::
 
     >>> from reader.plugins import enclosure_dedupe
     >>> reader = make_reader("db.sqlite", plugins=[enclosure_dedupe.init_reader])
+
+
+
+Feed and entry arguments
+------------------------
+
+As you may have noticed in the examples above,
+feed URLs and :class:`Feed` objects can be used interchangeably
+as method arguments.
+This is by design.
+Likewise, wherever an entry argument is expected,
+you can either pass a *(feed URL, entry id)* tuple
+or an :class:`Entry` (or :class:`EntrySearchResult`) object.
+
+You can get this unique identifier in a uniform way by using the ``object_id``
+property.
+This is useful when you need to refer to a *reader* object in a generic way
+from outside Python (e.g. to make a link to the next :ref:`page <pagination>`
+of feeds/entries in a web application).
 
 
 
