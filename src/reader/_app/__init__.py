@@ -32,7 +32,6 @@ from reader import InvalidSearchQueryError
 from reader import ParseError
 from reader import ReaderError
 from reader._plugins import Loader
-from reader._plugins import LoaderError
 
 blueprint = Blueprint('reader', __name__)
 
@@ -48,7 +47,7 @@ got_preview_parse_error = signals.signal('preview-parse-error')
 def get_reader():
     if not hasattr(g, 'reader'):
         g.reader = current_app.config['READER_CONFIG'].make_reader(
-            'app', plugin_loader_cls=FlaskPluginLoader
+            'app', plugin_loader=current_app.plugin_loader
         )
     return g.reader
 
@@ -272,7 +271,7 @@ def preview():
     # TODO: maybe cache stuff
 
     reader = current_app.config['READER_CONFIG'].make_reader(
-        'default', url=':memory:', plugin_loader_cls=FlaskPluginLoader
+        'default', url=':memory:', plugin_loader=current_app.plugin_loader
     )
 
     reader.add_feed(url)
@@ -583,13 +582,6 @@ def additional_enclosure_links(enclosure, entry):
         yield from func(enclosure, entry)
 
 
-class FlaskPluginLoader(Loader):
-    def handle_error(self, exception, cause):
-        current_app.logger.exception(
-            "%s; original traceback follows", exception, exc_info=cause or exception
-        )
-
-
 def create_app(config):
     app = Flask(__name__)
     app.secret_key = 'secret'
@@ -597,18 +589,27 @@ def create_app(config):
     app.config['READER_CONFIG'] = config
     app.teardown_appcontext(close_db)
 
-    # Force reader plugins to load, so we can fail fast for import errors
-    # (although some errors may just be logged while we use FlaskPluginLoader).
-    with app.app_context():
-        get_reader()
-
     app.register_blueprint(blueprint)
 
     # NOTE: this is part of the app extension API
     app.reader_additional_enclosure_links = []
 
-    # app_context() needed for logging to work.
+    app.plugin_loader = loader = Loader()
+
+    def log_exception(message, cause):
+        app.logger.exception("%s; original traceback follows", message, exc_info=cause)
+
+    # Don't raise exceptions for plugins, just log.
+    # Does it make sense to keep going after initializing a plugin fails?
+    # How do we know the target isn't left in a bad state?
+    loader.handle_import_error = log_exception
+    loader.handle_init_error = log_exception
+
+    # Fail fast for reader plugin import/init errors
+    # (although depending on the handler they may just be logged).
     with app.app_context():
-        FlaskPluginLoader(config.merged('app').get('plugins', {})).load_plugins(app)
+        get_reader()
+
+    loader.init(app, config.merged('app').get('plugins', {}))
 
     return app

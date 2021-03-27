@@ -13,42 +13,41 @@ from .plugins import _DEFAULT_PLUGINS
 from .plugins import _PLUGINS
 from reader import make_reader
 from reader._plugins import Loader
-from reader._vendor.pkgutil import resolve_name
 
 
 MAKE_READER_IMPORT_KWARGS = ('storage_cls', 'search_cls')
 
 
-def make_reader_from_config(*, plugins=None, plugin_loader_cls=Loader, **kwargs):
+def make_reader_from_config(*, plugins=None, plugin_loader=None, **kwargs):
     """Like reader.make_reader(), but:
 
     * If *_cls arguments are str, import them.
     * Load plugins.
 
     """
+    loader = Loader()
+    plugin_loader = plugin_loader or loader
 
     for name in MAKE_READER_IMPORT_KWARGS:
+        # this is dead code until make_reader() actually gets those arguments
         thing = kwargs.get(name)
         if thing and isinstance(thing, str):
-            kwargs[name] = resolve_name(thing)
+            # use the default loader for these (we always want exceptions)
+            kwargs[name] = loader.load(name, wrap=True)
 
     plugins = plugins if plugins is not None else dict.fromkeys(_DEFAULT_PLUGINS)
 
     plugins_arg = kwargs['plugins'] = []
-
-    for plugin in list(plugins):
-        if plugin in _PLUGINS:
+    for name in list(plugins):
+        if name in _PLUGINS:
+            plugins_arg.append(name)
+        else:
+            plugin = plugin_loader.load(name, wrap=True)
+            if not plugin:
+                continue
             plugins_arg.append(plugin)
-            plugins.pop(plugin)
 
     reader = make_reader(**kwargs)
-
-    try:
-        plugin_loader_cls(plugins).load_plugins(reader)
-    except Exception:
-        reader.close()
-        raise
-
     return reader
 
 
