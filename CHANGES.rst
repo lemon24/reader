@@ -9,7 +9,7 @@ Changelog
 Version 1.16
 ------------
 
-Unreleased
+Released 2021-03-29
 
 * Allow :func:`make_reader` to load plugins through the ``plugins`` argument.
   (:issue:`229`)
