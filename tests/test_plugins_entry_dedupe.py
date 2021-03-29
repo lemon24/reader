@@ -5,7 +5,6 @@ from fakeparser import Parser
 
 from reader import Content
 from reader import Entry
-from reader import make_reader
 from reader.plugins.entry_dedupe import _is_duplicate
 from reader.plugins.entry_dedupe import _normalize
 
@@ -78,7 +77,7 @@ def test_is_duplicate(one, two, result):
     assert bool(_is_duplicate(one, two)) is bool(result)
 
 
-def test_plugin():
+def test_plugin(make_reader):
     reader = make_reader(':memory:', plugins=['reader.entry_dedupe'])
     parser = Parser()
     reader._parser = parser

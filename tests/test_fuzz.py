@@ -73,6 +73,7 @@ def test_sort_and_filter_subset_basic(data_and_kwargs, pre_stuff, call_method):
 
     # can't use reader fixture because of
     # https://github.com/pytest-dev/pytest/issues/916
+    # TODO: use the make_reader() fixture if possible
     reader = make_reader(':memory:')
 
     reader._storage.chunk_size = chunk_size

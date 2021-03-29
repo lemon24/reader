@@ -133,7 +133,6 @@ def test_post_entry_add_plugins(reader):
     # TODO: What is the expected behavior if a plugin raises an exception?
 
 
-def test_make_reader_storage():
-    storage = Storage(':memory:')
+def test_make_reader_storage(storage):
     reader = make_reader('', _storage=storage)
     assert reader._storage is storage

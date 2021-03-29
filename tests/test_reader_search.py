@@ -11,7 +11,6 @@ from reader import EntrySearchCounts
 from reader import EntrySearchResult
 from reader import FeedNotFoundError
 from reader import HighlightedString
-from reader import make_reader
 from reader import Reader
 from reader import ReaderError
 from reader import SearchError
@@ -147,7 +146,9 @@ def test_update_search_feeds_change_after_enable(reader, sort, chunk_size):
 
 
 UPDATE_TRIGGERS_DATA = {
-    "no entry": [(lambda r: None, None),],
+    "no entry": [
+        (lambda r: None, None),
+    ],
     "after insert on entries": [
         (
             lambda r: r._parser.entry(1, 1, datetime(2010, 1, 1)),
@@ -317,7 +318,7 @@ def test_update_triggers(reader, data):
 
 
 @pytest.mark.parametrize('set_user_title', [False, True])
-def test_update_triggers_no_change(db_path, monkeypatch, set_user_title):
+def test_update_triggers_no_change(db_path, make_reader, monkeypatch, set_user_title):
     """update_search() should *not* update the search index
     if anything else except the indexed fields changes.
 
@@ -763,7 +764,9 @@ def test_search_entries_sort_error(reader):
 # BEGIN concurrency tests
 
 
-def test_update_search_entry_changed_during_strip_html(db_path, monkeypatch):
+def test_update_search_entry_changed_during_strip_html(
+    db_path, make_reader, monkeypatch
+):
     """Test the entry can't remain out of sync if it changes
     during reader.update_search() in a strip_html() call.
 
@@ -791,6 +794,8 @@ def test_update_search_entry_changed_during_strip_html(db_path, monkeypatch):
     can_return_from_strip_html = threading.Event()
 
     def target():
+        # can't use fixture because it would run close() in a different thread
+        from reader import make_reader
         from reader._search import Search
 
         # strip_html() may or may not be used a SQLite user-defined function,
@@ -806,7 +811,10 @@ def test_update_search_entry_changed_during_strip_html(db_path, monkeypatch):
         monkeypatch.setattr('reader.core.Search', MySearch)
 
         reader = make_reader(db_path)
-        reader.update_search()
+        try:
+            reader.update_search()
+        finally:
+            reader.close()
 
     thread = threading.Thread(target=target)
     thread.start()
@@ -832,7 +840,9 @@ def test_update_search_entry_changed_during_strip_html(db_path, monkeypatch):
     assert entry.title == result.metadata['.title'].value == expected_title
 
 
-def test_update_search_entry_changed_between_insert_loops(db_path, monkeypatch):
+def test_update_search_entry_changed_between_insert_loops(
+    db_path, make_reader, monkeypatch
+):
     """Test the entry can't be added twice to the search index if it changes
     during reader.update_search() between two insert loops.
 
@@ -868,6 +878,9 @@ def test_update_search_entry_changed_between_insert_loops(db_path, monkeypatch):
     can_return_from_insert_chunk = threading.Event()
 
     def target():
+        # can't use fixture because it would run close() in a different thread
+        from reader import make_reader
+
         reader = make_reader(db_path)
         original_insert_chunk = reader._search._insert_into_search_one_chunk
 
@@ -882,7 +895,11 @@ def test_update_search_entry_changed_between_insert_loops(db_path, monkeypatch):
             return original_insert_chunk(*args, **kwargs)
 
         reader._search._insert_into_search_one_chunk = insert_chunk
-        reader.update_search()
+
+        try:
+            reader.update_search()
+        finally:
+            reader.close()
 
     thread = threading.Thread(target=target)
     thread.start()
@@ -904,7 +921,7 @@ def test_update_search_entry_changed_between_insert_loops(db_path, monkeypatch):
     assert rowcount == 1
 
 
-def test_update_search_concurrent_calls(db_path, monkeypatch):
+def test_update_search_concurrent_calls(db_path, make_reader, monkeypatch):
     """Test concurrent calls to reader.update_search() don't interfere
     with one another.
 
@@ -932,6 +949,8 @@ def test_update_search_concurrent_calls(db_path, monkeypatch):
     barrier = threading.Barrier(2)
 
     def target():
+        # can't use fixture because it would run close() in a different thread
+        from reader import make_reader
         from reader._search import Search
 
         class MySearch(Search):
@@ -944,7 +963,10 @@ def test_update_search_concurrent_calls(db_path, monkeypatch):
         monkeypatch.setattr('reader.core.Search', MySearch)
 
         reader = make_reader(db_path)
-        reader.update_search()
+        try:
+            reader.update_search()
+        finally:
+            reader.close()
 
     threads = [threading.Thread(target=target) for _ in range(2)]
     for thread in threads:

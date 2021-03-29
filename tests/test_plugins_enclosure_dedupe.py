@@ -3,10 +3,9 @@ from datetime import datetime
 from fakeparser import Parser
 
 from reader import Enclosure
-from reader import make_reader
 
 
-def test_plugin():
+def test_plugin(make_reader):
     reader = make_reader(':memory:', plugins=['reader.enclosure_dedupe'])
     reader._parser = parser = Parser()
 

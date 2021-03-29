@@ -27,7 +27,6 @@ from reader import FeedCounts
 from reader import FeedExistsError
 from reader import FeedNotFoundError
 from reader import InvalidPluginError
-from reader import make_reader
 from reader import MetadataNotFoundError
 from reader import ParseError
 from reader import Reader
@@ -292,7 +291,7 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
 
 
 @pytest.mark.slow
-def test_update_blocking(db_path, call_update_method):
+def test_update_blocking(db_path, make_reader, call_update_method):
     """Calls to reader._parser() shouldn't block the underlying storage."""
 
     parser = Parser()
@@ -310,9 +309,15 @@ def test_update_blocking(db_path, call_update_method):
     blocking_parser = BlockingParser.from_parser(parser)
 
     def target():
+        # can't use fixture because it would run close() in a different thread
+        from reader import make_reader
+
         reader = make_reader(db_path)
         reader._parser = blocking_parser
-        call_update_method(reader, feed.url)
+        try:
+            call_update_method(reader, feed.url)
+        finally:
+            reader.close()
 
     t = threading.Thread(target=target)
     t.start()
@@ -672,7 +677,9 @@ class EntryAction(Enum):
         }
     ],
 )
-def test_update_feed_deleted(db_path, call_update_method, feed_action, entry_action):
+def test_update_feed_deleted(
+    db_path, make_reader, call_update_method, feed_action, entry_action
+):
     """reader.update_feed should raise FeedNotFoundError if the feed is
     deleted during parsing.
 
@@ -707,12 +714,16 @@ def test_update_feed_deleted(db_path, call_update_method, feed_action, entry_act
     blocking_parser = parser_cls.from_parser(parser)
 
     def target():
+        # can't use fixture because it would run close() in a different thread
+        from reader import make_reader
+
+        blocking_parser.in_parser.wait()
+        reader = make_reader(db_path)
         try:
-            blocking_parser.in_parser.wait()
-            reader = make_reader(db_path)
             reader.remove_feed(feed.url)
         finally:
             blocking_parser.can_return_from_parser.set()
+            reader.close()
 
     t = threading.Thread(target=target)
     t.start()
@@ -1830,7 +1841,7 @@ def test_entries_filtering_error(reader, pre_stuff, call_method, kwargs):
         (dict(feed_root='/path'), '/path'),
     ],
 )
-def test_make_reader_feed_root(monkeypatch, kwargs, feed_root):
+def test_make_reader_feed_root(monkeypatch, make_reader, kwargs, feed_root):
     exc = Exception("whatever")
 
     def default_parser(feed_root, **kwargs):
@@ -2802,7 +2813,7 @@ def test_logging_defaults():
         ({'session_timeout': (1.234, 324.1)}, (1.234, 324.1)),
     ],
 )
-def test_session_timeout(monkeypatch, kwargs, expected_timeout):
+def test_session_timeout(monkeypatch, make_reader, kwargs, expected_timeout):
     def send(*args, timeout=None, **kwargs):
         raise Exception('timeout', timeout)
 
@@ -2817,7 +2828,7 @@ def test_session_timeout(monkeypatch, kwargs, expected_timeout):
     assert exc_info.value.__cause__.args == ('timeout', expected_timeout)
 
 
-def test_plugins(monkeypatch):
+def test_plugins(monkeypatch, make_reader):
     def one(reader):
         one.reader = reader
 

@@ -1,10 +1,9 @@
 import pytest
 
-from reader import make_reader
 from reader import ParseError
 
 
-def test_fallback(requests_mock):
+def test_fallback(requests_mock, make_reader):
     url = 'http://www.example.com/'
 
     reader = make_reader(':memory:', plugins=('reader.ua_fallback',))
@@ -25,7 +24,7 @@ def test_fallback(requests_mock):
     assert second_ua.endswith(first_ua)
 
 
-def test_noop(requests_mock):
+def test_noop(requests_mock, make_reader):
     url = 'http://www.example.com/'
 
     reader = make_reader(':memory:', plugins=('reader.ua_fallback',))

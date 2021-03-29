@@ -1,5 +1,6 @@
 import sqlite3
 import sys
+from functools import wraps
 
 import pytest
 from utils import rename_argument
@@ -17,6 +18,20 @@ from reader._sqlite_utils import RequirementError
 from reader._sqlite_utils import SchemaVersionError
 from reader._sqlite_utils import setup_db
 from reader._sqlite_utils import wrap_exceptions
+
+
+original_sqlite3_connect = sqlite3.connect
+
+
+@pytest.fixture(autouse=True)
+def patch_sqlite3_connect(monkeypatch, request):
+    @wraps(original_sqlite3_connect)
+    def connect(*args, **kwargs):
+        db = original_sqlite3_connect(*args, **kwargs)
+        request.addfinalizer(db.close)
+        return db
+
+    monkeypatch.setattr('sqlite3.connect', connect)
 
 
 def dummy_ddl_transaction(db):

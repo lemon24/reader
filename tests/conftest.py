@@ -1,11 +1,13 @@
 import sqlite3
 import sys
+from contextlib import closing
+from functools import wraps
 
 import py.path
 import pytest
 from utils import reload_module
 
-from reader import make_reader
+from reader import make_reader as original_make_reader
 from reader._storage import Storage
 
 
@@ -46,13 +48,26 @@ def apply_flaky_pypy_sqlite3(items):  # pragma: no cover
 
 
 @pytest.fixture
+def make_reader(request):
+    @wraps(original_make_reader)
+    def make_reader(*args, **kwargs):
+        reader = original_make_reader(*args, **kwargs)
+        request.addfinalizer(reader.close)
+        return reader
+
+    return make_reader
+
+
+@pytest.fixture
 def reader():
-    return make_reader(':memory:')
+    with closing(original_make_reader(':memory:')) as reader:
+        yield reader
 
 
 @pytest.fixture
 def storage():
-    return Storage(':memory:')
+    with closing(Storage(':memory:')) as storage:
+        yield storage
 
 
 def call_update_feeds(reader, _):
