@@ -95,7 +95,7 @@ class _Updater:
             self.log.info("feed has no updated, treating as updated")
             return True
 
-        if not old.updated and self.stale:
+        if self.stale:
             # logging for stale happened in process_old_feed()
             return True
 
