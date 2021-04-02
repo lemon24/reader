@@ -100,10 +100,17 @@ class _Updater:
 
         # we only care if feed.updated changed if any entries changed:
         # https://github.com/lemon24/reader/issues/231#issuecomment-812601988
+        #
+        # for RSS, if there's no date element,
+        # feedparser user lastBuildDate as .updated,
+        # which may (obviously) change without the feed actually changing
+        #
         if entries_to_update and (not old.updated or new.updated > old.updated):
             self.log.info("feed updated")
             return True
 
+        # check if the feed content actually changed:
+        # https://github.com/lemon24/reader/issues/179
         if not old.hash or new.hash != old.hash:
             self.log.debug("feed hash changed, treating as updated")
             return True
@@ -158,10 +165,14 @@ class _Updater:
         # If old is None, compute_entry_updated() returned something.
         assert old is not None
 
-        # Checking the hash leads to spurious updates for some feeds.
-        # See this comment for some ideas on how to address it:
-        # https://github.com/lemon24/reader/issues/179#issuecomment-801327048
-
+        # Check if the entry content actually changed:
+        # https://github.com/lemon24/reader/issues/179
+        #
+        # We limit the number of updates due to only the hash changing
+        # to prevent spurious updates for entries whose content changes
+        # excessively (for example, because it includes the current time).
+        # https://github.com/lemon24/reader/issues/225
+        #
         if not old.hash or new.hash != old.hash:
             if (old.hash_changed or 0) < HASH_CHANGED_LIMIT:
                 self.log.debug("entry %r: entry hash changed, updating", new.id)

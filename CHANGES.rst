@@ -11,6 +11,17 @@ Version 1.17
 
 Unreleased
 
+* Ignore :attr:`~Feed.updated` when updating feeds;
+  only update the feed if other feed data changed
+  or if any entries were added/updated.
+  (:issue:`231`)
+
+  Prevents spurious updates for feeds whose :attr:`~Feed.updated`
+  changes excessively
+  (either because the entries' content changes excessively,
+  or because an RSS feed does not have a ``dc:date`` element,
+  and feedparser falls back to ``lastBuildDate`` for :attr:`~Feed.updated`).
+
 
 Version 1.16
 ------------

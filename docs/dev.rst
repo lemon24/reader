@@ -289,6 +289,8 @@ Updating entries based on a hash of their content (regardless of ``updated``):
   `death and gravity article <https://death.andgravity.com/stable-hashing>`_
 * ideas for how to deal with spurious hash changes: :issue:`225`
 
+Decision to ignore feed.updated when updating feeds: :issue:`231`.
+
 
 Counts API
 ~~~~~~~~~~
