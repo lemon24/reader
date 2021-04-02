@@ -126,7 +126,7 @@ class EntryData(Generic[_UpdatedType], _namedtuple_compat):
     def object_id(self) -> Tuple[str, str]:
         return self.feed_url, self.id
 
-    _hash_exclude_ = frozenset({'feed_url', 'id'})
+    _hash_exclude_ = frozenset({'feed_url', 'id', 'updated'})
 
     @cached_property
     def hash(self) -> bytes:

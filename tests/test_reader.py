@@ -1508,14 +1508,15 @@ def test_data_hashes_remain_stable():
     )
 
     assert feed.hash == b'\x00\xad\xf9\xa0\x0c"(\xb1\xbfF:\xc4\x916/\xd7'
-    assert entry.hash == b'\x00\xbcKt2w\xe5\xb4ws\xe0$\xbc\xd36_'
+    assert entry.hash == b'\x00f\xa9\xdb\t5\xdf\xedcK\xd9bm\x80,l'
 
     assert feed._replace(url='x').hash == feed.hash
     assert feed._replace(title='x').hash == b'\x00wN\xf34R\xbeb\x02\xacbf\x08\x18\xe0 '
 
-    assert entry._replace(feed_url='x', id='x').hash == entry.hash
+    assert entry._replace(feed_url='x', id='x', updated='x').hash == entry.hash
     assert (
-        entry._replace(title='x').hash == b'\x00\xafAk<c\xa929\xa7\xf3\x90\x87\x1f\xebN'
+        entry._replace(title='x').hash
+        == b'\x00\x95\xc4\xe9\xd3\x95\xf6\xff\xf0*\xbd\x00L\x08\x1a\xa2'
     )
 
 
