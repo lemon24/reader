@@ -5,7 +5,6 @@ from typing import Any
 from typing import cast
 from typing import Iterable
 from typing import Optional
-from typing import Sequence
 from typing import Tuple
 from typing import Union
 
@@ -82,7 +81,7 @@ class _Updater:
     def stale(self) -> bool:
         return self.old_feed.stale
 
-    def should_update_feed(self, new: FeedData) -> bool:
+    def should_update_feed(self, new: FeedData, entries_to_update: bool) -> bool:
         old = self.old_feed
         self.log.debug("old updated %s, new updated %s", old.updated, new.updated)
 
@@ -99,7 +98,9 @@ class _Updater:
             # logging for stale happened in process_old_feed()
             return True
 
-        if not old.updated or new.updated > old.updated:
+        # we only care if feed.updated changed if any entries changed:
+        # https://github.com/lemon24/reader/issues/231#issuecomment-812601988
+        if entries_to_update and (not old.updated or new.updated > old.updated):
             self.log.info("feed updated")
             return True
 
@@ -208,9 +209,9 @@ class _Updater:
     def get_feed_to_update(
         self,
         parsed_feed: ParsedFeed,
-        entries_to_update: Sequence[EntryUpdateIntent],
+        entries_to_update: bool,
     ) -> Optional[FeedUpdateIntent]:
-        if self.should_update_feed(parsed_feed.feed):
+        if self.should_update_feed(parsed_feed.feed, entries_to_update):
             return FeedUpdateIntent(
                 self.url,
                 self.now,
@@ -250,7 +251,7 @@ class _Updater:
             return FeedUpdateIntent(self.url, None, last_exception=exc_info), ()
 
         entries_to_update = list(self.get_entries_to_update(entry_pairs))
-        feed_to_update = self.get_feed_to_update(parsed_feed, entries_to_update)
+        feed_to_update = self.get_feed_to_update(parsed_feed, bool(entries_to_update))
 
         if not feed_to_update and self.old_feed.last_exception:
             # Clear last_exception.

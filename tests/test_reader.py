@@ -103,8 +103,7 @@ def test_update_feed_updated(reader, call_update_method, caplog):
     assert "feed hash changed, treating as updated" in caplog.text
     caplog.clear()
 
-    # The feed doesn't change because it is newer,
-    # but because its hash changed (.updated is still part of feed content).
+    # The feed doesn't change, because .updated is older.
     # Entries get updated regardless.
     old_feed = parser.feed(1, datetime(2009, 1, 1), title='old-different-title')
     entry_three = parser.entry(1, 3, datetime(2010, 2, 1))
@@ -114,18 +113,43 @@ def test_update_feed_updated(reader, call_update_method, caplog):
         call_update_method(reader, old_feed.url)
 
     feed = old_feed.as_feed(
-        added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 4)
+        added=datetime(2010, 1, 1),
+        # doesn't change because it's not newer
+        updated=datetime(2010, 1, 1),
+        # changes because entries changed
+        last_updated=datetime(2010, 1, 4),
     )
     assert set(reader.get_entries()) == {
         entry_one.as_entry(feed=feed, last_updated=datetime(2010, 1, 2)),
         entry_two.as_entry(feed=feed, last_updated=datetime(2010, 1, 3)),
         entry_three.as_entry(feed=feed, last_updated=datetime(2010, 1, 4)),
     }
-    assert "feed hash changed, treating as updated" in caplog.text
+    assert "feed not updated, updating entries anyway" in caplog.text
     caplog.clear()
 
-    # The feeds changes because it is newer.
-    # Entries get updated regardless.
+    # The feed doesn't change; despite being newer, no entries have changed.
+    old_feed = parser.feed(1, datetime(2010, 1, 2), title='old-different-title')
+    reader._now = lambda: datetime(2010, 1, 4, 12)
+
+    with caplog.at_level(logging.DEBUG, logger='reader'):
+        call_update_method(reader, old_feed.url)
+
+    feed = old_feed.as_feed(
+        added=datetime(2010, 1, 1),
+        # doesn't change because no entries have changed
+        updated=datetime(2010, 1, 1),
+        # doesn't change because nothing changed
+        last_updated=datetime(2010, 1, 4),
+    )
+    assert set(reader.get_entries()) == {
+        entry_one.as_entry(feed=feed, last_updated=datetime(2010, 1, 2)),
+        entry_two.as_entry(feed=feed, last_updated=datetime(2010, 1, 3)),
+        entry_three.as_entry(feed=feed, last_updated=datetime(2010, 1, 4)),
+    }
+    assert "feed not updated, updating entries anyway" in caplog.text
+    caplog.clear()
+
+    # The feeds changes because it is newer *and* entries get updated.
     new_feed = parser.feed(1, datetime(2010, 1, 2), title='new')
     entry_four = parser.entry(1, 4, datetime(2010, 2, 1))
     reader._now = lambda: datetime(2010, 1, 5)
@@ -172,14 +196,18 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
     assert "entry updated" in caplog.text
     caplog.clear()
 
-    # Feed newer, entry remains unchanged.
+    # Feed newer (doesn't change), entry remains unchanged.
     feed = parser.feed(1, datetime(2010, 1, 2))
     reader._now = lambda: datetime(2010, 2, 3)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
         call_update_method(reader, feed.url)
 
-    feed = feed.as_feed(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 3))
+    feed = feed.as_feed(
+        added=datetime(2010, 2, 1),
+        updated=datetime(2010, 1, 1),
+        last_updated=datetime(2010, 2, 2),
+    )
     assert set(reader.get_entries()) == {
         old_entry.as_entry(feed=feed, last_updated=datetime(2010, 2, 2))
     }
@@ -702,7 +730,7 @@ def test_update_feed_deleted(
             parser.entry(1, 1, datetime(2010, 1, 2))
 
     if feed_action is FeedAction.update:
-        feed = parser.feed(1, datetime(2010, 1, 2))
+        feed = parser.feed(1, datetime(2010, 1, 2), title='new title')
 
     if feed_action is not FeedAction.fail:
         parser_cls = BlockingParser
@@ -1507,11 +1535,14 @@ def test_data_hashes_remain_stable():
         enclosures=(Enclosure('http://e1', 'type', 1000), Enclosure('http://e2')),
     )
 
-    assert feed.hash == b'\x00\xad\xf9\xa0\x0c"(\xb1\xbfF:\xc4\x916/\xd7'
+    assert feed.hash == b'\x00\xda\xf5\xa1Je\x13],\xf0\xdb\xaa\x88d\x99\xc6'
     assert entry.hash == b'\x00f\xa9\xdb\t5\xdf\xedcK\xd9bm\x80,l'
 
-    assert feed._replace(url='x').hash == feed.hash
-    assert feed._replace(title='x').hash == b'\x00wN\xf34R\xbeb\x02\xacbf\x08\x18\xe0 '
+    assert feed._replace(url='x', updated='x').hash == feed.hash
+    assert (
+        feed._replace(title='x').hash
+        == b'\x00\xce\x81\xc7\x8d(\xab\xd8)\x06\x90?\xf9\x847\xc4'
+    )
 
     assert entry._replace(feed_url='x', id='x', updated='x').hash == entry.hash
     assert (

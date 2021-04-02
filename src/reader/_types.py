@@ -57,7 +57,7 @@ class FeedData(_namedtuple_compat):
     def object_id(self) -> str:
         return self.url
 
-    _hash_exclude_ = frozenset({'url'})
+    _hash_exclude_ = frozenset({'url', 'updated'})
 
     @cached_property
     def hash(self) -> bytes:
