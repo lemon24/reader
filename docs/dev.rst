@@ -263,6 +263,21 @@ Feed tags
 Detailed requirements and API discussion: :issue:`184#issuecomment-689587006`.
 
 
+Entry user data
+~~~~~~~~~~~~~~~
+
+:issue:`228#issuecomment-810098748` discusses three different kinds,
+how they would be implemented,
+and why I want more use-cases before implementing them (basically, YAGNI):
+
+* entry searchable text fields (for notes etc.)
+* entry tags (similar to feed tags, can be used as additional bool flags)
+* entry metadata (similar to feed metadata)
+
+  * also discusses how to build an enclosure cache/preloader
+    (doesn't need special *reader* features besides what's available in 1.16)
+
+
 Feed updates
 ~~~~~~~~~~~~
 
