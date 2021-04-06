@@ -128,6 +128,9 @@ def is_rel_path(path: str) -> bool:
     return not any([is_abs, has_drive])
 
 
+# TODO: pathlib.PurePath.is_reserved does the same thing, get rid of this?
+
+
 def is_windows_device_file(path: str) -> bool:
     if os.name != 'nt':
         return False
