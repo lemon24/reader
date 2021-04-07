@@ -1,15 +1,10 @@
 recursive-include src/reader/_app/templates *
 recursive-include src/reader/_app/static *
 recursive-include src/reader/_plugins/templates *
-include Makefile README.md README.rst CHANGES.rst LICENSE
+include Makefile CHANGES.rst LICENSE tox.ini
 recursive-include tests *
 recursive-include examples *
 recursive-include docs *
 recursive-include scripts *
-recursive-exclude docs *.pyc
-recursive-exclude docs *.pyo
-recursive-exclude tests *.pyc
-recursive-exclude tests *.pyo
-recursive-exclude examples *.pyc
-recursive-exclude examples *.pyo
+global-exclude *.py[cod]
 prune docs/_build
