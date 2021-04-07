@@ -6,15 +6,16 @@ install-dev:
 	pip install -e '.[search,cli,app,enclosure-tags,preview-feed-list,dev,docs]'
 
 test:
-	pytest -v --runslow
+	pytest --runslow
 
 coverage:
 	pytest --cov --cov-context=test --runslow
 	coverage html --show-contexts
+	# also in tox.ini
 	coverage report \
 		--include '*/reader/*' \
 		--omit '*/reader/_vendor/*,*/reader/__main__.py,*/reader/_cli*,*/reader/_config*,*/reader/_app/*,*/reader/_plugins/*,tests/*' \
-		--fail-under 100
+		--skip-covered --fail-under 100
 
 cov: coverage
 
