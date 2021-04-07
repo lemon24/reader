@@ -133,6 +133,8 @@
 
 {{ macros.text_confirm_button('.form_api', 'change-feed-url', 'change feed URL', 'new-feed-url', 'new URL', loop.index, leave_disabled=true, next=next, context=context) }}
 
+{{ macros.simple_button('.form_api', 'update-feed', 'update', leave_disabled=true, next=next, context={'feed-url': feed.url}) }}
+
 {% if feed.updates_enabled %}
 {{ macros.simple_button('.form_api', 'disable-feed-updates', 'disable updates', leave_disabled=true, next=next, context=context) }}
 {% else %}
@@ -144,9 +146,9 @@
     ('update-feed-title', feed.url),
     ('update-feed-tags', feed.url),
     ('change-feed-url', feed.url),
+    ('update-feed', feed.url),
     ('disable-feed-updates', feed.url),
     ('enable-feed-updates', feed.url),
-
 ) %}
 <li class="error">{{ message }}
 {% endfor %}

@@ -574,6 +574,16 @@ def disable_feed_updates(data):
     get_reader().disable_feed_updates(feed_url)
 
 
+@form_api
+@readererror_to_apierror()
+def update_feed(data):
+    # TODO: feed updates should happen in the background
+    # (otherwise we're tying up a worker);
+    # acceptable only because /preview does it as well
+    feed_url = data['feed-url']
+    get_reader().update_feed(feed_url)
+
+
 # for some reason, @blueprint.app_template_global does not work
 @blueprint.app_template_global()
 def additional_enclosure_links(enclosure, entry):

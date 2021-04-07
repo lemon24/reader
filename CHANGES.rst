@@ -22,6 +22,9 @@ Unreleased
   or because an RSS feed does not have a ``dc:date`` element,
   and feedparser falls back to ``lastBuildDate`` for :attr:`~Feed.updated`).
 
+* In the web application, allow updating a feed manually.
+  (:issue:`195`)
+
 
 Version 1.16
 ------------

@@ -167,6 +167,11 @@
         {# <!-- TODO: how do we redirect to the new feed after url update? --> #}
         {{ macros.text_confirm_button('.form_api', 'change-feed-url', 'change feed URL', 'new-feed-url', 'new URL', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
 
+        {# we reload from javascript so we still get the "..." loading indicator #}
+        {% call macros.simple_button('.form_api', 'update-feed', 'update', next=next, context={'feed-url': feed.url}) %}
+            location.reload();
+        {% endcall %}
+
         {% if feed.updates_enabled %}
             {{ macros.simple_button('.form_api', 'disable-feed-updates', 'disable updates', leave_disabled=true, next=next, context={'feed-url': feed.url}) }}
         {% else %}
@@ -185,6 +190,7 @@
     'update-feed-title',
     'update-feed-tags',
     'change-feed-url',
+    'update-feed',
     'disable-feed-updates',
     'enable-feed-updates',
 ) %}
