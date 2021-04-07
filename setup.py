@@ -51,8 +51,7 @@ setup(
             'sphinx-click',
             'sphinx-issues',
             # release
-            'setuptools',
-            'wheel',
+            'build',
             'twine',
             # ...
             'pre-commit',

@@ -36,8 +36,7 @@ def tox():
 
 def build():
     run('rm -rf dist/', shell=True)
-    run('python setup.py build sdist', shell=True)
-    run('python setup.py build bdist_wheel', shell=True)
+    run('python -m build', shell=True)
 
 
 def path_sub(pattern, repl, path):
