@@ -21,8 +21,6 @@ from typing import Callable
 from typing import Iterable
 from typing import List
 from typing import Mapping
-from typing import MutableMapping
-from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -36,24 +34,31 @@ _Q = TypeVar('_Q', bound='BaseQuery')
 _QArg = Union[str, Tuple[str, ...]]
 
 
-class Thing(NamedTuple):
-    value: str
+class Thing(str):
     alias: Optional[str] = None
     keyword: Optional[str] = None
 
     @property
     def name(self) -> str:
-        return self.alias or self.value
+        return self.alias or self
 
     @classmethod
-    def from_arg(cls, thing: _QArg, **kwargs: Any) -> 'Thing':
-        if isinstance(thing, str):
-            alias, value = None, _clean_up(thing)
+    def from_arg(cls, arg: _QArg, keyword: Optional[str] = None) -> 'Thing':
+        if isinstance(arg, str):
+            rv = cls(_clean_up(arg))
         else:
-            if len(thing) != 2:  # pragma: no cover
-                raise ValueError(f"invalid thing: {thing!r}")
-            alias, value = map(_clean_up, thing)
-        return cls(value, alias, **kwargs)
+            if len(arg) != 2:  # pragma: no cover
+                raise ValueError(f"invalid arg: {arg!r}")
+            alias, value = arg
+            rv = cls(_clean_up(value))
+            rv.alias = _clean_up(alias)
+        if keyword is not None:
+            rv.keyword = keyword
+        return rv
+
+
+class FlagList(List[_T]):
+    flag: Optional[str] = None
 
 
 def _clean_up(thing: str) -> str:
@@ -80,7 +85,7 @@ class BaseQuery:
         collections.defaultdict(lambda: '{value}'),
         dict(
             SELECT='{value} AS {alias}',
-            WITH='{alias} AS (\n{indented_value}\n)',
+            WITH='{alias} AS (\n{indented}\n)',
         ),
     )
 
@@ -90,13 +95,12 @@ class BaseQuery:
     def __init__(self, data: Optional[Mapping[str, Iterable[_QArg]]] = None) -> None:
         if data is None:
             data = dict.fromkeys(self.keywords, ())
-        self.data: Mapping[str, List[Thing]] = {
-            keyword: [Thing.from_arg(t) for t in things]
+        self.data: Mapping[str, FlagList[Thing]] = {
+            keyword: FlagList(Thing.from_arg(t) for t in things)
             for keyword, things in data.items()
         }
-        self.flags: MutableMapping[str, str] = {}
 
-    def add(self: _Q, keyword: str, *things: _QArg) -> _Q:
+    def add(self: _Q, keyword: str, *args: _QArg) -> _Q:
         fake_keyword: Optional[str]
         for fake_keyword_part, real_keyword in self.fake_keywords.items():
             if fake_keyword_part in keyword:
@@ -112,15 +116,14 @@ class BaseQuery:
         target = self.data[keyword]
 
         if keyword in self.flag_keywords and flag:
-            existing_flag = self.flags.get(keyword)
-            if existing_flag is not None:  # pragma: no cover
+            if target.flag is not None:  # pragma: no cover
                 raise ValueError(f"keyword {keyword} already has flag: {flag!r}")
             if flag not in self.flag_keywords[keyword]:
                 raise ValueError(f"invalid flag for keyword {keyword}: {flag!r}")
-            self.flags[keyword] = flag
+            target.flag = flag
 
-        for thing in things:
-            target.append(Thing.from_arg(thing, keyword=fake_keyword))
+        for arg in args:
+            target.append(Thing.from_arg(arg, keyword=fake_keyword))
 
         return self
 
@@ -140,9 +143,8 @@ class BaseQuery:
             if not things:
                 continue
 
-            flag = self.flags.get(keyword)
-            if flag is not None:
-                yield f'{keyword} {flag}\n'
+            if things.flag is not None:
+                yield f'{keyword} {things.flag}\n'
             else:
                 yield f'{keyword}\n'
 
@@ -160,9 +162,9 @@ class BaseQuery:
                 yield thing.keyword + '\n'
 
             fmt = self.formats[thing.alias is not None][keyword]
-            context = thing._asdict()
-            context.update(indented_value=self._indent(thing.value))
-            yield self._indent(fmt.format_map(context))
+            yield self._indent(
+                fmt.format(value=thing, alias=thing.alias, indented=self._indent(thing))
+            )
 
             if not last and thing.keyword is None:
                 try:
