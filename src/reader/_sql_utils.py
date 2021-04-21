@@ -35,15 +35,15 @@ _QArg = Union[str, Tuple[str, ...]]
 
 
 class Thing(str):
-    alias: Optional[str] = None
-    keyword: Optional[str] = None
+    alias: str = ''
+    keyword: str = ''
 
     @property
     def name(self) -> str:
         return self.alias or self
 
     @classmethod
-    def from_arg(cls, arg: _QArg, keyword: Optional[str] = None) -> 'Thing':
+    def from_arg(cls, arg: _QArg, keyword: str = '') -> 'Thing':
         if isinstance(arg, str):
             rv = cls(_clean_up(arg))
         else:
@@ -58,7 +58,7 @@ class Thing(str):
 
 
 class FlagList(List[_T]):
-    flag: Optional[str] = None
+    flag: str = ''
 
 
 def _clean_up(thing: str) -> str:
@@ -101,13 +101,12 @@ class BaseQuery:
         }
 
     def add(self: _Q, keyword: str, *args: _QArg) -> _Q:
-        fake_keyword: Optional[str]
         for fake_keyword_part, real_keyword in self.fake_keywords.items():
             if fake_keyword_part in keyword:
                 keyword, fake_keyword = real_keyword, keyword
                 break
         else:
-            fake_keyword = None
+            fake_keyword = ''
 
         prefix, _, flag = keyword.partition(' ')
         if prefix in self.flag_keywords:
@@ -116,7 +115,7 @@ class BaseQuery:
         target = self.data[keyword]
 
         if keyword in self.flag_keywords and flag:
-            if target.flag is not None:  # pragma: no cover
+            if target.flag:  # pragma: no cover
                 raise ValueError(f"keyword {keyword} already has flag: {flag!r}")
             if flag not in self.flag_keywords[keyword]:
                 raise ValueError(f"invalid flag for keyword {keyword}: {flag!r}")
@@ -143,14 +142,14 @@ class BaseQuery:
             if not things:
                 continue
 
-            if things.flag is not None:
+            if things.flag:
                 yield f'{keyword} {things.flag}\n'
             else:
                 yield f'{keyword}\n'
 
             grouped: Tuple[List[Thing], ...] = ([], [])
             for thing in things:
-                grouped[thing.keyword is not None].append(thing)
+                grouped[bool(thing.keyword)].append(thing)
             for group in grouped:
                 yield from self._lines_keyword(keyword, group)
 
@@ -158,15 +157,15 @@ class BaseQuery:
         for i, thing in enumerate(things):
             last = i + 1 == len(things)
 
-            if thing.keyword is not None:
+            if thing.keyword:
                 yield thing.keyword + '\n'
 
-            fmt = self.formats[thing.alias is not None][keyword]
+            fmt = self.formats[bool(thing.alias)][keyword]
             yield self._indent(
                 fmt.format(value=thing, alias=thing.alias, indented=self._indent(thing))
             )
 
-            if not last and thing.keyword is None:
+            if not last and not thing.keyword:
                 try:
                     yield ' ' + self.separators[keyword]
                 except KeyError:
