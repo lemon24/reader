@@ -38,10 +38,6 @@ class Thing(str):
     alias: str = ''
     keyword: str = ''
 
-    @property
-    def name(self) -> str:
-        return self.alias or self
-
     @classmethod
     def from_arg(cls, arg: _QArg, keyword: str = '') -> 'Thing':
         if isinstance(arg, str):
@@ -101,30 +97,33 @@ class BaseQuery:
         }
 
     def add(self: _Q, keyword: str, *args: _QArg) -> _Q:
-        for fake_keyword_part, real_keyword in self.fake_keywords.items():
-            if fake_keyword_part in keyword:
-                keyword, fake_keyword = real_keyword, keyword
-                break
-        else:
-            fake_keyword = ''
-
-        prefix, _, flag = keyword.partition(' ')
-        if prefix in self.flag_keywords:
-            keyword = prefix
-
+        keyword, fake_keyword = self._resolve_fakes(keyword)
+        keyword, flag = self._resolve_flags(keyword)
         target = self.data[keyword]
 
-        if keyword in self.flag_keywords and flag:
+        if flag:
             if target.flag:  # pragma: no cover
                 raise ValueError(f"keyword {keyword} already has flag: {flag!r}")
-            if flag not in self.flag_keywords[keyword]:
-                raise ValueError(f"invalid flag for keyword {keyword}: {flag!r}")
             target.flag = flag
 
         for arg in args:
             target.append(Thing.from_arg(arg, keyword=fake_keyword))
 
         return self
+
+    def _resolve_fakes(self, keyword: str) -> Tuple[str, str]:
+        for fake_part, real in self.fake_keywords.items():
+            if fake_part in keyword:
+                return real, keyword
+        return keyword, ''
+
+    def _resolve_flags(self, keyword: str) -> Tuple[str, str]:
+        prefix, _, flag = keyword.partition(' ')
+        if prefix in self.flag_keywords:
+            if flag and flag not in self.flag_keywords[prefix]:
+                raise ValueError(f"invalid flag for keyword {prefix}: {flag!r}")
+            return prefix, flag
+        return keyword, ''
 
     def __getattr__(self: _Q, name: str) -> Callable[..., _Q]:
         # also, we must not shadow dunder methods (e.g. __deepcopy__)
@@ -208,7 +207,7 @@ class ScrollingWindowMixin(_SWMBase):
         return self.add(self.__keyword, str(comparison).rstrip())
 
     def extract_last(self, result: Tuple[_T, ...]) -> Optional[Tuple[_T, ...]]:
-        names = [t.name for t in self.data['SELECT']]
+        names = [t.alias or t for t in self.data['SELECT']]
         return tuple(result[names.index(t)] for t in self.__things) or None
 
     def last_params(self, last: Optional[Tuple[_T, ...]]) -> Sequence[Tuple[str, _T]]:
