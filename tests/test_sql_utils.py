@@ -8,9 +8,8 @@ from reader._sql_utils import Query
 
 
 def test_query_simple():
-    assert str(
-        BaseQuery().SELECT('select').FROM('from').JOIN('join').WHERE('where')
-    ) == dedent(
+    query = BaseQuery().SELECT('select').FROM('from').JOIN('join').WHERE('where')
+    assert str(query) == dedent(
         """\
         SELECT
             select
@@ -35,7 +34,7 @@ def test_query_complicated():
     * no-argument keywords have no effect
 
     """
-    assert str(
+    query = (
         BaseQuery()
         .WHERE()
         .OUTER_JOIN('outer join')
@@ -62,7 +61,8 @@ def test_query_complicated():
         .NATURAL_JOIN('natural join')
         .SELECT()
         .SELECT()
-    ) == dedent(
+    )
+    assert str(query) == dedent(
         """\
         WITH
             first cte,
@@ -79,10 +79,10 @@ def test_query_complicated():
             another from
         OUTER JOIN
             outer join
-        OUTER JOIN
-            another outer join
         JOIN
             join
+        OUTER JOIN
+            another outer join
         JOIN
             another join
         NATURAL JOIN
@@ -104,6 +104,19 @@ def test_query_complicated():
             limit
         """
     )
+
+
+def test_query_flag():
+    query = BaseQuery().SELECT('one').SELECT('two').SELECT_DISTINCT()
+    assert str(query) == dedent(
+        """\
+        SELECT DISTINCT
+            one,
+            two
+        """
+    )
+    with pytest.raises(ValueError):
+        BaseQuery().SELECT_MAGIC('one')
 
 
 def test_query_deepcopy():
@@ -176,7 +189,7 @@ def test_scrolling_window_last():
     assert query.extract_last([1, 2, 3]) == None
     assert dict(query.last_params(None)) == {}
 
-    query = Query().SELECT('one', 'two', 'three')
+    query = Query().SELECT('one', 'two', ('three', 'max(3)'))
     query.scrolling_window_order_by('one', 'three')
     assert query.extract_last([1, 2, 3]) == (1, 3)
     assert dict(query.last_params([1, 3])) == {'last_0': 1, 'last_1': 3}

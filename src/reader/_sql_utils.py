@@ -18,9 +18,11 @@ import functools
 import textwrap
 from typing import Any
 from typing import Callable
-from typing import Iterator
+from typing import Iterable
 from typing import List
 from typing import Mapping
+from typing import MutableMapping
+from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -30,26 +32,96 @@ from typing import Union
 
 _T = TypeVar('_T')
 
-
 _Q = TypeVar('_Q', bound='BaseQuery')
 _QArg = Union[str, Tuple[str, ...]]
 
 
-if TYPE_CHECKING:  # pragma: no cover
-    _BQBase = collections.OrderedDict[str, List[List[str]]]
-else:
-    _BQBase = collections.OrderedDict
+class Thing(NamedTuple):
+    value: str
+    alias: Optional[str] = None
+    keyword: Optional[str] = None
+
+    @property
+    def name(self) -> str:
+        return self.alias or self.value
+
+    @classmethod
+    def from_arg(cls, thing: _QArg, **kwargs: Any) -> 'Thing':
+        if isinstance(thing, str):
+            alias, value = None, _clean_up(thing)
+        else:
+            if len(thing) != 2:  # pragma: no cover
+                raise ValueError(f"invalid thing: {thing!r}")
+            alias, value = map(_clean_up, thing)
+        return cls(value, alias, **kwargs)
 
 
-class BaseQuery(_BQBase):
+def _clean_up(thing: str) -> str:
+    return textwrap.dedent(thing.rstrip()).strip()
 
-    default_separators = dict(WHERE='AND', HAVING='AND')
+
+class BaseQuery:
+
+    keywords = [
+        'WITH',
+        'SELECT',
+        'FROM',
+        'WHERE',
+        'GROUP BY',
+        'HAVING',
+        'ORDER BY',
+        'LIMIT',
+    ]
+
+    fake_keywords = dict(JOIN='FROM')
+    flag_keywords = dict(SELECT={'DISTINCT', 'ALL'})
+
+    formats: Tuple[Mapping[str, str], ...] = (
+        collections.defaultdict(lambda: '{value}'),
+        dict(
+            SELECT='{value} AS {alias}',
+            WITH='{alias} AS (\n{indented_value}\n)',
+        ),
+    )
+
+    separators = dict(WHERE='AND', HAVING='AND')
+    default_separator = ','
+
+    def __init__(self, data: Optional[Mapping[str, Iterable[_QArg]]] = None) -> None:
+        if data is None:
+            data = dict.fromkeys(self.keywords, ())
+        self.data: Mapping[str, List[Thing]] = {
+            keyword: [Thing.from_arg(t) for t in things]
+            for keyword, things in data.items()
+        }
+        self.flags: MutableMapping[str, str] = {}
 
     def add(self: _Q, keyword: str, *things: _QArg) -> _Q:
-        target = self.setdefault(keyword, [])
-        for maybe_thing in things:
-            thing = (maybe_thing,) if isinstance(maybe_thing, str) else maybe_thing
-            target.append([self._clean_up(t) for t in thing])
+        fake_keyword: Optional[str]
+        for fake_keyword_part, real_keyword in self.fake_keywords.items():
+            if fake_keyword_part in keyword:
+                keyword, fake_keyword = real_keyword, keyword
+                break
+        else:
+            fake_keyword = None
+
+        prefix, _, flag = keyword.partition(' ')
+        if prefix in self.flag_keywords:
+            keyword = prefix
+
+        target = self.data[keyword]
+
+        if keyword in self.flag_keywords and flag:
+            existing_flag = self.flags.get(keyword)
+            if existing_flag is not None:  # pragma: no cover
+                raise ValueError(f"keyword {keyword} already has flag: {flag!r}")
+            if flag not in self.flag_keywords[keyword]:
+                raise ValueError(f"invalid flag for keyword {keyword}: {flag!r}")
+            self.flags[keyword] = flag
+
+        for thing in things:
+            target.append(Thing.from_arg(thing, keyword=fake_keyword))
+
         return self
 
     def __getattr__(self: _Q, name: str) -> Callable[..., _Q]:
@@ -63,85 +135,44 @@ class BaseQuery(_BQBase):
     def __str__(self) -> str:
         return ''.join(self._lines())
 
-    def _clean_up(self, thing: str) -> str:
-        return textwrap.dedent(thing.rstrip()).strip()
-
-    def _lines(self) -> Iterator[str]:
-        pairs = sorted(self.items(), key=lambda p: self._keyword_key(p[0]))
-
-        for keyword, things in pairs:
+    def _lines(self) -> Iterable[str]:
+        for keyword, things in self.data.items():
             if not things:
                 continue
 
-            if keyword == 'SELECT' and getattr(self, 'distinct', None):
-                yield 'SELECT DISTINCT\n'
+            flag = self.flags.get(keyword)
+            if flag is not None:
+                yield f'{keyword} {flag}\n'
             else:
-                yield keyword + '\n'
+                yield f'{keyword}\n'
 
-            for i, maybe_thing in enumerate(things, 1):
-                fmt = self._keyword_formats[len(maybe_thing)][keyword]
-                name, thing = (
-                    (None, *maybe_thing) if len(maybe_thing) == 1 else maybe_thing
-                )
+            things_without_keyword = [t for t in things if t.keyword is None]
+            yield from self._lines_keyword(keyword, things_without_keyword)
 
-                yield self._indent(
-                    fmt.format(
-                        name=name,
-                        thing=thing,
-                        indented_thing=self._indent(thing),
-                    )
-                )
+            things_with_keyword = [t for t in things if t.keyword is not None]
+            yield from self._lines_keyword(keyword, things_with_keyword)
 
-                if i < len(things):
-                    yield self._get_separator(keyword)
-                yield '\n'
+    def _lines_keyword(self, keyword: str, things: Sequence[Thing]) -> Iterable[str]:
+        for i, thing in enumerate(things):
+            last = i + 1 == len(things)
 
-    def _keyword_key(self, keyword: str) -> float:
-        if 'JOIN' in keyword:
-            keyword = 'JOIN'
-        try:
-            return self._keyword_order.index(keyword)
-        except ValueError:
-            return float('inf')
+            if thing.keyword is not None:
+                yield thing.keyword + '\n'
 
-    _keyword_order = [
-        'WITH',
-        'SELECT',
-        'FROM',
-        'JOIN',
-        'WHERE',
-        'GROUP BY',
-        'HAVING',
-        'ORDER BY',
-        'LIMIT',
-    ]
+            fmt = self.formats[thing.alias is not None][keyword]
+            context = thing._asdict()
+            context.update(indented_value=self._indent(thing.value))
+            yield self._indent(fmt.format_map(context))
 
-    _keyword_formats: Mapping[int, Mapping[str, str]] = {
-        1: collections.defaultdict(lambda: '{thing}'),
-        2: dict(
-            SELECT='{thing} AS {name}',
-            WITH='{name} AS (\n{indented_thing}\n)',
-        ),
-    }
+            if not last and thing.keyword is None:
+                try:
+                    yield ' ' + self.separators[keyword]
+                except KeyError:
+                    yield self.default_separator
+
+            yield '\n'
 
     _indent = functools.partial(textwrap.indent, prefix='    ')
-
-    def _get_separator(self, keyword: str) -> str:
-        if 'JOIN' in keyword:
-            return '\n' + keyword
-        try:
-            return ' ' + self.default_separators[keyword]
-        except KeyError:
-            return ','
-
-    def SELECT(self: _Q, *things: _QArg, distinct: Optional[bool] = None) -> _Q:
-        if distinct is not None:
-            # TODO: HACK: this flag should be in the dict somewhere, not an attribute
-            self.distinct = distinct
-        return self.add('SELECT', *things)
-
-    def SELECT_DISTINCT(self: _Q, *things: _QArg) -> _Q:
-        return self.SELECT(*things, distinct=True)
 
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -160,7 +191,7 @@ class ScrollingWindowMixin(_SWMBase):
     def scrolling_window_order_by(
         self: _SWM, *things: str, desc: bool = False, keyword: str = 'WHERE'
     ) -> _SWM:
-        self.__things = [self._clean_up(t) for t in things]
+        self.__things = [_clean_up(t) for t in things]
         self.__desc = desc
         self.__keyword = keyword
 
@@ -172,13 +203,11 @@ class ScrollingWindowMixin(_SWMBase):
     def add_last(self: _SWM) -> _SWM:
         op = '<' if self.__desc else '>'
         labels = (':' + self.__make_label(i) for i in range(len(self.__things)))
-        return self.add(
-            self.__keyword,
-            str(Query().add('(', *self.__things).add(f') {op} (', *labels)) + ')',
-        )
+        comparison = BaseQuery({'(': self.__things, f') {op} (': labels, ')': ['']})
+        return self.add(self.__keyword, str(comparison).rstrip())
 
     def extract_last(self, result: Tuple[_T, ...]) -> Optional[Tuple[_T, ...]]:
-        names = [t[0] for t in self['SELECT']]
+        names = [t.name for t in self.data['SELECT']]
         return tuple(result[names.index(t)] for t in self.__things) or None
 
     def last_params(self, last: Optional[Tuple[_T, ...]]) -> Sequence[Tuple[str, _T]]:
