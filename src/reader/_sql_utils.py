@@ -148,11 +148,11 @@ class BaseQuery:
             else:
                 yield f'{keyword}\n'
 
-            things_without_keyword = [t for t in things if t.keyword is None]
-            yield from self._lines_keyword(keyword, things_without_keyword)
-
-            things_with_keyword = [t for t in things if t.keyword is not None]
-            yield from self._lines_keyword(keyword, things_with_keyword)
+            grouped: Tuple[List[Thing], ...] = ([], [])
+            for thing in things:
+                grouped[thing.keyword is not None].append(thing)
+            for group in grouped:
+                yield from self._lines_keyword(keyword, group)
 
     def _lines_keyword(self, keyword: str, things: Sequence[Thing]) -> Iterable[str]:
         for i, thing in enumerate(things):
