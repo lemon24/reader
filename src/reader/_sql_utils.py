@@ -21,6 +21,7 @@ from typing import Callable
 from typing import Iterable
 from typing import List
 from typing import Mapping
+from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -34,23 +35,19 @@ _Q = TypeVar('_Q', bound='BaseQuery')
 _QArg = Union[str, Tuple[str, ...]]
 
 
-class Thing(str):
+class Thing(NamedTuple):
+    value: str
     alias: str = ''
     keyword: str = ''
 
     @classmethod
     def from_arg(cls, arg: _QArg, keyword: str = '') -> 'Thing':
         if isinstance(arg, str):
-            rv = cls(_clean_up(arg))
-        else:
-            if len(arg) != 2:  # pragma: no cover
-                raise ValueError(f"invalid arg: {arg!r}")
-            alias, value = arg
-            rv = cls(_clean_up(value))
-            rv.alias = _clean_up(alias)
-        if keyword is not None:
-            rv.keyword = keyword
-        return rv
+            return cls(_clean_up(arg), keyword=keyword)
+        if len(arg) != 2:  # pragma: no cover
+            raise ValueError(f"invalid arg: {arg!r}")
+        alias, value = arg
+        return cls(_clean_up(value), _clean_up(alias), keyword)
 
 
 class FlagList(List[_T]):
@@ -159,10 +156,10 @@ class BaseQuery:
             if thing.keyword:
                 yield thing.keyword + '\n'
 
-            fmt = self.formats[bool(thing.alias)][keyword]
-            yield self._indent(
-                fmt.format(value=thing, alias=thing.alias, indented=self._indent(thing))
-            )
+            format = self.formats[bool(thing.alias)][keyword]
+            context = thing._asdict()
+            context.update(indented=self._indent(thing.value))
+            yield self._indent(format.format_map(context))
 
             if not last and not thing.keyword:
                 try:
@@ -207,7 +204,7 @@ class ScrollingWindowMixin(_SWMBase):
         return self.add(self.__keyword, str(comparison).rstrip())
 
     def extract_last(self, result: Tuple[_T, ...]) -> Optional[Tuple[_T, ...]]:
-        names = [t.alias or t for t in self.data['SELECT']]
+        names = [t.alias or t.value for t in self.data['SELECT']]
         return tuple(result[names.index(t)] for t in self.__things) or None
 
     def last_params(self, last: Optional[Tuple[_T, ...]]) -> Sequence[Tuple[str, _T]]:
