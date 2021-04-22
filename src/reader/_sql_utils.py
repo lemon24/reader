@@ -6,11 +6,48 @@ https://sqlbuilder.readthedocs.io/en/latest/#short-manual-for-sqlbuilder-mini
 
 See tests/test_sql_utils.py for some usage examples.
 
-For a version of this that supports UNIONs and nested queries,
-see the second prototype in https://github.com/lemon24/reader/issues/123
+---
+
+For a version of this that supports UNIONs see the second prototype in
+https://github.com/lemon24/reader/issues/123#issuecomment-624045621
+
+---
 
 For a version of this that supports INSERT/UPDATE/DELETE, see
 https://github.com/lemon24/reader/commit/7c97fccf61d16946176c2455be3634c5a8343e1b
+
+The way things work now has changed slightly;
+we'd probably make them flag keywords now.
+
+To make VALUES bake in the parentheses, we just need to set:
+
+    query.formats[0]['VALUES'] = '({value})'
+
+---
+
+To support marking arbitrary things as subqueries,
+add a signalling tuple and a helper function:
+
+    class _Subquery(tuple): pass
+
+    def Subquery(*args) -> _Subquery:
+        return _Subquery(args)  # from_arg() has to support 1-tuples
+
+Then, in from_arg(), if arg is a _Subquery, set is_subquery.
+
+Usage looks like this:
+
+    Query().FROM(
+        Subquery('alias', 'subquery'),
+        ('alias', 'not subquery'),
+    )
+
+---
+
+To support using Queries as arguments directly,
+without having to convert them to strings first,
+allow _Thing.value to be a Query (and support it in);
+then, in _lines_keyword(), convert queries to str and override is_subquery.
 
 """
 import functools
