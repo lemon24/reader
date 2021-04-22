@@ -13,11 +13,12 @@ For a version of this that supports INSERT/UPDATE/DELETE, see
 https://github.com/lemon24/reader/commit/7c97fccf61d16946176c2455be3634c5a8343e1b
 
 """
-import collections
 import functools
 import textwrap
+from collections import defaultdict
 from typing import Any
 from typing import Callable
+from typing import Dict
 from typing import Iterable
 from typing import List
 from typing import Mapping
@@ -39,15 +40,17 @@ class Thing(NamedTuple):
     value: str
     alias: str = ''
     keyword: str = ''
+    is_subquery: bool = False
 
     @classmethod
-    def from_arg(cls, arg: _QArg, keyword: str = '') -> 'Thing':
+    def from_arg(cls, arg: _QArg, **kwargs: Any) -> 'Thing':
         if isinstance(arg, str):
-            return cls(_clean_up(arg), keyword=keyword)
-        if len(arg) != 2:  # pragma: no cover
+            value, alias = arg, ''
+        elif len(arg) == 2:
+            alias, value = arg
+        else:  # pragma: no cover
             raise ValueError(f"invalid arg: {arg!r}")
-        alias, value = arg
-        return cls(_clean_up(value), _clean_up(alias), keyword)
+        return cls(_clean_up(value), _clean_up(alias), **kwargs)
 
 
 class FlagList(List[_T]):
@@ -75,12 +78,10 @@ class BaseQuery:
     flag_keywords = dict(SELECT={'DISTINCT', 'ALL'})
 
     formats: Tuple[Mapping[str, str], ...] = (
-        collections.defaultdict(lambda: '{value}'),
-        dict(
-            SELECT='{value} AS {alias}',
-            WITH='{alias} AS (\n{indented}\n)',
-        ),
+        defaultdict(lambda: '{value}'),
+        defaultdict(lambda: '{value} AS {alias}', WITH='{alias} AS {value}'),
     )
+    subquery_by_default = {'WITH'}
 
     separators = dict(WHERE='AND', HAVING='AND')
     default_separator = ','
@@ -103,8 +104,14 @@ class BaseQuery:
                 raise ValueError(f"keyword {keyword} already has flag: {flag!r}")
             target.flag = flag
 
+        kwargs: Dict[str, Any] = {}
+        if fake_keyword:
+            kwargs.update(keyword=fake_keyword)
+        if keyword in self.subquery_by_default:
+            kwargs.update(is_subquery=True)
+
         for arg in args:
-            target.append(Thing.from_arg(arg, keyword=fake_keyword))
+            target.append(Thing.from_arg(arg, **kwargs))
 
         return self
 
@@ -157,9 +164,10 @@ class BaseQuery:
                 yield thing.keyword + '\n'
 
             format = self.formats[bool(thing.alias)][keyword]
-            context = thing._asdict()
-            context.update(indented=self._indent(thing.value))
-            yield self._indent(format.format_map(context))
+            value = thing.value
+            if thing.is_subquery:
+                value = f'(\n{self._indent(value)}\n)'
+            yield self._indent(format.format(value=value, alias=thing.alias))
 
             if not last and not thing.keyword:
                 try:

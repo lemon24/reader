@@ -52,6 +52,7 @@ def test_query_complicated():
         .WHERE('where')
         .ORDER_BY('third')
         .OUTER_JOIN('another outer join')
+        # this isn't technically valid
         .WITH('first cte')
         .GROUP_BY('another group by')
         .HAVING('another having')
@@ -62,10 +63,13 @@ def test_query_complicated():
         .SELECT()
         .SELECT()
     )
+    print(str(query))
     assert str(query) == dedent(
         """\
         WITH
-            first cte,
+            (
+                first cte
+            ),
             fancy AS (
                 second cte
             )
