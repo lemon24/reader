@@ -36,14 +36,14 @@ _Q = TypeVar('_Q', bound='BaseQuery')
 _QArg = Union[str, Tuple[str, ...]]
 
 
-class Thing(NamedTuple):
+class _Thing(NamedTuple):
     value: str
     alias: str = ''
     keyword: str = ''
     is_subquery: bool = False
 
     @classmethod
-    def from_arg(cls, arg: _QArg, **kwargs: Any) -> 'Thing':
+    def from_arg(cls, arg: _QArg, **kwargs: Any) -> '_Thing':
         if isinstance(arg, str):
             value, alias = arg, ''
         elif len(arg) == 2:
@@ -53,7 +53,7 @@ class Thing(NamedTuple):
         return cls(_clean_up(value), _clean_up(alias), **kwargs)
 
 
-class FlagList(List[_T]):
+class _FlagList(List[_T]):
     flag: str = ''
 
 
@@ -89,8 +89,8 @@ class BaseQuery:
     def __init__(self, data: Optional[Mapping[str, Iterable[_QArg]]] = None) -> None:
         if data is None:
             data = dict.fromkeys(self.keywords, ())
-        self.data: Mapping[str, FlagList[Thing]] = {
-            keyword: FlagList(Thing.from_arg(t) for t in things)
+        self.data: Mapping[str, _FlagList[_Thing]] = {
+            keyword: _FlagList(_Thing.from_arg(t) for t in things)
             for keyword, things in data.items()
         }
 
@@ -111,7 +111,7 @@ class BaseQuery:
             kwargs.update(is_subquery=True)
 
         for arg in args:
-            target.append(Thing.from_arg(arg, **kwargs))
+            target.append(_Thing.from_arg(arg, **kwargs))
 
         return self
 
@@ -150,13 +150,13 @@ class BaseQuery:
             else:
                 yield f'{keyword}\n'
 
-            grouped: Tuple[List[Thing], ...] = ([], [])
+            grouped: Tuple[List[_Thing], ...] = ([], [])
             for thing in things:
                 grouped[bool(thing.keyword)].append(thing)
             for group in grouped:
                 yield from self._lines_keyword(keyword, group)
 
-    def _lines_keyword(self, keyword: str, things: Sequence[Thing]) -> Iterable[str]:
+    def _lines_keyword(self, keyword: str, things: Sequence[_Thing]) -> Iterable[str]:
         for i, thing in enumerate(things):
             last = i + 1 == len(things)
 
