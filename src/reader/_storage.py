@@ -16,6 +16,7 @@ from typing import Tuple
 from typing import Type
 from typing import TypeVar
 
+from ._sql_utils import BaseQuery
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
 from ._sqlite_utils import paginated_query
@@ -1349,13 +1350,12 @@ def apply_feed_tags_filter_options(
     next_tag_id = 0
 
     for subtags in tags:
-        # TODO: Query() should allow building this kind of stuff.
-        or_parts = []
+        tag_query = BaseQuery({'(': [], ')': ['']}, {'(': 'OR'})
+        tag_add = partial(tag_query.add, '(')
+
         for maybe_tag in subtags:
             if isinstance(maybe_tag, bool):
-                or_parts.append(
-                    f"{'NOT' if not maybe_tag else ''} (SELECT * FROM tags_count)"
-                )
+                tag_add(f"{'NOT' if not maybe_tag else ''} (SELECT * FROM tags_count)")
                 add_tags_count_cte = True
                 continue
 
@@ -1363,10 +1363,10 @@ def apply_feed_tags_filter_options(
             tag_name = f'__tag_{next_tag_id}'
             next_tag_id += 1
             context[tag_name] = tag
-            or_parts.append(f":{tag_name} {'NOT' if is_negation else ''} IN tags")
+            tag_add(f":{tag_name} {'NOT' if is_negation else ''} IN tags")
             add_tags_cte = True
 
-        add(f"({' OR '.join(or_parts)})")
+        add(str(tag_query))
 
     if add_tags_cte:
         query.WITH(("tags", f"SELECT tag FROM feed_tags WHERE feed = {url_column}"))

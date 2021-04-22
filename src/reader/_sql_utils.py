@@ -83,16 +83,22 @@ class BaseQuery:
     )
     subquery_by_default = {'WITH'}
 
-    separators = dict(WHERE='AND', HAVING='AND')
+    separators: Mapping[str, str] = dict(WHERE='AND', HAVING='AND')
     default_separator = ','
 
-    def __init__(self, data: Optional[Mapping[str, Iterable[_QArg]]] = None) -> None:
+    def __init__(
+        self,
+        data: Optional[Mapping[str, Iterable[_QArg]]] = None,
+        separators: Optional[Mapping[str, str]] = None,
+    ) -> None:
         if data is None:
             data = dict.fromkeys(self.keywords, ())
         self.data: Mapping[str, _FlagList[_Thing]] = {
             keyword: _FlagList(_Thing.from_arg(t) for t in things)
             for keyword, things in data.items()
         }
+        if separators is not None:
+            self.separators = separators
 
     def add(self: _Q, keyword: str, *args: _QArg) -> _Q:
         keyword, fake_keyword = self._resolve_fakes(keyword)
