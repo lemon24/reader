@@ -27,10 +27,10 @@ install:
       && export PATH=${PATH}:${HOME}/.cargo/bin
       || true
 
-    - make install-dev
+    - ./run.sh ci-install
     - pip install codecov
 
-script: make coverage typing
+script: ./run.sh ci-run
 
 notifications:
     email: false

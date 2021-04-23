@@ -24,30 +24,16 @@ readonly SCRIPT="$( pwd )/$( basename "$0" )"
 
 function install-dev {
     pip install -e '.[search,cli,app,enclosure-tags,preview-feed-list,dev,docs]'
+    # TODO: pre-commit
 }
 
 
+# TODO: test commands: test-fast, test
+
+
 function coverage-all {
-    local options=$( getopt x "$@" )
-    eval set -- "$options"
-
-    local context=true
-
-    while true; do
-        case "$1" in
-        -x) context= ;;
-        --) break ;;
-        esac
-        shift
-    done
-
-    if [[ $context == true ]]; then
-        coverage-run --cov-context=test
-        coverage-report --show-contexts
-    else
-        coverage-run
-        coverage-report
-    fi
+    coverage-run --cov-context=test "$@"
+    coverage-report --show-contexts
 }
 
 function coverage-run {
@@ -94,22 +80,6 @@ function docs {
 }
 
 
-function ls-project-files {
-    git ls-files "$@"
-    git ls-files --exclude-standard --others "$@"
-}
-
-function entr-project-files {
-    set +o errexit
-    while true; do
-        ls-project-files | entr "$@"
-        if [[ $? -eq 0 ]]; then
-            break
-        fi
-    done
-}
-
-
 function test-dev {
     clean-pyc
     entr-project-files -cdr pytest "$@"
@@ -133,11 +103,42 @@ function serve-dev {
 }
 
 
+function release {
+    python scripts/release.py "$@"
+}
+
+
+function ls-project-files {
+    git ls-files "$@"
+    git ls-files --exclude-standard --others "$@"
+}
+
+function entr-project-files {
+    set +o errexit
+    while true; do
+        ls-project-files | entr "$@"
+        if [[ $? -eq 0 ]]; then
+            break
+        fi
+    done
+}
+
+
 function clean-pyc {
+    local IFS=$'\n'
     find \
-        docs examples scripts src tests \
+        $( ls-project-files | grep / | cut -d/ -f1 | uniq ) \
         -name '*.pyc' -or -name '*.pyo' \
         -exec rm -rf {} +
+}
+
+
+function ci-install {
+    install-dev
+}
+
+function ci-run {
+    coverage-run && coverage-report && typing
 }
 
 

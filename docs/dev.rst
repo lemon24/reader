@@ -45,7 +45,7 @@ Style guide
 You should enforce it by using `pre-commit <https://pre-commit.com/>`_.
 To install it into your git hooks, run::
 
-    pip install pre-commit  # pip install '.[dev]' already does it for you
+    pip install pre-commit  # ./run.sh install-dev already does it for you
     pre-commit install
 
 Every time you clone the repo, running ``pre-commit install`` should always be
@@ -57,13 +57,11 @@ Testing
 
 First, install the testing dependencies::
 
-    make install-dev        # or
+    ./run.sh install-dev    # or
     pip install '.[search,cli,app,enclosure-tags,preview-feed-list,dev,docs]'
 
 Run tests using the current Python interpreter::
 
-    make                    # or
-    make test               # or
     pytest --runslow
 
 Run tests using the current Python interpreter, but skip slow tests::
@@ -72,21 +70,20 @@ Run tests using the current Python interpreter, but skip slow tests::
 
 Run tests for all supported Python versions::
 
-    make test-all          # or
     tox
 
 Run tests with coverage and generate an HTML report (in ``./htmlcov``)::
 
-    make coverage
+    ./run.sh coverage-all
 
 Run the type checker::
 
-    make typing             # or
+    ./run.sh typing         # or
     mypy --strict src
 
 Start a local development server for the web application::
 
-    make serve-dev          # or
+    ./run.sh serve-dev      # or
 
     FLASK_DEBUG=1 FLASK_TRAP_BAD_REQUEST_ERRORS=1 \
     FLASK_APP=src/reader/_app/wsgi.py \
@@ -96,13 +93,13 @@ Start a local development server for the web application::
 Building the documentation
 --------------------------
 
-First, install the dependencies (``pip install '.[dev]'`` already does it for you)::
+First, install the dependencie::
 
-    pip install '.[docs]'
+    pip install '.[docs]'   # ./run.sh install-dev already does it for you
 
 The documentation is built with Sphinx::
 
-    make docs               # or
+    ./run.sh docs           # or
     make -C docs html       # using Sphinx's Makefile directly
 
 The built HTML docs should be in ``./docs/_build/html/``.
