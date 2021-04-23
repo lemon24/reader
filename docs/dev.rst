@@ -45,7 +45,7 @@ Style guide
 You should enforce it by using `pre-commit <https://pre-commit.com/>`_.
 To install it into your git hooks, run::
 
-    pip install pre-commit  # ./run.sh install-dev already does it for you
+    pip install pre-commit  # ./run.sh install-dev already does both
     pre-commit install
 
 Every time you clone the repo, running ``pre-commit install`` should always be
@@ -58,7 +58,7 @@ Testing
 First, install the testing dependencies::
 
     ./run.sh install-dev    # or
-    pip install '.[search,cli,app,enclosure-tags,preview-feed-list,dev,docs]'
+    pip install '.[search,cli,app,tests,dev,unstable-plugins]'
 
 Run tests using the current Python interpreter::
 
@@ -118,7 +118,7 @@ Making a release (from ``x`` to ``y`` == ``x + 1``):
 * (release.py) update changelog with release version and date
 * (release.py) make sure tests pass / docs build
 * (release.py) clean up dist/: ``rm -rf dist/``
-* (release.py) build tarball and wheel: ``python setup.py build sdist`` and ``python setup.py build bdist_wheel``
+* (release.py) build tarball and wheel: ``python -m build``
 * (release.py) push to GitHub
 * (release.py prompts) wait for Travis / Codecov / Read the Docs builds to pass
 * upload to test PyPI and check: ``twine upload --repository-url https://test.pypi.org/legacy/ dist/*``

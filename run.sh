@@ -2,43 +2,51 @@
 #
 # usage: ./run.sh command [argument ...]
 #
-# Commands for use during development / CI.
-#
+# Commands used during development / CI.
+# Also, executable documentation for project dev practices.
 
+
+# First, set up the environment.
+# (Check the notes at the end when changing this.)
 
 set -o nounset
 set -o pipefail
 set -o errexit
 
-
 # Change the current directory to the project root.
-script_root=${0%/*}
-if [[ $0 != $script_root && $script_root != "" ]]; then
-    cd "$script_root"
+PROJECT_ROOT=${0%/*}
+if [[ $0 != $PROJECT_ROOT && $PROJECT_ROOT != "" ]]; then
+    cd "$PROJECT_ROOT"
 fi
-unset script_root
+readonly PROJECT_ROOT=$( pwd )
 
 # Store the absolute path to this script (useful for recursion).
-readonly SCRIPT="$( pwd )/$( basename "$0" )"
+readonly SCRIPT="$PROJECT_ROOT/$( basename "$0" )"
+
+
+
+# Commands follow.
 
 
 function install-dev {
-    pip install -e '.[search,cli,app,enclosure-tags,preview-feed-list,dev,docs]'
-    # TODO: pre-commit
+    pip install -e '.[search,cli,app,tests,docs,dev,unstable-plugins]'
+    pre-commit install
 }
 
 
-# TODO: test commands: test-fast, test
+function test {
+    pytest --runslow "$@"
+}
 
 
 function coverage-all {
+    clean-pyc
     coverage-run --cov-context=test "$@"
     coverage-report --show-contexts
 }
 
 function coverage-run {
-    clean-pyc
-    pytest --cov --runslow "$@"
+    pytest --runslow --cov "$@"
 }
 
 function coverage-report {
@@ -58,6 +66,11 @@ function coverage-report {
         )" \
         --skip-covered \
         --fail-under 100
+}
+
+
+function test-all {
+    tox -p
 }
 
 
@@ -134,7 +147,7 @@ function clean-pyc {
 
 
 function ci-install {
-    install-dev
+    pip install -e '.[search,cli,app,tests,unstable-plugins]'
 }
 
 function ci-run {
@@ -142,5 +155,19 @@ function ci-run {
 }
 
 
-# Pass control to commands.
+
+# Commands end. Dispatch to command.
+
 "$@"
+
+
+
+# Some dev notes for this script.
+#
+# The commands *require*:
+#
+# * The current working directory is the project root.
+# * The shell options and globals are set as they are.
+#
+# Inspired by http://www.oilshell.org/blog/2020/02/good-parts-sketch.html
+#

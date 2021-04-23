@@ -9,12 +9,12 @@ Create a feed out of the SQLite release history pages at:
 
 Also serves as an example of how to write custom parsers.
 
-This plugin needs additional dependencies, use the ``sqlite-releases`` extra
+This plugin needs additional dependencies, use the ``unstable-plugins`` extra
 to install them:
 
 .. code-block:: bash
 
-    pip install reader[sqlite-releases]
+    pip install reader[unstable-plugins]
 
 To load::
 

@@ -22,6 +22,11 @@ Unreleased
   or because an RSS feed does not have a ``dc:date`` element,
   and feedparser falls back to ``lastBuildDate`` for :attr:`~Feed.updated`).
 
+* The ``enclosure-tags``, ``preview-feed-list``, and ``sqlite-releases``
+  unstable extras are not available anymore.
+  Use the ``unstable-plugins`` extra to install
+  dependencies of the unstable plugins instead.
+
 * In the web application, allow updating a feed manually.
   (:issue:`195`)
 
