@@ -374,10 +374,10 @@ class NameScheme(_namedtuple_compat):
         return self
 
     def make_reader_name(self, key: str) -> str:
-        return self.reader_prefix + self.separator + key
+        return self.reader_prefix + key
 
     def make_plugin_name(self, plugin_name: str, key: Optional[str] = None) -> str:
-        rv = self.plugin_prefix + self.separator + plugin_name
+        rv = self.plugin_prefix + plugin_name
         if key is not None:
             rv += self.separator + key
         return rv
@@ -385,8 +385,8 @@ class NameScheme(_namedtuple_compat):
 
 DEFAULT_RESERVED_NAME_SCHEME = MappingProxyType(
     {
-        'reader_prefix': '.reader',
-        'plugin_prefix': '.plugin',
+        'reader_prefix': '.reader.',
+        'plugin_prefix': '.plugin.',
         'separator': '.',
     }
 )

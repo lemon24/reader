@@ -34,6 +34,7 @@ from reader import StorageError
 from reader import UpdatedFeed
 from reader import UpdateResult
 from reader._storage import Storage
+from reader._types import DEFAULT_RESERVED_NAME_SCHEME
 from reader._types import FeedUpdateIntent
 
 
@@ -1739,8 +1740,6 @@ def test_closed(reader):
 
 
 def test_direct_instantiation():
-    from reader._types import DEFAULT_RESERVED_NAME_SCHEME
-
     with pytest.warns(UserWarning):
         Reader('storage', 'search', 'parser', DEFAULT_RESERVED_NAME_SCHEME)
 
@@ -2901,9 +2900,9 @@ def test_reserved_names(make_reader):
 
     reader.reserved_name_scheme = new_scheme
 
-    assert reader.make_reader_reserved_name('key') == ':key'
-    assert reader.make_plugin_reserved_name('myplugin') == '.:myplugin'
-    assert reader.make_plugin_reserved_name('myplugin', 'key') == '.:myplugin:key'
+    assert reader.make_reader_reserved_name('key') == 'key'
+    assert reader.make_plugin_reserved_name('myplugin') == '.myplugin'
+    assert reader.make_plugin_reserved_name('myplugin', 'key') == '.myplugin:key'
 
     assert dict(reader.reserved_name_scheme) == new_scheme
 

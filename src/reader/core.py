@@ -154,6 +154,11 @@ def make_reader(
             as a float, or a (connect timeout, read timeout) tuple.
             Passed to the underlying `Requests session`_.
 
+        reserved_name_scheme (dict(str, str) or None):
+            Value for :attr:`~Reader.reserved_name_scheme`.
+            The prefixes default to ``.reader.``/``.plugin.``,
+            and the separator to ``.``
+
     .. _Requests session: https://requests.readthedocs.io/en/master/user/advanced/#timeouts
 
     Returns:
@@ -179,6 +184,9 @@ def make_reader(
     .. versionadded:: 1.16
         The ``plugins`` keyword argument. Using an invalid plugin name
         raises :exc:`InvalidPluginError`, a :exc:`ValueError` subclass.
+
+    .. versionadded:: 1.17
+        The ``reserved_name_scheme`` argument.
 
     """
 
@@ -1469,7 +1477,7 @@ class Reader:
 
         Uses :attr:`~Reader.reserved_name_scheme` to build names of the format::
 
-        {reader_prefix}{separator}{key}
+        {reader_prefix}{key}
 
         Using the default scheme:
 
@@ -1498,8 +1506,8 @@ class Reader:
 
         Uses :attr:`~Reader.reserved_name_scheme` to build names of the format::
 
-        {plugin_prefix}{separator}{plugin_name}
-        {plugin_prefix}{separator}{plugin_name}{separator}{key}
+        {plugin_prefix}{plugin_name}
+        {plugin_prefix}{plugin_name}{separator}{key}
 
         Using the default scheme:
 
@@ -1534,7 +1542,7 @@ class Reader:
 
         The default scheme (these keys are required)::
 
-        {'reader_prefix': '.reader', 'plugin_prefix': '.plugin', 'separator': '.'}
+            {'reader_prefix': '.reader.', 'plugin_prefix': '.plugin.', 'separator': '.'}
 
         The returned mapping is immutable; assign a new mapping to change the scheme.
 
