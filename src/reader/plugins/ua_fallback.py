@@ -45,7 +45,7 @@ def _ua_fallback_response_hook(session, response, request, **kwargs):
         h: response.headers[h] for h in _LOG_HEADERS if h in response.headers
     }
     log.info(
-        "ua_fallback: %s: got status code %i, "
+        "%s: got status code %i, "
         "retrying with feedparser User-Agent; "
         "relevant response headers: %s",
         request.url,

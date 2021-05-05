@@ -18,6 +18,7 @@ for details on how built-in plugins are loaded.
 
 .. automodule:: reader.plugins.enclosure_dedupe
 .. automodule:: reader.plugins.entry_dedupe
+.. automodule:: reader.plugins.mark_as_read
 .. automodule:: reader.plugins.ua_fallback
 
 
@@ -62,7 +63,6 @@ use the entry point as a :ref:`custom plugin <custom plugins>`::
     >>> reader = make_reader("db.sqlite", plugins=[regex_mark_as_read])
 
 
-.. automodule:: reader._plugins.regex_mark_as_read
 .. automodule:: reader._plugins.tumblr_gdpr
 .. automodule:: reader._plugins.enclosure_tags
 .. automodule:: reader._plugins.preview_feed_list
