@@ -11,6 +11,11 @@ Version 1.17
 
 Unreleased
 
+* Reserve tags and metadata keys starting with ``.reader.`` and ``.plugin.``
+  for *reader*- and plugin-specific uses.
+  See the :ref:`reserved names` user guide section for details.
+  (:issue:`186`)
+
 * Ignore :attr:`~Feed.updated` when updating feeds;
   only update the feed if other feed data changed
   or if any entries were added/updated.

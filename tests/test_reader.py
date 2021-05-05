@@ -1739,8 +1739,10 @@ def test_closed(reader):
 
 
 def test_direct_instantiation():
+    from reader._types import DEFAULT_RESERVED_NAME_SCHEME
+
     with pytest.warns(UserWarning):
-        Reader('storage', 'search', 'parser')
+        Reader('storage', 'search', 'parser', DEFAULT_RESERVED_NAME_SCHEME)
 
 
 # BEGIN entry filtering tests
@@ -2880,3 +2882,30 @@ def test_plugins(monkeypatch, make_reader):
         make_reader(':memory:', plugins=['two'])
 
     assert str(exc_info.value) == "no such built-in plugin: 'two'"
+
+
+def test_reserved_names(make_reader):
+    with pytest.raises(ValueError):
+        make_reader(':memory:', reserved_name_scheme={})
+
+    reader = make_reader(':memory:')
+
+    assert reader.make_reader_reserved_name('key') == '.reader.key'
+    assert reader.make_plugin_reserved_name('myplugin') == '.plugin.myplugin'
+    assert reader.make_plugin_reserved_name('myplugin', 'key') == '.plugin.myplugin.key'
+
+    with pytest.raises(AttributeError):
+        reader.reserved_name_scheme = {}
+
+    new_scheme = {'reader_prefix': '', 'plugin_prefix': '.', 'separator': ':'}
+
+    reader.reserved_name_scheme = new_scheme
+
+    assert reader.make_reader_reserved_name('key') == ':key'
+    assert reader.make_plugin_reserved_name('myplugin') == '.:myplugin'
+    assert reader.make_plugin_reserved_name('myplugin', 'key') == '.:myplugin:key'
+
+    assert dict(reader.reserved_name_scheme) == new_scheme
+
+    with pytest.raises(TypeError):
+        reader.reserved_name_scheme['separator'] = '.'

@@ -363,8 +363,10 @@ key-value pairs where the values are any JSON-serializable data::
 
 Common uses for metadata are plugin and UI settings.
 
-.. todo:: Mention reader doesn't restrict key characters, but the UI should.
-.. todo:: Mention reserved key prefixes (:issue:`186`).
+Note that metadata keys and the top-level keys of dict metadata values
+starting with specific (configurable) prefixes are `reserved <Reserved names_>`_.
+Other than that, they can be any unicode string,
+although UIs might want to restrict this to a smaller character set.
 
 
 
@@ -391,8 +393,10 @@ Tags can be used for filtering feeds and entries
     ... ][:2]
     [('Cortex', '106: Clear and Boring'), ('Cortex', '105: Atomic Notes')]
 
-.. todo:: Mention reader doesn't restrict tag characters, but the UI should.
-.. todo:: Mention reserved tag prefixes (:issue:`186`).
+Note that tags
+starting with specific (configurable) prefixes are `reserved <Reserved names_>`_.
+Other than that, they can be any unicode string,
+although UIs might want to restrict this to a smaller character set.
 
 
 
@@ -553,6 +557,70 @@ Some examples of how this is useful:
 * Likewise, if you don't keep the entries around (e.g. append them to a list),
   memory usage should remain relatively constant
   regardless of the total number of entries returned.
+
+
+
+.. _reserved names:
+
+Reserved names
+--------------
+
+In order to expose *reader* and plugin functionality directly to the end user,
+*names* starting with ``.reader.`` and ``.plugin.`` are *reserved*.
+This applies to the following names:
+
+* tags
+* metadata keys
+* the top-level keys of dict metadata values
+
+Currently, there are no *reader*-reserved names;
+new ones will be documented here.
+
+The prefixes can be changed using
+:attr:`~Reader.reserved_name_scheme`.
+
+Note that changing :attr:`~Reader.reserved_name_scheme`
+*does not rename* the actual entities,
+it just controls how new reserved names are built.
+Because of this, I recommend choosing a scheme
+before setting up a new *reader* database,
+and sticking with that scheme for its lifetime.
+To change the scheme of an existing database,
+you must rename the entities listed above yourself.
+
+When choosing a :attr:`~Reader.reserved_name_scheme`,
+the ``reader_prefix`` and ``plugin_prefix`` should not overlap,
+otherwise the *reader* core and various plugins may interfere each other.
+(For example, if both prefixes are set to ``.``,
+*reader*-reserved key ``user_title``
+and a plugin named ``user_title`` that uses just the plugin name (with no key)
+will both end up using the ``.user_title`` metadata.)
+
+That said, *reader* will ensure
+names reserved by the core
+and :ref:`built-in plugin <built-in plugins>` names
+*will never collide*,
+so this is a concern only if you plan to use third-party plugins.
+
+.. todo::
+
+    ... that don't follow the plugin author guide (doesn't exist yet)
+    Mention in the plugin author guide that care should be taken to avoid colliding with known reader names.
+    Also, mention that if the plugin name is `reader_whatever`, plugins can use just `whatever` as name.
+    Also, mention that if plugin `reader_whatever` exists on PyPI, I won't add a new reader name that's called `whatever`.
+    Furthermore, keys starting with `_` are private/unstable.
+
+Reserved names can be built programmatically using
+:meth:`~Reader.make_reader_reserved_name`
+and :meth:`~Reader.make_plugin_reserved_name`.
+Code that wishes to work with any scheme
+should always use these methods to construct reserved names
+(especially third-party plugins).
+
+.. todo::
+
+    (especially third-party plugins published on PyPI).
+    This should be mentoined in the plugin author guide.
 
 
 

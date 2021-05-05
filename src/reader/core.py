@@ -4,11 +4,13 @@ import logging
 import numbers
 import warnings
 from datetime import datetime
+from types import MappingProxyType
 from typing import Any
 from typing import Callable
 from typing import Collection
 from typing import Iterable
 from typing import Iterator
+from typing import Mapping
 from typing import Optional
 from typing import overload
 from typing import Tuple
@@ -22,12 +24,14 @@ from ._parser import SESSION_TIMEOUT
 from ._requests_utils import TimeoutType
 from ._search import Search
 from ._storage import Storage
+from ._types import DEFAULT_RESERVED_NAME_SCHEME
 from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import EntryUpdateIntent
 from ._types import FeedFilterOptions
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
+from ._types import NameScheme
 from ._types import ParsedFeed
 from ._utils import make_pool_map
 from ._utils import nullcontext
@@ -76,6 +80,7 @@ def make_reader(
     feed_root: Optional[str] = '',
     plugins: Iterable[Union[str, ReaderPluginType]] = _DEFAULT_PLUGINS,
     session_timeout: TimeoutType = SESSION_TIMEOUT,
+    reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
     _storage: Optional[Storage] = None,
     _storage_factory: Any = None,
 ) -> 'Reader':
@@ -191,7 +196,9 @@ def make_reader(
 
     parser = default_parser(feed_root, session_timeout=session_timeout)
 
-    reader = Reader(storage, search, parser, _called_directly=False)
+    reader = Reader(
+        storage, search, parser, reserved_name_scheme, _called_directly=False
+    )
 
     for plugin in plugins:
         if isinstance(plugin, str):
@@ -255,11 +262,18 @@ class Reader:
         _storage: Storage,
         _search: Search,
         _parser: Parser,
+        _reserved_name_scheme: Mapping[str, str],
         _called_directly: bool = True,
     ):
         self._storage = _storage
         self._search = _search
         self._parser = _parser
+
+        try:
+            self.reserved_name_scheme = _reserved_name_scheme
+        except AttributeError as e:
+            raise ValueError(str(e)) from (e.__cause__ or e)
+
         self._updater = reader._updater
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
 
@@ -1448,3 +1462,90 @@ class Reader:
         """
         feed_url = _feed_argument(feed) if feed is not None else feed
         return self._storage.get_feed_tags(feed_url)
+
+    def make_reader_reserved_name(self, key: str) -> str:
+        """Create a *reader*-reserved tag or metadata name.
+        See :ref:`reserved names` for details.
+
+        Uses :attr:`~Reader.reserved_name_scheme` to build names of the format::
+
+        {reader_prefix}{separator}{key}
+
+        Using the default scheme:
+
+        >>> reader.make_reader_reserved_name('key')
+        '.reader.key'
+
+        Args:
+            key (str): A key.
+
+        Returns:
+            str: The name.
+
+        .. versionadded:: 1.17
+
+        """
+        return self._reserved_name_scheme.make_reader_name(key)
+
+    def make_plugin_reserved_name(
+        self, plugin_name: str, key: Optional[str] = None
+    ) -> str:
+        """Create a plugin-reserved tag or metadata name.
+        See :ref:`reserved names` for details.
+
+        Plugins should use this to generate names
+        for plugin-specific tags and metadata.
+
+        Uses :attr:`~Reader.reserved_name_scheme` to build names of the format::
+
+        {plugin_prefix}{separator}{plugin_name}
+        {plugin_prefix}{separator}{plugin_name}{separator}{key}
+
+        Using the default scheme:
+
+        >>> reader.make_plugin_reserved_name('myplugin')
+        '.plugin.myplugin'
+        >>> reader.make_plugin_reserved_name('myplugin', 'key')
+        '.plugin.myplugin.key'
+
+        Args:
+            plugin_name (str): The plugin package/module name.
+            key (str or None): A key; if more than one reserved name is needed.
+
+        Returns:
+            str: The name.
+
+        .. versionadded:: 1.17
+
+        """
+        return self._reserved_name_scheme.make_plugin_name(plugin_name, key)
+
+    # Ideally, the getter would return a TypedDict,
+    # but the setter would take *any* Mapping[str, str];
+    # unfortunately, mypy doesn't like when the types differ:
+    # https://github.com/python/mypy/issues/3004
+
+    @property
+    def reserved_name_scheme(self) -> Mapping[str, str]:
+        """dict(str, str): Mapping used to build reserved names.
+        See :meth:`~Reader.make_reader_reserved_name`
+        and :meth:`~Reader.make_plugin_reserved_name`
+        for details on how this is used.
+
+        The default scheme (these keys are required)::
+
+        {'reader_prefix': '.reader', 'plugin_prefix': '.plugin', 'separator': '.'}
+
+        The returned mapping is immutable; assign a new mapping to change the scheme.
+
+        .. versionadded:: 1.17
+
+        """
+        return MappingProxyType(self._reserved_name_scheme.__dict__)
+
+    @reserved_name_scheme.setter
+    def reserved_name_scheme(self, value: Mapping[str, str]) -> None:
+        try:
+            self._reserved_name_scheme = NameScheme.from_value(value)
+        except Exception as e:
+            raise AttributeError(f"invalid scheme: {value}") from e

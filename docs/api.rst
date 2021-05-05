@@ -16,7 +16,7 @@ Most of *reader*'s functionality can be accessed through a :class:`Reader` insta
 
     Split this into sub-sections.
 
-.. autofunction:: make_reader(url, *, feed_root='', plugins=..., session_timeout=(3.05, 60))
+.. autofunction:: make_reader(url, *, feed_root='', plugins=..., session_timeout=(3.05, 60), reserved_name_scheme=...)
 
 .. autoclass:: Reader(...)
     :members:

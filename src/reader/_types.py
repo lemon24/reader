@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
+from types import MappingProxyType
 from typing import Generic
 from typing import Iterable
+from typing import Mapping
 from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
@@ -355,3 +357,36 @@ class FeedFilterOptions(NamedTuple):
             raise ValueError("updates_enabled should be one of (None, False, True)")
 
         return cls(feed_url, tag_filter, broken, updates_enabled)
+
+
+@dataclass(frozen=True)
+class NameScheme(_namedtuple_compat):
+    reader_prefix: str
+    plugin_prefix: str
+    separator: str
+
+    @classmethod
+    def from_value(cls, value: Mapping[str, str]) -> 'NameScheme':
+        # Use is validation.
+        self = cls(**value)
+        self.make_reader_name('key')
+        self.make_plugin_name('name', 'key')
+        return self
+
+    def make_reader_name(self, key: str) -> str:
+        return self.reader_prefix + self.separator + key
+
+    def make_plugin_name(self, plugin_name: str, key: Optional[str] = None) -> str:
+        rv = self.plugin_prefix + self.separator + plugin_name
+        if key is not None:
+            rv += self.separator + key
+        return rv
+
+
+DEFAULT_RESERVED_NAME_SCHEME = MappingProxyType(
+    {
+        'reader_prefix': '.reader',
+        'plugin_prefix': '.plugin',
+        'separator': '.',
+    }
+)
