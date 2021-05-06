@@ -71,6 +71,7 @@ _T = TypeVar('_T')
 _U = TypeVar('_U')
 
 ReaderPluginType = Callable[['Reader'], None]
+_PostFeedUpdatePluginType = Callable[['Reader', str], None]
 _PostEntryAddPluginType = Callable[['Reader', EntryData[datetime]], None]
 
 
@@ -283,6 +284,7 @@ class Reader:
             raise ValueError(str(e)) from (e.__cause__ or e)
 
         self._updater = reader._updater
+        self._post_feed_update_plugins: Collection[_PostFeedUpdatePluginType] = []
         self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
 
         if _called_directly:
@@ -813,7 +815,9 @@ class Reader:
                     feed_for_update, now, global_now, parse_result, entry_pairs
                 )
 
-                counts = self._update_feed(feed_to_update, entries_to_update)
+                counts = self._update_feed(
+                    feed_for_update.url, feed_to_update, entries_to_update
+                )
 
                 if isinstance(parse_result, Exception):
                     rv = parse_result
@@ -840,6 +844,7 @@ class Reader:
 
     def _update_feed(
         self,
+        url: str,
         feed_to_update: Optional[FeedUpdateIntent],
         entries_to_update: Iterable[EntryUpdateIntent],
     ) -> Tuple[int, int]:
@@ -851,6 +856,9 @@ class Reader:
         # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
 
+        for feed_plugin in self._post_feed_update_plugins:
+            feed_plugin(self, url)
+
         new_count = 0
         updated_count = 0
         for entry in entries_to_update:
@@ -860,8 +868,8 @@ class Reader:
                 updated_count += 1
             if not entry.new:
                 continue
-            for plugin in self._post_entry_add_plugins:
-                plugin(self, entry.entry)
+            for entry_plugin in self._post_entry_add_plugins:
+                entry_plugin(self, entry.entry)
 
         return new_count, updated_count
 

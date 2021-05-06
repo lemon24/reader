@@ -133,6 +133,34 @@ def test_post_entry_add_plugins(reader):
     # TODO: What is the expected behavior if a plugin raises an exception?
 
 
+def test_post_feed_update_plugins(reader):
+    parser = Parser()
+    reader._parser = parser
+
+    plugin_calls = []
+
+    def first_plugin(r, e):
+        assert r is reader
+        plugin_calls.append((first_plugin, e))
+
+    def second_plugin(r, e):
+        assert r is reader
+        plugin_calls.append((second_plugin, e))
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    parser.entry(1, 1, datetime(2010, 1, 1))
+    reader.add_feed(feed.url)
+    reader._post_feed_update_plugins.append(first_plugin)
+    reader._post_feed_update_plugins.append(second_plugin)
+
+    reader.update_feeds()
+    assert plugin_calls == [
+        (first_plugin, feed.url),
+        (second_plugin, feed.url),
+    ]
+    assert set(e.id for e in reader.get_entries()) == {'1, 1'}
+
+
 def test_make_reader_storage(storage):
     reader = make_reader('', _storage=storage)
     assert reader._storage is storage

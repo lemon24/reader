@@ -27,13 +27,18 @@ Unreleased
   or because an RSS feed does not have a ``dc:date`` element,
   and feedparser falls back to ``lastBuildDate`` for :attr:`~Feed.updated`).
 
-* The ``regex_mark_as_read`` plugin is now :ref:`built-in <built-in plugins>`.
+* The ``regex_mark_as_read`` experimental plugin is now
+  :ref:`built-in <built-in plugins>`.
   To use it with the CLI / web application,
   use the plugin name instead of the entry point (``reader.mark_as_read``).
+
   The config metadata key and format changed;
-  for active feeds, the config will be migrated automatically
-  on the next feed update (until *reader* version 2.0).
-  (:issue:`186`)
+  the config will be migrated automatically on the next feed update,
+  **during reader version 1.17 only**.
+  If you used ``regex_mark_as_read`` and are upgrading to a version >1.17,
+  install 1.17 (``pip install reader==1.17``)
+  and run a full feed update (``python -m reader update``)
+  before installing the newer version.
 
 * The ``enclosure-tags``, ``preview-feed-list``, and ``sqlite-releases``
   unstable extras are not available anymore.

@@ -52,24 +52,32 @@ def _get_config(reader, feed_url, metadata_key, patterns_key):
     return []
 
 
-def _plugin(reader, entry):
+def _migrate_old_config_format(reader, url):
+    # Fall back to the old config format.
+    # A bit wasteful, since this runs on every update.
+    # TODO: Remove this before 1.18.
+
+    metadata_name = reader.make_reader_reserved_name('mark_as_read')
+
+    old_patterns = _get_config(reader, url, 'regex-mark-as-read', 'patterns')
+    if old_patterns is None:
+        return
+
+    new_patterns = _get_config(reader, url, metadata_name, 'title')
+    if new_patterns is not None:  # pragma: no cover
+        log.warning(
+            "%s: found both old-style and new-style mark_as_read config metadata, not migrating",
+            url,
+        )
+        return
+
+    reader.set_feed_metadata(url, metadata_name, {'title': old_patterns})
+    reader.delete_feed_metadata(url, 'regex-mark-as-read')
+
+
+def _mark_as_read(reader, entry):
     metadata_name = reader.make_reader_reserved_name('mark_as_read')
     patterns = _get_config(reader, entry.feed_url, metadata_name, 'title')
-
-    # Fall back to the old config format.
-    # TODO: Remove the fallback before 2.0.
-    # NOTE: This won't do anything for feeds that weren't modified. All feeds should be marked as stale at least once before 2.0.
-    # TODO: It would be nice to have a hook for running this kind of "migration"...
-    if patterns is None:
-        old_patterns = _get_config(
-            reader, entry.feed_url, 'regex-mark-as-read', 'patterns'
-        )
-        if old_patterns is not None:
-            reader.set_feed_metadata(
-                entry.feed_url, metadata_name, {'title': old_patterns}
-            )
-            reader.delete_feed_metadata(entry.feed_url, 'regex-mark-as-read')
-            patterns = old_patterns
 
     for pattern in patterns or ():
         if re.search(pattern, entry.title):
@@ -78,4 +86,5 @@ def _plugin(reader, entry):
 
 
 def init_reader(reader):
-    reader._post_entry_add_plugins.append(_plugin)
+    reader._post_feed_update_plugins.append(_migrate_old_config_format)
+    reader._post_entry_add_plugins.append(_mark_as_read)
