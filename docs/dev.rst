@@ -336,6 +336,12 @@ List of hooks (unmaintained as of 2021): :issue:`80`.
 Minimal plugin API (case study and considetrations for the built-in plugin naming scheme): `229#issuecomment-803870781`.
 
 
+Reserved names
+~~~~~~~~~~~~~~
+
+Requirements, thoughts about the naming scheme and prefixes unlikely to collide with user names: :issue:`186` (multiple comments).
+
+
 Web application
 ~~~~~~~~~~~~~~~
 
