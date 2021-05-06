@@ -9,7 +9,7 @@ Changelog
 Version 1.17
 ------------
 
-Unreleased
+Released 2021-05-06
 
 * Reserve tags and metadata keys starting with ``.reader.`` and ``.plugin.``
   for *reader*- and plugin-specific uses.
