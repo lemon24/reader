@@ -63,7 +63,6 @@ def test_query_complicated():
         .SELECT()
         .SELECT()
     )
-    print(str(query))
     assert str(query) == dedent(
         """\
         WITH

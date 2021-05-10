@@ -42,6 +42,11 @@ Usage looks like this:
         ('alias', 'not subquery'),
     )
 
+Alternatively, add an is_subquery kwarg to add():
+
+    query = Query().FROM(('alias', 'subquery'), is_subquery=True)
+    query.FROM(('alias', 'not subquery'))
+
 ---
 
 To support using Queries as arguments directly,
@@ -82,7 +87,7 @@ class _Thing(NamedTuple):
     @classmethod
     def from_arg(cls, arg: _QArg, **kwargs: Any) -> '_Thing':
         if isinstance(arg, str):
-            value, alias = arg, ''
+            alias, value = '', arg
         elif len(arg) == 2:
             alias, value = arg
         else:  # pragma: no cover
@@ -111,29 +116,30 @@ class BaseQuery:
         'LIMIT',
     ]
 
-    fake_keywords = dict(JOIN='FROM')
-    flag_keywords = dict(SELECT={'DISTINCT', 'ALL'})
+    separators: Mapping[str, str] = dict(WHERE='AND', HAVING='AND')
+    default_separator = ','
 
     formats: Tuple[Mapping[str, str], ...] = (
         defaultdict(lambda: '{value}'),
         defaultdict(lambda: '{value} AS {alias}', WITH='{alias} AS {value}'),
     )
-    subquery_by_default = {'WITH'}
 
-    separators: Mapping[str, str] = dict(WHERE='AND', HAVING='AND')
-    default_separator = ','
+    subquery_keywords = {'WITH'}
+    fake_keywords = dict(JOIN='FROM')
+    flag_keywords = dict(SELECT={'DISTINCT', 'ALL'})
 
     def __init__(
         self,
         data: Optional[Mapping[str, Iterable[_QArg]]] = None,
         separators: Optional[Mapping[str, str]] = None,
     ) -> None:
+        self.data: Mapping[str, _FlagList[_Thing]] = {}
         if data is None:
             data = dict.fromkeys(self.keywords, ())
-        self.data: Mapping[str, _FlagList[_Thing]] = {
-            keyword: _FlagList(_Thing.from_arg(t) for t in things)
-            for keyword, things in data.items()
-        }
+        for keyword, args in data.items():
+            self.data[keyword] = _FlagList()
+            self.add(keyword, *args)
+
         if separators is not None:
             self.separators = separators
 
@@ -144,13 +150,13 @@ class BaseQuery:
 
         if flag:
             if target.flag:  # pragma: no cover
-                raise ValueError(f"keyword {keyword} already has flag: {flag!r}")
+                raise ValueError(f"{keyword} already has flag: {flag!r}")
             target.flag = flag
 
         kwargs: Dict[str, Any] = {}
         if fake_keyword:
             kwargs.update(keyword=fake_keyword)
-        if keyword in self.subquery_by_default:
+        if keyword in self.subquery_keywords:
             kwargs.update(is_subquery=True)
 
         for arg in args:
@@ -159,8 +165,8 @@ class BaseQuery:
         return self
 
     def _resolve_fakes(self, keyword: str) -> Tuple[str, str]:
-        for fake_part, real in self.fake_keywords.items():
-            if fake_part in keyword:
+        for part, real in self.fake_keywords.items():
+            if part in keyword:
                 return real, keyword
         return keyword, ''
 
@@ -168,16 +174,14 @@ class BaseQuery:
         prefix, _, flag = keyword.partition(' ')
         if prefix in self.flag_keywords:
             if flag and flag not in self.flag_keywords[prefix]:
-                raise ValueError(f"invalid flag for keyword {prefix}: {flag!r}")
+                raise ValueError(f"invalid flag for {prefix}: {flag!r}")
             return prefix, flag
         return keyword, ''
 
     def __getattr__(self: _Q, name: str) -> Callable[..., _Q]:
-        # also, we must not shadow dunder methods (e.g. __deepcopy__)
+        # conveniently, avoids shadowing dunder methods (e.g. __deepcopy__)
         if not name.isupper():
-            raise AttributeError(
-                f"{type(self).__name__!r} object has no attribute {name!r}"
-            )
+            return getattr(super(), name)  # type: ignore
         return functools.partial(self.add, name.replace('_', ' '))
 
     def __str__(self) -> str:
