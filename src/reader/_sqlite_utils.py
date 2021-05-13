@@ -463,8 +463,7 @@ def paginated_query(
         query.LIMIT(":chunk_size")
         context['chunk_size'] = chunk_size
     if last:
-        query.add_last()
-        context.update(query.last_params(cast(Optional[Tuple[Any, ...]], last)))
+        context.update(query.add_last(cast(Optional[Tuple[Any, ...]], last)))
 
     rv = (
         (value_factory(t), cast(_U, query.extract_last(t)))

@@ -250,19 +250,23 @@ class ScrollingWindowMixin(_SWMBase):
         order = 'DESC' if desc else 'ASC'
         return self.ORDER_BY(*(f'{thing} {order}' for thing in things))
 
-    __make_label = 'last_{}'.format
-
-    def add_last(self: _SWM) -> _SWM:
-        op = '<' if self.__desc else '>'
-        labels = (':' + self.__make_label(i) for i in range(len(self.__things)))
-        comparison = BaseQuery({'(': self.__things, f') {op} (': labels, ')': ['']})
-        return self.add(self.__keyword, str(comparison).rstrip())
-
     def extract_last(self, result: Tuple[_T, ...]) -> Optional[Tuple[_T, ...]]:
         names = [t.alias or t.value for t in self.data['SELECT']]
         return tuple(result[names.index(t)] for t in self.__things) or None
 
-    def last_params(self, last: Optional[Tuple[_T, ...]]) -> Sequence[Tuple[str, _T]]:
+    def add_last(self, last: Optional[Tuple[_T, ...]]) -> Sequence[Tuple[str, _T]]:
+        self.__add_last()
+        return self.__last_params(last)
+
+    __make_label = 'last_{}'.format
+
+    def __add_last(self: _SWM) -> None:
+        op = '<' if self.__desc else '>'
+        labels = (':' + self.__make_label(i) for i in range(len(self.__things)))
+        comparison = BaseQuery({'(': self.__things, f') {op} (': labels, ')': ['']})
+        self.add(self.__keyword, str(comparison).rstrip())
+
+    def __last_params(self, last: Optional[Tuple[_T, ...]]) -> Sequence[Tuple[str, _T]]:
         return [(self.__make_label(i), t) for i, t in enumerate(last or ())]
 
 

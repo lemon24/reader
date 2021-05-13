@@ -150,7 +150,7 @@ def test_scrolling_window():
     query = make_query()
     query.scrolling_window_order_by('one')
     query.LIMIT('limit')
-    query.add_last()
+    query.add_last([])
     assert str(query) == str(
         make_query(BaseQuery)
         .WHERE(
@@ -169,7 +169,7 @@ def test_scrolling_window():
     query = make_query()
     query.scrolling_window_order_by('one', desc=True, keyword='HAVING')
     query.LIMIT('limit')
-    query.add_last()
+    query.add_last([])
     assert str(query) == str(
         make_query(BaseQuery)
         .HAVING(
@@ -190,9 +190,9 @@ def test_scrolling_window_last():
     query = Query().SELECT()
     query.scrolling_window_order_by()
     assert query.extract_last([1, 2, 3]) == None
-    assert dict(query.last_params(None)) == {}
+    assert dict(query.add_last(None)) == {}
 
     query = Query().SELECT('one', 'two', ('three', 'max(3)'))
     query.scrolling_window_order_by('one', 'three')
     assert query.extract_last([1, 2, 3]) == (1, 3)
-    assert dict(query.last_params([1, 3])) == {'last_0': 1, 'last_1': 3}
+    assert dict(query.add_last([1, 3])) == {'last_0': 1, 'last_1': 3}
