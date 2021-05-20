@@ -11,6 +11,29 @@ Version 1.18
 
 Unreleased
 
+* Rename :exc:`MetadataNotFoundError` to :exc:`FeedMetadataNotFoundError`.
+  :exc:`MetadataNotFoundError` remains available,
+  and is a superclass of :exc:`FeedMetadataNotFoundError`
+  for backwards compatibility.
+  (:issue:`228`)
+
+  .. warning::
+
+    The signatures of the following exceptions changed:
+
+    :exc:`MetadataError`
+        Takes a new required ``key`` argument, instead of no required arguments.
+
+    :exc:`MetadataNotFoundError`
+        Takes only one required argument, ``key``;
+        the ``url`` argument has been removed.
+
+        Use :exc:`FeedMetadataNotFoundError` instead.
+
+    **This is a minor compatibility break.**
+
+    Only code that instantiates the exceptions should be affected.
+
 
 Version 1.17
 ------------

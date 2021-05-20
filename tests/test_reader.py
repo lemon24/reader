@@ -25,9 +25,9 @@ from reader import EntrySearchCounts
 from reader import Feed
 from reader import FeedCounts
 from reader import FeedExistsError
+from reader import FeedMetadataNotFoundError
 from reader import FeedNotFoundError
 from reader import InvalidPluginError
-from reader import MetadataNotFoundError
 from reader import ParseError
 from reader import Reader
 from reader import StorageError
@@ -1603,7 +1603,7 @@ def test_feed_metadata(reader):
     assert excinfo.value.url == 'one'
     assert 'no such feed' in excinfo.value.message
 
-    with pytest.raises(MetadataNotFoundError) as excinfo:
+    with pytest.raises(FeedMetadataNotFoundError) as excinfo:
         reader.delete_feed_metadata('one', 'key')
     assert (excinfo.value.url, excinfo.value.key) == ('one', 'key')
     assert 'no such metadata' in excinfo.value.message
@@ -1611,14 +1611,14 @@ def test_feed_metadata(reader):
     reader.add_feed('feed')
 
     assert set(reader.iter_feed_metadata('feed')) == set()
-    with pytest.raises(MetadataNotFoundError) as excinfo:
+    with pytest.raises(FeedMetadataNotFoundError) as excinfo:
         reader.get_feed_metadata('feed', 'key')
     assert (excinfo.value.url, excinfo.value.key) == ('feed', 'key')
     assert 'no such metadata' in excinfo.value.message
     assert reader.get_feed_metadata('feed', 'key', None) is None
     assert reader.get_feed_metadata('feed', 'key', default=0) == 0
 
-    with pytest.raises(MetadataNotFoundError):
+    with pytest.raises(FeedMetadataNotFoundError):
         reader.delete_feed_metadata('one', 'key')
 
     reader.set_feed_metadata('feed', 'key', 'value')
@@ -1629,7 +1629,7 @@ def test_feed_metadata(reader):
     reader.delete_feed_metadata('feed', 'key')
 
     assert set(reader.iter_feed_metadata('feed')) == set()
-    with pytest.raises(MetadataNotFoundError):
+    with pytest.raises(FeedMetadataNotFoundError):
         reader.get_feed_metadata('feed', 'key')
 
 

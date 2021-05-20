@@ -1,3 +1,4 @@
+from typing import Any
 from typing import Tuple
 
 from ._vendor.functools import cached_property
@@ -133,26 +134,59 @@ class EntryNotFoundError(EntryError):
 
 
 class MetadataError(ReaderError):
-    """A feed metadata error occured."""
+    """A metadata error occurred.
 
-    def __init__(self, url: str, key: str, message: str = '') -> None:
-        super().__init__(message)
+    .. versionchanged:: 1.18
 
-        #: The feed URL.
-        self.url = url
+        Signature changed from ``MetadataError(message='')``
+        to ``MetadataError(key, message='')``.
+
+    """
+
+    def __init__(self, *args: Any, key: str, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
 
         #: The metadata key.
         self.key = key
 
     @property
     def _str(self) -> str:
-        return f"{self.url!r}: {self.key!r}"
+        return f"{super()._str}: {self.key!r}"
 
 
 class MetadataNotFoundError(MetadataError):
-    """Feed metadata not found."""
+    """Metadata not found.
+
+    .. versionchanged:: 1.18
+
+        Signature changed from ``MetadataNotFoundError(url, key, message='')``
+        to ``MetadataNotFoundError(key, message='')``.
+
+    """
 
     message = "no such metadata"
+
+
+class FeedMetadataNotFoundError(MetadataNotFoundError, FeedError):
+    """Feed metadata not found.
+
+    .. versionadded:: 1.18
+
+    """
+
+    def __init__(self, url: str, key: str, message: str = '') -> None:
+        super().__init__(url, key=key, message=message)
+
+
+class EntryMetadataNotFoundError(MetadataNotFoundError, EntryError):
+    """Entry metadata not found.
+
+    .. versionadded:: 1.18
+
+    """
+
+    def __init__(self, url: str, id: str, key: str, message: str = '') -> None:
+        super().__init__(url, id, key=key, message=message)
 
 
 class StorageError(ReaderError):

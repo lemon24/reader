@@ -37,9 +37,9 @@ from ._utils import make_pool_map
 from ._utils import nullcontext
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
+from .exceptions import FeedMetadataNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import InvalidPluginError
-from .exceptions import MetadataNotFoundError
 from .exceptions import ParseError
 from .plugins import _DEFAULT_PLUGINS
 from .plugins import _PLUGINS
@@ -1128,7 +1128,7 @@ class Reader:
 
         """
         feed_url = _feed_argument(feed)
-        return self._storage.iter_feed_metadata(feed_url, key)
+        return self._storage.iter_metadata((feed_url,), key)
 
     @overload
     def get_feed_metadata(
@@ -1160,13 +1160,13 @@ class Reader:
             JSONType is whatever :py:func:`json.dumps` accepts.
 
         Raises:
-            MetadataNotFoundError
+            FeedMetadataNotFoundError
             StorageError
 
         """
         return zero_or_one(
             (v for _, v in self.iter_feed_metadata(feed, key=key)),
-            lambda: MetadataNotFoundError(_feed_argument(feed), key),
+            lambda: FeedMetadataNotFoundError(_feed_argument(feed), key),
             default,
         )
 
@@ -1185,7 +1185,7 @@ class Reader:
 
         """
         feed_url = _feed_argument(feed)
-        self._storage.set_feed_metadata(feed_url, key, value)
+        self._storage.set_metadata((feed_url,), key, value)
 
     def delete_feed_metadata(self, feed: FeedInput, key: str) -> None:
         """Delete metadata for a feed.
@@ -1195,12 +1195,12 @@ class Reader:
             key (str): The key of the metadata to delete.
 
         Raises:
-            MetadataNotFoundError
+            FeedMetadataNotFoundError
             StorageError
 
         """
         feed_url = _feed_argument(feed)
-        self._storage.delete_feed_metadata(feed_url, key)
+        self._storage.delete_metadata((feed_url,), key)
 
     def enable_search(self) -> None:
         """Enable full-text search.

@@ -165,16 +165,16 @@ def get_entries_chunk_size_1(storage, _, __):
     list(storage.get_entries_page(chunk_size=1, now=datetime(2010, 1, 1)))
 
 
-def iter_feed_metadata(storage, feed, __):
-    list(storage.iter_feed_metadata(feed.url))
+def iter_metadata(storage, feed, __):
+    list(storage.iter_metadata((feed.url,)))
 
 
-def set_feed_metadata(storage, feed, __):
-    storage.set_feed_metadata(feed.url, 'key', 'value')
+def set_metadata(storage, feed, __):
+    storage.set_metadata((feed.url,), 'key', 'value')
 
 
-def delete_feed_metadata(storage, feed, __):
-    storage.delete_feed_metadata(feed.url, 'key')
+def delete_metadata(storage, feed, __):
+    storage.delete_metadata((feed.url,), 'key')
 
 
 def add_feed_tag(storage, feed, __):
@@ -225,9 +225,9 @@ def get_entry_last(storage, feed, entry):
         add_or_update_entries,
         get_entries_chunk_size_0,
         get_entries_chunk_size_1,
-        iter_feed_metadata,
-        set_feed_metadata,
-        delete_feed_metadata,
+        iter_metadata,
+        set_metadata,
+        delete_metadata,
         add_feed_tag,
         remove_feed_tag,
         get_feed_tags,
@@ -309,8 +309,8 @@ def iter_pagination_chunk_size_3(storage):
     return storage.get_entries_page(chunk_size=3, now=datetime(2010, 1, 1))
 
 
-def iter_iter_feed_metadata(storage):
-    return storage.iter_feed_metadata_page('two', chunk_size=1)
+def iter_iter_metadata(storage):
+    return storage.iter_metadata_page(('two',), chunk_size=1)
 
 
 def iter_get_feed_tags(storage):
@@ -330,7 +330,7 @@ def iter_get_feed_tags(storage):
         iter_pagination_chunk_size_1,
         iter_pagination_chunk_size_2,
         iter_pagination_chunk_size_3,
-        iter_iter_feed_metadata,
+        iter_iter_metadata,
         iter_get_feed_tags,
     ],
 )
@@ -358,8 +358,8 @@ def check_iter_locked(db_path, pre_stuff, iter_stuff):
             entry._replace(feed_url='two'), entry.updated, datetime(2010, 1, 1), 0, 0
         )
     )
-    storage.set_feed_metadata('two', '1', 1)
-    storage.set_feed_metadata('two', '2', 2)
+    storage.set_metadata(('two',), '1', 1)
+    storage.set_metadata(('two',), '2', 2)
     storage.add_feed_tag('two', '1')
     storage.add_feed_tag('two', '2')
 

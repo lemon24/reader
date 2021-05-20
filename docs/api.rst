@@ -108,6 +108,11 @@ Exceptions
 
     Subclass of :exc:`MetadataError`.
 
+.. autoexception:: FeedMetadataNotFoundError
+    :members:
+
+    Subclass of :exc:`MetadataNotFoundError` and :exc:`FeedError`.
+
 .. autoexception:: StorageError
     :members:
 

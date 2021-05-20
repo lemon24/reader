@@ -10,6 +10,7 @@ from typing import Any
 from typing import Dict
 from typing import Iterable
 from typing import Mapping
+from typing import NamedTuple
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -35,10 +36,13 @@ from ._utils import chunks
 from ._utils import exactly_one
 from ._utils import join_paginated_iter
 from ._utils import zero_or_one
+from .exceptions import EntryMetadataNotFoundError
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
+from .exceptions import FeedMetadataNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import MetadataNotFoundError
+from .exceptions import ReaderError
 from .exceptions import StorageError
 from .types import Content
 from .types import Enclosure
@@ -166,6 +170,21 @@ def create_feed_tags(db: sqlite3.Connection) -> None:
         );
         """
     )
+
+
+class SchemaInfo(NamedTuple):
+    table_prefix: str
+    id_columns: Tuple[str, ...]
+    not_found_exc: Type[ReaderError]
+    metadata_not_found_exc: Type[MetadataNotFoundError]
+
+
+SCHEMA_INFO = {
+    1: SchemaInfo('feed_', ('feed',), FeedNotFoundError, FeedMetadataNotFoundError),
+    2: SchemaInfo(
+        'entry_', ('feed', 'id'), EntryNotFoundError, EntryMetadataNotFoundError
+    ),
+}
 
 
 def create_indexes(db: sqlite3.Connection) -> None:
@@ -1083,31 +1102,32 @@ class Storage:
 
         return EntryCounts(*row)
 
-    def iter_feed_metadata(
+    def iter_metadata(
         self,
-        feed_url: str,
+        object_id: Tuple[str, ...],
         key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
         yield from join_paginated_iter(
-            partial(self.iter_feed_metadata_page, feed_url, key),
+            partial(self.iter_metadata_page, object_id, key),
             self.chunk_size,
         )
 
     @wrap_exceptions_iter(StorageError)
-    def iter_feed_metadata_page(
+    def iter_metadata_page(
         self,
-        feed_url: str,
+        object_id: Tuple[str, ...],
         key: Optional[str] = None,
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[Tuple[str, JSONType], Optional[_T]]]:
-        query = (
-            Query()
-            .SELECT("key", "value")
-            .FROM("feed_metadata")
-            .WHERE("feed = :feed_url")
-        )
-        context = dict(feed_url=feed_url)
+        info = SCHEMA_INFO[len(object_id)]
+
+        query = Query().SELECT("key", "value").FROM(f"{info.table_prefix}metadata")
+
+        for column in info.id_columns:
+            query.WHERE(f"{column} = :{column}")
+        context = dict(zip(info.id_columns, object_id))
+
         if key is not None:
             query.WHERE("key = :key")
             context.update(key=key)
@@ -1123,41 +1143,50 @@ class Storage:
         )
 
     @wrap_exceptions(StorageError)
-    def set_feed_metadata(self, feed_url: str, key: str, value: JSONType) -> None:
+    def set_metadata(
+        self, object_id: Tuple[str, ...], key: str, value: JSONType
+    ) -> None:
+        info = SCHEMA_INFO[len(object_id)]
+
+        columns = info.id_columns + ('key', 'value')
+        query = f"""
+            INSERT OR REPLACE INTO {info.table_prefix}metadata (
+                {', '.join(columns)}
+            ) VALUES (
+                {', '.join(('?' for _ in columns))}
+            )
+        """
+        params = object_id + (key, json.dumps(value))
+
         with self.db:
             try:
-                self.db.execute(
-                    """
-                    INSERT OR REPLACE INTO feed_metadata (
-                        feed,
-                        key,
-                        value
-                    ) VALUES (
-                        :feed_url,
-                        :key,
-                        :value_json
-                    );
-                    """,
-                    dict(feed_url=feed_url, key=key, value_json=json.dumps(value)),
-                )
+                self.db.execute(query, params)
             except sqlite3.IntegrityError as e:
-                if (
-                    "foreign key constraint failed" not in str(e).lower()
-                ):  # pragma: no cover
+                foreign_key_error = "foreign key constraint failed" in str(e).lower()
+                if not foreign_key_error:  # pragma: no cover
                     raise
-                raise FeedNotFoundError(feed_url)
+                raise info.not_found_exc(*object_id)
 
     @wrap_exceptions(StorageError)
-    def delete_feed_metadata(self, feed_url: str, key: str) -> None:
-        with self.db:
-            cursor = self.db.execute(
-                """
-                DELETE FROM feed_metadata
-                WHERE feed = :feed_url AND key = :key;
-                """,
-                dict(feed_url=feed_url, key=key),
+    def delete_metadata(self, object_id: Tuple[str, ...], key: str) -> None:
+        info = SCHEMA_INFO[len(object_id)]
+
+        columns = info.id_columns + ('key',)
+        query = f"""
+            DELETE FROM {info.table_prefix}metadata
+            WHERE (
+                {', '.join(columns)}
+            ) = (
+                {', '.join(('?' for _ in columns))}
             )
-        rowcount_exactly_one(cursor, lambda: MetadataNotFoundError(feed_url, key))
+        """
+        params = object_id + (key,)
+
+        with self.db:
+            cursor = self.db.execute(query, params)
+        rowcount_exactly_one(
+            cursor, lambda: info.metadata_not_found_exc(*object_id, key=key)
+        )
 
     @wrap_exceptions(StorageError)
     def add_feed_tag(self, feed_url: str, tag: str) -> None:

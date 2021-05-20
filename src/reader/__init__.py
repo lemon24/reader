@@ -66,6 +66,7 @@ from .exceptions import (
     EntryNotFoundError,
     MetadataError,
     MetadataNotFoundError,
+    FeedMetadataNotFoundError,
     StorageError,
     SearchError,
     SearchNotEnabledError,
