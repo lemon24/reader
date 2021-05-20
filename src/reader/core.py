@@ -1441,7 +1441,7 @@ class Reader:
 
         """
         feed_url = _feed_argument(feed)
-        self._storage.add_feed_tag(feed_url, tag)
+        self._storage.add_tag((feed_url,), tag)
 
     def remove_feed_tag(self, feed: FeedInput, tag: str) -> None:
         """Remove a tag from a feed.
@@ -1459,7 +1459,7 @@ class Reader:
 
         """
         feed_url = _feed_argument(feed)
-        self._storage.remove_feed_tag(feed_url, tag)
+        self._storage.remove_tag((feed_url,), tag)
 
     def get_feed_tags(self, feed: Optional[FeedInput] = None) -> Iterable[str]:
         """Get all or some of the feed tags.
@@ -1476,8 +1476,8 @@ class Reader:
         .. versionadded:: 1.7
 
         """
-        feed_url = _feed_argument(feed) if feed is not None else feed
-        return self._storage.get_feed_tags(feed_url)
+        feed_url = _feed_argument(feed) if feed is not None else None
+        return self._storage.get_tags((feed_url,))
 
     def make_reader_reserved_name(self, key: str) -> str:
         """Create a *reader*-reserved tag or metadata name.

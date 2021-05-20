@@ -177,16 +177,16 @@ def delete_metadata(storage, feed, __):
     storage.delete_metadata((feed.url,), 'key')
 
 
-def add_feed_tag(storage, feed, __):
-    storage.add_feed_tag(feed.url, 'tag')
+def add_tag(storage, feed, __):
+    storage.add_tag((feed.url,), 'tag')
 
 
-def remove_feed_tag(storage, feed, __):
-    storage.remove_feed_tag(feed.url, 'tag')
+def remove_tag(storage, feed, __):
+    storage.remove_tag((feed.url,), 'tag')
 
 
-def get_feed_tags(storage, feed, __):
-    list(storage.get_feed_tags(feed.url))
+def get_tags(storage, feed, __):
+    list(storage.get_tags((feed.url,)))
 
 
 def get_feed_counts(storage, _, __):
@@ -228,9 +228,9 @@ def get_entry_last(storage, feed, entry):
         iter_metadata,
         set_metadata,
         delete_metadata,
-        add_feed_tag,
-        remove_feed_tag,
-        get_feed_tags,
+        add_tag,
+        remove_tag,
+        get_tags,
         get_feed_counts,
         get_entry_counts,
         get_feed_last,
@@ -313,8 +313,8 @@ def iter_iter_metadata(storage):
     return storage.iter_metadata_page(('two',), chunk_size=1)
 
 
-def iter_get_feed_tags(storage):
-    return storage.get_feed_tags('two')
+def iter_get_tags(storage):
+    return storage.get_tags_page(('two',), chunk_size=1)
 
 
 @pytest.mark.slow
@@ -331,7 +331,7 @@ def iter_get_feed_tags(storage):
         iter_pagination_chunk_size_2,
         iter_pagination_chunk_size_3,
         iter_iter_metadata,
-        iter_get_feed_tags,
+        iter_get_tags,
     ],
 )
 def test_iter_locked(db_path, iter_stuff):
@@ -360,8 +360,8 @@ def check_iter_locked(db_path, pre_stuff, iter_stuff):
     )
     storage.set_metadata(('two',), '1', 1)
     storage.set_metadata(('two',), '2', 2)
-    storage.add_feed_tag('two', '1')
-    storage.add_feed_tag('two', '2')
+    storage.add_tag(('two',), '1')
+    storage.add_tag(('two',), '2')
 
     if pre_stuff:
         pre_stuff(storage)

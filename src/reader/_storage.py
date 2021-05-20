@@ -1189,43 +1189,73 @@ class Storage:
         )
 
     @wrap_exceptions(StorageError)
-    def add_feed_tag(self, feed_url: str, tag: str) -> None:
+    def add_tag(self, object_id: Tuple[str, ...], tag: str) -> None:
+        info = SCHEMA_INFO[len(object_id)]
+
+        columns = info.id_columns + ('tag',)
+        query = f"""
+            INSERT INTO {info.table_prefix}tags (
+                {', '.join(columns)}
+            ) VALUES (
+                {', '.join(('?' for _ in columns))}
+            )
+        """
+        params = object_id + (tag,)
+
         with self.db:
             try:
-                self.db.execute("INSERT INTO feed_tags VALUES (?, ?);", (feed_url, tag))
+                self.db.execute(query, params)
             except sqlite3.IntegrityError as e:
                 if "foreign key constraint failed" in str(e).lower():
-                    raise FeedNotFoundError(feed_url)
+                    raise info.not_found_exc(*object_id)
                 # tag exists is a no-op; it looks like:
                 # "UNIQUE constraint failed: feed_tags.feed, feed_tags.tag"
 
     @wrap_exceptions(StorageError)
-    def remove_feed_tag(self, feed_url: str, tag: str) -> None:
-        with self.db:
-            self.db.execute(
-                "DELETE FROM feed_tags WHERE feed = ? AND tag = ?;",
-                (feed_url, tag),
-            )
+    def remove_tag(self, object_id: Tuple[str, ...], tag: str) -> None:
+        info = SCHEMA_INFO[len(object_id)]
 
-    def get_feed_tags(self, feed_url: Optional[str]) -> Iterable[str]:
+        columns = info.id_columns + ('tag',)
+        query = f"""
+            DELETE FROM {info.table_prefix}tags
+            WHERE (
+                {', '.join(columns)}
+            ) = (
+                {', '.join(('?' for _ in columns))}
+            )
+        """
+        params = object_id + (tag,)
+
+        with self.db:
+            self.db.execute(query, params)
+
+    # Tuple[Optional[str], ...] seems hacky,
+    # but we can't have Optional[Tuple[str, ...]]
+    # because we depend on the tuple length
+    # to distinguish between feeds and entries.
+
+    def get_tags(self, object_id: Tuple[Optional[str], ...]) -> Iterable[str]:
         yield from join_paginated_iter(
-            partial(self.get_feed_tags_page, feed_url),
+            partial(self.get_tags_page, object_id),
             self.chunk_size,
         )
 
     @wrap_exceptions_iter(StorageError)
-    def get_feed_tags_page(
+    def get_tags_page(
         self,
-        feed_url: Optional[str],
+        object_id: Tuple[Optional[str], ...],
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[str, Optional[_T]]]:
-        query = Query().SELECT_DISTINCT("tag").FROM("feed_tags")
+        info = SCHEMA_INFO[len(object_id)]
+
+        query = Query().SELECT_DISTINCT("tag").FROM(f"{info.table_prefix}tags")
         context: Dict[str, Any] = dict()
 
-        if feed_url is not None:
-            query.WHERE("feed = :feed_url")
-            context.update(feed_url=feed_url)
+        if not any(p is None for p in object_id):
+            for column in info.id_columns:
+                query.WHERE(f"{column} = :{column}")
+            context.update(zip(info.id_columns, object_id))
 
         query.scrolling_window_order_by("tag")
 
