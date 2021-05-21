@@ -60,8 +60,10 @@ import textwrap
 from collections import defaultdict
 from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Dict
 from typing import Iterable
+from typing import Iterator
 from typing import List
 from typing import Mapping
 from typing import NamedTuple
@@ -73,6 +75,8 @@ from typing import TypeVar
 from typing import Union
 
 _T = TypeVar('_T')
+_U = TypeVar('_U')
+
 
 _Q = TypeVar('_Q', bound='BaseQuery')
 _QArg = Union[str, Tuple[str, ...]]
@@ -272,3 +276,38 @@ class ScrollingWindowMixin(_SWMBase):
 
 class Query(ScrollingWindowMixin, BaseQuery):
     pass
+
+
+if TYPE_CHECKING:  # pragma: no cover
+    import sqlite3
+
+
+def paginated_query(
+    db: 'sqlite3.Connection',
+    query: Query,
+    params: Dict[str, Any] = {},  # noqa: B006
+    chunk_size: Optional[int] = 0,
+    last: Optional[_U] = None,
+    row_factory: Optional[Callable[[Tuple[Any, ...]], _T]] = None,
+) -> Iterator[Tuple[_T, _U]]:
+
+    params = dict(params)
+
+    if chunk_size:
+        query.LIMIT(":chunk_size")
+        params['chunk_size'] = chunk_size
+    if last:
+        params.update(query.add_last(last))  # type: ignore
+
+    rv = (
+        (row_factory(t) if row_factory else t, cast(_U, query.extract_last(t)))
+        for t in db.execute(str(query), params)
+    )
+
+    # Consume the result to avoid blocking the database,
+    # but only if the query is actually paginated
+    # (we may need the pass-through for performance).
+    if chunk_size:
+        return iter(list(rv))
+
+    return rv

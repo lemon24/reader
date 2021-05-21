@@ -19,7 +19,6 @@ from typing import no_type_check
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import TYPE_CHECKING
 from typing import TypeVar
 
 from typing_extensions import Protocol
@@ -435,48 +434,6 @@ def rowcount_exactly_one(
     if cursor.rowcount == 0:
         raise make_exc()
     assert cursor.rowcount == 1, "shouldn't have more than 1 row"
-
-
-# TODO: maybe move this to _sql_utils,
-# since DB can be anything with .execute(), but a Query is always required;
-# leaving here for now because _sql_utils.py has type checking disabled
-
-_T = TypeVar('_T')
-_U = TypeVar('_U')
-
-if TYPE_CHECKING:  # pragma: no cover
-    from ._sql_utils import Query
-
-
-def paginated_query(
-    db: sqlite3.Connection,
-    query: 'Query',
-    # FIXME: Any should be SQLiteType
-    context: Dict[str, Any],
-    value_factory: Callable[[Tuple[Any, ...]], _T],
-    chunk_size: Optional[int],
-    last: _U,
-) -> Iterator[Tuple[_T, _U]]:
-    # We need the cast to/from _U until we find a better way of typing last.
-
-    if chunk_size:
-        query.LIMIT(":chunk_size")
-        context['chunk_size'] = chunk_size
-    if last:
-        context.update(query.add_last(cast(Optional[Tuple[Any, ...]], last)))
-
-    rv = (
-        (value_factory(t), cast(_U, query.extract_last(t)))
-        for t in db.execute(str(query), context)
-    )
-
-    # Equivalent to using @returns_iter_list, except when we don't have
-    # a chunk_size (which disables pagination, but can block the database).
-    # TODO: If we don't expose chunk_size, why have this special case?
-    if chunk_size:
-        return iter(list(rv))
-
-    return rv
 
 
 # BEGIN DebugConnection

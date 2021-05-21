@@ -18,9 +18,9 @@ from typing import Type
 from typing import TypeVar
 
 from ._sql_utils import BaseQuery
+from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
-from ._sqlite_utils import paginated_query
 from ._sqlite_utils import rowcount_exactly_one
 from ._sqlite_utils import setup_db as setup_sqlite_db
 from ._sqlite_utils import wrap_exceptions
@@ -528,37 +528,9 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[Feed, Optional[_T]]]:
-        query = (
-            Query()
-            .SELECT(
-                'url',
-                'updated',
-                'title',
-                'link',
-                'author',
-                'user_title',
-                'added',
-                'last_updated',
-                'last_exception',
-                'updates_enabled',
-            )
-            .FROM("feeds")
-        )
-
-        context = apply_feed_filter_options(query, filter_options)
-
-        # sort by url at the end to make sure the order is deterministic
-        if sort == 'title':
-            query.SELECT(("kinda_title", "lower(coalesce(user_title, title))"))
-            query.scrolling_window_order_by("kinda_title", "url")
-        elif sort == 'added':
-            query.SELECT("added")
-            query.scrolling_window_order_by("added", "url", desc=True)
-        else:
-            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
-
+        query, context = make_get_feeds_query(filter_options, sort)
         yield from paginated_query(
-            self.db, query, context, feed_factory, chunk_size, last
+            self.db, query, context, chunk_size, last, feed_factory
         )
 
     @wrap_exceptions(StorageError)
@@ -624,7 +596,7 @@ class Storage:
             query.scrolling_window_order_by("url")
 
             yield from paginated_query(
-                self.db, query, context, FeedForUpdate._make, chunk_size, last
+                self.db, query, context, chunk_size, last, FeedForUpdate._make
             )
 
         yield from join_paginated_iter(inner, self.chunk_size)
@@ -1045,31 +1017,10 @@ class Storage:
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[Entry, Optional[_T]]]:
-        # See this issue for some thoughts on the sort='random' implementation:
-        # https://github.com/lemon24/reader/issues/105
-
-        query, query_context = make_get_entries_query(filter_options, sort)
-
-        context = dict(
-            recent_threshold=now - self.recent_threshold,
-            **query_context,
-        )
-
-        def value_factory(t: Tuple[Any, ...]) -> Entry:
-            feed = feed_factory(t[0:10])
-            entry = t[10:17] + (
-                tuple(Content(**d) for d in json.loads(t[17])) if t[17] else (),
-                tuple(Enclosure(**d) for d in json.loads(t[18])) if t[18] else (),
-                t[19] == 1,
-                t[20] == 1,
-                t[21],
-                t[22] or feed.url,
-                feed,
-            )
-            return Entry._make(entry)
-
+        query, context = make_get_entries_query(filter_options, sort)
+        context.update(recent_threshold=now - self.recent_threshold)
         yield from paginated_query(
-            self.db, query, context, value_factory, chunk_size, last
+            self.db, query, context, chunk_size, last, entry_factory
         )
 
     @wrap_exceptions(StorageError)
@@ -1134,12 +1085,12 @@ class Storage:
 
         query.scrolling_window_order_by("key")
 
-        def value_factory(t: Tuple[Any, ...]) -> Tuple[str, JSONType]:
+        def row_factory(t: Tuple[Any, ...]) -> Tuple[str, JSONType]:
             key, value, *_ = t
             return key, json.loads(value)
 
         yield from paginated_query(
-            self.db, query, context, value_factory, chunk_size, last
+            self.db, query, context, chunk_size, last, row_factory
         )
 
     @wrap_exceptions(StorageError)
@@ -1259,14 +1210,49 @@ class Storage:
 
         query.scrolling_window_order_by("tag")
 
-        def value_factory(t: Tuple[Any, ...]) -> str:
+        def row_factory(t: Tuple[Any, ...]) -> str:
             tag = t[0]
             assert isinstance(tag, str)
             return tag
 
         yield from paginated_query(
-            self.db, query, context, value_factory, chunk_size, last
+            self.db, query, context, chunk_size, last, row_factory
         )
+
+
+def make_get_feeds_query(
+    filter_options: FeedFilterOptions, sort: FeedSortOrder
+) -> Tuple[Query, Dict[str, Any]]:
+    query = (
+        Query()
+        .SELECT(
+            'url',
+            'updated',
+            'title',
+            'link',
+            'author',
+            'user_title',
+            'added',
+            'last_updated',
+            'last_exception',
+            'updates_enabled',
+        )
+        .FROM("feeds")
+    )
+
+    context = apply_feed_filter_options(query, filter_options)
+
+    # sort by url at the end to make sure the order is deterministic
+    if sort == 'title':
+        query.SELECT(("kinda_title", "lower(coalesce(user_title, title))"))
+        query.scrolling_window_order_by("kinda_title", "url")
+    elif sort == 'added':
+        query.SELECT("added")
+        query.scrolling_window_order_by("added", "url", desc=True)
+    else:
+        assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+
+    return query, context
 
 
 def feed_factory(t: Tuple[Any, ...]) -> Feed:
@@ -1352,6 +1338,20 @@ def make_get_entries_query(
     log.debug("_get_entries query\n%s\n", query)
 
     return query, filter_context
+
+
+def entry_factory(t: Tuple[Any, ...]) -> Entry:
+    feed = feed_factory(t[0:10])
+    entry = t[10:17] + (
+        tuple(Content(**d) for d in json.loads(t[17])) if t[17] else (),
+        tuple(Enclosure(**d) for d in json.loads(t[18])) if t[18] else (),
+        t[19] == 1,
+        t[20] == 1,
+        t[21],
+        t[22] or feed.url,
+        feed,
+    )
+    return Entry._make(entry)
 
 
 def apply_entry_filter_options(

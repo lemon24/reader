@@ -23,10 +23,10 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
+from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
 from ._sqlite_utils import ddl_transaction
-from ._sqlite_utils import paginated_query
 from ._sqlite_utils import require_version
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
@@ -852,7 +852,7 @@ class Search:
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[EntrySearchResult, Optional[_T]]]:
 
-        sql_query, query_context = make_search_entries_query(filter_options, sort)
+        sql_query, context = make_search_entries_query(filter_options, sort)
 
         random_mark = ''.join(
             random.choices(string.ascii_letters + string.digits, k=20)
@@ -860,9 +860,8 @@ class Search:
         before_mark = f'>>>{random_mark}>>>'
         after_mark = f'<<<{random_mark}<<<'
 
-        context = dict(
+        context.update(
             query=query,
-            **query_context,
             before_mark=before_mark,
             after_mark=after_mark,
             # 255 letters / 4.7 letters per word (average in English)
@@ -870,48 +869,15 @@ class Search:
             recent_threshold=now - self.recent_threshold,
         )
 
-        def value_factory(t: Tuple[Any, ...]) -> EntrySearchResult:
-            (
-                entry_id,
-                feed_url,
-                rank,
-                title,
-                feed_title,
-                is_feed_user_title,
-                content,
-                *_,
-            ) = t
-            content = json.loads(content)
-
-            metadata = {}
-            if title:
-                metadata['.title'] = HighlightedString.extract(
-                    title, before_mark, after_mark
-                )
-            if feed_title:
-                metadata[
-                    '.feed.title' if not is_feed_user_title else '.feed.user_title'
-                ] = HighlightedString.extract(feed_title, before_mark, after_mark)
-
-            rv_content: Dict[str, HighlightedString] = OrderedDict(
-                (
-                    c['path'],
-                    HighlightedString.extract(c['value'], before_mark, after_mark),
-                )
-                for c in content
-                if c['path']
-            )
-
-            return EntrySearchResult(
-                feed_url,
-                entry_id,
-                MappingProxyType(metadata),
-                MappingProxyType(rv_content),
-            )
+        row_factory = partial(
+            entry_search_result_factory,
+            before_mark=before_mark,
+            after_mark=after_mark,
+        )
 
         with wrap_search_exceptions():
             yield from paginated_query(
-                self.db, sql_query, context, value_factory, chunk_size, last
+                self.db, sql_query, context, chunk_size, last, row_factory
             )
 
     @wrap_exceptions(SearchError)
@@ -997,6 +963,46 @@ def make_search_entries_query(
     log.debug("_search_entries query\n%s\n", query)
 
     return query, context
+
+
+def entry_search_result_factory(
+    t: Tuple[Any, ...], before_mark: str, after_mark: str
+) -> EntrySearchResult:
+    (
+        entry_id,
+        feed_url,
+        rank,
+        title,
+        feed_title,
+        is_feed_user_title,
+        content,
+        *_,
+    ) = t
+    content = json.loads(content)
+
+    metadata = {}
+    if title:
+        metadata['.title'] = HighlightedString.extract(title, before_mark, after_mark)
+    if feed_title:
+        metadata[
+            '.feed.title' if not is_feed_user_title else '.feed.user_title'
+        ] = HighlightedString.extract(feed_title, before_mark, after_mark)
+
+    rv_content: Dict[str, HighlightedString] = OrderedDict(
+        (
+            c['path'],
+            HighlightedString.extract(c['value'], before_mark, after_mark),
+        )
+        for c in content
+        if c['path']
+    )
+
+    return EntrySearchResult(
+        feed_url,
+        entry_id,
+        MappingProxyType(metadata),
+        MappingProxyType(rv_content),
+    )
 
 
 def make_search_entry_counts_query(
