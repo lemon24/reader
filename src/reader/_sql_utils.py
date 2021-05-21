@@ -23,6 +23,14 @@ To make VALUES bake in the parentheses, we just need to set:
 
     query.formats[0]['VALUES'] = '({value})'
 
+That's to add one values tuple at a time. To add one column, we could do this:
+
+* output keyword even if called with no args
+* add(..., flag=...), and allow arbitrary flags;
+  INSERT_INTO('x', 'y', flag='table') -> flag is "INTO table"
+* parens_keywords = {'INSERT', 'VALUES'};
+  different than subquery_keywords because it applies once to the whole set
+
 ---
 
 To support marking arbitrary things as subqueries,
