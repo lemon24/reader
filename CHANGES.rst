@@ -30,9 +30,9 @@ Unreleased
 
         Use :exc:`FeedMetadataNotFoundError` instead.
 
-    **This is a minor compatibility break.**
-
-    Only code that instantiates the exceptions should be affected.
+    **This is a minor compatibility break**,
+    and affects only third-party code that instantiates
+    these exceptions *directly*.
 
 
 Version 1.17

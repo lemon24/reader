@@ -6,15 +6,10 @@ import pytest
 from fakeparser import Parser
 
 
-@pytest.mark.parametrize(
-    'key, value',
-    [
-        ('.reader.mark_as_read', {'title': ['^match']}),
-        # TODO: remove before 2.0
-        ('regex-mark-as-read', {'patterns': ['^match']}),
-    ],
-)
-def test_regex_mark_as_read(make_reader, key, value):
+def test_regex_mark_as_read(make_reader):
+    key = '.reader.mark_as_read'
+    value = {'title': ['^match']}
+
     reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
 
     parser = Parser()
@@ -41,13 +36,6 @@ def test_regex_mark_as_read(make_reader, key, value):
     assert len(list(reader.get_entries())) == 4
     assert set((e.id, e.read) for e in reader.get_entries(read=True)) == {
         (match_new.id, True),
-    }
-
-    # Check migration from the old-style config happened.
-    # TODO: remove before 2.0
-    assert reader.get_feed_metadata(one, 'regex-mark-as-read', None) is None
-    assert reader.get_feed_metadata(one, '.reader.mark_as_read', None) == {
-        'title': ['^match']
     }
 
 
