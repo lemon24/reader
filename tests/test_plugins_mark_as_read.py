@@ -21,7 +21,7 @@ def test_regex_mark_as_read(make_reader):
     reader.add_feed(one)
     reader.update_feeds()
 
-    reader.set_feed_metadata(one, key, value)
+    reader.set_feed_metadata_item(one, key, value)
 
     one = parser.feed(1, datetime(2010, 1, 2))
     match_new = parser.entry(1, 2, datetime(2010, 1, 2), title='match new')
@@ -50,7 +50,7 @@ def test_regex_mark_as_read_bad_metadata(make_reader, value):
     parser.entry(1, 1, datetime(2010, 1, 1), title='match')
 
     reader.add_feed(one)
-    reader.set_feed_metadata(one, '.reader.mark_as_read', value)
+    reader.set_feed_metadata_item(one, '.reader.mark_as_read', value)
 
     reader.update_feeds()
 

@@ -1308,7 +1308,7 @@ def test_add_remove_get_feeds(reader, feed_arg):
     assert 'no such feed' in excinfo.value.message
 
     assert reader.get_feed(feed_arg(one), None) == None
-    assert reader.get_feed(feed_arg(one), default=1) == 1
+    assert reader.get_feed(feed_arg(one), 1) == 1
     assert set(reader.get_entries()) == set()
 
     with pytest.raises(FeedNotFoundError) as excinfo:
@@ -1599,38 +1599,38 @@ def test_integration(reader, feed_type, data_dir, monkeypatch):
 
 def test_feed_metadata(reader):
     with pytest.raises(FeedNotFoundError) as excinfo:
-        reader.set_feed_metadata('one', 'key', 'value')
+        reader.set_feed_metadata_item('one', 'key', 'value')
     assert excinfo.value.url == 'one'
     assert 'no such feed' in excinfo.value.message
 
     with pytest.raises(FeedMetadataNotFoundError) as excinfo:
-        reader.delete_feed_metadata('one', 'key')
+        reader.delete_feed_metadata_item('one', 'key')
     assert (excinfo.value.url, excinfo.value.key) == ('one', 'key')
     assert 'no such metadata' in excinfo.value.message
 
     reader.add_feed('feed')
 
-    assert set(reader.iter_feed_metadata('feed')) == set()
+    assert set(reader.get_feed_metadata('feed')) == set()
     with pytest.raises(FeedMetadataNotFoundError) as excinfo:
-        reader.get_feed_metadata('feed', 'key')
+        reader.get_feed_metadata_item('feed', 'key')
     assert (excinfo.value.url, excinfo.value.key) == ('feed', 'key')
     assert 'no such metadata' in excinfo.value.message
-    assert reader.get_feed_metadata('feed', 'key', None) is None
-    assert reader.get_feed_metadata('feed', 'key', default=0) == 0
+    assert reader.get_feed_metadata_item('feed', 'key', None) is None
+    assert reader.get_feed_metadata_item('feed', 'key', 0) == 0
 
     with pytest.raises(FeedMetadataNotFoundError):
-        reader.delete_feed_metadata('one', 'key')
+        reader.delete_feed_metadata_item('one', 'key')
 
-    reader.set_feed_metadata('feed', 'key', 'value')
+    reader.set_feed_metadata_item('feed', 'key', 'value')
 
-    assert set(reader.iter_feed_metadata('feed')) == {('key', 'value')}
-    assert reader.get_feed_metadata('feed', 'key') == 'value'
+    assert set(reader.get_feed_metadata('feed')) == {('key', 'value')}
+    assert reader.get_feed_metadata_item('feed', 'key') == 'value'
 
-    reader.delete_feed_metadata('feed', 'key')
+    reader.delete_feed_metadata_item('feed', 'key')
 
-    assert set(reader.iter_feed_metadata('feed')) == set()
+    assert set(reader.get_feed_metadata('feed')) == set()
     with pytest.raises(FeedMetadataNotFoundError):
-        reader.get_feed_metadata('feed', 'key')
+        reader.get_feed_metadata_item('feed', 'key')
 
 
 def test_get_entry(reader, entry_arg):
@@ -1648,7 +1648,7 @@ def test_get_entry(reader, entry_arg):
     assert (excinfo.value.url, excinfo.value.id) == (entry.feed_url, entry.id)
     assert 'no such entry' in excinfo.value.message
     assert reader.get_entry(entry_arg(entry.as_entry(feed=feed)), None) == None
-    assert reader.get_entry(entry_arg(entry.as_entry(feed=feed)), default=1) == 1
+    assert reader.get_entry(entry_arg(entry.as_entry(feed=feed)), 1) == 1
 
     reader._now = lambda: datetime(2010, 1, 3)
     reader.update_feeds()
@@ -2434,12 +2434,12 @@ def test_change_feed_url_search(reader):
 
 @rename_argument('reader', 'reader_with_two_feeds')
 def test_change_feed_url_metadata(reader):
-    reader.set_feed_metadata('1', 'key', 'value')
+    reader.set_feed_metadata_item('1', 'key', 'value')
 
     reader.change_feed_url('1', '3')
 
-    assert dict(reader.iter_feed_metadata('1')) == {}
-    assert dict(reader.iter_feed_metadata('3')) == {'key': 'value'}
+    assert dict(reader.get_feed_metadata('1')) == {}
+    assert dict(reader.get_feed_metadata('3')) == {'key': 'value'}
 
 
 @rename_argument('reader', 'reader_with_two_feeds')

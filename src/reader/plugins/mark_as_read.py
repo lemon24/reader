@@ -37,7 +37,7 @@ log = logging.getLogger(__name__)
 
 def _get_config(reader, feed_url, metadata_key, patterns_key):
     try:
-        metadata = reader.get_feed_metadata(feed_url, metadata_key)
+        metadata = reader.get_feed_metadata_item(feed_url, metadata_key)
     except MetadataNotFoundError:
         return None
 

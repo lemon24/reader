@@ -367,7 +367,7 @@ def metadata():
     if not feed:
         abort(404)
 
-    metadata = reader.iter_feed_metadata(feed_url)
+    metadata = reader.get_feed_metadata(feed_url)
 
     # Ensure flashed messages get removed from the session.
     # https://github.com/lemon24/reader/issues/81
@@ -512,7 +512,7 @@ def update_feed_title(data):
 def add_metadata(data):
     feed_url = data['feed-url']
     key = data['key']
-    get_reader().set_feed_metadata(feed_url, key, None)
+    get_reader().set_feed_metadata_item(feed_url, key, None)
 
 
 @form_api
@@ -524,7 +524,7 @@ def update_metadata(data):
         value = yaml.safe_load(data['value'])
     except yaml.YAMLError as e:
         raise APIError("invalid JSON: {}".format(e), (feed_url, key))
-    get_reader().set_feed_metadata(feed_url, key, value)
+    get_reader().set_feed_metadata_item(feed_url, key, value)
 
 
 @form_api
@@ -532,7 +532,7 @@ def update_metadata(data):
 def delete_metadata(data):
     feed_url = data['feed-url']
     key = data['key']
-    get_reader().delete_feed_metadata(feed_url, key)
+    get_reader().delete_feed_metadata_item(feed_url, key)
 
 
 @form_api

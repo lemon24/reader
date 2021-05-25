@@ -11,6 +11,37 @@ Version 1.18
 
 Unreleased
 
+* Rename :class:`Reader` feed metadata methods:
+
+  * :meth:`~Reader.iter_feed_metadata` to :meth:`~Reader.get_feed_metadata`
+  * :meth:`~Reader.get_feed_metadata` to :meth:`~Reader.get_feed_metadata_item`
+  * :meth:`~Reader.set_feed_metadata` to :meth:`~Reader.set_feed_metadata_item`
+  * :meth:`~Reader.delete_feed_metadata` to :meth:`~Reader.delete_feed_metadata_item`
+
+  For backwards compatibility,
+  the old method signatures will continue to work **until version 2.0**,
+  when they **will be removed.**
+
+  .. warning::
+
+    The ``get_feed_metadata(feed, key[, default]) -> value`` form
+    is backwards-compatible *only when the arguments are positional*.
+
+    **This is a minor compatibility break**;
+    the following work in 1.17, but do not in 1.18::
+
+        # raises TypeError
+        reader.get_feed_metadata(feed, key, default=None)
+
+        # returns `(key, value), ...` instead of `value`
+        reader.get_feed_metadata(feed, key=key)
+
+    The pre-1.18 :meth:`~Reader.get_feed_metadata`
+    (1.18 :meth:`~Reader.get_feed_metadata_item`)
+    is intended to have positional-only arguments,
+    but this cannot be expressed easily until Python 3.8.
+
+
 * Rename :exc:`MetadataNotFoundError` to :exc:`FeedMetadataNotFoundError`.
   :exc:`MetadataNotFoundError` remains available,
   and is a superclass of :exc:`FeedMetadataNotFoundError`

@@ -1107,47 +1107,77 @@ class Reader:
         feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_important_unimportant(feed_url, entry_id, False)
 
-    def iter_feed_metadata(
+    def get_feed_metadata(
         self,
         feed: FeedInput,
-        *,
+        *args: Any,
         key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
-        """Get all or some of the metadata values for a feed.
+        """Get all or some of the metadata for a feed as ``(key, value)`` pairs.
 
         Args:
             feed (str or Feed): The feed URL.
             key (str or None): Only return the metadata for this key.
 
         Yields:
-            tuple(str, JSONType): Key-value pairs, in undefined order.
+            tuple(str, JSONType): ``(key, value)`` pairs, in undefined order.
             JSONType is whatever :py:func:`json.dumps` accepts.
 
         Raises:
             StorageError
 
+        .. versionchanged:: 1.18
+
+            :meth:`iter_feed_metadata` was renamed to :meth:`get_feed_metadata`,
+            and :meth:`get_feed_metadata` was renamed to :meth:`get_feed_metadata_item`.
+
+            To preserve backwards compatibility,
+            the ``get_feed_metadata(feed, key[, default]) -> value``
+            form (positional arguments only)
+            will continue to work as an alias for
+            ``get_feed_metadata_item(feed, key[, default])``
+            until the last 1.\\* *reader* version,
+            after which it will result in a :exc:`TypeError`.
+
         """
+
+        if args:
+            # get_feed_metadata(feed, key[, default]) -> value
+            if len(args) > 2:
+                raise TypeError(
+                    f"get_feed_metadata() takes 1 positional arguments, but {len(args) + 1} were given"
+                )
+            warnings.warn(
+                "the get_feed_metadata(feed, key[, default]) -> value "
+                "version of get_feed_metadata() is deprecated "
+                "and will be removed in reader 2.0. "
+                "Use get_feed_metadata_item() instead.",
+                DeprecationWarning,
+            )
+            return self.get_feed_metadata_item(feed, *args)  # type: ignore
+
+        # get_feed_metadata(feed, *, key=None) -> (key, value), ...
         feed_url = _feed_argument(feed)
         return self._storage.iter_metadata((feed_url,), key)
 
     @overload
-    def get_feed_metadata(
+    def get_feed_metadata_item(
         self, feed: FeedInput, key: str
     ) -> JSONType:  # pragma: no cover
         ...
 
     @overload
-    def get_feed_metadata(
+    def get_feed_metadata_item(
         self, feed: FeedInput, key: str, default: _T
     ) -> Union[JSONType, _T]:  # pragma: no cover
         ...
 
-    def get_feed_metadata(
+    def get_feed_metadata_item(
         self, feed: FeedInput, key: str, default: Union[MissingType, _T] = MISSING
     ) -> Union[JSONType, _T]:
         """Get metadata for a feed.
 
-        Like ``next(iter(reader.get_feed_metadata(feed, key=key)), default)``,
+        Like ``next(iter(reader.get_feed_metadata(feed, key=key)), (None, default))[1]``,
         but raises a custom exception instead of :exc:`StopIteration`.
 
         Args:
@@ -1163,44 +1193,105 @@ class Reader:
             FeedMetadataNotFoundError
             StorageError
 
+        .. versionadded:: 1.18
+
         """
         return zero_or_one(
-            (v for _, v in self.iter_feed_metadata(feed, key=key)),
+            (v for _, v in self.get_feed_metadata(feed, key=key)),
             lambda: FeedMetadataNotFoundError(_feed_argument(feed), key),
             default,
         )
 
-    def set_feed_metadata(self, feed: FeedInput, key: str, value: JSONType) -> None:
+    def set_feed_metadata_item(
+        self, feed: FeedInput, key: str, value: JSONType
+    ) -> None:
         """Set metadata for a feed.
 
         Args:
             feed (str or Feed): The feed URL.
-            key (str): The key of the metadata to set.
-            value (JSONType): The value of the metadata to set.
+            key (str): The key of the metadata item to set.
+            value (JSONType): The value of the metadata item to set.
                 JSONType is whatever :py:func:`json.dumps` accepts.
 
         Raises:
             FeedNotFoundError
             StorageError
 
+        .. versionadded:: 1.18
+
         """
         feed_url = _feed_argument(feed)
         self._storage.set_metadata((feed_url,), key, value)
 
-    def delete_feed_metadata(self, feed: FeedInput, key: str) -> None:
+    def delete_feed_metadata_item(self, feed: FeedInput, key: str) -> None:
         """Delete metadata for a feed.
 
         Args:
             feed (str or Feed): The feed URL.
-            key (str): The key of the metadata to delete.
+            key (str): The key of the metadata item to delete.
 
         Raises:
             FeedMetadataNotFoundError
             StorageError
 
+        .. versionadded:: 1.18
+
         """
         feed_url = _feed_argument(feed)
         self._storage.delete_metadata((feed_url,), key)
+
+    def iter_feed_metadata(
+        self,
+        feed: FeedInput,
+        *,
+        key: Optional[str] = None,
+    ) -> Iterable[Tuple[str, JSONType]]:
+        """Deprecated alias for ``get_feed_metadata(feed, key=key)``.
+
+        .. deprecated:: 1.18
+            This method will be removed in *reader* 2.0.
+            Use :meth:`get_feed_metadata` instead.
+
+        """
+        warnings.warn(
+            "iter_feed_metadata() is deprecated "
+            "and will be removed in reader 2.0. "
+            "Use get_feed_metadata() instead.",
+            DeprecationWarning,
+        )
+        return self.get_feed_metadata(feed, key=key)
+
+    def set_feed_metadata(self, feed: FeedInput, key: str, value: JSONType) -> None:
+        """Deprecated alias for :meth:`set_feed_metadata_item`.
+
+        .. deprecated:: 1.18
+            This method will be removed in *reader* 2.0.
+            Use :meth:`set_feed_metadata_item` instead.
+
+        """
+        warnings.warn(
+            "set_feed_metadata() is deprecated "
+            "and will be removed in reader 2.0. "
+            "Use set_feed_metadata_item() instead.",
+            DeprecationWarning,
+        )
+        return self.set_feed_metadata_item(feed, key, value)
+
+    def delete_feed_metadata(self, feed: FeedInput, key: str) -> None:
+        """Deprecated alias for :meth:`delete_feed_metadata_item`.
+
+        .. deprecated:: 1.18
+            This method will be removed in *reader* 2.0.
+            Use :meth:`delete_feed_metadata_item` instead.
+
+        """
+        warnings.warn(
+            "delete_feed_metadata() is deprecated "
+            "and will be removed in reader 2.0. "
+            "Use delete_feed_metadata_item() instead.",
+            DeprecationWarning,
+        )
+        return self.delete_feed_metadata_item(feed, key)
 
     def enable_search(self) -> None:
         """Enable full-text search.
