@@ -41,7 +41,6 @@ Unreleased
     is intended to have positional-only arguments,
     but this cannot be expressed easily until Python 3.8.
 
-
 * Rename :exc:`MetadataNotFoundError` to :exc:`FeedMetadataNotFoundError`.
   :exc:`MetadataNotFoundError` remains available,
   and is a superclass of :exc:`FeedMetadataNotFoundError`

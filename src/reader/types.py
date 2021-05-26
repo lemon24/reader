@@ -382,8 +382,9 @@ class HighlightedString:
         ['a', 'bc', 'd']
 
         Yields:
-            str: The parts. Parts with even indexes are highlighted,
-            parts with odd indexes are not.
+            str: The parts (always an odd number);
+            parts with odd indexes are highlighted,
+            parts with even indexes are not.
 
         """
         start = 0
