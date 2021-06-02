@@ -74,6 +74,10 @@ Unreleased
   when there are more than 256 feeds (``Storage.chunk_size``).
   (:issue:`203`)
 
+* When serving the web application with ``python -m reader serve``,
+  don't set the ``Referer`` header for cross-origin requests.
+  (:issue:`209`)
+
 
 Version 1.17
 ------------
