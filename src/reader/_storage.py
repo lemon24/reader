@@ -1242,9 +1242,12 @@ def make_get_feeds_query(
 
     context = apply_feed_filter_options(query, filter_options)
 
+    # NOTE: when changing, ensure none of the values can be null
+    # to prevent https://github.com/lemon24/reader/issues/203
+
     # sort by url at the end to make sure the order is deterministic
     if sort == 'title':
-        query.SELECT(("kinda_title", "lower(coalesce(user_title, title))"))
+        query.SELECT(("kinda_title", "lower(coalesce(user_title, title, ''))"))
         query.scrolling_window_order_by("kinda_title", "url")
     elif sort == 'added':
         query.SELECT("added")
@@ -1524,15 +1527,15 @@ def apply_recent(
         "negative_feed_order",
     )
 
+    # NOTE: when changing, ensure none of the values can be null
+    # to prevent https://github.com/lemon24/reader/issues/203
     query.scrolling_window_order_by(
-        *f"""
-        kinda_first_updated
-        kinda_published
-        {id_prefix}feed
-        ids.last_updated
-        negative_feed_order
-        {id_prefix}id
-        """.split(),
+        'kinda_first_updated',
+        'kinda_published',
+        f'{id_prefix}feed',
+        'ids.last_updated',
+        'negative_feed_order',
+        f'{id_prefix}id',
         desc=True,
         keyword=keyword,
     )

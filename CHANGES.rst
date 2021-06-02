@@ -64,10 +64,15 @@ Unreleased
     and affects only third-party code that instantiates
     these exceptions *directly*.
 
-* Rename :meth:`Reader.remove_feed` to :meth:`Reader.delete_feed`.
+* Rename :meth:`~Reader.remove_feed` to :meth:`~Reader.delete_feed`.
   For backwards compatibility,
   the old method will continue to work **until version 2.0**,
   when it **will be removed.** (:issue:`183`)
+
+* Fix feeds with no title sometimes missing
+  from the :meth:`~Reader.get_feeds()` results
+  when there are more than 256 feeds (``Storage.chunk_size``).
+  (:issue:`203`)
 
 
 Version 1.17

@@ -1357,7 +1357,8 @@ def test_get_feeds_sort_error(reader):
         set(reader.get_feeds(sort='bad sort'))
 
 
-def test_get_feeds_order_title(reader):
+@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2, 0])
+def test_get_feeds_order_title(reader, chunk_size):
     """When sort='title', feeds should be sorted by (with decreasing
     priority):
 
@@ -1368,6 +1369,9 @@ def test_get_feeds_order_title(reader):
     https://github.com/lemon24/reader/issues/102
 
     """
+    # for https://github.com/lemon24/reader/issues/203
+    reader._storage.chunk_size = chunk_size
+
     parser = Parser()
     reader._parser = parser
 
@@ -1424,7 +1428,6 @@ def test_get_feeds_order_added(reader):
     https://github.com/lemon24/reader/issues/98
 
     """
-
     parser = Parser()
     reader._parser = parser
 
