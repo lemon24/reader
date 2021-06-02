@@ -250,7 +250,7 @@ def add(reader, url, update):
 @pass_reader
 def remove(reader, url):
     """Remove an existing feed."""
-    reader.remove_feed(url)
+    reader.delete_feed(url)
 
 
 def red(text):

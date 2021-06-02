@@ -324,10 +324,8 @@ class Reader:
         now = self._now()
         self._storage.add_feed(url, now)
 
-    def remove_feed(self, feed: FeedInput) -> None:
-        """Remove a feed.
-
-        Also removes all of the feed's entries, metadata, and tags.
+    def delete_feed(self, feed: FeedInput) -> None:
+        """Delete a feed and all of its entries, metadata, and tags.
 
         Args:
             feed (str or Feed): The feed URL.
@@ -336,9 +334,27 @@ class Reader:
             FeedNotFoundError
             StorageError
 
+        .. versionadded:: 1.18
+
         """
         url = _feed_argument(feed)
-        self._storage.remove_feed(url)
+        self._storage.delete_feed(url)
+
+    def remove_feed(self, feed: FeedInput) -> None:
+        """Deprecated alias for :meth:`delete_feed`.
+
+        .. deprecated:: 1.18
+            This method will be removed in *reader* 2.0.
+            Use :meth:`delete_feed` instead.
+
+        """
+        warnings.warn(
+            "remove_feed() is deprecated "
+            "and will be removed in reader 2.0. "
+            "Use delete_feed() instead.",
+            DeprecationWarning,
+        )
+        return self.delete_feed(feed)
 
     def change_feed_url(self, old: FeedInput, new: FeedInput) -> None:
         """Change the URL of a feed.

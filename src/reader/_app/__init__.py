@@ -487,7 +487,7 @@ def mark_as_unimportant(data):
 @readererror_to_apierror()
 def delete_feed(data):
     feed_url = data['feed-url']
-    get_reader().remove_feed(feed_url)
+    get_reader().delete_feed(feed_url)
 
 
 @form_api

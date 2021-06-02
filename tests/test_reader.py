@@ -749,7 +749,7 @@ def test_update_feed_deleted(
         blocking_parser.in_parser.wait()
         reader = make_reader(db_path)
         try:
-            reader.remove_feed(feed.url)
+            reader.delete_feed(feed.url)
         finally:
             blocking_parser.can_return_from_parser.set()
             reader.close()
@@ -1312,7 +1312,7 @@ def test_add_remove_get_feeds(reader, feed_arg):
     assert set(reader.get_entries()) == set()
 
     with pytest.raises(FeedNotFoundError) as excinfo:
-        reader.remove_feed(feed_arg(one))
+        reader.delete_feed(feed_arg(one))
     assert excinfo.value.url == one.url
     assert 'no such feed' in excinfo.value.message
 
@@ -1343,13 +1343,13 @@ def test_add_remove_get_feeds(reader, feed_arg):
     assert reader.get_feed(feed_arg(one)) == one
     assert set(reader.get_entries()) == {entry_one, entry_two}
 
-    reader.remove_feed(feed_arg(one))
+    reader.delete_feed(feed_arg(one))
     assert set(reader.get_feeds()) == {two}
     assert reader.get_feed(feed_arg(one), None) == None
     assert set(reader.get_entries()) == {entry_two}
 
     with pytest.raises(FeedNotFoundError) as excinfo:
-        reader.remove_feed(feed_arg(one))
+        reader.delete_feed(feed_arg(one))
 
 
 def test_get_feeds_sort_error(reader):
@@ -1960,7 +1960,7 @@ def test_tags_basic(reader, chunk_size):
         'tag-common',
     ]
 
-    reader.remove_feed('two')
+    reader.delete_feed('two')
     assert list(reader.get_feed_tags('one')) == ['tag-1', 'tag-common']
     assert list(reader.get_feed_tags('two')) == []
     assert list(reader.get_feed_tags()) == ['tag-1', 'tag-common']
@@ -2282,7 +2282,7 @@ def test_change_feed_url_second_update(reader, new_feed_url):
     reader.enable_search()
     reader.update_search()
 
-    reader.remove_feed('2')
+    reader.delete_feed('2')
 
     old_one = reader.get_feed('1')
 
@@ -2343,7 +2343,7 @@ def test_change_feed_url_search_entry_id_repeats(reader):
 
     # TODO: write another test to make sure things marked as to_update remain marked after change
 
-    reader.remove_feed(two)
+    reader.delete_feed(two)
     reader.change_feed_url(one, two)
 
     new = set(reader.get_entries(feed=two))

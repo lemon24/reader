@@ -1,6 +1,7 @@
 import pytest
 
 from reader import FeedMetadataNotFoundError
+from reader import FeedNotFoundError
 
 
 def test_feed_metadata(reader):
@@ -31,3 +32,13 @@ def test_feed_metadata(reader):
         assert set(reader.iter_feed_metadata('feed')) == set()
     with pytest.raises(FeedMetadataNotFoundError), pytest.deprecated_call():
         reader.get_feed_metadata('feed', 'key')
+
+
+def test_remove_feed(reader):
+    with pytest.raises(FeedNotFoundError), pytest.deprecated_call():
+        reader.remove_feed('feed')
+
+    reader.add_feed('feed')
+
+    with pytest.deprecated_call():
+        reader.remove_feed('feed')

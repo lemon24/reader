@@ -435,7 +435,7 @@ class Storage:
                 raise FeedExistsError(url)
 
     @wrap_exceptions(StorageError)
-    def remove_feed(self, url: str) -> None:
+    def delete_feed(self, url: str) -> None:
         with self.db:
             cursor = self.db.execute(
                 "DELETE FROM feeds WHERE url = :url;", dict(url=url)

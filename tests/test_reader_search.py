@@ -105,7 +105,7 @@ def test_update_search_feeds_change_after_enable(reader, sort, chunk_size):
     reader.update_search()
 
     try:
-        reader.remove_feed('1')
+        reader.delete_feed('1')
     except FeedNotFoundError:
         pass
 
@@ -162,7 +162,7 @@ UPDATE_TRIGGERS_DATA = {
         ),
         (
             lambda r: (
-                r.remove_feed('1'),
+                r.delete_feed('1'),
                 r._parser.entries[1].pop(1),
                 r.add_feed('1'),
             ),

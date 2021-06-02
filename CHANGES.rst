@@ -20,7 +20,7 @@ Unreleased
 
   For backwards compatibility,
   the old method signatures will continue to work **until version 2.0**,
-  when they **will be removed.**
+  when they **will be removed.** (:issue:`183`)
 
   .. warning::
 
@@ -63,6 +63,11 @@ Unreleased
     **This is a minor compatibility break**,
     and affects only third-party code that instantiates
     these exceptions *directly*.
+
+* Rename :meth:`Reader.remove_feed` to :meth:`Reader.delete_feed`.
+  For backwards compatibility,
+  the old method will continue to work **until version 2.0**,
+  when it **will be removed.** (:issue:`183`)
 
 
 Version 1.17

@@ -105,8 +105,8 @@ def add_feed(storage, feed, __):
     storage.add_feed(feed.url + '_', datetime(2010, 1, 1))
 
 
-def remove_feed(storage, feed, __):
-    storage.remove_feed(feed.url)
+def delete_feed(storage, feed, __):
+    storage.delete_feed(feed.url)
 
 
 def get_feeds(storage, _, __):
@@ -211,7 +211,7 @@ def get_entry_last(storage, feed, entry):
     [
         init,
         add_feed,
-        remove_feed,
+        delete_feed,
         get_feeds,
         get_feeds_for_update,
         get_entries_for_update,

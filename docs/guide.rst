@@ -102,9 +102,9 @@ Deleting feeds
 --------------
 
 To delete a feed and all the data associated with it,
-use :meth:`~Reader.remove_feed`::
+use :meth:`~Reader.delete_feed`::
 
-    >>> reader.remove_feed("https://www.example.com/feed.xml")
+    >>> reader.delete_feed("https://www.example.com/feed.xml")
 
 
 
