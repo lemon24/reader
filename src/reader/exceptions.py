@@ -1,3 +1,4 @@
+import warnings
 from typing import Any
 from typing import Tuple
 
@@ -100,22 +101,24 @@ class ParseError(FeedError):
 
 
 class EntryError(ReaderError):
-    """An entry error occured."""
+    """An entry error occurred.
 
-    def __init__(self, url: str, id: str, message: str = '') -> None:
+    .. versionchanged:: 1.18
+        The ``url`` argument/attribute was renamed to ``feed_url``.
+    """
+
+    def __init__(self, feed_url: str, id: str, message: str = '') -> None:
         super().__init__(message)
 
-        # TODO: .url should be .feed_url
-
         #: The feed URL.
-        self.url = url
+        self.feed_url = feed_url
 
         #: The entry id.
         self.id = id
 
     @property
     def _str(self) -> str:
-        return repr((self.url, self.id))
+        return repr((self.feed_url, self.id))
 
     @property
     def object_id(self) -> Tuple[str, str]:
@@ -124,7 +127,22 @@ class EntryError(ReaderError):
         .. versionadded:: 1.12
 
         """
-        return self.url, self.id
+        return self.feed_url, self.id
+
+    @property
+    def url(self) -> str:
+        """Deprecated alias for :attr:`EntryError.feed_url`.
+
+        .. deprecated: 1.18
+
+        """
+        warnings.warn(
+            "EntryError.url is deprecated "
+            "and will be removed in reader 2.0. "
+            "Use EntryError.feed_url instead.",
+            DeprecationWarning,
+        )
+        return self.feed_url
 
 
 class EntryNotFoundError(EntryError):
@@ -185,8 +203,8 @@ class EntryMetadataNotFoundError(MetadataNotFoundError, EntryError):
 
     """
 
-    def __init__(self, url: str, id: str, key: str, message: str = '') -> None:
-        super().__init__(url, id, key=key, message=message)
+    def __init__(self, feed_url: str, id: str, key: str, message: str = '') -> None:
+        super().__init__(feed_url, id, key=key, message=message)
 
 
 class StorageError(ReaderError):

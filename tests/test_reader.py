@@ -925,12 +925,12 @@ def test_mark_as_read_unread(reader, entry_arg):
 
     with pytest.raises(EntryNotFoundError) as excinfo:
         reader.mark_entry_as_read(entry_arg(entry_with_feed))
-    assert (excinfo.value.url, excinfo.value.id) == (entry.feed_url, entry.id)
+    assert (excinfo.value.feed_url, excinfo.value.id) == (entry.feed_url, entry.id)
     assert 'no such entry' in excinfo.value.message
 
     with pytest.raises(EntryNotFoundError) as excinfo:
         reader.mark_entry_as_unread(entry_arg(entry_with_feed))
-    assert (excinfo.value.url, excinfo.value.id) == (entry.feed_url, entry.id)
+    assert (excinfo.value.feed_url, excinfo.value.id) == (entry.feed_url, entry.id)
     assert 'no such entry' in excinfo.value.message
 
     reader.add_feed(feed.url)
@@ -1648,7 +1648,7 @@ def test_get_entry(reader, entry_arg):
 
     with pytest.raises(EntryNotFoundError) as excinfo:
         reader.get_entry(entry_arg(entry.as_entry(feed=feed)))
-    assert (excinfo.value.url, excinfo.value.id) == (entry.feed_url, entry.id)
+    assert (excinfo.value.feed_url, excinfo.value.id) == (entry.feed_url, entry.id)
     assert 'no such entry' in excinfo.value.message
     assert reader.get_entry(entry_arg(entry.as_entry(feed=feed)), None) == None
     assert reader.get_entry(entry_arg(entry.as_entry(feed=feed)), 1) == 1

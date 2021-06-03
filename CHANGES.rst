@@ -61,8 +61,23 @@ Unreleased
         Use :exc:`FeedMetadataNotFoundError` instead.
 
     **This is a minor compatibility break**,
-    and affects only third-party code that instantiates
+    but only affects third-party code that instantiates
     these exceptions *directly*.
+
+* Rename the ``url`` argument of :exc:`EntryError` to ``feed_url``.
+  Rename :attr:`EntryError.url` to :attr:`~EntryError.feed_url`;
+  for backwards compatibility,
+  the old attribute will be available as a property **until version 2.0**,
+  when it **will be removed.** (:issue:`183`).
+
+  .. warning::
+
+    The signature of :exc:`EntryError` (and its subclasses)
+    changed from ``EntryError(url, id)`` to ``EntryError(feed_url, id)``.
+
+    **This is a minor compatibility break**,
+    but only affects third-party code that instantiates
+    these exceptions *directly* with ``url`` as a *keyword argument*.
 
 * Rename :meth:`~Reader.remove_feed` to :meth:`~Reader.delete_feed`.
   For backwards compatibility,

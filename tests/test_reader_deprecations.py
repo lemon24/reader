@@ -3,6 +3,8 @@ from datetime import datetime
 import pytest
 from fakeparser import Parser
 
+from reader import EntryError
+from reader import EntryNotFoundError
 from reader import FeedMetadataNotFoundError
 from reader import FeedNotFoundError
 
@@ -69,3 +71,10 @@ def test_mark_as(reader):
     with pytest.deprecated_call():
         reader.mark_as_unimportant(entry)
     assert not reader.get_entry(entry).important
+
+
+@pytest.mark.parametrize('cls', [EntryError, EntryNotFoundError])
+def test_entry_error_url(cls):
+    exc = cls('feed', 'id')
+    with pytest.deprecated_call():
+        assert exc.url == 'feed'
