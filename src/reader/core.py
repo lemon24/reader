@@ -33,6 +33,7 @@ from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import NameScheme
 from ._types import ParsedFeed
+from ._utils import deprecated_wrapper
 from ._utils import make_pool_map
 from ._utils import nullcontext
 from ._utils import zero_or_one
@@ -340,21 +341,7 @@ class Reader:
         url = _feed_argument(feed)
         self._storage.delete_feed(url)
 
-    def remove_feed(self, feed: FeedInput) -> None:
-        """Deprecated alias for :meth:`delete_feed`.
-
-        .. deprecated:: 1.18
-            This method will be removed in *reader* 2.0.
-            Use :meth:`delete_feed` instead.
-
-        """
-        warnings.warn(
-            "remove_feed() is deprecated "
-            "and will be removed in reader 2.0. "
-            "Use delete_feed() instead.",
-            DeprecationWarning,
-        )
-        return self.delete_feed(feed)
+    remove_feed = deprecated_wrapper('remove_feed', delete_feed, '1.8', '2.0')
 
     def change_feed_url(self, old: FeedInput, new: FeedInput) -> None:
         """Change the URL of a feed.
@@ -1256,58 +1243,15 @@ class Reader:
         feed_url = _feed_argument(feed)
         self._storage.delete_metadata((feed_url,), key)
 
-    def iter_feed_metadata(
-        self,
-        feed: FeedInput,
-        *,
-        key: Optional[str] = None,
-    ) -> Iterable[Tuple[str, JSONType]]:
-        """Deprecated alias for ``get_feed_metadata(feed, key=key)``.
-
-        .. deprecated:: 1.18
-            This method will be removed in *reader* 2.0.
-            Use :meth:`get_feed_metadata` instead.
-
-        """
-        warnings.warn(
-            "iter_feed_metadata() is deprecated "
-            "and will be removed in reader 2.0. "
-            "Use get_feed_metadata() instead.",
-            DeprecationWarning,
-        )
-        return self.get_feed_metadata(feed, key=key)
-
-    def set_feed_metadata(self, feed: FeedInput, key: str, value: JSONType) -> None:
-        """Deprecated alias for :meth:`set_feed_metadata_item`.
-
-        .. deprecated:: 1.18
-            This method will be removed in *reader* 2.0.
-            Use :meth:`set_feed_metadata_item` instead.
-
-        """
-        warnings.warn(
-            "set_feed_metadata() is deprecated "
-            "and will be removed in reader 2.0. "
-            "Use set_feed_metadata_item() instead.",
-            DeprecationWarning,
-        )
-        return self.set_feed_metadata_item(feed, key, value)
-
-    def delete_feed_metadata(self, feed: FeedInput, key: str) -> None:
-        """Deprecated alias for :meth:`delete_feed_metadata_item`.
-
-        .. deprecated:: 1.18
-            This method will be removed in *reader* 2.0.
-            Use :meth:`delete_feed_metadata_item` instead.
-
-        """
-        warnings.warn(
-            "delete_feed_metadata() is deprecated "
-            "and will be removed in reader 2.0. "
-            "Use delete_feed_metadata_item() instead.",
-            DeprecationWarning,
-        )
-        return self.delete_feed_metadata_item(feed, key)
+    iter_feed_metadata = deprecated_wrapper(
+        'iter_feed_metadata', get_feed_metadata, '1.8', '2.0'
+    )
+    set_feed_metadata = deprecated_wrapper(
+        'set_feed_metadata', set_feed_metadata_item, '1.8', '2.0'
+    )
+    delete_feed_metadata = deprecated_wrapper(
+        'delete_feed_metadata', delete_feed_metadata_item, '1.8', '2.0'
+    )
 
     def enable_search(self) -> None:
         """Enable full-text search.

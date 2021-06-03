@@ -1,8 +1,11 @@
 import itertools
 import logging
 import multiprocessing.dummy
+import warnings
 from contextlib import contextmanager
+from functools import wraps
 from queue import Queue
+from textwrap import dedent
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -184,3 +187,30 @@ class PrefixLogger(logging.LoggerAdapter):
 
     def process(self, msg: str, kwargs: Any) -> Tuple[str, Any]:  # pragma: no cover
         return ': '.join(tuple(self._escape(p) for p in self.prefixes) + (msg,)), kwargs
+
+
+def deprecated_wrapper(
+    old_name: str, func: F, deprecated_in: str, removed_in: str
+) -> F:
+    @wraps(func)
+    def old_func(*args, **kwargs):  # type: ignore
+        warnings.warn(
+            f"{old_name}() is deprecated "
+            f"and will be removed in reader {removed_in}. "
+            f"Use {func.__name__}() instead.",
+            DeprecationWarning,
+        )
+        return func(*args, **kwargs)
+
+    old_func.__name__ = old_name
+    old_func.__doc__ = dedent(
+        f"""Deprecated alias for :meth:`{func.__name__}`.
+
+        .. deprecated:: {deprecated_in}
+            This method will be removed in *reader* {removed_in}.
+            Use :meth:`{func.__name__}` instead.
+
+        """
+    )
+
+    return cast(F, old_func)
