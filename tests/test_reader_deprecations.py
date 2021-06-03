@@ -1,4 +1,7 @@
+from datetime import datetime
+
 import pytest
+from fakeparser import Parser
 
 from reader import FeedMetadataNotFoundError
 from reader import FeedNotFoundError
@@ -42,3 +45,27 @@ def test_remove_feed(reader):
 
     with pytest.deprecated_call():
         reader.remove_feed('feed')
+
+
+def test_mark_as(reader):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+    reader.add_feed(feed)
+    reader.update_feeds()
+
+    with pytest.deprecated_call():
+        reader.mark_as_read(entry)
+    assert reader.get_entry(entry).read
+
+    with pytest.deprecated_call():
+        reader.mark_as_unread(entry)
+    assert not reader.get_entry(entry).read
+
+    with pytest.deprecated_call():
+        reader.mark_as_important(entry)
+    assert reader.get_entry(entry).important
+
+    with pytest.deprecated_call():
+        reader.mark_as_unimportant(entry)
+    assert not reader.get_entry(entry).important

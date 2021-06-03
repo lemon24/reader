@@ -59,8 +59,8 @@ For these, the full entry point *must* be specified.
 To use them from within Python code,
 use the entry point as a :ref:`custom plugin <custom plugins>`::
 
-    >>> from reader._plugins.regex_mark_as_read import regex_mark_as_read
-    >>> reader = make_reader("db.sqlite", plugins=[regex_mark_as_read])
+    >>> from reader._plugins import sqlite_releases
+    >>> reader = make_reader("db.sqlite", plugins=[sqlite_releases.init])
 
 
 .. automodule:: reader._plugins.tumblr_gdpr

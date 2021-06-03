@@ -414,8 +414,8 @@ def test_update_triggers_no_change(db_path, make_reader, monkeypatch, set_user_t
         )
     # TODO: Change this test when updating entries uses UPDATE instead of INSERT OR REPLACE
 
-    reader.mark_as_read(entry)
-    reader.mark_as_important(entry)
+    reader.mark_entry_as_read(entry)
+    reader.mark_entry_as_important(entry)
 
     reader.update_feeds()
     if set_user_title:

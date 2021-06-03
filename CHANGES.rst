@@ -69,6 +69,17 @@ Unreleased
   the old method will continue to work **until version 2.0**,
   when it **will be removed.** (:issue:`183`)
 
+* Rename :class:`Reader` ``mark_as_...`` methods:
+
+  * :meth:`~Reader.mark_as_read` to :meth:`~Reader.mark_entry_as_read`
+  * :meth:`~Reader.mark_as_unread` to :meth:`~Reader.mark_entry_as_unread`
+  * :meth:`~Reader.mark_as_important` to :meth:`~Reader.mark_entry_as_important`
+  * :meth:`~Reader.mark_as_unimportant` to :meth:`~Reader.mark_entry_as_unimportant`
+
+  For backwards compatibility,
+  the old methods will continue to work **until version 2.0**,
+  when they **will be removed.** (:issue:`183`)
+
 * Fix feeds with no title sometimes missing
   from the :meth:`~Reader.get_feeds()` results
   when there are more than 256 feeds (``Storage.chunk_size``).

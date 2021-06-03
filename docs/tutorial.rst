@@ -144,7 +144,7 @@ and marking them as read after we process them::
 
     for entry in entries:
         ...
-        reader.mark_as_read(entry)
+        reader.mark_entry_as_read(entry)
 
 If you run the script once, it should have the same output as before.
 If you run it again, it will show the next 3 unread entries:
@@ -187,12 +187,12 @@ And then we use it in download_everything()::
             print("  *", filename)
             download_file(enclosure.href, os.path.join(podcasts_dir, filename))
 
-        reader.mark_as_read(entry)
+        reader.mark_entry_as_read(entry)
 
 For each :class:`Enclosure`, we extract the filename from the enclosure URL
 so we can use it as the name of the local file.
 
-:meth:`~Reader.mark_as_read` gets called *after* we download the file,
+:meth:`~Reader.mark_entry_as_read` gets called *after* we download the file,
 so if the download fails, the script won't skip it at the next re-run.
 
 We also need to make sure the directory exists before calling

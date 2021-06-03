@@ -127,10 +127,10 @@ def _entry_dedupe_plugin(reader, entry):
             (entry.feed_url, entry.id),
             entry.title,
         )
-        reader.mark_as_read(entry)
+        reader.mark_entry_as_read(entry)
     else:
         for duplicate in duplicates:
-            reader.mark_as_read(duplicate)
+            reader.mark_entry_as_read(duplicate)
         log.info(
             "%r (%s): found unread duplicates, marking duplicates as read",
             (entry.feed_url, entry.id),
@@ -144,9 +144,9 @@ def _entry_dedupe_plugin(reader, entry):
             (entry.feed_url, entry.id),
             entry.title,
         )
-        reader.mark_as_important(entry)
+        reader.mark_entry_as_important(entry)
         for duplicate in duplicates:
-            reader.mark_as_unimportant(duplicate)
+            reader.mark_entry_as_unimportant(duplicate)
 
 
 def init_reader(reader):

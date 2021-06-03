@@ -336,12 +336,13 @@ class Reader:
             StorageError
 
         .. versionadded:: 1.18
+            Renamed from :meth:`remove_feed`.
 
         """
         url = _feed_argument(feed)
         self._storage.delete_feed(url)
 
-    remove_feed = deprecated_wrapper('remove_feed', delete_feed, '1.8', '2.0')
+    remove_feed = deprecated_wrapper('remove_feed', delete_feed, '1.18', '2.0')
 
     def change_feed_url(self, old: FeedInput, new: FeedInput) -> None:
         """Change the URL of a feed.
@@ -1054,7 +1055,7 @@ class Reader:
         )
         return self._storage.get_entry_counts(filter_options)
 
-    def mark_as_read(self, entry: EntryInput) -> None:
+    def mark_entry_as_read(self, entry: EntryInput) -> None:
         """Mark an entry as read.
 
         Args:
@@ -1064,11 +1065,14 @@ class Reader:
             EntryNotFoundError
             StorageError
 
+        .. versionadded:: 1.18
+            Renamed from :meth:`mark_as_read`.
+
         """
         feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_read_unread(feed_url, entry_id, True)
 
-    def mark_as_unread(self, entry: EntryInput) -> None:
+    def mark_entry_as_unread(self, entry: EntryInput) -> None:
         """Mark an entry as unread.
 
         Args:
@@ -1078,11 +1082,14 @@ class Reader:
             EntryNotFoundError
             StorageError
 
+        .. versionadded:: 1.18
+            Renamed from :meth:`mark_as_unread`.
+
         """
         feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_read_unread(feed_url, entry_id, False)
 
-    def mark_as_important(self, entry: EntryInput) -> None:
+    def mark_entry_as_important(self, entry: EntryInput) -> None:
         """Mark an entry as important.
 
         Args:
@@ -1092,11 +1099,14 @@ class Reader:
             EntryNotFoundError
             StorageError
 
+        .. versionadded:: 1.18
+            Renamed from :meth:`mark_as_important`.
+
         """
         feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_important_unimportant(feed_url, entry_id, True)
 
-    def mark_as_unimportant(self, entry: EntryInput) -> None:
+    def mark_entry_as_unimportant(self, entry: EntryInput) -> None:
         """Mark an entry as unimportant.
 
         Args:
@@ -1106,9 +1116,23 @@ class Reader:
             EntryNotFoundError
             StorageError
 
+        .. versionadded:: 1.18
+            Renamed from :meth:`mark_as_unimportant`.
+
         """
         feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_important_unimportant(feed_url, entry_id, False)
+
+    mark_as_read = deprecated_wrapper('mark_as_read', mark_entry_as_read, '1.18', '2.0')
+    mark_as_unread = deprecated_wrapper(
+        'mark_as_unread', mark_entry_as_unread, '1.18', '2.0'
+    )
+    mark_as_important = deprecated_wrapper(
+        'mark_as_important', mark_entry_as_important, '1.18', '2.0'
+    )
+    mark_as_unimportant = deprecated_wrapper(
+        'mark_as_unimportant', mark_entry_as_unimportant, '1.18', '2.0'
+    )
 
     def get_feed_metadata(
         self,
@@ -1197,6 +1221,7 @@ class Reader:
             StorageError
 
         .. versionadded:: 1.18
+            Renamed from :meth:`get_feed_metadata`.
 
         """
         return zero_or_one(
@@ -1221,6 +1246,7 @@ class Reader:
             StorageError
 
         .. versionadded:: 1.18
+            Renamed from :meth:`set_feed_metadata`.
 
         """
         feed_url = _feed_argument(feed)
@@ -1238,19 +1264,20 @@ class Reader:
             StorageError
 
         .. versionadded:: 1.18
+            Renamed from :meth:`delete_feed_metadata`.
 
         """
         feed_url = _feed_argument(feed)
         self._storage.delete_metadata((feed_url,), key)
 
     iter_feed_metadata = deprecated_wrapper(
-        'iter_feed_metadata', get_feed_metadata, '1.8', '2.0'
+        'iter_feed_metadata', get_feed_metadata, '1.18', '2.0'
     )
     set_feed_metadata = deprecated_wrapper(
-        'set_feed_metadata', set_feed_metadata_item, '1.8', '2.0'
+        'set_feed_metadata', set_feed_metadata_item, '1.18', '2.0'
     )
     delete_feed_metadata = deprecated_wrapper(
-        'delete_feed_metadata', delete_feed_metadata_item, '1.8', '2.0'
+        'delete_feed_metadata', delete_feed_metadata_item, '1.18', '2.0'
     )
 
     def enable_search(self) -> None:

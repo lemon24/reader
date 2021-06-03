@@ -355,7 +355,7 @@ def test_update_blocking(db_path, make_reader, call_update_method):
 
     try:
         # shouldn't raise an exception
-        reader.mark_as_read((feed.url, entry.id))
+        reader.mark_entry_as_read((feed.url, entry.id))
     finally:
         blocking_parser.can_return_from_parser.set()
         t.join()
@@ -924,41 +924,41 @@ def test_mark_as_read_unread(reader, entry_arg):
     entry_with_feed = entry.as_entry(feed=feed)
 
     with pytest.raises(EntryNotFoundError) as excinfo:
-        reader.mark_as_read(entry_arg(entry_with_feed))
+        reader.mark_entry_as_read(entry_arg(entry_with_feed))
     assert (excinfo.value.url, excinfo.value.id) == (entry.feed_url, entry.id)
     assert 'no such entry' in excinfo.value.message
 
     with pytest.raises(EntryNotFoundError) as excinfo:
-        reader.mark_as_unread(entry_arg(entry_with_feed))
+        reader.mark_entry_as_unread(entry_arg(entry_with_feed))
     assert (excinfo.value.url, excinfo.value.id) == (entry.feed_url, entry.id)
     assert 'no such entry' in excinfo.value.message
 
     reader.add_feed(feed.url)
 
     with pytest.raises(EntryNotFoundError):
-        reader.mark_as_read(entry_arg(entry_with_feed))
+        reader.mark_entry_as_read(entry_arg(entry_with_feed))
 
     with pytest.raises(EntryNotFoundError):
-        reader.mark_as_unread(entry_arg(entry_with_feed))
+        reader.mark_entry_as_unread(entry_arg(entry_with_feed))
 
     reader.update_feeds()
 
     (entry,) = list(reader.get_entries())
     assert not entry.read
 
-    reader.mark_as_read(entry_arg(entry_with_feed))
+    reader.mark_entry_as_read(entry_arg(entry_with_feed))
     (entry,) = list(reader.get_entries())
     assert entry.read
 
-    reader.mark_as_read(entry_arg(entry_with_feed))
+    reader.mark_entry_as_read(entry_arg(entry_with_feed))
     (entry,) = list(reader.get_entries())
     assert entry.read
 
-    reader.mark_as_unread(entry_arg(entry_with_feed))
+    reader.mark_entry_as_unread(entry_arg(entry_with_feed))
     (entry,) = list(reader.get_entries())
     assert not entry.read
 
-    reader.mark_as_unread(entry_arg(entry_with_feed))
+    reader.mark_entry_as_unread(entry_arg(entry_with_feed))
     (entry,) = list(reader.get_entries())
     assert not entry.read
 
@@ -1697,7 +1697,7 @@ def test_mark_as_important(reader, entry_arg):
 
     reader._storage = FakeStorage()
     entry = Entry('entry', None, feed=Feed('feed'))
-    reader.mark_as_important(entry_arg(entry))
+    reader.mark_entry_as_important(entry_arg(entry))
     assert reader._storage.calls == [
         ('mark_as_important_unimportant', 'feed', 'entry', True)
     ]
@@ -1706,7 +1706,7 @@ def test_mark_as_important(reader, entry_arg):
 def test_mark_as_unimportant(reader, entry_arg):
     reader._storage = FakeStorage()
     entry = Entry('entry', None, feed=Feed('feed'))
-    reader.mark_as_unimportant(entry_arg(entry))
+    reader.mark_entry_as_unimportant(entry_arg(entry))
     assert reader._storage.calls == [
         ('mark_as_important_unimportant', 'feed', 'entry', False)
     ]
@@ -1715,7 +1715,9 @@ def test_mark_as_unimportant(reader, entry_arg):
 @pytest.mark.parametrize(
     'exc', [EntryNotFoundError('feed', 'entry'), StorageError('whatever')]
 )
-@pytest.mark.parametrize('meth', ['mark_as_important', 'mark_as_unimportant'])
+@pytest.mark.parametrize(
+    'meth', ['mark_entry_as_important', 'mark_entry_as_unimportant']
+)
 def test_mark_as_important_unimportant_error(reader, exc, meth):
     reader._storage = FakeStorage(exc=exc)
     with pytest.raises(Exception) as excinfo:
@@ -1828,8 +1830,8 @@ def test_entries_filtering(reader, pre_stuff, call_method, kwargs, expected):
     reader.add_feed(two.url)
     reader.update_feeds()
 
-    reader.mark_as_read((one.url, one_two.id))
-    reader.mark_as_important((one.url, one_three.id))
+    reader.mark_entry_as_read((one.url, one_two.id))
+    reader.mark_entry_as_important((one.url, one_three.id))
 
     pre_stuff(reader)
 
@@ -2692,9 +2694,9 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
     pre_stuff(reader)
 
     for entry in two_entries[:2]:
-        reader.mark_as_read(entry)
+        reader.mark_entry_as_read(entry)
     for entry in two_entries[:4]:
-        reader.mark_as_important(entry)
+        reader.mark_entry_as_important(entry)
 
     rv = call_method(reader, **kwargs)
     assert type(rv) is rv_type

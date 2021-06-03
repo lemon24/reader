@@ -97,8 +97,8 @@ def test_plugin(make_reader):
 
     reader.add_feed(one.url)
     reader.update_feeds()
-    reader.mark_as_read((one.url, read_one.id))
-    reader.mark_as_important((one.url, important_one.id))
+    reader.mark_entry_as_read((one.url, read_one.id))
+    reader.mark_entry_as_important((one.url, important_one.id))
 
     one = parser.feed(1, datetime(2010, 1, 2))
     new = parser.entry(1, 11, datetime(2010, 1, 2), title='title', summary='new')

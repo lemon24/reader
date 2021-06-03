@@ -438,7 +438,7 @@ def readererror_to_apierror(*args):
 def mark_as_read(data):
     feed_url = data['feed-url']
     entry_id = data['entry-id']
-    get_reader().mark_as_read((feed_url, entry_id))
+    get_reader().mark_entry_as_read((feed_url, entry_id))
 
 
 @form_api
@@ -446,7 +446,7 @@ def mark_as_read(data):
 def mark_as_unread(data):
     feed_url = data['feed-url']
     entry_id = data['entry-id']
-    get_reader().mark_as_unread((feed_url, entry_id))
+    get_reader().mark_entry_as_unread((feed_url, entry_id))
 
 
 @form_api(really=True)
@@ -455,7 +455,7 @@ def mark_all_as_read(data):
     feed_url = data['feed-url']
     entry_id = json.loads(data['entry-id'])
     for entry_id in entry_id:
-        get_reader().mark_as_read((feed_url, entry_id))
+        get_reader().mark_entry_as_read((feed_url, entry_id))
 
 
 @form_api(really=True)
@@ -464,7 +464,7 @@ def mark_all_as_unread(data):
     feed_url = data['feed-url']
     entry_id = json.loads(data['entry-id'])
     for entry_id in entry_id:
-        get_reader().mark_as_unread((feed_url, entry_id))
+        get_reader().mark_entry_as_unread((feed_url, entry_id))
 
 
 @form_api
@@ -472,7 +472,7 @@ def mark_all_as_unread(data):
 def mark_as_important(data):
     feed_url = data['feed-url']
     entry_id = data['entry-id']
-    get_reader().mark_as_important((feed_url, entry_id))
+    get_reader().mark_entry_as_important((feed_url, entry_id))
 
 
 @form_api
@@ -480,7 +480,7 @@ def mark_as_important(data):
 def mark_as_unimportant(data):
     feed_url = data['feed-url']
     entry_id = data['entry-id']
-    get_reader().mark_as_unimportant((feed_url, entry_id))
+    get_reader().mark_entry_as_unimportant((feed_url, entry_id))
 
 
 @form_api(really=True)

@@ -285,12 +285,12 @@ Here is an example of getting entries for a single feed::
 Entry flags
 -----------
 
-Entries can be marked as :meth:`read <Reader.mark_as_read>`
-or as :meth:`important <Reader.mark_as_important>`.
+Entries can be marked as :meth:`read <Reader.mark_entry_as_read>`
+or as :meth:`important <Reader.mark_entry_as_important>`.
 
 These flags can be used for filtering::
 
-    >>> reader.mark_as_read(entries[0])
+    >>> reader.mark_entry_as_read(entries[0])
     >>> entries = list(reader.get_entries(feed=feed, read=False))
     >>> for entry in entries[:2]:
     ...     print(entry.feed.title, '-', entry.title)

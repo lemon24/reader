@@ -40,7 +40,7 @@ def download_everything():
             print("  *", filename)
             download_file(enclosure.href, os.path.join(podcasts_dir, filename))
 
-        reader.mark_as_read(entry)
+        reader.mark_entry_as_read(entry)
 
 
 def download_file(src_url, dst_path):
