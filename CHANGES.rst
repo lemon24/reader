@@ -9,7 +9,7 @@ Changelog
 Version 1.18
 ------------
 
-Unreleased
+Released 2021-06-03
 
 * Rename :class:`Reader` feed metadata methods:
 
