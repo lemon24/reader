@@ -133,7 +133,7 @@ def main(version, new_version, date):
     confirm("Push version {}?", version)
     push()
 
-    confirm("Wait for Travis / Read the Docs builds to pass.")
+    confirm("Wait for GitHub Actions / Read the Docs builds to pass.")
 
     confirm("Upload to PyPI?")
     build()

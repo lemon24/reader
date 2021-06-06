@@ -120,7 +120,7 @@ Making a release (from ``x`` to ``y`` == ``x + 1``):
 * (release.py) clean up dist/: ``rm -rf dist/``
 * (release.py) build tarball and wheel: ``python -m build``
 * (release.py) push to GitHub
-* (release.py prompts) wait for Travis / Codecov / Read the Docs builds to pass
+* (release.py prompts) wait for GitHub Actions / Codecov / Read the Docs builds to pass
 * upload to test PyPI and check: ``twine upload --repository-url https://test.pypi.org/legacy/ dist/*``
 * (release.py) upload to PyPI: ``twine upload dist/*``
 * (release.py prompts) tag release in GitHub

@@ -11,6 +11,9 @@ Version 1.19
 
 Unreleased
 
+* Stop using Travis CI (only use GitHub Actions). (:issue:`199`)
+
+
 
 Version 1.18
 ------------

@@ -9,11 +9,8 @@ and without enforcing a dependency on a particular framework.
 .. end-intro
 
 
-|build-status-travis| |build-status-github| |code-coverage| |documentation-status| |pypi-status| |type-checking| |code-style|
+|build-status-github| |code-coverage| |documentation-status| |pypi-status| |type-checking| |code-style|
 
-.. |build-status-travis| image:: https://travis-ci.com/lemon24/reader.svg?branch=master
-  :target: https://travis-ci.com/lemon24/reader
-  :alt: build status (Travis CI)
 
 .. |build-status-github| image:: https://github.com/lemon24/reader/workflows/build/badge.svg
   :target: https://github.com/lemon24/reader/actions?query=workflow%3Abuild
