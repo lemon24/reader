@@ -28,6 +28,7 @@
         <link rel="enclosure" href="http://example.org/enclosure-with-type" type="text/whatever" />
         <link rel="enclosure" href="http://example.org/enclosure-with-length" length="1000" />
         <link rel="enclosure" href="http://example.org/enclosure-with-bad-length" length="xyz" />
+        <link rel="enclosure" href="" />
     </entry>
 
     <entry>

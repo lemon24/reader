@@ -44,6 +44,14 @@ entries = [
             Enclosure(
                 href='http://example.org/enclosure-with-bad-length', type='text/html'
             ),
+        )
+        + (
+            # feedparser resolves empty href to the base,
+            # but only for Atom, and only if the base has a scheme(?);
+            # document this (somewhat pointless) behavior
+            (Enclosure(href=feed.url, type='text/html'),)
+            if feed.url.startswith('http')
+            else ()
         ),
     ),
     EntryData(
