@@ -17,6 +17,7 @@
         <pubDate>Sun, 06 Sep 2009 16:20:00 +0000</pubDate>
         <author>Example editor</author>
         <content>Example content</content>
+        <enclosure url="" />
         <enclosure url="http://example.com/enclosure" />
         <enclosure url="http://example.com/enclosure-with-type" type="image/jpeg" />
         <enclosure url="http://example.com/enclosure-with-length" length="100000" />

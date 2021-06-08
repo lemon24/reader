@@ -531,6 +531,9 @@ def _feedparser_entry(
     enclosures = []
     for data in entry.get('enclosures', ()):
         data = {k: v for k, v in data.items() if k in ('href', 'type', 'length')}
+        href = data.get('href')
+        if not href:
+            continue
         if 'length' in data:
             try:
                 data['length'] = int(data['length'])

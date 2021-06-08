@@ -38,6 +38,9 @@
                 },
                 {
                     "url": "http://example.com/downloads/another.mp3"
+                },
+                {
+                    "url": ""
                 }
             ]
         },
