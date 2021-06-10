@@ -483,6 +483,19 @@ class EntrySearchResult(_namedtuple_compat):
 
 
 # TODO: Could we use some kind of str-compatible enum here?
+#
+# Yes:
+#
+# class Order(enum.Enum):
+#    TITLE = 'title'
+#    ADDED = 'added'
+#
+# The public methods should then take Union[str, Order],
+# and use the value _only_ as Order(arg) for validation.
+# Having the arguments typed as Literals is silly anyway,
+# because we sometimes get them dynamically, e.g.
+# https://github.com/lemon24/reader/blob/1.18/src/reader/_app/__init__.py#L151
+#
 FeedSortOrder = Literal['title', 'added']
 EntrySortOrder = Literal['recent', 'random']
 SearchSortOrder = Literal['relevant', 'recent', 'random']
