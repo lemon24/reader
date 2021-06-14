@@ -1,4 +1,5 @@
 import logging
+import os
 
 import click
 import py.path
@@ -227,7 +228,7 @@ def test_cli_app_plugin(db_path, monkeypatch):
     )
 
     # it doesn't fail, just skips the plugin
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert "plug-in error" in result.output
 
     assert run_simple.called
@@ -357,16 +358,27 @@ def test_config_option(tmpdir):
     }
 
 
-def test_config_example(db_path, monkeypatch):
+def test_config_example(db_path, monkeypatch, tmp_path):
     runner = CliRunner()
 
-    command_base = ['--db', db_path, '--config']
-    command_base.append(
-        str(py.path.local(__file__).dirpath().join('../examples/config.yaml'))
+    config_path = tmp_path.joinpath('config.yaml')
+
+    py.path.local(__file__).dirpath().join('../examples/config.yaml').copy(
+        py.path.local(str(config_path))
     )
+    if os.name == 'nt':
+        with config_path.open() as f:
+            config = yaml.safe_load(f)
+        old_root = config['default']['reader']['feed_root']
+        root = 'c:' + old_root.replace('/', '\\')
+        config['default']['reader']['feed_root'] = root
+        with config_path.open('w') as f:
+            yaml.safe_dump(config, f)
+
+    command_base = ['--db', db_path, '--config', str(config_path)]
 
     result = runner.invoke(cli, command_base + ['list', 'feeds'])
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
 
     def run_simple(host, port, app):
         app.test_client().get('/')
@@ -374,7 +386,6 @@ def test_config_example(db_path, monkeypatch):
     monkeypatch.setattr('werkzeug.serving.run_simple', run_simple)
 
     result = runner.invoke(cli, command_base + ['serve'])
-    assert result.exit_code == 0
-    print(result.output)
+    assert result.exit_code == 0, result.output
     assert 'ERROR' not in result.output
     assert 'Traceback' not in result.output
