@@ -4,6 +4,7 @@ import logging
 import os.path
 import sys
 import traceback
+from contextlib import nullcontext
 from datetime import datetime
 
 import click
@@ -17,7 +18,6 @@ from ._config import make_reader_config
 from ._config import make_reader_from_config
 from ._plugins import LoaderError
 from ._sqlite_utils import DebugConnection
-from ._utils import nullcontext
 
 
 APP_NAME = reader.__name__

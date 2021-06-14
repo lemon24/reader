@@ -167,12 +167,6 @@ def wrap_map(map: F, workers: int) -> F:
     return cast(F, wrapper)
 
 
-# TODO: remove this when we drop Python 3.6 support
-@contextmanager
-def nullcontext(thing: _T) -> Iterator[_T]:
-    yield thing
-
-
 class PrefixLogger(logging.LoggerAdapter):
 
     # if needed, add: with log.push('another prefix'): ...

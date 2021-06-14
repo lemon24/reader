@@ -3,6 +3,7 @@ import itertools
 import logging
 import numbers
 import warnings
+from contextlib import nullcontext
 from datetime import datetime
 from types import MappingProxyType
 from typing import Any
@@ -35,7 +36,6 @@ from ._types import NameScheme
 from ._types import ParsedFeed
 from ._utils import deprecated_wrapper
 from ._utils import make_pool_map
-from ._utils import nullcontext
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedMetadataNotFoundError
