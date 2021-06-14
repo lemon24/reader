@@ -8,6 +8,10 @@ on:
     branches: [master]
   workflow_dispatch:
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   tests:
     runs-on: ${{ matrix.os }}
