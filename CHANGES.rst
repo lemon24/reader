@@ -14,6 +14,7 @@ Unreleased
 * Skip enclosures with no ``href``/``url``;
   previously, they would result in a parse error.
   (:issue:`240`)
+* Support PyPy 3.7. (:issue:`237`)
 * Stop using Travis CI (only use GitHub Actions). (:issue:`199`)
 
 
