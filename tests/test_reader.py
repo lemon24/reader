@@ -752,7 +752,13 @@ def test_update_feed_deleted(
             reader.delete_feed(feed.url)
         finally:
             blocking_parser.can_return_from_parser.set()
-            reader.close()
+            try:
+                reader.close()
+            except StorageError as e:
+                if 'database is locked' in str(e):
+                    pass  # sometimes, it can be; we don't care
+                else:
+                    raise
 
     t = threading.Thread(target=target)
     t.start()
