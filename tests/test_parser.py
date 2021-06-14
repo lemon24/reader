@@ -757,9 +757,11 @@ def test_feed_root_relative_root_error(monkeypatch, os_name, root):
     monkeypatch.setattr('os.path', {'nt': ntpath, 'posix': posixpath}[os_name])
 
     with pytest.raises(ValueError) as excinfo:
-        default_parser(root)
-
-    monkeypatch.undo()
+        try:
+            default_parser(root)
+        finally:
+            # pytest.raises() doesn't interact well with our monkeypatching
+            monkeypatch.undo()
 
     assert 'root must be absolute' in str(excinfo.value)
 
@@ -834,9 +836,11 @@ def test_normalize_url_errors(monkeypatch, reload_module, os_name, url, reason):
     reload_module(urllib.request)
 
     with pytest.raises(ValueError) as excinfo:
-        FileRetriever(data_dir)._normalize_url(url)
-
-    reload_module.undo()
+        try:
+            FileRetriever(data_dir)._normalize_url(url)
+        finally:
+            # pytest.raises() doesn't interact well with our monkeypatching
+            reload_module.undo()
 
     assert reason in str(excinfo.value)
 

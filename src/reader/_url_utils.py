@@ -7,7 +7,9 @@ In this context, bare paths are considered equivalent to file:// URIs.
 import os.path
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
-from urllib.request import url2pathname
+
+# for url2pathname, but we want to allow it to be monkeypatched during testing
+import urllib.request  # noreorder
 
 
 def normalize_url(url: str) -> str:
@@ -39,7 +41,7 @@ def extract_path(url: str) -> str:
             raise ValueError("unknown authority for file URI")
         # TODO: maybe disallow query, params, fragment too, to reserve for future uses
 
-        return url2pathname(url_parsed.path)
+        return urllib.request.url2pathname(url_parsed.path)
 
     if url_parsed.scheme:
         # on Windows, drive is the drive letter or UNC \\host\share;
