@@ -17,6 +17,10 @@ Unreleased
   previously, they would result in a parse error.
   (:issue:`240`)
 * Stop using Travis CI (only use GitHub Actions). (:issue:`199`)
+* Add the ``new`` argument to
+  :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`;
+  ``new_only`` is deprecated and **will be removed in 2.0**.
+  (:issue:`217`)
 
 
 Version 1.18

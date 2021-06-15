@@ -332,7 +332,7 @@ def update(reader, url, new_only, workers, verbose):
 
         it = make_it()
     else:
-        it = reader.update_feeds_iter(new_only=new_only, workers=workers)
+        it = reader.update_feeds_iter(new=True if new_only else None, workers=workers)
 
     ok_count = 0
     not_modified_count = 0
