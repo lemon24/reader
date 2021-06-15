@@ -12,7 +12,7 @@ Version 1.19
 Unreleased
 
 * Drop Python 3.6 support. (:issue:`237`)
-* Support PyPy 3.7. (:issue:`237`)
+* Support PyPy 3.7. (:issue:`234`)
 * Skip enclosures with no ``href``/``url``;
   previously, they would result in a parse error.
   (:issue:`240`)
