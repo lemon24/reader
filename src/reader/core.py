@@ -686,8 +686,10 @@ class Reader:
 
         make_map = nullcontext(builtins.map) if workers == 1 else make_pool_map(workers)
 
+        new = True if new_only else None
+
         with make_map as map:
-            results = self._update_feeds(new_only=new_only, map=map)
+            results = self._update_feeds(new=new, map=map)
 
             for url, value in results:
                 if isinstance(value, FeedNotFoundError):
@@ -752,7 +754,7 @@ class Reader:
     def _update_feeds(
         self,
         url: Optional[str] = None,
-        new_only: bool = False,
+        new: Optional[bool] = None,
         enabled_only: bool = True,
         map: Callable[[Callable[[Any], Any], Iterable[Any]], Iterator[Any]] = map,
     ) -> Iterator[Tuple[str, Union[UpdatedFeed, None, Exception]]]:
@@ -785,9 +787,7 @@ class Reader:
         # It may make sense to also have _get_entries_for_update run in
         # parallel with a different (slower) storage, but for now we're good.
 
-        feeds_for_update = self._storage.get_feeds_for_update(
-            url, new_only, enabled_only
-        )
+        feeds_for_update = self._storage.get_feeds_for_update(url, new, enabled_only)
         feeds_for_update = builtins.map(
             self._updater.process_old_feed, feeds_for_update
         )

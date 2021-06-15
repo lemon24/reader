@@ -558,7 +558,7 @@ class Storage:
     def get_feeds_for_update(
         self,
         url: Optional[str] = None,
-        new_only: bool = False,
+        new: Optional[bool] = None,
         enabled_only: bool = True,
     ) -> Iterable[FeedForUpdate]:
         # Reader shouldn't care this is paginated,
@@ -588,8 +588,8 @@ class Storage:
             if url:
                 query.WHERE("url = :url")
                 context.update(url=url)
-            if new_only:
-                query.WHERE("last_updated is NULL")
+            if new is not None:
+                query.WHERE(f"last_updated is {'' if new else 'NOT'} NULL")
             if enabled_only:
                 query.WHERE("updates_enabled")
 
