@@ -215,97 +215,6 @@ def create_indexes(db: sqlite3.Connection) -> None:
     )
 
 
-def update_from_17_to_18(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/125
-    db.execute("UPDATE feeds SET stale = 1;")
-
-
-def update_from_18_to_19(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/68
-    db.execute("ALTER TABLE feeds ADD COLUMN last_exception TEXT;")
-
-
-def recreate_search_triggers(db: sqlite3.Connection) -> None:  # pragma: no cover
-    from ._search import Search
-
-    search = Search(db)
-    if search.is_enabled():
-        search._drop_triggers()
-        search._create_triggers()
-
-
-def update_from_20_to_21(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/178
-
-    from ._search import Search
-
-    search = Search(db)
-    if search.is_enabled():
-        search._drop_triggers()
-
-        db.execute(
-            """
-            ALTER TABLE entries_search_sync_state
-            ADD COLUMN es_rowids TEXT NOT NULL DEFAULT '[]';
-            """
-        )
-
-        input = db.execute(
-            """
-            SELECT json_group_array(rowid), _id, _feed
-            FROM entries_search
-            GROUP BY _id, _feed;
-            """
-        )
-        db.executemany(
-            """
-            UPDATE entries_search_sync_state
-            SET es_rowids = ?
-            WHERE (id, feed) = (?, ?);
-            """,
-            input,
-        )
-
-        search._create_triggers()
-
-
-def update_from_23_to_24(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/149
-    db.execute("ALTER TABLE entries ADD COLUMN original_feed TEXT;")
-
-
-def update_from_25_to_26(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/187
-    db.execute(
-        """
-        ALTER TABLE feeds
-        ADD COLUMN updates_enabled INTEGER NOT NULL DEFAULT 1;
-        """
-    )
-
-
-def update_from_26_to_27(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/211
-    db.execute(f"PRAGMA application_id = {APPLICATION_ID};")
-
-
-def update_from_27_to_28(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/179
-
-    db.execute("ALTER TABLE feeds ADD COLUMN data_hash BLOB;")
-    db.execute("ALTER TABLE entries ADD COLUMN data_hash BLOB;")
-
-    # force the hash to be set on the next full update;
-    # otherwise, for some feeds it'll be set only after
-    # their caching headers change, which is less predictable
-    db.execute("UPDATE feeds SET stale = 1;")
-
-
-def update_from_28_to_29(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/225
-    db.execute("ALTER TABLE entries ADD COLUMN data_hash_changed INTEGER;")
-
-
 def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
@@ -314,22 +223,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
-            17: update_from_17_to_18,
-            18: update_from_18_to_19,
-            # for https://github.com/lemon24/reader/issues/175#issuecomment-654213853
-            19: recreate_search_triggers,
-            20: update_from_20_to_21,
-            # for https://github.com/lemon24/reader/issues/184
-            21: create_feed_tags,
-            # for https://github.com/lemon24/reader/issues/149#issuecomment-700633577
-            22: recreate_search_triggers,
-            23: update_from_23_to_24,
-            # for https://github.com/lemon24/reader/issues/134#issuecomment-722454963
-            24: create_indexes,
-            25: update_from_25_to_26,
-            26: update_from_26_to_27,
-            27: update_from_27_to_28,
-            28: update_from_28_to_29,
+            # 17-28 removed before 2.0 (last in be9c89581ea491d0c9cc95c9d39f073168a2fd02)
         },
         id=APPLICATION_ID,
         # Row value support was added in 3.15.
@@ -394,7 +288,10 @@ class Storage:
                     db.close()
                     raise
             except DBError as e:
-                raise StorageError(message=str(e))
+                message = str(e)
+                if 'no migration' in message:
+                    message += "; you may have skipped some required migrations, see https://reader.readthedocs.io/en/latest/changelog.html#removed-migrations-2-0"
+                raise StorageError(message=message)
 
         self.db: sqlite3.Connection = db
         self.path = path

@@ -11,6 +11,28 @@ Version 2.0
 
 Unreleased
 
+* Remove old database migrations.
+
+  If you are upgrading from *reader* 1.15 or newer, no action is required.
+
+  .. _removed migrations 2.0:
+
+  .. attention::
+
+    If you are upgrading to *reader* 2.0 from a version **older than 1.15**,
+    you must open your database with *reader* 1.15 or newer once,
+    to run the removed migrations:
+
+    .. code-block:: sh
+
+        pip install 'reader>=1.15,<2' && \
+        cat << EOF | python - db.sqlite
+        import sys
+        from reader import make_reader
+        make_reader(sys.argv[1])
+        print("OK")
+        EOF
+
 * Remove code that issued deprecation warnings in versions 1.* (:issue:`183`):
 
   * :meth:`Reader.remove_feed`
