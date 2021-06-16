@@ -266,7 +266,7 @@ def get_update_status(value):
         return None
     if isinstance(value, Exception):
         return False
-    if not (value.new or value.updated):
+    if not (value.new or value.modified):
         return None
     return True
 
@@ -285,7 +285,7 @@ def iter_update_status(it, length):
         elif not update_status:
             status = red(value)
         else:
-            status = green(f"{value.new} new, {value.updated} updated")
+            status = green(f"{value.new} new, {value.modified} modified")
 
         click.echo(f"{elapsed}\t{pos}\t{url}\t{status}")
 
@@ -387,10 +387,10 @@ def update(reader, url, new_only, workers, verbose):
                 else:
                     ok_count += 1
                     new_count += value.new
-                    updated_count += value.updated
+                    updated_count += value.modified
     finally:
         click.echo(
-            f"{feed_stats(9999)}; entries: {new_count} new, {updated_count} updated"
+            f"{feed_stats(9999)}; entries: {new_count} new, {updated_count} modified"
         )
 
 
