@@ -1,6 +1,7 @@
 import dataclasses
 import re
 import traceback
+import warnings
 from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
@@ -646,16 +647,37 @@ class UpdatedFeed:
 
     .. versionadded:: 1.14
 
+    .. versionchanged:: 1.19
+        The ``updated`` argument/attribute was renamed to ``modified``.
+
     """
 
     #: The URL of the feed.
     url: str
 
-    #: The number of new entries.
+    #: The number of new entries
+    #: (entries that did not previously exist in storage).
     new: int
 
-    #: The number of updated entries.
-    updated: int
+    #: The number of modified entries
+    #: (entries that existed in storage,
+    #: but had different data than the corresponding feed file entry.)
+    modified: int
+
+    @property
+    def updated(self) -> int:
+        """Deprecated alias for :attr:`UpdatedFeed.modified`.
+
+        .. deprecated: 1.19
+
+        """
+        warnings.warn(
+            "UpdatedFeed.updated is deprecated "
+            "and will be removed in reader 2.0. "
+            "Use UpdatedFeed.modified instead.",
+            DeprecationWarning,
+        )
+        return self.modified
 
 
 class UpdateResult(NamedTuple):

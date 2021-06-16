@@ -7,6 +7,7 @@ from reader import EntryError
 from reader import EntryNotFoundError
 from reader import FeedMetadataNotFoundError
 from reader import FeedNotFoundError
+from reader.types import UpdatedFeed
 
 
 def test_feed_metadata(reader):
@@ -103,3 +104,12 @@ def test_update_feeds_new_only(reader, name):
     with pytest.raises(MyError) as excinfo, pytest.deprecated_call():
         list(method(new_only=False) or ())
     assert excinfo.value.args[0] is None
+
+
+def test_updated_feed_updated():
+    feed = UpdatedFeed('url', 1, 2)
+
+    with pytest.deprecated_call():
+        feed.updated
+
+    assert feed.updated == feed.modified

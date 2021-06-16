@@ -22,6 +22,21 @@ Unreleased
   ``new_only`` is deprecated and **will be removed in 2.0**.
   (:issue:`217`)
 
+* Rename :attr:`UpdatedFeed.updated` to :attr:`~UpdatedFeed.modified`;
+  for backwards compatibility,
+  the old attribute will be available as a property **until version 2.0**,
+  when it **will be removed.** (:issue:`241`).
+
+  .. warning::
+
+    The signature of :class:`UpdatedFeed`
+    changed from ``UpdatedFeed(url, new, updated)``
+    to ``UpdatedFeed(url, new, modified)``.
+
+    **This is a minor compatibility break**,
+    but only affects third-party code that instantiates
+    UpdatedFeed *directly* with ``updated`` as a *keyword argument*.
+
 
 Version 1.18
 ------------
@@ -81,8 +96,7 @@ Released 2021-06-03
     but only affects third-party code that instantiates
     these exceptions *directly*.
 
-* Rename the ``url`` argument of :exc:`EntryError` to ``feed_url``.
-  Rename :attr:`EntryError.url` to :attr:`~EntryError.feed_url`;
+* Rename :attr:`EntryError.url` to :attr:`~EntryError.feed_url`;
   for backwards compatibility,
   the old attribute will be available as a property **until version 2.0**,
   when it **will be removed.** (:issue:`183`).

@@ -866,12 +866,12 @@ def test_update_feeds_iter(reader, call_update_iter_method):
         reader.add_feed(feed)
 
     assert dict(call_update_iter_method(reader)) == {
-        '1': UpdatedFeed(url='1', new=2, updated=0),
-        '2': UpdatedFeed(url='2', new=1, updated=0),
+        '1': UpdatedFeed(url='1', new=2, modified=0),
+        '2': UpdatedFeed(url='2', new=1, modified=0),
     }
 
     assert next(call_update_iter_method(reader)) == UpdateResult(
-        '1', UpdatedFeed(url='1', new=0, updated=0)
+        '1', UpdatedFeed(url='1', new=0, modified=0)
     )
 
     one_two = parser.entry(1, 2, datetime(2010, 2, 2), title='new title')
@@ -884,8 +884,8 @@ def test_update_feeds_iter(reader, call_update_iter_method):
     rv = dict(call_update_iter_method(reader))
     assert set(rv) == set('123')
 
-    assert rv['1'] == UpdatedFeed(url='1', new=2, updated=1)
-    assert rv['2'] == UpdatedFeed(url='2', new=0, updated=0)
+    assert rv['1'] == UpdatedFeed(url='1', new=2, modified=1)
+    assert rv['2'] == UpdatedFeed(url='2', new=0, modified=0)
 
     assert isinstance(rv['3'], ParseError)
     assert rv['3'].url == '3'
@@ -924,7 +924,7 @@ def test_update_feeds_iter_raised_exception(reader, exc_type, call_update_iter_m
     if not sys.implementation.name == 'pypy':
         # for some reason, on PyPy the updates sometimes
         # happen out of order and rv is empty
-        assert rv == {'1': UpdatedFeed(url='1', new=0, updated=0)}
+        assert rv == {'1': UpdatedFeed(url='1', new=0, modified=0)}
 
 
 def test_mark_as_read_unread(reader, entry_arg):
