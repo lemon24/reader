@@ -9,7 +9,7 @@ Changelog
 Version 1.19
 ------------
 
-Unreleased
+Released 2021-06-16
 
 * Drop Python 3.6 support. (:issue:`237`)
 * Support PyPy 3.7. (:issue:`234`)
