@@ -69,7 +69,7 @@ def test_cli(db_path, data_dir):
 
     result = runner.invoke(cli, ['--db', db_path, 'update'])
     assert result.exit_code == 0
-    assert "1 ok, 0 error, 0 not modified; entries: 2 new, 0 updated" in result.output
+    assert "1 ok, 0 error, 0 not modified; entries: 2 new, 0 modified" in result.output
 
     result = runner.invoke(cli, ['--db', db_path, 'list', 'feeds'])
     assert result.exit_code == 0
