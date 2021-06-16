@@ -25,6 +25,8 @@ Unreleased
   * :meth:`Reader.delete_feed_metadata`
   * the ``new_only`` parameter of
     :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
+  * :attr:`EntryError.url`
+  * :attr:`UpdatedFeed.updated`
 
 * The parameters of
   :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`

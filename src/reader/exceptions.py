@@ -1,4 +1,3 @@
-import warnings
 from typing import Any
 from typing import Tuple
 
@@ -128,21 +127,6 @@ class EntryError(ReaderError):
 
         """
         return self.feed_url, self.id
-
-    @property
-    def url(self) -> str:
-        """Deprecated alias for :attr:`EntryError.feed_url`.
-
-        .. deprecated: 1.18
-
-        """
-        warnings.warn(
-            "EntryError.url is deprecated "
-            "and will be removed in reader 2.0. "
-            "Use EntryError.feed_url instead.",
-            DeprecationWarning,
-        )
-        return self.feed_url
 
 
 class EntryNotFoundError(EntryError):
