@@ -34,7 +34,6 @@ from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import NameScheme
 from ._types import ParsedFeed
-from ._utils import deprecated_wrapper
 from ._utils import make_pool_map
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
@@ -341,8 +340,6 @@ class Reader:
         """
         url = _feed_argument(feed)
         self._storage.delete_feed(url)
-
-    remove_feed = deprecated_wrapper('remove_feed', delete_feed, '1.18', '2.0')
 
     def change_feed_url(self, old: FeedInput, new: FeedInput) -> None:
         """Change the URL of a feed.
@@ -1174,21 +1171,9 @@ class Reader:
         feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_important_unimportant(feed_url, entry_id, False)
 
-    mark_as_read = deprecated_wrapper('mark_as_read', mark_entry_as_read, '1.18', '2.0')
-    mark_as_unread = deprecated_wrapper(
-        'mark_as_unread', mark_entry_as_unread, '1.18', '2.0'
-    )
-    mark_as_important = deprecated_wrapper(
-        'mark_as_important', mark_entry_as_important, '1.18', '2.0'
-    )
-    mark_as_unimportant = deprecated_wrapper(
-        'mark_as_unimportant', mark_entry_as_unimportant, '1.18', '2.0'
-    )
-
     def get_feed_metadata(
         self,
         feed: FeedInput,
-        *args: Any,
         key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
         """Get all or some of the metadata for a feed as ``(key, value)`` pairs.
@@ -1205,34 +1190,15 @@ class Reader:
             StorageError
 
         .. versionchanged:: 1.18
+            :meth:`get_feed_metadata` was renamed to :meth:`get_feed_metadata_item`,
+            :meth:`iter_feed_metadata` was renamed to :meth:`get_feed_metadata`.
 
-            :meth:`iter_feed_metadata` was renamed to :meth:`get_feed_metadata`,
-            and :meth:`get_feed_metadata` was renamed to :meth:`get_feed_metadata_item`.
-
-            To preserve backwards compatibility,
-            the ``get_feed_metadata(feed, key[, default]) -> value``
-            form (positional arguments only)
-            will continue to work as an alias for
-            ``get_feed_metadata_item(feed, key[, default])``
-            until the last 1.\\* *reader* version,
-            after which it will result in a :exc:`TypeError`.
+        .. versionchanged:: 2.0
+            The ``get_feed_metadata(feed, key, default=no value, /)``
+            (positional arguments only)
+            :meth:`get_feed_metadata_item` alias was removed.
 
         """
-
-        if args:
-            # get_feed_metadata(feed, key[, default]) -> value
-            if len(args) > 2:
-                raise TypeError(
-                    f"get_feed_metadata() takes 1 positional arguments, but {len(args) + 1} were given"
-                )
-            warnings.warn(
-                "The get_feed_metadata(feed, key[, default]) -> value "
-                "version of get_feed_metadata() is deprecated "
-                "and will be removed in reader 2.0. "
-                "Use get_feed_metadata_item() instead.",
-                DeprecationWarning,
-            )
-            return self.get_feed_metadata_item(feed, *args)  # type: ignore
 
         # get_feed_metadata(feed, *, key=None) -> (key, value), ...
         feed_url = _feed_argument(feed)
@@ -1320,16 +1286,6 @@ class Reader:
         """
         feed_url = _feed_argument(feed)
         self._storage.delete_metadata((feed_url,), key)
-
-    iter_feed_metadata = deprecated_wrapper(
-        'iter_feed_metadata', get_feed_metadata, '1.18', '2.0'
-    )
-    set_feed_metadata = deprecated_wrapper(
-        'set_feed_metadata', set_feed_metadata_item, '1.18', '2.0'
-    )
-    delete_feed_metadata = deprecated_wrapper(
-        'delete_feed_metadata', delete_feed_metadata_item, '1.18', '2.0'
-    )
 
     def enable_search(self) -> None:
         """Enable full-text search.

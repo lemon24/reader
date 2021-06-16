@@ -11,6 +11,19 @@ Version 2.0
 
 Unreleased
 
+* Remove code that issued deprecation warnings in versions 1.*:
+
+  * :meth:`Reader.remove_feed`
+  * :meth:`Reader.mark_as_read`
+  * :meth:`Reader.mark_as_unread`
+  * :meth:`Reader.mark_as_important`
+  * :meth:`Reader.mark_as_unimportant`
+  * :meth:`Reader.iter_feed_metadata`
+  * the ``get_feed_metadata(feed, key, default=no value, /)``
+    form of :meth:`Reader.get_feed_metadata`
+  * :meth:`Reader.set_feed_metadata`
+  * :meth:`Reader.delete_feed_metadata`
+
 
 Version 1.19
 ------------
