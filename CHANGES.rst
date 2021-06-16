@@ -6,6 +6,12 @@ Changelog
   :noindex:
 
 
+Version 1.20
+------------
+
+Unreleased
+
+
 Version 1.19
 ------------
 
