@@ -11,7 +11,7 @@ Version 2.0
 
 Unreleased
 
-* Remove code that issued deprecation warnings in versions 1.*:
+* Remove code that issued deprecation warnings in versions 1.* (:issue:`183`):
 
   * :meth:`Reader.remove_feed`
   * :meth:`Reader.mark_as_read`
@@ -23,6 +23,12 @@ Unreleased
     form of :meth:`Reader.get_feed_metadata`
   * :meth:`Reader.set_feed_metadata`
   * :meth:`Reader.delete_feed_metadata`
+  * the ``new_only`` parameter of
+    :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
+
+* The parameters of
+  :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
+  are now keyword-only. (:issue:`183`)
 
 
 Version 1.19
@@ -44,7 +50,7 @@ Unreleased
 * Rename :attr:`UpdatedFeed.updated` to :attr:`~UpdatedFeed.modified`;
   for backwards compatibility,
   the old attribute will be available as a property **until version 2.0**,
-  when it **will be removed.** (:issue:`241`).
+  when it **will be removed.**. (:issue:`241`)
 
   .. warning::
 

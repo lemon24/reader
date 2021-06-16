@@ -605,10 +605,9 @@ class Reader:
 
     def update_feeds(
         self,
-        new_only: Union[bool, MissingType] = MISSING,
-        workers: int = 1,
         *,
-        new: Union[Optional[bool], MissingType] = MISSING,
+        new: Optional[bool] = None,
+        workers: int = 1,
     ) -> None:
         """Update all the feeds that have updates enabled.
 
@@ -617,17 +616,10 @@ class Reader:
         Roughly equivalent to ``for _ in reader.update_feed_iter(...): pass``.
 
         Args:
-            new_only (bool):
-                Only update feeds that have never been updated.
-                Defaults to False.
-
-                .. deprecated:: 1.19
-                    Use ``new`` instead.
-
-            workers (int): Number of threads to use when getting the feeds.
             new (bool or None):
                 Only update feeds that have never been updated
                 / have been updated before. Defaults to None.
+            workers (int): Number of threads to use when getting the feeds.
 
         Raises:
             StorageError
@@ -647,13 +639,14 @@ class Reader:
             Previously, entries would be updated only if the
             entry :attr:`~Entry.updated` was *newer* than the stored one.
 
-        .. deprecated:: 1.19
-            The ``new_only`` argument
-            (will be removed in *reader* 2.0);
-            use ``new`` instead.
+        .. versionchanged:: 2.0
+            Removed the ``new_only`` parameter.
+
+        .. versionchanged:: 2.0
+            All parameters are keyword-only.
 
         """
-        for url, value in self.update_feeds_iter(new_only, workers, new=new):
+        for url, value in self.update_feeds_iter(new=new, workers=workers):
             if isinstance(value, ParseError):
                 log.exception(
                     "update feed %r: error while getting/parsing feed, "
@@ -668,25 +661,18 @@ class Reader:
 
     def update_feeds_iter(
         self,
-        new_only: Union[bool, MissingType] = MISSING,
-        workers: int = 1,
         *,
-        new: Union[Optional[bool], MissingType] = MISSING,
+        new: Optional[bool] = None,
+        workers: int = 1,
     ) -> Iterable[UpdateResult]:
         """Update all the feeds that have updates enabled.
 
         Args:
-            new_only (bool):
-                Only update feeds that have never been updated.
-                Defaults to False.
-
-                .. deprecated:: 1.19
-                    Use ``new`` instead.
-
-            workers (int): Number of threads to use when getting the feeds.
             new (bool or None):
                 Only update feeds that have never been updated
                 / have been updated before. Defaults to None.
+            workers (int): Number of threads to use when getting the feeds.
+
 
         Yields:
             :class:`UpdateResult`:
@@ -710,34 +696,20 @@ class Reader:
             Update entries whenever their content changes.
             See :meth:`~Reader.update_feeds` for details.
 
-        .. deprecated:: 1.19
-            The ``new_only`` argument
-            (will be removed in *reader* 2.0);
-            use ``new`` instead.
+        .. versionchanged:: 2.0
+            Removed the ``new_only`` parameter.
+
+        .. versionchanged:: 2.0
+            All parameters are keyword-only.
 
         """
         if workers < 1:
             raise ValueError("workers must be a positive integer")
 
-        if new is MISSING and new_only is MISSING:
-            new_final = None
-        elif new is MISSING and new_only is not MISSING:
-            new_final = True if new_only else None
-            warnings.warn(
-                "new_only is deprecated and will be removed in reader 2.0. "
-                "Use new instead.",
-                DeprecationWarning,
-            )
-        elif new is not MISSING and new_only is MISSING:
-            assert not isinstance(new, MissingType)  # mypy pleasing
-            new_final = new
-        else:
-            raise TypeError("new and new_only are mutually exclusive")
-
         make_map = nullcontext(builtins.map) if workers == 1 else make_pool_map(workers)
 
         with make_map as map:
-            results = self._update_feeds(new=new_final, map=map)
+            results = self._update_feeds(new=new, map=map)
 
             for url, value in results:
                 if isinstance(value, FeedNotFoundError):
