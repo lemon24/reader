@@ -496,7 +496,8 @@ try:
 
     cli.add_command(serve)
 except ImportError:
-    pass
+    # pass  # FIXME: this shadows stuff
+    raise
 
 
 if __name__ == '__main__':

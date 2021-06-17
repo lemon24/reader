@@ -5,7 +5,6 @@ import time
 from dataclasses import dataclass
 
 import flask.signals
-import humanize
 import markupsafe
 import yaml
 from flask import abort
@@ -32,6 +31,76 @@ from reader import InvalidSearchQueryError
 from reader import ParseError
 from reader import ReaderError
 from reader._plugins import Loader
+
+# noreorder
+
+# BEGIN humanize pkg_resources.get_distribution PyOxidizer hack
+
+import pkg_resources
+
+old_get_distribution = pkg_resources.get_distribution
+
+
+def get_distribution(name, *args, **kwargs):
+    if name.startswith('humanize'):
+
+        class FakeHumanizeDistribution:
+            version = 'whatever'
+
+        return FakeHumanizeDistribution
+    return old_get_distribution(name, *args, **kwargs)
+
+
+try:
+    pkg_resources.get_distribution = get_distribution
+    import humanize
+finally:
+    pkg_resources.get_distribution = old_get_distribution
+
+# END humanize pkg_resources.get_distribution PyOxidizer hack
+
+
+# BEGIN flask get_root_path PyOxidizer hack
+
+import os  # noqa
+
+import flask  # noqa
+
+old_get_root_path = flask.helpers.get_root_path
+
+
+def get_root_path(name):
+    if name.startswith('reader._app'):
+        return os.getcwd()
+    return old_get_root_path(name)
+
+
+flask.helpers.get_root_path = get_root_path
+flask.app.get_root_path = get_root_path
+flask.blueprints.get_root_path = get_root_path
+flask.scaffold.get_root_path = get_root_path
+
+# works, but only from this directory:
+#
+# $ cd pyapp/build/x86_64-apple-darwin/debug/install/reader/_app
+# $ ../../pyapp serve -p 8888
+
+# we could probably detect the path of the executable, though, and use that
+
+# for templates, we might be able to avoid
+# the "resource.add_location = 'filesystem-relative:.'" thing with
+# https://jinja.palletsprojects.com/en/3.0.x/api/#jinja2.ModuleLoader and
+# https://jinja.palletsprojects.com/en/3.0.x/api/#jinja2.Environment.compile_templates
+
+# ... or make a loader that uses importlib.resources
+
+# for static files, we can probably override
+# https://flask.palletsprojects.com/en/2.0.x/api/#flask.Flask.send_static_file
+
+# alternatively, we could keep them like external files, to allow them to be themed
+
+# END flask get_root_path PyOxidizer hack
+
 
 blueprint = Blueprint('reader', __name__)
 
