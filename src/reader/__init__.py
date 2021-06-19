@@ -54,6 +54,7 @@ from .types import (
     EntrySearchCounts,
     UpdateResult,
     UpdatedFeed,
+    EntryUpdateStatus,
 )
 
 from .exceptions import (

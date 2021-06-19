@@ -1,4 +1,5 @@
 import dataclasses
+import enum
 import re
 import traceback
 import warnings
@@ -478,6 +479,19 @@ class EntrySearchResult(_namedtuple_compat):
 
         """
         return self.feed_url, self.id
+
+
+class EntryUpdateStatus(enum.Enum):
+
+    """Data type representing status of entry.
+    Used by :py:attr:`~Reader.after_entry_update_hooks`.
+
+    .. versionadded:: 1.20
+
+    """
+
+    NEW = 'new'
+    MODIFIED = 'modified'
 
 
 # Semi-public API (typing support)

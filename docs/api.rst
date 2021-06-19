@@ -61,6 +61,9 @@ Data objects
 .. autoclass:: UpdatedFeed
     :members:
 
+.. autoclass:: EntryUpdateStatus
+    :members:
+
 
 Exceptions
 ----------

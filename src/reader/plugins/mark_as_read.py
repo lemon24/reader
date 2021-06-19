@@ -29,6 +29,7 @@ import logging
 import re
 
 from reader.exceptions import MetadataNotFoundError
+from reader.types import EntryUpdateStatus
 
 # avoid circular imports
 
@@ -52,7 +53,10 @@ def _get_config(reader, feed_url, metadata_key, patterns_key):
     return []
 
 
-def _mark_as_read(reader, entry):
+def _mark_as_read(reader, entry, status):
+    if status is EntryUpdateStatus.MODIFIED:
+        return
+
     metadata_name = reader.make_reader_reserved_name('mark_as_read')
     patterns = _get_config(reader, entry.feed_url, metadata_name, 'title')
 
@@ -63,4 +67,4 @@ def _mark_as_read(reader, entry):
 
 
 def init_reader(reader):
-    reader._post_entry_add_plugins.append(_mark_as_read)
+    reader.after_entry_update_hooks.append(_mark_as_read)

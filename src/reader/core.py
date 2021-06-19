@@ -52,6 +52,7 @@ from .types import EntryInput
 from .types import EntrySearchCounts
 from .types import EntrySearchResult
 from .types import EntrySortOrder
+from .types import EntryUpdateStatus
 from .types import Feed
 from .types import FeedCounts
 from .types import FeedInput
@@ -73,7 +74,12 @@ _U = TypeVar('_U')
 
 ReaderPluginType = Callable[['Reader'], None]
 _PostFeedUpdatePluginType = Callable[['Reader', str], None]
-_PostEntryAddPluginType = Callable[['Reader', EntryData[datetime]], None]
+#: Function that will be called for each new/modified entry
+#:
+#: ..versionadded:: 1.20
+AfterEntryUpdateHook = Callable[
+    ['Reader', EntryData[datetime], EntryUpdateStatus], None
+]
 
 
 def make_reader(
@@ -265,6 +271,9 @@ class Reader:
     .. versionadded:: 1.13
         JSON Feed support.
 
+    .. versionadded:: 1.20
+        after_entry_update_hooks public attribute
+
     """
 
     def __init__(
@@ -286,7 +295,22 @@ class Reader:
 
         self._updater = reader._updater
         self._post_feed_update_plugins: Collection[_PostFeedUpdatePluginType] = []
-        self._post_entry_add_plugins: Collection[_PostEntryAddPluginType] = []
+
+        #: List of functions that will be called for each new/modified entry after
+        #: feed was updated. Each function should take three arguments and return None.
+        #:
+        #: * ``reader`` - a :class:`Reader` instance
+        #: * ``entry`` - an :class:`~types.Entry`-like object
+        #:
+        #:   .. warning::
+        #:
+        #:     The only attributes that are guaranteed to be present are ``feed_url``, ``id``
+        #:     and ``object_id``; all other attributes may appear or disappear between minor
+        #:     versions, or may be None.
+        #: * ``status`` - an :class:`~types.EntryUpdateStatus` value
+        #:
+        #: ..versionadded:: 1.20
+        self.after_entry_update_hooks: Collection[AfterEntryUpdateHook] = []
 
         if _called_directly:
             warnings.warn(
@@ -919,12 +943,12 @@ class Reader:
         for entry in entries_to_update:
             if entry.new:
                 new_count += 1
+                entry_status = EntryUpdateStatus.NEW
             else:
                 updated_count += 1
-            if not entry.new:
-                continue
-            for entry_plugin in self._post_entry_add_plugins:
-                entry_plugin(self, entry.entry)
+                entry_status = EntryUpdateStatus.MODIFIED
+            for entry_hook in self.after_entry_update_hooks:
+                entry_hook(self, entry.entry, entry_status)
 
         return new_count, updated_count
 
