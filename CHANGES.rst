@@ -11,6 +11,12 @@ Version 1.20
 
 Unreleased
 
+* Added public property :attr:`~Reader.after_entry_update_hooks` to
+  :class:`Reader`, which contains list of hooks to run for each new/modified
+  entry after :meth:`~Reader.update_feeds()` call. Hooks will receive
+  :class:`Reader` instance, :class:`~types.Entry`-like object instance and
+  :class:`~types.EntryUpdateStatus` value
+
 
 Version 1.19
 ------------

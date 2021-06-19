@@ -92,6 +92,9 @@ def test_plugin(make_reader):
     important_one = parser.entry(
         1, 5, datetime(2010, 1, 1), title='important', summary='also important'
     )
+    modified_one = parser.entry(
+        1, 6, datetime(2010, 1, 1), title='title', summary='will be modified'
+    )
 
     # TODO just use the feeds/entries as arguments
 
@@ -109,6 +112,9 @@ def test_plugin(make_reader):
     )
     important_two = parser.entry(
         1, 15, datetime(2010, 1, 2), title='important', summary='also important'
+    )
+    modified_two = parser.entry(
+        1, 6, datetime(2010, 1, 1), title='title', summary='was modified'
     )
 
     reader.update_feeds()
@@ -128,6 +134,8 @@ def test_plugin(make_reader):
             # the old one is marked as read in favor of the new one
             (unread_one.id, True),
             (unread_two.id, False),
+            # modified entry is ignored by plugin
+            (modified_one.id, False),
         }
     } | {
         # the new one is important because the old one was;

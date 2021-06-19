@@ -74,6 +74,8 @@ Entry user attributes are set as follows:
 import logging
 import re
 
+from reader.types import EntryUpdateStatus
+
 log = logging.getLogger('reader._plugins.feed_entry_dedupe')
 
 
@@ -111,7 +113,10 @@ def _is_duplicate(one, two):
     return same_title and same_text
 
 
-def _entry_dedupe_plugin(reader, entry):
+def _entry_dedupe_plugin(reader, entry, status):
+    if status is EntryUpdateStatus.MODIFIED:
+        return
+
     duplicates = [
         e
         for e in reader.get_entries(feed=entry.feed_url)
@@ -150,4 +155,4 @@ def _entry_dedupe_plugin(reader, entry):
 
 
 def init_reader(reader):
-    reader._post_entry_add_plugins.append(_entry_dedupe_plugin)
+    reader.after_entry_update_hooks.append(_entry_dedupe_plugin)
