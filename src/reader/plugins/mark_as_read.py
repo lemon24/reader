@@ -1,11 +1,11 @@
 """
-reader.mark_entry_as_read
-~~~~~~~~~~~~~~~~~~~~~~~~~
+reader.mark_as_read
+~~~~~~~~~~~~~~~~~~~
 
 Mark added entries of specific feeds as read if their title matches a regex.
 
 To configure, set the ``make_reader_reserved_name('mark_as_read')``
-(by default, ``.reader.mark_entry_as_read``)
+(by default, ``.reader.mark_as_read``)
 feed metadata to something like::
 
     {
