@@ -12,6 +12,7 @@ from typing import Collection
 from typing import Iterable
 from typing import Iterator
 from typing import Mapping
+from typing import MutableSequence
 from typing import Optional
 from typing import overload
 from typing import Tuple
@@ -73,13 +74,10 @@ _T = TypeVar('_T')
 _U = TypeVar('_U')
 
 ReaderPluginType = Callable[['Reader'], None]
-_PostFeedUpdatePluginType = Callable[['Reader', str], None]
-#: Function that will be called for each new/modified entry
-#:
-#: ..versionadded:: 1.20
 AfterEntryUpdateHook = Callable[
     ['Reader', EntryData[datetime], EntryUpdateStatus], None
 ]
+_PostFeedUpdatePluginType = Callable[['Reader', str], None]
 
 
 def make_reader(
@@ -271,8 +269,6 @@ class Reader:
     .. versionadded:: 1.13
         JSON Feed support.
 
-    .. versionadded:: 1.20
-        after_entry_update_hooks public attribute
 
     """
 
@@ -296,21 +292,28 @@ class Reader:
         self._updater = reader._updater
         self._post_feed_update_plugins: Collection[_PostFeedUpdatePluginType] = []
 
-        #: List of functions that will be called for each new/modified entry after
-        #: feed was updated. Each function should take three arguments and return None.
+        #: List of functions called for each updated entry
+        #: after the feed was updated.
         #:
-        #: * ``reader`` - a :class:`Reader` instance
-        #: * ``entry`` - an :class:`~types.Entry`-like object
+        #: Each function is called with:
         #:
-        #:   .. warning::
+        #: * `reader` – the :class:`Reader` instance
+        #: * `entry` – an :class:`Entry`-like object
+        #: * `status` – an :class:`EntryUpdateStatus` value
         #:
-        #:     The only attributes that are guaranteed to be present are ``feed_url``, ``id``
-        #:     and ``object_id``; all other attributes may appear or disappear between minor
-        #:     versions, or may be None.
-        #: * ``status`` - an :class:`~types.EntryUpdateStatus` value
+        #: Each function should return :const:`None`.
         #:
-        #: ..versionadded:: 1.20
-        self.after_entry_update_hooks: Collection[AfterEntryUpdateHook] = []
+        #: .. warning::
+        #:
+        #:  The only `entry` attributes guaranteed to be present are
+        #:  :attr:`~Entry.feed_url`, :attr:`~Entry.id`,
+        #:  and :attr:`~Entry.object_id`;
+        #:  all other attributes may be missing
+        #:  (accessing them may raise :exc:`AttributeError`).
+        #:
+        #: .. versionadded:: 1.20
+        #:
+        self.after_entry_update_hooks: MutableSequence[AfterEntryUpdateHook] = []
 
         if _called_directly:
             warnings.warn(

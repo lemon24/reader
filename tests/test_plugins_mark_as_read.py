@@ -38,6 +38,13 @@ def test_regex_mark_as_read(make_reader):
         (match_new.id, True),
     }
 
+    parser.entry(1, 3, datetime(2010, 1, 2), title='no match once again')
+    reader.update_feeds()
+
+    assert set((e.id, e.read) for e in reader.get_entries(read=True)) == {
+        (match_new.id, True),
+    }
+
 
 @pytest.mark.parametrize('value', ['x', {'title': 'x'}, {'title': [1]}])
 def test_regex_mark_as_read_bad_metadata(make_reader, value):
@@ -48,14 +55,10 @@ def test_regex_mark_as_read_bad_metadata(make_reader, value):
 
     one = parser.feed(1, datetime(2010, 1, 1))
     parser.entry(1, 1, datetime(2010, 1, 1), title='match')
-    parser.entry(1, 2, datetime(2010, 1, 1), title='will be modified')
 
     reader.add_feed(one)
     reader.set_feed_metadata_item(one, '.reader.mark_as_read', value)
 
     reader.update_feeds()
 
-    parser.entry(1, 2, datetime(2010, 1, 1), title='modified')
-    reader.update_feeds()
-
-    assert [e.read for e in reader.get_entries()] == [False, False]
+    assert [e.read for e in reader.get_entries()] == [False]

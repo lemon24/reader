@@ -483,14 +483,17 @@ class EntrySearchResult(_namedtuple_compat):
 
 class EntryUpdateStatus(enum.Enum):
 
-    """Data type representing status of entry.
-    Used by :py:attr:`~Reader.after_entry_update_hooks`.
+    """Enum representing how an entry was updated.
 
     .. versionadded:: 1.20
 
     """
 
+    #: The entry did not previously exist in storage.
     NEW = 'new'
+
+    #: The entry existed in storage,
+    #: but had different data from the one in the feed file.
     MODIFIED = 'modified'
 
 

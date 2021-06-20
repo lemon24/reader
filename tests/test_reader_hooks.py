@@ -2,7 +2,7 @@ from datetime import datetime
 
 from fakeparser import Parser
 
-from reader.types import EntryUpdateStatus
+from reader import EntryUpdateStatus
 
 
 def test_post_entry_update_hooks(reader):
