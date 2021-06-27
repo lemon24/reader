@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import threading
 from datetime import datetime
@@ -45,6 +46,67 @@ def test_db_errors(db_path, db_error_cls):
         MyStorage(db_path)
     assert excinfo.value.__cause__ is None
     assert 'whatever' in excinfo.value.message
+
+
+# TODO: move all the database_error tests to test_sqlite_utils.py::test_wrap_exceptions
+
+
+def test_database_error_open_invalid(db_path):
+    with open(db_path, 'w') as f:
+        f.write('not a database')
+
+    with pytest.raises(StorageError) as excinfo:
+        Storage(db_path)
+
+    assert isinstance(excinfo.value.__cause__, sqlite3.DatabaseError)
+
+
+def test_database_error_overwritten(db_path):
+    storage = Storage(db_path)
+
+    for suffix in ['', '-wal', '-shm']:
+        with open(db_path + suffix, 'w') as f:
+            f.write('not a database')
+
+    # TODO: should we test all methods here (like test_errors_locked)?
+
+    with pytest.raises(StorageError) as excinfo:
+        storage.add_feed('one', datetime(2010, 1, 1))
+
+    assert isinstance(excinfo.value.__cause__, sqlite3.DatabaseError)
+
+    with pytest.raises(StorageError) as excinfo:
+        # hopefully this closes the file, even if we get DatabaseError
+        storage.close()
+
+
+@pytest.mark.parametrize(
+    'exc', [sqlite3.DatabaseError('whatever'), sqlite3.ProgrammingError('whatever')]
+)
+def test_database_error_other(exc):
+    # for some reason, this test doesn't cover both branches of
+    # "if type(e) is sqlite3.DatabaseError:" in wrap_exceptions
+
+    class MyStorage(Storage):
+        @staticmethod
+        def setup_db(*args, **kwargs):
+            raise exc
+
+    print(type(exc), type(exc) is sqlite3.DatabaseError)
+    with pytest.raises(sqlite3.Error) as excinfo:
+        MyStorage(':memory:')
+    assert excinfo.value is exc
+
+
+def test_database_error_permissions(db_path):
+    for suffix in ['', '-wal', '-shm']:
+        path = db_path + suffix
+        with open(path, 'w') as f:
+            pass
+        os.chmod(db_path + suffix, 0)
+
+    with pytest.raises(StorageError) as excinfo:
+        Storage(db_path)
 
 
 def test_path(db_path):

@@ -15,6 +15,9 @@ Unreleased
   which allows running arbitrary actions for updated entries.
   Thanks to `Mirek Długosz`_ for the issue and pull request.
   (:issue:`241`)
+* Raise :exc:`StorageError` when opening / operating on an invalid database,
+  instead of a plain :exc:`sqlite3.DatabaseError`.
+  (:issue:`243`)
 
 .. _Mirek Długosz: https://github.com/mirekdlugosz
 

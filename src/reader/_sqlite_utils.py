@@ -98,11 +98,26 @@ def wrap_exceptions(
     """
     try:
         yield
+
     except sqlite3.OperationalError as e:
         raise exc_type(message) from e
+
     except sqlite3.ProgrammingError as e:
         if "cannot operate on a closed database" in str(e).lower():
             raise exc_type("operation on closed database")
+
+        raise
+
+    except sqlite3.DatabaseError as e:
+
+        # most sqlite3 exceptions are subclasses of DatabaseError
+        if type(e) is sqlite3.DatabaseError:  # pragma: no cover
+            # test_database_error_other should test both branches of this, but doesn't for some reason
+
+            # SQLITE_CORRUPT: either on connect(), or after
+            if "file is not a database" in str(e).lower():
+                raise exc_type(message) from e
+
         raise
 
 

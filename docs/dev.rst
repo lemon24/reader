@@ -342,6 +342,12 @@ Reserved names
 Requirements, thoughts about the naming scheme and prefixes unlikely to collide with user names: :issue:`186` (multiple comments).
 
 
+Wrapping underlying storage exceptions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Which exception to wrap, and which not: :issue:`21#issuecomment-365442439`.
+
+
 Web application
 ~~~~~~~~~~~~~~~
 
