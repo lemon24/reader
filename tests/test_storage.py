@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import sys
 import threading
 from datetime import datetime
 from unittest.mock import ANY
@@ -48,9 +49,6 @@ def test_db_errors(db_path, db_error_cls):
     assert 'whatever' in excinfo.value.message
 
 
-# TODO: move all the database_error tests to test_sqlite_utils.py::test_wrap_exceptions
-
-
 def test_database_error_open_invalid(db_path):
     with open(db_path, 'w') as f:
         f.write('not a database')
@@ -61,6 +59,10 @@ def test_database_error_open_invalid(db_path):
     assert isinstance(excinfo.value.__cause__, sqlite3.DatabaseError)
 
 
+@pytest.mark.skipif(
+    sys.platform not in ("linux", "darwin"),
+    reason="overwriting doesn't work on Windows",
+)
 def test_database_error_overwritten(db_path):
     storage = Storage(db_path)
 
@@ -80,19 +82,18 @@ def test_database_error_overwritten(db_path):
         storage.close()
 
 
-@pytest.mark.parametrize(
-    'exc', [sqlite3.DatabaseError('whatever'), sqlite3.ProgrammingError('whatever')]
-)
-def test_database_error_other(exc):
+@pytest.mark.parametrize('exc_type', [sqlite3.DatabaseError, sqlite3.ProgrammingError])
+def test_database_error_other(exc_type):
     # for some reason, this test doesn't cover both branches of
     # "if type(e) is sqlite3.DatabaseError:" in wrap_exceptions
+
+    exc = exc_type('whatever')
 
     class MyStorage(Storage):
         @staticmethod
         def setup_db(*args, **kwargs):
             raise exc
 
-    print(type(exc), type(exc) is sqlite3.DatabaseError)
     with pytest.raises(sqlite3.Error) as excinfo:
         MyStorage(':memory:')
     assert excinfo.value is exc
