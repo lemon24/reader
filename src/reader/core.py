@@ -168,7 +168,8 @@ def make_reader(
 
     Raises:
         StorageError
-        InvalidPluginError: If an invalid plugin name is passed to ``plugins``.
+        InvalidPluginError: An invalid plugin name was passed to ``plugins``.
+        ReaderError: An ambiguous exception ocurred while creating the reader.
 
     .. versionadded:: 1.6
         The ``feed_root`` keyword argument.

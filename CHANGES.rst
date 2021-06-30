@@ -58,6 +58,10 @@ Unreleased
   now defaults to ``None`` (don't open local feeds)
   instead of ``''`` (full filesystem access).
 
+* :func:`make_reader` may now raise any :exc:`ReaderError`,
+  not just :exc:`StorageError`.
+
+
 
 Version 1.19
 ------------
