@@ -60,10 +60,12 @@ File-system access
 
 *reader* supports *http(s)://* and local (*file:*) feeds.
 
-For security reasons, you might want to restrict file-system access
-to a single directory or prevent it entirely;
-you can do so by using the ``feed_root`` :func:`make_reader` argument::
+For security reasons, local feeds are disabled by default.
+You can allow full file-system access or restrict it to a single directory
+by using the ``feed_root`` :func:`make_reader` argument::
 
+    >>> # all local feed paths allowed
+    >>> reader = make_reader("db.sqlite", feed_root='')
     >>> # local feed paths are relative to /feeds
     >>> reader = make_reader("db.sqlite", feed_root='/feeds')
     >>> # ok, resolves to /feeds/feed.xml
@@ -72,8 +74,6 @@ you can do so by using the ``feed_root`` :func:`make_reader` argument::
     >>> reader.add_feed("file:also/feed.xml")
     >>> # error on update, resolves to /feed.xml, which is above /feeds
     >>> reader.add_feed("file:../feed.xml")
-    >>> # all local paths will fail to update
-    >>> reader = make_reader("db.sqlite", feed_root=None)
 
 Note that it is still possible to `add <Adding feeds_>`_ local feeds
 regardless of ``feed_root``;

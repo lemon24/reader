@@ -78,7 +78,7 @@ _PostEntryAddPluginType = Callable[['Reader', EntryData[datetime]], None]
 def make_reader(
     url: str,
     *,
-    feed_root: Optional[str] = '',
+    feed_root: Optional[str] = None,
     plugins: Iterable[Union[str, ReaderPluginType]] = _DEFAULT_PLUGINS,
     session_timeout: TimeoutType = SESSION_TIMEOUT,
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
@@ -137,9 +137,10 @@ def make_reader(
 
         feed_root (str or None):
             Directory where to look for local feeds.
-            One of ``None`` (don't open local feeds),
-            ``''`` (full filesystem access; default), or
-            ``'/path/to/feed/root'`` (an absolute path that feed paths are relative to).
+            One of ``None`` (don't open local feeds; default),
+            ``''`` (full filesystem access), or
+            ``'/path/to/feed/root'``
+            (an absolute path that feed paths are relative to).
 
         plugins (iterable(str or callable(Reader)) or None):
             An iterable of built-in plugin names or
@@ -172,11 +173,6 @@ def make_reader(
     .. versionadded:: 1.6
         The ``feed_root`` keyword argument.
 
-    .. versionchanged:: 2.0
-        The default ``feed_root`` behavior will change from
-        *full filesystem access* (``''``) to
-        *don't open local feeds* (``None``).
-
     .. versionadded:: 1.14
         The ``session_timeout`` keyword argument,
         with a default of (3.05, 60) seconds;
@@ -188,6 +184,10 @@ def make_reader(
 
     .. versionadded:: 1.17
         The ``reserved_name_scheme`` argument.
+
+    .. versionchanged:: 2.0
+        ``feed_root`` now defaults to ``None`` (don't open local feeds)
+        instead of ``''`` (full filesystem access).
 
     """
 

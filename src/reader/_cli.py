@@ -202,13 +202,23 @@ def pass_reader(fn):
     show_default=True,
 )
 @click.option(
+    '--feed-root',
+    type=click.Path(file_okay=False),
+    show_default=True,
+    help=(
+        "Directory local feeds are relative to. "
+        "'' (empty string) means full filesystem access. "
+        "If not provided, don't open local feeds."
+    ),
+)
+@click.option(
     '--debug-storage/--no-debug-storage',
     hidden=True,
     help="NOT TESTED. With -vv, log storage database calls.",
 )
 @click.version_option(reader.__version__, message='%(prog)s %(version)s')
 @click.pass_obj
-def cli(config, db, plugin, debug_storage):
+def cli(config, db, plugin, feed_root, debug_storage):
     # TODO: mention in docs that --db/--plugin/envvars ALWAYS override the config
     # (same for wsgi envvars)
     # NOTE: we can never use click defaults for --db/--plugin, because they would override the config always
@@ -226,6 +236,9 @@ def cli(config, db, plugin, debug_storage):
 
     if plugin:
         config.all['reader']['plugins'] = dict.fromkeys(plugin)
+
+    if feed_root is not None:
+        config['default']['reader']['feed_root'] = feed_root
 
     # until we make debug_storage a proper make_reader argument,
     # and we get rid of make_reader_with_plugins

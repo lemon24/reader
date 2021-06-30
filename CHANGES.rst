@@ -54,6 +54,10 @@ Unreleased
   :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
   are now keyword-only. (:issue:`183`)
 
+* The ``feed_root`` argument of :func:`make_reader`
+  now defaults to ``None`` (don't open local feeds)
+  instead of ``''`` (full filesystem access).
+
 
 Version 1.19
 ------------

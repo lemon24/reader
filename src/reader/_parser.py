@@ -75,6 +75,7 @@ class RetrieverType(Protocol):
         ...
 
 
+# TODO: use Collection instead of Iterable
 FeedAndEntries = Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]
 
 

@@ -1888,7 +1888,7 @@ def test_entries_filtering_error(reader, pre_stuff, call_method, kwargs):
 @pytest.mark.parametrize(
     'kwargs, feed_root',
     [
-        (dict(), ''),
+        (dict(), None),
         (dict(feed_root=None), None),
         (dict(feed_root=''), ''),
         (dict(feed_root='/path'), '/path'),
