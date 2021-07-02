@@ -61,6 +61,9 @@ Unreleased
 * :func:`make_reader` may now raise any :exc:`ReaderError`,
   not just :exc:`StorageError`.
 
+* :attr:`Entry.updated` may now be :const:`None`;
+  use :attr:`~Entry.updated_not_none` for the pre-2.0 behavior.
+
 
 
 Version 1.19

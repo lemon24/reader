@@ -179,7 +179,13 @@ class Entry(_namedtuple_compat):
     id: str
 
     #: The date the entry was last updated, according to the feed.
-    updated: datetime
+    #:
+    #: .. versionchanged:: 2.0
+    #:  May be None in some cases.
+    #:  In a future version, will be None if missing in the feed;
+    #:  use :attr:`updated_not_none` for the pre-2.0 behavior.
+    #:
+    updated: Optional[datetime]
 
     #: The title of the entry.
     title: Optional[str] = None
@@ -242,6 +248,19 @@ class Entry(_namedtuple_compat):
 
         """
         return self.feed_url, self.id
+
+    @property
+    def updated_not_none(self) -> datetime:
+        """Like :attr:`updated`, but guaranteed to be set (not None).
+
+        If the entry `updated` is missing in the feed,
+        defaults to when the entry was first added.
+
+        .. versionadded:: 2.0
+            Identical to the behavior of :attr:`updated` before 2.0.
+
+        """
+        return self.updated
 
 
 @dataclass(frozen=True)
