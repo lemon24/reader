@@ -9,7 +9,7 @@ Changelog
 Version 1.20
 ------------
 
-Unreleased
+Released 2021-07-12
 
 * Add :attr:`Reader.after_entry_update_hooks`,
   which allows running arbitrary actions for updated entries.
