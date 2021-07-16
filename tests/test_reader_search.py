@@ -1,9 +1,12 @@
 import threading
-from datetime import datetime
+from datetime import timezone
 
 import pytest
 from fakeparser import Parser
+from utils import naive_datetime
 from utils import rename_argument
+from utils import utc_datetime
+from utils import utc_datetime as datetime
 
 from reader import Content
 from reader import Enclosure

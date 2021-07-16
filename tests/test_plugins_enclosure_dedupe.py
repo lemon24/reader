@@ -1,6 +1,5 @@
-from datetime import datetime
-
 from fakeparser import Parser
+from utils import utc_datetime as datetime
 
 from reader import Enclosure
 

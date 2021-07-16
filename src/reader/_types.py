@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from datetime import timezone
 from types import MappingProxyType
 from typing import Generic
 from typing import Iterable
@@ -390,3 +391,14 @@ DEFAULT_RESERVED_NAME_SCHEME = MappingProxyType(
         'separator': '.',
     }
 )
+
+
+def fix_datetime_tzinfo(obj, *names, old=None, new=timezone.utc):
+    kwargs = {}
+    for name in names:
+        value = getattr(obj, name)
+        if value:
+            if old is not False:
+                assert value.tzinfo == old, value
+            kwargs[name] = value.replace(tzinfo=new)
+    return obj._replace(**kwargs)

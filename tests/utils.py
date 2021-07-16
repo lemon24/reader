@@ -2,6 +2,8 @@ import functools
 import importlib
 import inspect
 import os.path
+from datetime import datetime
+from datetime import timezone
 from urllib.parse import urlparse
 
 import pytest
@@ -71,3 +73,15 @@ def reload_module(monkeypatch):
         yield reloader
     finally:
         reloader.undo()
+
+
+# FIXME: explain what this is
+# https://github.com/lemon24/reader/issues/233
+
+
+def utc_datetime(*args, **kwargs):
+    return datetime(*args, tzinfo=timezone.utc, **kwargs)
+
+
+def naive_datetime(*args, **kwargs):
+    return datetime(*args, tzinfo=None, **kwargs)

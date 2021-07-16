@@ -32,6 +32,7 @@ from ._types import EntryUpdateIntent
 from ._types import FeedFilterOptions
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
+from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
 from ._types import ParsedFeed
 from ._utils import make_pool_map
@@ -476,12 +477,17 @@ class Reader:
             if not isinstance(limit, numbers.Integral) or limit < 1:
                 raise ValueError("limit should be a positive integer")
 
-        return self._storage.get_feeds(
+        feeds = self._storage.get_feeds(
             filter_options,
             sort,
             limit,
             _feed_argument(starting_after) if starting_after else None,
         )
+
+        for feed in feeds:
+            # FIXME: optimize
+            feed = fix_datetime_tzinfo(feed, 'updated', 'added', 'last_updated')
+            yield feed
 
     @overload
     def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
@@ -992,13 +998,22 @@ class Reader:
             raise ValueError("using starting_after with sort='random' not supported")
 
         now = self._now()
-        return self._storage.get_entries(
+        entries = self._storage.get_entries(
             now,
             filter_options,
             sort,
             limit,
             _entry_argument(starting_after) if starting_after else None,
         )
+
+        for entry in entries:
+            # FIXME: optimize
+            entry = fix_datetime_tzinfo(entry, 'updated', 'published', 'last_updated')
+            print(entry)
+            feed = entry.feed
+            feed = fix_datetime_tzinfo(feed, 'updated', 'added', 'last_updated')
+            entry = entry._replace(feed=feed)
+            yield entry
 
     @overload
     def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover
