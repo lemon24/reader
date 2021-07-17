@@ -172,8 +172,16 @@ class Entry(_namedtuple_compat):
         """The feed URL."""
         return self.feed.url
 
-    # TODO: .id and .updated will still be set to some default value if the entry doesn't have them; we should at least document this.
-    # I'm not sure its useful to expose the original values. If we do it, it would be minimally invasive to add them as new attributes (even if it means id/updated don't always reflect their value in the feed); the names should work with the schemes proposed in #153 and #159.
+    # TODO: .id will still be set to some default value if the entry doesn't have it; document this.
+
+    # NOTE: In #183 (2.0 compat breaking), we made .updated optional,
+    # to allow it to reflect the feed value.
+    #
+    # The code to do so hasn't been changed yet,
+    # so its value is actually the same as before.
+    #
+    # To change that, we need to store/add a `first_updated` attribute,
+    # and change `updated_not_none` to `updated or first_updated`.
 
     #: The entry id.
     id: str
@@ -260,6 +268,8 @@ class Entry(_namedtuple_compat):
             Identical to the behavior of :attr:`updated` before 2.0.
 
         """
+        # for mypy
+        assert self.updated is not None
         return self.updated
 
 
