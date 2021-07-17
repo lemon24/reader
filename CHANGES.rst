@@ -66,6 +66,7 @@ Released 2021-07-17
   of :class:`Feed` and :class:`Entry` objects are now timezone-aware,
   with the timezone set to :attr:`~datetime.timezone.utc`.
   Previously, they were naive datetimes representing UTC times.
+  (:issue:`233`)
 
 * The parameters of
   :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
