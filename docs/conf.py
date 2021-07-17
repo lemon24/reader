@@ -28,6 +28,7 @@ extensions = [
     'sphinx_click.ext',
     'sphinx_issues',
     'hoverxref.extension',
+    'sphinxcontrib.log_cabinet',
 ]
 
 intersphinx_mapping = {
