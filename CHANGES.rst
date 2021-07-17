@@ -50,6 +50,11 @@ Unreleased
   * :attr:`EntryError.url`
   * :attr:`UpdatedFeed.updated`
 
+* The :class:`~datetime.datetime` attributes
+  of :class:`Feed` and :class:`Entry` objects are now timezone-aware,
+  with the timezone set to :attr:`~datetime.timezone.utc`.
+  Previously, they were naive datetimes representing UTC times.
+
 * The parameters of
   :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
   are now keyword-only. (:issue:`183`)

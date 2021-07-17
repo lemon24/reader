@@ -67,8 +67,12 @@ class Feed(_namedtuple_compat):
 
     """Data type representing a feed.
 
-    All :class:`~datetime.datetime` attributes are timezone-naive,
-    and always represent UTC.
+    All :class:`~datetime.datetime` attributes are timezone-aware,
+    with the timezone set to :attr:`~datetime.timezone.utc`.
+
+    .. versionchanged:: 2.0
+        :class:`~datetime.datetime` attributes are now timezone-aware;
+        prior to 2.0, they were naive datetimes representing UTC times.
 
     """
 
@@ -160,8 +164,12 @@ class Entry(_namedtuple_compat):
 
     """Data type representing an entry.
 
-    All :class:`~datetime.datetime` attributes are timezone-naive,
-    and always represent UTC.
+    All :class:`~datetime.datetime` attributes are timezone-aware,
+    with the timezone set to :attr:`~datetime.timezone.utc`.
+
+    .. versionchanged:: 2.0
+        :class:`~datetime.datetime` attributes are now timezone-aware;
+        prior to 2.0, they were naive datetimes representing UTC times.
 
     """
 

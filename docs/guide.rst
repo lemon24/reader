@@ -117,7 +117,7 @@ You can update all the feeds by using the :meth:`~Reader.update_feeds` method::
 
     >>> reader.update_feeds()
     >>> reader.get_feed(feed)
-    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=datetime.datetime(2020, 2, 28, 9, 34, 2), title='Hello Internet', ...)
+    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=datetime.datetime(2020, 2, 28, 9, 34, 2, tzinfo=datetime.timezone.utc), title='Hello Internet', ...)
 
 
 To retrive feeds in parallel, use the ``workers`` flag::
@@ -201,13 +201,14 @@ with more information about a feed::
             day=28,
             hour=9,
             minute=34,
-            second=2
+            second=2,
+            tzinfo=datetime.timezone.utc
         ),
         title='Hello Internet',
         link='http://www.hellointernet.fm/',
         author='CGP Grey',
-        added=datetime.datetime(2020, 10, 12),
-        last_updated=datetime.datetime(2020, 10, 12)
+        added=datetime.datetime(2020, 10, 12, tzinfo=datetime.timezone.utc),
+        last_updated=datetime.datetime(2020, 10, 12, tzinfo=datetime.timezone.utc)
     )
 
 To get all the feeds, use the :meth:`~Reader.get_feeds` method::
@@ -219,8 +220,8 @@ To get all the feeds, use the :meth:`~Reader.get_feeds` method::
     ...         f"updated on {feed.updated or 'never'}",
     ...     )
     ...
-    Cortex by Relay FM, updated on 2020-09-14 12:15:00
-    Hello Internet by CGP Grey, updated on 2020-02-28 09:34:02
+    Cortex by Relay FM, updated on 2020-09-14 12:15:00+00:00
+    Hello Internet by CGP Grey, updated on 2020-02-28 09:34:02+00:00
 
 :meth:`~Reader.get_feeds` also allows
 filtering feeds by their `tags <Feed tags_>`_, if the last update succeeded,
