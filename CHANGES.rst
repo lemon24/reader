@@ -9,7 +9,7 @@ Changelog
 Version 2.0
 -----------
 
-Unreleased
+Released 2021-07-17
 
 
 .. attention::
