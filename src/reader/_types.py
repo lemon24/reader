@@ -393,12 +393,27 @@ DEFAULT_RESERVED_NAME_SCHEME = MappingProxyType(
 )
 
 
-def fix_datetime_tzinfo(obj, *names, old=None, new=timezone.utc):
+_T = TypeVar('_T', bound=_namedtuple_compat)
+
+
+def fix_datetime_tzinfo(
+    obj: _T,
+    *names: str,
+    old: Union[None, timezone, bool] = None,
+    new: Union[None, timezone] = timezone.utc,
+) -> _T:
+    """For specific optional datetime attributes of an object,
+    and set their tzinfo to `new`.
+
+    Build and return a new object, using the old ones _replace() method.
+
+    If `old` is not False, assert the old tzinfo is equal to it.
+
+    """
     kwargs = {}
     for name in names:
         value = getattr(obj, name)
         if value:
-            if old is not False:
-                assert value.tzinfo == old, value
+            assert old is False or value.tzinfo == old, value
             kwargs[name] = value.replace(tzinfo=new)
     return obj._replace(**kwargs)
