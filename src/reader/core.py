@@ -1009,7 +1009,6 @@ class Reader:
         for entry in entries:
             # FIXME: optimize
             entry = fix_datetime_tzinfo(entry, 'updated', 'published', 'last_updated')
-            print(entry)
             feed = entry.feed
             feed = fix_datetime_tzinfo(feed, 'updated', 'added', 'last_updated')
             entry = entry._replace(feed=feed)
