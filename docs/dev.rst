@@ -348,6 +348,12 @@ Wrapping underlying storage exceptions
 Which exception to wrap, and which not: :issue:`21#issuecomment-365442439`.
 
 
+Timezone handling
+~~~~~~~~~~~~~~~~~
+
+Aware vs. naive, and what's needed to go fully aware: :issue:`233#issuecomment-881618002`.
+
+
 Web application
 ~~~~~~~~~~~~~~~
 
