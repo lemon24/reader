@@ -63,10 +63,10 @@ class Parser:
         else:
             raise RuntimeError("unkown feed: {}".format(url))
 
-        feed = fix_datetime_tzinfo(feed, 'updated', old=self.tzinfo, new=None)
+        feed = fix_datetime_tzinfo(feed, 'updated', _old=self.tzinfo, _new=None)
 
         entries = [
-            fix_datetime_tzinfo(e, 'updated', 'published', old=self.tzinfo, new=None)
+            fix_datetime_tzinfo(e, 'updated', 'published', _old=self.tzinfo, _new=None)
             for e in self.entries[feed_number].values()
         ]
 

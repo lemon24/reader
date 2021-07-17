@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
 from types import MappingProxyType
+from typing import Any
 from typing import Generic
 from typing import Iterable
 from typing import Mapping
@@ -399,21 +400,23 @@ _T = TypeVar('_T', bound=_namedtuple_compat)
 def fix_datetime_tzinfo(
     obj: _T,
     *names: str,
-    old: Union[None, timezone, bool] = None,
-    new: Union[None, timezone] = timezone.utc,
+    _old: Union[None, timezone, bool] = None,
+    _new: Union[None, timezone] = timezone.utc,
+    **kwargs: Any,
 ) -> _T:
     """For specific optional datetime attributes of an object,
-    and set their tzinfo to `new`.
+    and set their tzinfo to `_new`.
 
     Build and return a new object, using the old ones _replace() method.
+    Pass any other kwargs to _replace().
 
-    If `old` is not False, assert the old tzinfo is equal to it.
+    If `_old` is not False, assert the old tzinfo is equal to it.
 
     """
-    kwargs = {}
     for name in names:
+        assert name not in kwargs, (name, list(kwargs))
         value = getattr(obj, name)
         if value:
-            assert old is False or value.tzinfo == old, value
-            kwargs[name] = value.replace(tzinfo=new)
+            assert _old is False or value.tzinfo == _old, value
+            kwargs[name] = value.replace(tzinfo=_new)
     return obj._replace(**kwargs)
