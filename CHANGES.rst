@@ -11,6 +11,12 @@ Version 2.0
 
 Unreleased
 
+
+.. attention::
+
+    This release contains backwards incompatible changes.
+
+
 * Remove old database migrations.
 
   If you are upgrading from *reader* 1.15 or newer, no action is required.
