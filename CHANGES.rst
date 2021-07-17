@@ -6,10 +6,74 @@ Changelog
   :noindex:
 
 
-Version 1.21
-------------
+Version 2.0
+-----------
 
 Unreleased
+
+
+.. attention::
+
+    This release contains backwards incompatible changes.
+
+
+* Remove old database migrations.
+
+  If you are upgrading from *reader* 1.15 or newer, no action is required.
+
+  .. _removed migrations 2.0:
+
+  .. attention::
+
+    If you are upgrading to *reader* 2.0 from a version **older than 1.15**,
+    you must open your database with *reader* 1.15 or newer once,
+    to run the removed migrations:
+
+    .. code-block:: sh
+
+        pip install 'reader>=1.15,<2' && \
+        cat << EOF | python - db.sqlite
+        import sys
+        from reader import make_reader
+        make_reader(sys.argv[1])
+        print("OK")
+        EOF
+
+* Remove code that issued deprecation warnings in versions 1.* (:issue:`183`):
+
+  * :meth:`Reader.remove_feed`
+  * :meth:`Reader.mark_as_read`
+  * :meth:`Reader.mark_as_unread`
+  * :meth:`Reader.mark_as_important`
+  * :meth:`Reader.mark_as_unimportant`
+  * :meth:`Reader.iter_feed_metadata`
+  * the ``get_feed_metadata(feed, key, default=no value, /)``
+    form of :meth:`Reader.get_feed_metadata`
+  * :meth:`Reader.set_feed_metadata`
+  * :meth:`Reader.delete_feed_metadata`
+  * the ``new_only`` parameter of
+    :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
+  * :attr:`EntryError.url`
+  * :attr:`UpdatedFeed.updated`
+
+* The :class:`~datetime.datetime` attributes
+  of :class:`Feed` and :class:`Entry` objects are now timezone-aware,
+  with the timezone set to :attr:`~datetime.timezone.utc`.
+  Previously, they were naive datetimes representing UTC times.
+
+* The parameters of
+  :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
+  are now keyword-only. (:issue:`183`)
+
+* The ``feed_root`` argument of :func:`make_reader`
+  now defaults to ``None`` (don't open local feeds)
+  instead of ``''`` (full filesystem access).
+
+* :func:`make_reader` may now raise any :exc:`ReaderError`,
+  not just :exc:`StorageError`.
+
+* :attr:`Entry.updated` may now be :const:`None`;
+  use :attr:`~Entry.updated_not_none` for the pre-2.0 behavior.
 
 
 Version 1.20
@@ -47,7 +111,7 @@ Released 2021-06-16
 * Rename :attr:`UpdatedFeed.updated` to :attr:`~UpdatedFeed.modified`;
   for backwards compatibility,
   the old attribute will be available as a property **until version 2.0**,
-  when it **will be removed.** (:issue:`241`).
+  when it **will be removed.**. (:issue:`241`)
 
   .. warning::
 

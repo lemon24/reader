@@ -60,10 +60,12 @@ File-system access
 
 *reader* supports *http(s)://* and local (*file:*) feeds.
 
-For security reasons, you might want to restrict file-system access
-to a single directory or prevent it entirely;
-you can do so by using the ``feed_root`` :func:`make_reader` argument::
+For security reasons, local feeds are disabled by default.
+You can allow full file-system access or restrict it to a single directory
+by using the ``feed_root`` :func:`make_reader` argument::
 
+    >>> # all local feed paths allowed
+    >>> reader = make_reader("db.sqlite", feed_root='')
     >>> # local feed paths are relative to /feeds
     >>> reader = make_reader("db.sqlite", feed_root='/feeds')
     >>> # ok, resolves to /feeds/feed.xml
@@ -72,8 +74,6 @@ you can do so by using the ``feed_root`` :func:`make_reader` argument::
     >>> reader.add_feed("file:also/feed.xml")
     >>> # error on update, resolves to /feed.xml, which is above /feeds
     >>> reader.add_feed("file:../feed.xml")
-    >>> # all local paths will fail to update
-    >>> reader = make_reader("db.sqlite", feed_root=None)
 
 Note that it is still possible to `add <Adding feeds_>`_ local feeds
 regardless of ``feed_root``;
@@ -117,7 +117,7 @@ You can update all the feeds by using the :meth:`~Reader.update_feeds` method::
 
     >>> reader.update_feeds()
     >>> reader.get_feed(feed)
-    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=datetime.datetime(2020, 2, 28, 9, 34, 2), title='Hello Internet', ...)
+    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=datetime.datetime(2020, 2, 28, 9, 34, 2, tzinfo=datetime.timezone.utc), title='Hello Internet', ...)
 
 
 To retrive feeds in parallel, use the ``workers`` flag::
@@ -201,13 +201,14 @@ with more information about a feed::
             day=28,
             hour=9,
             minute=34,
-            second=2
+            second=2,
+            tzinfo=datetime.timezone.utc
         ),
         title='Hello Internet',
         link='http://www.hellointernet.fm/',
         author='CGP Grey',
-        added=datetime.datetime(2020, 10, 12),
-        last_updated=datetime.datetime(2020, 10, 12)
+        added=datetime.datetime(2020, 10, 12, tzinfo=datetime.timezone.utc),
+        last_updated=datetime.datetime(2020, 10, 12, tzinfo=datetime.timezone.utc)
     )
 
 To get all the feeds, use the :meth:`~Reader.get_feeds` method::
@@ -219,8 +220,8 @@ To get all the feeds, use the :meth:`~Reader.get_feeds` method::
     ...         f"updated on {feed.updated or 'never'}",
     ...     )
     ...
-    Cortex by Relay FM, updated on 2020-09-14 12:15:00
-    Hello Internet by CGP Grey, updated on 2020-02-28 09:34:02
+    Cortex by Relay FM, updated on 2020-09-14 12:15:00+00:00
+    Hello Internet by CGP Grey, updated on 2020-02-28 09:34:02+00:00
 
 :meth:`~Reader.get_feeds` also allows
 filtering feeds by their `tags <Feed tags_>`_, if the last update succeeded,

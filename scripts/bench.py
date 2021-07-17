@@ -84,6 +84,7 @@ NUM_FEEDS = 8
 def make_reader_with_entries(path, num_entries, num_feeds=NUM_FEEDS, text=False):
     reader = make_reader(path)
     reader._parser = parser = Parser()
+    parser.tzinfo = None
 
     for i in range(num_feeds):
         feed = parser.feed(i, datetime(2010, 1, 1))

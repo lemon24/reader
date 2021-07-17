@@ -219,7 +219,7 @@ class _DBFunction(Protocol):  # pragma: no cover
 
 
 @dataclass
-class NewMigration:
+class HeavyMigration:
 
     # mypy will complain if we use Callable[[sqlite3.Connection], None].
     # TODO: get rid of _DBFunction when https://github.com/python/mypy/issues/5485 is resolved?
@@ -335,51 +335,6 @@ def table_count(db: sqlite3.Connection) -> int:
     (value,) = db.execute("select count(*) from sqlite_master;").fetchone()
     assert isinstance(value, int), value  # for mypy
     return value
-
-
-class OldMigration(NewMigration):
-
-    # TODO: delete in 2.0
-
-    @staticmethod
-    def get_version(db: sqlite3.Connection) -> int:
-        try:
-            # TODO: this assignment should fail with DBError
-            (version,) = db.execute("SELECT MAX(version) FROM version;").fetchone()
-        except sqlite3.OperationalError as e:
-            if "no such table" in str(e).lower():
-                return 0
-            raise SchemaVersionError(f"cannot get current version: {e}") from e
-        assert isinstance(version, int), version
-        return version
-
-    @classmethod
-    def set_version(
-        cls, db: sqlite3.Connection, version: int
-    ) -> None:  # pragma: no cover
-        raise NotImplementedError
-
-    @staticmethod
-    def del_version(db: sqlite3.Connection) -> None:
-        db.execute("DROP TABLE IF EXISTS version;")
-
-
-class HeavyMigration(NewMigration):
-
-    """Transition wrapper to assist with the switch from from storing
-    the schema version in a "version" table to using "PRAGMA user_version".
-
-    TODO: delete in 2.0, and rename NewMigration to HeavyMigration
-
-    """
-
-    def migrate(self, db: sqlite3.Connection) -> None:
-        old_version = OldMigration.get_version(db)
-        if old_version:
-            with ddl_transaction(db):
-                OldMigration.del_version(db)
-                super().set_version(db, old_version)
-        super().migrate(db)
 
 
 def require_version(db: sqlite3.Connection, version_info: Tuple[int, ...]) -> None:

@@ -16,6 +16,7 @@ from reader import InvalidSearchQueryError
 from reader import MetadataNotFoundError
 from reader import StorageError
 from reader._sqlite_utils import DBError
+from reader._sqlite_utils import HeavyMigration
 from reader._sqlite_utils import require_version
 from reader._storage import Storage
 from reader._types import EntryData
@@ -664,3 +665,23 @@ def test_minimum_sqlite_version(db_path, monkeypatch):
         Storage(db_path)
 
     mock.assert_called_with(ANY, (3, 15))
+
+
+MIGRATION_MINIMUM_VERSION = 29
+
+
+def test_migration_minimum_version(db_path, request):
+    """Sanity check: older versions *do* cause an error."""
+
+    storage = Storage(db_path)
+    request.addfinalizer(storage.close)
+
+    assert HeavyMigration.get_version(storage.db) >= MIGRATION_MINIMUM_VERSION
+
+    HeavyMigration.set_version(storage.db, MIGRATION_MINIMUM_VERSION - 1)
+
+    with pytest.raises(StorageError) as excinfo:
+        Storage(db_path)
+
+    assert 'no migration' in str(excinfo.value)
+    assert '://reader.readthedocs.io/en/latest/changelog.html' in str(excinfo.value)

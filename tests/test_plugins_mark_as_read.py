@@ -1,9 +1,9 @@
 import json
 import os
-from datetime import datetime
 
 import pytest
 from fakeparser import Parser
+from utils import utc_datetime as datetime
 
 
 def test_regex_mark_as_read(make_reader):

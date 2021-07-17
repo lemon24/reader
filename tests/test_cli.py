@@ -51,70 +51,73 @@ def test_cli(db_path, data_dir):
 
     runner = CliRunner()
 
-    result = runner.invoke(cli, ['--db', db_path, 'list', 'feeds'])
+    def invoke(*args):
+        return runner.invoke(cli, ('--db', db_path, '--feed-root', '') + args)
+
+    result = invoke('list', 'feeds')
     assert result.exit_code == 0
     assert result.output == ''
 
-    result = runner.invoke(cli, ['--db', db_path, 'add', feed_path])
+    result = invoke('add', feed_path)
     assert result.exit_code == 0
     assert result.output == ''
 
-    result = runner.invoke(cli, ['--db', db_path, 'list', 'feeds'])
+    result = invoke('list', 'feeds')
     assert result.exit_code == 0
     assert result.output.splitlines() == [feed_path]
 
-    result = runner.invoke(cli, ['--db', db_path, 'list', 'entries'])
+    result = invoke('list', 'entries')
     assert result.exit_code == 0
     assert result.output == ''
 
-    result = runner.invoke(cli, ['--db', db_path, 'update'])
+    result = invoke('update')
     assert result.exit_code == 0
     assert "1 ok, 0 error, 0 not modified; entries: 2 new, 0 modified" in result.output
 
-    result = runner.invoke(cli, ['--db', db_path, 'list', 'feeds'])
+    result = invoke('list', 'feeds')
     assert result.exit_code == 0
     assert result.output.splitlines() == [feed_path]
 
-    result = runner.invoke(cli, ['--db', db_path, 'list', 'entries'])
+    result = invoke('list', 'entries')
     assert result.exit_code == 0
     assert [l.split() for l in result.output.splitlines()] == [
         [feed_path, e.link or e.id]
         for e in sorted(expected['entries'], key=lambda e: e.updated, reverse=True)
     ]
 
-    result = runner.invoke(cli, ['--db', db_path, 'search', 'status'])
+    result = invoke('search', 'status')
     assert result.exit_code == 0
     assert 'search: disabled' in result.output
 
-    result = runner.invoke(cli, ['--db', db_path, 'search', 'update'])
+    result = invoke('search', 'update')
     assert result.exit_code != 0
 
-    result = runner.invoke(cli, ['--db', db_path, 'search', 'entries', 'amok'])
+    result = invoke('search', 'entries', 'amok')
     assert result.exit_code != 0
 
-    result = runner.invoke(cli, ['--db', db_path, 'search', 'enable'])
+    result = invoke('search', 'enable')
     assert result.exit_code == 0
     assert result.output == ''
 
-    result = runner.invoke(cli, ['--db', db_path, 'search', 'status'])
+    result = invoke('search', 'status')
     assert result.exit_code == 0
     assert 'search: enabled' in result.output
 
-    result = runner.invoke(cli, ['--db', db_path, 'search', 'entries', 'amok'])
+    result = invoke('search', 'entries', 'amok')
     assert result.exit_code == 0
     assert result.output == ''
 
-    result = runner.invoke(cli, ['--db', db_path, 'search', 'update'])
+    result = invoke('search', 'update')
     assert result.exit_code == 0
     assert result.output == ''
 
-    result = runner.invoke(cli, ['--db', db_path, 'search', 'entries', 'amok'])
+    result = invoke('search', 'entries', 'amok')
     assert result.exit_code == 0
     assert {tuple(l.split()) for l in result.output.splitlines()} == {
         (feed_path, e.link or e.id) for e in expected['entries']
     }
 
-    result = runner.invoke(cli, ['--db', db_path, 'search', 'entries', 'again'])
+    result = invoke('search', 'entries', 'again')
     assert result.exit_code == 0
     assert {tuple(l.split()) for l in result.output.splitlines()} == {
         (feed_path, e.link or e.id)
@@ -122,15 +125,15 @@ def test_cli(db_path, data_dir):
         if 'again' in e.title.lower()
     }
 
-    result = runner.invoke(cli, ['--db', db_path, 'search', 'entries', 'nope'])
+    result = invoke('search', 'entries', 'nope')
     assert result.exit_code == 0
     assert {tuple(l.split()) for l in result.output.splitlines()} == set()
 
-    result = runner.invoke(cli, ['--db', db_path, 'search', 'disable'])
+    result = invoke('search', 'disable')
     assert result.exit_code == 0
     assert result.output == ''
 
-    result = runner.invoke(cli, ['--db', db_path, 'search', 'status'])
+    result = invoke('search', 'status')
     assert result.exit_code == 0
     assert 'search: disabled' in result.output
 

@@ -1,7 +1,6 @@
-from datetime import datetime
-
 import pytest
 from fakeparser import Parser
+from utils import utc_datetime as datetime
 
 from reader import Content
 from reader import Entry

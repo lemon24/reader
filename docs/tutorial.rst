@@ -81,7 +81,7 @@ The output should be similar to this:
 
 .. code-block:: text
 
-    updated Hello Internet (last changed at 2020-02-28 09:34:02)
+    updated Hello Internet (last changed at 2020-02-28 09:34:02+00:00)
 
 Comment out the ``add_and_update_feed()`` call for now.
 If you re-run the script, the output should be the same,
@@ -275,7 +275,7 @@ The script output should now look like:
 
 .. code-block:: text
 
-    updated Hello Internet (last changed at 2020-02-28 09:34:02)
+    updated Hello Internet (last changed at 2020-02-28 09:34:02+00:00)
 
     Hello Internet - H.I. #136: Dog Bingo
       * 136FinalFinal.mp3

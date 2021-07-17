@@ -1,9 +1,11 @@
 import threading
 from collections import OrderedDict
+from datetime import timezone
 
 from reader import ParseError
 from reader._types import EntryData
 from reader._types import FeedData
+from reader._types import fix_datetime_tzinfo
 from reader._types import ParsedFeed
 from reader.types import _entry_argument
 
@@ -31,6 +33,8 @@ def _make_entry(feed_number, number, updated, **kwargs):
 
 
 class Parser:
+    tzinfo = timezone.utc
+
     def __init__(self, feeds=None, entries=None):
         self.feeds = feeds or {}
         self.entries = entries or {}
@@ -58,9 +62,17 @@ class Parser:
                 break
         else:
             raise RuntimeError("unkown feed: {}".format(url))
+
+        feed = fix_datetime_tzinfo(feed, 'updated', _old=self.tzinfo, _new=None)
+
+        entries = [
+            fix_datetime_tzinfo(e, 'updated', 'published', _old=self.tzinfo, _new=None)
+            for e in self.entries[feed_number].values()
+        ]
+
         return ParsedFeed(
             feed,
-            self.entries[feed_number].values(),
+            entries,
             self.http_etag,
             self.http_last_modified,
         )

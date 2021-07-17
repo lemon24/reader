@@ -198,7 +198,8 @@ def deprecated_wrapper(
 
     old_func.__name__ = old_name
     old_func.__doc__ = dedent(
-        f"""Deprecated alias for :meth:`{func.__name__}`.
+        f"""\
+        Deprecated alias for :meth:`{func.__name__}`.
 
         .. deprecated:: {deprecated_in}
             This method will be removed in *reader* {removed_in}.

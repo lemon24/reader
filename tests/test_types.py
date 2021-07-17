@@ -1,5 +1,6 @@
 import string
 from dataclasses import dataclass
+from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
@@ -216,3 +217,10 @@ def test_exception_info():
     assert ei.value_str == 'message'
     assert ei.traceback_str.startswith('Traceback')
     assert ei.traceback_str.rstrip().endswith('ValueError: message')
+
+
+def test_entry_updated_not_none():
+    entry = Entry('id', datetime(2021, 12, 21))
+
+    # will be entry.updated or entry.first_updated at some point
+    assert entry.updated_not_none == entry.updated

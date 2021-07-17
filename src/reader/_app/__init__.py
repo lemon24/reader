@@ -3,6 +3,8 @@ import itertools
 import json
 import time
 from dataclasses import dataclass
+from datetime import datetime
+from datetime import timezone
 
 import flask.signals
 import humanize
@@ -35,7 +37,14 @@ from reader._plugins import Loader
 
 blueprint = Blueprint('reader', __name__)
 
-blueprint.app_template_filter('humanize_naturaltime')(humanize.naturaltime)
+
+@blueprint.app_template_filter()
+def humanize_naturaltime(dt):
+    when = None
+    if dt.tzinfo:
+        when = datetime.utcnow().replace(tzinfo=timezone.utc)
+    return humanize.naturaltime(dt, when=when)
+
 
 # if any plugins need signals, they need to install blinker
 signals = flask.signals.Namespace()

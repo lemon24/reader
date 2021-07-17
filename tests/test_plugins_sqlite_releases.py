@@ -1,6 +1,5 @@
-from datetime import datetime
-
 import pytest
+from utils import utc_datetime as datetime
 
 from reader._plugins.sqlite_releases import FULL_URL
 from reader._plugins.sqlite_releases import init

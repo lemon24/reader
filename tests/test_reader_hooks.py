@@ -7,6 +7,8 @@ from reader import EntryUpdateStatus
 
 def test_post_entry_update_hooks(reader):
     parser = Parser()
+    parser.tzinfo = False
+
     reader._parser = parser
 
     plugin_calls = []

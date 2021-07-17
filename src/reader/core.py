@@ -33,9 +33,9 @@ from ._types import EntryUpdateIntent
 from ._types import FeedFilterOptions
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
+from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
 from ._types import ParsedFeed
-from ._utils import deprecated_wrapper
 from ._utils import make_pool_map
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
@@ -83,7 +83,7 @@ _PostFeedUpdatePluginType = Callable[['Reader', str], None]
 def make_reader(
     url: str,
     *,
-    feed_root: Optional[str] = '',
+    feed_root: Optional[str] = None,
     plugins: Iterable[Union[str, ReaderPluginType]] = _DEFAULT_PLUGINS,
     session_timeout: TimeoutType = SESSION_TIMEOUT,
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
@@ -142,9 +142,10 @@ def make_reader(
 
         feed_root (str or None):
             Directory where to look for local feeds.
-            One of ``None`` (don't open local feeds),
-            ``''`` (full filesystem access; default), or
-            ``'/path/to/feed/root'`` (an absolute path that feed paths are relative to).
+            One of ``None`` (don't open local feeds; default),
+            ``''`` (full filesystem access), or
+            ``'/path/to/feed/root'``
+            (an absolute path that feed paths are relative to).
 
         plugins (iterable(str or callable(Reader)) or None):
             An iterable of built-in plugin names or
@@ -172,15 +173,11 @@ def make_reader(
 
     Raises:
         StorageError
-        InvalidPluginError: If an invalid plugin name is passed to ``plugins``.
+        InvalidPluginError: An invalid plugin name was passed to ``plugins``.
+        ReaderError: An ambiguous exception ocurred while creating the reader.
 
     .. versionadded:: 1.6
         The ``feed_root`` keyword argument.
-
-    .. versionchanged:: 2.0
-        The default ``feed_root`` behavior will change from
-        *full filesystem access* (``''``) to
-        *don't open local feeds* (``None``).
 
     .. versionadded:: 1.14
         The ``session_timeout`` keyword argument,
@@ -193,6 +190,10 @@ def make_reader(
 
     .. versionadded:: 1.17
         The ``reserved_name_scheme`` argument.
+
+    .. versionchanged:: 2.0
+        ``feed_root`` now defaults to ``None`` (don't open local feeds)
+        instead of ``''`` (full filesystem access).
 
     """
 
@@ -369,8 +370,6 @@ class Reader:
         url = _feed_argument(feed)
         self._storage.delete_feed(url)
 
-    remove_feed = deprecated_wrapper('remove_feed', delete_feed, '1.18', '2.0')
-
     def change_feed_url(self, old: FeedInput, new: FeedInput) -> None:
         """Change the URL of a feed.
 
@@ -505,12 +504,15 @@ class Reader:
             if not isinstance(limit, numbers.Integral) or limit < 1:
                 raise ValueError("limit should be a positive integer")
 
-        return self._storage.get_feeds(
+        rv = self._storage.get_feeds(
             filter_options,
             sort,
             limit,
             _feed_argument(starting_after) if starting_after else None,
         )
+
+        for rv_feed in rv:
+            yield fix_datetime_tzinfo(rv_feed, 'updated', 'added', 'last_updated')
 
     @overload
     def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
@@ -635,10 +637,9 @@ class Reader:
 
     def update_feeds(
         self,
-        new_only: Union[bool, MissingType] = MISSING,
-        workers: int = 1,
         *,
-        new: Union[Optional[bool], MissingType] = MISSING,
+        new: Optional[bool] = None,
+        workers: int = 1,
     ) -> None:
         """Update all the feeds that have updates enabled.
 
@@ -647,17 +648,10 @@ class Reader:
         Roughly equivalent to ``for _ in reader.update_feed_iter(...): pass``.
 
         Args:
-            new_only (bool):
-                Only update feeds that have never been updated.
-                Defaults to False.
-
-                .. deprecated:: 1.19
-                    Use ``new`` instead.
-
-            workers (int): Number of threads to use when getting the feeds.
             new (bool or None):
                 Only update feeds that have never been updated
                 / have been updated before. Defaults to None.
+            workers (int): Number of threads to use when getting the feeds.
 
         Raises:
             StorageError
@@ -677,13 +671,14 @@ class Reader:
             Previously, entries would be updated only if the
             entry :attr:`~Entry.updated` was *newer* than the stored one.
 
-        .. deprecated:: 1.19
-            The ``new_only`` argument
-            (will be removed in *reader* 2.0);
-            use ``new`` instead.
+        .. versionchanged:: 2.0
+            Removed the ``new_only`` parameter.
+
+        .. versionchanged:: 2.0
+            All parameters are keyword-only.
 
         """
-        for url, value in self.update_feeds_iter(new_only, workers, new=new):
+        for url, value in self.update_feeds_iter(new=new, workers=workers):
             if isinstance(value, ParseError):
                 log.exception(
                     "update feed %r: error while getting/parsing feed, "
@@ -698,25 +693,18 @@ class Reader:
 
     def update_feeds_iter(
         self,
-        new_only: Union[bool, MissingType] = MISSING,
-        workers: int = 1,
         *,
-        new: Union[Optional[bool], MissingType] = MISSING,
+        new: Optional[bool] = None,
+        workers: int = 1,
     ) -> Iterable[UpdateResult]:
         """Update all the feeds that have updates enabled.
 
         Args:
-            new_only (bool):
-                Only update feeds that have never been updated.
-                Defaults to False.
-
-                .. deprecated:: 1.19
-                    Use ``new`` instead.
-
-            workers (int): Number of threads to use when getting the feeds.
             new (bool or None):
                 Only update feeds that have never been updated
                 / have been updated before. Defaults to None.
+            workers (int): Number of threads to use when getting the feeds.
+
 
         Yields:
             :class:`UpdateResult`:
@@ -740,34 +728,20 @@ class Reader:
             Update entries whenever their content changes.
             See :meth:`~Reader.update_feeds` for details.
 
-        .. deprecated:: 1.19
-            The ``new_only`` argument
-            (will be removed in *reader* 2.0);
-            use ``new`` instead.
+        .. versionchanged:: 2.0
+            Removed the ``new_only`` parameter.
+
+        .. versionchanged:: 2.0
+            All parameters are keyword-only.
 
         """
         if workers < 1:
             raise ValueError("workers must be a positive integer")
 
-        if new is MISSING and new_only is MISSING:
-            new_final = None
-        elif new is MISSING and new_only is not MISSING:
-            new_final = True if new_only else None
-            warnings.warn(
-                "new_only is deprecated and will be removed in reader 2.0. "
-                "Use new instead.",
-                DeprecationWarning,
-            )
-        elif new is not MISSING and new_only is MISSING:
-            assert not isinstance(new, MissingType)  # mypy pleasing
-            new_final = new
-        else:
-            raise TypeError("new and new_only are mutually exclusive")
-
         make_map = nullcontext(builtins.map) if workers == 1 else make_pool_map(workers)
 
         with make_map as map:
-            results = self._update_feeds(new=new_final, map=map)
+            results = self._update_feeds(new=new, map=map)
 
             for url, value in results:
                 if isinstance(value, FeedNotFoundError):
@@ -1049,13 +1023,24 @@ class Reader:
             raise ValueError("using starting_after with sort='random' not supported")
 
         now = self._now()
-        return self._storage.get_entries(
+        rv = self._storage.get_entries(
             now,
             filter_options,
             sort,
             limit,
             _entry_argument(starting_after) if starting_after else None,
         )
+
+        for rv_entry in rv:
+            yield fix_datetime_tzinfo(
+                rv_entry,
+                'updated',
+                'published',
+                'last_updated',
+                feed=fix_datetime_tzinfo(
+                    rv_entry.feed, 'updated', 'added', 'last_updated'
+                ),
+            )
 
     @overload
     def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover
@@ -1201,21 +1186,9 @@ class Reader:
         feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_important_unimportant(feed_url, entry_id, False)
 
-    mark_as_read = deprecated_wrapper('mark_as_read', mark_entry_as_read, '1.18', '2.0')
-    mark_as_unread = deprecated_wrapper(
-        'mark_as_unread', mark_entry_as_unread, '1.18', '2.0'
-    )
-    mark_as_important = deprecated_wrapper(
-        'mark_as_important', mark_entry_as_important, '1.18', '2.0'
-    )
-    mark_as_unimportant = deprecated_wrapper(
-        'mark_as_unimportant', mark_entry_as_unimportant, '1.18', '2.0'
-    )
-
     def get_feed_metadata(
         self,
         feed: FeedInput,
-        *args: Any,
         key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
         """Get all or some of the metadata for a feed as ``(key, value)`` pairs.
@@ -1232,34 +1205,15 @@ class Reader:
             StorageError
 
         .. versionchanged:: 1.18
+            :meth:`get_feed_metadata` was renamed to :meth:`get_feed_metadata_item`,
+            :meth:`iter_feed_metadata` was renamed to :meth:`get_feed_metadata`.
 
-            :meth:`iter_feed_metadata` was renamed to :meth:`get_feed_metadata`,
-            and :meth:`get_feed_metadata` was renamed to :meth:`get_feed_metadata_item`.
-
-            To preserve backwards compatibility,
-            the ``get_feed_metadata(feed, key[, default]) -> value``
-            form (positional arguments only)
-            will continue to work as an alias for
-            ``get_feed_metadata_item(feed, key[, default])``
-            until the last 1.\\* *reader* version,
-            after which it will result in a :exc:`TypeError`.
+        .. versionchanged:: 2.0
+            The ``get_feed_metadata(feed, key, default=no value, /)``
+            (positional arguments only)
+            :meth:`get_feed_metadata_item` alias was removed.
 
         """
-
-        if args:
-            # get_feed_metadata(feed, key[, default]) -> value
-            if len(args) > 2:
-                raise TypeError(
-                    f"get_feed_metadata() takes 1 positional arguments, but {len(args) + 1} were given"
-                )
-            warnings.warn(
-                "The get_feed_metadata(feed, key[, default]) -> value "
-                "version of get_feed_metadata() is deprecated "
-                "and will be removed in reader 2.0. "
-                "Use get_feed_metadata_item() instead.",
-                DeprecationWarning,
-            )
-            return self.get_feed_metadata_item(feed, *args)  # type: ignore
 
         # get_feed_metadata(feed, *, key=None) -> (key, value), ...
         feed_url = _feed_argument(feed)
@@ -1347,16 +1301,6 @@ class Reader:
         """
         feed_url = _feed_argument(feed)
         self._storage.delete_metadata((feed_url,), key)
-
-    iter_feed_metadata = deprecated_wrapper(
-        'iter_feed_metadata', get_feed_metadata, '1.18', '2.0'
-    )
-    set_feed_metadata = deprecated_wrapper(
-        'set_feed_metadata', set_feed_metadata_item, '1.18', '2.0'
-    )
-    delete_feed_metadata = deprecated_wrapper(
-        'delete_feed_metadata', delete_feed_metadata_item, '1.18', '2.0'
-    )
 
     def enable_search(self) -> None:
         """Enable full-text search.

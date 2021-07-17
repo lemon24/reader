@@ -1,4 +1,3 @@
-import warnings
 from typing import Any
 from typing import Tuple
 
@@ -122,27 +121,12 @@ class EntryError(ReaderError):
 
     @property
     def object_id(self) -> Tuple[str, str]:
-        """Alias for (:attr:`~EntryError.url`, :attr:`~EntryError.id`).
+        """Alias for (:attr:`~EntryError.feed_url`, :attr:`~EntryError.id`).
 
         .. versionadded:: 1.12
 
         """
         return self.feed_url, self.id
-
-    @property
-    def url(self) -> str:
-        """Deprecated alias for :attr:`EntryError.feed_url`.
-
-        .. deprecated: 1.18
-
-        """
-        warnings.warn(
-            "EntryError.url is deprecated "
-            "and will be removed in reader 2.0. "
-            "Use EntryError.feed_url instead.",
-            DeprecationWarning,
-        )
-        return self.feed_url
 
 
 class EntryNotFoundError(EntryError):
@@ -239,4 +223,8 @@ class PluginError(ReaderError):
 
 
 class InvalidPluginError(PluginError, ValueError):
-    """An invalid plugin was provided."""
+    """An invalid plugin was provided.
+
+    .. versionadded:: 1.16
+
+    """

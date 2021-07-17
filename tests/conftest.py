@@ -60,7 +60,7 @@ def make_reader(request):
 
 @pytest.fixture
 def reader():
-    with closing(original_make_reader(':memory:')) as reader:
+    with closing(original_make_reader(':memory:', feed_root='')) as reader:
         yield reader
 
 

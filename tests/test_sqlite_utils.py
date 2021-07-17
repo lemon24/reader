@@ -1,5 +1,6 @@
 import sqlite3
 import sys
+from dataclasses import dataclass
 from functools import wraps
 
 import pytest
@@ -10,8 +11,6 @@ from reader._sqlite_utils import ddl_transaction
 from reader._sqlite_utils import HeavyMigration
 from reader._sqlite_utils import IdError
 from reader._sqlite_utils import IntegrityError
-from reader._sqlite_utils import NewMigration
-from reader._sqlite_utils import OldMigration
 from reader._sqlite_utils import require_compile_options
 from reader._sqlite_utils import require_version
 from reader._sqlite_utils import RequirementError
@@ -151,15 +150,14 @@ def update_from_1_to_2_error(db):
     raise WeirdError('update')
 
 
-@pytest.fixture(params=[HeavyMigration, NewMigration])
-def migration_cls_no_id(request):
-    # TODO: delete in 2.0; needed for the migration from OldMigration to NewMigration
-    return request.param
+@dataclass
+class NewDefaultIdMigration(HeavyMigration):
+    id: int = 1234
 
 
-@pytest.fixture(params=[0, 1234])
-def migration_cls(request, migration_cls_no_id):
-    return lambda *a, **kw: migration_cls_no_id(*a, id=request.param, **kw)
+@pytest.fixture(params=[False, True])
+def migration_cls(request):
+    return HeavyMigration if not request.param else NewDefaultIdMigration
 
 
 def test_migration_create(migration_cls):
@@ -278,41 +276,6 @@ def test_migration_version_valuerror(migration_cls, version):
         migration.migrate(db)
 
 
-def test_old_migration_invalid_version_table():
-    # TODO: remove in 2.0
-    db = sqlite3.connect(':memory:')
-    with db:
-        db.execute("CREATE TABLE version (not_version);")
-    migration = OldMigration(create_db_2, 2, {})
-    with pytest.raises(SchemaVersionError) as excinfo:
-        migration.migrate(db)
-
-
-def test_migration_version_migration():
-    """That is, the migration of the migration system from storing
-    the schema version in a "version (version INTEGER NOT NULL)" table
-    to using "PRAGMA user_version".
-    """
-    # TODO: remove in 2.0
-    db = sqlite3.connect(':memory:')
-    with db:
-        # emulate a database managed by OldMigration
-        db.execute("CREATE TABLE version (version INTEGER NOT NULL);")
-        db.execute("INSERT INTO version VALUES (1);")
-        create_db_1(db)
-    migration = HeavyMigration(create_db_1, 2, {1: update_from_1_to_2})
-    migration.migrate(db)
-
-    with pytest.raises(sqlite3.OperationalError) as excinfo:
-        db.execute("SELECT * FROM version;")
-    assert 'no such table' in str(excinfo.value)
-
-    assert list(db.execute("PRAGMA user_version;")) == [(2,)]
-
-    columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
-    assert columns == ['one', 'two']
-
-
 def test_nonempty(migration_cls):
     db = sqlite3.connect(':memory:')
     db.execute("CREATE TABLE unexpected (one INTEGER);")
@@ -321,7 +284,6 @@ def test_nonempty(migration_cls):
         migration.migrate(db)
 
 
-@rename_argument('migration_cls', 'migration_cls_no_id')
 def test_invalid_id(migration_cls):
     db = sqlite3.connect(':memory:')
     db.execute("PRAGMA application_id = 2;")
@@ -330,7 +292,6 @@ def test_invalid_id(migration_cls):
         migration.migrate(db)
 
 
-@rename_argument('migration_cls', 'migration_cls_no_id')
 def test_missing_id_with_version(migration_cls):
     db = sqlite3.connect(':memory:')
     migration_cls.set_version(db, 2)
@@ -339,7 +300,6 @@ def test_missing_id_with_version(migration_cls):
         migration.migrate(db)
 
 
-@rename_argument('migration_cls', 'migration_cls_no_id')
 def test_missing_id_after_migration(migration_cls):
     db = sqlite3.connect(':memory:')
 

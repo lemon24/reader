@@ -2,7 +2,6 @@ import dataclasses
 import enum
 import re
 import traceback
-import warnings
 from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
@@ -69,8 +68,12 @@ class Feed(_namedtuple_compat):
 
     """Data type representing a feed.
 
-    All :class:`~datetime.datetime` attributes are timezone-naive,
-    and always represent UTC.
+    All :class:`~datetime.datetime` attributes are timezone-aware,
+    with the timezone set to :attr:`~datetime.timezone.utc`.
+
+    .. versionchanged:: 2.0
+        :class:`~datetime.datetime` attributes are now timezone-aware;
+        prior to 2.0, they were naive datetimes representing UTC times.
 
     """
 
@@ -162,8 +165,12 @@ class Entry(_namedtuple_compat):
 
     """Data type representing an entry.
 
-    All :class:`~datetime.datetime` attributes are timezone-naive,
-    and always represent UTC.
+    All :class:`~datetime.datetime` attributes are timezone-aware,
+    with the timezone set to :attr:`~datetime.timezone.utc`.
+
+    .. versionchanged:: 2.0
+        :class:`~datetime.datetime` attributes are now timezone-aware;
+        prior to 2.0, they were naive datetimes representing UTC times.
 
     """
 
@@ -174,14 +181,28 @@ class Entry(_namedtuple_compat):
         """The feed URL."""
         return self.feed.url
 
-    # TODO: .id and .updated will still be set to some default value if the entry doesn't have them; we should at least document this.
-    # I'm not sure its useful to expose the original values. If we do it, it would be minimally invasive to add them as new attributes (even if it means id/updated don't always reflect their value in the feed); the names should work with the schemes proposed in #153 and #159.
+    # TODO: .id will still be set to some default value if the entry doesn't have it; document this.
+
+    # NOTE: In #183 (2.0 compat breaking), we made .updated optional,
+    # to allow it to reflect the feed value.
+    #
+    # The code to do so hasn't been changed yet,
+    # so its value is actually the same as before.
+    #
+    # To change that, we need to store/add a `first_updated` attribute,
+    # and change `updated_not_none` to `updated or first_updated`.
 
     #: The entry id.
     id: str
 
     #: The date the entry was last updated, according to the feed.
-    updated: datetime
+    #:
+    #: .. versionchanged:: 2.0
+    #:  May be None in some cases.
+    #:  In a future version, will be None if missing in the feed;
+    #:  use :attr:`updated_not_none` for the pre-2.0 behavior.
+    #:
+    updated: Optional[datetime]
 
     #: The title of the entry.
     title: Optional[str] = None
@@ -244,6 +265,21 @@ class Entry(_namedtuple_compat):
 
         """
         return self.feed_url, self.id
+
+    @property
+    def updated_not_none(self) -> datetime:
+        """Like :attr:`updated`, but guaranteed to be set (not None).
+
+        If the entry `updated` is missing in the feed,
+        defaults to when the entry was first added.
+
+        .. versionadded:: 2.0
+            Identical to the behavior of :attr:`updated` before 2.0.
+
+        """
+        # for mypy
+        assert self.updated is not None
+        return self.updated
 
 
 @dataclass(frozen=True)
@@ -680,21 +716,6 @@ class UpdatedFeed:
     #: (entries that existed in storage,
     #: but had different data than the corresponding feed file entry.)
     modified: int
-
-    @property
-    def updated(self) -> int:
-        """Deprecated alias for :attr:`UpdatedFeed.modified`.
-
-        .. deprecated: 1.19
-
-        """
-        warnings.warn(
-            "UpdatedFeed.updated is deprecated "
-            "and will be removed in reader 2.0. "
-            "Use UpdatedFeed.modified instead.",
-            DeprecationWarning,
-        )
-        return self.modified
 
 
 class UpdateResult(NamedTuple):
