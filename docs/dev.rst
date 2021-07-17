@@ -123,7 +123,9 @@ Making a release (from ``x`` to ``y`` == ``x + 1``):
 * (release.py prompts) wait for GitHub Actions / Codecov / Read the Docs builds to pass
 * upload to test PyPI and check: ``twine upload --repository-url https://test.pypi.org/legacy/ dist/*``
 * (release.py) upload to PyPI: ``twine upload dist/*``
-* (release.py prompts) tag release in GitHub
+* (release.py) tag current commit with `<major>.<minor>` and `<major>.x`
+  (e.g. when releasing `1.20`: `1.20` and `1.x`)
+* (release.py prompts) create release in GitHub
 * build docs from latest and enable ``y`` docs version (should happen automatically after the first time)
 * (release.py) bump versions from ``y`` to ``(y + 1).dev0``, add ``(y + 1)`` changelog section
 * (release.py prompts) deactivate old versions in Read the Docs

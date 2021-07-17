@@ -116,6 +116,12 @@ def upload_to_pypi():
     run('twine upload dist/*', shell=True)
 
 
+def add_and_push_tags(tags):
+    for tag in tags:
+        run(['git', 'tag', '-f', tag])
+    run(['git', 'push', '--tags'])
+
+
 @click.command()
 @click.argument('version')
 @click.argument('new_version')
@@ -138,6 +144,11 @@ def main(version, new_version, date):
     confirm("Upload to PyPI?")
     build()
     upload_to_pypi()
+
+    version_x = version.partition('.')[0] + '.x'
+    tags = [version, version_x]
+    confirm(f"Add and push tags ({', '.join(tags)})?")
+    add_and_push_tags(tags)
 
     confirm("Create release {} in GitHub.", version)
 
