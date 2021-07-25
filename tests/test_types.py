@@ -8,15 +8,17 @@ import pytest
 from reader import Entry
 from reader import EntryError
 from reader import EntrySearchResult
+from reader import ExceptionInfo
 from reader import Feed
 from reader import FeedError
+from reader import HighlightedString
+from reader import UpdatedFeed
+from reader import UpdateResult
 from reader._types import EntryData
 from reader._types import FeedData
 from reader.types import _entry_argument
 from reader.types import _feed_argument
 from reader.types import _namedtuple_compat
-from reader.types import ExceptionInfo
-from reader.types import HighlightedString
 from reader.types import MISSING
 
 
@@ -224,3 +226,28 @@ def test_entry_updated_not_none():
 
     # will be entry.updated or entry.first_updated at some point
     assert entry.updated_not_none == entry.updated
+
+
+def test_update_result_properties():
+    feed = UpdatedFeed('url', 0, 1)
+    result = UpdateResult('url', feed)
+    assert result.updated_feed is feed
+    assert result.error is None
+    assert result.not_modified is False
+
+    feed = UpdatedFeed('url', 0, 0)
+    result = UpdateResult('url', feed)
+    assert result.updated_feed is feed
+    assert result.error is None
+    assert result.not_modified is True
+
+    result = UpdateResult('url', None)
+    assert result.updated_feed is None
+    assert result.error is None
+    assert result.not_modified is True
+
+    exc = Exception('error')
+    result = UpdateResult('url', exc)
+    assert result.updated_feed is None
+    assert result.error is exc
+    assert result.not_modified is False

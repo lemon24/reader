@@ -11,6 +11,10 @@ Version 2.1
 
 Unreleased
 
+* Add :class:`UpdateResult` :attr:`~UpdateResult.updated_feed`,
+  :attr:`~UpdateResult.error`, and :attr:`~UpdateResult.not_modified`
+  convenience properties. (:issue:`204`)
+
 
 Version 2.0
 -----------

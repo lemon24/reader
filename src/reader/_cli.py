@@ -274,35 +274,23 @@ def green(text):
     return click.style(str(text), fg='bright_green')
 
 
-def get_update_status(value):
-    if value is None:
-        return None
-    if isinstance(value, Exception):
-        return False
-    if not (value.new or value.modified):
-        return None
-    return True
-
-
 def iter_update_status(it, length):
     start = datetime.now()
 
-    for i, (url, value) in enumerate(it):
+    for i, result in enumerate(it):
         elapsed = datetime.now() - start
         pos = f"{i}/{length or '?'}"
 
-        update_status = get_update_status(value)
-
-        if update_status is None:
+        if result.not_modified:
             status = 'not modified'
-        elif not update_status:
-            status = red(value)
+        elif result.error:
+            status = red(result.error)
         else:
-            status = green(f"{value.new} new, {value.modified} modified")
+            status = green(f"{result.value.new} new, {result.value.modified} modified")
 
-        click.echo(f"{elapsed}\t{pos}\t{url}\t{status}")
+        click.echo(f"{elapsed}\t{pos}\t{result.url}\t{status}")
 
-        yield url, value
+        yield result
 
 
 @cli.command()
@@ -391,16 +379,15 @@ def update(reader, url, new_only, workers, verbose):
 
     try:
         with bar_context as bar:
-            for _, value in bar:
-                update_status = get_update_status(value)
-                if update_status is None:
+            for result in bar:
+                if result.not_modified:
                     not_modified_count += 1
-                elif not update_status:
+                elif result.error:
                     error_count += 1
                 else:
                     ok_count += 1
-                    new_count += value.new
-                    updated_count += value.modified
+                    new_count += result.value.new
+                    updated_count += result.value.modified
     finally:
         click.echo(
             f"{feed_stats(9999)}; entries: {new_count} new, {updated_count} modified"

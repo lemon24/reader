@@ -737,7 +737,7 @@ class UpdateResult(NamedTuple):
     #: :obj:`None`
     #:
     #:  If the server indicated the feed has not changed
-    #:  since the last update.
+    #:  since the last update without returning any data.
     #:
     #: :exc:`ReaderError`
     #:
@@ -752,3 +752,37 @@ class UpdateResult(NamedTuple):
     # Currently, storage or plugin-raised exceptions
     # prevent updates for the following feeds (:issue:`218`),
     # but that's not necessarily by design.
+
+    @property
+    def updated_feed(self) -> Optional[UpdatedFeed]:
+        """The updated feed, if the update was successful, :const:`None` otherwise.
+
+        .. versionadded:: 2.1
+
+        """
+        return self.value if not isinstance(self.value, Exception) else None
+
+    @property
+    def error(self) -> Optional[ReaderError]:
+        """The exception, if there was an error, :const:`None` otherwise.
+
+        .. versionadded:: 2.1
+
+        """
+        return self.value if isinstance(self.value, Exception) else None
+
+    @property
+    def not_modified(self) -> bool:
+        """True if the feed has not changed
+        (either because the server returned no data,
+        or because the data didn't change),
+        false otherwise.
+
+        .. versionadded:: 2.1
+
+        """
+        if self.error:
+            return False
+        if not self.updated_feed:
+            return True
+        return not (self.updated_feed.new or self.updated_feed.modified)
