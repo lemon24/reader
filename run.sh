@@ -4,6 +4,9 @@
 #
 # Commands used during development / CI.
 # Also, executable documentation for project dev practices.
+#
+# See https://death.andgravity.com/run-sh
+# for an explanation of how it works and why it's useful.
 
 
 # First, set up the environment.
