@@ -4,6 +4,7 @@ import re
 import traceback
 from dataclasses import dataclass
 from datetime import datetime
+from datetime import timedelta
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
@@ -663,6 +664,9 @@ class EntryCounts(_namedtuple_compat):
 
     #: Number of entries that have enclosures.
     has_enclosures: Optional[int] = None
+
+    # FIXME: naming and docstring
+    update_frequency: Optional['timedelta'] = None
 
 
 @dataclass(frozen=True)
