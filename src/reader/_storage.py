@@ -297,9 +297,6 @@ class Storage:
         self.path = path
         self.timeout = timeout
 
-        # FIXME: is this the right place for this?
-        db.create_aggregate("_avg_of_differences", 1, AvgOfDifferences)
-
     # TODO: these are not part of the Storage API
     connect = staticmethod(sqlite3.connect)
     setup_db = staticmethod(setup_db)
@@ -923,6 +920,8 @@ class Storage:
             self.db, query, context, chunk_size, last, entry_factory
         )
 
+    entry_update_frequency_days = 365.0
+
     @wrap_exceptions(StorageError)
     def get_entry_counts(
         self,
@@ -932,14 +931,21 @@ class Storage:
         entries_query = Query().SELECT('id', 'feed').FROM('entries')
         context = apply_entry_filter_options(entries_query, filter_options)
 
+        # TODO: first_updated_epoch should be first_updated
+        # FIXME: make 12 months a class attribute or an argument
+        # FIXME: now should be an argument
+        # FIXME: no entries for time window should be 0
+        # FIXME: 3 time windows: 1 month, 3 months, 1 year
+
         kfu_query = (
             Query()
-            .SELECT('coalesce(published, updated, first_updated_epoch) AS kfu')
+            .SELECT('coalesce(published, updated, first_updated_epoch) as kfu')
             .FROM('entries_filtered')
-            # FIXME: make 12 months a class attribute or an argument
-            .WHERE("kfu >= datetime('now', '-12 months')")
-            .ORDER_BY('kfu, id, feed')
             .JOIN("entries USING (id, feed)")
+            .GROUP_BY('published, updated, first_updated_epoch, feed')
+            .HAVING(
+                f"kfu between datetime('now', '-{self.entry_update_frequency_days} days') and datetime('now')"
+            )
         )
 
         query = (
@@ -959,19 +965,15 @@ class Storage:
                     ), 0
                 )
                 """,
-                "(select _avg_of_differences(kfu) from entries_kfu)",
+                f"(select count(*) / {self.entry_update_frequency_days} from entries_kfu)",
             )
             .FROM("entries_filtered")
             .JOIN("entries USING (id, feed)")
         )
 
-        # FIXME: _avg_of_differences is None if there are no entries in the last year
-        # FIXME: https://250bpm.com/rss.xml gives the wrong result, because a lot of entries have been added with the same epoch
-
         row = exactly_one(self.db.execute(str(query), context))
-        update_frequency = None if row[-1] is None else timedelta(seconds=row[-1])
 
-        return EntryCounts(*row[:-1], update_frequency)
+        return EntryCounts(*row)
 
     def iter_metadata(
         self,
@@ -1470,40 +1472,3 @@ def apply_random(query: Query) -> None:
     # can benefit from future optimizations.
     #
     query.ORDER_BY("random()")
-
-
-# FIXME: is this the right place for this?
-
-# based on https://github.com/lemon24/reader/blob/0.22/src/reader/core/storage.py#L203-L212
-def _datetime_to_s(value):
-    if not value:
-        return None
-    if not isinstance(value, bytes):
-        value = value.encode('utf-8')
-    dt = sqlite3.converters['TIMESTAMP'](value)
-    rv = (dt - datetime(1970, 1, 1)).total_seconds()
-    return rv
-
-
-missing = object()
-
-# FIXME: better error handling
-
-
-class AvgOfDifferences:
-    def __init__(self):
-        self.prev = missing
-        self.count = 0
-        self.total = 0
-
-    def step(self, value):
-        value = _datetime_to_s(value)
-        if self.prev is missing:
-            self.prev = value
-            return
-        self.count += 1
-        self.total += value - self.prev
-        self.prev = value
-
-    def finalize(self):
-        return self.total / self.count if self.count else None
