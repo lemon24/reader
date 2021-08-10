@@ -215,6 +215,10 @@ def create_indexes(db: sqlite3.Connection) -> None:
     )
 
 
+MINIMUM_SQLITE_VERSION = (3, 15)
+REQUIRED_SQLITE_COMPILE_OPTIONS = ["ENABLE_JSON1"]
+
+
 def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
@@ -228,9 +232,9 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
         id=APPLICATION_ID,
         # Row value support was added in 3.15.
         # TODO: Remove the Search.update() check once this gets bumped to >=3.18.
-        minimum_sqlite_version=(3, 15),
+        minimum_sqlite_version=MINIMUM_SQLITE_VERSION,
         # We use the JSON1 extension for entries.content.
-        required_sqlite_compile_options=["ENABLE_JSON1"],
+        required_sqlite_compile_options=REQUIRED_SQLITE_COMPILE_OPTIONS,
         wal_enabled=wal_enabled,
     )
 

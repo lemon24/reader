@@ -14,6 +14,16 @@ Unreleased
 * Add :class:`UpdateResult` :attr:`~UpdateResult.updated_feed`,
   :attr:`~UpdateResult.error`, and :attr:`~UpdateResult.not_modified`
   convenience properties. (:issue:`204`)
+* Make the minimum SQLite version and required SQLite compile options
+  ``reader._storage`` module globals, for easier monkeypatching. (:issue:`163`)
+
+  This is allows supplying a user-defined ``json_array_length`` function
+  on platforms where SQLite doesn't come with the JSON1 extension
+  (e.g. on Windows with stock Python earlier than 3.9;
+  `details <https://github.com/lemon24/reader/issues/163#issuecomment-895041943>`_).
+
+  Note these globals are private, and thus *not* covered by the
+  :doc:`backwards compatibility policy <compat>`.
 
 
 Version 2.0
