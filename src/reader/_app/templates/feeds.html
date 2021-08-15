@@ -108,15 +108,7 @@
 
 {% if entry_counts %}
 <li>
-    <abbr title='({{ entry_counts.read }} read, {{ entry_counts.important }} important)'>
-    {{ entry_counts.total }} entries
-    </abbr>
-<li>
-    {% if entry_counts.update_frequency %}
-    {{ "{:.2f}".format(entry_counts.update_frequency.total_seconds() / (3600 * 24)) }} days
-    {% else %}
-    not updated recently
-    {% endif %}
+    {{ macros.entry_counts(entry_counts) }}
 {% endif %}
 
 

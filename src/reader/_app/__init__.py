@@ -1,6 +1,7 @@
 import contextlib
 import itertools
 import json
+import math
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -44,6 +45,16 @@ def humanize_naturaltime(dt):
     if dt.tzinfo:
         when = datetime.utcnow().replace(tzinfo=timezone.utc)
     return humanize.naturaltime(dt, when=when)
+
+
+@blueprint.app_template_filter()
+def log_scale(n, p=2):
+    # https://github.com/lemon24/reader/issues/249#issuecomment-893440484
+    # https://math.stackexchange.com/a/970251
+    # https://math.stackexchange.com/a/3428961
+    n = float(n)
+    c = 10 ** p
+    return math.log10(n * c + 1) / math.log10(c + 1)
 
 
 # if any plugins need signals, they need to install blinker
