@@ -664,8 +664,11 @@ class EntryCounts(_namedtuple_compat):
     #: Number of entries that have enclosures.
     has_enclosures: Optional[int] = None
 
-    # FIXME: naming and docstring
-    update_frequency: Optional[float] = None
+    #: Average entries per day during the last 1, 3, 12 months, as a 3-tuple.
+    #:
+    #: .. versionadded:: 2.1
+    #:
+    averages: Optional[Tuple[float, float, float]] = None
 
 
 @dataclass(frozen=True)
@@ -695,6 +698,12 @@ class EntrySearchCounts(_namedtuple_compat):
 
     #: Number of entries that have enclosures.
     has_enclosures: Optional[int] = None
+
+    #: Average entries per day during the last 1, 3, 12 months, as a 3-tuple.
+    #:
+    #: .. versionadded:: 2.1
+    #:
+    averages: Optional[Tuple[float, float, float]] = None
 
 
 @dataclass(frozen=True)

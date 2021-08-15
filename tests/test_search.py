@@ -132,7 +132,7 @@ def search_entries_chunk_size_1(storage, _, __):
 
 
 def search_entry_counts(storage, _, __):
-    Search(storage).search_entry_counts('entry')
+    Search(storage).search_entry_counts('entry', now=datetime(2010, 1, 1))
 
 
 def search_entry_last(storage, feed, entry):
@@ -226,7 +226,7 @@ def call_search_entries(search, query):
 
 
 def call_search_entry_counts(search, query):
-    search.search_entry_counts(query)
+    search.search_entry_counts(query, datetime(2010, 1, 1))
     raise ActuallyOK
 
 

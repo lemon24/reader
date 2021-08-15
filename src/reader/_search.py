@@ -34,6 +34,7 @@ from ._sqlite_utils import wrap_exceptions_iter
 from ._storage import apply_entry_filter_options
 from ._storage import apply_random
 from ._storage import apply_recent
+from ._storage import make_entry_counts_query
 from ._storage import Storage
 from ._types import EntryFilterOptions
 from ._utils import exactly_one
@@ -885,12 +886,36 @@ class Search:
     def search_entry_counts(
         self,
         query: str,
+        now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
     ) -> EntrySearchCounts:
-        sql_query, query_context = make_search_entry_counts_query(filter_options)
+        entries_query = (
+            Query()
+            .WITH(
+                (
+                    "search",
+                    """
+                    SELECT _id, _feed
+                    FROM entries_search
+                    WHERE entries_search MATCH :query
+                    GROUP BY _id, _feed
+                    """,
+                )
+            )
+            .SELECT('id', 'feed')
+            .FROM('entries')
+            .JOIN("search ON (id, feed) = (_id, _feed)")
+        )
+        query_context = apply_entry_filter_options(entries_query, filter_options)
+
+        sql_query, new_context = make_entry_counts_query(
+            now, self.storage.entry_counts_average_periods, entries_query
+        )
+        query_context.update(new_context)
+
         context = dict(query=query, **query_context)
         row = exactly_one(self.db.execute(str(sql_query), context))
-        return EntrySearchCounts(*row)
+        return EntrySearchCounts(*row[:4], row[4:])
 
 
 def make_search_entries_query(
@@ -1003,42 +1028,3 @@ def entry_search_result_factory(
         MappingProxyType(metadata),
         MappingProxyType(rv_content),
     )
-
-
-def make_search_entry_counts_query(
-    filter_options: EntryFilterOptions,
-) -> Tuple[Query, Dict[str, Any]]:
-    query = (
-        Query()
-        .WITH(
-            (
-                "search",
-                """
-                SELECT _id, _feed
-                FROM entries_search
-                WHERE entries_search MATCH :query
-                GROUP BY _id, _feed
-                """,
-            )
-        )
-        .SELECT(
-            'count(*)',
-            'coalesce(sum(read == 1), 0)',
-            'coalesce(sum(important == 1), 0)',
-            """
-            coalesce(
-                sum(
-                    NOT (
-                        json_array_length(entries.enclosures) IS NULL OR json_array_length(entries.enclosures) = 0
-                    )
-                ), 0
-            )
-            """,
-        )
-        .FROM("entries")
-        .JOIN("search ON (id, feed) = (_id, _feed)")
-    )
-
-    context = apply_entry_filter_options(query, filter_options)
-
-    return query, context
