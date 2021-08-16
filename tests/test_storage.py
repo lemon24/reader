@@ -258,7 +258,7 @@ def get_feed_counts(storage, _, __):
 
 
 def get_entry_counts(storage, _, __):
-    storage.get_entry_counts(),
+    storage.get_entry_counts(now=datetime(2010, 1, 1)),
 
 
 def get_feed_last(storage, feed, __):

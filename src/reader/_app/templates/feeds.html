@@ -108,9 +108,7 @@
 
 {% if entry_counts %}
 <li>
-    <abbr title='({{ entry_counts.read }} read, {{ entry_counts.important }} important)'>
-    {{ entry_counts.total }} entries
-    </abbr>
+    {{ macros.entry_counts(entry_counts) }}
 {% endif %}
 
 

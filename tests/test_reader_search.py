@@ -461,6 +461,8 @@ def test_search_entry_counts_fails_if_not_enabled(reader):
 def test_search_entries_basic(reader, sort):
     parser = Parser()
     reader._parser = parser
+    # we're far intro the future, there are no recent entries
+    reader._now = lambda: naive_datetime(2020, 1, 1)
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
@@ -494,7 +496,7 @@ def test_search_entries_basic(reader, sort):
     # TODO: the asserts below look parametrizable
 
     assert list(search('zero')) == []
-    assert search_counts('zero') == EntrySearchCounts(0, 0, 0, 0)
+    assert search_counts('zero') == EntrySearchCounts(0, 0, 0, 0, (0, 0, 0))
     assert list(search('one')) == [
         EntrySearchResult(
             feed.url,
@@ -505,7 +507,7 @@ def test_search_entries_basic(reader, sort):
             },
         )
     ]
-    assert search_counts('one') == EntrySearchCounts(1, 0, 0, 0)
+    assert search_counts('one') == EntrySearchCounts(1, 0, 0, 0, (0, 0, 0))
     assert list(search('two')) == [
         EntrySearchResult(
             feed.url,
@@ -578,7 +580,7 @@ def test_search_entries_basic(reader, sort):
             ),
         ]
     }
-    assert search_counts('summary') == EntrySearchCounts(3, 0, 0, 0)
+    assert search_counts('summary') == EntrySearchCounts(3, 0, 0, 0, (0, 0, 0))
 
 
 # search_entries() filtering is tested in test_reader.py::test_entries_filtering{,_error}

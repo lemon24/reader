@@ -2694,6 +2694,8 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
     # TODO: fuzz get_entries() == get_entry_counts()
 
     reader._parser = parser = Parser()
+    # we're far intro the future, there are no recent entries
+    reader._now = lambda: naive_datetime(2020, 1, 1)
 
     one = parser.feed(1, datetime(2010, 1, 3))
     two = parser.feed(2, datetime(2010, 1, 3))
@@ -2730,6 +2732,10 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
 
     rv = call_method(reader, **kwargs)
     assert type(rv) is rv_type
+
+    # for this test, there are no recent entries
+    expected = expected._replace(averages=(0.0,) * 3)
+
     # this isn't gonna work as well if the return types get different attributes
     assert rv._asdict() == expected._asdict()
 

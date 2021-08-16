@@ -222,9 +222,7 @@
 
 {% if counts %}
 <p>
-    <abbr title='({{ counts.read }} read, {{ counts.important }} important)'>
-    {{ counts.total }} entries
-    </abbr>
+    {{ macros.entry_counts(counts) }}
 {% endif %}
 
 

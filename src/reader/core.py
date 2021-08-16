@@ -1116,7 +1116,8 @@ class Reader:
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
         )
-        return self._storage.get_entry_counts(filter_options)
+        now = self._now()
+        return self._storage.get_entry_counts(now, filter_options)
 
     def mark_entry_as_read(self, entry: EntryInput) -> None:
         """Mark an entry as read.
@@ -1522,7 +1523,8 @@ class Reader:
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
         )
-        return self._search.search_entry_counts(query, filter_options)
+        now = self._now()
+        return self._search.search_entry_counts(query, now, filter_options)
 
     def add_feed_tag(self, feed: FeedInput, tag: str) -> None:
         """Add a tag to a feed.

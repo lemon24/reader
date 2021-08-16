@@ -262,10 +262,14 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
 
 class Storage:
 
-    # recent_threshold and chunk_size are not part of the Storage interface,
+    # recent_threshold, chunk_size, and entry_counts_average_periods
+    # are not part of the Storage interface,
     # but are part of the private API of this implementation.
     recent_threshold = timedelta(7)
     chunk_size = 2 ** 8
+    # 1, 3, 12 months rounded down to days,
+    # assuming an average of 30.436875 days/month
+    entry_counts_average_periods = (30, 91, 365)
 
     @wrap_exceptions(StorageError)
     def __init__(
@@ -927,32 +931,21 @@ class Storage:
     @wrap_exceptions(StorageError)
     def get_entry_counts(
         self,
+        now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
     ) -> EntryCounts:
-        query = (
-            Query()
-            .SELECT(
-                'count(*)',
-                'coalesce(sum(read == 1), 0)',
-                'coalesce(sum(important == 1), 0)',
-                """
-                coalesce(
-                    sum(
-                        NOT (
-                            json_array_length(entries.enclosures) IS NULL OR json_array_length(entries.enclosures) = 0
-                        )
-                    ), 0
-                )
-                """,
-            )
-            .FROM("entries")
-        )
 
-        context = apply_entry_filter_options(query, filter_options)
+        entries_query = Query().SELECT('id', 'feed').FROM('entries')
+        context = apply_entry_filter_options(entries_query, filter_options)
+
+        query, new_context = make_entry_counts_query(
+            now, self.entry_counts_average_periods, entries_query
+        )
+        context.update(new_context)
 
         row = exactly_one(self.db.execute(str(query), context))
 
-        return EntryCounts(*row)
+        return EntryCounts(*row[:4], row[4:7])  # type: ignore[call-arg]
 
     def iter_metadata(
         self,
@@ -1451,3 +1444,58 @@ def apply_random(query: Query) -> None:
     # can benefit from future optimizations.
     #
     query.ORDER_BY("random()")
+
+
+def make_entry_counts_query(
+    now: datetime,
+    average_periods: Tuple[float, ...],
+    entries_query: Query,
+) -> Tuple[Query, Dict[str, Any]]:
+    query = (
+        Query()
+        .WITH(('entries_filtered', str(entries_query)))
+        .SELECT(
+            'count(*)',
+            'coalesce(sum(read == 1), 0)',
+            'coalesce(sum(important == 1), 0)',
+            """
+            coalesce(
+                sum(
+                    NOT (
+                        json_array_length(entries.enclosures) IS NULL OR json_array_length(entries.enclosures) = 0
+                    )
+                ), 0
+            )
+            """,
+        )
+        .FROM("entries_filtered")
+        .JOIN("entries USING (id, feed)")
+    )
+
+    # one CTE / period + HAVING in the CTE is a tiny bit faster than
+    # one CTE + WHERE in the SELECT
+
+    context: Dict[str, Any] = dict(now=now)
+
+    for period_i, period_days in enumerate(average_periods):
+        # TODO: when we get first_updated, use it instead of first_updated_epoch
+
+        days_param = f'kfu_{period_i}_days'
+        context[days_param] = float(period_days)
+
+        start_param = f'kfu_{period_i}_start'
+        context[start_param] = now - timedelta(days=period_days)
+
+        kfu_query = (
+            Query()
+            .SELECT('coalesce(published, updated, first_updated_epoch) AS kfu')
+            .FROM('entries_filtered')
+            .JOIN("entries USING (id, feed)")
+            .GROUP_BY('published, updated, first_updated_epoch, feed')
+            .HAVING(f"kfu BETWEEN :{start_param} AND :now")
+        )
+
+        query.WITH((f'kfu_{period_i}', str(kfu_query)))
+        query.SELECT(f"(SELECT count(*) / :{days_param} FROM kfu_{period_i})")
+
+    return query, context

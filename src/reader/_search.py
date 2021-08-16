@@ -8,7 +8,6 @@ import warnings
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import datetime
-from datetime import timedelta
 from functools import partial
 from itertools import groupby
 from types import MappingProxyType
@@ -34,6 +33,7 @@ from ._sqlite_utils import wrap_exceptions_iter
 from ._storage import apply_entry_filter_options
 from ._storage import apply_random
 from ._storage import apply_recent
+from ._storage import make_entry_counts_query
 from ._storage import Storage
 from ._types import EntryFilterOptions
 from ._utils import exactly_one
@@ -186,32 +186,28 @@ class Search:
 
     """
 
-    def __init__(self, storage: Union['Storage', sqlite3.Connection]):
+    def __init__(self, storage: Union[Storage, sqlite3.Connection]):
         # during migrations there's no storage, so we need to pass the DB in
-        self.storage = storage
+        self._storage = storage
 
-    # db, recent_threshold, and chunk_size exposed for convenience.
+    # db, storage, and chunk_size exposed for (typing) convenience.
 
     @property
     def db(self) -> sqlite3.Connection:
-        if isinstance(self.storage, sqlite3.Connection):  # pragma: no cover
-            return self.storage
-        return self.storage.db
+        if isinstance(self._storage, sqlite3.Connection):  # pragma: no cover
+            return self._storage
+        return self._storage.db
 
     @property
-    def recent_threshold(self) -> timedelta:
-        if isinstance(self.storage, sqlite3.Connection):  # pragma: no cover
+    def storage(self) -> Storage:
+        if isinstance(self._storage, sqlite3.Connection):  # pragma: no cover
             raise NotImplementedError(
                 f"self.storage is {self.storage!r}, should be Storage"
             )
-        return self.storage.recent_threshold
+        return self._storage
 
     @property
     def chunk_size(self) -> int:
-        if isinstance(self.storage, sqlite3.Connection):  # pragma: no cover
-            raise NotImplementedError(
-                f"self.storage is {self.storage!r}, should be Storage"
-            )
         return self.storage.chunk_size
 
     # strip_html is not part of the Search interface,
@@ -793,7 +789,6 @@ class Search:
             last = None
             if starting_after:
                 if sort == 'recent':
-                    assert isinstance(self.storage, Storage)
                     last = self.storage.get_entry_last(now, sort, starting_after)
                 else:
                     last = self.search_entry_last(query, starting_after)
@@ -851,7 +846,6 @@ class Search:
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[EntrySearchResult, Optional[_T]]]:
-
         sql_query, context = make_search_entries_query(filter_options, sort)
 
         random_mark = ''.join(
@@ -866,7 +860,7 @@ class Search:
             after_mark=after_mark,
             # 255 letters / 4.7 letters per word (average in English)
             snippet_tokens=54,
-            recent_threshold=now - self.recent_threshold,
+            recent_threshold=now - self.storage.recent_threshold,
         )
 
         row_factory = partial(
@@ -885,12 +879,36 @@ class Search:
     def search_entry_counts(
         self,
         query: str,
+        now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
     ) -> EntrySearchCounts:
-        sql_query, query_context = make_search_entry_counts_query(filter_options)
+        entries_query = (
+            Query()
+            .WITH(
+                (
+                    "search",
+                    """
+                    SELECT _id, _feed
+                    FROM entries_search
+                    WHERE entries_search MATCH :query
+                    GROUP BY _id, _feed
+                    """,
+                )
+            )
+            .SELECT('id', 'feed')
+            .FROM('entries')
+            .JOIN("search ON (id, feed) = (_id, _feed)")
+        )
+        query_context = apply_entry_filter_options(entries_query, filter_options)
+
+        sql_query, new_context = make_entry_counts_query(
+            now, self.storage.entry_counts_average_periods, entries_query
+        )
+        query_context.update(new_context)
+
         context = dict(query=query, **query_context)
         row = exactly_one(self.db.execute(str(sql_query), context))
-        return EntrySearchCounts(*row)
+        return EntrySearchCounts(*row[:4], row[4:7])  # type: ignore[call-arg]
 
 
 def make_search_entries_query(
@@ -1003,42 +1021,3 @@ def entry_search_result_factory(
         MappingProxyType(metadata),
         MappingProxyType(rv_content),
     )
-
-
-def make_search_entry_counts_query(
-    filter_options: EntryFilterOptions,
-) -> Tuple[Query, Dict[str, Any]]:
-    query = (
-        Query()
-        .WITH(
-            (
-                "search",
-                """
-                SELECT _id, _feed
-                FROM entries_search
-                WHERE entries_search MATCH :query
-                GROUP BY _id, _feed
-                """,
-            )
-        )
-        .SELECT(
-            'count(*)',
-            'coalesce(sum(read == 1), 0)',
-            'coalesce(sum(important == 1), 0)',
-            """
-            coalesce(
-                sum(
-                    NOT (
-                        json_array_length(entries.enclosures) IS NULL OR json_array_length(entries.enclosures) = 0
-                    )
-                ), 0
-            )
-            """,
-        )
-        .FROM("entries")
-        .JOIN("search ON (id, feed) = (_id, _feed)")
-    )
-
-    context = apply_entry_filter_options(query, filter_options)
-
-    return query, context
