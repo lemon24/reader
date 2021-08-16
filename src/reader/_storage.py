@@ -941,7 +941,7 @@ class Storage:
 
         row = exactly_one(self.db.execute(str(query), context))
 
-        return EntryCounts(*row[:4], row[4:])
+        return EntryCounts(*row[:4], row[4:7])  # type: ignore[call-arg]
 
     def iter_metadata(
         self,
@@ -1471,7 +1471,7 @@ def make_entry_counts_query(
     # one CTE / period + HAVING in the CTE is a tiny bit faster than
     # one CTE + WHERE in the SELECT
 
-    context = dict(now=now)
+    context: Dict[str, Any] = dict(now=now)
 
     for period_i, period_days in enumerate(average_periods):
         # TODO: when we get first_updated, use it instead of first_updated_epoch
