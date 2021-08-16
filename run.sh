@@ -87,7 +87,7 @@ function typing {
         return
     fi
 
-    mypy --strict src "$@"
+    mypy --strict src --show-error-codes "$@"
 }
 
 
@@ -115,7 +115,7 @@ function serve-dev {
     export FLASK_TRAP_BAD_REQUEST_ERRORS=1
     export FLASK_APP=src/reader/_app/wsgi.py
     export READER_DB=db.sqlite
-    flask run -h 0.0.0.0 -p 8000
+    flask run -p 8000 "$@"
 }
 
 
