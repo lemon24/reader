@@ -586,6 +586,45 @@ def test_search_entries_basic(reader, sort):
 # search_entries() filtering is tested in test_reader.py::test_entries_filtering{,_error}
 
 
+from test_reader import entries_per_day
+
+
+@pytest.mark.parametrize(
+    'query, expected',
+    [
+        ('one', entries_per_day(0, 0, 1)),
+        ('two', entries_per_day(0, 1, 1)),
+        ('three', entries_per_day(1, 1, 1)),
+        ('entry', entries_per_day(1, 2, 2)),
+        ('one OR two', entries_per_day(0, 1, 2)),
+        ('one OR three', entries_per_day(1, 1, 2)),
+        ('one OR entry', entries_per_day(1, 2, 3)),
+        ('feed', entries_per_day(1, 2, 3)),
+        ('four', (0, 0, 0)),
+    ],
+)
+def test_search_entry_counts_basic(reader, query, expected):
+    # search_entry_counts() filtering is tested in test_reader.py::test_entry_counts
+
+    parser = Parser()
+    reader._parser = parser
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    parser.entry(1, 1, datetime(2010, 2, 15), title='one')
+    parser.entry(1, 2, datetime(2010, 11, 15), title='entry two')
+    parser.entry(1, 3, datetime(2010, 12, 16), title='entry three')
+
+    reader.add_feed(feed.url)
+    reader.update_feeds()
+
+    reader.enable_search()
+    reader.update_search()
+
+    reader._now = lambda: naive_datetime(2010, 12, 31)
+
+    assert reader.search_entry_counts(query).averages == expected
+
+
 # TODO: fix duplication in these order tests
 # BEGIN order tests
 
