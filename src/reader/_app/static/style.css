@@ -179,6 +179,16 @@ abbr[title]:focus::after {
 }
 
 
+.averages-block {
+    display: inline-block;
+    overflow: hidden;
+    background: black;
+    border-bottom: .5px solid black;
+    margin-right: 1px;
+
+}
+
+
 
 /* TODO: same for <strong>? */
 h1 b,

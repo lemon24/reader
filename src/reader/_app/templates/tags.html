@@ -47,6 +47,8 @@
     ,
     {% if entry_counts %}
         {{ macros.entry_counts(entry_counts, url_for('.entries', **url_kwargs)) }}
+    {% else %}
+        <a href="{{ url_for('.entries', **url_kwargs) }}">entries</a>
     {% endif %}
     {% if entry_counts %}</abbr>{% endif %}
 </dd>

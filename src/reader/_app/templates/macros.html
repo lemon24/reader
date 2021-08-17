@@ -269,9 +269,11 @@ data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
             (counts.averages[1] * 91 / 3)   | round(1)      }}, {{
             (counts.averages[2] * 365 / 12) | round(1)
     }})'>
-        <code>
+        <code class="averages">
         {%- for avg in counts.averages -%}
-        {{ blocks.get((avg | log_scale(2) * 8) | int, blocks[7]) }}
+        <span class="averages-block" style="height: {{ [avg | log_scale(2), 1] | min }}em;">
+        {{- blocks.get((avg | log_scale(2) * 8) | int, blocks[7]) -}}
+        </span>
         {%- endfor -%}
         </code>
     </abbr>
