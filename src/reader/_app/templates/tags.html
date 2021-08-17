@@ -46,9 +46,8 @@
     {%- if feed_counts %}</abbr>{% endif -%}
     ,
     {% if entry_counts %}
-        <abbr title='({{ entry_counts.read }} read, {{ entry_counts.important }} important)'>{{ entry_counts.total }}
+        {{ macros.entry_counts(entry_counts, url_for('.entries', **url_kwargs)) }}
     {% endif %}
-    <a href="{{ url_for('.entries', **url_kwargs) }}">entries</a>
     {% if entry_counts %}</abbr>{% endif %}
 </dd>
 
