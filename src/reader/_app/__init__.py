@@ -264,6 +264,10 @@ def entries():
     if feed_url:
         entries_data = [e.id for e in entries]
 
+    feed_entry_counts = None
+    if feed_url:
+        feed_entry_counts = reader.get_entry_counts(feed=feed)
+
     # Ensure flashed messages get removed from the session,
     # otherwise they keep adding up and never disappear.
     # Assumes the template will call get_flashed_messages() at some point.
@@ -278,6 +282,7 @@ def entries():
         entries_data=entries_data,
         error=error,
         counts=counts,
+        feed_entry_counts=feed_entry_counts,
     )
 
 
@@ -309,9 +314,16 @@ def preview():
 
     feed = reader.get_feed(url)
     entries = list(reader.get_entries())
+    feed_entry_counts = reader.get_entry_counts(feed=url)
 
     # TODO: maybe limit
-    return stream_template('entries.html', entries=entries, feed=feed, read_only=True)
+    return stream_template(
+        'entries.html',
+        entries=entries,
+        feed=feed,
+        read_only=True,
+        feed_entry_counts=feed_entry_counts,
+    )
 
 
 @blueprint.route('/feeds')

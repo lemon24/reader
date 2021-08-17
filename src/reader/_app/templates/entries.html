@@ -126,6 +126,12 @@
             not updated
         {% endif %}
 
+    {# TODO: almost duplicated from feeds.html #}
+    {% if feed_entry_counts %}
+    <li>
+        {{ macros.entry_counts(feed_entry_counts) }}
+    {% endif %}
+
     {# TODO: duplicated from feeds.html #}
     <li>
         {% for tag in feed_tags %}
