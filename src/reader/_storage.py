@@ -213,6 +213,13 @@ def create_indexes(db: sqlite3.Connection) -> None:
         );
         """
     )
+    # Speed up get_entry_counts(feed=...).
+    db.execute("CREATE INDEX entries_by_feed ON entries (feed);")
+
+
+def update_from_29_to_30(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/251
+    db.execute("CREATE INDEX entries_by_feed ON entries (feed);")
 
 
 MINIMUM_SQLITE_VERSION = (3, 15)
@@ -223,11 +230,12 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=29,
+        version=30,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
             # 17-28 removed before 2.0 (last in be9c89581ea491d0c9cc95c9d39f073168a2fd02)
+            29: update_from_29_to_30,
         },
         id=APPLICATION_ID,
         # Row value support was added in 3.15.
