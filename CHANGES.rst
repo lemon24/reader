@@ -9,7 +9,7 @@ Changelog
 Version 2.1
 -----------
 
-Unreleased
+Released 2021-08-18
 
 * Return :ref:`entry averages <entry averages>` for the past 1, 3, 12 months
   from the entry count methods. (:issue:`249`)
