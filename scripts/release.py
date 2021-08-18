@@ -118,8 +118,10 @@ def upload_to_pypi():
 
 def add_and_push_tags(tags):
     for tag in tags:
-        run(['git', 'tag', '-f', tag])
-    run(['git', 'push', '--tags'])
+        run(['git', 'tag', '--force', tag])
+    # https://stackoverflow.com/a/19300065
+    refs = [f'refs/tags/{tag}:refs/tags/{tag}' for tag in tags]
+    run(['git', 'push', '--force', 'origin'] + refs)
 
 
 @click.command()
