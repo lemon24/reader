@@ -11,9 +11,19 @@ Version 2.1
 
 Unreleased
 
+* Return :ref:`entry averages <entry averages>` for the past 1, 3, 12 months
+  from the entry count methods. (:issue:`249`)
+
+* Use an index for ``get_entry_counts(feed=...)`` calls.
+  Makes the /feeds?counts=yes page load 2-4x faster. (:issue:`251`)
+
 * Add :class:`UpdateResult` :attr:`~UpdateResult.updated_feed`,
   :attr:`~UpdateResult.error`, and :attr:`~UpdateResult.not_modified`
   convenience properties. (:issue:`204`)
+
+* In the web application, show the feed entry count averages as a bar sparkline.
+  (:issue:`249`)
+
 * Make the minimum SQLite version and required SQLite compile options
   ``reader._storage`` module globals, for easier monkeypatching. (:issue:`163`)
 

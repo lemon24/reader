@@ -664,6 +664,9 @@ class EntryCounts(_namedtuple_compat):
     #: Number of entries that have enclosures.
     has_enclosures: Optional[int] = None
 
+    # TODO: make averages a rich tuple
+    # https://github.com/lemon24/reader/issues/249#issuecomment-894624989
+
     #: Average entries per day during the last 1, 3, 12 months, as a 3-tuple.
     #:
     #: .. versionadded:: 2.1

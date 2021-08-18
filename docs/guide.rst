@@ -410,28 +410,52 @@ You can get aggregated feed and entry counts by using one of the
 :meth:`~Reader.search_entry_counts` methods::
 
     >>> reader.get_feed_counts()
-    FeedCounts(total=134, broken=3, updates_enabled=132)
+    FeedCounts(total=156, broken=5, updates_enabled=154)
     >>> reader.get_entry_counts()
-    EntryCounts(total=11843, read=9762, important=45, has_enclosures=4273)
-    >>> reader.search_entry_counts('hello internet')
-    EntrySearchCounts(total=207, read=196, important=0, has_enclosures=172)
+    EntryCounts(total=12494, read=10127, important=115, has_enclosures=2823, averages=...)
+    >>> reader.search_entry_counts('feed: death and gravity')
+    EntrySearchCounts(total=16, read=16, important=0, has_enclosures=0, averages=...)
+
 
 The ``_counts`` methods support the same filtering arguments
 as their non-``_counts`` counterparts.
 The following example shows how to get counts only for feeds/entries
 with a specific tag::
 
-    >>> for tag in chain(reader.get_feed_tags(), [False]):
+    >>> for tag in itertools.chain(reader.get_feed_tags(), [False]):
     ...     feeds = reader.get_feed_counts(tags=[tag])
     ...     entries = reader.get_entry_counts(feed_tags=[tag])
     ...     print(f"{tag or '<no tag>'}: {feeds.total} feeds, {entries.total} entries ")
     ...
-    podcast: 29 feeds, 4277 entries
-    python: 29 feeds, 1281 entries
-    self: 2 feeds, 67 entries
-    tech: 79 feeds, 5527 entries
-    webcomic: 6 feeds, 1609 entries
-    <no tag>: 22 feeds, 1118 entries
+    podcast: 27 feeds, 2838 entries
+    python: 39 feeds, 1929 entries
+    self: 5 feeds, 240 entries
+    tech: 90 feeds, 7075 entries
+    webcomic: 6 feeds, 1865 entries
+    <no tag>: 23 feeds, 1281 entries
+
+
+.. _entry averages:
+
+For entry counts, the :attr:`~EntryCounts.averages` attribute
+is the average number of entries per day during the last 1, 3, 12 months,
+as a 3-tuple (e.g. to get an idea of how often a feed gets updated)::
+
+    >>> reader.get_entry_counts().averages
+    (8.066666666666666, 8.054945054945055, 8.446575342465753)
+    >>> reader.search_entry_counts('feed: death and gravity').averages
+    (0.03333333333333333, 0.06593406593406594, 0.043835616438356165)
+
+This example shows how to convert them to monthly statistics::
+
+    >>> periods = [(30, 1, 'month'), (91, 3, '3 months'), (365, 12, 'year')]
+    >>> for avg, (days, months, label) in zip(counts.averages, periods):
+    ...     entries = round(avg * days / months, 1)
+    ...     print(f"{entries} entries/month (past {label})")
+    ...
+    1.0 entries/month (past month)
+    2.0 entries/month (past 3 months)
+    1.3 entries/month (past year)
 
 
 
