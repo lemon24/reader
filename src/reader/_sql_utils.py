@@ -1,15 +1,33 @@
 """
 Homegrown SQL query builder.
 
-Inspired by sqlitebuilder.mini;
-https://sqlbuilder.readthedocs.io/en/latest/#short-manual-for-sqlbuilder-mini
-
 See tests/test_sql_utils.py for some usage examples.
+
+I've written at length about it elsewhere:
+
+https://death.andgravity.com/query-builder
+    Introduction to the series, has more examples.
+
+https://death.andgravity.com/query-builder-why
+    "Why use an SQL query builder in the first place?"
+    The problem we're trying to solve.
+
+https://death.andgravity.com/own-query-builder
+    "Why I wrote my own SQL query builder"
+    High-level design decisions, in the context of reader.
+
+https://death.andgravity.com/query-builder-how
+    Code walk-through / tutorial.
+    Low-level design decisions.
+    Better thought-out versions of the unimplemented features below.
 
 ---
 
 For a version of this that supports UNIONs see the second prototype in
 https://github.com/lemon24/reader/issues/123#issuecomment-624045621
+
+Here's a version based on the same idea that works with the 2021 refactor:
+https://gist.github.com/lemon24/3777dd39c96bf30014a331943ed789fa
 
 ---
 
