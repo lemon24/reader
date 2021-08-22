@@ -71,6 +71,7 @@ Entry user attributes are set as follows:
 
 
 """
+import functools
 import logging
 import re
 
@@ -113,46 +114,71 @@ def _is_duplicate(one, two):
     return same_title and same_text
 
 
-def _entry_dedupe_plugin(reader, entry, status):
+def _after_entry_update(reader, entry, status):
     if status is EntryUpdateStatus.MODIFIED:
         return
 
-    duplicates = [
-        e
-        for e in reader.get_entries(feed=entry.feed_url)
-        if e.id != entry.id and _is_duplicate(entry, e)
-    ]
+    others = list(_get_same_group_entries(reader, entry))
+    if not others:
+        return
 
+    _dedupe_entries(reader, entry, others)
+
+
+def _get_same_group_entries(reader, entry):
+    for other in reader.get_entries(feed=entry.feed_url):
+        if entry.object_id == other.object_id:
+            continue
+        if _normalize(entry.title) != _normalize(other.title):
+            continue
+        yield other
+
+
+def _name(thing):  # pragma: no cover
+    name = getattr(thing, '__name__', None)
+    if name:
+        return name
+    for attr in ('__func__', 'func'):
+        new_thing = getattr(thing, attr, None)
+        if new_thing:
+            return _name(new_thing)
+    return '<noname>'
+
+
+class partial(functools.partial):  # pragma: no cover
+    __slots__ = ()
+
+    def __str__(self):
+        name = _name(self.func)
+        parts = [repr(getattr(v, 'object_id', v)) for v in self.args]
+        parts.extend(
+            f"{k}={getattr(v, 'object_id', v)!r}" for k, v in self.keywords.items()
+        )
+        return f"{name}({', '.join(parts)})"
+
+
+def _make_actions(reader, entry, duplicates):
+    if all(d.read for d in duplicates):
+        yield partial(reader.mark_entry_as_read, entry)
+    else:
+        for duplicate in duplicates:
+            yield partial(reader.mark_entry_as_read, duplicate)
+
+    if any(d.important for d in duplicates):
+        yield partial(reader.mark_entry_as_important, entry)
+        for duplicate in duplicates:
+            yield partial(reader.mark_entry_as_unimportant, duplicate)
+
+
+def _dedupe_entries(reader, entry, others):
+    duplicates = [e for e in others if _is_duplicate(entry, e)]
     if not duplicates:
         return
 
-    if all(d.read for d in duplicates):
-        log.info(
-            "%r (%s): found read duplicates, marking this as read",
-            (entry.feed_url, entry.id),
-            entry.title,
-        )
-        reader.mark_entry_as_read(entry)
-    else:
-        for duplicate in duplicates:
-            reader.mark_entry_as_read(duplicate)
-        log.info(
-            "%r (%s): found unread duplicates, marking duplicates as read",
-            (entry.feed_url, entry.id),
-            entry.title,
-        )
-
-    if any(d.important for d in duplicates):
-        log.info(
-            "%r (%s): found important duplicates, "
-            "marking this as important and duplicates as unimportant",
-            (entry.feed_url, entry.id),
-            entry.title,
-        )
-        reader.mark_entry_as_important(entry)
-        for duplicate in duplicates:
-            reader.mark_entry_as_unimportant(duplicate)
+    for action in _make_actions(reader, entry, duplicates):
+        action()
+        log.info("entry_dedupe: %s", action)
 
 
 def init_reader(reader):
-    reader.after_entry_update_hooks.append(_entry_dedupe_plugin)
+    reader.after_entry_update_hooks.append(_after_entry_update)
