@@ -61,7 +61,7 @@ IS_DUPLICATE_DATA = [
     (
         make_entry(title='title', content=('value', 'text/plain')),
         make_entry(title='title', content=('value', 'text/plain')),
-        False,
+        True,
     ),
     (
         make_entry(title='title', summary='value'),

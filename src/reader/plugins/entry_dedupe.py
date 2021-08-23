@@ -101,8 +101,11 @@ def _normalize(text):
     return text
 
 
-def _first_content(entry):
-    return next((c.value for c in (entry.content or ()) if c.type == 'text/html'), None)
+def _content_fields(entry):
+    rv = [c.value for c in (entry.content or ())]
+    if entry.summary:
+        rv.append(entry.summary)
+    return [_normalize(s) for s in rv]
 
 
 def _is_duplicate(one, two):
@@ -111,54 +114,50 @@ def _is_duplicate(one, two):
     if _normalize(one.title) != _normalize(two.title):
         return False
 
-    pairs = [
-        (one.summary, two.summary),
-        (_first_content(one), _first_content(two)),
-        (one.summary or _first_content(one), two.summary or _first_content(two)),
-    ]
-    pairs = [(_normalize(a), _normalize(b)) for a, b in pairs if a and b]
-    if not pairs:
-        return False
+    one_fields = _content_fields(one)
+    two_fields = _content_fields(two)
 
-    def by_min_len_and_diff(t):
-        a, b = t
-        return min(len(a), len(b)), -abs(len(a) - len(b))
+    data = {}
 
-    pairs.sort(key=by_min_len_and_diff)
-    one_text, two_text = pairs[-1]
+    for one_text in one_fields:
+        for two_text in two_fields:
+            if one_text == two_text:
+                return True
 
-    if one_text == two_text:
-        return True
+            if True:  # pragma: no cover
+                one_words = one_text.split()
+                two_words = two_text.split()
+                min_length = min(len(one_words), len(two_words))
 
-    if True:  # pragma: no cover
-        one_words = one_text.split()
-        two_words = two_text.split()
-        min_length = min(len(one_words), len(two_words))
+                for n in (2, 3, 4):
+                    if min_length < n:
+                        continue
 
-        for n in (2, 3, 4):
-            if min_length < n:
-                continue
+                    d = dict(
+                        n=n,
+                        feed=one.feed_url,
+                        title=one.title,
+                        one_id=one.id,
+                        two_id=two.id,
+                        one_text=one_text,
+                        two_text=two_text,
+                        sim=_jaccard_similarity(one_words, two_words, n),
+                        trimmed=False,
+                    )
+                    data.setdefault((n, False), []).append(dict(d))
 
-            d = dict(
-                n=n,
-                feed=one.feed_url,
-                title=one.title,
-                one_id=one.id,
-                two_id=two.id,
-                one_text=one_text,
-                two_text=two_text,
-                sim=_jaccard_similarity(one_words, two_words, n),
-                trimmed=False,
-            )
-            log.info('xxx %r', d)
+                    one_words = one_words[:min_length]
+                    two_words = two_words[:min_length]
+                    d.update(
+                        sim=_jaccard_similarity(one_words, two_words, n),
+                        trimmed=True,
+                    )
+                    data.setdefault((n, True), []).append(dict(d))
 
-            one_words = one_words[:min_length]
-            two_words = two_words[:min_length]
-            d.update(
-                sim=_jaccard_similarity(one_words, two_words, n),
-                trimmed=True,
-            )
-            log.info('xxx %r', d)
+    for ds in data.values():  # pragma: no cover
+        ds.sort(key=lambda d: d['sim'])
+        d = ds[-1]
+        log.info('xxx %r', d)
 
     return False
 
