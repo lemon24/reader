@@ -74,6 +74,8 @@ Entry user attributes are set as follows:
 import functools
 import logging
 import re
+from collections import Counter
+from collections import deque
 from itertools import groupby
 
 from reader.types import EntryUpdateStatus
@@ -104,20 +106,81 @@ def _first_content(entry):
 
 
 def _is_duplicate(one, two):
-    same_title = False
-    if one.title and two.title:
-        same_title = _normalize(one.title) == _normalize(two.title)
+    if not one.title or not two.title:
+        return False
+    if _normalize(one.title) != _normalize(two.title):
+        return False
 
-    same_text = False
-    if one.summary and two.summary:
-        same_text = _normalize(one.summary) == _normalize(two.summary)
-    else:
-        one_content = _first_content(one)
-        two_content = _first_content(two)
-        if one_content and two_content:
-            same_text = _normalize(one_content) == _normalize(two_content)
+    pairs = [
+        (one.summary, two.summary),
+        (_first_content(one), _first_content(two)),
+        (one.summary or _first_content(one), two.summary or _first_content(two)),
+    ]
+    pairs = [(_normalize(a), _normalize(b)) for a, b in pairs if a and b]
+    if not pairs:
+        return False
 
-    return same_title and same_text
+    def by_min_len_and_diff(t):
+        a, b = t
+        return min(len(a), len(b)), -abs(len(a) - len(b))
+
+    pairs.sort(key=by_min_len_and_diff)
+    one_text, two_text = pairs[-1]
+
+    if one_text == two_text:
+        return True
+
+    if True:  # pragma: no cover
+        one_words = one_text.split()
+        two_words = two_text.split()
+        min_length = min(len(one_words), len(two_words))
+
+        for n in (2, 3, 4):
+            if min_length < n:
+                continue
+
+            d = dict(
+                n=n,
+                feed=one.feed_url,
+                title=one.title,
+                one_id=one.id,
+                two_id=two.id,
+                one_text=one_text,
+                two_text=two_text,
+                sim=_jaccard_similarity(one_words, two_words, n),
+                trimmed=False,
+            )
+            log.info('xxx %r', d)
+
+            one_words = one_words[:min_length]
+            two_words = two_words[:min_length]
+            d.update(
+                sim=_jaccard_similarity(one_words, two_words, n),
+                trimmed=True,
+            )
+            log.info('xxx %r', d)
+
+    return False
+
+
+def _ngrams(iterable, n):  # pragma: no cover
+    it = iter(iterable)
+    window = deque(maxlen=n)
+    while True:
+        if len(window) == n:
+            yield tuple(window)
+        try:
+            window.append(next(it))
+        except StopIteration:
+            return
+
+
+def _jaccard_similarity(one, two, n):  # pragma: no cover
+    # https://github.com/lemon24/reader/issues/79#issuecomment-447636334
+    # https://www.cs.utah.edu/~jeffp/teaching/cs5140-S15/cs5140/L4-Jaccard+nGram.pdf
+    one = Counter(_ngrams(one, n))
+    two = Counter(_ngrams(two, n))
+    return sum((one & two).values()) / sum((one | two).values())
 
 
 def _after_entry_update(reader, entry, status, *, dry_run=False):
@@ -175,7 +238,6 @@ def _get_entry_groups(reader, feed):  # pragma: no cover
 
     for _, group in groupby(entries, key=by_title):
         entry, *others = sorted(group, key=lambda e: e.last_updated, reverse=True)
-        # print('_', repr(_), len(others))
         yield entry, others
 
 
@@ -244,9 +306,16 @@ if __name__ == '__main__':  # pragma: no cover
     import logging
     from reader import make_reader
 
-    db, feed = sys.argv[1:]
+    db = sys.argv[1]
     logging.basicConfig(format="%(message)s")
     logging.getLogger('reader').setLevel(logging.INFO)
     reader = make_reader(db)
-    reader.add_feed_tag(feed, reader.make_reader_reserved_name('entry_dedupe.once'))
-    _after_feed_update(reader, feed)
+
+    if len(sys.argv) > 2:
+        feeds = [sys.argv[2]]
+    else:
+        feeds = reader.get_feeds()
+
+    for feed in feeds:
+        reader.add_feed_tag(feed, reader.make_reader_reserved_name('entry_dedupe.once'))
+        _after_feed_update(reader, feed)
