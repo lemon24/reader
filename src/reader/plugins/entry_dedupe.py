@@ -83,14 +83,17 @@ log = logging.getLogger('reader._plugins.feed_entry_dedupe')
 
 _XML_TAG_RE = re.compile(r'<[^<]+?>', re.I)
 _XML_ENTITY_RE = re.compile(r'&[^\s;]+?;', re.I)
+_NON_WORD_RE = re.compile(r'\W+')
 _WHITESPACE_RE = re.compile(r'\s+')
 
 
 def _normalize(text):
+    # TODO: doing them one by one is inefficient
     if text is None:  # pragma: no cover
         return ''
     text = _XML_TAG_RE.sub(' ', text)
     text = _XML_ENTITY_RE.sub(' ', text)
+    text = _NON_WORD_RE.sub(' ', text)
     text = _WHITESPACE_RE.sub(' ', text).strip()
     text = text.lower()
     return text
@@ -172,6 +175,7 @@ def _get_entry_groups(reader, feed):  # pragma: no cover
 
     for _, group in groupby(entries, key=by_title):
         entry, *others = sorted(group, key=lambda e: e.last_updated, reverse=True)
+        # print('_', repr(_), len(others))
         yield entry, others
 
 
@@ -216,15 +220,16 @@ def _make_actions(reader, entry, duplicates):
 
 def _dedupe_entries(reader, entry, others, *, dry_run):
     duplicates = [e for e in others if _is_duplicate(entry, e)]
-    if not duplicates:
-        return
-
     log.info(
         "entry_dedupe: %i candidates and %i duplicates for %r",
         len(others),
         len(duplicates),
         entry.object_id,
     )
+
+    if not duplicates:
+        return
+
     for action in _make_actions(reader, entry, duplicates):
         action()
         log.info("entry_dedupe: %s", action)
