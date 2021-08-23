@@ -74,6 +74,7 @@ Entry user attributes are set as follows:
 import functools
 import logging
 import re
+from itertools import groupby
 
 from reader.types import EntryUpdateStatus
 
@@ -86,6 +87,8 @@ _WHITESPACE_RE = re.compile(r'\s+')
 
 
 def _normalize(text):
+    if text is None:  # pragma: no cover
+        return ''
     text = _XML_TAG_RE.sub(' ', text)
     text = _XML_ENTITY_RE.sub(' ', text)
     text = _WHITESPACE_RE.sub(' ', text).strip()
@@ -100,7 +103,7 @@ def _first_content(entry):
 def _is_duplicate(one, two):
     same_title = False
     if one.title and two.title:
-        same_title = _normalize(one.title or '') == _normalize(two.title or '')
+        same_title = _normalize(one.title) == _normalize(two.title)
 
     same_text = False
     if one.summary and two.summary:
@@ -114,7 +117,7 @@ def _is_duplicate(one, two):
     return same_title and same_text
 
 
-def _after_entry_update(reader, entry, status):
+def _after_entry_update(reader, entry, status, *, dry_run=False):
     if status is EntryUpdateStatus.MODIFIED:
         return
 
@@ -122,16 +125,54 @@ def _after_entry_update(reader, entry, status):
     if not others:
         return
 
-    _dedupe_entries(reader, entry, others)
+    _dedupe_entries(reader, entry, others, dry_run=dry_run)
 
 
 def _get_same_group_entries(reader, entry):
-    for other in reader.get_entries(feed=entry.feed_url):
+
+    # to make this better, we could do something like
+    # reader.search_entries(f'title: {fts5_escape(entry.title)}'),
+    # assuming the search index is up to date enough;
+    # https://github.com/lemon24/reader/issues/202
+
+    for other in reader.get_entries(feed=entry.feed_url, read=None):
         if entry.object_id == other.object_id:
             continue
         if _normalize(entry.title) != _normalize(other.title):
             continue
         yield other
+
+
+def _after_feed_update(reader, feed, *, dry_run=False):  # pragma: no cover
+    tag = reader.make_reader_reserved_name('entry_dedupe.once')
+    tags = set(reader.get_feed_tags(feed))
+
+    if tag not in tags:
+        return
+
+    for entry, others in _get_entry_groups(reader, feed):
+        if not others:
+            continue
+        _dedupe_entries(reader, entry, others, dry_run=dry_run)
+
+    reader.remove_feed_tag(feed, tag)
+
+
+def _get_entry_groups(reader, feed):  # pragma: no cover
+    def by_title(e):
+        return _normalize(e.title)
+
+    # this reads all the feed's entries in memory;
+    # better would be to get all the (e.title, e.object_id),
+    # sort them, and then get_entry() each entry in order;
+    # even better would be to have get_entries(sort='title');
+    # https://github.com/lemon24/reader/issues/202
+
+    entries = sorted(reader.get_entries(feed=feed, read=None), key=by_title)
+
+    for _, group in groupby(entries, key=by_title):
+        entry, *others = sorted(group, key=lambda e: e.last_updated, reverse=True)
+        yield entry, others
 
 
 def _name(thing):  # pragma: no cover
@@ -158,6 +199,9 @@ class partial(functools.partial):  # pragma: no cover
 
 
 def _make_actions(reader, entry, duplicates):
+    # we could check if entry.read/.important before,
+    # but entry must Entry, not EntryData
+
     if all(d.read for d in duplicates):
         yield partial(reader.mark_entry_as_read, entry)
     else:
@@ -170,11 +214,17 @@ def _make_actions(reader, entry, duplicates):
             yield partial(reader.mark_entry_as_unimportant, duplicate)
 
 
-def _dedupe_entries(reader, entry, others):
+def _dedupe_entries(reader, entry, others, *, dry_run):
     duplicates = [e for e in others if _is_duplicate(entry, e)]
     if not duplicates:
         return
 
+    log.info(
+        "entry_dedupe: %i candidates and %i duplicates for %r",
+        len(others),
+        len(duplicates),
+        entry.object_id,
+    )
     for action in _make_actions(reader, entry, duplicates):
         action()
         log.info("entry_dedupe: %s", action)
@@ -182,3 +232,16 @@ def _dedupe_entries(reader, entry, others):
 
 def init_reader(reader):
     reader.after_entry_update_hooks.append(_after_entry_update)
+
+
+if __name__ == '__main__':  # pragma: no cover
+    import sys
+    import logging
+    from reader import make_reader
+
+    db, feed = sys.argv[1:]
+    logging.basicConfig(format="%(message)s")
+    logging.getLogger('reader').setLevel(logging.INFO)
+    reader = make_reader(db)
+    reader.add_feed_tag(feed, reader.make_reader_reserved_name('entry_dedupe.once'))
+    _after_feed_update(reader, feed)
