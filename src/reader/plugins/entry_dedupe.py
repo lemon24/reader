@@ -85,7 +85,7 @@ log = logging.getLogger('reader._plugins.feed_entry_dedupe')
 
 _XML_TAG_RE = re.compile(r'<[^<]+?>', re.I)
 _XML_ENTITY_RE = re.compile(r'&[^\s;]+?;', re.I)
-_NON_WORD_RE = re.compile(r'\W+')
+_NON_WORD_RE = re.compile(r'[\W-]+')
 _WHITESPACE_RE = re.compile(r'\s+')
 
 
@@ -117,47 +117,27 @@ def _is_duplicate(one, two):
     one_fields = _content_fields(one)
     two_fields = _content_fields(two)
 
-    data = {}
-
     for one_text in one_fields:
         for two_text in two_fields:
             if one_text == two_text:
                 return True
 
+            one_words = one_text.split()
+            two_words = two_text.split()
+            min_length = min(len(one_words), len(two_words))
+
             if True:  # pragma: no cover
-                one_words = one_text.split()
-                two_words = two_text.split()
-                min_length = min(len(one_words), len(two_words))
+                if min_length < 12:
+                    continue
 
-                for n in (2, 3, 4):
-                    if min_length < n:
-                        continue
+                sim = _jaccard_similarity(one_words, two_words, 4)
 
-                    d = dict(
-                        n=n,
-                        feed=one.feed_url,
-                        title=one.title,
-                        one_id=one.id,
-                        two_id=two.id,
-                        one_text=one_text,
-                        two_text=two_text,
-                        sim=_jaccard_similarity(one_words, two_words, n),
-                        trimmed=False,
-                    )
-                    data.setdefault((n, False), []).append(dict(d))
-
-                    one_words = one_words[:min_length]
-                    two_words = two_words[:min_length]
-                    d.update(
-                        sim=_jaccard_similarity(one_words, two_words, n),
-                        trimmed=True,
-                    )
-                    data.setdefault((n, True), []).append(dict(d))
-
-    for ds in data.values():  # pragma: no cover
-        ds.sort(key=lambda d: d['sim'])
-        d = ds[-1]
-        log.info('xxx %r', d)
+                if min_length >= 48 and sim >= 0.3:
+                    return True
+                if min_length >= 24 and sim >= 0.5:
+                    return True
+                if sim >= 0.7:
+                    return True
 
     return False
 
