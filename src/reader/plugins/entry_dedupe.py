@@ -117,6 +117,8 @@ def _is_duplicate(one, two):
     one_fields = _content_fields(one)
     two_fields = _content_fields(two)
 
+    # data = []
+
     for one_text in one_fields:
         for two_text in two_fields:
             if one_text == two_text:
@@ -127,17 +129,23 @@ def _is_duplicate(one, two):
             min_length = min(len(one_words), len(two_words))
 
             if True:  # pragma: no cover
-                if min_length < 12:
+                if min_length < 4:
                     continue
+
+                one_words = one_words[:min_length]
+                two_words = two_words[:min_length]
 
                 sim = _jaccard_similarity(one_words, two_words, 4)
 
-                if min_length >= 48 and sim >= 0.3:
+                # data.append(dict(feed=one.feed_url, one_id=one.id, two_id=two.id, title=one.title, sim=sim, min_length=min_length))
+                # note: comment the stuff below when collecting data
+                if min_length >= 48 and sim >= 0.7:
                     return True
-                if min_length >= 24 and sim >= 0.5:
+                if min_length >= 24 and sim >= 0.9:
                     return True
-                if sim >= 0.7:
-                    return True
+
+    # for d in data:
+    # log.info('xxx %r', d)
 
     return False
 
