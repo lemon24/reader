@@ -129,7 +129,7 @@ def _is_duplicate(one, two):
             min_length = min(len(one_words), len(two_words))
 
             if True:  # pragma: no cover
-                if min_length < 4:
+                if min_length < 32:
                     continue
 
                 one_words = one_words[:min_length]
@@ -139,9 +139,21 @@ def _is_duplicate(one, two):
 
                 # data.append(dict(feed=one.feed_url, one_id=one.id, two_id=two.id, title=one.title, sim=sim, min_length=min_length))
                 # note: comment the stuff below when collecting data
-                if min_length >= 48 and sim >= 0.7:
+
+                # all figures below for 4-grams, substitutions only
+
+                # 2 fully-spaced subs in the middle,
+                # 4 subs with consecutive on odd or even indexes in the middle,
+                # 7 subs with consecutive indexes in the middle,
+                # 10 subs at one end
+                if min_length >= 64 and sim >= 0.7:
                     return True
-                if min_length >= 24 and sim >= 0.9:
+                # 1 substitution in the middle,
+                # or ~4 at the ends
+                if min_length >= 48 and sim >= 0.8:
+                    return True
+                # 1 substitution at the end
+                if min_length >= 32 and sim >= 0.9:
                     return True
 
     # for d in data:
@@ -167,7 +179,10 @@ def _jaccard_similarity(one, two, n):  # pragma: no cover
     # https://www.cs.utah.edu/~jeffp/teaching/cs5140-S15/cs5140/L4-Jaccard+nGram.pdf
     one = Counter(_ngrams(one, n))
     two = Counter(_ngrams(two, n))
-    return sum((one & two).values()) / sum((one | two).values())
+    try:
+        return sum((one & two).values()) / sum((one | two).values())
+    except ZeroDivisionError:
+        return 0
 
 
 def _after_entry_update(reader, entry, status, *, dry_run=False):
