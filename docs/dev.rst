@@ -356,6 +356,12 @@ Timezone handling
 Aware vs. naive, and what's needed to go fully aware: :issue:`233#issuecomment-881618002`.
 
 
+OPML support
+~~~~~~~~~~~~
+
+Thoughts on dynamic lists of feeds: :issue:`165#issuecomment-905893420`.
+
+
 Web application
 ~~~~~~~~~~~~~~~
 
