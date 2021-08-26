@@ -309,15 +309,15 @@ class Search:
             CREATE TRIGGER entries_search_entries_insert
             AFTER INSERT ON entries
             BEGIN
-                INSERT INTO entries_search_sync_state (id, feed, es_rowids)
+                INSERT OR REPLACE INTO entries_search_sync_state (id, feed, es_rowids)
                 VALUES (
                     new.id,
                     new.feed,
-                    (
+                    coalesce((
                         SELECT es_rowids
                         from entries_search_sync_state
                         where (id, feed) = (new.id, new.feed)
-                    )
+                    ), '[]')
                 );
             END;
             """

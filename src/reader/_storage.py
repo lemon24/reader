@@ -222,6 +222,15 @@ def update_from_29_to_30(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute("CREATE INDEX entries_by_feed ON entries (feed);")
 
 
+def recreate_search_triggers(db: sqlite3.Connection) -> None:  # pragma: no cover
+    from ._search import Search
+
+    search = Search(db)
+    if search.is_enabled():
+        search._drop_triggers()
+        search._create_triggers()
+
+
 MINIMUM_SQLITE_VERSION = (3, 15)
 REQUIRED_SQLITE_COMPILE_OPTIONS = ["ENABLE_JSON1"]
 
@@ -230,12 +239,13 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=30,
+        version=31,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
             # 17-28 removed before 2.0 (last in be9c89581ea491d0c9cc95c9d39f073168a2fd02)
             29: update_from_29_to_30,
+            30: recreate_search_triggers,
         },
         id=APPLICATION_ID,
         # Row value support was added in 3.15.
