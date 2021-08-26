@@ -14,6 +14,7 @@ import reader
 from . import ParseError
 from . import ReaderError
 from . import StorageError
+from . import UpdateResult
 from ._config import make_reader_config
 from ._config import make_reader_from_config
 from ._plugins import LoaderError
@@ -327,9 +328,9 @@ def update(reader, url, new_only, workers, verbose):
 
         def make_it():
             try:
-                yield url, reader.update_feed(url)
+                yield UpdateResult(url, reader.update_feed(url))
             except ParseError as e:
-                yield url, e
+                yield UpdateResult(url, e)
 
         it = make_it()
     else:
