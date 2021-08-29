@@ -11,6 +11,9 @@ Version 2.2
 
 Unreleased
 
+* Add :attr:`~Reader.after_feed_update_hooks`,
+  which allow running arbitrary actions for updated feeds.
+  (:issue:`202`)
 
 Version 2.1
 -----------
@@ -118,8 +121,8 @@ Version 1.20
 
 Released 2021-07-12
 
-* Add :attr:`Reader.after_entry_update_hooks`,
-  which allows running arbitrary actions for updated entries.
+* Add :attr:`~Reader.after_entry_update_hooks`,
+  which allow running arbitrary actions for updated entries.
   Thanks to `Mirek Długosz`_ for the issue and pull request.
   (:issue:`241`)
 * Raise :exc:`StorageError` when opening / operating on an invalid database,

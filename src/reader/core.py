@@ -8,7 +8,6 @@ from datetime import datetime
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
-from typing import Collection
 from typing import Iterable
 from typing import Iterator
 from typing import Mapping
@@ -77,7 +76,7 @@ ReaderPluginType = Callable[['Reader'], None]
 AfterEntryUpdateHook = Callable[
     ['Reader', EntryData[datetime], EntryUpdateStatus], None
 ]
-_PostFeedUpdatePluginType = Callable[['Reader', str], None]
+AfterFeedUpdateHook = Callable[['Reader', str], None]
 
 
 def make_reader(
@@ -291,7 +290,6 @@ class Reader:
             raise ValueError(str(e)) from (e.__cause__ or e)
 
         self._updater = reader._updater
-        self._post_feed_update_plugins: Collection[_PostFeedUpdatePluginType] = []
 
         #: List of functions called for each updated entry
         #: after the feed was updated.
@@ -315,6 +313,20 @@ class Reader:
         #: .. versionadded:: 1.20
         #:
         self.after_entry_update_hooks: MutableSequence[AfterEntryUpdateHook] = []
+
+        #: List of functions called for each updated feed
+        #: after the feed was updated.
+        #:
+        #: Each function is called with:
+        #:
+        #: * `reader` – the :class:`Reader` instance
+        #: * `feed` – the :class:`str` feed URL
+        #:
+        #: Each function should return :const:`None`.
+        #:
+        #: .. versionadded:: 2.2
+        #:
+        self.after_feed_update_hooks: MutableSequence[AfterFeedUpdateHook] = []
 
         if _called_directly:
             warnings.warn(
@@ -912,9 +924,6 @@ class Reader:
         # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
 
-        for feed_plugin in self._post_feed_update_plugins:
-            feed_plugin(self, url)
-
         new_count = 0
         updated_count = 0
         for entry in entries_to_update:
@@ -926,6 +935,9 @@ class Reader:
                 entry_status = EntryUpdateStatus.MODIFIED
             for entry_hook in self.after_entry_update_hooks:
                 entry_hook(self, entry.entry, entry_status)
+
+        for feed_hook in self.after_feed_update_hooks:
+            feed_hook(self, url)
 
         return new_count, updated_count
 
