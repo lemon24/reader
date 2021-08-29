@@ -5,6 +5,7 @@ from utils import utc_datetime as datetime
 
 from reader import Content
 from reader import Entry
+from reader.plugins import entry_dedupe
 from reader.plugins.entry_dedupe import _is_duplicate_full
 from reader.plugins.entry_dedupe import _normalize
 
@@ -196,7 +197,7 @@ def test_plugin(make_reader):
         ['.reader.dedupe.once', '.reader.dedupe.once.title'],
     ],
 )
-def test_plugin_once(make_reader, db_path, tags):
+def test_plugin_once(make_reader, db_path, monkeypatch, tags):
     reader = make_reader(db_path)
     reader._parser = parser = Parser()
 
@@ -280,6 +281,9 @@ def test_plugin_once(make_reader, db_path, tags):
     for tag in tags:
         reader.add_feed_tag(feed, tag)
     reader.add_feed_tag(feed, 'unrelated')
+
+    assert entry_dedupe._MAX_GROUP_SIZE < 16
+    monkeypatch.setattr(entry_dedupe, '_MAX_GROUP_SIZE', 16)
     reader.update_feeds()
 
     assert set(reader.get_feed_tags(feed)) == {'unrelated'}

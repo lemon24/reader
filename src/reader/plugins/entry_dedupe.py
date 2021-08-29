@@ -266,6 +266,9 @@ def _after_feed_update(reader, feed, *, dry_run=False):
         reader.remove_feed_tag(feed, tag)
 
 
+_MAX_GROUP_SIZE = 8
+
+
 def _get_entry_groups(reader, feed, is_duplicate):
     def by_title(e):
         return _normalize(e.title)
@@ -280,6 +283,15 @@ def _get_entry_groups(reader, feed, is_duplicate):
 
     for _, group in groupby(entries, key=by_title):
         group = list(group)
+
+        if len(group) > _MAX_GROUP_SIZE:  # pragma: no cover
+            log.info(
+                "entry_dedupe: feed %r: found group > %r, skipping; first title: %s",
+                feed,
+                _MAX_GROUP_SIZE,
+                group[0].title,
+            )
+            continue
 
         while group:
             group.sort(key=lambda e: e.last_updated, reverse=True)
@@ -365,5 +377,10 @@ if __name__ == '__main__':  # pragma: no cover
         feeds = reader.get_feeds()
 
     for feed in feeds:
+        # if 'n-gate' not in feed.url: continue
         reader.add_feed_tag(feed, reader.make_reader_reserved_name('dedupe.once'))
-        _after_feed_update(reader, feed)
+        _after_feed_update(reader, feed.url)
+
+    import resource
+
+    print(resource.getrusage(resource.RUSAGE_SELF))
