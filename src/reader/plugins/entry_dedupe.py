@@ -77,6 +77,7 @@ import re
 from collections import Counter
 from collections import deque
 from itertools import groupby
+from typing import NamedTuple
 
 from reader.types import EntryUpdateStatus
 
@@ -90,7 +91,6 @@ _WHITESPACE_RE = re.compile(r'\s+')
 
 
 def _normalize(text):
-    # TODO: doing them one by one is inefficient
     if text is None:  # pragma: no cover
         return ''
     text = _XML_TAG_RE.sub(' ', text)
@@ -108,7 +108,27 @@ def _content_fields(entry):
     return [_normalize(s) for s in rv]
 
 
-def _is_duplicate(one, two):
+class _Threshold(NamedTuple):
+    length: int
+    similarity: float
+
+
+# all figures in comments for 4-grams, substitutions only
+_THRESHOLDS = [
+    # 2 fully-spaced subs in the middle,
+    # 4 subs with consecutive on odd or even indexes in the middle,
+    # 7 subs with consecutive indexes in the middle,
+    # 10 subs at one end
+    _Threshold(64, 0.7),
+    # 1 substitution in the middle,
+    # or ~4 at the ends
+    _Threshold(48, 0.8),
+    # 1 substitution at the end
+    _Threshold(32, 0.9),
+]
+
+
+def _is_duplicate_full(one, two):
     if not one.title or not two.title:
         return False
     if _normalize(one.title) != _normalize(two.title):
@@ -128,32 +148,22 @@ def _is_duplicate(one, two):
             two_words = two_text.split()
             min_length = min(len(one_words), len(two_words))
 
-            if True:  # pragma: no cover
-                if min_length < 32:
-                    continue
+            if min_length < min(t.length for t in _THRESHOLDS):
+                continue
 
-                one_words = one_words[:min_length]
-                two_words = two_words[:min_length]
+            one_words = one_words[:min_length]
+            two_words = two_words[:min_length]
 
-                sim = _jaccard_similarity(one_words, two_words, 4)
+            similarity = _jaccard_similarity(one_words, two_words, 4)
 
-                # data.append(dict(feed=one.feed_url, one_id=one.id, two_id=two.id, title=one.title, sim=sim, min_length=min_length))
-                # note: comment the stuff below when collecting data
+            # data.append(dict(feed=one.feed_url, one_id=one.id, two_id=two.id, title=one.title, sim=sim, min_length=min_length))
+            # note: comment the stuff below when collecting data
 
-                # all figures below for 4-grams, substitutions only
-
-                # 2 fully-spaced subs in the middle,
-                # 4 subs with consecutive on odd or even indexes in the middle,
-                # 7 subs with consecutive indexes in the middle,
-                # 10 subs at one end
-                if min_length >= 64 and sim >= 0.7:
-                    return True
-                # 1 substitution in the middle,
-                # or ~4 at the ends
-                if min_length >= 48 and sim >= 0.8:
-                    return True
-                # 1 substitution at the end
-                if min_length >= 32 and sim >= 0.9:
+            for threshold in _THRESHOLDS:
+                if (
+                    min_length >= threshold.length
+                    and similarity >= threshold.similarity
+                ):
                     return True
 
     # for d in data:
@@ -162,7 +172,13 @@ def _is_duplicate(one, two):
     return False
 
 
-def _ngrams(iterable, n):  # pragma: no cover
+def _is_duplicate_title(one, two):
+    if not one.title or not two.title:  # pragma: no cover
+        return False
+    return _normalize(one.title) == _normalize(two.title)
+
+
+def _ngrams(iterable, n):
     it = iter(iterable)
     window = deque(maxlen=n)
     while True:
@@ -174,14 +190,14 @@ def _ngrams(iterable, n):  # pragma: no cover
             return
 
 
-def _jaccard_similarity(one, two, n):  # pragma: no cover
+def _jaccard_similarity(one, two, n):
     # https://github.com/lemon24/reader/issues/79#issuecomment-447636334
     # https://www.cs.utah.edu/~jeffp/teaching/cs5140-S15/cs5140/L4-Jaccard+nGram.pdf
     one = Counter(_ngrams(one, n))
     two = Counter(_ngrams(two, n))
     try:
         return sum((one & two).values()) / sum((one | two).values())
-    except ZeroDivisionError:
+    except ZeroDivisionError:  # pragma: no cover
         return 0
 
 
@@ -189,11 +205,15 @@ def _after_entry_update(reader, entry, status, *, dry_run=False):
     if status is EntryUpdateStatus.MODIFIED:
         return
 
-    others = list(_get_same_group_entries(reader, entry))
-    if not others:
+    duplicates = [
+        e
+        for e in _get_same_group_entries(reader, entry)
+        if _is_duplicate_full(entry, e)
+    ]
+    if not duplicates:
         return
 
-    _dedupe_entries(reader, entry, others, dry_run=dry_run)
+    _dedupe_entries(reader, entry, duplicates, dry_run=dry_run)
 
 
 def _get_same_group_entries(reader, entry):
@@ -211,22 +231,42 @@ def _get_same_group_entries(reader, entry):
         yield other
 
 
-def _after_feed_update(reader, feed, *, dry_run=False):  # pragma: no cover
-    tag = reader.make_reader_reserved_name('entry_dedupe.once')
-    tags = set(reader.get_feed_tags(feed))
+_TAG_PREFIX = 'dedupe'
 
-    if tag not in tags:
+# ordered by strictness (strictest first)
+_IS_DUPLICATE_BY_TAG_SUFFIX = {
+    'once': _is_duplicate_full,
+    'once.title': _is_duplicate_title,
+}
+
+
+def _after_feed_update(reader, feed, *, dry_run=False):
+    all_tags = set(reader.get_feed_tags(feed))
+
+    dedupe_tags = []
+    for suffix in _IS_DUPLICATE_BY_TAG_SUFFIX:
+        tag = reader.make_reader_reserved_name(f'{_TAG_PREFIX}.{suffix}')
+        if tag in all_tags:
+            dedupe_tags.append((tag, suffix))
+
+    if not dedupe_tags:
         return
 
-    for entry, others in _get_entry_groups(reader, feed):
-        if not others:
+    suffix = dedupe_tags[0][1]
+    is_duplicate = _IS_DUPLICATE_BY_TAG_SUFFIX[suffix]
+
+    log.info("entry_dedupe: %r for feed %r", suffix, feed)
+
+    for entry, duplicates in _get_entry_groups(reader, feed, is_duplicate):
+        if not duplicates:
             continue
-        _dedupe_entries(reader, entry, others, dry_run=dry_run)
+        _dedupe_entries(reader, entry, duplicates, dry_run=dry_run)
 
-    reader.remove_feed_tag(feed, tag)
+    for tag, _ in dedupe_tags:
+        reader.remove_feed_tag(feed, tag)
 
 
-def _get_entry_groups(reader, feed):  # pragma: no cover
+def _get_entry_groups(reader, feed, is_duplicate):
     def by_title(e):
         return _normalize(e.title)
 
@@ -239,8 +279,19 @@ def _get_entry_groups(reader, feed):  # pragma: no cover
     entries = sorted(reader.get_entries(feed=feed, read=None), key=by_title)
 
     for _, group in groupby(entries, key=by_title):
-        entry, *others = sorted(group, key=lambda e: e.last_updated, reverse=True)
-        yield entry, others
+        group = list(group)
+
+        while group:
+            group.sort(key=lambda e: e.last_updated, reverse=True)
+            entry, *rest = group
+
+            duplicates, others = [], []
+            for e in rest:
+                (duplicates if is_duplicate(entry, e) else others).append(e)
+
+            yield entry, duplicates
+
+            group = others
 
 
 def _name(thing):  # pragma: no cover
@@ -267,33 +318,27 @@ class partial(functools.partial):  # pragma: no cover
 
 
 def _make_actions(reader, entry, duplicates):
-    # we could check if entry.read/.important before,
-    # but entry must Entry, not EntryData
+    # the getattr checks are because entry may be EntryData
 
-    if all(d.read for d in duplicates):
-        yield partial(reader.mark_entry_as_read, entry)
-    else:
-        for duplicate in duplicates:
+    if any(d.read for d in duplicates):
+        if not getattr(entry, 'read', False):  # pragma: no cover
+            yield partial(reader.mark_entry_as_read, entry)
+    for duplicate in duplicates:
+        if not duplicate.read:
             yield partial(reader.mark_entry_as_read, duplicate)
 
     if any(d.important for d in duplicates):
-        yield partial(reader.mark_entry_as_important, entry)
+        if not getattr(entry, 'important', False):  # pragma: no cover
+            yield partial(reader.mark_entry_as_important, entry)
         for duplicate in duplicates:
-            yield partial(reader.mark_entry_as_unimportant, duplicate)
+            if duplicate.important:
+                yield partial(reader.mark_entry_as_unimportant, duplicate)
 
 
-def _dedupe_entries(reader, entry, others, *, dry_run):
-    duplicates = [e for e in others if _is_duplicate(entry, e)]
+def _dedupe_entries(reader, entry, duplicates, *, dry_run):
     log.info(
-        "entry_dedupe: %i candidates and %i duplicates for %r",
-        len(others),
-        len(duplicates),
-        entry.object_id,
+        "entry_dedupe: %r duplicates: %r", entry.object_id, [e.id for e in duplicates]
     )
-
-    if not duplicates:
-        return
-
     for action in _make_actions(reader, entry, duplicates):
         action()
         log.info("entry_dedupe: %s", action)
@@ -301,6 +346,7 @@ def _dedupe_entries(reader, entry, others, *, dry_run):
 
 def init_reader(reader):
     reader.after_entry_update_hooks.append(_after_entry_update)
+    reader.after_feed_update_hooks.append(_after_feed_update)
 
 
 if __name__ == '__main__':  # pragma: no cover
@@ -319,5 +365,5 @@ if __name__ == '__main__':  # pragma: no cover
         feeds = reader.get_feeds()
 
     for feed in feeds:
-        reader.add_feed_tag(feed, reader.make_reader_reserved_name('entry_dedupe.once'))
+        reader.add_feed_tag(feed, reader.make_reader_reserved_name('dedupe.once'))
         _after_feed_update(reader, feed)

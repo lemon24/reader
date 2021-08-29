@@ -1,10 +1,11 @@
 import pytest
 from fakeparser import Parser
+from utils import naive_datetime
 from utils import utc_datetime as datetime
 
 from reader import Content
 from reader import Entry
-from reader.plugins.entry_dedupe import _is_duplicate
+from reader.plugins.entry_dedupe import _is_duplicate_full
 from reader.plugins.entry_dedupe import _normalize
 
 
@@ -68,20 +69,66 @@ IS_DUPLICATE_DATA = [
         make_entry(title='title', content=('value', 'text/html')),
         True,
     ),
+    (
+        make_entry(title='title', summary='value'),
+        make_entry(title='title', content=('value', 'text/html')),
+        True,
+    ),
+    (
+        make_entry(title='title', summary='one ' * 40),
+        make_entry(title='title', summary='one ' * 39 + 'two '),
+        True,
+    ),
+    (
+        make_entry(title='title', summary='one ' * 40),
+        make_entry(title='title', summary='one ' * 38),
+        True,
+    ),
+    (
+        make_entry(title='title', summary='one ' * 40),
+        make_entry(title='title', summary='one ' * 20 + 'two ' * 3 + 17 * 'one '),
+        False,
+    ),
+    (
+        make_entry(title='title', summary='one ' * 50),
+        make_entry(
+            title='title', summary='one ' * 30 + 'two ' + 17 * 'one ' + 'three '
+        ),
+        True,
+    ),
+    (
+        make_entry(title='title', summary='one ' * 50),
+        make_entry(title='title', summary='one ' * 30 + 'two ' * 5 + 25 * 'one '),
+        False,
+    ),
+    (
+        make_entry(title='title', summary='one ' * 70),
+        make_entry(
+            title='title', summary='one ' * 30 + 'two ' * 5 + 33 * 'one ' + 'three '
+        ),
+        True,
+    ),
+    (
+        make_entry(title='title', summary='one ' * 70),
+        make_entry(title='title', summary='one ' * 30 + 'two ' * 10 + 30 * 'one '),
+        False,
+    ),
+    # TODO: test normalization
 ]
 
 
 @pytest.mark.parametrize('one, two, result', IS_DUPLICATE_DATA)
 def test_is_duplicate(one, two, result):
-    assert bool(_is_duplicate(one, two)) is bool(result)
+    assert bool(_is_duplicate_full(one, two)) is bool(result)
 
 
 def test_plugin(make_reader):
     reader = make_reader(':memory:', plugins=['reader.entry_dedupe'])
-    parser = Parser()
-    reader._parser = parser
+    reader._parser = parser = Parser()
 
-    one = parser.feed(1, datetime(2010, 1, 1))
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    reader.add_feed(feed)
+
     old = parser.entry(1, 1, datetime(2010, 1, 1), title='title', summary='old')
     title_only_one = parser.entry(1, 2, datetime(2010, 1, 1), title='title only')
     read_one = parser.entry(1, 3, datetime(2010, 1, 1), title='title', summary='read')
@@ -95,14 +142,11 @@ def test_plugin(make_reader):
         1, 6, datetime(2010, 1, 1), title='title', summary='will be modified'
     )
 
-    # TODO just use the feeds/entries as arguments
-
-    reader.add_feed(one.url)
     reader.update_feeds()
-    reader.mark_entry_as_read((one.url, read_one.id))
-    reader.mark_entry_as_important((one.url, important_one.id))
+    reader.mark_entry_as_read(read_one)
+    reader.mark_entry_as_important(important_one)
 
-    one = parser.feed(1, datetime(2010, 1, 2))
+    feed = parser.feed(1, datetime(2010, 1, 2))
     new = parser.entry(1, 11, datetime(2010, 1, 2), title='title', summary='new')
     title_only_two = parser.entry(1, 12, datetime(2010, 1, 2), title='title only')
     read_two = parser.entry(1, 13, datetime(2010, 1, 2), title='title', summary='read')
@@ -142,3 +186,133 @@ def test_plugin(make_reader):
         (important_one.id, True, False),
         (important_two.id, False, True),
     }
+
+
+@pytest.mark.parametrize(
+    'tags',
+    [
+        ['.reader.dedupe.once'],
+        ['.reader.dedupe.once.title'],
+        ['.reader.dedupe.once', '.reader.dedupe.once.title'],
+    ],
+)
+def test_plugin_once(make_reader, db_path, tags):
+    reader = make_reader(db_path)
+    reader._parser = parser = Parser()
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    reader.add_feed(feed)
+
+    different_title = parser.entry(
+        1, 1, datetime(2010, 1, 5), title='different title', summary='summary'
+    )
+    no_content_match = parser.entry(
+        1, 2, datetime(2010, 1, 10), title='title', summary='does not match'
+    )
+
+    read_one = parser.entry(1, 4, datetime(2010, 1, 1), title='title', summary='read')
+    read_two = parser.entry(
+        1,
+        6,
+        datetime(2010, 1, 3),
+        title='title',
+        content=[Content('read', type='text/html')],
+    )
+
+    important_one = parser.entry(
+        1, 9, datetime(2010, 1, 3), title='title', summary='important'
+    )
+    important_two = parser.entry(
+        1,
+        8,
+        datetime(2010, 1, 1),
+        title='title',
+        content=[Content('important', type='text/plain')],
+    )
+
+    unread_one = parser.entry(
+        1, 10, datetime(2010, 1, 1), title='title', content=[Content('unread')]
+    )
+    unread_two = parser.entry(
+        1, 11, datetime(2010, 1, 1), title='title', summary='unread'
+    )
+
+    reader._now = lambda: naive_datetime(2010, 1, 10)
+    reader.update_feeds()
+    reader.mark_entry_as_read(read_one)
+
+    read_three = parser.entry(1, 5, datetime(2010, 1, 2), title='title', summary='read')
+    important_three = parser.entry(
+        1, 7, datetime(2010, 1, 2), title='title', summary='important'
+    )
+
+    reader._now = lambda: naive_datetime(2010, 1, 11)
+    reader.update_feeds()
+    reader.mark_entry_as_important(important_two)
+
+    unread_three = parser.entry(
+        1, 12, datetime(2010, 1, 1), title='title', summary='unread'
+    )
+
+    reader._now = lambda: naive_datetime(2010, 1, 12)
+    reader.update_feeds()
+
+    reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
+    reader._parser = parser
+    reader._now = lambda: naive_datetime(2010, 1, 12)
+    reader.update_feeds()
+
+    # nothing changes without tag
+    assert set((e.id, e.read, e.important) for e in reader.get_entries()) == {
+        (different_title.id, False, False),
+        (no_content_match.id, False, False),
+        (read_one.id, True, False),
+        (read_two.id, False, False),
+        (read_three.id, False, False),
+        (important_one.id, False, False),
+        (important_two.id, False, True),
+        (important_three.id, False, False),
+        (unread_one.id, False, False),
+        (unread_two.id, False, False),
+        (unread_three.id, False, False),
+    }
+
+    for tag in tags:
+        reader.add_feed_tag(feed, tag)
+    reader.add_feed_tag(feed, 'unrelated')
+    reader.update_feeds()
+
+    assert set(reader.get_feed_tags(feed)) == {'unrelated'}
+
+    # if both 'once' and 'once.title' are in tags,
+    # 'once' (the strictest) has priority
+    if '.reader.dedupe.once' in tags:
+        expected = {
+            (different_title.id, False, False),
+            (no_content_match.id, False, False),
+            (read_one.id, True, False),
+            (read_two.id, True, False),
+            (read_three.id, True, False),
+            (important_one.id, True, False),
+            (important_two.id, True, False),
+            (important_three.id, False, True),
+            (unread_one.id, True, False),
+            (unread_two.id, True, False),
+            (unread_three.id, False, False),
+        }
+    else:
+        expected = {
+            (different_title.id, False, False),
+            (no_content_match.id, True, False),
+            (read_one.id, True, False),
+            (read_two.id, True, False),
+            (read_three.id, True, False),
+            (important_one.id, True, False),
+            (important_two.id, True, False),
+            (important_three.id, True, False),
+            (unread_one.id, True, False),
+            (unread_two.id, True, False),
+            (unread_three.id, True, True),
+        }
+
+    assert set((e.id, e.read, e.important) for e in reader.get_entries()) == expected
