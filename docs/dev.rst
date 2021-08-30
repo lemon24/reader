@@ -365,6 +365,12 @@ OPML support
 Thoughts on dynamic lists of feeds: :issue:`165#issuecomment-905893420`.
 
 
+entry_dedupe
+~~~~~~~~~~~~
+
+Using MinHash to speed up similarity checks (maybe): https://gist.github.com/lemon24/b9af5ade919713406bda9603847d32e5
+
+
 Web application
 ~~~~~~~~~~~~~~~
 

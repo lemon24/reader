@@ -227,7 +227,7 @@ def _jaccard_similarity(one, two, n):
     one = Counter(_ngrams(one, n))
     two = Counter(_ngrams(two, n))
 
-    # we count replicas, hence the sum((...).values());
+    # we count replicas (i.e. weighted Jaccard), hence the sum((...).values());
     # I assume this decreases similarity if two has a sentence from one twice,
     # whereas len(...) would not
     try:
