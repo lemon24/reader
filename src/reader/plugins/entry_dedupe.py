@@ -266,7 +266,7 @@ def _after_feed_update(reader, feed, *, dry_run=False):
         reader.remove_feed_tag(feed, tag)
 
 
-_MAX_GROUP_SIZE = 8
+_MAX_GROUP_SIZE = 16
 
 
 def _get_entry_groups(reader, feed, is_duplicate):
