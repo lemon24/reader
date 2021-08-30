@@ -18,8 +18,15 @@ like *read* or *important* from the old entry to the new one.
     please +1 / comment in :issue:`140` if you need this.
 
 
-Duplicates are entries with the same title *and* the same summary/content,
-after all HTML tags and whitespace have been stripped.
+Duplicates are entries with the same title *and* the same summary/content.
+
+By default, this plugin runs only for newly-added entries.
+To run it for the existing entries of a feed,
+add the ``.reader.dedupe.once`` tag to the feed;
+the plugin will run on the next feed update, and remove the tag afterwards.
+To run it for the existing entries in a feed,
+and only use the title for comparisons (ignoring the content),
+use ``.reader.dedupe.once.title`` instead.
 
 
 Entry user attributes are set as follows:
@@ -51,6 +58,27 @@ Entry user attributes are set as follows:
     True            False           True
     False           False           False
     =============== =============== ===============
+
+
+To reduce false negatives when detecting duplicates:
+
+* All comparisons are case-insensitive,
+  with HTML tags, HTML entities, punctuation, and whitespace removed.
+* For entries with content of different lengths,
+  only a prefix of common (smaller) length is used in comparison.
+  (This is useful when one version of an entry
+  has only the first paragraph of the article,
+  but the other has the whole article.)
+* For entries with longer content (over ~48 words),
+  approximate matching is used instead of an exact match
+  (currently, Jaccard similarity of 4-grams).
+
+To reduce false positives when detecting duplicates:
+
+* Titles must match exactly (after clean-up).
+* Both entries must have title *and* content.
+* Similarity thresholds are set relatively high,
+  and higher for shorter content.
 
 
 .. todo::
@@ -98,6 +126,7 @@ def _normalize(text):
     text = _NON_WORD_RE.sub(' ', text)
     text = _WHITESPACE_RE.sub(' ', text).strip()
     text = text.lower()
+    # TODO in a better version of this, we'd keep the title/alt of img
     return text
 
 
@@ -129,6 +158,9 @@ _THRESHOLDS = [
 
 
 def _is_duplicate_full(one, two):
+    # info on similarity thresholds:
+    # https://github.com/lemon24/reader/issues/202#issuecomment-904139483
+
     if not one.title or not two.title:
         return False
     if _normalize(one.title) != _normalize(two.title):
@@ -137,12 +169,13 @@ def _is_duplicate_full(one, two):
     one_fields = _content_fields(one)
     two_fields = _content_fields(two)
 
-    # data = []
-
     for one_text in one_fields:
         for two_text in two_fields:
             if one_text == two_text:
                 return True
+
+            # TODO: we should match content fields by length, preferring longer ones;
+            # a summary is less likely to match, but the whole article might
 
             one_words = one_text.split()
             two_words = two_text.split()
@@ -156,18 +189,12 @@ def _is_duplicate_full(one, two):
 
             similarity = _jaccard_similarity(one_words, two_words, 4)
 
-            # data.append(dict(feed=one.feed_url, one_id=one.id, two_id=two.id, title=one.title, sim=sim, min_length=min_length))
-            # note: comment the stuff below when collecting data
-
             for threshold in _THRESHOLDS:
                 if (
                     min_length >= threshold.length
                     and similarity >= threshold.similarity
                 ):
                     return True
-
-    # for d in data:
-    # log.info('xxx %r', d)
 
     return False
 
@@ -193,8 +220,16 @@ def _ngrams(iterable, n):
 def _jaccard_similarity(one, two, n):
     # https://github.com/lemon24/reader/issues/79#issuecomment-447636334
     # https://www.cs.utah.edu/~jeffp/teaching/cs5140-S15/cs5140/L4-Jaccard+nGram.pdf
+
+    # if this ends up being too slow, this may help:
+    # https://www.cs.utah.edu/~jeffp/teaching/cs5140-S15/cs5140/L5-Minhash.pdf
+
     one = Counter(_ngrams(one, n))
     two = Counter(_ngrams(two, n))
+
+    # we count replicas, hence the sum((...).values());
+    # I assume this decreases similarity if two has a sentence from one twice,
+    # whereas len(...) would not
     try:
         return sum((one & two).values()) / sum((one | two).values())
     except ZeroDivisionError:  # pragma: no cover
@@ -284,7 +319,12 @@ def _get_entry_groups(reader, feed, is_duplicate):
     for _, group in groupby(entries, key=by_title):
         group = list(group)
 
-        if len(group) > _MAX_GROUP_SIZE:  # pragma: no cover
+        # this gets extremely slow for different entries with the same title,
+        # hence the limit
+
+        if (
+            len(group) > _MAX_GROUP_SIZE and is_duplicate is _is_duplicate_full
+        ):  # pragma: no cover
             log.info(
                 "entry_dedupe: feed %r: found group > %r, skipping; first title: %s",
                 feed,

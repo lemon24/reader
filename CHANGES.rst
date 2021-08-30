@@ -11,9 +11,14 @@ Version 2.2
 
 Unreleased
 
+* :mod:`~reader.plugins.entry_dedupe` plugin improvements:
+  reduce false negatives by using approximate content matching,
+  and make it possible to re-run the plugin for existing entries.
+  (:issue:`202`)
 * Add :attr:`~Reader.after_feed_update_hooks`,
   which allow running arbitrary actions for updated feeds.
   (:issue:`202`)
+
 
 Version 2.1
 -----------
@@ -313,7 +318,7 @@ Released 2021-03-29
 * Allow :func:`make_reader` to load plugins through the ``plugins`` argument.
   (:issue:`229`)
 
-  Enable the ``ua_fallback`` plugin by default.
+  Enable the :mod:`~reader.plugins.ua_fallback` plugin by default.
 
   :func:`make_reader` may now raise :exc:`InvalidPluginError`
   (a :exc:`ValueError` subclass, which it already raises implicitly)
