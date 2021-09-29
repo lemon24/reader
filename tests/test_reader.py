@@ -1705,9 +1705,9 @@ class FakeStorage:
     def close(self):
         self.calls.append(('close',))
 
-    def mark_as_important_unimportant(self, feed_url, entry_id, important):
+    def mark_as_important_unimportant(self, feed_url, entry_id, important, modified):
         self.calls.append(
-            ('mark_as_important_unimportant', feed_url, entry_id, important)
+            ('mark_as_important_unimportant', feed_url, entry_id, important, modified)
         )
         if self.exc:
             raise self.exc
@@ -1724,21 +1724,34 @@ class FakeStorage:
 
 
 def test_mark_as_important(reader, entry_arg):
-
     reader._storage = FakeStorage()
+    reader._now = lambda: naive_datetime(2010, 1, 1)
     entry = Entry('entry', None, feed=Feed('feed'))
     reader.mark_entry_as_important(entry_arg(entry))
     assert reader._storage.calls == [
-        ('mark_as_important_unimportant', 'feed', 'entry', True)
+        (
+            'mark_as_important_unimportant',
+            'feed',
+            'entry',
+            True,
+            naive_datetime(2010, 1, 1),
+        )
     ]
 
 
 def test_mark_as_unimportant(reader, entry_arg):
     reader._storage = FakeStorage()
+    reader._now = lambda: naive_datetime(2010, 1, 1)
     entry = Entry('entry', None, feed=Feed('feed'))
     reader.mark_entry_as_unimportant(entry_arg(entry))
     assert reader._storage.calls == [
-        ('mark_as_important_unimportant', 'feed', 'entry', False)
+        (
+            'mark_as_important_unimportant',
+            'feed',
+            'entry',
+            False,
+            naive_datetime(2010, 1, 1),
+        )
     ]
 
 
@@ -3078,3 +3091,32 @@ def test_reserved_names(make_reader):
 
     with pytest.raises(TypeError):
         reader.reserved_name_scheme['separator'] = '.'
+
+
+@pytest.mark.parametrize('flag', ['read', 'important'])
+@rename_argument('reader', 'reader_with_one_feed')
+def test_entry_read_important_modified(reader, flag):
+    reader.update_feeds()
+
+    entry = next(reader.get_entries())
+    assert not getattr(entry, flag)
+    assert getattr(entry, f'{flag}_modified') is None
+
+    reader._now = lambda: naive_datetime(2010, 1, 1)
+    getattr(reader, f'mark_entry_as_{flag}')(entry)
+    entry = next(reader.get_entries())
+    assert getattr(entry, flag)
+    assert getattr(entry, f'{flag}_modified') == datetime(2010, 1, 1)
+
+    reader._now = lambda: naive_datetime(2010, 1, 2)
+    getattr(reader, f'mark_entry_as_{flag}')(entry)
+    entry = next(reader.get_entries())
+    assert getattr(entry, f'{flag}_modified') == datetime(2010, 1, 2)
+
+    # TODO: set to specific datetime, set to None
+
+    reader._now = lambda: naive_datetime(2010, 1, 3)
+    getattr(reader, f'mark_entry_as_un{flag}')(entry)
+    entry = next(reader.get_entries())
+    assert not getattr(entry, flag)
+    assert getattr(entry, f'{flag}_modified') == datetime(2010, 1, 3)

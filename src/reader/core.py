@@ -1049,6 +1049,8 @@ class Reader:
                 'updated',
                 'published',
                 'last_updated',
+                'read_modified',
+                'important_modified',
                 feed=fix_datetime_tzinfo(
                     rv_entry.feed, 'updated', 'added', 'last_updated'
                 ),
@@ -1145,8 +1147,9 @@ class Reader:
             Renamed from :meth:`mark_as_read`.
 
         """
+        modified = self._now()
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_read_unread(feed_url, entry_id, True)
+        self._storage.mark_as_read_unread(feed_url, entry_id, True, modified)
 
     def mark_entry_as_unread(self, entry: EntryInput) -> None:
         """Mark an entry as unread.
@@ -1162,8 +1165,9 @@ class Reader:
             Renamed from :meth:`mark_as_unread`.
 
         """
+        modified = self._now()
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_read_unread(feed_url, entry_id, False)
+        self._storage.mark_as_read_unread(feed_url, entry_id, False, modified)
 
     def mark_entry_as_important(self, entry: EntryInput) -> None:
         """Mark an entry as important.
@@ -1179,8 +1183,9 @@ class Reader:
             Renamed from :meth:`mark_as_important`.
 
         """
+        modified = self._now()
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_important_unimportant(feed_url, entry_id, True)
+        self._storage.mark_as_important_unimportant(feed_url, entry_id, True, modified)
 
     def mark_entry_as_unimportant(self, entry: EntryInput) -> None:
         """Mark an entry as unimportant.
@@ -1196,8 +1201,9 @@ class Reader:
             Renamed from :meth:`mark_as_unimportant`.
 
         """
+        modified = self._now()
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_important_unimportant(feed_url, entry_id, False)
+        self._storage.mark_as_important_unimportant(feed_url, entry_id, False, modified)
 
     def get_feed_metadata(
         self,

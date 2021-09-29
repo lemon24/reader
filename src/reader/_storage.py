@@ -635,30 +635,47 @@ class Storage:
             rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     @wrap_exceptions(StorageError)
-    def mark_as_read_unread(self, feed_url: str, entry_id: str, read: bool) -> None:
-        with self.db:
-            cursor = self.db.execute(
-                """
-                UPDATE entries
-                SET read = :read
-                WHERE feed = :feed_url AND id = :entry_id;
-                """,
-                dict(feed_url=feed_url, entry_id=entry_id, read=read),
-            )
-        rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
-
-    @wrap_exceptions(StorageError)
-    def mark_as_important_unimportant(
-        self, feed_url: str, entry_id: str, important: bool
+    def mark_as_read_unread(
+        self, feed_url: str, entry_id: str, read: bool, modified: Optional[datetime]
     ) -> None:
         with self.db:
             cursor = self.db.execute(
                 """
                 UPDATE entries
-                SET important = :important
+                SET
+                    read = :read,
+                    read_modified = :modified
                 WHERE feed = :feed_url AND id = :entry_id;
                 """,
-                dict(feed_url=feed_url, entry_id=entry_id, important=important),
+                dict(
+                    feed_url=feed_url, entry_id=entry_id, read=read, modified=modified
+                ),
+            )
+        rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
+
+    @wrap_exceptions(StorageError)
+    def mark_as_important_unimportant(
+        self,
+        feed_url: str,
+        entry_id: str,
+        important: bool,
+        modified: Optional[datetime],
+    ) -> None:
+        with self.db:
+            cursor = self.db.execute(
+                """
+                UPDATE entries
+                SET
+                    important = :important,
+                    important_modified = :modified
+                WHERE feed = :feed_url AND id = :entry_id;
+                """,
+                dict(
+                    feed_url=feed_url,
+                    entry_id=entry_id,
+                    important=important,
+                    modified=modified,
+                ),
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
