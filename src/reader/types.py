@@ -230,8 +230,22 @@ class Entry(_namedtuple_compat):
     #: Whether the entry was read or not.
     read: bool = False
 
+    #: The date when :attr:`read` was last set by the user;
+    #: :const:`None` if that never happened,
+    #: or the entry predates the date being recorded.
+    #:
+    #: .. versionadded:: 2.2
+    read_modified: Optional[datetime] = None
+
     #: Whether the entry is important or not.
     important: bool = False
+
+    #: The date when :attr:`important` was last set by the user;
+    #: :const:`None` if that never happened,
+    #: or the entry predates the date being recorded.
+    #:
+    #: .. versionadded:: 2.2
+    important_modified: Optional[datetime] = None
 
     #: The date when the entry was last updated by reader.
     #:

@@ -1239,7 +1239,9 @@ def make_get_entries_query(
             entries.content
             entries.enclosures
             entries.read
+            entries.read_modified
             entries.important
+            entries.important_modified
             entries.last_updated
             entries.original_feed
             """.split()
@@ -1270,9 +1272,11 @@ def entry_factory(t: Tuple[Any, ...]) -> Entry:
         tuple(Content(**d) for d in json.loads(t[17])) if t[17] else (),
         tuple(Enclosure(**d) for d in json.loads(t[18])) if t[18] else (),
         t[19] == 1,
-        t[20] == 1,
-        t[21],
-        t[22] or feed.url,
+        t[20],
+        t[21] == 1,
+        t[22],
+        t[23],
+        t[24] or feed.url,
         feed,
     )
     return Entry._make(entry)
