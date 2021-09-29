@@ -125,7 +125,9 @@ def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
 
             -- reader data
             read INTEGER NOT NULL DEFAULT 0,
+            read_modified TIMESTAMP,
             important INTEGER NOT NULL DEFAULT 0,
+            important_modified TIMESTAMP,
             last_updated TIMESTAMP NOT NULL,
             first_updated_epoch TIMESTAMP NOT NULL,
             feed_order INTEGER NOT NULL,
@@ -231,6 +233,12 @@ def recreate_search_triggers(db: sqlite3.Connection) -> None:  # pragma: no cove
         search._create_triggers()
 
 
+def update_from_31_to_32(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/254
+    db.execute("ALTER TABLE entries ADD COLUMN read_modified TIMESTAMP;")
+    db.execute("ALTER TABLE entries ADD COLUMN important_modified TIMESTAMP;")
+
+
 MINIMUM_SQLITE_VERSION = (3, 15)
 REQUIRED_SQLITE_COMPILE_OPTIONS = ["ENABLE_JSON1"]
 
@@ -239,13 +247,14 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=31,
+        version=32,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
             # 17-28 removed before 2.0 (last in be9c89581ea491d0c9cc95c9d39f073168a2fd02)
             29: update_from_29_to_30,
             30: recreate_search_triggers,
+            31: update_from_31_to_32,
         },
         id=APPLICATION_ID,
         # Row value support was added in 3.15.
