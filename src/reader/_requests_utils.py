@@ -86,10 +86,7 @@ class SessionWrapper:
         for request_hook in self.hooks.request:
             request = request_hook(self.session, request, **kwargs) or request
 
-        response = self.session.send(
-            self.session.prepare_request(request),  # type: ignore
-            **kwargs,
-        )
+        response = self.session.send(self.session.prepare_request(request), **kwargs)
 
         for response_hook in self.hooks.response:
             new_request = response_hook(self.session, response, request, **kwargs)
@@ -104,8 +101,7 @@ class SessionWrapper:
 
             request = new_request
             response = self.session.send(
-                self.session.prepare_request(request),  # type: ignore
-                **kwargs,
+                self.session.prepare_request(request), **kwargs
             )
 
         return response
