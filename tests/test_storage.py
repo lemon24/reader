@@ -197,12 +197,12 @@ def mark_as_stale(storage, feed, __):
     storage.mark_as_stale(feed.url)
 
 
-def mark_as_read_unread(storage, feed, entry):
-    storage.mark_as_read_unread(feed.url, entry.id, 1, None)
+def mark_as_read(storage, feed, entry):
+    storage.mark_as_read(feed.url, entry.id, 1, None)
 
 
-def mark_as_important_unimportant(storage, feed, entry):
-    storage.mark_as_important_unimportant(feed.url, entry.id, 1, None)
+def mark_as_important(storage, feed, entry):
+    storage.mark_as_important(feed.url, entry.id, 1, None)
 
 
 def update_feed(storage, feed, entry):
@@ -286,8 +286,8 @@ def get_entry_last(storage, feed, entry):
         set_feed_user_title,
         set_feed_updates_enabled,
         mark_as_stale,
-        mark_as_read_unread,
-        mark_as_important_unimportant,
+        mark_as_read,
+        mark_as_important,
         update_feed,
         update_feed_last_updated,
         add_or_update_entry,
@@ -440,9 +440,9 @@ def check_iter_locked(db_path, pre_stuff, iter_stuff):
 
     # shouldn't raise an exception
     storage = Storage(db_path, timeout=0, wal_enabled=False)
-    storage.mark_as_read_unread(feed.url, entry.id, 1, None)
+    storage.mark_as_read(feed.url, entry.id, 1, None)
     storage = Storage(db_path, timeout=0)
-    storage.mark_as_read_unread(feed.url, entry.id, 0, None)
+    storage.mark_as_read(feed.url, entry.id, 0, None)
 
 
 def test_update_feed_last_updated_not_found(db_path):
@@ -530,7 +530,7 @@ def storage():
 
 def test_entry_remains_read_after_update(storage_with_two_entries):
     storage = storage_with_two_entries
-    storage.mark_as_read_unread('feed', 'one', True, None)
+    storage.mark_as_read('feed', 'one', True, None)
 
     storage.add_or_update_entry(
         EntryUpdateIntent(
@@ -586,7 +586,7 @@ def test_important_unimportant_by_default(storage):
 
 @rename_argument('storage', 'storage_with_two_entries')
 def test_important_get_entries(storage):
-    storage.mark_as_important_unimportant('feed', 'one', True, datetime(2010, 1, 2))
+    storage.mark_as_important('feed', 'one', True, datetime(2010, 1, 2))
 
     assert {e.id for e in storage.get_entries(now=datetime(2010, 1, 1))} == {
         'one',
@@ -614,7 +614,7 @@ def test_important_get_entries(storage):
 
 @rename_argument('storage', 'storage_with_two_entries')
 def test_important_entry_remains_important_after_update(storage):
-    storage.mark_as_important_unimportant('feed', 'one', True, None)
+    storage.mark_as_important('feed', 'one', True, None)
 
     storage.add_or_update_entry(
         EntryUpdateIntent(
@@ -636,7 +636,7 @@ def test_important_entry_remains_important_after_update(storage):
 
 @rename_argument('storage', 'storage_with_two_entries')
 def test_important_entry_important(storage):
-    storage.mark_as_important_unimportant('feed', 'one', True, None)
+    storage.mark_as_important('feed', 'one', True, None)
 
     assert {e.id: e.important for e in storage.get_entries(datetime(2010, 1, 1))} == {
         'one': True,
@@ -646,8 +646,8 @@ def test_important_entry_important(storage):
 
 @rename_argument('storage', 'storage_with_two_entries')
 def test_important_mark_as_unimportant(storage):
-    storage.mark_as_important_unimportant('feed', 'one', True, None)
-    storage.mark_as_important_unimportant('feed', 'one', False, None)
+    storage.mark_as_important('feed', 'one', True, None)
+    storage.mark_as_important('feed', 'one', False, None)
 
     assert {
         e.id
@@ -659,7 +659,7 @@ def test_important_mark_as_unimportant(storage):
 
 def test_important_mark_entry_not_found(storage):
     with pytest.raises(EntryNotFoundError):
-        storage.mark_as_important_unimportant('feed', 'one', True, None)
+        storage.mark_as_important('feed', 'one', True, None)
 
 
 def test_minimum_sqlite_version(db_path, monkeypatch):

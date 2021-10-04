@@ -635,7 +635,7 @@ class Storage:
             rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     @wrap_exceptions(StorageError)
-    def mark_as_read_unread(
+    def mark_as_read(
         self, feed_url: str, entry_id: str, read: bool, modified: Optional[datetime]
     ) -> None:
         with self.db:
@@ -654,7 +654,7 @@ class Storage:
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
     @wrap_exceptions(StorageError)
-    def mark_as_important_unimportant(
+    def mark_as_important(
         self,
         feed_url: str,
         entry_id: str,

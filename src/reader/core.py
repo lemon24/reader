@@ -1149,7 +1149,7 @@ class Reader:
         """
         modified = self._now()
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_read_unread(feed_url, entry_id, True, modified)
+        self._storage.mark_as_read(feed_url, entry_id, True, modified)
 
     def mark_entry_as_unread(self, entry: EntryInput) -> None:
         """Mark an entry as unread.
@@ -1167,7 +1167,7 @@ class Reader:
         """
         modified = self._now()
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_read_unread(feed_url, entry_id, False, modified)
+        self._storage.mark_as_read(feed_url, entry_id, False, modified)
 
     def mark_entry_as_important(self, entry: EntryInput) -> None:
         """Mark an entry as important.
@@ -1185,7 +1185,7 @@ class Reader:
         """
         modified = self._now()
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_important_unimportant(feed_url, entry_id, True, modified)
+        self._storage.mark_as_important(feed_url, entry_id, True, modified)
 
     def mark_entry_as_unimportant(self, entry: EntryInput) -> None:
         """Mark an entry as unimportant.
@@ -1203,7 +1203,7 @@ class Reader:
         """
         modified = self._now()
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_important_unimportant(feed_url, entry_id, False, modified)
+        self._storage.mark_as_important(feed_url, entry_id, False, modified)
 
     def get_feed_metadata(
         self,
