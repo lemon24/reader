@@ -5,6 +5,7 @@ import numbers
 import warnings
 from contextlib import nullcontext
 from datetime import datetime
+from datetime import timezone
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
@@ -1133,12 +1134,24 @@ class Reader:
         now = self._now()
         return self._storage.get_entry_counts(now, filter_options)
 
-    def mark_entry_as_read(self, entry: EntryInput, read: bool = True) -> None:
+    def mark_entry_as_read(
+        self,
+        entry: EntryInput,
+        read: bool = True,
+        *,
+        modified: Union[MissingType, None, datetime] = MISSING,
+    ) -> None:
         """Mark an entry as read (or unread).
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
-            read (bool): Mark the entry as read if true, and as unread otherwise.
+            read (bool): Mark the entry as read if true (default),
+                and as unread otherwise.
+            modified (datetime or None):
+                Set :attr:`~Entry.read_modified` to this.
+                Naive datetimes are normalized by passing them to
+                :meth:`~datetime.datetime.astimezone`.
+                Defaults to the current time.
 
         Raises:
             EntryNotFoundError
@@ -1150,10 +1163,20 @@ class Reader:
         .. versionadded:: 2.2
             The ``read`` argument.
 
+        .. versionadded:: 2.2
+            The ``modified`` argument.
+
         """
-        modified = self._now()
+        modified_naive: Optional[datetime]
+        if isinstance(modified, MissingType):
+            modified_naive = self._now()
+        elif modified is None:
+            modified_naive = None
+        else:
+            modified_naive = modified.astimezone(timezone.utc).replace(tzinfo=None)
+
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_read(feed_url, entry_id, bool(read), modified)
+        self._storage.mark_as_read(feed_url, entry_id, bool(read), modified_naive)
 
     def mark_entry_as_unread(self, entry: EntryInput) -> None:
         """Mark an entry as unread.
@@ -1174,14 +1197,23 @@ class Reader:
         return self.mark_entry_as_read(entry, False)
 
     def mark_entry_as_important(
-        self, entry: EntryInput, important: bool = True
+        self,
+        entry: EntryInput,
+        important: bool = True,
+        *,
+        modified: Union[MissingType, None, datetime] = MISSING,
     ) -> None:
         """Mark an entry as important (or unimportant).
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
-            important (bool): Mark the entry as important if true,
+            important (bool): Mark the entry as important if true (default),
                 and as unimportant otherwise.
+            modified (datetime or None):
+                Set :attr:`~Entry.important_modified` to this.
+                Naive datetimes are normalized by passing them to
+                :meth:`~datetime.datetime.astimezone`.
+                Defaults to the current time.
 
         Raises:
             EntryNotFoundError
@@ -1193,10 +1225,22 @@ class Reader:
         .. versionadded:: 2.2
             The ``important`` argument.
 
+        .. versionadded:: 2.2
+            The ``modified`` argument.
+
         """
-        modified = self._now()
+        modified_naive: Optional[datetime]
+        if isinstance(modified, MissingType):
+            modified_naive = self._now()
+        elif modified is None:
+            modified_naive = None
+        else:
+            modified_naive = modified.astimezone(timezone.utc).replace(tzinfo=None)
+
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_important(feed_url, entry_id, bool(important), modified)
+        self._storage.mark_as_important(
+            feed_url, entry_id, bool(important), modified_naive
+        )
 
     def mark_entry_as_unimportant(self, entry: EntryInput) -> None:
         """Mark an entry as unimportant.
