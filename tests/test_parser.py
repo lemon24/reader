@@ -370,9 +370,9 @@ def test_parse_returns_etag_last_modified(
 
 
 @pytest.mark.parametrize('tz', ['UTC', 'Europe/Helsinki'])
-# timt.tzset() does not exist on Windows
+# time.tzset() does not exist on Windows
 @pytest.mark.skipif("os.name == 'nt'")
-def test_parse_local_timezone(monkeypatch, request, parse, tz, data_dir):
+def test_parse_local_timezone(monkeypatch_tz, request, parse, tz, data_dir):
     """parse() return the correct dates regardless of the local timezone."""
 
     feed_path = data_dir.join('full.atom')
@@ -381,11 +381,7 @@ def test_parse_local_timezone(monkeypatch, request, parse, tz, data_dir):
     expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(feed_path.new(ext='.atom.py').read(), expected)
 
-    import time
-
-    request.addfinalizer(time.tzset)
-    monkeypatch.setenv('TZ', tz)
-    time.tzset()
+    monkeypatch_tz(tz)
     feed, _, _, _ = parse(str(feed_path))
     assert feed.updated == expected['feed'].updated
 

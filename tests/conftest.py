@@ -5,6 +5,7 @@ from functools import wraps
 
 import py.path
 import pytest
+from utils import monkeypatch_tz
 from utils import reload_module
 
 from reader import make_reader as original_make_reader

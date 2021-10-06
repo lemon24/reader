@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 import threading
 from collections import Counter
@@ -3122,7 +3123,7 @@ def test_entry_read_important_modified_gets_set_to_now(reader, flag):
 
 @pytest.mark.parametrize('flag', ['read', 'important'])
 @rename_argument('reader', 'reader_with_one_feed')
-def test_entry_read_important_modified_argument(reader, flag):
+def test_entry_read_important_modified_argument(reader, flag, monkeypatch_tz):
     from datetime import datetime
 
     reader.update_feeds()
@@ -3134,12 +3135,22 @@ def test_entry_read_important_modified_argument(reader, flag):
         entry, modified=datetime(2010, 1, 1, tzinfo=timezone(timedelta(hours=-2)))
     )
     entry = next(reader.get_entries())
-    assert getattr(entry, f'{flag}_modified') == datetime(
-        2010, 1, 1, 2, tzinfo=timezone.utc
-    )
-
-    # TODO: test naive datetime handling (by mocking the system timezone?)
+    assert getattr(entry, f'{flag}_modified') == utc_datetime(2010, 1, 1, 2)
 
     getattr(reader, f'mark_entry_as_{flag}')(entry, modified=None)
     entry = next(reader.get_entries())
     assert getattr(entry, f'{flag}_modified') is None
+
+    # time.tzset() does not exist on Windows
+    if os.name == 'nt':
+        return
+
+    monkeypatch_tz('UTC')
+    getattr(reader, f'mark_entry_as_{flag}')(entry, modified=datetime(2010, 1, 1, 4))
+    entry = next(reader.get_entries())
+    assert getattr(entry, f'{flag}_modified') == utc_datetime(2010, 1, 1, 4)
+
+    monkeypatch_tz('Etc/GMT+6')
+    getattr(reader, f'mark_entry_as_{flag}')(entry, modified=datetime(2010, 1, 1))
+    entry = next(reader.get_entries())
+    assert getattr(entry, f'{flag}_modified') == utc_datetime(2010, 1, 1, 6)

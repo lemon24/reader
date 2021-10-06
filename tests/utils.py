@@ -2,6 +2,7 @@ import functools
 import importlib
 import inspect
 import os.path
+import time
 from datetime import datetime
 from datetime import timezone
 from urllib.parse import urlparse
@@ -73,6 +74,28 @@ def reload_module(monkeypatch):
         yield reloader
     finally:
         reloader.undo()
+
+
+class TZSetter:
+    def __init__(self, monkeypatch):
+        self.monkeypatch = monkeypatch
+
+    def __call__(self, tz):
+        self.monkeypatch.setenv('TZ', tz)
+        time.tzset()
+
+    def undo(self):
+        self.monkeypatch.undo()
+        time.tzset()
+
+
+@pytest.fixture
+def monkeypatch_tz(monkeypatch):
+    tzsetter = TZSetter(monkeypatch)
+    try:
+        yield tzsetter
+    finally:
+        tzsetter.undo()
 
 
 # FIXME: explain what this is
