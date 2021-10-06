@@ -1133,11 +1133,12 @@ class Reader:
         now = self._now()
         return self._storage.get_entry_counts(now, filter_options)
 
-    def mark_entry_as_read(self, entry: EntryInput) -> None:
-        """Mark an entry as read.
+    def mark_entry_as_read(self, entry: EntryInput, read: bool = True) -> None:
+        """Mark an entry as read (or unread).
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+            read (bool): Mark the entry as read if true, and as unread otherwise.
 
         Raises:
             EntryNotFoundError
@@ -1146,13 +1147,18 @@ class Reader:
         .. versionadded:: 1.18
             Renamed from :meth:`mark_as_read`.
 
+        .. versionadded:: 2.2
+            The ``read`` argument.
+
         """
         modified = self._now()
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_read(feed_url, entry_id, True, modified)
+        self._storage.mark_as_read(feed_url, entry_id, bool(read), modified)
 
     def mark_entry_as_unread(self, entry: EntryInput) -> None:
         """Mark an entry as unread.
+
+        Alias for ``mark_entry_as_read(entry, False)``.
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
@@ -1165,15 +1171,17 @@ class Reader:
             Renamed from :meth:`mark_as_unread`.
 
         """
-        modified = self._now()
-        feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_read(feed_url, entry_id, False, modified)
+        return self.mark_entry_as_read(entry, False)
 
-    def mark_entry_as_important(self, entry: EntryInput) -> None:
-        """Mark an entry as important.
+    def mark_entry_as_important(
+        self, entry: EntryInput, important: bool = True
+    ) -> None:
+        """Mark an entry as important (or unimportant).
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+            important (bool): Mark the entry as important if true,
+                and as unimportant otherwise.
 
         Raises:
             EntryNotFoundError
@@ -1182,13 +1190,18 @@ class Reader:
         .. versionadded:: 1.18
             Renamed from :meth:`mark_as_important`.
 
+        .. versionadded:: 2.2
+            The ``important`` argument.
+
         """
         modified = self._now()
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_important(feed_url, entry_id, True, modified)
+        self._storage.mark_as_important(feed_url, entry_id, bool(important), modified)
 
     def mark_entry_as_unimportant(self, entry: EntryInput) -> None:
         """Mark an entry as unimportant.
+
+        Alias for ``mark_entry_as_important(entry, False)``.
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
@@ -1201,9 +1214,7 @@ class Reader:
             Renamed from :meth:`mark_as_unimportant`.
 
         """
-        modified = self._now()
-        feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_important(feed_url, entry_id, False, modified)
+        return self.mark_entry_as_important(entry, False)
 
     def get_feed_metadata(
         self,

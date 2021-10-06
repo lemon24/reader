@@ -18,6 +18,10 @@ Unreleased
 * Add :attr:`~Reader.after_feed_update_hooks`,
   which allow running arbitrary actions for updated feeds.
   (:issue:`202`)
+* Allow :meth:`~Reader.mark_entry_as_read`
+  and :meth:`~Reader.mark_entry_as_important`
+  to mark an entry as unread/unimportant through a boolean flag.
+  (:issue:`256`)
 
 
 Version 2.1
