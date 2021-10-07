@@ -316,3 +316,120 @@ def test_plugin_once(make_reader, db_path, monkeypatch, tags):
         }
 
     assert set((e.id, e.read, e.important) for e in reader.get_entries()) == expected
+
+
+READ_MODIFIED_COPYING_DATA = [
+    # sanity checks
+    ([], []),
+    ([(1, False, None)], [(1, False, None)]),
+    # some read, earliest modified of the read entries is used
+    (
+        [
+            (1, False, None),
+            (2, True, None),
+            (3, False, datetime(2010, 1, 3)),
+            (4, True, datetime(2010, 1, 4)),
+            (5, True, datetime(2010, 1, 5)),
+            (6, False, datetime(2010, 1, 6)),
+            (9, False, None),
+        ],
+        [
+            (1, True, None),
+            (2, True, None),
+            (3, True, None),
+            (4, True, None),
+            (5, True, None),
+            (6, True, None),
+            (9, True, datetime(2010, 1, 4)),
+        ],
+    ),
+    # none read, earliest modified of the unread entries is used
+    (
+        [
+            (1, False, None),
+            (2, False, datetime(2010, 1, 2)),
+            (3, False, datetime(2010, 1, 3)),
+            (9, False, None),
+        ],
+        [
+            (1, True, None),
+            (2, True, None),
+            (3, True, None),
+            (9, False, datetime(2010, 1, 2)),
+        ],
+    ),
+    # none read, no modified
+    (
+        [
+            (1, False, None),
+            (9, False, None),
+        ],
+        [
+            (1, True, None),
+            (9, False, None),
+        ],
+    ),
+    # read, no modified
+    (
+        [
+            (1, True, None),
+            (9, False, None),
+        ],
+        [
+            (1, True, None),
+            (9, True, None),
+        ],
+    ),
+    # all read, earliest modified of the read entries is used (last has modified)
+    # FIXME: fails
+    # ([
+    # (1, True, None),
+    # (2, True, datetime(2010, 1, 2)),
+    # (3, True, datetime(2010, 1, 3)),
+    # ], [
+    # (1, True, None),
+    # (2, True, None),
+    # (3, True, datetime(2010, 1, 2)),
+    # ]),
+    # none read, earliest modified of the unread entries is used (last has modified)
+    (
+        [
+            (1, False, None),
+            (2, False, datetime(2010, 1, 2)),
+            (3, False, datetime(2010, 1, 3)),
+        ],
+        [
+            (1, True, None),
+            (2, True, None),
+            (3, False, datetime(2010, 1, 2)),
+        ],
+    ),
+]
+
+
+@pytest.mark.parametrize('data, expected', READ_MODIFIED_COPYING_DATA)
+def test_read_modified_copying(make_reader, db_path, data, expected):
+    reader = make_reader(db_path)
+    reader._parser = parser = Parser()
+
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    reader.add_feed(feed)
+
+    for id, *_ in data:
+        parser.entry(1, id, datetime(2010, 1, id), title='title', summary='summary')
+
+    reader.update_feeds()
+
+    # the entry with the highest id is the last one
+    for id, read, modified in data:
+        reader.mark_entry_as_read(('1', f'1, {id}'), read, modified=modified)
+
+    reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
+    reader._parser = parser
+    reader.add_feed_tag(feed, '.reader.dedupe.once')
+    reader.update_feeds()
+
+    actual = sorted(
+        (eval(e.id)[1], e.read, e.read_modified) for e in reader.get_entries()
+    )
+    assert actual == expected

@@ -372,12 +372,43 @@ class partial(functools.partial):  # pragma: no cover
 def _make_actions(reader, entry, duplicates):
     # the getattr checks are because entry may be EntryData
 
+    # TODO: get rid of the "no cover"s below
+
     if any(d.read for d in duplicates):
+
         if not getattr(entry, 'read', False):  # pragma: no cover
-            yield partial(reader.mark_entry_as_read, entry)
+            read_modified = next(
+                iter(
+                    sorted(
+                        d.read_modified
+                        for d in duplicates
+                        if d.read and d.read_modified
+                    )
+                ),
+                None,
+            )
+            yield partial(reader.mark_entry_as_read, entry, modified=read_modified)
+
+    else:
+        if not getattr(entry, 'read', False):  # pragma: no cover
+            read_modified = next(
+                iter(
+                    sorted(
+                        d.read_modified
+                        for d in duplicates
+                        if not d.read and d.read_modified
+                    )
+                ),
+                None,
+            )
+            if read_modified and read_modified != getattr(entry, 'read_modified', None):
+                yield partial(
+                    reader.mark_entry_as_read, entry, False, modified=read_modified
+                )
+
     for duplicate in duplicates:
-        if not duplicate.read:
-            yield partial(reader.mark_entry_as_read, duplicate)
+        if not duplicate.read or duplicate.read_modified is not None:
+            yield partial(reader.mark_entry_as_read, duplicate, modified=None)
 
     if any(d.important for d in duplicates):
         if not getattr(entry, 'important', False):  # pragma: no cover
