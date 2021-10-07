@@ -1138,7 +1138,6 @@ class Reader:
         self,
         entry: EntryInput,
         read: bool = True,
-        *,
         modified: Union[MissingType, None, datetime] = MISSING,
     ) -> None:
         """Mark an entry as read (or unread).
@@ -1200,7 +1199,6 @@ class Reader:
         self,
         entry: EntryInput,
         important: bool = True,
-        *,
         modified: Union[MissingType, None, datetime] = MISSING,
     ) -> None:
         """Mark an entry as important (or unimportant).

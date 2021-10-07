@@ -411,6 +411,77 @@ READ_MODIFIED_COPYING_DATA = [
 
 @pytest.mark.parametrize('data, expected', READ_MODIFIED_COPYING_DATA)
 def test_read_modified_copying(make_reader, db_path, data, expected):
+    _test_modified_copying(make_reader, db_path, data, expected, 'read')
+
+
+IMPORTANT_MODIFIED_COPYING_DATA = [
+    # sanity checks
+    ([], []),
+    ([(1, False, None)], [(1, False, None)]),
+    # none important, no modified
+    (
+        [
+            (1, False, None),
+            (9, False, None),
+        ],
+        [
+            (1, False, None),
+            (9, False, None),
+        ],
+    ),
+    # important, no modified
+    (
+        [
+            (1, True, None),
+            (9, False, None),
+        ],
+        [
+            (1, False, None),
+            (9, True, None),
+        ],
+    ),
+    # none important, modified
+    (
+        [
+            (1, False, datetime(2010, 1, 1)),
+            (9, False, None),
+        ],
+        [
+            (1, False, None),
+            (9, False, datetime(2010, 1, 1)),
+        ],
+    ),
+    # none important, modified (last has modified)
+    (
+        [
+            (1, False, datetime(2010, 1, 1)),
+            (9, False, datetime(2010, 1, 9)),
+        ],
+        [
+            (1, False, None),
+            (9, False, datetime(2010, 1, 1)),
+        ],
+    ),
+    # important, modified
+    (
+        [
+            (1, True, datetime(2010, 1, 1)),
+            (9, False, None),
+        ],
+        [
+            (1, False, None),
+            (9, True, datetime(2010, 1, 1)),
+        ],
+    ),
+]
+
+
+@pytest.mark.parametrize('data, expected', IMPORTANT_MODIFIED_COPYING_DATA)
+def test_important_modified_copying(make_reader, db_path, data, expected):
+    _test_modified_copying(make_reader, db_path, data, expected, 'important')
+
+
+def _test_modified_copying(make_reader, db_path, data, expected, name):
     reader = make_reader(db_path)
     reader._parser = parser = Parser()
 
@@ -423,8 +494,8 @@ def test_read_modified_copying(make_reader, db_path, data, expected):
     reader.update_feeds()
 
     # the entry with the highest id is the last one
-    for id, read, modified in data:
-        reader.mark_entry_as_read(('1', f'1, {id}'), read, modified=modified)
+    for id, flag, modified in data:
+        getattr(reader, f'mark_entry_as_{name}')(('1', f'1, {id}'), flag, modified)
 
     reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
     reader._parser = parser
@@ -432,6 +503,7 @@ def test_read_modified_copying(make_reader, db_path, data, expected):
     reader.update_feeds()
 
     actual = sorted(
-        (eval(e.id)[1], e.read, e.read_modified) for e in reader.get_entries()
+        (eval(e.id)[1], getattr(e, name), getattr(e, f'{name}_modified'))
+        for e in reader.get_entries()
     )
     assert actual == expected

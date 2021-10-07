@@ -370,33 +370,41 @@ class partial(functools.partial):  # pragma: no cover
         return f"{name}({', '.join(parts)})"
 
 
-def _make_read_actions(reader, entry, duplicates):
-    read = any(d.read for d in duplicates)
+def _get_flag_args(entry, duplicates, name):
+    flag = any(getattr(d, name) for d in duplicates)
 
+    modified_name = f'{name}_modified'
     modifieds = (
-        e.read_modified
+        getattr(e, modified_name)
         for e in duplicates + [entry]
-        if e.read == read and e.read_modified
+        if getattr(e, name) == flag and getattr(e, modified_name)
     )
     modified = next(iter(sorted(modifieds)), None)
 
-    if entry.read != read or entry.read_modified != modified:
-        yield partial(reader.mark_entry_as_read, entry, read, modified=modified)
+    if getattr(entry, name) != flag or getattr(entry, modified_name) != modified:
+        return flag, modified
+
+    return None
+
+
+def _make_actions(reader, entry, duplicates):
+    args = _get_flag_args(entry, duplicates, 'read')
+    if args:
+        yield partial(reader.mark_entry_as_read, entry, *args)
 
     for duplicate in duplicates:
         if not duplicate.read or duplicate.read_modified is not None:
             yield partial(reader.mark_entry_as_read, duplicate, modified=None)
 
+    args = _get_flag_args(entry, duplicates, 'important')
+    if args:
+        yield partial(reader.mark_entry_as_important, entry, *args)
 
-def _make_actions(reader, entry, duplicates):
-    yield from _make_read_actions(reader, entry, duplicates)
-
-    if any(d.important for d in duplicates):
-        if not getattr(entry, 'important', False):  # pragma: no cover
-            yield partial(reader.mark_entry_as_important, entry)
-        for duplicate in duplicates:
-            if duplicate.important:
-                yield partial(reader.mark_entry_as_unimportant, duplicate)
+    for duplicate in duplicates:
+        if duplicate.important or duplicate.important_modified is not None:
+            yield partial(
+                reader.mark_entry_as_important, duplicate, False, modified=None
+            )
 
 
 def _dedupe_entries(reader, entry, duplicates, *, dry_run):
