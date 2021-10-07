@@ -108,6 +108,7 @@ from itertools import groupby
 from typing import NamedTuple
 
 from reader.types import EntryUpdateStatus
+from reader.types import Feed
 
 log = logging.getLogger('reader._plugins.feed_entry_dedupe')
 
@@ -369,46 +370,26 @@ class partial(functools.partial):  # pragma: no cover
         return f"{name}({', '.join(parts)})"
 
 
-def _make_actions(reader, entry, duplicates):
-    # the getattr checks are because entry may be EntryData
+def _make_read_actions(reader, entry, duplicates):
+    read = any(d.read for d in duplicates)
 
-    # TODO: get rid of the "no cover"s below
+    modifieds = (
+        e.read_modified
+        for e in duplicates + [entry]
+        if e.read == read and e.read_modified
+    )
+    modified = next(iter(sorted(modifieds)), None)
 
-    if any(d.read for d in duplicates):
-
-        if not getattr(entry, 'read', False):  # pragma: no cover
-            read_modified = next(
-                iter(
-                    sorted(
-                        d.read_modified
-                        for d in duplicates
-                        if d.read and d.read_modified
-                    )
-                ),
-                None,
-            )
-            yield partial(reader.mark_entry_as_read, entry, modified=read_modified)
-
-    else:
-        if not getattr(entry, 'read', False):  # pragma: no cover
-            read_modified = next(
-                iter(
-                    sorted(
-                        d.read_modified
-                        for d in duplicates
-                        if not d.read and d.read_modified
-                    )
-                ),
-                None,
-            )
-            if read_modified and read_modified != getattr(entry, 'read_modified', None):
-                yield partial(
-                    reader.mark_entry_as_read, entry, False, modified=read_modified
-                )
+    if entry.read != read or entry.read_modified != modified:
+        yield partial(reader.mark_entry_as_read, entry, read, modified=modified)
 
     for duplicate in duplicates:
         if not duplicate.read or duplicate.read_modified is not None:
             yield partial(reader.mark_entry_as_read, duplicate, modified=None)
+
+
+def _make_actions(reader, entry, duplicates):
+    yield from _make_read_actions(reader, entry, duplicates)
 
     if any(d.important for d in duplicates):
         if not getattr(entry, 'important', False):  # pragma: no cover
@@ -422,6 +403,11 @@ def _dedupe_entries(reader, entry, duplicates, *, dry_run):
     log.info(
         "entry_dedupe: %r duplicates: %r", entry.object_id, [e.id for e in duplicates]
     )
+
+    # in case entry is EntryData, not Entry
+    if hasattr(entry, 'as_entry'):
+        entry = entry.as_entry(feed=Feed(entry.feed_url))
+
     for action in _make_actions(reader, entry, duplicates):
         action()
         log.info("entry_dedupe: %s", action)

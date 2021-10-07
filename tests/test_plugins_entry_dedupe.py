@@ -381,16 +381,18 @@ READ_MODIFIED_COPYING_DATA = [
         ],
     ),
     # all read, earliest modified of the read entries is used (last has modified)
-    # FIXME: fails
-    # ([
-    # (1, True, None),
-    # (2, True, datetime(2010, 1, 2)),
-    # (3, True, datetime(2010, 1, 3)),
-    # ], [
-    # (1, True, None),
-    # (2, True, None),
-    # (3, True, datetime(2010, 1, 2)),
-    # ]),
+    (
+        [
+            (1, True, None),
+            (2, True, datetime(2010, 1, 2)),
+            (3, True, datetime(2010, 1, 3)),
+        ],
+        [
+            (1, True, None),
+            (2, True, None),
+            (3, True, datetime(2010, 1, 2)),
+        ],
+    ),
     # none read, earliest modified of the unread entries is used (last has modified)
     (
         [
