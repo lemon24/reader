@@ -1260,6 +1260,22 @@ class Reader:
         """
         return self.mark_entry_as_important(entry, False)
 
+    def _mark_entry_as_dont_care(self, entry: EntryInput) -> None:
+        """Mark an entry as read and unimportant at the same time,
+        resulting in the same read_modified and important_modified.
+
+        This method becoming public is pending on #254.
+
+        Presumably, we could just use mark_entry_as_{read,important} instead
+        and get the slightly different timestamps,
+        but it's likely better to collect more accurate data.
+
+        """
+        modified_naive = self._now()
+        feed_url, entry_id = _entry_argument(entry)
+        self._storage.mark_as_read(feed_url, entry_id, True, modified_naive)
+        self._storage.mark_as_important(feed_url, entry_id, False, modified_naive)
+
     def get_feed_metadata(
         self,
         feed: FeedInput,

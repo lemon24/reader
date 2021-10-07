@@ -99,7 +99,7 @@ Usage:
     >>> [e.title for e in entries]
     ['H.I. #108: Project Cyclops', 'H.I. #107: One Year of Weird', ...]
     >>>
-    >>> reader.mark_as_read(entries[0])
+    >>> reader.mark_entry_as_read(entries[0])
     >>>
     >>> [e.title for e in reader.get_entries(read=False)]
     ['H.I. #107: One Year of Weird', 'H.I. #106: Water on Mars', ...]

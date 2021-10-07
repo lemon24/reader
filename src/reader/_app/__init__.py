@@ -481,6 +481,14 @@ def mark_as_unread(data):
     get_reader().mark_entry_as_unread((feed_url, entry_id))
 
 
+@form_api
+@readererror_to_apierror()
+def mark_as_dont_care(data):
+    feed_url = data['feed-url']
+    entry_id = data['entry-id']
+    get_reader()._mark_entry_as_dont_care((feed_url, entry_id))
+
+
 @form_api(really=True)
 @readererror_to_apierror()
 def mark_all_as_read(data):

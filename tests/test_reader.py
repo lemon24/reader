@@ -3154,3 +3154,21 @@ def test_entry_read_important_modified_argument(reader, flag, monkeypatch_tz):
     getattr(reader, f'mark_entry_as_{flag}')(entry, modified=datetime(2010, 1, 1))
     entry = next(reader.get_entries())
     assert getattr(entry, f'{flag}_modified') == utc_datetime(2010, 1, 1, 6)
+
+
+@rename_argument('reader', 'reader_with_one_feed')
+def test_mark_as_dont_care(reader):
+    reader.update_feeds()
+
+    entry = next(reader.get_entries())
+    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader.mark_entry_as_important(entry)
+
+    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader._mark_entry_as_dont_care(entry)
+    entry = next(reader.get_entries())
+
+    assert entry.read
+    assert entry.read_modified == datetime(2010, 1, 2)
+    assert not entry.important
+    assert entry.important_modified == datetime(2010, 1, 2)

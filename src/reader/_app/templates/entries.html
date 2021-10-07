@@ -273,6 +273,11 @@ untitled
         {{ macros.simple_button('.form_api', 'mark-as-important', 'important', leave_disabled=true, next=next, context=context) }}
     {% endif %}
 
+    {% if not (entry.read and not entry.important and entry.important_modified) %}
+        {{ macros.simple_button('.form_api', 'mark-as-dont-care', "don't care", leave_disabled=true, next=next, context=context) }}
+    {% endif %}
+
+
 {% endif %} {# not read only #}
 
 

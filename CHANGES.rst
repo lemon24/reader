@@ -23,6 +23,10 @@ Unreleased
   to mark an entry as unread/unimportant through a boolean flag.
   (:issue:`256`)
 
+* In the web application, allow marking an entry as "don't care"
+  (read + unimportant explicitly set by the user) with a single button.
+  (:issue:`254`)
+
 
 Version 2.1
 -----------

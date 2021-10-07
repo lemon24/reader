@@ -27,7 +27,7 @@ Get all the entries, both read and unread::
 
 Mark the first entry as read::
 
-    reader.mark_as_read(entries[0])
+    reader.mark_entry_as_read(entries[0])
 
 Print the titles of the unread entries::
 
