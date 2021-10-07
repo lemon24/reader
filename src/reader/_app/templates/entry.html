@@ -25,22 +25,28 @@
 {% set context = {'feed-url': feed.url, 'entry-id': entry.id} %}
 
 {% if entry.read %}
-{{ macros.simple_button('.form_api', 'mark-as-unread', 'unread', leave_disabled=true, next=next, context=context) }}
+    {{ macros.simple_button('.form_api', 'mark-as-unread', 'unread', leave_disabled=true, next=next, context=context, title=entry.read_modified or "not modified") }}
 {% else %}
-{{ macros.simple_button('.form_api', 'mark-as-read', 'read', leave_disabled=true, next=next, context=context) }}
+    {{ macros.simple_button('.form_api', 'mark-as-read', 'read', leave_disabled=true, next=next, context=context, title=entry.read_modified or "not modified") }}
 {% endif %}
 
 {% if entry.important %}
-{{ macros.simple_button('.form_api', 'mark-as-unimportant', 'unimportant', leave_disabled=true, next=next, context=context) }}
+    {{ macros.simple_button('.form_api', 'mark-as-unimportant', 'unimportant', leave_disabled=true, next=next, context=context, title=entry.important_modified or "not modified") }}
 {% else %}
-{{ macros.simple_button('.form_api', 'mark-as-important', 'important', leave_disabled=true, next=next, context=context) }}
+    {{ macros.simple_button('.form_api', 'mark-as-important', 'important', leave_disabled=true, next=next, context=context, title=entry.important_modified or "not modified") }}
 {% endif %}
+
+{% if not (entry.read and not entry.important and entry.important_modified) %}
+    {{ macros.simple_button('.form_api', 'mark-as-dont-care', "don't care", leave_disabled=true, next=next, context=context) }}
+{% endif %}
+
 
 {% for message in get_flashed_messages_by_prefix(
     ('mark-as-read', feed.url, entry.id),
     ('mark-as-unread', feed.url, entry.id),
     ('mark-as-important', feed.url, entry.id),
     ('mark-as-unimportant', feed.url, entry.id),
+    ('mark-as-dont-care', feed.url, entry.id),
 ) %}
 <li class="error">{{ message }}
 {% endfor %}

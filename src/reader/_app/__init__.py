@@ -520,7 +520,8 @@ def mark_as_important(data):
 def mark_as_unimportant(data):
     feed_url = data['feed-url']
     entry_id = data['entry-id']
-    get_reader().mark_entry_as_unimportant((feed_url, entry_id))
+    # only "don't care" sets important_modified
+    get_reader().mark_entry_as_important((feed_url, entry_id), False, modified=None)
 
 
 @form_api(really=True)
