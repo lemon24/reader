@@ -95,7 +95,13 @@ def monkeypatch_tz(monkeypatch):
     try:
         yield tzsetter
     finally:
-        tzsetter.undo()
+        try:
+            tzsetter.undo()
+        except AttributeError as e:
+            # on windows, we get "module 'time' has no attribute 'tzset'";
+            # it's ok to do nothing, since  __call__() didn't call it either
+            if 'tzset' not in str(e):
+                raise
 
 
 # FIXME: explain what this is
