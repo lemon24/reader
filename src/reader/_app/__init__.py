@@ -478,7 +478,13 @@ def mark_as_read(data):
 def mark_as_unread(data):
     feed_url = data['feed-url']
     entry_id = data['entry-id']
-    get_reader().mark_entry_as_unread((feed_url, entry_id))
+    id = feed_url, entry_id
+    reader = get_reader()
+    reader.mark_entry_as_unread(id)
+    entry = reader.get_entry(id)
+    # if we're in "don't care", reset important_modified
+    if not entry.important and entry.important_modified:
+        reader.mark_entry_as_important(id, False, modified=None)
 
 
 @form_api
