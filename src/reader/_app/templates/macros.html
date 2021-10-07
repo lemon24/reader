@@ -181,7 +181,7 @@ data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
 {%- endmacro %}
 
 
-{% macro simple_button(form_view, action, label, leave_disabled=false, next=none, context=none, js_enabled=True) -%}
+{% macro simple_button(form_view, action, label, leave_disabled=false, next=none, context=none, js_enabled=True, title=none) -%}
 <li class="simple-button"
 
 data-button-type="simple"
@@ -199,7 +199,9 @@ data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
 {% endif %}
 >
 <form action="{{ url_for(form_view) }}" method="post" class="action-{{ action }}">
-    <button type="submit" name="action" value="{{ action }}" autocomplete="off">{{ label }}</button>
+    <button type="submit" name="action" value="{{ action }}" autocomplete="off"
+    {%- if title %} title="{{ title }}"{% endif -%}
+    >{{ label }}</button>
     {% if next is not none %}<input type="hidden" name="next-{{ action }}" value='{{ next }}'>{% endif %}
     {% for name, value in (context or {}) | dictsort -%}
     <input type="hidden" name='{{ name }}' value='{{ value }}'>

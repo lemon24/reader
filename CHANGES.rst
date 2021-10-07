@@ -26,6 +26,9 @@ Unreleased
 * In the web application, allow marking an entry as "don't care"
   (read + unimportant explicitly set by the user) with a single button.
   (:issue:`254`)
+* In the web application, show the entry read modified / important modified
+  timestamps as button tooltips.
+  (:issue:`254`)
 
 
 Version 2.1
