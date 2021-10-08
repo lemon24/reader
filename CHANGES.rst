@@ -11,6 +11,8 @@ Version 2.3
 
 Unreleased
 
+* Support Python 3.10. (:issue:`248`)
+
 
 Version 2.2
 -----------
