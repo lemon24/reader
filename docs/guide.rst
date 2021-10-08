@@ -289,15 +289,25 @@ Entry flags
 Entries can be marked as :meth:`read <Reader.mark_entry_as_read>`
 or as :meth:`important <Reader.mark_entry_as_important>`.
 
-These flags can be used for filtering::
+The flags can be used for filtering::
 
     >>> reader.mark_entry_as_read(entries[0])
     >>> entries = list(reader.get_entries(feed=feed, read=False))
     >>> for entry in entries[:2]:
-    ...     print(entry.feed.title, '-', entry.title)
+    ...     printentry.title)
     ...
-    Hello Internet - H.I. #135: Place Your Bets
-    Hello Internet - # H.I. 134: Boxing Day
+    H.I. #135: Place Your Bets
+    # H.I. 134: Boxing Day
+
+
+The time when a flag was last modified is recorded, and is available via
+:attr:`~Entry.read_modified` and :attr:`~Entry.important_modified`::
+
+    >>> for entry in reader.get_entries(feed=feed, limit=2):
+    ...     print(entry.title, '-', entry.read, entry.read_modified)
+    ...
+    H.I. #136: Dog Bingo - True 2021-10-08 08:00:00+00:00
+    H.I. #135: Place Your Bets - False None
 
 
 
