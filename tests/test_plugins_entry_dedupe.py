@@ -462,6 +462,17 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
             (9, False, datetime(2010, 1, 1)),
         ],
     ),
+    # none important, modified (last has modified, same date)
+    (
+        [
+            (1, False, datetime(2010, 1, 1)),
+            (9, False, datetime(2010, 1, 1)),
+        ],
+        [
+            (1, False, None),
+            (9, False, datetime(2010, 1, 1)),
+        ],
+    ),
     # important, modified
     (
         [
