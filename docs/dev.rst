@@ -128,7 +128,7 @@ Making a release (from ``x`` to ``y`` == ``x + 1``):
 * (release.py prompts) create release in GitHub
 * build docs from latest and enable ``y`` docs version (should happen automatically after the first time)
 * (release.py) bump versions from ``y`` to ``(y + 1).dev0``, add ``(y + 1)`` changelog section
-* (release.py prompts) deactivate old versions in Read the Docs
+* (release.py prompts) trigger Read the Docs build for `<major>.x` (doesn't happen automatically)
 
 
 Design notes

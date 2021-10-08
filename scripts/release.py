@@ -154,8 +154,6 @@ def main(version, new_version, date):
 
     confirm("Create release {} in GitHub.", version)
 
-    confirm("Deactivate old versions in Read the Docs.")
-
     new_version_full = "{}.dev0".format(new_version)
     update_init_version(new_version_full)
     add_changelog_section(version, new_version)
@@ -163,6 +161,11 @@ def main(version, new_version, date):
 
     confirm("Push version {}?", new_version_full)
     push()
+
+    # TODO: I just enabled branch or tag creation/deletion for the RtD webhook in GitHub, this might not be needed next time.
+    confirm(
+        f"Trigger Read the Docs build for {version_x} (doesn't happen automatically)."
+    )
 
 
 if __name__ == '__main__':
