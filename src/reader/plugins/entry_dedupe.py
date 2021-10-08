@@ -390,21 +390,19 @@ def _get_flag_args(entry, duplicates, name):
 def _make_actions(reader, entry, duplicates):
     args = _get_flag_args(entry, duplicates, 'read')
     if args:
-        yield partial(reader.mark_entry_as_read, entry, *args)
+        yield partial(reader.set_entry_read, entry, *args)
 
     for duplicate in duplicates:
         if not duplicate.read or duplicate.read_modified is not None:
-            yield partial(reader.mark_entry_as_read, duplicate, modified=None)
+            yield partial(reader.set_entry_read, duplicate, True, None)
 
     args = _get_flag_args(entry, duplicates, 'important')
     if args:
-        yield partial(reader.mark_entry_as_important, entry, *args)
+        yield partial(reader.set_entry_important, entry, *args)
 
     for duplicate in duplicates:
         if duplicate.important or duplicate.important_modified is not None:
-            yield partial(
-                reader.mark_entry_as_important, duplicate, False, modified=None
-            )
+            yield partial(reader.set_entry_important, duplicate, False, None)
 
 
 def _dedupe_entries(reader, entry, duplicates, *, dry_run):

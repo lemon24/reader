@@ -506,7 +506,7 @@ def _test_modified_copying(make_reader, db_path, data, expected, name):
 
     # the entry with the highest id is the last one
     for id, flag, modified in data:
-        getattr(reader, f'mark_entry_as_{name}')(('1', f'1, {id}'), flag, modified)
+        getattr(reader, f'set_entry_{name}')(('1', f'1, {id}'), flag, modified)
 
     reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
     reader._parser = parser

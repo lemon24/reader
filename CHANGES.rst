@@ -19,17 +19,16 @@ Unreleased
   via :attr:`~Reader.after_feed_update_hooks`.
   (:issue:`202`)
 
-* Allow :meth:`~Reader.mark_entry_as_read`
-  and :meth:`~Reader.mark_entry_as_important`
-  to mark an entry as unread/unimportant through a boolean flag.
+* Add :meth:`~Reader.set_entry_read` and :meth:`~Reader.set_entry_important`
+  to allow marking an entry as (un)read/(un)important through a boolean flag.
   (:issue:`256`)
 
-* Record the time an entry is marked as read/important,
+* Record when an entry is marked as read/important,
   and make it available through :attr:`~Entry.read_modified` and
   :attr:`~Entry.important_modified`.
-  Allow setting it to a user-provided value using the ``modified``
-  argument of :meth:`~Reader.mark_entry_as_read`
-  and :meth:`~Reader.mark_entry_as_important`.
+  Allow providing a custom value using the ``modified``
+  argument of :meth:`~Reader.set_entry_read`
+  and :meth:`~Reader.set_entry_important`.
   (:issue:`254`)
 * Make :mod:`~reader.plugins.entry_dedupe` copy
   :attr:`~Entry.read_modified` and :attr:`~Entry.important_modified`

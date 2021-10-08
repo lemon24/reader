@@ -3115,7 +3115,7 @@ def test_entry_read_important_modified_gets_set_to_now(reader, flag):
     assert getattr(entry, f'{flag}_modified') == datetime(2010, 1, 2)
 
     reader._now = lambda: naive_datetime(2010, 1, 3)
-    getattr(reader, f'mark_entry_as_{flag}')(entry, False)
+    getattr(reader, f'mark_entry_as_un{flag}')(entry)
     entry = next(reader.get_entries())
     assert not getattr(entry, flag)
     assert getattr(entry, f'{flag}_modified') == datetime(2010, 1, 3)
@@ -3131,13 +3131,13 @@ def test_entry_read_important_modified_argument(reader, flag, monkeypatch_tz):
     entry = next(reader.get_entries())
     reader._now = lambda: naive_datetime(2010, 1, 1)
 
-    getattr(reader, f'mark_entry_as_{flag}')(
-        entry, modified=datetime(2010, 1, 1, tzinfo=timezone(timedelta(hours=-2)))
+    getattr(reader, f'set_entry_{flag}')(
+        entry, True, modified=datetime(2010, 1, 1, tzinfo=timezone(timedelta(hours=-2)))
     )
     entry = next(reader.get_entries())
     assert getattr(entry, f'{flag}_modified') == utc_datetime(2010, 1, 1, 2)
 
-    getattr(reader, f'mark_entry_as_{flag}')(entry, modified=None)
+    getattr(reader, f'set_entry_{flag}')(entry, True, modified=None)
     entry = next(reader.get_entries())
     assert getattr(entry, f'{flag}_modified') is None
 
@@ -3146,12 +3146,12 @@ def test_entry_read_important_modified_argument(reader, flag, monkeypatch_tz):
         return
 
     monkeypatch_tz('UTC')
-    getattr(reader, f'mark_entry_as_{flag}')(entry, modified=datetime(2010, 1, 1, 4))
+    getattr(reader, f'set_entry_{flag}')(entry, True, modified=datetime(2010, 1, 1, 4))
     entry = next(reader.get_entries())
     assert getattr(entry, f'{flag}_modified') == utc_datetime(2010, 1, 1, 4)
 
     monkeypatch_tz('Etc/GMT+6')
-    getattr(reader, f'mark_entry_as_{flag}')(entry, modified=datetime(2010, 1, 1))
+    getattr(reader, f'set_entry_{flag}')(entry, True, modified=datetime(2010, 1, 1))
     entry = next(reader.get_entries())
     assert getattr(entry, f'{flag}_modified') == utc_datetime(2010, 1, 1, 6)
 

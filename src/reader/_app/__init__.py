@@ -484,7 +484,7 @@ def mark_as_unread(data):
     entry = reader.get_entry(id)
     # if we're in "don't care", reset important_modified
     if not entry.important and entry.important_modified:
-        reader.mark_entry_as_important(id, False, modified=None)
+        reader.set_entry_important(id, False, modified=None)
 
 
 @form_api
@@ -527,7 +527,7 @@ def mark_as_unimportant(data):
     feed_url = data['feed-url']
     entry_id = data['entry-id']
     # only "don't care" sets important_modified
-    get_reader().mark_entry_as_important((feed_url, entry_id), False, modified=None)
+    get_reader().set_entry_important((feed_url, entry_id), False, modified=None)
 
 
 @form_api(really=True)

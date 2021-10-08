@@ -1134,13 +1134,14 @@ class Reader:
         now = self._now()
         return self._storage.get_entry_counts(now, filter_options)
 
-    def mark_entry_as_read(
+    def set_entry_read(
         self,
         entry: EntryInput,
-        read: bool = True,
+        read: bool,
         modified: Union[MissingType, None, datetime] = MISSING,
     ) -> None:
-        """Mark an entry as read (or unread).
+        """Mark an entry as read or unread,
+        possibly with a custom timestamp.
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
@@ -1156,14 +1157,7 @@ class Reader:
             EntryNotFoundError
             StorageError
 
-        .. versionadded:: 1.18
-            Renamed from :meth:`mark_as_read`.
-
         .. versionadded:: 2.2
-            The ``read`` argument.
-
-        .. versionadded:: 2.2
-            The ``modified`` argument.
 
         """
         modified_naive: Optional[datetime]
@@ -1177,10 +1171,28 @@ class Reader:
         feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_read(feed_url, entry_id, bool(read), modified_naive)
 
+    def mark_entry_as_read(self, entry: EntryInput) -> None:
+        """Mark an entry as read.
+
+        Alias for ``set_entry_read(entry, True)``.
+
+        Args:
+            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+
+        Raises:
+            EntryNotFoundError
+            StorageError
+
+        .. versionadded:: 1.18
+            Renamed from :meth:`mark_as_read`.
+
+        """
+        self.set_entry_read(entry, True)
+
     def mark_entry_as_unread(self, entry: EntryInput) -> None:
         """Mark an entry as unread.
 
-        Alias for ``mark_entry_as_read(entry, False)``.
+        Alias for ``set_entry_read(entry, False)``.
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
@@ -1193,15 +1205,16 @@ class Reader:
             Renamed from :meth:`mark_as_unread`.
 
         """
-        return self.mark_entry_as_read(entry, False)
+        return self.set_entry_read(entry, False)
 
-    def mark_entry_as_important(
+    def set_entry_important(
         self,
         entry: EntryInput,
-        important: bool = True,
+        important: bool,
         modified: Union[MissingType, None, datetime] = MISSING,
     ) -> None:
-        """Mark an entry as important (or unimportant).
+        """Mark an entry as important or unimportant,
+        possibly with a custom timestamp.
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
@@ -1217,14 +1230,7 @@ class Reader:
             EntryNotFoundError
             StorageError
 
-        .. versionadded:: 1.18
-            Renamed from :meth:`mark_as_important`.
-
         .. versionadded:: 2.2
-            The ``important`` argument.
-
-        .. versionadded:: 2.2
-            The ``modified`` argument.
 
         """
         modified_naive: Optional[datetime]
@@ -1240,10 +1246,28 @@ class Reader:
             feed_url, entry_id, bool(important), modified_naive
         )
 
+    def mark_entry_as_important(self, entry: EntryInput) -> None:
+        """Mark an entry as important.
+
+        Alias for ``set_entry_important(entry, True)``.
+
+        Args:
+            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+
+        Raises:
+            EntryNotFoundError
+            StorageError
+
+        .. versionadded:: 1.18
+            Renamed from :meth:`mark_as_important`.
+
+        """
+        self.set_entry_important(entry, True)
+
     def mark_entry_as_unimportant(self, entry: EntryInput) -> None:
         """Mark an entry as unimportant.
 
-        Alias for ``mark_entry_as_important(entry, False)``.
+        Alias for ``set_entry_important(entry, False)``.
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
@@ -1256,7 +1280,7 @@ class Reader:
             Renamed from :meth:`mark_as_unimportant`.
 
         """
-        return self.mark_entry_as_important(entry, False)
+        return self.set_entry_important(entry, False)
 
     def _mark_entry_as_dont_care(self, entry: EntryInput) -> None:
         """Mark an entry as read and unimportant at the same time,
