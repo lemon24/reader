@@ -9,7 +9,7 @@ Changelog
 Version 2.2
 -----------
 
-Unreleased
+Released 2021-10-08
 
 * :mod:`~reader.plugins.entry_dedupe` plugin improvements:
   reduce false negatives by using approximate content matching,
