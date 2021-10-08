@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import sys
 from contextlib import closing
@@ -46,6 +47,18 @@ def apply_flaky_pypy_sqlite3(items):  # pragma: no cover
     sqlite3_flaky = pytest.mark.flaky(rerun_filter=rerun_filter, max_runs=10)
     for item in items:
         item.add_marker(sqlite3_flaky)
+
+
+def pytest_runtest_setup(item):
+    # lxml fails to build in various places,
+    # see the comments in setup.py for details.
+    for mark in item.iter_markers(name="requires_lxml"):
+        no_lxml = [
+            sys.implementation.name == 'pypy',
+            os.name == 'nt' and sys.version_info[:2] == (3, 10),
+        ]
+        if any(no_lxml):
+            pytest.skip("test requires lxml")
 
 
 @pytest.fixture

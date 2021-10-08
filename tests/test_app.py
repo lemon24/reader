@@ -10,13 +10,14 @@ from reader._app import create_app
 from reader._config import make_reader_config
 from reader._config import make_reader_from_config
 
-# mechanicalsoup depends on lxml, which doesn't build on pypy;
-# see the comments in setup.py for details.
-if sys.implementation.name != 'pypy':
+# mechanicalsoup depends on lxml, but we don't have that everywhere.
+try:
     import mechanicalsoup
+except ImportError:
+    pass
 
-# We just don't run these tests on pypy because of it.
-pytestmark = pytest.mark.skipif("sys.implementation.name == 'pypy'")
+# Don't run these tests if we don't have lxml.
+pytestmark = pytest.mark.requires_lxml
 
 
 @pytest.fixture

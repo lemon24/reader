@@ -74,10 +74,7 @@ STRIP_HTML_DATA = [(i, i) for i in [None, 10, 11.2, b'aabb', b'aa<br>bb']] + [
     'features',
     [
         None,
-        # lxml fails to build on pypy, see the comments in setup.py for details.
-        pytest.param(
-            'lxml', marks=pytest.mark.skipif("sys.implementation.name == 'pypy'")
-        ),
+        pytest.param('lxml', marks=pytest.mark.requires_lxml),
         'html.parser',
         'html5lib',
     ],
