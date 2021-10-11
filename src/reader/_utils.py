@@ -1,3 +1,4 @@
+import functools
 import itertools
 import logging
 import multiprocessing.dummy
@@ -15,6 +16,7 @@ from typing import no_type_check
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
+from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
@@ -209,3 +211,41 @@ def deprecated_wrapper(
     )
 
     return cast(F, old_func)
+
+
+def _name(thing: object) -> str:
+    name = getattr(thing, '__name__', None)
+    if name:
+        return str(name)
+    for attr in ('__func__', 'func'):
+        new_thing = getattr(thing, attr, None)
+        if new_thing:  # pragma: no cover
+            return _name(new_thing)
+    return '<noname>'
+
+
+# avoid "TypeError: 'type' object is not subscriptable" on Python <= 3.8
+# https://stackoverflow.com/a/48554601
+
+if TYPE_CHECKING:  # pragma: no cover
+    Partial = functools.partial
+else:
+
+    class FakeGenericMeta(type):
+        def __getitem__(self, item):  # noqa: B902
+            return self
+
+    class Partial(functools.partial, metaclass=FakeGenericMeta):
+        pass
+
+
+class BetterStrPartial(Partial[_T]):
+    __slots__ = ()
+
+    def __str__(self) -> str:
+        name = _name(self.func)
+        parts = [repr(getattr(v, 'object_id', v)) for v in self.args]
+        parts.extend(
+            f"{k}={getattr(v, 'object_id', v)!r}" for k, v in self.keywords.items()
+        )
+        return f"{name}({', '.join(parts)})"

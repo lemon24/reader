@@ -33,3 +33,22 @@ def test_deprecated_wrapper():
         str(warning.message)
         == 'old_func() is deprecated and will be removed in reader 2.0. Use func() instead.'
     )
+
+
+def test_better_str_partial():
+    from reader._utils import BetterStrPartial as partial
+
+    def fn():
+        pass
+
+    assert str(partial(fn, 1, two=2)) == "fn(1, two=2)"
+
+    fn.__name__ = ''
+    assert str(partial(fn, 1)) == "<noname>(1)"
+
+    class Cls:
+        def meth(self):
+            pass
+
+    assert str(partial(Cls.meth, two=2)) == 'meth(two=2)'
+    assert str(partial(Cls().meth, two=2)) == 'meth(two=2)'

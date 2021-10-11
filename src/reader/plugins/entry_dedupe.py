@@ -99,7 +99,6 @@ To reduce false positives when detecting duplicates:
 
 
 """
-import functools
 import logging
 import re
 from collections import Counter
@@ -107,6 +106,7 @@ from collections import deque
 from itertools import groupby
 from typing import NamedTuple
 
+from reader._utils import BetterStrPartial as partial
 from reader.types import EntryUpdateStatus
 from reader.types import Feed
 
@@ -345,29 +345,6 @@ def _get_entry_groups(reader, feed, is_duplicate):
             yield entry, duplicates
 
             group = others
-
-
-def _name(thing):  # pragma: no cover
-    name = getattr(thing, '__name__', None)
-    if name:
-        return name
-    for attr in ('__func__', 'func'):
-        new_thing = getattr(thing, attr, None)
-        if new_thing:
-            return _name(new_thing)
-    return '<noname>'
-
-
-class partial(functools.partial):  # pragma: no cover
-    __slots__ = ()
-
-    def __str__(self):
-        name = _name(self.func)
-        parts = [repr(getattr(v, 'object_id', v)) for v in self.args]
-        parts.extend(
-            f"{k}={getattr(v, 'object_id', v)!r}" for k, v in self.keywords.items()
-        )
-        return f"{name}({', '.join(parts)})"
 
 
 def _get_flag_args(entry, duplicates, name):
