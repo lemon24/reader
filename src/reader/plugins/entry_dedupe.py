@@ -369,22 +369,20 @@ def _make_actions(reader, entry, duplicates):
     if args:
         yield partial(reader.set_entry_read, entry, *args)
 
-    for duplicate in duplicates:
-        if not duplicate.read or duplicate.read_modified is not None:
-            yield partial(reader.set_entry_read, duplicate, True, None)
-
     args = _get_flag_args(entry, duplicates, 'important')
     if args:
         yield partial(reader.set_entry_important, entry, *args)
 
-    for duplicate in duplicates:
-        if duplicate.important or duplicate.important_modified is not None:
-            yield partial(reader.set_entry_important, duplicate, False, None)
+    duplicate_ids = [d.object_id for d in duplicates]
+    yield partial(reader._storage.delete_entries, duplicate_ids)
 
 
 def _dedupe_entries(reader, entry, duplicates, *, dry_run):
     log.info(
-        "entry_dedupe: %r duplicates: %r", entry.object_id, [e.id for e in duplicates]
+        "entry_dedupe: %r (title: %r) duplicates: %r",
+        entry.object_id,
+        entry.title,
+        [e.id for e in duplicates],
     )
 
     # in case entry is EntryData, not Entry

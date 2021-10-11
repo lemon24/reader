@@ -1,3 +1,5 @@
+from random import randrange
+
 import pytest
 from fakeparser import Parser
 from utils import naive_datetime
@@ -171,19 +173,17 @@ def test_plugin(make_reader):
             # also remain untouched
             (title_only_one.id, False),
             (title_only_two.id, False),
-            # the new one is marked as read because the old one was
-            (read_one.id, True),
+            # the new one is marked as read because the old one was;
+            # the old one is deleted
             (read_two.id, True),
-            # the old one is marked as read in favor of the new one
-            (unread_one.id, True),
+            # the old one is deleted in favor of the new one
             (unread_two.id, False),
             # modified entry is ignored by plugin
             (modified_one.id, False),
         }
     } | {
         # the new one is important because the old one was;
-        # the old one is not important anymore
-        (important_one.id, True, False),
+        # the old one is deleted
         (important_two.id, False, True),
     }
 
@@ -290,28 +290,17 @@ def test_plugin_once(make_reader, db_path, monkeypatch, tags):
         expected = {
             (different_title.id, False, False),
             (no_content_match.id, False, False),
-            (read_one.id, True, False),
-            (read_two.id, True, False),
+            # delete read_one, read_two (older last_updated)
             (read_three.id, True, False),
-            (important_one.id, True, False),
-            (important_two.id, True, False),
+            # delete important_one, important_two have (older last_updated)
             (important_three.id, False, True),
-            (unread_one.id, True, False),
-            (unread_two.id, True, False),
+            # delete unread_one, unread_two (older last_updated)
             (unread_three.id, False, False),
         }
     else:
         expected = {
             (different_title.id, False, False),
-            (no_content_match.id, True, False),
-            (read_one.id, True, False),
-            (read_two.id, True, False),
-            (read_three.id, True, False),
-            (important_one.id, True, False),
-            (important_two.id, True, False),
-            (important_three.id, True, False),
-            (unread_one.id, True, False),
-            (unread_two.id, True, False),
+            # delete all others (older last_updated)
             (unread_three.id, True, True),
         }
 
@@ -334,12 +323,6 @@ READ_MODIFIED_COPYING_DATA = [
             (9, False, None),
         ],
         [
-            (1, True, None),
-            (2, True, None),
-            (3, True, None),
-            (4, True, None),
-            (5, True, None),
-            (6, True, None),
             (9, True, datetime(2010, 1, 4)),
         ],
     ),
@@ -352,9 +335,6 @@ READ_MODIFIED_COPYING_DATA = [
             (9, False, None),
         ],
         [
-            (1, True, None),
-            (2, True, None),
-            (3, True, None),
             (9, False, datetime(2010, 1, 2)),
         ],
     ),
@@ -365,7 +345,6 @@ READ_MODIFIED_COPYING_DATA = [
             (9, False, None),
         ],
         [
-            (1, True, None),
             (9, False, None),
         ],
     ),
@@ -376,7 +355,6 @@ READ_MODIFIED_COPYING_DATA = [
             (9, False, None),
         ],
         [
-            (1, True, None),
             (9, True, None),
         ],
     ),
@@ -388,8 +366,6 @@ READ_MODIFIED_COPYING_DATA = [
             (3, True, datetime(2010, 1, 3)),
         ],
         [
-            (1, True, None),
-            (2, True, None),
             (3, True, datetime(2010, 1, 2)),
         ],
     ),
@@ -401,17 +377,22 @@ READ_MODIFIED_COPYING_DATA = [
             (3, False, datetime(2010, 1, 3)),
         ],
         [
-            (1, True, None),
-            (2, True, None),
             (3, False, datetime(2010, 1, 2)),
         ],
     ),
 ]
 
 
+@pytest.fixture(params=[False, True])
+def same_last_updated(request):
+    yield request.param
+
+
 @pytest.mark.parametrize('data, expected', READ_MODIFIED_COPYING_DATA)
-def test_read_modified_copying(make_reader, db_path, data, expected):
-    _test_modified_copying(make_reader, db_path, data, expected, 'read')
+def test_read_modified_copying(make_reader, db_path, data, expected, same_last_updated):
+    _test_modified_copying(
+        make_reader, db_path, data, expected, 'read', same_last_updated
+    )
 
 
 IMPORTANT_MODIFIED_COPYING_DATA = [
@@ -425,7 +406,6 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
             (9, False, None),
         ],
         [
-            (1, False, None),
             (9, False, None),
         ],
     ),
@@ -436,7 +416,6 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
             (9, False, None),
         ],
         [
-            (1, False, None),
             (9, True, None),
         ],
     ),
@@ -447,7 +426,6 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
             (9, False, None),
         ],
         [
-            (1, False, None),
             (9, False, datetime(2010, 1, 1)),
         ],
     ),
@@ -458,7 +436,6 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
             (9, False, datetime(2010, 1, 9)),
         ],
         [
-            (1, False, None),
             (9, False, datetime(2010, 1, 1)),
         ],
     ),
@@ -469,7 +446,6 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
             (9, False, datetime(2010, 1, 1)),
         ],
         [
-            (1, False, None),
             (9, False, datetime(2010, 1, 1)),
         ],
     ),
@@ -480,7 +456,6 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
             (9, False, None),
         ],
         [
-            (1, False, None),
             (9, True, datetime(2010, 1, 1)),
         ],
     ),
@@ -488,21 +463,49 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
 
 
 @pytest.mark.parametrize('data, expected', IMPORTANT_MODIFIED_COPYING_DATA)
-def test_important_modified_copying(make_reader, db_path, data, expected):
-    _test_modified_copying(make_reader, db_path, data, expected, 'important')
+def test_important_modified_copying(
+    make_reader, db_path, data, expected, same_last_updated
+):
+    _test_modified_copying(
+        make_reader, db_path, data, expected, 'important', same_last_updated
+    )
 
 
-def _test_modified_copying(make_reader, db_path, data, expected, name):
+def _test_modified_copying(
+    make_reader, db_path, data, expected, name, same_last_updated
+):
     reader = make_reader(db_path)
     reader._parser = parser = Parser()
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed)
 
-    for id, *_ in data:
-        parser.entry(1, id, datetime(2010, 1, id), title='title', summary='summary')
+    same_last_updated = False
 
-    reader.update_feeds()
+    if not same_last_updated:
+        # if .last_updated differs,
+        # the entry with the most recent .last_updated remains
+
+        for day_i, (id, *_) in enumerate(data, 1):
+            reader._now = lambda: naive_datetime(2010, 1, day_i)
+            # updated doesn't matter, this should never make the test fail
+            updated = datetime(2010, 1, randrange(1, 30))
+            parser.entry(1, id, updated, title='title', summary='summary')
+            reader.update_feeds()
+
+    else:
+        # if .last_updated is the same for all entries,
+        # the order from get_entries(sort='recent') is preserved;
+        # in this case, the entry with the most recent .updated remains
+
+        reader._now = lambda: naive_datetime(2010, 1, 1)
+        for day_i, (id, *_) in enumerate(data, 1):
+            parser.entry(
+                1, id, datetime(2010, 1, day_i), title='title', summary='summary'
+            )
+        reader.update_feeds()
+
+    reader._now: lambda: naive_datetime(2011, 1, 1)
 
     # the entry with the highest id is the last one
     for id, flag, modified in data:
