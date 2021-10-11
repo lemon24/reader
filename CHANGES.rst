@@ -9,7 +9,7 @@ Changelog
 Version 2.3
 -----------
 
-Unreleased
+Released 2021-10-11
 
 * Support Python 3.10. (:issue:`248`)
 
