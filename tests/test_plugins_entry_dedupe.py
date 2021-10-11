@@ -348,11 +348,21 @@ READ_MODIFIED_COPYING_DATA = [
             (9, False, None),
         ],
     ),
-    # read, no modified
+    # old read, no modified
     (
         [
             (1, True, None),
             (9, False, None),
+        ],
+        [
+            (9, True, None),
+        ],
+    ),
+    # new read, no modified
+    (
+        [
+            (1, False, None),
+            (9, True, None),
         ],
         [
             (9, True, None),
@@ -409,11 +419,21 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
             (9, False, None),
         ],
     ),
-    # important, no modified
+    # old important, no modified
     (
         [
             (1, True, None),
             (9, False, None),
+        ],
+        [
+            (9, True, None),
+        ],
+    ),
+    # new important, no modified
+    (
+        [
+            (1, False, None),
+            (9, True, None),
         ],
         [
             (9, True, None),
@@ -449,7 +469,7 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
             (9, False, datetime(2010, 1, 1)),
         ],
     ),
-    # important, modified
+    # old important, modified
     (
         [
             (1, True, datetime(2010, 1, 1)),
@@ -457,6 +477,16 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
         ],
         [
             (9, True, datetime(2010, 1, 1)),
+        ],
+    ),
+    # new important, old modified
+    (
+        [
+            (1, False, datetime(2010, 1, 1)),
+            (9, True, None),
+        ],
+        [
+            (9, True, None),
         ],
     ),
 ]

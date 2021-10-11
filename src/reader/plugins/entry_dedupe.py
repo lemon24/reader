@@ -348,12 +348,13 @@ def _get_entry_groups(reader, feed, is_duplicate):
 
 
 def _get_flag_args(entry, duplicates, name):
-    flag = any(getattr(d, name) for d in duplicates)
+    entries = duplicates + [entry]
+    flag = any(getattr(d, name) for d in entries)
 
     modified_name = f'{name}_modified'
     modifieds = (
         getattr(e, modified_name)
-        for e in duplicates + [entry]
+        for e in entries
         if getattr(e, name) == flag and getattr(e, modified_name)
     )
     modified = next(iter(sorted(modifieds)), None)

@@ -13,6 +13,19 @@ Unreleased
 
 * Support Python 3.10. (:issue:`248`)
 
+* .. _yanked 2.2:
+
+  Fix :mod:`~reader.plugins.entry_dedupe` bug introduced in 2.2,
+  causing the newest read entry to be marked as unread
+  if none of its duplicates are read (idem for important).
+  This was an issue *only when re-running the plugin for existing entries*,
+  not for new entries (since new entries are unread and unimportant).
+  To ensure people don't use the buggy version,
+  *reader* 2.2 was `yanked`_ from PyPI.
+
+
+.. _yanked: https://pypi.org/help/#yanked
+
 
 Version 2.2
 -----------
