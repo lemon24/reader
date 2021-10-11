@@ -13,18 +13,22 @@ Unreleased
 
 * Support Python 3.10. (:issue:`248`)
 
+* :mod:`~reader.plugins.entry_dedupe` now
+  deletes old duplicates instead of marking them as read/unimportant.
+  (:issue:`140`)
+
+  .. note::
+
+    Please comment in :issue:`140` / open an issue
+    if you were relying on the old behavior.
+
 * .. _yanked 2.2:
 
   Fix :mod:`~reader.plugins.entry_dedupe` bug introduced in 2.2,
   causing the newest read entry to be marked as unread
   if none of its duplicates are read (idem for important).
   This was an issue *only when re-running the plugin for existing entries*,
-  not for new entries (since new entries are unread and unimportant).
-  To ensure people don't use the buggy version,
-  *reader* 2.2 was `yanked`_ from PyPI.
-
-
-.. _yanked: https://pypi.org/help/#yanked
+  not for new entries (since new entries are unread/unimportant).
 
 
 Version 2.2

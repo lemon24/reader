@@ -2,20 +2,20 @@
 reader.entry_dedupe
 ~~~~~~~~~~~~~~~~~~~
 
+.. module:: reader
+  :noindex:
+
 Deduplicate the entries of a feed.
 
 Sometimes, the format of the entry id changes for all the entries in a feed,
-for example from ``example.com/123`` to ``example.com/entry``.
-Because the entry id is used to uniquely identify entries,
-normally this results in the entry being added again with the new id.
+for example from ``example.com/123`` to ``example.com/entry-title``.
+Because :attr:`~Entry.id` uniquely identifies the entries of a feed,
+this results in them being added again with the new ids.
 
-This plugin addresses this by copying entry user attributes
-like *read* or *important* from the old entry to the new one.
-
-.. note::
-
-    There are plans to *delete* the old entry after copying user attributes;
-    please +1 / comment in :issue:`140` if you need this.
+:mod:`~reader.plugins.entry_dedupe` addresses this
+by copying entry user attributes
+like *read* or *important* from the old entries to the new one,
+and **deleting** the old entries.
 
 
 Duplicates are entries with the same title *and* the same summary/content.
@@ -31,33 +31,14 @@ use ``.reader.dedupe.once.title`` instead.
 
 Entry user attributes are set as follows:
 
-:attr:`~Entry.read`
+:attr:`~Entry.read` / :attr:`~Entry.important`
 
-    If the old entry is read, the new one will be too.
-    If the old entry is unread, it will be marked as read in favor of the new one.
+    If any of the entries is read/important, the new entry will be read/important.
 
-    =========== =========== ===========
-    before      after
-    ----------- -----------------------
-    old.read    old.read    new.read
-    =========== =========== ===========
-    True        True        True
-    False       True        False
-    =========== =========== ===========
+:attr:`~Entry.read_modified` / :attr:`~Entry.important_modified`
 
-:attr:`~Entry.important`
-
-    If the old entry is important, it will be marked as unimporant,
-    and the new one will be marked as important.
-
-    =============== =============== ===============
-    before          after
-    --------------- -------------------------------
-    old.important   old.important   new.important
-    =============== =============== ===============
-    True            False           True
-    False           False           False
-    =============== =============== ===============
+    Set to the oldest *modified* of the entries
+    with the same status as the new read/important.
 
 
 To reduce false negatives when detecting duplicates:
@@ -81,6 +62,16 @@ To reduce false positives when detecting duplicates:
   and higher for shorter content.
 
 
+.. versionchanged:: 2.2
+    Reduce false negatives by using approximate content matching.
+
+.. versionchanged:: 2.2
+    Make it possible to re-run the plugin for existing entries.
+
+.. versionchanged:: 2.3
+    Delete old duplicates instead of marking them as read / unimportant.
+
+
 .. todo::
 
     Some possible optimizations:
@@ -96,6 +87,7 @@ To reduce false positives when detecting duplicates:
 
 ..
     Implemented for https://github.com/lemon24/reader/issues/79.
+    Deleting entries added in https://github.com/lemon24/reader/issues/140.
 
 
 """
