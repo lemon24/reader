@@ -104,7 +104,7 @@ def wrap_exceptions(
 
     except sqlite3.ProgrammingError as e:
         if "cannot operate on a closed database" in str(e).lower():
-            raise exc_type("operation on closed database")
+            raise exc_type("operation on closed database") from None
 
         raise
 

@@ -326,7 +326,7 @@ class Storage:
                 message = str(e)
                 if 'no migration' in message:
                     message += "; you may have skipped some required migrations, see https://reader.readthedocs.io/en/latest/changelog.html#removed-migrations-2-0"
-                raise StorageError(message=message)
+                raise StorageError(message=message) from None
 
         self.db: sqlite3.Connection = db
         self.path = path
@@ -364,7 +364,7 @@ class Storage:
             except sqlite3.IntegrityError as e:
                 if "unique constraint failed" not in str(e).lower():  # pragma: no cover
                     raise
-                raise FeedExistsError(url)
+                raise FeedExistsError(url) from None
 
     @wrap_exceptions(StorageError)
     def delete_feed(self, url: str) -> None:
@@ -385,7 +385,7 @@ class Storage:
             except sqlite3.IntegrityError as e:
                 if "unique constraint failed" not in str(e).lower():  # pragma: no cover
                     raise
-                raise FeedExistsError(new)
+                raise FeedExistsError(new) from None
             else:
                 rowcount_exactly_one(cursor, lambda: FeedNotFoundError(old))
 
@@ -889,7 +889,7 @@ class Storage:
                     feed_url,
                     exc_info=True,
                 )
-                raise FeedNotFoundError(feed_url)
+                raise FeedNotFoundError(feed_url) from None
 
     def add_or_update_entry(self, intent: EntryUpdateIntent) -> None:
         # TODO: this method is for testing convenience only, maybe delete it?
@@ -1054,7 +1054,7 @@ class Storage:
                 foreign_key_error = "foreign key constraint failed" in str(e).lower()
                 if not foreign_key_error:  # pragma: no cover
                     raise
-                raise info.not_found_exc(*object_id)
+                raise info.not_found_exc(*object_id) from None
 
     @wrap_exceptions(StorageError)
     def delete_metadata(self, object_id: Tuple[str, ...], key: str) -> None:
@@ -1096,7 +1096,7 @@ class Storage:
                 self.db.execute(query, params)
             except sqlite3.IntegrityError as e:
                 if "foreign key constraint failed" in str(e).lower():
-                    raise info.not_found_exc(*object_id)
+                    raise info.not_found_exc(*object_id) from None
                 # tag exists is a no-op; it looks like:
                 # "UNIQUE constraint failed: feed_tags.feed, feed_tags.tag"
 

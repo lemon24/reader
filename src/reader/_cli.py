@@ -148,7 +148,7 @@ def config_option(*args, **kwargs):
                 config = make_reader_config(yaml.safe_load(file))
         except FileNotFoundError as e:
             if value != param.default:
-                raise click.BadParameter(str(e), ctx=ctx, param=param)
+                raise click.BadParameter(str(e), ctx=ctx, param=param) from None
             config = make_reader_config({})
 
         ctx.default_map = config['cli'].get('defaults', {})

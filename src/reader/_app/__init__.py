@@ -462,7 +462,7 @@ def readererror_to_apierror(*args):
             category = (e.url,)
             if hasattr(e, 'id'):
                 category += (e.id,)
-        raise APIError(str(e), category)
+        raise APIError(str(e), category) from e
 
 
 @form_api
@@ -570,7 +570,7 @@ def update_metadata(data):
     try:
         value = yaml.safe_load(data['value'])
     except yaml.YAMLError as e:
-        raise APIError("invalid JSON: {}".format(e), (feed_url, key))
+        raise APIError("invalid JSON: {}".format(e), (feed_url, key)) from e
     get_reader().set_feed_metadata_item(feed_url, key, value)
 
 

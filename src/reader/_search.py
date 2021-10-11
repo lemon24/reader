@@ -130,13 +130,13 @@ def wrap_search_exceptions() -> Iterator[None]:
         msg_lower = str(e).lower()
 
         if 'no such table' in msg_lower:
-            raise SearchNotEnabledError()
+            raise SearchNotEnabledError() from None
 
         is_query_error = any(
             fragment in msg_lower for fragment in _QUERY_ERROR_MESSAGE_FRAGMENTS
         )
         if is_query_error:
-            raise InvalidSearchQueryError(message=str(e))
+            raise InvalidSearchQueryError(message=str(e)) from None
 
         raise
 
@@ -466,7 +466,7 @@ class Search:
             return self._update()
         except sqlite3.OperationalError as e:
             if 'no such table' in str(e).lower():
-                raise SearchNotEnabledError()
+                raise SearchNotEnabledError() from None
             raise
 
     def _update(self) -> None:
@@ -484,7 +484,7 @@ class Search:
         try:
             require_version(self.db, (3, 18))
         except DBError as e:
-            raise SearchError(message=str(e))
+            raise SearchError(message=str(e)) from None
 
         self._delete_from_search()
         self._insert_into_search()
