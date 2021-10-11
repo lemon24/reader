@@ -7,10 +7,10 @@ from utils import naive_datetime
 from utils import utc_datetime
 
 from reader import Entry
+from reader import EntryNotFoundError
 from reader import Feed
 from reader import FeedNotFoundError
 from reader import make_reader
-from reader._storage import Storage
 
 
 @pytest.mark.parametrize('entry_updated', [utc_datetime(2010, 1, 1), None])
@@ -103,3 +103,44 @@ def test_update_parse(reader, call_update_method):
 def test_make_reader_storage(storage):
     reader = make_reader('', _storage=storage)
     assert reader._storage is storage
+
+
+def test_delete_entries(reader):
+    """While Storage.delete_entries() is a storage method,
+    we care how it interacts with updates etc.,
+    and it will be called by plugins.
+
+    """
+    from utils import utc_datetime as datetime
+
+    reader._parser = parser = Parser()
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+    reader.add_feed(feed.url)
+
+    def get_entry_ids():
+        return [e.id for e in reader.get_entries()]
+
+    with pytest.raises(EntryNotFoundError) as excinfo:
+        reader._storage.delete_entries([entry.object_id])
+    assert (excinfo.value.feed_url, excinfo.value.id) == entry.object_id
+    assert 'no such entry' in excinfo.value.message
+
+    assert get_entry_ids() == []
+
+    reader.update_feeds()
+    assert get_entry_ids() == ['1, 1']
+
+    reader._storage.delete_entries([entry.object_id])
+    assert get_entry_ids() == []
+
+    with pytest.raises(EntryNotFoundError) as excinfo:
+        reader._storage.delete_entries([entry.object_id])
+
+    del parser.entries[1][1]
+    reader.update_feeds()
+    assert get_entry_ids() == []
+
+    parser.entries[1][1] = entry
+    reader.update_feeds()
+    assert get_entry_ids() == ['1, 1']

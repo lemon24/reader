@@ -594,7 +594,9 @@ class Storage:
         iterables = chunks(self.chunk_size, entries) if self.chunk_size else (entries,)
         for iterable in iterables:
 
-            # The reason there are two implementations for this method:
+            # There are two implementations for this method because
+            # the number of parameters in a query varies
+            # (e.g. 999 when compiling from sources, 250k on Ubuntu 18.04);
             # https://github.com/lemon24/reader/issues/109
             iterable = list(iterable)
             try:
@@ -805,7 +807,7 @@ class Storage:
 
     def _add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
         # We need to capture the last value for exception handling
-        # (it's not guaranteed all the entries belong to the same tuple).
+        # (it's not guaranteed all the entries belong to the same feed).
         # FIXME: In this case, is it ok to just fail other feeds too
         # if we have an exception? If no, we should force the entries to
         # belong to a single feed!
@@ -894,6 +896,26 @@ class Storage:
     def add_or_update_entry(self, intent: EntryUpdateIntent) -> None:
         # TODO: this method is for testing convenience only, maybe delete it?
         self.add_or_update_entries([intent])
+
+    @wrap_exceptions(StorageError)
+    def delete_entries(self, entries: Iterable[Tuple[str, str]]) -> None:
+        # This must be atomic (unlike add_or_update_entries()); hence, no paging.
+        # We'll deal with locking issues only if they start appearing
+        # (hopefully, there are both fewer entries to be deleted and
+        # this takes less time per entry).
+
+        # I don't know how to check *which* entry did not exit
+        # with executemany(), so we use execute().
+        # TODO: Maybe add_or_update_entries() doesn't need executemany() either.
+
+        query = "DELETE FROM entries WHERE feed = :feed AND id = :id"
+
+        with self.db:
+            for feed_url, entry_id in entries:
+                cursor = self.db.execute(query, dict(feed=feed_url, id=entry_id))
+                rowcount_exactly_one(
+                    cursor, lambda: EntryNotFoundError(feed_url, entry_id)
+                )
 
     def get_entries(
         self,

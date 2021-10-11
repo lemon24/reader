@@ -225,6 +225,10 @@ def add_or_update_entries(storage, feed, entry):
     )
 
 
+def delete_entries(storage, feed, entry):
+    storage.delete_entries([entry.object_id])
+
+
 def get_entries_chunk_size_0(storage, _, __):
     list(storage.get_entries_page(chunk_size=0, now=datetime(2010, 1, 1)))
 
@@ -292,6 +296,7 @@ def get_entry_last(storage, feed, entry):
         update_feed_last_updated,
         add_or_update_entry,
         add_or_update_entries,
+        delete_entries,
         get_entries_chunk_size_0,
         get_entries_chunk_size_1,
         iter_metadata,
@@ -528,8 +533,8 @@ def storage():
     return Storage(':memory:')
 
 
-def test_entry_remains_read_after_update(storage_with_two_entries):
-    storage = storage_with_two_entries
+@rename_argument('storage', 'storage_with_two_entries')
+def test_entry_remains_read_after_update(storage):
     storage.mark_as_read('feed', 'one', True, None)
 
     storage.add_or_update_entry(
