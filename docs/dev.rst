@@ -28,7 +28,6 @@ In no particular order:
 
 * Web application re-design.
 
-* Plugin system / hooks stabilization. (:issue:`80`)
 * Internal API stabilization.
 * CLI stabilization.
 * Web application stabilization.
@@ -342,15 +341,19 @@ Some thoughts on why it's difficult to do: :issue:`206#issuecomment-751383418`.
 Plugins
 ~~~~~~~
 
-List of hooks (unmaintained as of 2021): :issue:`80`.
+List of potential hooks (from mid-2018): :issue:`80`.
 
-Minimal plugin API (case study and considetrations for the built-in plugin naming scheme): `229#issuecomment-803870781`.
+Minimal plugin API (from 2021) – case study and built-in plugin naming scheme: :issue:`229#issuecomment-803870781`.
+
+We'll add / document new (public) hooks as needed.
 
 
 Reserved names
 ~~~~~~~~~~~~~~
 
-Requirements, thoughts about the naming scheme and prefixes unlikely to collide with user names: :issue:`186` (multiple comments).
+Requirements, thoughts about the naming scheme
+and prefixes unlikely to collide with user names:
+:issue:`186` (multiple comments).
 
 
 Wrapping underlying storage exceptions
