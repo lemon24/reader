@@ -46,7 +46,7 @@ For `built-in plugins`_, it is enough to use the plugin name (``reader.XYZ``).
 
 .. note::
 
-    :func:`make_reader()` ignores the plugin environment variables.
+    :func:`make_reader` ignores the plugin environment variables.
 
 
 Experimental plugins

@@ -11,6 +11,11 @@ Version 2.4
 
 Unreleased
 
+* Change :mod:`~reader.plugins.mark_as_read` to also
+  explicitly mark matching entries as unimportant,
+  similar to how the *don't care* web application button works.
+  (:issue:`260`)
+
 
 Version 2.3
 -----------
@@ -66,7 +71,7 @@ Released 2021-10-08
   from the duplicates to the new entry.
   (:issue:`254`)
 
-* In the web application, allow marking an entry as "don't care"
+* In the web application, allow marking an entry as *don't care*
   (read + unimportant explicitly set by the user) with a single button.
   (:issue:`254`)
 * In the web application, show the entry read modified / important modified
