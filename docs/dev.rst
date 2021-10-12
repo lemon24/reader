@@ -277,6 +277,9 @@ and why I want more use-cases before implementing them (basically, YAGNI):
 :issue:`253` discusses using entry tags to implement the current entry flags
 (read, important); tl;dr: it's not worth adding entry tags just for this.
 
+As of late 2021, I closed :issue:`228` with `wontfix`,
+since I don't have a use case for it, nor enough bandwidth to implement it.
+
 
 Feed updates
 ~~~~~~~~~~~~
