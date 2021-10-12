@@ -377,6 +377,13 @@ entry_dedupe
 Using MinHash to speed up similarity checks (maybe): https://gist.github.com/lemon24/b9af5ade919713406bda9603847d32e5
 
 
+REST API
+~~~~~~~~
+
+Some early thoughts: :issue:`192#issuecomment-700773138`
+(closed with `wontfix`, for now).
+
+
 Web application
 ~~~~~~~~~~~~~~~
 
