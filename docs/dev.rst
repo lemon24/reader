@@ -24,7 +24,6 @@ In no particular order:
 
 * API to delete old entries. (:issue:`96`)
 * API to delete duplicate entries. (:issue:`140`)
-* Batch get related resources API. (:issue:`191`)
 * update_feeds() filtering. (:issue:`193`)
 
 * Web application re-design.
@@ -321,10 +320,17 @@ Using None as a special argument value
 This comment: :issue:`177#issuecomment-674786498`.
 
 
-Batch update (set) methods
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Batch methods
+~~~~~~~~~~~~~
 
-There's a discussion on why I want to postpone this in this comment: :issue:`187#issuecomment-700740251`.
+Some initial thoughts on batch get methods (including API/typing)
+in :issue:`191` (closed with `wontfix`, for now).
+
+Why I want to postpone batch update/set methods:
+:issue:`187#issuecomment-700740251`.
+
+tl:dr: Performance is likely a non-issue with SQLite,
+convenience can be added on top as a plugin.
 
 
 Using a single Reader objects from multiple threads
