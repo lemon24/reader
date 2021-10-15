@@ -123,19 +123,18 @@ _QUERY_ERROR_MESSAGE_FRAGMENTS = [
 
 
 @contextmanager
-def wrap_search_exceptions() -> Iterator[None]:
+def wrap_search_exceptions(enabled: bool = True, query: bool = False) -> Iterator[None]:
     try:
         yield
     except sqlite3.OperationalError as e:
         msg_lower = str(e).lower()
 
-        if 'no such table' in msg_lower:
+        if enabled and 'no such table' in msg_lower:
             raise SearchNotEnabledError() from None
 
-        is_query_error = any(
+        if query and any(
             fragment in msg_lower for fragment in _QUERY_ERROR_MESSAGE_FRAGMENTS
-        )
-        if is_query_error:
+        ):
             raise InvalidSearchQueryError(message=str(e)) from None
 
         raise
@@ -213,6 +212,27 @@ class Search:
     # strip_html is not part of the Search interface,
     # but is part of the private API of this implementation.
     strip_html = staticmethod(strip_html)
+
+    @wrap_exceptions(SearchError)
+    def check_dependencies(self) -> None:
+        # Only update() requires these, so we don't check in __init__().
+
+        # If bs4 is not available, we raise an exception here, otherwise
+        # we get just a "user-defined function raised exception" SearchError
+        # (at least if used from within SQLite).
+        if not bs4:
+            raise SearchError(
+                message="could not import search dependencies "
+                "(use the 'search' extra to install them)"
+            ) from bs4_import_error
+
+        # last_insert_rowid() / cursor.lastrowid works correctly for FTS5
+        # tables only starting with SQLite 3.18.
+        # https://www.sqlite.org/releaselog/3_18_0.html
+        try:
+            require_version(self.db, (3, 18))
+        except DBError as e:
+            raise SearchError(message=str(e)) from None
 
     @wrap_exceptions(SearchError)
     def enable(self) -> None:
@@ -461,31 +481,9 @@ class Search:
         return search_table_exists
 
     @wrap_exceptions(SearchError)
+    @wrap_search_exceptions()
     def update(self) -> None:
-        try:
-            return self._update()
-        except sqlite3.OperationalError as e:
-            if 'no such table' in str(e).lower():
-                raise SearchNotEnabledError() from None
-            raise
-
-    def _update(self) -> None:
-        # If bs4 is not available, we raise an exception here, otherwise
-        # we get just a "user-defined function raised exception" SearchError.
-        if not bs4:
-            raise SearchError(
-                message="could not import search dependencies "
-                "(use the 'search' extra to install them)"
-            ) from bs4_import_error
-
-        # last_insert_rowid() / cursor.lastrowid works correctly for FTS5
-        # tables only starting with SQLite 3.18.
-        # https://www.sqlite.org/releaselog/3_18_0.html
-        try:
-            require_version(self.db, (3, 18))
-        except DBError as e:
-            raise SearchError(message=str(e)) from None
-
+        self.check_dependencies()
         self._delete_from_search()
         self._insert_into_search()
 
@@ -817,6 +815,7 @@ class Search:
         yield from rv
 
     @wrap_exceptions(SearchError)
+    @wrap_search_exceptions()
     def search_entry_last(self, query: str, entry: Tuple[str, str]) -> Tuple[Any, ...]:
         feed_url, entry_id = entry
 
@@ -869,13 +868,13 @@ class Search:
             after_mark=after_mark,
         )
 
-        with wrap_search_exceptions():
+        with wrap_search_exceptions(query=True):
             yield from paginated_query(
                 self.db, sql_query, context, chunk_size, last, row_factory
             )
 
     @wrap_exceptions(SearchError)
-    @wrap_search_exceptions()
+    @wrap_search_exceptions(query=True)
     def search_entry_counts(
         self,
         query: str,
