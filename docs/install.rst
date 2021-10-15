@@ -21,6 +21,8 @@ These packages will be installed automatically when installing *reader*:
 
 *reader* also depends on the :mod:`sqlite3` standard library module
 (at least SQLite 3.15), and on the `JSON1`_ SQLite extension.
+To use the :ref:`full-text search <fts>` functionality,
+at least SQLite 3.18 with the `FTS5`_ extension is required.
 
 .. note::
 
@@ -42,9 +44,6 @@ As such, most dependencies are optional, and can be installed as `extras`_.
 
 As of version |version|, *reader* has the following extras:
 
-* ``search`` provides :ref:`full-text search <fts>` functionality;
-  search also requires that the SQLite used by :mod:`sqlite3`
-  was compiled with the `FTS5`_ extension, and is at least version 3.18.
 * ``cli`` installs the dependencies needed for the
   :doc:`command-line interface <cli>`.
 * ``app`` installs the dependencies needed for the

@@ -85,7 +85,7 @@ Usage:
 
 .. code-block:: bash
 
-    $ pip install reader[search]
+    $ pip install reader
 
 .. code-block:: python
 

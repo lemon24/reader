@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
+import bs4  # type: ignore
+
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
@@ -51,15 +53,6 @@ from .types import SearchSortOrder
 if TYPE_CHECKING:  # pragma: no cover
     from ._storage import Storage  # noqa: F401
 
-
-# Only Search.update() has a reason to fail if bs4 is missing.
-try:
-    import bs4  # type: ignore
-
-    bs4_import_error = None
-except ImportError as e:  # pragma: no cover
-    bs4 = None
-    bs4_import_error = e
 
 log = logging.getLogger('reader')
 
@@ -143,6 +136,7 @@ def wrap_search_exceptions(enabled: bool = True, query: bool = False) -> Iterato
 # When trying to fix "database is locked" errors or to optimize stuff,
 # have a look at the lessons here first:
 # https://github.com/lemon24/reader/issues/175#issuecomment-657495233
+# tl;dr: Measure. Measure in prod. FTS5 tables are slow for non-FTS queries.
 
 # When adding a new method, add a new test_search.py::test_errors_locked test.
 
@@ -216,15 +210,6 @@ class Search:
     @wrap_exceptions(SearchError)
     def check_dependencies(self) -> None:
         # Only update() requires these, so we don't check in __init__().
-
-        # If bs4 is not available, we raise an exception here, otherwise
-        # we get just a "user-defined function raised exception" SearchError
-        # (at least if used from within SQLite).
-        if not bs4:
-            raise SearchError(
-                message="could not import search dependencies "
-                "(use the 'search' extra to install them)"
-            ) from bs4_import_error
 
         # last_insert_rowid() / cursor.lastrowid works correctly for FTS5
         # tables only starting with SQLite 3.18.

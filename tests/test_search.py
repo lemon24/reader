@@ -17,18 +17,6 @@ from reader._sqlite_utils import DBError
 from reader._sqlite_utils import require_version
 
 
-def test_bs4_import_error(storage, monkeypatch):
-    search = Search(storage)
-    search.enable()
-    monkeypatch.setattr('reader._search.bs4', None)
-    monkeypatch.setattr('reader._search.bs4_import_error', ImportError('reason'))
-
-    with pytest.raises(SearchError) as excinfo:
-        search.update()
-    assert 'search dependencies' in str(excinfo.value.message)
-    assert isinstance(excinfo.value.__cause__, ImportError)
-
-
 STRIP_HTML_DATA = [(i, i) for i in [None, 10, 11.2, b'aabb', b'aa<br>bb']] + [
     ('aabb', 'aabb'),
     ('aa<br>bb', 'aa\nbb'),

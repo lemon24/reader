@@ -56,7 +56,7 @@ Testing
 First, install the testing dependencies::
 
     ./run.sh install-dev    # or
-    pip install '.[search,cli,app,tests,dev,unstable-plugins]'
+    pip install '.[cli,app,tests,dev,unstable-plugins]'
 
 Run tests using the current Python interpreter::
 

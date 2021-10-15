@@ -316,12 +316,6 @@ The time when a flag was last modified is recorded, and is available via
 Full-text search
 ----------------
 
-.. note::
-
-    The search functionality is optional, use the ``search`` extra to install
-    its :ref:`dependencies <Optional dependencies>`.
-
-
 *reader* supports full-text searches over the entries' content through the :meth:`~Reader.search_entries()` method.
 
 Since search adds some overhead,
