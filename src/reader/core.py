@@ -19,6 +19,8 @@ from typing import Tuple
 from typing import TypeVar
 from typing import Union
 
+from typing_extensions import Literal
+
 import reader._updater
 from ._parser import default_parser
 from ._parser import Parser
@@ -43,6 +45,7 @@ from .exceptions import FeedMetadataNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import InvalidPluginError
 from .exceptions import ParseError
+from .exceptions import SearchNotEnabledError
 from .plugins import _DEFAULT_PLUGINS
 from .plugins import _PLUGINS
 from .types import _entry_argument
@@ -87,6 +90,7 @@ def make_reader(
     plugins: Iterable[Union[str, ReaderPluginType]] = _DEFAULT_PLUGINS,
     session_timeout: TimeoutType = SESSION_TIMEOUT,
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
+    search_enabled: Union[bool, None, Literal['auto']] = 'auto',
     _storage: Optional[Storage] = None,
     _storage_factory: Any = None,
 ) -> 'Reader':
@@ -166,6 +170,14 @@ def make_reader(
             The prefixes default to ``.reader.``/``.plugin.``,
             and the separator to ``.``
 
+        search_enabled (bool or None or ``'auto'``):
+            Whether to enable search. One of
+            ``'auto'`` (enable on the first
+            :meth:`~Reader.update_search` call; default),
+            :const:`True` (enable),
+            :const:`False` (disable),
+            :const:`None` (do nothing).
+
     .. _Requests session: https://requests.readthedocs.io/en/master/user/advanced/#timeouts
 
     Returns:
@@ -189,13 +201,22 @@ def make_reader(
         raises :exc:`InvalidPluginError`, a :exc:`ValueError` subclass.
 
     .. versionadded:: 1.17
-        The ``reserved_name_scheme`` argument.
+        The ``reserved_name_scheme`` keyword argument.
 
     .. versionchanged:: 2.0
         ``feed_root`` now defaults to ``None`` (don't open local feeds)
         instead of ``''`` (full filesystem access).
 
+    .. versionadded:: 2.4
+        The ``search_enabled`` keyword argument.
+
+    .. versionchanged:: 2.4
+        Enable search on the first :meth:`~Reader.update_search` call;
+        the previous behavior was to do nothing (leave search as-is).
+
     """
+    if search_enabled not in ('auto', True, False, None):
+        raise ValueError("search_enabled should be one of ('auto', True, False, None)")
 
     # If we ever need to change the signature of make_reader(),
     # or support additional storage/search implementations,
@@ -214,6 +235,17 @@ def make_reader(
     reader = Reader(
         storage, search, parser, reserved_name_scheme, _called_directly=False
     )
+
+    if search_enabled is True:
+        reader.enable_search()
+    elif search_enabled is False:
+        reader.disable_search()
+    elif search_enabled is None:
+        pass
+    elif search_enabled == 'auto':
+        reader._enable_search = True
+    else:
+        assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
     for plugin in plugins:
         if isinstance(plugin, str):
@@ -328,6 +360,8 @@ class Reader:
         #: .. versionadded:: 2.2
         #:
         self.after_feed_update_hooks: MutableSequence[AfterFeedUpdateHook] = []
+
+        self._enable_search: bool = False
 
         if _called_directly:
             warnings.warn(
@@ -1454,13 +1488,22 @@ class Reader:
 
         Search must be enabled to call this method.
 
+        If :func:`make_reader` was called with ``search_enabled='auto'``,
+        search will be enabled automatically.
+
         Raises:
             SearchNotEnabledError
             SearchError
             StorageError
 
         """
-        return self._search.update()
+        try:
+            self._search.update()
+        except SearchNotEnabledError:
+            if not self._enable_search:
+                raise
+            self._search.enable()
+            self._search.update()
 
     def search_entries(
         self,

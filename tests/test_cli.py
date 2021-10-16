@@ -89,12 +89,6 @@ def test_cli(db_path, data_dir):
     assert result.exit_code == 0
     assert 'search: disabled' in result.output
 
-    result = invoke('search', 'update')
-    assert result.exit_code != 0
-
-    result = invoke('search', 'entries', 'amok')
-    assert result.exit_code != 0
-
     result = invoke('search', 'enable')
     assert result.exit_code == 0
     assert result.output == ''

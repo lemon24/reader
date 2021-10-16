@@ -33,7 +33,9 @@ def test_closed(reader):
 
 
 @pytest.fixture(params=[False, True], ids=['without_entries', 'with_entries'])
-def reader_without_and_with_entries(request, reader):
+def reader_without_and_with_entries(request, make_reader):
+    reader = make_reader(':memory:', search_enabled=None)
+
     if not request.param:
         return reader
 
@@ -58,6 +60,9 @@ def reader_without_and_with_entries(request, reader):
     reader.update_feeds()
 
     return reader
+
+
+with_sort = pytest.mark.parametrize('sort', ['relevant', 'recent'])
 
 
 @rename_argument('reader', 'reader_without_and_with_entries')
@@ -96,7 +101,70 @@ def test_update_search(reader):
     reader.update_search()
 
 
-with_sort = pytest.mark.parametrize('sort', ['relevant', 'recent'])
+@rename_argument('reader', 'reader_without_and_with_entries')
+def test_update_search_fails_if_not_enabled(reader):
+    with pytest.raises(SearchNotEnabledError) as excinfo:
+        reader.update_search()
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.message
+
+
+@rename_argument('reader', 'reader_without_and_with_entries')
+@with_sort
+def test_search_entries_fails_if_not_enabled(reader, sort):
+    with pytest.raises(SearchNotEnabledError) as excinfo:
+        list(reader.search_entries('one', sort=sort))
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.message
+
+
+@rename_argument('reader', 'reader_without_and_with_entries')
+def test_search_entry_counts_fails_if_not_enabled(reader):
+    with pytest.raises(SearchNotEnabledError) as excinfo:
+        list(reader.search_entry_counts('one'))
+    assert excinfo.value.__cause__ is None
+    assert excinfo.value.message
+
+
+def test_search_enabled_true(make_reader):
+    reader = make_reader(':memory:', search_enabled=True)
+    assert reader.is_search_enabled()
+
+    reader.update_search()
+    list(reader.search_entries('one'))
+
+
+def test_search_enabled_false(make_reader, db_path):
+    reader = make_reader(db_path, search_enabled=None)
+    reader.enable_search()
+    assert reader.is_search_enabled()
+
+    reader = make_reader(db_path, search_enabled=False)
+    assert not reader.is_search_enabled()
+
+    with pytest.raises(SearchNotEnabledError):
+        reader.update_search()
+    with pytest.raises(SearchNotEnabledError):
+        list(reader.search_entries('one'))
+
+
+@pytest.mark.parametrize('kwargs', [{}, dict(search_enabled='auto')])
+def test_search_enabled_auto(make_reader, kwargs):
+    reader = make_reader(':memory:', **kwargs)
+    assert not reader.is_search_enabled()
+
+    with pytest.raises(SearchNotEnabledError):
+        list(reader.search_entries('one'))
+
+    reader.update_search()
+    list(reader.search_entries('one'))
+
+
+@pytest.mark.parametrize('search_enabled', ['a', 2])
+def test_search_enabled_value_error(make_reader, search_enabled):
+    with pytest.raises(ValueError) as excinfo:
+        make_reader(':memory:', search_enabled=search_enabled)
+    assert 'search_enabled' in str(excinfo.value)
 
 
 @rename_argument('reader', 'reader_without_and_with_entries')
@@ -430,31 +498,6 @@ def test_update_triggers_no_change(db_path, make_reader, monkeypatch, set_user_t
 
     assert old_result == new_result
     assert strip_html_called == 0
-
-
-@rename_argument('reader', 'reader_without_and_with_entries')
-def test_update_search_fails_if_not_enabled(reader):
-    with pytest.raises(SearchNotEnabledError) as excinfo:
-        reader.update_search()
-    assert excinfo.value.__cause__ is None
-    assert excinfo.value.message
-
-
-@rename_argument('reader', 'reader_without_and_with_entries')
-@with_sort
-def test_search_entries_fails_if_not_enabled(reader, sort):
-    with pytest.raises(SearchNotEnabledError) as excinfo:
-        list(reader.search_entries('one', sort=sort))
-    assert excinfo.value.__cause__ is None
-    assert excinfo.value.message
-
-
-@rename_argument('reader', 'reader_without_and_with_entries')
-def test_search_entry_counts_fails_if_not_enabled(reader):
-    with pytest.raises(SearchNotEnabledError) as excinfo:
-        list(reader.search_entry_counts('one'))
-    assert excinfo.value.__cause__ is None
-    assert excinfo.value.message
 
 
 @with_sort
