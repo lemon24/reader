@@ -106,7 +106,6 @@ Usage:
     >>> [e.title for e in reader.get_entries(read=True)]
     ['H.I. #108: Project Cyclops']
     >>>
-    >>> reader.enable_search()
     >>> reader.update_search()
     >>>
     >>> for e in list(reader.search_entries('year'))[:3]:

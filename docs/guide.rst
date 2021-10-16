@@ -316,19 +316,11 @@ The time when a flag was last modified is recorded, and is available via
 Full-text search
 ----------------
 
-*reader* supports full-text searches over the entries' content through the :meth:`~Reader.search_entries()` method.
-
-Since search adds some overhead,
-it needs to be enabled by calling :meth:`~Reader.enable_search()`
-(this is persistent across Reader instances using the same database,
-and only needs to be done once).
-Also, the search index must be kept in sync by calling
-:meth:`~Reader.update_search()` regularly
-(usually after updating the feeds).
+*reader* supports full-text searches over the entries' content
+through the :meth:`~Reader.search_entries()` method.
 
 ::
 
-    >>> reader.enable_search()
     >>> reader.update_search()
     >>> for result in reader.search_entries('mars'):
     ...     print(result.metadata['.title'].apply('*', '*'))
@@ -336,17 +328,35 @@ Also, the search index must be kept in sync by calling
     H.I. #106: Water on *Mars*
 
 
-:meth:`~Reader.search_entries()` generates :class:`EntrySearchResult` objects,
-which contain snippets of relevant entry/feed fields,
+:meth:`~Reader.search_entries()` generates :class:`EntrySearchResult` objects
+containing snippets of relevant entry/feed fields,
 with the parts that matched highlighted.
 
 .. todo:: Talk about how you can eval() on an entry to get the corresponding field.
 
-
-By default, the results are filtered by relevance;
+By default, results are filtered by relevance;
 you can sort them most-recent first by passing ``sort='recent'``.
+Also, you can filter them just as with :meth:`~Reader.get_entries()`.
 
-:meth:`~Reader.search_entries()` allows filtering the results just as :meth:`~Reader.get_entries()` does.
+
+The search index is not updated automatically;
+to keep it in sync, you need to call :meth:`~Reader.update_search()`
+when entries change (e.g. after updating/deleting feeds).
+:meth:`~Reader.update_search()` only updates
+the entries that changed since the last call,
+so it is OK to call it relatively often.
+
+
+Because search adds  minor overhead to other :class:`Reader` methods
+and can almost double the size of the database,
+it can be turned on/off through the
+:meth:`~Reader.enable_search()` / :meth:`~Reader.disable_search()` methods.
+This is persistent across instances using the same database,
+and only needs to be done once.
+You can also use the ``search_enabled`` :func:`make_reader` argument
+for the same purpose.
+By default, search is disabled,
+and enabled automatically on the first :meth:`~Reader.update_search()` call.
 
 
 

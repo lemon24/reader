@@ -1488,8 +1488,8 @@ class Reader:
 
         Search must be enabled to call this method.
 
-        If :func:`make_reader` was called with ``search_enabled='auto'``,
-        search will be enabled automatically.
+        If :func:`make_reader` was called with ``search_enabled='auto'``
+        and search is disabled, it will be enabled automatically.
 
         Raises:
             SearchNotEnabledError
