@@ -11,6 +11,15 @@ Version 2.4
 
 Unreleased
 
+* Enable search by default. (:issue:`252`)
+
+  * Add the ``search_enabled`` :func:`make_reader` argument.
+    By default, search is enabled on the first
+    :meth:`~Reader.update_search` call;
+    the previous behavior was to do nothing.
+  * Always install the full-text search dependencies (previously optional).
+    The ``search`` extra remains available to avoid breaking dependent packages.
+
 * Change :mod:`~reader.plugins.mark_as_read` to also
   explicitly mark matching entries as unimportant,
   similar to how the *don't care* web application button works.

@@ -211,8 +211,11 @@ def make_reader(
         The ``search_enabled`` keyword argument.
 
     .. versionchanged:: 2.4
-        Enable search on the first :meth:`~Reader.update_search` call;
-        the previous behavior was to do nothing (leave search as-is).
+        Enable search on the first :meth:`~Reader.update_search` call.
+        To get the previous behavior (leave search as-is),
+        use ``search_enabled=None``.
+
+
 
     """
     if search_enabled not in ('auto', True, False, None):
