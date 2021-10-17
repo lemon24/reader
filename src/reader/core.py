@@ -11,6 +11,7 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Iterator
+from typing import List
 from typing import Mapping
 from typing import MutableSequence
 from typing import Optional
@@ -165,7 +166,7 @@ def make_reader(
             as a float, or a (connect timeout, read timeout) tuple.
             Passed to the underlying `Requests session`_.
 
-        reserved_name_scheme (dict(str, str) or None):
+        reserved_name_scheme (dict(str, str)):
             Value for :attr:`~Reader.reserved_name_scheme`.
             The prefixes default to ``.reader.``/``.plugin.``,
             and the separator to ``.``
@@ -217,8 +218,28 @@ def make_reader(
         use ``search_enabled=None``.
 
     """
+
+    # Do as much work as possible before creating the storage.
+
     if search_enabled not in ('auto', True, False, None):
         raise ValueError("search_enabled should be one of ('auto', True, False, None)")
+
+    parser = default_parser(feed_root, session_timeout=session_timeout)
+
+    try:
+        name_scheme = NameScheme.from_value(reserved_name_scheme)
+    except Exception as e:
+        raise ValueError(f"invalid reserved name scheme: {reserved_name_scheme}") from e
+
+    plugin_funcs: List[ReaderPluginType] = []
+    for plugin in plugins:
+        if isinstance(plugin, str):
+            if plugin not in _PLUGINS:
+                raise InvalidPluginError(f"no such built-in plugin: {plugin!r}")
+            plugin_func = _PLUGINS[plugin]
+        else:
+            plugin_func = plugin
+        plugin_funcs.append(plugin_func)
 
     # If we ever need to change the signature of make_reader(),
     # or support additional storage/search implementations,
@@ -229,53 +250,32 @@ def make_reader(
 
     storage = _storage or Storage(url, factory=_storage_factory)
 
-    # For now, we're using a storage-bound search provider.
-    search = Search(storage)
-
-    # TODO: I don't like all these try-excepts
-
     try:
+        # For now, we're using a storage-bound search provider.
+        search = Search(storage)
+
         if search_enabled is True:
             search.check_dependencies()
             search.enable()
         elif search_enabled is False:
             search.disable()
-    except Exception:  # pragma: no cover
-        storage.close()
-        raise
 
-    parser = default_parser(feed_root, session_timeout=session_timeout)
-
-    try:
         reader = Reader(
             storage,
             search,
             parser,
-            reserved_name_scheme,
+            name_scheme,
             _enable_search=(search_enabled == 'auto'),
             _called_directly=False,
         )
-    except Exception:  # pragma: no cover
+
+        # TODO: (maybe) wrap exceptions raised here in a custom exception
+        for plugin_func in plugin_funcs:
+            plugin_func(reader)
+
+    except BaseException:
         storage.close()
         raise
-
-    for plugin in plugins:
-        if isinstance(plugin, str):
-            if plugin not in _PLUGINS:
-                reader.close()
-                raise InvalidPluginError(f"no such built-in plugin: {plugin!r}")
-
-            plugin_func = _PLUGINS[plugin]
-        else:
-            plugin_func = plugin
-
-        try:
-            plugin_func(reader)  # type: ignore
-        except Exception:  # pragma: no cover
-            # TODO: this whole branch is not tested
-            reader.close()
-            # TODO: this should raise a custom exception (but can't because of backwards compatibility)
-            raise
 
     return reader
 
@@ -323,7 +323,7 @@ class Reader:
         _storage: Storage,
         _search: Search,
         _parser: Parser,
-        _reserved_name_scheme: Mapping[str, str],
+        _reserved_name_scheme: NameScheme,
         _enable_search: bool = False,
         _called_directly: bool = True,
     ):
@@ -331,10 +331,7 @@ class Reader:
         self._search = _search
         self._parser = _parser
 
-        try:
-            self.reserved_name_scheme = _reserved_name_scheme
-        except AttributeError as e:
-            raise ValueError(str(e)) from (e.__cause__ or e)
+        self._reserved_name_scheme = _reserved_name_scheme
 
         self._enable_search = _enable_search
 
@@ -1834,4 +1831,4 @@ class Reader:
         try:
             self._reserved_name_scheme = NameScheme.from_value(value)
         except Exception as e:
-            raise AttributeError(f"invalid scheme: {value}") from e
+            raise AttributeError(f"invalid reserved name scheme: {value}") from e
