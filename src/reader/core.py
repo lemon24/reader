@@ -230,26 +230,37 @@ def make_reader(
     # For now, we're using a storage-bound search provider.
     search = Search(storage)
 
+    # TODO: I don't like all these try-excepts
+
+    try:
+        if search_enabled is True:
+            search.check_dependencies()
+            search.enable()
+        elif search_enabled is False:
+            search.disable()
+    except Exception:  # pragma: no cover
+        storage.close()
+        raise
+
     parser = default_parser(feed_root, session_timeout=session_timeout)
 
-    reader = Reader(
-        storage, search, parser, reserved_name_scheme, _called_directly=False
-    )
-
-    if search_enabled is True:
-        reader.enable_search()
-    elif search_enabled is False:
-        reader.disable_search()
-    elif search_enabled is None:
-        pass
-    elif search_enabled == 'auto':
-        reader._enable_search = True
-    else:
-        assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+    try:
+        reader = Reader(
+            storage,
+            search,
+            parser,
+            reserved_name_scheme,
+            _enable_search=(search_enabled == 'auto'),
+            _called_directly=False,
+        )
+    except Exception:  # pragma: no cover
+        storage.close()
+        raise
 
     for plugin in plugins:
         if isinstance(plugin, str):
             if plugin not in _PLUGINS:
+                reader.close()
                 raise InvalidPluginError(f"no such built-in plugin: {plugin!r}")
 
             plugin_func = _PLUGINS[plugin]
@@ -311,6 +322,7 @@ class Reader:
         _search: Search,
         _parser: Parser,
         _reserved_name_scheme: Mapping[str, str],
+        _enable_search: bool = False,
         _called_directly: bool = True,
     ):
         self._storage = _storage
@@ -321,6 +333,8 @@ class Reader:
             self.reserved_name_scheme = _reserved_name_scheme
         except AttributeError as e:
             raise ValueError(str(e)) from (e.__cause__ or e)
+
+        self._enable_search = _enable_search
 
         self._updater = reader._updater
 
@@ -360,8 +374,6 @@ class Reader:
         #: .. versionadded:: 2.2
         #:
         self.after_feed_update_hooks: MutableSequence[AfterFeedUpdateHook] = []
-
-        self._enable_search: bool = False
 
         if _called_directly:
             warnings.warn(
