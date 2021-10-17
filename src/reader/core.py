@@ -184,9 +184,10 @@ def make_reader(
         Reader: The reader.
 
     Raises:
-        StorageError
+        StorageError: An error occurred while connecting to storage.
+        SearchError: An error occurred while enabling/disabling search.
         InvalidPluginError: An invalid plugin name was passed to ``plugins``.
-        ReaderError: An ambiguous exception ocurred while creating the reader.
+        ReaderError: An ambiguous exception occurred while creating the reader.
 
     .. versionadded:: 1.6
         The ``feed_root`` keyword argument.
@@ -214,8 +215,6 @@ def make_reader(
         Enable search on the first :meth:`~Reader.update_search` call.
         To get the previous behavior (leave search as-is),
         use ``search_enabled=None``.
-
-
 
     """
     if search_enabled not in ('auto', True, False, None):

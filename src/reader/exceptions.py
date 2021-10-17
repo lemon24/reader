@@ -57,7 +57,7 @@ class ReaderError(_FancyExceptionBase):
 
 
 class FeedError(ReaderError):
-    """A feed error occured."""
+    """A feed error occurred."""
 
     def __init__(self, url: str, message: str = '') -> None:
         super().__init__(message)
@@ -92,7 +92,7 @@ class FeedNotFoundError(FeedError):
 
 
 class ParseError(FeedError):
-    """An error occured while getting/parsing feed.
+    """An error occurred while getting/parsing feed.
 
     The original exception should be chained to this one (e.__cause__).
 
