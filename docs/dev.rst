@@ -226,6 +226,8 @@ From the initial issue:
 * detailed requirements and API discussion: :issue:`122#issuecomment-591302580`
 * discussion of possible backend-independent search queries: :issue:`122#issuecomment-508938311`
 
+Enabling search by default, and alternative search APIs: :issue:`252`.
+
 
 reader types to Atom mapping
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
