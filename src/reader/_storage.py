@@ -245,6 +245,8 @@ def update_from_32_to_33(db: sqlite3.Connection) -> None:  # pragma: no cover
     # https://github.com/lemon24/reader/issues/223
     db.execute("ALTER TABLE feeds ADD COLUMN subtitle TEXT;")
     db.execute("ALTER TABLE feeds ADD COLUMN version TEXT;")
+    # force all feeds to update regardless of their caching headers
+    db.execute("UPDATE feeds SET stale = 1;")
 
 
 MINIMUM_SQLITE_VERSION = (3, 15)
@@ -736,6 +738,8 @@ class Storage:
                     link = :link,
                     updated = :updated,
                     author = :author,
+                    subtitle = :subtitle,
+                    version = :version,
                     http_etag = :http_etag,
                     http_last_modified = :http_last_modified,
                     data_hash = :data_hash,

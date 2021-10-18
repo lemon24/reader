@@ -7,7 +7,9 @@ from reader._types import FeedData
 
 
 feed = FeedData(
-    url='{}relative.atom'.format(url_base), link='{}file.html'.format(rel_base)
+    url='{}relative.atom'.format(url_base),
+    link='{}file.html'.format(rel_base),
+    version='atom10',
 )
 
 entries = [

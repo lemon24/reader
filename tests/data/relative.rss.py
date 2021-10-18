@@ -7,7 +7,9 @@ from reader._types import FeedData
 
 
 feed = FeedData(
-    url='{}relative.rss'.format(url_base), link='{}file.html'.format(rel_base)
+    url='{}relative.rss'.format(url_base),
+    link='{}file.html'.format(rel_base),
+    version='rss20',
 )
 
 entries = [

@@ -473,6 +473,8 @@ def _process_feedparser_dict(url: str, d: Any) -> FeedAndEntries:
         d.feed.get('title'),
         d.feed.get('link'),
         d.feed.get('author'),
+        d.feed.get('subtitle') or None,
+        d.version,
     )
     # This must be a list, not a generator expression,
     # otherwise the user may get a ParseError when calling
@@ -575,10 +577,20 @@ class JSONFeedParser:
         return _process_jsonfeed_dict(url, result)
 
 
+_JSONFEED_VERSIONS = {
+    "https://jsonfeed.org/version/1.1": 'json11',
+    "https://jsonfeed.org/version/1": 'json10',
+}
+_JSONFEED_VERSION_URL_PREFIX = "https://jsonfeed.org/version/"
+_JSONFEED_VERSION_UNKNOWN = 'json'
+
+
 def _process_jsonfeed_dict(url: str, d: Any) -> FeedAndEntries:
     version = _dict_get(d, 'version', str) or ''
-    if not version.lower().startswith('https://jsonfeed.org/version/'):
-        raise ParseError(url, "missing or bad JSON Feed version")
+    version_lower = version.lower()
+    if not version_lower.startswith(_JSONFEED_VERSION_URL_PREFIX):
+        raise ParseError(url, f"missing or bad JSON Feed version: {version!r}")
+    version_code = _JSONFEED_VERSIONS.get(version_lower, _JSONFEED_VERSION_UNKNOWN)
 
     feed = FeedData(
         url=url,
@@ -586,6 +598,8 @@ def _process_jsonfeed_dict(url: str, d: Any) -> FeedAndEntries:
         title=_dict_get(d, 'title', str),
         link=_dict_get(d, 'home_page_url', str),
         author=_jsonfeed_author(d),
+        subtitle=_dict_get(d, 'description', str),
+        version=version_code,
     )
     lang = _dict_get(d, 'language', str)
 

@@ -12,6 +12,8 @@ feed = FeedData(
     title='RSS Title',
     link='http://www.example.com/main.html',
     author='Example editor (me@example.com)',
+    subtitle='This is an example of an RSS feed',
+    version='rss20',
 )
 
 entries = [

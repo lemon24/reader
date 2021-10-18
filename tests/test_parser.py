@@ -153,7 +153,7 @@ def make_url(request, requests_mock):
 @pytest.mark.parametrize(
     'feed_type, data_file',
     [(ft, df) for ft in ['rss', 'atom'] for df in ['full', 'empty', 'relative']]
-    + [('json', df) for df in ['full', 'empty', 'invalid']],
+    + [('json', df) for df in ['full', 'empty', 'invalid', '10', 'unknown']],
 )
 def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     monkeypatch.chdir(data_dir.dirname)

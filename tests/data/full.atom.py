@@ -12,6 +12,8 @@ feed = FeedData(
     title='Example Feed',
     link='http://example.org/',
     author='John Doe',
+    subtitle='all your examples are belong to us',
+    version='atom10',
 )
 
 entries = [

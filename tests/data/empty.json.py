@@ -8,6 +8,7 @@ from reader._types import FeedData
 
 feed = FeedData(
     url='{}empty.json'.format(url_base),
+    version='json11',
 )
 
 entries = [
