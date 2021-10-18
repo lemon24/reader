@@ -49,6 +49,8 @@ class FeedData(_namedtuple_compat):
     title: Optional[str] = None
     link: Optional[str] = None
     author: Optional[str] = None
+    subtitle: Optional[str] = None
+    version: Optional[str] = None
 
     def as_feed(self, **kwargs: object) -> Feed:
         """For testing."""

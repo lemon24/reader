@@ -92,6 +92,32 @@ class Feed(_namedtuple_compat):
     #: The author of the feed.
     author: Optional[str] = None
 
+    #: A description or subtitle for the feed.
+    #:
+    #: .. versionadded:: 2.4
+    subtitle: Optional[str] = None
+
+    #: The feed type and version.
+    #:
+    #: For Atom and RSS, provided by `feedparser`_ (e.g. ``atom10``, ``rss20``);
+    #: `full list <https://feedparser.readthedocs.io/en/latest/version-detection.html>`_.
+    #:
+    #: For JSON Feed:
+    #:
+    #: ``json10``
+    #:  `JSON Feed 1.0 <https://www.jsonfeed.org/version/1/>`_
+    #:
+    #: ``json11``
+    #:  `JSON Feed 1.1 <https://www.jsonfeed.org/version/1.1/>`_
+    #:
+    #: ``json``
+    #:  JSON Feed (unknown or unrecognized version)
+    #:
+    #: Plugins may add other versions.
+    #:
+    #: .. versionadded:: 2.4
+    version: Optional[str] = None
+
     #: User-defined feed title.
     user_title: Optional[str] = None
 

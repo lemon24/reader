@@ -405,6 +405,7 @@ class Storage:
                 UPDATE feeds
                 SET
                     updated = NULL,
+                    version = NULL,
                     http_etag = NULL,
                     http_last_modified = NULL,
                     stale = 0,
@@ -1200,6 +1201,8 @@ def make_get_feeds_query(
             'title',
             'link',
             'author',
+            'subtitle',
+            'version',
             'user_title',
             'added',
             'last_updated',
@@ -1229,10 +1232,10 @@ def make_get_feeds_query(
 
 def feed_factory(t: Tuple[Any, ...]) -> Feed:
     return Feed._make(
-        t[:8]
+        t[:10]
         + (
-            ExceptionInfo(**json.loads(t[8])) if t[8] else None,
-            t[9] == 1,
+            ExceptionInfo(**json.loads(t[10])) if t[10] else None,
+            t[11] == 1,
         )
     )
 
@@ -1272,6 +1275,8 @@ def make_get_entries_query(
             feeds.title
             feeds.link
             feeds.author
+            feeds.subtitle
+            feeds.version
             feeds.user_title
             feeds.added
             feeds.last_updated
@@ -1315,16 +1320,16 @@ def make_get_entries_query(
 
 
 def entry_factory(t: Tuple[Any, ...]) -> Entry:
-    feed = feed_factory(t[0:10])
-    entry = t[10:17] + (
-        tuple(Content(**d) for d in json.loads(t[17])) if t[17] else (),
-        tuple(Enclosure(**d) for d in json.loads(t[18])) if t[18] else (),
-        t[19] == 1,
-        t[20],
+    feed = feed_factory(t[0:12])
+    entry = t[12:19] + (
+        tuple(Content(**d) for d in json.loads(t[19])) if t[19] else (),
+        tuple(Enclosure(**d) for d in json.loads(t[20])) if t[20] else (),
         t[21] == 1,
         t[22],
-        t[23],
-        t[24] or feed.url,
+        t[23] == 1,
+        t[24],
+        t[25],
+        t[26] or feed.url,
         feed,
     )
     return Entry._make(entry)
