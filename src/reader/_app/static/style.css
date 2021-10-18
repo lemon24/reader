@@ -177,6 +177,10 @@ abbr[title]:hover::after,
 abbr[title]:focus::after {
     content: " " attr(title);
 }
+abbr[title]:hover .ellipsis,
+abbr[title]:focus .ellipsis {
+    display: none;
+}
 
 
 .averages-block {

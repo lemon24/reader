@@ -282,3 +282,19 @@ data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
 
 
 {% endmacro %}
+
+
+
+{% macro abbr_truncate(s, length=255, end='...') %}
+
+{% set s = s | striptags | trim %}
+{% set truncated = s | truncate(length, end='') %}
+{% set have_tail = truncated | length < s | length %}
+
+{%- if have_tail -%}
+<abbr title="{{ s[ truncated | length :] }}">
+{%- endif -%}
+{{ truncated }}
+{%- if have_tail %}<span class="ellipsis">{{ end }}</span></abbr>{% endif -%}
+
+{% endmacro %}

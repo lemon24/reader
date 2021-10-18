@@ -25,6 +25,14 @@
 
 {% block body %}
 
+{% if feed and feed.subtitle %}
+{# 24 words * 4.7 letters/word = 112.8 letters #}
+<p><em>
+{{ macros.abbr_truncate(feed.subtitle, 113) }}
+</em></p>
+{% endif %}
+
+
 <div id="update-entries">
 <ul class="controls">
 
@@ -114,7 +122,9 @@
 
     <li>
         {% if feed.link %}<a href="{{ feed.link }}">site</a>{% endif %}
-        <a href="{{ feed.url }}">feed</a>
+        <a href="{{ feed.url }}"
+            {%- if feed.version %} title="{{ feed.version }}"{% endif -%}
+        >feed</a>
 
     {# TODO: duplicated from feeds.html #}
     <li>
@@ -223,8 +233,6 @@
 
 
 </div>
-
-
 
 {% if counts %}
 <p>

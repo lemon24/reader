@@ -94,7 +94,9 @@
 
 <li>
     {% if feed.link %}<a href="{{ feed.link }}">site</a>{% else %}no site{% endif %}
-    <a href="{{ feed.url }}">feed</a>
+    <a href="{{ feed.url }}"
+        {%- if feed.version %} title="{{ feed.version }}"{% endif -%}
+    >feed</a>
 
 <li>
     added <span title="{{ feed.added }}">{{ feed.added | humanize_naturaltime }}</span>;
