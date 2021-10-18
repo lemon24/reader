@@ -83,6 +83,8 @@ def create_feeds(db: sqlite3.Connection, name: str = 'feeds') -> None:
             link TEXT,
             updated TIMESTAMP,
             author TEXT,
+            subtitle TEXT,
+            version TEXT,
             user_title TEXT,  -- except this one, which comes from reader
             http_etag TEXT,
             http_last_modified TEXT,
@@ -239,6 +241,12 @@ def update_from_31_to_32(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute("ALTER TABLE entries ADD COLUMN important_modified TIMESTAMP;")
 
 
+def update_from_32_to_33(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # https://github.com/lemon24/reader/issues/223
+    db.execute("ALTER TABLE feeds ADD COLUMN subtitle TEXT;")
+    db.execute("ALTER TABLE feeds ADD COLUMN version TEXT;")
+
+
 MINIMUM_SQLITE_VERSION = (3, 15)
 REQUIRED_SQLITE_COMPILE_OPTIONS = ["ENABLE_JSON1"]
 
@@ -247,7 +255,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=32,
+        version=33,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
@@ -255,6 +263,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             29: update_from_29_to_30,
             30: recreate_search_triggers,
             31: update_from_31_to_32,
+            32: update_from_32_to_33,
         },
         id=APPLICATION_ID,
         # Row value support was added in 3.15.
