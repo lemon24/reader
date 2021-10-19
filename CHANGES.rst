@@ -20,10 +20,16 @@ Unreleased
   * Always install the full-text search dependencies (previously optional).
     The ``search`` extra remains available to avoid breaking dependent packages.
 
-* Change :mod:`~reader.plugins.mark_as_read` to also
+* Add the :attr:`~Feed.subtitle` and :attr:`~Feed.version` Feed attributes.
+  (:issue:`223`)
+
+* Change the :mod:`~reader.plugins.mark_as_read` plugin to also
   explicitly mark matching entries as unimportant,
   similar to how the *don't care* web application button works.
   (:issue:`260`)
+
+* In the web application, show the feed subtitle.
+  (:issue:`223`)
 
 
 Version 2.3
