@@ -299,7 +299,7 @@ def preview():
         'default', url=':memory:', plugin_loader=current_app.plugin_loader
     )
 
-    reader.add_feed(url)
+    reader.add_feed(url, allow_invalid_url=True)
 
     try:
         reader.update_feed(url)

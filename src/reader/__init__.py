@@ -63,6 +63,7 @@ from .exceptions import (
     FeedExistsError,
     FeedNotFoundError,
     ParseError,
+    InvalidFeedURLError,
     EntryError,
     EntryNotFoundError,
     MetadataError,

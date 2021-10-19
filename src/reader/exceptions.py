@@ -91,6 +91,16 @@ class FeedNotFoundError(FeedError):
     message = "no such feed"
 
 
+class InvalidFeedURLError(FeedError, ValueError):
+    """Invalid feed URL.
+
+    .. versionadded:: 2.5
+
+    """
+
+    message = "invalid feed URL"
+
+
 class ParseError(FeedError):
     """An error occurred while getting/parsing feed.
 

@@ -45,6 +45,7 @@ from ._url_utils import extract_path
 from ._url_utils import is_windows_device_file
 from ._url_utils import normalize_url
 from ._url_utils import resolve_root
+from .exceptions import InvalidFeedURLError
 from .exceptions import ParseError
 from .types import Content
 from .types import Enclosure
@@ -78,7 +79,7 @@ class RetrieverType(Protocol):
         """Check if ``url`` is valid for this retriever.
 
         Raises:
-            ValueError: If ``url`` is not valid.
+            InvalidFeedURLError: If ``url`` is not valid.
 
         """
 
@@ -200,14 +201,17 @@ class Parser:
         """Check if ``url`` is valid without actually retrieving it.
 
         Raises:
-            ValueError: If ``url`` is not valid.
+            InvalidFeedURLError: If ``url`` is not valid.
 
         """
         try:
             retriever = self.get_retriever(url)
         except ParseError as e:
-            raise ValueError(str(e)) from e
-        retriever.validate_url(url)
+            raise InvalidFeedURLError(e.url, message=e.message) from None
+        try:
+            retriever.validate_url(url)
+        except ValueError as e:
+            raise InvalidFeedURLError(url) from e
 
     def mount_retriever(self, prefix: str, retriever: RetrieverType) -> None:
         self.retrievers[prefix] = retriever

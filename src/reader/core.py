@@ -409,7 +409,7 @@ class Reader:
         Raises:
             FeedExistsError
             StorageError
-            ValueError: If ``feed`` is invalid and ``allow_invalid_url`` is false.
+            InvalidFeedURLError: If ``feed`` is invalid and ``allow_invalid_url`` is false.
 
         .. versionadded:: 2.5
             The ``allow_invalid_url`` keyword argument.
@@ -472,7 +472,7 @@ class Reader:
             FeedNotFoundError: If ``old`` does not exist.
             FeedExistsError: If ``new`` already exists.
             StorageError
-            ValueError: If ``new`` is invalid and ``allow_invalid_url`` is false.
+            InvalidFeedURLError: If ``new`` is invalid and ``allow_invalid_url`` is false.
 
         .. versionadded:: 1.8
 

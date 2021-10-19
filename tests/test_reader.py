@@ -31,6 +31,7 @@ from reader import FeedCounts
 from reader import FeedExistsError
 from reader import FeedMetadataNotFoundError
 from reader import FeedNotFoundError
+from reader import InvalidFeedURLError
 from reader import InvalidPluginError
 from reader import ParseError
 from reader import Reader
@@ -3193,8 +3194,9 @@ allow_invalid_url_feed_root = 'C:\\tmp' if os.name == 'nt' else '/tmp'
 def test_allow_invalid_url(make_reader, feed_root, url):
     reader = make_reader(':memory:', feed_root=feed_root)
 
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(InvalidFeedURLError) as excinfo:
         reader.add_feed(url)
+    assert excinfo.value.url == url
 
     reader.add_feed(url, allow_invalid_url=True)
 
@@ -3203,7 +3205,8 @@ def test_allow_invalid_url(make_reader, feed_root, url):
     old = 'https://www.example.com/feed.xml'
     reader.add_feed(old)
 
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(InvalidFeedURLError) as excinfo:
         reader.change_feed_url(old, url)
+    assert excinfo.value.url == url
 
     reader.change_feed_url(old, url, allow_invalid_url=True)

@@ -95,6 +95,10 @@ Exceptions
 
     Subclass of :exc:`FeedError`.
 
+.. autoexception:: InvalidFeedURLError
+
+    Subclass of :exc:`FeedError` and :exc:`ValueError`.
+
 .. autoexception:: EntryError
     :members:
 
