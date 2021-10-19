@@ -55,6 +55,23 @@ You can use :func:`contextlib.closing` to do this automatically::
 
 
 
+Adding feeds
+------------
+
+To add a feed, call the :meth:`~Reader.add_feed` method with the feed URL::
+
+    >>> reader.add_feed("https://www.relay.fm/cortex/feed")
+    >>> reader.add_feed("http://www.hellointernet.fm/podcast?format=rss")
+
+Most of the attributes of a new feed are empty
+(to populate them, the feed must be `updated <Updating feeds_>`_)::
+
+    >>> feed = reader.get_feed("http://www.hellointernet.fm/podcast?format=rss")
+    >>> print(feed)
+    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=None, title=None, ...)
+
+
+
 File-system access
 ------------------
 
@@ -72,29 +89,20 @@ by using the ``feed_root`` :func:`make_reader` argument::
     >>> reader.add_feed("feed.xml")
     >>> # ok, resolves to /feeds/also/feed.xml
     >>> reader.add_feed("file:also/feed.xml")
-    >>> # error on update, resolves to /feed.xml, which is above /feeds
+    >>> # error, resolves to /feed.xml, which is above /feeds
     >>> reader.add_feed("file:../feed.xml")
+    Traceback (most recent call last):
+      ...
+    ValueError: path cannot be outside root: '/feed.xml'
 
-Note that it is still possible to `add <Adding feeds_>`_ local feeds
-regardless of ``feed_root``;
-it is `updating <Updating feeds_>`_ them that will fail.
+Note that it is possible to add invalid feeds;
+`updating <Updating feeds_>`_ them will still fail, though::
 
-
-
-Adding feeds
-------------
-
-To add a feed, call the :meth:`~Reader.add_feed` method with the feed URL::
-
-    >>> reader.add_feed("https://www.relay.fm/cortex/feed")
-    >>> reader.add_feed("http://www.hellointernet.fm/podcast?format=rss")
-
-Most of the attributes of a new feed are empty
-(to populate them, the feed must be `updated <Updating feeds_>`_)::
-
-    >>> feed = reader.get_feed("http://www.hellointernet.fm/podcast?format=rss")
-    >>> print(feed)
-    Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=None, title=None, ...)
+    >>> reader.add_feed("file:../feed.xml", allow_invalid_url=True)
+    >>> reader.update_feed("file:../feed.xml")
+    Traceback (most recent call last):
+      ...
+    reader.exceptions.ParseError: path cannot be outside root: '/feed.xml': 'file:../feed.xml'
 
 
 

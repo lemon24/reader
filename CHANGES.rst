@@ -11,6 +11,17 @@ Version 2.5
 
 Unreleased
 
+* In :meth:`~Reader.add_feed` and :meth:`~Reader.change_feed_url`,
+  validate if the current Reader configuration can handle the new feed URL.
+  (:issue:`155`)
+
+  .. note::
+
+    While this is not breaking the API,
+    the behavior change may be surprising.
+    To get the previous behavior (no validation),
+    use ``allow_invalid_url=True``.
+
 
 Version 2.4
 -----------

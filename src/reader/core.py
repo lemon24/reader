@@ -394,20 +394,35 @@ class Reader:
         """
         self._storage.close()
 
-    def add_feed(self, feed: FeedInput) -> None:
+    def add_feed(self, feed: FeedInput, *, allow_invalid_url: bool = False) -> None:
         """Add a new feed.
 
         Feed updates are enabled by default.
 
         Args:
             feed (str or Feed): The feed URL.
+            allow_invalid_url (bool):
+                Add feed even if the current Reader configuration
+                does not know how to handle the feed URL
+                (and updates for it would fail).
 
         Raises:
             FeedExistsError
             StorageError
+            ValueError: If ``feed`` is invalid and ``allow_invalid_url`` is false.
+
+        .. versionadded:: 2.5
+            The ``allow_invalid_url`` keyword argument.
+
+        .. versionchanged:: 2.5
+            Validate the new feed URL.
+            To get the previous behavior (no validation),
+            use ``allow_invalid_url=True``.
 
         """
         url = _feed_argument(feed)
+        if not allow_invalid_url:
+            self._parser.validate_url(url)
         now = self._now()
         self._storage.add_feed(url, now)
 
@@ -428,15 +443,19 @@ class Reader:
         url = _feed_argument(feed)
         self._storage.delete_feed(url)
 
-    def change_feed_url(self, old: FeedInput, new: FeedInput) -> None:
+    def change_feed_url(
+        self, old: FeedInput, new: FeedInput, *, allow_invalid_url: bool = False
+    ) -> None:
         """Change the URL of a feed.
 
         User-defined feed attributes are preserved:
         :attr:`~Feed.added`, :attr:`~Feed.user_title`.
         Feed-defined feed attributes are also preserved,
         at least until the next update:
-        :attr:`~Feed.title`, :attr:`~Feed.link`, :attr:`~Feed.author`
-        (except :attr:`~Feed.updated`, which gets set to None).
+        :attr:`~Feed.title`, :attr:`~Feed.link`, :attr:`~Feed.author`,
+        :attr:`~Feed.subtitle`
+        (except :attr:`~Feed.updated` and :attr:`~Feed.version`,
+        which get set to None).
         All other feed attributes are set to their default values.
 
         The entries, tags and metadata are preserved.
@@ -444,16 +463,33 @@ class Reader:
         Args:
             old (str or Feed): The old feed; must exist.
             new (str or Feed): The new feed; must not exist.
+            allow_invalid_url (bool):
+                Change feed URL even if the current Reader configuration
+                does not know how to handle the new feed URL
+                (and updates for it would fail).
 
         Raises:
             FeedNotFoundError: If ``old`` does not exist.
             FeedExistsError: If ``new`` already exists.
             StorageError
+            ValueError: If ``new`` is invalid and ``allow_invalid_url`` is false.
 
         .. versionadded:: 1.8
 
+        .. versionadded:: 2.5
+            The ``allow_invalid_url`` keyword argument.
+
+        .. versionchanged:: 2.5
+            Validate the new feed URL.
+            To get the previous behavior (no validation),
+            use ``allow_invalid_url=True``.
+
         """
-        self._storage.change_feed_url(_feed_argument(old), _feed_argument(new))
+        old_str = _feed_argument(old)
+        new_str = _feed_argument(new)
+        if not allow_invalid_url:
+            self._parser.validate_url(new_str)
+        self._storage.change_feed_url(old_str, new_str)
 
     def get_feeds(
         self,

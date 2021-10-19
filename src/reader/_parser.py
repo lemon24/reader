@@ -74,6 +74,14 @@ class RetrieverType(Protocol):
     ) -> ContextManager[Optional[RetrieveResult]]:  # pragma: no cover
         ...
 
+    def validate_url(self, url: str) -> None:
+        """Check if ``url`` is valid for this retriever.
+
+        Raises:
+            ValueError: If ``url`` is not valid.
+
+        """
+
 
 # TODO: use Collection instead of Iterable
 FeedAndEntries = Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]
@@ -188,6 +196,19 @@ class Parser:
 
         return ParsedFeed(feed, entries, result.http_etag, result.http_last_modified)
 
+    def validate_url(self, url: str) -> None:
+        """Check if ``url`` is valid without actually retrieving it.
+
+        Raises:
+            ValueError: If ``url`` is not valid.
+
+        """
+        try:
+            retriever = self.get_retriever(url)
+        except ParseError as e:
+            raise ValueError(str(e)) from e
+        retriever.validate_url(url)
+
     def mount_retriever(self, prefix: str, retriever: RetrieverType) -> None:
         self.retrievers[prefix] = retriever
         keys_to_move = [k for k in self.retrievers if len(k) < len(prefix)]
@@ -288,6 +309,9 @@ class FileRetriever:
             with open(normalized_url, 'rb') as file:
                 yield RetrieveResult(file)
 
+    def validate_url(self, url: str) -> None:
+        self._normalize_url(url)
+
     def _normalize_url(self, url: str) -> str:
         path = extract_path(url)
         if self.feed_root:
@@ -384,6 +408,11 @@ class HTTPRetriever:
                     http_last_modified,
                     response_headers,
                 )
+
+    def validate_url(self, url: str) -> None:
+        session = self.make_session().session
+        session.get_adapter(url)
+        session.prepare_request(requests.Request('GET', url))
 
 
 def _caching_get(

@@ -186,7 +186,7 @@ file:// handling, feed root, per-URL-prefix parsers (later retrievers, see below
 
 * requirements: :issue:`155#issuecomment-667970956`
 * detailed requirements: :issue:`155#issuecomment-672324186`
-* method for URL validation (not added, as of 1.13): :issue:`155#issuecomment-673694472`
+* method for URL validation: :issue:`155#issuecomment-673694472`, :issue:`155#issuecomment-946591071`
 
 Requests session plugins:
 

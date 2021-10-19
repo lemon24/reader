@@ -77,6 +77,9 @@ class Parser:
             self.http_last_modified,
         )
 
+    def validate_url(self, url):
+        pass
+
 
 class BlockingParser(Parser):
     def __init__(self, *args, **kwargs):

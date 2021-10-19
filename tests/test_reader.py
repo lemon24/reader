@@ -3172,3 +3172,38 @@ def test_mark_as_dont_care(reader):
     assert entry.read_modified == datetime(2010, 1, 2)
     assert not entry.important
     assert entry.important_modified == datetime(2010, 1, 2)
+
+
+allow_invalid_url_feed_root = 'C:\\tmp' if os.name == 'nt' else '/tmp'
+
+
+@pytest.mark.parametrize(
+    'feed_root, url',
+    [
+        # checking a bunch of common known-bad URLs,
+        # there are more detailed tests in test_parser.py
+        (None, 'feed.xml'),
+        (None, 'http://'),
+        (None, 'nope://feed.xml'),
+        (allow_invalid_url_feed_root, '/feed.xml'),
+        (allow_invalid_url_feed_root, 'http://'),
+        (allow_invalid_url_feed_root, 'nope://feed.xml'),
+    ],
+)
+def test_allow_invalid_url(make_reader, feed_root, url):
+    reader = make_reader(':memory:', feed_root=feed_root)
+
+    with pytest.raises(ValueError) as excinfo:
+        reader.add_feed(url)
+
+    reader.add_feed(url, allow_invalid_url=True)
+
+    reader.delete_feed(url)
+
+    old = 'https://www.example.com/feed.xml'
+    reader.add_feed(old)
+
+    with pytest.raises(ValueError) as excinfo:
+        reader.change_feed_url(old, url)
+
+    reader.change_feed_url(old, url, allow_invalid_url=True)
