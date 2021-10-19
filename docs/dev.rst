@@ -22,8 +22,6 @@ Roadmap
 
 In no particular order:
 
-* API to delete old entries. (:issue:`96`)
-* API to delete duplicate entries. (:issue:`140`)
 * update_feeds() filtering. (:issue:`193`)
 
 * Web application re-design.
@@ -208,6 +206,9 @@ Query builder
 ~~~~~~~~~~~~~
 
 Survey of possible options: :issue:`123#issuecomment-582307504`.
+
+In 2021, I've written an entire series about it:
+https://death.andgravity.com/query-builder
 
 
 Pagination for methods that return iterators
