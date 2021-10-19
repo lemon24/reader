@@ -9,7 +9,7 @@ Changelog
 Version 2.4
 -----------
 
-Unreleased
+Released 2021-10-19
 
 * Enable search by default. (:issue:`252`)
 
