@@ -257,7 +257,7 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
             last_updated=datetime(2010, 2, 2),
         )
     }
-    assert "entry updated" in caplog.text
+    assert "entry new, updating" in caplog.text
     caplog.clear()
 
     # Feed newer (doesn't change), entry remains unchanged.
@@ -302,7 +302,6 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
             last_updated=datetime(2010, 2, 3, 12),
         )
     }
-    assert "entry not updated, skipping" in caplog.text
     assert "entry hash changed, updating" in caplog.text
     caplog.clear()
 
@@ -323,7 +322,7 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
             last_updated=datetime(2010, 2, 4),
         )
     }
-    assert "entry updated" in caplog.text
+    assert "entry updated, updating" in caplog.text
     caplog.clear()
 
     # Entry hash changes, but reaches the update limit.

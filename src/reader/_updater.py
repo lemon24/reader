@@ -122,32 +122,25 @@ class _Updater:
         self, new: EntryData, old: Optional[EntryForUpdate]
     ) -> Tuple[Optional[EntryData], bool]:
         def debug(msg: str, *args: Any) -> None:
-            self.log.debug("entry %r: " + msg, id, *args)
-
-        if not old:
-            # FIXME: this should say added
-            debug("entry updated")
-            return new, False
-
-        new_ref_dt = new.updated or new.published
-        old_ref_dt = old.updated or old.published
-
-        if not new_ref_dt:
-            debug("has no updated, updating but not changing updated")
-            debug("entry added/updated")
-            return new, False
+            self.log.debug("entry %r: " + msg, new.id, *args)
 
         if self.stale:
-            debug("feed marked as stale, updating anyway")
-            debug("entry added/updated")
+            debug("feed marked as stale, updating")
             return new, False
 
-        if old_ref_dt and new_ref_dt <= old_ref_dt:
-            debug(
-                "entry not updated, skipping (old updated %s, new updated %s)", old, new
-            )
-        else:
-            debug("entry updated")
+        if not old:
+            debug("entry new, updating")
+            return new, False
+
+        new_updated = new.updated or new.published
+        old_updated = old.updated or old.published
+
+        if not new_updated:
+            debug("entry has no updated, updating")
+            return new, False
+
+        if not (old_updated and new_updated <= old_updated):
+            debug("entry updated, updating")
             return new, False
 
         # Check if the entry content actually changed:
@@ -160,16 +153,20 @@ class _Updater:
         #
         if not old.hash or new.hash != old.hash:
             if (old.hash_changed or 0) < HASH_CHANGED_LIMIT:
-                self.log.debug("entry %r: entry hash changed, updating", new.id)
-                # mypy does not automatically "cast" new to EntryData[datetime]
+                debug("entry hash changed, updating")
                 return new, True
             else:
-                self.log.debug(
-                    "entry %r: entry hash changed, "
-                    "but exceeds the update limit (%i); skipping",
-                    new.id,
+                debug(
+                    "entry hash changed, but exceeds the update limit (%i); skipping",
                     HASH_CHANGED_LIMIT,
                 )
+                return None, False
+
+        debug(
+            "entry not updated, skipping (old updated %s, new updated %s)",
+            old_updated,
+            new_updated,
+        )
 
         return None, False
 
