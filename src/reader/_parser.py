@@ -529,9 +529,6 @@ def _get_updated_published(
     updated = convert('updated_parsed')
     published = convert('published_parsed')
 
-    if published and not updated and is_rss:
-        updated, published = published, None
-
     return updated, published
 
 

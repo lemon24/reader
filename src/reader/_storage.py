@@ -618,7 +618,11 @@ class Storage:
                 context = dict(feed_url=feed_url, id=id)
                 row = self.db.execute(
                     """
-                    SELECT updated, data_hash, data_hash_changed
+                    SELECT
+                        updated,
+                        published,
+                        data_hash,
+                        data_hash_changed
                     FROM entries
                     WHERE feed = :feed_url
                         AND id = :id;
@@ -645,6 +649,7 @@ class Storage:
             SELECT
                 entries.id IS NOT NULL,
                 entries.updated,
+                entries.published,
                 entries.data_hash,
                 entries.data_hash_changed
             FROM input
@@ -1505,15 +1510,15 @@ def make_recent_last_select(id_prefix: str = 'entries.') -> Sequence[Any]:
             coalesce (
                 CASE
                 WHEN
-                    coalesce(entries.published, entries.updated)
+                    coalesce(entries.published, entries.updated, entries.first_updated)
                         >= :recent_threshold
                     THEN entries.first_updated_epoch
                 END,
-                entries.published, entries.updated
+                entries.published, entries.updated, entries.first_updated
             )
             """,
         ),
-        ('kinda_published', 'coalesce(published, updated)'),
+        ('kinda_published', 'coalesce(published, updated, first_updated)'),
         f'{id_prefix}feed',
         'last_updated',
         ('negative_feed_order', '- feed_order'),
@@ -1537,7 +1542,7 @@ def apply_recent(
             kinda_first_updated = 'first_updated_epoch'
             sign = '>='
         else:
-            kinda_first_updated = 'coalesce(published, updated)'
+            kinda_first_updated = 'coalesce(published, updated, first_updated)'
             sign = '<'
 
         return f"""
@@ -1546,7 +1551,7 @@ def apply_recent(
                 id,
                 last_updated,
                 {kinda_first_updated} as kinda_first_updated,
-                coalesce(published, updated) as kinda_published,
+                coalesce(published, updated, first_updated) as kinda_published,
                 - feed_order as negative_feed_order
             FROM entries
             WHERE kinda_published {sign} :recent_threshold

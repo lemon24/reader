@@ -121,49 +121,37 @@ class _Updater:
 
         return False
 
-    def compute_entry_updated(
-        self, id: str, new: Optional[datetime], old: Optional[datetime]
-    ) -> Optional[datetime]:
+    def should_update_entry(
+        self, new: EntryData[Optional[datetime]], old: Optional[EntryForUpdate]
+    ) -> Tuple[Optional[EntryData[datetime]], bool]:
         def debug(msg: str, *args: Any) -> None:
             self.log.debug("entry %r: " + msg, id, *args)
 
-        if not new:
+        if not old:
+            # FIXME: this should say added
+            debug("entry updated")
+            return new, False
+
+        new_ref_dt = new.updated or new.published
+        old_ref_dt = old.updated or old.published
+
+        if not new_ref_dt:
             debug("has no updated, updating but not changing updated")
             debug("entry added/updated")
-            return old or self.now
+            return new, False
 
         if self.stale:
             debug("feed marked as stale, updating anyway")
             debug("entry added/updated")
-            return new
+            return new, False
 
-        if old and new <= old:
+        if old_ref_dt and new_ref_dt <= old_ref_dt:
             debug(
                 "entry not updated, skipping (old updated %s, new updated %s)", old, new
             )
-            return None
-
-        debug("entry updated")
-        return new
-
-    def should_update_entry(
-        self, new: EntryData[Optional[datetime]], old: Optional[EntryForUpdate]
-    ) -> Tuple[Optional[EntryData[datetime]], bool]:
-
-        updated = self.compute_entry_updated(new.id, new.updated, old and old.updated)
-
-        if updated:
-            return EntryData(**new._replace(updated=updated).__dict__), False
-
-        # At this point, new should have .updated is not None.
-        # otherwise, compute_entry_updated() would have returned
-        # either old.updated or self.now.
-        # Remove this when it stops doing that, as proposed in this comment:
-        # https://github.com/lemon24/reader/issues/179#issuecomment-663840297
-        assert new.updated is not None
-
-        # If old is None, compute_entry_updated() returned something.
-        assert old is not None
+        else:
+            debug("entry updated")
+            return new, False
 
         # Check if the entry content actually changed:
         # https://github.com/lemon24/reader/issues/179

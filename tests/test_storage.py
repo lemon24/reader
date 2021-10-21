@@ -539,7 +539,7 @@ def test_get_entries_for_update(storage_cls):
     )
 
     assert list(storage.get_entries_for_update([('feed', 'one'), ('feed', 'two')])) == [
-        EntryForUpdate(datetime(2010, 1, 1), entry.hash, 0),
+        EntryForUpdate(datetime(2010, 1, 1), None, entry.hash, 0),
         None,
     ]
 

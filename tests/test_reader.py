@@ -347,15 +347,7 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
 def test_update_no_updated(reader, chunk_size, call_update_method):
     """If a feed has updated == None, it should be treated as updated.
 
-    If an entry has updated == None, it should:
-
-    * be updated every time, but
-    * have updated set to the first time it was updated until it has a new
-      updated != None
-
-    This means a stored entry always has updated set.
-
-    https://github.com/lemon24/reader/issues/88
+    If an entry has updated == None, it should be updated every time.
 
     """
     reader._storage.chunk_size = chunk_size
@@ -374,7 +366,7 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
     assert set(reader.get_entries()) == {
         entry_one.as_entry(
             feed=feed,
-            updated=datetime(2010, 1, 1),
+            updated=None,
             first_updated=datetime(2010, 1, 1),
             last_updated=datetime(2010, 1, 1),
         )
@@ -391,13 +383,11 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
     assert set(reader.get_entries()) == {
         entry_one.as_entry(
             feed=feed,
-            updated=datetime(2010, 1, 1),
             first_updated=datetime(2010, 1, 1),
             last_updated=datetime(2010, 1, 2),
         ),
         entry_two.as_entry(
             feed=feed,
-            updated=datetime(2010, 1, 2),
             first_updated=datetime(2010, 1, 2),
             last_updated=datetime(2010, 1, 2),
         ),
@@ -1219,6 +1209,8 @@ def test_get_entries_recent_order(
     """Entries should be sorted descending by (with decreasing priority):
 
     * entry first updated (only if newer than _storage.recent_threshold)
+      * as of 2021-10 / #239, this test isn't covering this;
+        test_get_entries_recent_first_updated_order (below) is
     * entry published (or entry updated if published is none)
     * feed URL
     * entry last updated
@@ -1281,6 +1273,56 @@ def test_get_entries_recent_order(
     pre_stuff(reader)
 
     assert [eval(e.id) for e in call_method(reader)] == [t[:2] for t in expected]
+
+
+@pytest.mark.parametrize(
+    'chunk_size',
+    [
+        # the default
+        Storage.chunk_size,
+        # rough result size for this test
+        1,
+        2,
+        3,
+        8,
+        # unchunked query
+        0,
+    ],
+)
+@with_call_entries_recent_method
+def test_get_entries_recent_first_updated_order(
+    reader, chunk_size, pre_stuff, call_method
+):
+    """For entries with no published/updated,
+    entries should be sorted by first_updated.
+
+    """
+    reader._storage.chunk_size = chunk_size
+
+    parser = Parser()
+    reader._parser = parser
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    reader.add_feed(feed.url)
+
+    reader._now = lambda: naive_datetime(2010, 1, 2)
+    three = parser.entry(1, 3)
+    reader.update_feeds()
+
+    reader._now = lambda: naive_datetime(2010, 1, 4)
+    two = parser.entry(1, 2)
+    reader.update_feeds()
+
+    reader._now = lambda: naive_datetime(2010, 1, 1)
+    four = parser.entry(1, 4, datetime(2010, 1, 1))
+    reader.update_feeds()
+
+    reader._now = lambda: naive_datetime(2010, 1, 3)
+    one = parser.entry(1, 1, datetime(2010, 1, 1))
+    reader.update_feeds()
+
+    pre_stuff(reader)
+
+    assert [eval(e.id)[1] for e in call_method(reader)] == [2, 1, 3, 4]
 
 
 @pytest.mark.parametrize(

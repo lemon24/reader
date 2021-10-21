@@ -20,11 +20,11 @@ entries = [
     EntryData(
         feed_url=feed.url,
         id='7bd204c6-1655-4c27-aeee-53f933c5395f',
-        updated=datetime.datetime(2009, 9, 6, 16, 20),
+        updated=None,
         title='Example entry',
         link='http://www.example.com/blog/post/1',
         author='Example editor',
-        published=None,
+        published=datetime.datetime(2009, 9, 6, 16, 20),
         summary='Here is some text containing an interesting description.',
         content=(
             # the text/plain type comes from feedparser
@@ -40,7 +40,8 @@ entries = [
     EntryData(
         feed_url=feed.url,
         id='00000000-1655-4c27-aeee-00000000',
-        updated=datetime.datetime(2009, 9, 6, 0, 0, 0),
+        updated=None,
+        published=datetime.datetime(2009, 9, 6, 0, 0, 0),
         title='Example entry, again',
     ),
 ]

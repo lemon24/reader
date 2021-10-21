@@ -20,7 +20,7 @@ def _make_feed(number, updated=None, **kwargs):
     )
 
 
-def _make_entry(feed_number, number, updated, **kwargs):
+def _make_entry(feed_number, number, updated=None, **kwargs):
     return EntryData(
         f'{feed_number}',
         # evals to tuple
@@ -51,7 +51,7 @@ class Parser:
         self.entries.setdefault(number, OrderedDict())
         return feed
 
-    def entry(self, feed_number, number, updated, **kwargs):
+    def entry(self, feed_number, number, updated=None, **kwargs):
         entry = _make_entry(feed_number, number, updated, **kwargs)
         self.entries[feed_number][number] = entry
         return entry

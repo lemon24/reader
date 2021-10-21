@@ -179,7 +179,10 @@ class EntryForUpdate(NamedTuple):
     """Update-relevant information about an existing entry, from Storage."""
 
     #: The date the entry was last updated, according to the entry.
-    updated: datetime
+    updated: Optional[datetime]
+
+    #: The date the entry was published, according to the entry.
+    published: Optional[datetime]
 
     #: The hash of the corresponding EntryData.
     hash: Optional[bytes]
