@@ -85,7 +85,7 @@ class RetrieverType(Protocol):
 
 
 # TODO: use Collection instead of Iterable
-FeedAndEntries = Tuple[FeedData, Iterable[EntryData[Optional[datetime]]]]
+FeedAndEntries = Tuple[FeedData, Iterable[EntryData]]
 
 
 class ParserType(Protocol):
@@ -536,9 +536,7 @@ def _datetime_from_timetuple(tt: time.struct_time) -> datetime:
     return datetime.utcfromtimestamp(calendar.timegm(tt))
 
 
-def _feedparser_entry(
-    feed_url: str, entry: Any, is_rss: bool
-) -> EntryData[Optional[datetime]]:
+def _feedparser_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
     id = entry.get('id')
 
     # <guid> (entry.id) is not actually required for RSS;
@@ -687,9 +685,7 @@ def _jsonfeed_author(d: Any) -> Optional[str]:
     )
 
 
-def _jsonfeed_entry(
-    feed_url: str, d: Any, feed_lang: Optional[str]
-) -> EntryData[Optional[datetime]]:
+def _jsonfeed_entry(feed_url: str, d: Any, feed_lang: Optional[str]) -> EntryData:
     updated_str = _dict_get(d, 'date_modified', str)
     updated = _parse_jsonfeed_date(updated_str) if updated_str else None
     published_str = _dict_get(d, 'date_published', str)

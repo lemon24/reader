@@ -3,7 +3,6 @@ from datetime import datetime
 from datetime import timezone
 from types import MappingProxyType
 from typing import Any
-from typing import Generic
 from typing import Iterable
 from typing import Mapping
 from typing import NamedTuple
@@ -70,33 +69,24 @@ class FeedData(_namedtuple_compat):
         return get_hash(self)
 
 
-_UpdatedType = TypeVar('_UpdatedType', datetime, Optional[datetime])
-
-
 @dataclass(frozen=True)
-class EntryData(Generic[_UpdatedType], _namedtuple_compat):
+class EntryData(_namedtuple_compat):
 
     """Entry data that comes from the feed.
 
     Attributes are a subset of those of Entry.
 
-    The natural thing to use would have been generics, but pleasing Python,
-    mypy and Sphinx all at the same time is not possible at the moment,
-    and the workarounds are just as bad or worse.
+    ---
 
-    We should be able to use generics once/if this is resolved:
-    https://github.com/sphinx-doc/sphinx/issues/7450
+    This is not generic anymore, as of 2.5, and will likely never be.
 
-    ...however, it may be better to just have entry be a separate
-    plain dataclass -- help(Entry) works weird with concrete generics.
+    TODO: Make Entry a subclass of EntryData, make Feed a subclass of FeedData.
 
-    We can't subclass Entry because the attribute types become less specific.
+    It may still not be possible to use it as a subclass, though, because:
 
-    We can't use a subclass for the common attributes because it confuses
-    Sphinx: https://github.com/sphinx-doc/sphinx/issues/741
-
-    An implementation using generics is available here:
-    https://github.com/lemon24/reader/blob/62eb72563b94d78d8860519424103e3c3c1c013d/src/reader/core/types.py#L78-L241
+    * help(Entry) may not work
+    * Sphinx/autodoc may not work: https://github.com/sphinx-doc/sphinx/issues/741 (closed)
+    * as_entry(), hash() must not be inherited
 
     """
 
@@ -106,11 +96,7 @@ class EntryData(Generic[_UpdatedType], _namedtuple_compat):
     # WARNING: When changing attributes, keep Entry and EntryData in sync.
 
     id: str
-
-    # Entries returned by the parser have .updated Optional[datetime];
-    # entries sent to the storage always have .updatd set (not optional).
-    updated: _UpdatedType
-
+    updated: Optional[datetime] = None
     title: Optional[str] = None
     link: Optional[str] = None
     author: Optional[str] = None
@@ -143,7 +129,7 @@ class ParsedFeed(NamedTuple):
 
     feed: FeedData
     # TODO: wrap entries in iter(entries) to ensure stuff doesn't rely on it being a list
-    entries: Iterable[EntryData[Optional[datetime]]]
+    entries: Iterable[EntryData]
     http_etag: Optional[str] = None
     http_last_modified: Optional[str] = None
 
@@ -216,7 +202,7 @@ class EntryUpdateIntent(NamedTuple):
     """Data to be passed to Storage when updating a feed."""
 
     #: The entry.
-    entry: EntryData[datetime]
+    entry: EntryData
 
     #: The time at the start of updating this feed (start of update_feed
     #: in update_feed, the start of each feed update in update_feeds).

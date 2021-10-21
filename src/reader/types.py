@@ -209,26 +209,21 @@ class Entry(_namedtuple_compat):
 
     # TODO: .id will still be set to some default value if the entry doesn't have it; document this.
 
-    # NOTE: In #183 (2.0 compat breaking), we made .updated optional,
-    # to allow it to reflect the feed value.
-    #
-    # The code to do so hasn't been changed yet,
-    # so its value is actually the same as before.
-    #
-    # To change that, we need to store/add a `first_updated` attribute,
-    # and change `updated_not_none` to `updated or first_updated`.
-
     #: The entry id.
     id: str
 
     #: The date the entry was last updated, according to the feed.
     #:
     #: .. versionchanged:: 2.0
-    #:  May be None in some cases.
-    #:  In a future version, will be None if missing in the feed;
+    #:  May be :const:`None` in some cases.
+    #:  In a future version, will be :const:`None` if missing in the feed;
     #:  use :attr:`updated_not_none` for the pre-2.0 behavior.
     #:
-    updated: Optional[datetime]
+    #: .. versionchanged:: 2.5
+    #:  Is now :const:`None` if missing in the feed;
+    #:  use :attr:`updated_not_none` for the pre-2.5 behavior.
+    #:
+    updated: Optional[datetime] = None
 
     #: The title of the entry.
     title: Optional[str] = None
@@ -239,7 +234,7 @@ class Entry(_namedtuple_compat):
     #: The author of the feed.
     author: Optional[str] = None
 
-    #: The date the entry was first published.
+    #: The date the entry was published, according to the feed.
     published: Optional[datetime] = None
 
     #: A summary of the entry.

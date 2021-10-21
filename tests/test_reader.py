@@ -249,7 +249,6 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
         call_update_method(reader, feed.url)
 
     feed = feed.as_feed(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 2))
-    print(list(reader.get_entries()))
 
     assert set(reader.get_entries()) == {
         old_entry.as_entry(

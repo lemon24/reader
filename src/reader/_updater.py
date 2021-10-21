@@ -2,7 +2,6 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
-from typing import cast
 from typing import Iterable
 from typing import Optional
 from typing import Tuple
@@ -47,9 +46,7 @@ def make_update_intents(
     now: datetime,
     global_now: datetime,
     parsed_feed: Union[ParsedFeed, ParseError],
-    entry_pairs: Iterable[
-        Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]
-    ],
+    entry_pairs: Iterable[Tuple[EntryData, Optional[EntryForUpdate]]],
 ) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
     updater = _Updater(
         old_feed,
@@ -122,8 +119,8 @@ class _Updater:
         return False
 
     def should_update_entry(
-        self, new: EntryData[Optional[datetime]], old: Optional[EntryForUpdate]
-    ) -> Tuple[Optional[EntryData[datetime]], bool]:
+        self, new: EntryData, old: Optional[EntryForUpdate]
+    ) -> Tuple[Optional[EntryData], bool]:
         def debug(msg: str, *args: Any) -> None:
             self.log.debug("entry %r: " + msg, id, *args)
 
@@ -165,7 +162,7 @@ class _Updater:
             if (old.hash_changed or 0) < HASH_CHANGED_LIMIT:
                 self.log.debug("entry %r: entry hash changed, updating", new.id)
                 # mypy does not automatically "cast" new to EntryData[datetime]
-                return cast(EntryData[datetime], new), True
+                return new, True
             else:
                 self.log.debug(
                     "entry %r: entry hash changed, "
@@ -178,7 +175,7 @@ class _Updater:
 
     def get_entries_to_update(
         self,
-        pairs: Iterable[Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]],
+        pairs: Iterable[Tuple[EntryData, Optional[EntryForUpdate]]],
     ) -> Iterable[EntryUpdateIntent]:
         for feed_order, (new_entry, old_entry) in reversed(list(enumerate(pairs))):
 
@@ -225,9 +222,7 @@ class _Updater:
     def update(
         self,
         parsed_feed: Union[ParsedFeed, None, ParseError],
-        entry_pairs: Iterable[
-            Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]
-        ],
+        entry_pairs: Iterable[Tuple[EntryData, Optional[EntryForUpdate]]],
     ) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
 
         # Not modified.

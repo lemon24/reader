@@ -78,9 +78,7 @@ _T = TypeVar('_T')
 _U = TypeVar('_U')
 
 ReaderPluginType = Callable[['Reader'], None]
-AfterEntryUpdateHook = Callable[
-    ['Reader', EntryData[datetime], EntryUpdateStatus], None
-]
+AfterEntryUpdateHook = Callable[['Reader', EntryData, EntryUpdateStatus], None]
 AfterFeedUpdateHook = Callable[['Reader', str], None]
 
 
