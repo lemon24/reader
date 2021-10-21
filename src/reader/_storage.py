@@ -115,7 +115,7 @@ def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
             feed TEXT NOT NULL,
             title TEXT,
             link TEXT,
-            updated TIMESTAMP NOT NULL,
+            updated TIMESTAMP,
             author TEXT,
             published TIMESTAMP,
             summary TEXT,
@@ -131,6 +131,7 @@ def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
             important INTEGER NOT NULL DEFAULT 0,
             important_modified TIMESTAMP,
             last_updated TIMESTAMP NOT NULL,
+            first_updated TIMESTAMP NOT NULL,
             first_updated_epoch TIMESTAMP NOT NULL,
             feed_order INTEGER NOT NULL,
 
@@ -249,6 +250,67 @@ def update_from_32_to_33(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute("UPDATE feeds SET stale = 1;")
 
 
+def update_from_33_to_34(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/239
+
+    # Assumes foreign key checks have already been disabled.
+    # https://sqlite.org/lang_altertable.html#otheralter
+
+    create_entries(db, 'new_entries')
+    db.execute(
+        """
+        INSERT INTO new_entries (
+            id,
+            feed,
+            title,
+            link,
+            updated,
+            author,
+            published,
+            summary,
+            content,
+            enclosures,
+            original_feed,
+            data_hash,
+            data_hash_changed,
+            read,
+            read_modified,
+            important,
+            important_modified,
+            last_updated,
+            first_updated,
+            first_updated_epoch,
+            feed_order
+        )
+        SELECT
+            id,
+            feed,
+            title,
+            link,
+            updated,
+            author,
+            published,
+            summary,
+            content,
+            enclosures,
+            original_feed,
+            data_hash,
+            data_hash_changed,
+            read,
+            read_modified,
+            important,
+            important_modified,
+            last_updated,
+            first_updated_epoch,
+            first_updated_epoch,
+            feed_order
+        FROM entries;
+        """
+    )
+    db.execute("DROP TABLE entries;")
+    db.execute("ALTER TABLE new_entries RENAME TO entries;")
+
+
 MINIMUM_SQLITE_VERSION = (3, 15)
 REQUIRED_SQLITE_COMPILE_OPTIONS = ["ENABLE_JSON1"]
 
@@ -257,7 +319,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=33,
+        version=34,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
@@ -266,6 +328,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             30: recreate_search_triggers,
             31: update_from_31_to_32,
             32: update_from_32_to_33,
+            33: update_from_33_to_34,
         },
         id=APPLICATION_ID,
         # Row value support was added in 3.15.
@@ -852,6 +915,7 @@ class Storage:
                         read,
                         important,
                         last_updated,
+                        first_updated,
                         first_updated_epoch,
                         feed_order,
                         original_feed,
@@ -879,6 +943,11 @@ class Storage:
                         WHERE id = :id AND feed = :feed_url
                         ),
                         :last_updated,
+                        coalesce(:first_updated, (
+                            SELECT first_updated
+                            FROM entries
+                            WHERE id = :id AND feed = :feed_url
+                        )),
                         coalesce(:first_updated_epoch, (
                             SELECT first_updated_epoch
                             FROM entries
@@ -1299,6 +1368,7 @@ def make_get_entries_query(
             entries.read_modified
             entries.important
             entries.important_modified
+            entries.first_updated
             entries.last_updated
             entries.original_feed
             """.split()
@@ -1333,7 +1403,8 @@ def entry_factory(t: Tuple[Any, ...]) -> Entry:
         t[23] == 1,
         t[24],
         t[25],
-        t[26] or feed.url,
+        t[26],
+        t[27] or feed.url,
         feed,
     )
     return Entry._make(entry)

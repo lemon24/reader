@@ -1130,6 +1130,7 @@ class Reader:
                 rv_entry,
                 'updated',
                 'published',
+                'first_updated',
                 'last_updated',
                 'read_modified',
                 'important_modified',

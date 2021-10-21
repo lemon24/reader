@@ -74,7 +74,11 @@ def test_update_feed_updated(reader, call_update_method, caplog):
         added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2)
     )
     assert set(reader.get_entries()) == {
-        entry_one.as_entry(feed=feed, last_updated=datetime(2010, 1, 2))
+        entry_one.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 2),
+            last_updated=datetime(2010, 1, 2),
+        )
     }
     assert "feed has no last_updated, treating as updated" in caplog.text
     caplog.clear()
@@ -90,8 +94,16 @@ def test_update_feed_updated(reader, call_update_method, caplog):
         added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 3)
     )
     assert set(reader.get_entries()) == {
-        entry_one.as_entry(feed=feed, last_updated=datetime(2010, 1, 2)),
-        entry_two.as_entry(feed=feed, last_updated=datetime(2010, 1, 3)),
+        entry_one.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 2),
+            last_updated=datetime(2010, 1, 2),
+        ),
+        entry_two.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 3),
+            last_updated=datetime(2010, 1, 3),
+        ),
     }
     assert "feed not updated, updating entries anyway" in caplog.text
     caplog.clear()
@@ -127,9 +139,21 @@ def test_update_feed_updated(reader, call_update_method, caplog):
         last_updated=datetime(2010, 1, 4),
     )
     assert set(reader.get_entries()) == {
-        entry_one.as_entry(feed=feed, last_updated=datetime(2010, 1, 2)),
-        entry_two.as_entry(feed=feed, last_updated=datetime(2010, 1, 3)),
-        entry_three.as_entry(feed=feed, last_updated=datetime(2010, 1, 4)),
+        entry_one.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 2),
+            last_updated=datetime(2010, 1, 2),
+        ),
+        entry_two.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 3),
+            last_updated=datetime(2010, 1, 3),
+        ),
+        entry_three.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 4),
+            last_updated=datetime(2010, 1, 4),
+        ),
     }
     assert "feed not updated, updating entries anyway" in caplog.text
     caplog.clear()
@@ -149,9 +173,21 @@ def test_update_feed_updated(reader, call_update_method, caplog):
         last_updated=datetime(2010, 1, 4),
     )
     assert set(reader.get_entries()) == {
-        entry_one.as_entry(feed=feed, last_updated=datetime(2010, 1, 2)),
-        entry_two.as_entry(feed=feed, last_updated=datetime(2010, 1, 3)),
-        entry_three.as_entry(feed=feed, last_updated=datetime(2010, 1, 4)),
+        entry_one.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 2),
+            last_updated=datetime(2010, 1, 2),
+        ),
+        entry_two.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 3),
+            last_updated=datetime(2010, 1, 3),
+        ),
+        entry_three.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 4),
+            last_updated=datetime(2010, 1, 4),
+        ),
     }
     assert "feed not updated, updating entries anyway" in caplog.text
     caplog.clear()
@@ -168,10 +204,26 @@ def test_update_feed_updated(reader, call_update_method, caplog):
         call_update_method(reader, old_feed.url)
 
     assert set(reader.get_entries()) == {
-        entry_one.as_entry(feed=feed, last_updated=datetime(2010, 1, 2)),
-        entry_two.as_entry(feed=feed, last_updated=datetime(2010, 1, 3)),
-        entry_three.as_entry(feed=feed, last_updated=datetime(2010, 1, 4)),
-        entry_four.as_entry(feed=feed, last_updated=datetime(2010, 1, 5)),
+        entry_one.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 2),
+            last_updated=datetime(2010, 1, 2),
+        ),
+        entry_two.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 3),
+            last_updated=datetime(2010, 1, 3),
+        ),
+        entry_three.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 4),
+            last_updated=datetime(2010, 1, 4),
+        ),
+        entry_four.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 1, 5),
+            last_updated=datetime(2010, 1, 5),
+        ),
     }
     assert "feed updated" in caplog.text
     caplog.clear()
@@ -197,8 +249,14 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
         call_update_method(reader, feed.url)
 
     feed = feed.as_feed(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 2))
+    print(list(reader.get_entries()))
+
     assert set(reader.get_entries()) == {
-        old_entry.as_entry(feed=feed, last_updated=datetime(2010, 2, 2))
+        old_entry.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 2, 2),
+            last_updated=datetime(2010, 2, 2),
+        )
     }
     assert "entry updated" in caplog.text
     caplog.clear()
@@ -216,7 +274,11 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
         last_updated=datetime(2010, 2, 2),
     )
     assert set(reader.get_entries()) == {
-        old_entry.as_entry(feed=feed, last_updated=datetime(2010, 2, 2))
+        old_entry.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 2, 2),
+            last_updated=datetime(2010, 2, 2),
+        )
     }
     assert "entry not updated, skipping" in caplog.text
     assert "entry hash changed, updating" not in caplog.text
@@ -235,7 +297,11 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
         added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 3, 12)
     )
     assert set(reader.get_entries()) == {
-        new_entry.as_entry(feed=feed, last_updated=datetime(2010, 2, 3, 12))
+        new_entry.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 2, 2),
+            last_updated=datetime(2010, 2, 3, 12),
+        )
     }
     assert "entry not updated, skipping" in caplog.text
     assert "entry hash changed, updating" in caplog.text
@@ -252,7 +318,11 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
 
     feed = feed.as_feed(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 4))
     assert set(reader.get_entries()) == {
-        new_entry.as_entry(feed=feed, last_updated=datetime(2010, 2, 4))
+        new_entry.as_entry(
+            feed=feed,
+            first_updated=datetime(2010, 2, 2),
+            last_updated=datetime(2010, 2, 4),
+        )
     }
     assert "entry updated" in caplog.text
     caplog.clear()
@@ -303,7 +373,10 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
     assert set(reader.get_feeds()) == {feed}
     assert set(reader.get_entries()) == {
         entry_one.as_entry(
-            feed=feed, updated=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 1)
+            feed=feed,
+            updated=datetime(2010, 1, 1),
+            first_updated=datetime(2010, 1, 1),
+            last_updated=datetime(2010, 1, 1),
         )
     }
 
@@ -317,10 +390,16 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
     assert set(reader.get_feeds()) == {feed}
     assert set(reader.get_entries()) == {
         entry_one.as_entry(
-            feed=feed, updated=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2)
+            feed=feed,
+            updated=datetime(2010, 1, 1),
+            first_updated=datetime(2010, 1, 1),
+            last_updated=datetime(2010, 1, 2),
         ),
         entry_two.as_entry(
-            feed=feed, updated=datetime(2010, 1, 2), last_updated=datetime(2010, 1, 2)
+            feed=feed,
+            updated=datetime(2010, 1, 2),
+            first_updated=datetime(2010, 1, 2),
+            last_updated=datetime(2010, 1, 2),
         ),
     }
 
@@ -420,7 +499,11 @@ def test_update_new(reader):
     two = two.as_feed(added=datetime(2010, 1, 1, 12), last_updated=datetime(2010, 1, 2))
     assert len(set(reader.get_feeds())) == 2
     assert set(reader.get_entries()) == {
-        entry_two.as_entry(feed=two, last_updated=datetime(2010, 1, 2))
+        entry_two.as_entry(
+            feed=two,
+            first_updated=datetime(2010, 1, 2),
+            last_updated=datetime(2010, 1, 2),
+        )
     }
 
     reader._now = lambda: naive_datetime(2010, 1, 3)
@@ -429,8 +512,16 @@ def test_update_new(reader):
     one = one.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 3))
     assert len(set(reader.get_feeds())) == 2
     assert set(reader.get_entries()) == {
-        entry_one.as_entry(feed=one, last_updated=datetime(2010, 1, 3)),
-        entry_two.as_entry(feed=two, last_updated=datetime(2010, 1, 2)),
+        entry_one.as_entry(
+            feed=one,
+            first_updated=datetime(2010, 1, 3),
+            last_updated=datetime(2010, 1, 3),
+        ),
+        entry_two.as_entry(
+            feed=two,
+            first_updated=datetime(2010, 1, 2),
+            last_updated=datetime(2010, 1, 2),
+        ),
     }
 
 
@@ -818,7 +909,11 @@ def test_update_feed(reader, feed_arg):
     assert reader.get_feed(one.url) == one
     assert reader.get_feed(two.url) == Feed(two.url, added=datetime(2010, 1, 1))
     assert set(reader.get_entries()) == {
-        entry_one.as_entry(feed=one, last_updated=datetime(2010, 1, 1))
+        entry_one.as_entry(
+            feed=one,
+            first_updated=datetime(2010, 1, 1),
+            last_updated=datetime(2010, 1, 1),
+        )
     }
 
     reader.update_feed(feed_arg(two))
@@ -827,8 +922,16 @@ def test_update_feed(reader, feed_arg):
     assert reader.get_feed(one.url) == one
     assert reader.get_feed(two.url) == two
     assert set(reader.get_entries()) == {
-        entry_one.as_entry(feed=one, last_updated=datetime(2010, 1, 1)),
-        entry_two.as_entry(feed=two, last_updated=datetime(2010, 1, 1)),
+        entry_one.as_entry(
+            feed=one,
+            first_updated=datetime(2010, 1, 1),
+            last_updated=datetime(2010, 1, 1),
+        ),
+        entry_two.as_entry(
+            feed=two,
+            first_updated=datetime(2010, 1, 1),
+            last_updated=datetime(2010, 1, 1),
+        ),
     }
 
     reader._parser = FailingParser()
@@ -1357,8 +1460,12 @@ def test_add_remove_get_feeds(reader, feed_arg):
 
     one = one.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2))
     two = two.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2))
-    entry_one = entry_one.as_entry(feed=one, last_updated=datetime(2010, 1, 2))
-    entry_two = entry_two.as_entry(feed=two, last_updated=datetime(2010, 1, 2))
+    entry_one = entry_one.as_entry(
+        feed=one, first_updated=datetime(2010, 1, 2), last_updated=datetime(2010, 1, 2)
+    )
+    entry_two = entry_two.as_entry(
+        feed=two, first_updated=datetime(2010, 1, 2), last_updated=datetime(2010, 1, 2)
+    )
 
     assert set(reader.get_feeds()) == {one, two}
     assert reader.get_feed(feed_arg(one)) == one
@@ -1532,6 +1639,7 @@ def test_data_roundtrip(reader):
             feed=feed.as_feed(
                 added=datetime(2010, 1, 2), last_updated=datetime(2010, 1, 3)
             ),
+            first_updated=datetime(2010, 1, 3),
             last_updated=datetime(2010, 1, 3),
         )
     ]
@@ -1624,7 +1732,11 @@ def test_integration(reader, feed_type, data_dir, monkeypatch):
     assert feed == expected_feed
     assert entries == {
         fix_datetime_tzinfo(
-            e.as_entry(feed=feed, last_updated=utc_datetime(2010, 1, 2)),
+            e.as_entry(
+                feed=feed,
+                first_updated=utc_datetime(2010, 1, 2),
+                last_updated=utc_datetime(2010, 1, 2),
+            ),
             'updated',
             'published',
         )
@@ -1694,6 +1806,7 @@ def test_get_entry(reader, entry_arg):
         feed=feed.as_feed(
             added=datetime(2010, 1, 2), last_updated=datetime(2010, 1, 3)
         ),
+        first_updated=datetime(2010, 1, 3),
         last_updated=datetime(2010, 1, 3),
     )
     assert reader.get_entry(entry_arg(entry)) == entry

@@ -273,6 +273,11 @@ class Entry(_namedtuple_compat):
     #: .. versionadded:: 2.2
     important_modified: Optional[datetime] = None
 
+    #: The date when the entry was first updated (added) by reader.
+    #:
+    #: .. versionadded:: 2.5
+    first_updated: datetime = cast(datetime, None)
+
     #: The date when the entry was last updated by reader.
     #:
     #: .. versionadded:: 1.3
@@ -311,15 +316,13 @@ class Entry(_namedtuple_compat):
         """Like :attr:`updated`, but guaranteed to be set (not None).
 
         If the entry `updated` is missing in the feed,
-        defaults to when the entry was first added.
+        defaults to when the entry was first added (`first_updated`).
 
         .. versionadded:: 2.0
             Identical to the behavior of :attr:`updated` before 2.0.
 
         """
-        # for mypy
-        assert self.updated is not None
-        return self.updated
+        return self.updated or self.first_updated
 
 
 @dataclass(frozen=True)

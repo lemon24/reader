@@ -219,6 +219,10 @@ class EntryUpdateIntent(NamedTuple):
     #: in update_feed, the start of each feed update in update_feeds).
     last_updated: datetime
 
+    #: First last_updated.
+    #: None if the entry already exists.
+    first_updated: Optional[datetime]
+
     #: The time at the start of updating this batch of feeds (start of
     #: update_feed in update_feed, start of update_feeds in update_feeds);
     #: None if the entry already exists.

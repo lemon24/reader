@@ -192,7 +192,6 @@ class _Updater:
         self,
         pairs: Iterable[Tuple[EntryData[Optional[datetime]], Optional[EntryForUpdate]]],
     ) -> Iterable[EntryUpdateIntent]:
-        last_updated = self.now
         for feed_order, (new_entry, old_entry) in reversed(list(enumerate(pairs))):
 
             # This may fail if we ever implement changing the feed URL
@@ -209,7 +208,8 @@ class _Updater:
             if processed_new_entry:
                 yield EntryUpdateIntent(
                     processed_new_entry,
-                    last_updated,
+                    self.now,
+                    self.now if entry_new else None,
                     self.global_now if entry_new else None,
                     feed_order,
                     0
