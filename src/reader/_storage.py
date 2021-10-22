@@ -1379,9 +1379,9 @@ def make_get_entries_query(
             entries.important
             entries.important_modified
             entries.first_updated
+            entries.added_by
             entries.last_updated
             entries.original_feed
-            entries.added_by
             """.split()
         )
         .FROM("entries")
@@ -1415,8 +1415,8 @@ def entry_factory(t: Tuple[Any, ...]) -> Entry:
         t[24],
         t[25],
         t[26],
-        t[27] or feed.url,
-        t[28],
+        t[27],
+        t[28] or feed.url,
         feed,
     )
     return Entry._make(entry)

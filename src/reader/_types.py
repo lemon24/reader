@@ -210,7 +210,7 @@ class EntryUpdateIntent(NamedTuple):
     #: in update_feed, the start of each feed update in update_feeds).
     last_updated: datetime
 
-    #: First last_updated.
+    #: First last_updated (sets Entry.added).
     #: None if the entry already exists.
     first_updated: Optional[datetime]
 

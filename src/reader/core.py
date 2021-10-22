@@ -913,6 +913,8 @@ class Reader:
         # for the second of two new feeds updated in the same update_feeds()
         # call, first_updated_epoch != last_updated.
         #
+        # Update: However, added == last_updated for the first update.
+        #
         global_now = self._now()
 
         # Excluding the special exception handling,
@@ -1128,7 +1130,7 @@ class Reader:
                 rv_entry,
                 'updated',
                 'published',
-                'first_updated',
+                'added',
                 'last_updated',
                 'read_modified',
                 'important_modified',
