@@ -23,6 +23,10 @@ Unreleased
     To get the previous behavior (no validation),
     use ``allow_invalid_url=True``.
 
+* Fix bug causing
+  :attr:`~Entry.read_modified` and :attr:`~Entry.important_modified`
+  to be reset to :const:`None` when an entry is updated.
+
 
 Version 2.4
 -----------

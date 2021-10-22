@@ -549,29 +549,6 @@ def storage():
     return Storage(':memory:')
 
 
-@rename_argument('storage', 'storage_with_two_entries')
-def test_entry_remains_read_after_update(storage):
-    storage.mark_as_read('feed', 'one', True, None)
-
-    storage.add_or_update_entry(
-        EntryUpdateIntent(
-            EntryData('feed', 'one', datetime(2010, 1, 1)),
-            datetime(2010, 1, 2),
-            datetime(2010, 1, 2),
-            datetime(2010, 1, 2),
-            0,
-            0,
-        )
-    )
-
-    assert {
-        e.id
-        for e in storage.get_entries(
-            datetime(2010, 1, 1), EntryFilterOptions(read=True)
-        )
-    } == {'one'}
-
-
 @pytest.fixture
 def storage_with_two_entries(storage):
     storage.add_feed('feed', datetime(2010, 1, 1))
@@ -634,29 +611,6 @@ def test_important_get_entries(storage):
             datetime(2010, 1, 1), EntryFilterOptions(important=False)
         )
     } == {'two'}
-
-
-@rename_argument('storage', 'storage_with_two_entries')
-def test_important_entry_remains_important_after_update(storage):
-    storage.mark_as_important('feed', 'one', True, None)
-
-    storage.add_or_update_entry(
-        EntryUpdateIntent(
-            EntryData('feed', 'one', datetime(2010, 1, 1)),
-            datetime(2010, 1, 2),
-            datetime(2010, 1, 2),
-            datetime(2010, 1, 2),
-            0,
-            0,
-        )
-    )
-
-    assert {
-        e.id
-        for e in storage.get_entries(
-            datetime(2010, 1, 1), EntryFilterOptions(important=True)
-        )
-    } == {'one'}
 
 
 @rename_argument('storage', 'storage_with_two_entries')

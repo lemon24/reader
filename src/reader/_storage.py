@@ -932,7 +932,9 @@ class Storage:
                         content,
                         enclosures,
                         read,
+                        read_modified,
                         important,
+                        important_modified,
                         last_updated,
                         first_updated,
                         first_updated_epoch,
@@ -958,9 +960,19 @@ class Storage:
                             WHERE id = :id AND feed = :feed_url
                         ),
                         (
-                        SELECT important
-                        FROM entries
-                        WHERE id = :id AND feed = :feed_url
+                            SELECT read_modified
+                            FROM entries
+                            WHERE id = :id AND feed = :feed_url
+                        ),
+                        (
+                            SELECT important
+                            FROM entries
+                            WHERE id = :id AND feed = :feed_url
+                        ),
+                        (
+                            SELECT important_modified
+                            FROM entries
+                            WHERE id = :id AND feed = :feed_url
                         ),
                         :last_updated,
                         coalesce(:first_updated, (

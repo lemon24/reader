@@ -3310,6 +3310,31 @@ def test_entry_read_important_modified_argument(reader, flag, monkeypatch_tz):
     assert getattr(entry, f'{flag}_modified') == utc_datetime(2010, 1, 1, 6)
 
 
+@pytest.mark.parametrize('flag', ['read', 'important'])
+def test_entry_read_important_modified_remains_set_after_update(reader, flag):
+    reader._parser = parser = Parser()
+
+    feed = parser.feed(1)
+    entry = parser.entry(1, 1)
+    reader.add_feed(feed)
+    reader.update_feeds()
+
+    entry = reader.get_entry(entry)
+    assert not getattr(entry, flag)
+    assert getattr(entry, f'{flag}_modified') is None
+
+    reader._now = lambda: naive_datetime(2010, 1, 1)
+    getattr(reader, f'mark_entry_as_{flag}')(entry)
+
+    entry = parser.entry(1, 1, title='new')
+    reader.update_feeds()
+
+    entry = next(reader.get_entries())
+    assert entry.title == 'new'
+    assert getattr(entry, flag)
+    assert getattr(entry, f'{flag}_modified') == datetime(2010, 1, 1)
+
+
 @rename_argument('reader', 'reader_with_one_feed')
 def test_mark_as_dont_care(reader):
     reader.update_feeds()
