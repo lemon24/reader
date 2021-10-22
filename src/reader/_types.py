@@ -21,6 +21,7 @@ from .types import _namedtuple_compat
 from .types import Content
 from .types import Enclosure
 from .types import Entry
+from .types import EntryAddedBy
 from .types import EntryInput
 from .types import ExceptionInfo
 from .types import Feed
@@ -112,6 +113,7 @@ class EntryData(_namedtuple_compat):
         attrs.pop('hash', None)
         attrs.update(kwargs)
         attrs.setdefault('original_feed_url', feed_url)
+        attrs.setdefault('added_by', 'feed')
         return Entry(**attrs)
 
     @property
@@ -222,6 +224,9 @@ class EntryUpdateIntent(NamedTuple):
 
     #: Same as EntryForUpdate.hash_changed.
     hash_changed: Optional[int]
+
+    #: Same as Entry.source.
+    added_by: EntryAddedBy = 'feed'
 
     @property
     def new(self) -> bool:

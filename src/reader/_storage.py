@@ -130,6 +130,7 @@ def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
             read_modified TIMESTAMP,
             important INTEGER NOT NULL DEFAULT 0,
             important_modified TIMESTAMP,
+            added_by TEXT NOT NULL,
             last_updated TIMESTAMP NOT NULL,
             first_updated TIMESTAMP NOT NULL,
             first_updated_epoch TIMESTAMP NOT NULL,
@@ -277,6 +278,7 @@ def update_from_33_to_34(db: sqlite3.Connection) -> None:  # pragma: no cover
             read_modified,
             important,
             important_modified,
+            added_by,
             last_updated,
             first_updated,
             first_updated_epoch,
@@ -300,6 +302,7 @@ def update_from_33_to_34(db: sqlite3.Connection) -> None:  # pragma: no cover
             read_modified,
             important,
             important_modified,
+            'feed',
             last_updated,
             first_updated_epoch,
             first_updated_epoch,
@@ -925,7 +928,8 @@ class Storage:
                         feed_order,
                         original_feed,
                         data_hash,
-                        data_hash_changed
+                        data_hash_changed,
+                        added_by
                     ) VALUES (
                         :id,
                         :feed_url,
@@ -961,7 +965,8 @@ class Storage:
                         :feed_order,
                         NULL, -- original_feed
                         :data_hash,
-                        :data_hash_changed
+                        :data_hash_changed,
+                        :added_by
                     );
                     """,
                     make_params(),
@@ -1376,6 +1381,7 @@ def make_get_entries_query(
             entries.first_updated
             entries.last_updated
             entries.original_feed
+            entries.added_by
             """.split()
         )
         .FROM("entries")
@@ -1410,6 +1416,7 @@ def entry_factory(t: Tuple[Any, ...]) -> Entry:
         t[25],
         t[26],
         t[27] or feed.url,
+        t[28],
         feed,
     )
     return Entry._make(entry)

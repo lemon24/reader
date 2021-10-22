@@ -3363,3 +3363,9 @@ def test_allow_invalid_url(make_reader, feed_root, url):
     assert excinfo.value.url == url
 
     reader.change_feed_url(old, url, allow_invalid_url=True)
+
+
+@rename_argument('reader', 'reader_with_one_feed')
+def test_entry_source(reader):
+    reader.update_feeds()
+    assert next(reader.get_entries()).added_by == 'feed'

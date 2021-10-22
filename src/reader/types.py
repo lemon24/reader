@@ -186,6 +186,9 @@ class ExceptionInfo(_namedtuple_compat):
         )
 
 
+EntryAddedBy = Literal['feed', 'user']
+
+
 @dataclass(frozen=True)
 class Entry(_namedtuple_compat):
 
@@ -293,6 +296,13 @@ class Entry(_namedtuple_compat):
     # increases the chance we'll catch feed= not being set at runtime;
     # we don't check for it in __post_init__ because it's still useful
     # to have it None in tests. The cast is to please mypy.
+
+    #: The source of the entry. One of ``'feed'``, ``'user'``.
+    #:
+    #: Other values may be added in the future.
+    #:
+    #: .. versionadded:: 2.5
+    added_by: EntryAddedBy = cast(EntryAddedBy, None)
 
     #: The entry's feed.
     feed: Feed = cast(Feed, None)
