@@ -199,7 +199,7 @@ def create_indexes(db: sqlite3.Connection) -> None:
         """
         CREATE INDEX entries_by_kinda_first_updated ON entries(
             first_updated_epoch,
-            coalesce(published, updated),
+            coalesce(published, updated, first_updated),
             feed,
             last_updated,
             - feed_order,
@@ -210,8 +210,8 @@ def create_indexes(db: sqlite3.Connection) -> None:
     db.execute(
         """
         CREATE INDEX entries_by_kinda_published ON entries (
-            coalesce(published, updated),
-            coalesce(published, updated),
+            coalesce(published, updated, first_updated),
+            coalesce(published, updated, first_updated),
             feed,
             last_updated,
             - feed_order,
@@ -256,6 +256,13 @@ def update_from_33_to_34(db: sqlite3.Connection) -> None:  # pragma: no cover
 
     # Assumes foreign key checks have already been disabled.
     # https://sqlite.org/lang_altertable.html#otheralter
+
+    # This migration takes care of:
+    #
+    # * first_updated being added not null
+    # * updated becoming null
+    # * re-creating the entries_by_kinda_* indexes to use first_updated
+    # * added_by being added not null
 
     create_entries(db, 'new_entries')
     db.execute(
@@ -310,8 +317,12 @@ def update_from_33_to_34(db: sqlite3.Connection) -> None:  # pragma: no cover
         FROM entries;
         """
     )
+    # IMPORTANT: this drops ALL indexes and triggers ON entries
     db.execute("DROP TABLE entries;")
     db.execute("ALTER TABLE new_entries RENAME TO entries;")
+
+    create_indexes(db)
+    recreate_search_triggers(db)
 
 
 MINIMUM_SQLITE_VERSION = (3, 15)
