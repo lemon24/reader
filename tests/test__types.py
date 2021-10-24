@@ -1,7 +1,10 @@
+from types import SimpleNamespace
+
 import pytest
 
 from reader._types import EntryData
 from reader._types import FeedData
+from reader._types import fix_datetime_tzinfo
 from reader._types import tag_filter_argument
 
 
@@ -45,3 +48,75 @@ def test_tag_filter_argument_error(input, error):
     with pytest.raises(ValueError) as excinfo:
         tag_filter_argument(input, 'argument')
     assert error in str(excinfo.value)
+
+
+@pytest.mark.parametrize('data_file', ['full', 'empty'])
+def test_entry_data_from_obj(data_dir, data_file):
+    expected = {'url_base': '', 'rel_base': ''}
+    exec(data_dir.join(f'{data_file}.rss.py').read(), expected)
+    for i, entry in enumerate(expected['entries']):
+        assert entry == EntryData.from_obj(
+            fix_datetime_tzinfo(entry, 'updated', 'published')
+        ), i
+
+
+@pytest.mark.parametrize(
+    'exc, obj',
+    [
+        (AttributeError, SimpleNamespace()),
+        (AttributeError, SimpleNamespace(feed_url='feed')),
+        (AttributeError, SimpleNamespace(id='id')),
+        (TypeError, SimpleNamespace(feed_url='feed', id=1)),
+        (TypeError, SimpleNamespace(feed_url='feed', id=None)),
+        (TypeError, SimpleNamespace(feed_url='feed', id='id', updated=1)),
+        (TypeError, SimpleNamespace(feed_url='feed', id='id', title=1)),
+        (TypeError, SimpleNamespace(feed_url='feed', id='id', content=1)),
+        (
+            AttributeError,
+            SimpleNamespace(feed_url='feed', id='id', content=[SimpleNamespace()]),
+        ),
+        (
+            TypeError,
+            SimpleNamespace(
+                feed_url='feed', id='id', content=[SimpleNamespace(value=1)]
+            ),
+        ),
+        (
+            TypeError,
+            SimpleNamespace(
+                feed_url='feed',
+                id='id',
+                content=[SimpleNamespace(value='value', type=1)],
+            ),
+        ),
+        (
+            AttributeError,
+            SimpleNamespace(feed_url='feed', id='id', enclosures=[SimpleNamespace()]),
+        ),
+        (
+            TypeError,
+            SimpleNamespace(
+                feed_url='feed', id='id', enclosures=[SimpleNamespace(href=1)]
+            ),
+        ),
+        (
+            TypeError,
+            SimpleNamespace(
+                feed_url='feed',
+                id='id',
+                enclosures=[SimpleNamespace(href='href', type=1)],
+            ),
+        ),
+        (
+            TypeError,
+            SimpleNamespace(
+                feed_url='feed',
+                id='id',
+                enclosures=[SimpleNamespace(href='href', length='1')],
+            ),
+        ),
+    ],
+)
+def test_entry_data_from_obj_errors(exc, obj):
+    with pytest.raises(exc):
+        EntryData.from_obj(obj)

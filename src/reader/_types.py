@@ -70,6 +70,9 @@ class FeedData(_namedtuple_compat):
         return get_hash(self)
 
 
+_ED = TypeVar('_ED', bound='EntryData')
+
+
 @dataclass(frozen=True)
 class EntryData(_namedtuple_compat):
 
@@ -125,6 +128,74 @@ class EntryData(_namedtuple_compat):
     @cached_property
     def hash(self) -> bytes:
         return get_hash(self)
+
+    @classmethod
+    def from_obj(cls: Type[_ED], obj: object) -> _ED:
+        """
+        Naive datetimes are normalized by passing them to
+        :meth:`~datetime.datetime.astimezone`.
+        """
+        return cls(
+            feed_url=_getattr(obj, 'feed_url', str),
+            id=_getattr(obj, 'id', str),
+            updated=_getattr_optional_datetime(obj, 'updated'),
+            title=_getattr_optional(obj, 'title', str),
+            link=_getattr_optional(obj, 'link', str),
+            author=_getattr_optional(obj, 'author', str),
+            published=_getattr_optional_datetime(obj, 'published'),
+            summary=_getattr_optional(obj, 'summary', str),
+            content=tuple(_content_from_obj(o) for o in getattr(obj, 'content', ())),
+            enclosures=tuple(
+                _enclosure_from_obj(o) for o in getattr(obj, 'enclosures', ())
+            ),
+        )
+
+
+_T = TypeVar('_T')
+
+
+def _getattr(obj: object, name: str, type: Type[_T]) -> _T:
+    # will raise AttributeError implicitly
+    value = getattr(obj, name)
+    if not isinstance(value, type):
+        raise TypeError(
+            f"bad type for {name}; expected {type.__name__} instance, got {value!r}"
+        )
+    return value
+
+
+def _getattr_optional(obj: object, name: str, type: Type[_T]) -> Optional[_T]:
+    value = getattr(obj, name, None)
+    if value is None:
+        return value
+    if not isinstance(value, type):
+        raise TypeError(
+            f"bad type for {name}; expected {type.__name__} instance, got {value!r}"
+        )
+    return value
+
+
+def _getattr_optional_datetime(obj: object, name: str) -> Optional[datetime]:
+    value = _getattr_optional(obj, name, datetime)
+    if value is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def _content_from_obj(obj: object) -> Content:
+    return Content(
+        value=_getattr(obj, 'value', str),
+        type=_getattr_optional(obj, 'type', str),
+        language=_getattr_optional(obj, 'language', str),
+    )
+
+
+def _enclosure_from_obj(obj: object) -> Enclosure:
+    return Enclosure(
+        href=_getattr(obj, 'href', str),
+        type=_getattr_optional(obj, 'type', str),
+        length=_getattr_optional(obj, 'length', int),
+    )
 
 
 class ParsedFeed(NamedTuple):
@@ -394,16 +465,16 @@ DEFAULT_RESERVED_NAME_SCHEME = MappingProxyType(
 )
 
 
-_T = TypeVar('_T', bound=_namedtuple_compat)
+_NT = TypeVar('_NT', bound=_namedtuple_compat)
 
 
 def fix_datetime_tzinfo(
-    obj: _T,
+    obj: _NT,
     *names: str,
     _old: Union[None, timezone, bool] = None,
     _new: Union[None, timezone] = timezone.utc,
     **kwargs: Any,
-) -> _T:
+) -> _NT:
     """For specific optional datetime attributes of an object,
     and set their tzinfo to `_new`.
 
