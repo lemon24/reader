@@ -326,6 +326,21 @@ def preview():
     )
 
 
+@blueprint.route('/add-entry')
+def add_entry():
+    reader = get_reader()
+
+    feed_url = request.args['feed']
+    feed = reader.get_feed(feed_url, None)
+    if not feed:
+        abort(404)
+
+    return render_template(
+        'add_entry.html',
+        feed=feed,
+    )
+
+
 @blueprint.route('/feeds')
 def feeds():
     broken = request.args.get('broken')
@@ -458,10 +473,10 @@ def readererror_to_apierror(*args):
         yield
     except ReaderError as e:
         category = None
-        if hasattr(e, 'url'):
-            category = (e.url,)
-            if hasattr(e, 'id'):
-                category += (e.id,)
+        if hasattr(e, 'object_id'):
+            category = e.object_id
+            if not isinstance(category, tuple):
+                category = (category,)
         raise APIError(str(e), category) from e
 
 
@@ -574,7 +589,7 @@ def update_metadata(data):
     get_reader().set_feed_metadata_item(feed_url, key, value)
 
 
-@form_api
+@form_api(really=True)
 @readererror_to_apierror()
 def delete_metadata(data):
     feed_url = data['feed-url']
@@ -629,6 +644,29 @@ def update_feed(data):
     # acceptable only because /preview does it as well
     feed_url = data['feed-url']
     get_reader().update_feed(feed_url)
+
+
+@form_api(name='add-entry')
+@readererror_to_apierror()
+def add_entry_action(data):
+    feed_url = data['feed-url']
+    link = data['link'].strip()
+    title = data['title'].strip() or None
+    if not link:
+        raise APIError(f"invalid link: {link}", (feed_url,))
+
+    reader = get_reader()
+
+    # TODO: if we ever add other stuff, we should catch the various AttributeError/ValueError/TypeError from the conversion here
+    reader.add_entry(dict(feed_url=feed_url, id=link, link=link, title=title))
+
+
+@form_api(really=True)
+@readererror_to_apierror()
+def delete_entry(data):
+    feed_url = data['feed-url']
+    entry_id = data['entry-id']
+    get_reader().delete_entry((feed_url, entry_id))
 
 
 # for some reason, @blueprint.app_template_global does not work

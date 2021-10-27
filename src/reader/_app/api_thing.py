@@ -126,9 +126,11 @@ class APIThing:
             return self.dispatch_json()
         return "bad content type", 400
 
-    def __call__(self, func=None, *, really=False):
-        def register(f):
-            self.actions[f.__name__.replace('_', '-')] = f
+    def __call__(self, func=None, *, name=None, really=False):
+        def register(f, name=name):
+            if name is None:
+                name = f.__name__.replace('_', '-')
+            self.actions[name] = f
             self.really[f] = really
             return f
 

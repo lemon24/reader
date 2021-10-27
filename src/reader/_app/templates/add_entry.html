@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% import "macros.html" as macros %}
+
+
+{% block page_title %}Add entry to {{ macros.feed_title(feed) }}{% endblock %}
+{% block main_title %}Add entry to <b>{{ macros.feed_title(feed) }}</b>{% endblock %}
+
+
+{% block body %}
+
+<div>
+
+
+<form action="{{ url_for('.form_api') }}" method="post">
+
+<p><input type="text" name="link" placeholder="link" autocomplete="off">
+<p><input type="text" name="title" placeholder="title" autocomplete="off">
+<p><button type="submit" name="action" value="add-entry" autocomplete="off">add</button>
+
+<input type="hidden" name='feed-url' value='{{ feed.url }}'>
+
+{# TODO: maybe redirect to entry page? how? – we don't know the entry url yet #}
+<input type="hidden" name='next' value='{{ url_for('.entries', feed=feed.url) }}'>
+
+</form>
+
+
+<ul class="controls">
+
+{% for message in get_flashed_messages_by_prefix(
+    ('add-entry', feed.url),
+) %}
+<li class="error">{{ message }}
+{% endfor %}
+
+</ul>
+
+
+</div>
+
+{% endblock %}

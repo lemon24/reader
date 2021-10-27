@@ -180,6 +180,9 @@
         <li>
         <a href="{{ url_for('.metadata', feed=feed.url) }}">update metadata</a>
 
+        <li>
+        <a href="{{ url_for('.add_entry', feed=feed.url) }}">add entry</a>
+
         {# <!-- TODO: how do we redirect to the new feed after url update? --> #}
         {{ macros.text_confirm_button('.form_api', 'change-feed-url', 'change feed URL', 'new-feed-url', 'new URL', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
 
@@ -260,7 +263,7 @@ untitled
 <li>
     <a href="{{ url_for('.entries', feed=entry.feed.url) }}">{{ macros.feed_title(entry.feed) }}</a>
 <li>
-    {%- set published = entry.published or entry.updated -%}
+    {%- set published = entry.published or entry.updated_not_none -%}
     <span title="{{ published }}">{{ published | humanize_naturaltime }}</span>
 
 
@@ -285,6 +288,10 @@ untitled
         {{ macros.simple_button('.form_api', 'mark-as-dont-care', "don't care", leave_disabled=true, next=next, context=context) }}
     {% endif %}
 
+    {% if entry.added_by == 'user' %}
+        {{ macros.confirm_button('.form_api', 'delete-entry', 'delete', leave_disabled=true, next=url_for('.entries', **request.args), context=context) }}
+    {% endif %}
+
 
 {% endif %} {# not read only #}
 
@@ -295,6 +302,7 @@ untitled
     ('mark-as-important', feed.url, entry.id),
     ('mark-as-unimportant', feed.url, entry.id),
     ('mark-as-dont-care', feed.url, entry.id),
+    ('delete-entry', feed.url, entry.id),
 ) %}
 <li class="error">{{ message }}
 {% endfor %}

@@ -18,7 +18,7 @@
     {% if entry.author %} by {{ entry.author }}{% endif %}
     in <a href="{{ url_for('.entries', feed=entry.feed.url) }}">{{ macros.feed_title(entry.feed) }}</a>
 <li>
-    {%- set published = entry.published or entry.updated -%}
+    {%- set published = entry.published or entry.updated_not_none -%}
     <span title="{{ published }}">{{ published | humanize_naturaltime }}</span>
 
 {% set next = url_for('.entry', **request.args) %}
@@ -40,6 +40,10 @@
     {{ macros.simple_button('.form_api', 'mark-as-dont-care', "don't care", leave_disabled=true, next=next, context=context) }}
 {% endif %}
 
+{% if entry.added_by == 'user' %}
+    {{ macros.confirm_button('.form_api', 'delete-entry', 'delete', leave_disabled=true, next=url_for('.entries', **request.args), context=context) }}
+{% endif %}
+
 
 {% for message in get_flashed_messages_by_prefix(
     ('mark-as-read', feed.url, entry.id),
@@ -47,6 +51,7 @@
     ('mark-as-important', feed.url, entry.id),
     ('mark-as-unimportant', feed.url, entry.id),
     ('mark-as-dont-care', feed.url, entry.id),
+    ('delete-entry', feed.url, entry.id),
 ) %}
 <li class="error">{{ message }}
 {% endfor %}
