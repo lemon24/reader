@@ -1386,6 +1386,7 @@ class Reader:
         FIXME
         - datetimes
         - type of entry
+        - entryexistserror
         """
         now = self._now()
 
@@ -1400,6 +1401,15 @@ class Reader:
         self._storage.add_entry(intent)
         for entry_hook in self.after_entry_update_hooks:
             entry_hook(self, intent.entry, EntryUpdateStatus.NEW)
+
+    def delete_entry(self, entry: EntryInput) -> None:
+        """
+        FIXME:
+        - entryerror if has the wrong type
+        - types of entry
+        - EntryNotFoundError
+        """
+        self._storage.delete_entries([_entry_argument(entry)], added_by='user')
 
     def get_feed_metadata(
         self,

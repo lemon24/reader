@@ -24,6 +24,7 @@ from reader import Content
 from reader import Enclosure
 from reader import Entry
 from reader import EntryCounts
+from reader import EntryError
 from reader import EntryExistsError
 from reader import EntryNotFoundError
 from reader import EntrySearchCounts
@@ -3457,3 +3458,34 @@ def test_add_entry(reader):
             last_updated=datetime(2010, 1, 3),
         ),
     )
+
+
+def test_delete_entry(reader):
+    reader._parser = parser = Parser()
+
+    with pytest.raises(EntryNotFoundError) as excinfo:
+        reader.delete_entry(('1', '1, 1'))
+    assert excinfo.value.object_id == ('1', '1, 1')
+
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    reader.add_entry(dict(feed_url='1', id='1, 1'))
+    parser.entry(1, 2)
+    reader.update_feeds()
+
+    assert {(e.id, e.added_by) for e in reader.get_entries()} == {
+        ('1, 1', 'user'),
+        ('1, 2', 'feed'),
+    }
+
+    reader.delete_entry(('1', '1, 1'))
+
+    with pytest.raises(EntryError) as excinfo:
+        reader.delete_entry(('1', '1, 2'))
+    assert excinfo.value.object_id == ('1', '1, 2')
+    assert excinfo.value.message == "entry must be added by 'user', got 'feed'"
+
+    assert {(e.id, e.added_by) for e in reader.get_entries()} == {
+        ('1, 2', 'feed'),
+    }

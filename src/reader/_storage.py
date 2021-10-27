@@ -36,6 +36,7 @@ from ._utils import chunks
 from ._utils import exactly_one
 from ._utils import join_paginated_iter
 from ._utils import zero_or_one
+from .exceptions import EntryError
 from .exceptions import EntryExistsError
 from .exceptions import EntryMetadataNotFoundError
 from .exceptions import EntryNotFoundError
@@ -1028,7 +1029,9 @@ class Storage:
         self._add_or_update_entries([intent], exclusive=True)
 
     @wrap_exceptions(StorageError)
-    def delete_entries(self, entries: Iterable[Tuple[str, str]]) -> None:
+    def delete_entries(
+        self, entries: Iterable[Tuple[str, str]], *, added_by: Optional[str] = None
+    ) -> None:
         # This must be atomic (unlike add_or_update_entries()); hence, no paging.
         # We'll deal with locking issues only if they start appearing
         # (hopefully, there are both fewer entries to be deleted and
@@ -1038,11 +1041,26 @@ class Storage:
         # with executemany(), so we use execute().
         # TODO: Maybe add_or_update_entries() doesn't need executemany() either.
 
-        query = "DELETE FROM entries WHERE feed = :feed AND id = :id"
+        delete_query = "DELETE FROM entries WHERE feed = :feed AND id = :id"
+        added_by_query = "SELECT added_by FROM entries WHERE feed = :feed AND id = :id"
 
         with self.db:
+            cursor = self.db.cursor()
+
             for feed_url, entry_id in entries:
-                cursor = self.db.execute(query, dict(feed=feed_url, id=entry_id))
+                context = dict(feed=feed_url, id=entry_id)
+
+                if added_by is not None:
+                    row = cursor.execute(added_by_query, context).fetchone()
+                    if row:
+                        if row[0] != added_by:
+                            raise EntryError(
+                                feed_url,
+                                entry_id,
+                                f"entry must be added by {added_by!r}, got {row[0]!r}",
+                            )
+
+                cursor.execute(delete_query, context)
                 rowcount_exactly_one(
                     cursor, lambda: EntryNotFoundError(feed_url, entry_id)
                 )
