@@ -303,26 +303,47 @@ class Search:
         # the ON DELETE trigger doesn't fire during REPLACE
         # if recursive_triggers are not enabled (they aren't, as of 1.5).
         #
-        # What I don't understand is why the "INSERT into esss" below succeeds
-        # even when a specific (id, feed) already exists in esss
-        # (it seems to act as INSERT OR REPLACE -- maybe because it already
-        # is in one, and that REPLACE is global?).
-        # Anyway, it seems to do what we need it to do.
+        # Note the entries_search_entries_insert{,_esss_exists} trigers
+        # cannot use OR REPLACE, so we must have one trigger for each case.
 
         self.db.execute(
             """
             CREATE TRIGGER entries_search_entries_insert
             AFTER INSERT ON entries
+
+            WHEN
+                NOT EXISTS (
+                    SELECT *
+                    FROM entries_search_sync_state AS esss
+                    WHERE (esss.id, esss.feed) = (new.id, new.feed)
+                )
+
             BEGIN
-                INSERT OR REPLACE INTO entries_search_sync_state (id, feed, es_rowids)
-                VALUES (
-                    new.id,
-                    new.feed,
-                    coalesce((
-                        SELECT es_rowids
-                        from entries_search_sync_state
-                        where (id, feed) = (new.id, new.feed)
-                    ), '[]')
+                INSERT INTO entries_search_sync_state (id, feed)
+                VALUES (new.id, new.feed);
+            END;
+            """
+        )
+        self.db.execute(
+            """
+            CREATE TRIGGER entries_search_entries_insert_esss_exists
+            AFTER INSERT ON entries
+
+            WHEN
+                EXISTS (
+                    SELECT *
+                    FROM entries_search_sync_state AS esss
+                    WHERE (esss.id, esss.feed) = (new.id, new.feed)
+                )
+
+            BEGIN
+                UPDATE entries_search_sync_state
+                SET
+                    to_update = 1,
+                    to_delete = 0
+                WHERE (new.id, new.feed) = (
+                    entries_search_sync_state.id,
+                    entries_search_sync_state.feed
                 );
             END;
             """
@@ -446,6 +467,9 @@ class Search:
         # Private API, may be called from migrations.
         assert self.db.in_transaction
         self.db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert;")
+        self.db.execute(
+            "DROP TRIGGER IF EXISTS entries_search_entries_insert_esss_exists;"
+        )
         self.db.execute("DROP TRIGGER IF EXISTS entries_search_entries_update;")
         self.db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
         self.db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")

@@ -1069,3 +1069,19 @@ def test_update_search_concurrent_calls(db_path, make_reader, monkeypatch):
 
 
 # END concurrency tests
+
+
+def test_add_entry_repeatedly(reader):
+    # this could have been found with Hypothesis
+
+    reader.enable_search()
+    reader.add_feed('1')
+
+    # we should not get
+    #   sqlite3.IntegrityError: UNIQUE constraint failed:
+    #     entries_search_sync_state.id, entries_search_sync_state.feed
+    # on the second loop
+
+    for _ in range(3):
+        reader.add_entry(dict(feed_url='1', id='1'))
+        reader.delete_entry(('1', '1'))

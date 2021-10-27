@@ -26,6 +26,10 @@ Unreleased
 * Fix bug causing
   :attr:`~Entry.read_modified` and :attr:`~Entry.important_modified`
   to be reset to :const:`None` when an entry is updated.
+* Fix bug where deleting an entry and then adding it again
+  (with the same id) would fail
+  if search was enabled and :meth:`~Reader.update_search`
+  was not run before adding the new entry.
 
 
 Version 2.4

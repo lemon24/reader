@@ -1013,7 +1013,7 @@ class Storage:
                 if "foreign key constraint failed" in e_msg:
                     raise FeedNotFoundError(feed_url) from None
 
-                elif "unique constraint failed" in e_msg:
+                elif "unique constraint failed: entries.id, entries.feed" in e_msg:
                     raise EntryExistsError(feed_url, entry_id) from None
 
                 else:  # pragma: no cover
