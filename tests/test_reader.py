@@ -24,6 +24,7 @@ from reader import Content
 from reader import Enclosure
 from reader import Entry
 from reader import EntryCounts
+from reader import EntryExistsError
 from reader import EntryNotFoundError
 from reader import EntrySearchCounts
 from reader import Feed
@@ -3394,3 +3395,65 @@ def test_allow_invalid_url(make_reader, feed_root, url):
 def test_entry_source(reader):
     reader.update_feeds()
     assert next(reader.get_entries()).added_by == 'feed'
+
+
+def test_add_entry(reader):
+    reader._parser = parser = Parser()
+    reader._now = lambda: naive_datetime(2010, 1, 1)
+
+    # adding it fails if feed doesn't exist
+
+    with pytest.raises(FeedNotFoundError) as excinfo:
+        reader.add_entry(dict(feed_url='1', id='1, 1'))
+    assert excinfo.value.object_id == '1'
+
+    # add it by user (from dict)
+
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    expected_entry = Entry(
+        '1, 1',
+        last_updated=datetime(2010, 1, 1),
+        added=datetime(2010, 1, 1),
+        added_by='user',
+        original_feed_url='1',
+        feed=Feed('1', added=datetime(2010, 1, 1)),
+    )
+
+    reader.add_entry(dict(feed_url='1', id='1, 1'))
+    assert reader.get_entry(('1', '1, 1')) == expected_entry
+
+    # adding it again fails
+
+    with pytest.raises(EntryExistsError) as excinfo:
+        reader.add_entry(expected_entry)
+    assert excinfo.value.object_id == ('1', '1, 1')
+
+    # add it by user (from object)
+
+    reader._storage.delete_entries([('1', '1, 1')])
+    reader._now = lambda: naive_datetime(2010, 1, 2)
+
+    reader.add_entry(expected_entry)
+    assert reader.get_entry(('1', '1, 1')) == expected_entry._replace(
+        last_updated=datetime(2010, 1, 2),
+        added=datetime(2010, 1, 2),
+    )
+
+    # add it by feed (update)
+
+    reader._now = lambda: naive_datetime(2010, 1, 3)
+
+    entry = parser.entry(1, 1)
+    reader.update_feeds()
+
+    assert reader.get_entry(('1', '1, 1')) == entry.as_entry(
+        last_updated=datetime(2010, 1, 3),
+        added=datetime(2010, 1, 2),
+        added_by='feed',
+        feed=feed.as_feed(
+            added=datetime(2010, 1, 1),
+            last_updated=datetime(2010, 1, 3),
+        ),
+    )

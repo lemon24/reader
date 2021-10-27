@@ -30,6 +30,7 @@ from ._requests_utils import TimeoutType
 from ._search import Search
 from ._storage import Storage
 from ._types import DEFAULT_RESERVED_NAME_SCHEME
+from ._types import entry_data_from_obj
 from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import EntryUpdateIntent
@@ -1379,6 +1380,26 @@ class Reader:
         feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_read(feed_url, entry_id, True, modified_naive)
         self._storage.mark_as_important(feed_url, entry_id, False, modified_naive)
+
+    def add_entry(self, entry: Any) -> None:
+        """
+        FIXME
+        - datetimes
+        - type of entry
+        """
+        now = self._now()
+
+        intent = EntryUpdateIntent(
+            entry=entry_data_from_obj(entry),
+            last_updated=now,
+            first_updated=now,
+            first_updated_epoch=now,
+            added_by='user',
+        )
+
+        self._storage.add_entry(intent)
+        for entry_hook in self.after_entry_update_hooks:
+            entry_hook(self, intent.entry, EntryUpdateStatus.NEW)
 
     def get_feed_metadata(
         self,

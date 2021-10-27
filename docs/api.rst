@@ -104,6 +104,11 @@ Exceptions
 
     Subclass of :exc:`ReaderError`.
 
+.. autoexception:: EntryExistsError
+    :members:
+
+    Subclass of :exc:`EntryError`.
+
 .. autoexception:: EntryNotFoundError
     :members:
 

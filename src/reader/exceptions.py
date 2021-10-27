@@ -139,6 +139,16 @@ class EntryError(ReaderError):
         return self.feed_url, self.id
 
 
+class EntryExistsError(EntryError):
+    """Entry already exists.
+
+    .. versionadded:: 2.5
+
+    """
+
+    message = "entry exists"
+
+
 class EntryNotFoundError(EntryError):
     """Entry not found."""
 

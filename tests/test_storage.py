@@ -216,7 +216,7 @@ def update_feed_last_updated(storage, feed, entry):
 def add_or_update_entry(storage, feed, entry):
     storage.add_or_update_entry(
         EntryUpdateIntent(
-            entry, entry.updated, datetime(2010, 1, 1), datetime(2010, 1, 1), 0, 0
+            entry, entry.updated, datetime(2010, 1, 1), datetime(2010, 1, 1)
         )
     )
 
@@ -225,9 +225,20 @@ def add_or_update_entries(storage, feed, entry):
     storage.add_or_update_entries(
         [
             EntryUpdateIntent(
-                entry, entry.updated, datetime(2010, 1, 1), datetime(2010, 1, 1), 0, 0
+                entry,
+                entry.updated,
+                datetime(2010, 1, 1),
+                datetime(2010, 1, 1),
             )
         ]
+    )
+
+
+def add_entry(storage, feed, entry):
+    storage.add_entry(
+        EntryUpdateIntent(
+            entry, entry.updated, datetime(2010, 1, 1), datetime(2010, 1, 1)
+        )
     )
 
 
@@ -302,6 +313,7 @@ def get_entry_last(storage, feed, entry):
         update_feed_last_updated,
         add_or_update_entry,
         add_or_update_entries,
+        add_entry,
         delete_entries,
         get_entries_chunk_size_0,
         get_entries_chunk_size_1,

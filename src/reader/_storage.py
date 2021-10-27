@@ -36,6 +36,7 @@ from ._utils import chunks
 from ._utils import exactly_one
 from ._utils import join_paginated_iter
 from ._utils import zero_or_one
+from .exceptions import EntryExistsError
 from .exceptions import EntryMetadataNotFoundError
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
@@ -901,7 +902,9 @@ class Storage:
         for iterable in iterables:
             self._add_or_update_entries(iterable)
 
-    def _add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
+    def _add_or_update_entries(
+        self, entry_tuples: Iterable[EntryUpdateIntent], exclusive: bool = False
+    ) -> None:
         # We need to capture the last value for exception handling
         # (it's not guaranteed all the entries belong to the same feed).
         # FIXME: In this case, is it ok to just fail other feeds too
@@ -918,8 +921,8 @@ class Storage:
 
             try:
                 self.db.executemany(
-                    """
-                    INSERT OR REPLACE INTO entries (
+                    f"""
+                    INSERT {'OR ABORT' if exclusive else 'OR REPLACE'} INTO entries (
                         id,
                         feed,
                         --
@@ -954,21 +957,21 @@ class Storage:
                         :summary,
                         :content,
                         :enclosures,
-                        (
+                        coalesce((
                             SELECT read
                             FROM entries
                             WHERE id = :id AND feed = :feed_url
-                        ),
+                        ), 0),
                         (
                             SELECT read_modified
                             FROM entries
                             WHERE id = :id AND feed = :feed_url
                         ),
-                        (
+                        coalesce((
                             SELECT important
                             FROM entries
                             WHERE id = :id AND feed = :feed_url
-                        ),
+                        ), 0),
                         (
                             SELECT important_modified
                             FROM entries
@@ -995,10 +998,8 @@ class Storage:
                     make_params(),
                 )
             except sqlite3.IntegrityError as e:
-                if (
-                    "foreign key constraint failed" not in str(e).lower()
-                ):  # pragma: no cover
-                    raise
+                e_msg = str(e).lower()
+
                 feed_url = last_param['feed_url']
                 entry_id = last_param['id']
                 log.debug(
@@ -1007,11 +1008,24 @@ class Storage:
                     feed_url,
                     exc_info=True,
                 )
-                raise FeedNotFoundError(feed_url) from None
+
+                if "foreign key constraint failed" in e_msg:
+                    raise FeedNotFoundError(feed_url) from None
+
+                elif "unique constraint failed" in e_msg:
+                    raise EntryExistsError(feed_url, entry_id) from None
+
+                else:  # pragma: no cover
+                    raise
 
     def add_or_update_entry(self, intent: EntryUpdateIntent) -> None:
         # TODO: this method is for testing convenience only, maybe delete it?
         self.add_or_update_entries([intent])
+
+    @wrap_exceptions(StorageError)
+    def add_entry(self, intent: EntryUpdateIntent) -> None:
+        # TODO: unify with the or_update variants
+        self._add_or_update_entries([intent], exclusive=True)
 
     @wrap_exceptions(StorageError)
     def delete_entries(self, entries: Iterable[Tuple[str, str]]) -> None:

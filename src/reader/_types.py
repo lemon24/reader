@@ -295,10 +295,10 @@ class EntryUpdateIntent(NamedTuple):
     first_updated_epoch: Optional[datetime]
 
     #: The index of the entry in the feed (zero-based).
-    feed_order: int
+    feed_order: int = 0
 
     #: Same as EntryForUpdate.hash_changed.
-    hash_changed: Optional[int]
+    hash_changed: Optional[int] = 0
 
     #: Same as Entry.source.
     added_by: EntryAddedBy = 'feed'

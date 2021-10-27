@@ -65,6 +65,7 @@ from .exceptions import (
     ParseError,
     InvalidFeedURLError,
     EntryError,
+    EntryExistsError,
     EntryNotFoundError,
     MetadataError,
     MetadataNotFoundError,

@@ -5,13 +5,12 @@ from fakeparser import NotModifiedParser
 from fakeparser import Parser
 
 from reader import EntryUpdateStatus
+from reader._types import EntryData
 
 
 def test_after_entry_update_hooks(reader):
-    parser = Parser()
+    reader._parser = parser = Parser()
     parser.tzinfo = False
-
-    reader._parser = parser
 
     plugin_calls = []
 
@@ -49,11 +48,35 @@ def test_after_entry_update_hooks(reader):
     # TODO: What is the expected behavior if a plugin raises an exception?
 
 
-def test_after_feed_update_hooks(reader):
-    parser = Parser()
-    parser.tzinfo = False
+def test_after_entry_update_hooks_add_entry(reader):
+    reader.add_feed('1')
 
-    reader._parser = parser
+    plugin_calls = []
+
+    def first_plugin(r, e, s):
+        assert r is reader
+        plugin_calls.append((first_plugin, e, s))
+
+    def second_plugin(r, e, s):
+        assert r is reader
+        plugin_calls.append((second_plugin, e, s))
+
+    reader.after_entry_update_hooks.append(first_plugin)
+    reader.after_entry_update_hooks.append(second_plugin)
+
+    entry = EntryData('1', '1, 1', title='title')
+
+    reader.add_entry(entry)
+
+    assert plugin_calls == [
+        (first_plugin, entry, EntryUpdateStatus.NEW),
+        (second_plugin, entry, EntryUpdateStatus.NEW),
+    ]
+
+
+def test_after_feed_update_hooks(reader):
+    reader._parser = parser = Parser()
+    parser.tzinfo = False
 
     plugin_calls = []
 
