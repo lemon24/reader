@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from reader._types import entry_data_from_obj
 from reader._types import EntryData
 from reader._types import FeedData
 from reader._types import fix_datetime_tzinfo
@@ -54,14 +55,23 @@ def test_tag_filter_argument_error(input, error):
 def test_entry_data_from_obj(data_dir, data_file):
     expected = {'url_base': '', 'rel_base': ''}
     exec(data_dir.join(f'{data_file}.rss.py').read(), expected)
+
     for i, entry in enumerate(expected['entries']):
-        assert entry == EntryData.from_obj(
-            fix_datetime_tzinfo(entry, 'updated', 'published')
-        ), i
+        entry_utc = fix_datetime_tzinfo(entry, 'updated', 'published')
+
+        assert entry == entry_data_from_obj(entry_utc), i
+
+        entry_dict = entry_utc._asdict()
+        if 'content' in entry_dict:
+            entry_dict['content'] = [c._asdict() for c in entry_dict['content']]
+        if 'enclosures' in entry_dict:
+            entry_dict['enclosures'] = [e._asdict() for e in entry_dict['enclosures']]
+
+        assert entry == entry_data_from_obj(entry_dict), i
 
 
 @pytest.mark.parametrize(
-    'exc, obj',
+    'exc, entry',
     [
         (AttributeError, SimpleNamespace()),
         (AttributeError, SimpleNamespace(feed_url='feed')),
@@ -117,6 +127,15 @@ def test_entry_data_from_obj(data_dir, data_file):
         ),
     ],
 )
-def test_entry_data_from_obj_errors(exc, obj):
+def test_entry_data_from_obj_errors(exc, entry):
+
     with pytest.raises(exc):
-        EntryData.from_obj(obj)
+        entry_data_from_obj(entry)
+
+    with pytest.raises(exc):
+        entry_dict = dict(vars(entry))
+        if 'content' in entry_dict:
+            entry_dict['content'] = [dict(vars(c)) for c in entry_dict['content']]
+        if 'enclosures' in entry_dict:
+            entry_dict['enclosures'] = [dict(vars(e)) for e in entry_dict['enclosures']]
+        entry_data_from_obj(entry_dict)

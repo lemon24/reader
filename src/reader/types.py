@@ -203,7 +203,7 @@ class Entry(_namedtuple_compat):
 
     """
 
-    # WARNING: When changing attributes, keep Entry and EntryData in sync.
+    # WARNING: When changing attributes, keep Entry, EntryData and entry_data_from_obj in sync.
 
     @property
     def feed_url(self) -> str:
@@ -335,6 +335,8 @@ class Content(_namedtuple_compat):
 
     """Data type representing a piece of content."""
 
+    # WARNING: When changing attributes, keep content_from_obj in sync.
+
     #: The content value.
     value: str
 
@@ -349,6 +351,8 @@ class Content(_namedtuple_compat):
 class Enclosure(_namedtuple_compat):
 
     """Data type representing an external file."""
+
+    # WARNING: When changing attributes, keep content_from_obj in sync.
 
     #: The file URL.
     href: str

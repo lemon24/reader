@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
 from types import MappingProxyType
+from types import SimpleNamespace
 from typing import Any
 from typing import Iterable
 from typing import Mapping
@@ -33,6 +34,9 @@ from .types import TagFilterInput
 
 # structure similar to
 # https://github.com/lemon24/reader/issues/159#issuecomment-612512033
+
+
+_T = TypeVar('_T')
 
 
 @dataclass(frozen=True)
@@ -70,9 +74,6 @@ class FeedData(_namedtuple_compat):
         return get_hash(self)
 
 
-_ED = TypeVar('_ED', bound='EntryData')
-
-
 @dataclass(frozen=True)
 class EntryData(_namedtuple_compat):
 
@@ -97,7 +98,7 @@ class EntryData(_namedtuple_compat):
     #: The feed URL.
     feed_url: str
 
-    # WARNING: When changing attributes, keep Entry and EntryData in sync.
+    # WARNING: When changing attributes, keep Entry, EntryData, and entry_data_from_obj in sync.
 
     id: str
     updated: Optional[datetime] = None
@@ -129,29 +130,48 @@ class EntryData(_namedtuple_compat):
     def hash(self) -> bytes:
         return get_hash(self)
 
-    @classmethod
-    def from_obj(cls: Type[_ED], obj: object) -> _ED:
-        """
-        Naive datetimes are normalized by passing them to
-        :meth:`~datetime.datetime.astimezone`.
-        """
-        return cls(
-            feed_url=_getattr(obj, 'feed_url', str),
-            id=_getattr(obj, 'id', str),
-            updated=_getattr_optional_datetime(obj, 'updated'),
-            title=_getattr_optional(obj, 'title', str),
-            link=_getattr_optional(obj, 'link', str),
-            author=_getattr_optional(obj, 'author', str),
-            published=_getattr_optional_datetime(obj, 'published'),
-            summary=_getattr_optional(obj, 'summary', str),
-            content=tuple(_content_from_obj(o) for o in getattr(obj, 'content', ())),
-            enclosures=tuple(
-                _enclosure_from_obj(o) for o in getattr(obj, 'enclosures', ())
-            ),
-        )
+
+def entry_data_from_obj(obj: object) -> EntryData:
+    """Union[EntryDataLikeProtocol, EntryDataTypedDict] -> EntryData
+
+    Naive datetimes are normalized by passing them to
+    :meth:`~datetime.datetime.astimezone`.
+
+    """
+    if isinstance(obj, Mapping):
+        obj = SimpleNamespace(**obj)
+    return EntryData(
+        feed_url=_getattr(obj, 'feed_url', str),
+        id=_getattr(obj, 'id', str),
+        updated=_getattr_optional_datetime(obj, 'updated'),
+        title=_getattr_optional(obj, 'title', str),
+        link=_getattr_optional(obj, 'link', str),
+        author=_getattr_optional(obj, 'author', str),
+        published=_getattr_optional_datetime(obj, 'published'),
+        summary=_getattr_optional(obj, 'summary', str),
+        content=tuple(content_from_obj(o) for o in getattr(obj, 'content', ())),
+        enclosures=tuple(enclosure_from_obj(o) for o in getattr(obj, 'enclosures', ())),
+    )
 
 
-_T = TypeVar('_T')
+def content_from_obj(obj: object) -> Content:
+    if isinstance(obj, Mapping):
+        obj = SimpleNamespace(**obj)
+    return Content(
+        value=_getattr(obj, 'value', str),
+        type=_getattr_optional(obj, 'type', str),
+        language=_getattr_optional(obj, 'language', str),
+    )
+
+
+def enclosure_from_obj(obj: object) -> Enclosure:
+    if isinstance(obj, Mapping):
+        obj = SimpleNamespace(**obj)
+    return Enclosure(
+        href=_getattr(obj, 'href', str),
+        type=_getattr_optional(obj, 'type', str),
+        length=_getattr_optional(obj, 'length', int),
+    )
 
 
 def _getattr(obj: object, name: str, type: Type[_T]) -> _T:
@@ -180,22 +200,6 @@ def _getattr_optional_datetime(obj: object, name: str) -> Optional[datetime]:
     if value is None:
         return value
     return value.astimezone(timezone.utc).replace(tzinfo=None)
-
-
-def _content_from_obj(obj: object) -> Content:
-    return Content(
-        value=_getattr(obj, 'value', str),
-        type=_getattr_optional(obj, 'type', str),
-        language=_getattr_optional(obj, 'language', str),
-    )
-
-
-def _enclosure_from_obj(obj: object) -> Enclosure:
-    return Enclosure(
-        href=_getattr(obj, 'href', str),
-        type=_getattr_optional(obj, 'type', str),
-        length=_getattr_optional(obj, 'length', int),
-    )
 
 
 class ParsedFeed(NamedTuple):
