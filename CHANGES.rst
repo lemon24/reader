@@ -16,10 +16,10 @@ Unreleased
   if not, raise :exc:`InvalidFeedURLError` (a :exc:`ValueError` subclass).
   (:issue:`155`)
 
-  .. note::
+  .. warning::
 
-    While this change is backwards-compatible,
-    the behavior change may be surprising.
+    **This is a minor compatibility break**; previously,
+    :exc:`ValueError` would never be raised for :class:`str` arguments.
     To get the previous behavior (no validation),
     use ``allow_invalid_url=True``.
 
