@@ -69,7 +69,7 @@ function coverage-report {
         )" \
         --skip-covered \
         --show-missing \
-        --fail-under 100
+        --fail-under $( on-pypy && echo 99 || echo 100 )
 }
 
 
@@ -79,9 +79,7 @@ function test-all {
 
 
 function typing {
-    local implementation=$( python -c 'import sys; print(sys.implementation.name)' )
-
-    if [[ $implementation == pypy ]]; then
+    if on-pypy; then
         # mypy does not work on pypy as of January 2020
         # https://github.com/python/typed_ast/issues/97#issuecomment-484335190
         echo "mypy does not work on pypy, doing nothing"
@@ -156,6 +154,11 @@ function ci-install {
 
 function ci-run {
     coverage-run && coverage-report && typing
+}
+
+
+function on-pypy {
+    [[ $( python -c 'import sys; print(sys.implementation.name)' ) == pypy ]]
 }
 
 
