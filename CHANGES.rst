@@ -37,6 +37,8 @@ Unreleased
   for RSS feeds where :attr:`~Entry.updated` is missing.
   (:issue:`183`)
 
+* Support PyPy 3.8.
+
 * Fix bug causing
   :attr:`~Entry.read_modified` and :attr:`~Entry.important_modified`
   to be reset to :const:`None` when an entry is updated.
