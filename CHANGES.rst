@@ -23,6 +23,20 @@ Unreleased
     To get the previous behavior (no validation),
     use ``allow_invalid_url=True``.
 
+* Allow users to add entries to an existing feed
+  through the new :meth:`~Reader.add_entry` method.
+  Allow deleting user-added entries through :meth:`~Reader.delete_entry`.
+  (:issue:`239`)
+* Add the :attr:`~Entry.added` and :attr:`~Entry.added_by` Entry attributes.
+  (:issue:`239`)
+
+* :attr:`Entry.updated` is now :const:`None` if missing in the feed
+  (:attr:`~Entry.updated` became optional in `version 2.0`_).
+  Use :attr:`~Entry.updated_not_none` for the pre-2.5 behavior.
+  Do not swap :attr:`Entry.published` with :attr:`Entry.updated`
+  for RSS feeds where :attr:`~Entry.updated` is missing.
+  (:issue:`183`)
+
 * Fix bug causing
   :attr:`~Entry.read_modified` and :attr:`~Entry.important_modified`
   to be reset to :const:`None` when an entry is updated.
