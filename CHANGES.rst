@@ -6,6 +6,12 @@ Changelog
   :noindex:
 
 
+Version 2.6
+-----------
+
+Unreleased
+
+
 Version 2.5
 -----------
 
