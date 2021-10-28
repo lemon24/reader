@@ -9,7 +9,7 @@ Changelog
 Version 2.5
 -----------
 
-Unreleased
+Released 2021-10-28
 
 * In :meth:`~Reader.add_feed` and :meth:`~Reader.change_feed_url`,
   validate if the current Reader configuration can handle the new feed URL;
