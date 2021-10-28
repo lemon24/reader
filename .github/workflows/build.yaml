@@ -25,13 +25,7 @@ jobs:
 
         exclude:
           - os: windows-latest
-            python-version: "3.7"
-          - os: windows-latest
-            python-version: "pypy-3.7"
-          - os: windows-latest
-            python-version: "3.8"
-          - os: windows-latest
-            python-version: "pypy-3.8"
+            python-version: ["3.7", "pypy-3.7", "3.8", "pypy-3.8"]
 
     steps:
 
