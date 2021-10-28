@@ -68,6 +68,7 @@ function coverage-report {
             " | xargs echo | sed 's/ /,/g'
         )" \
         --skip-covered \
+        --show-missing \
         --fail-under 100
 }
 
