@@ -1382,11 +1382,53 @@ class Reader:
         self._storage.mark_as_important(feed_url, entry_id, False, modified_naive)
 
     def add_entry(self, entry: Any) -> None:
-        """
-        FIXME
-        - datetimes
-        - type of entry
-        - entryexistserror
+        """Add a new entry to an existing feed.
+
+        ``entry`` can be any :class:`Entry`-like object,
+        or a mapping of the same shape::
+
+            >>> from types import SimpleNamespace
+            >>> reader.add_entry(SimpleNamespace(
+            ...     feed_url='http://example.com',
+            ...     id='one',
+            ...     title='title',
+            ...     enclosures=[SimpleNamespace(href='enclosure')],
+            ... ))
+            >>> reader.add_entry({
+            ...     'feed_url': 'http://example.com',
+            ...     'id': 'two',
+            ...     'updated': datetime.now(timezone.utc),
+            ...     'content': [{'value': 'content'}],
+            ... })
+
+        The following attributes are used
+        (they must have the same types as on :class:`Entry`):
+
+        * :attr:`~Entry.feed_url` (required)
+        * :attr:`~Entry.id` (required)
+        * :attr:`~Entry.updated`
+        * :attr:`~Entry.title`
+        * :attr:`~Entry.link`
+        * :attr:`~Entry.author`
+        * :attr:`~Entry.published`
+        * :attr:`~Entry.summary`
+        * :attr:`~Entry.content`
+        * :attr:`~Entry.enclosures`
+
+        Naive datetimes are normalized by passing them to
+        :meth:`~datetime.datetime.astimezone`.
+
+        The added entry will be :attr:`~Entry.added_by` ``'user'``.
+
+        Args:
+            entry (Entry or dict): An entry-like object or equivalent mapping.
+
+        Raises:
+            EntryExistsError: If an entry with the same id already exists.
+            StorageError
+
+        .. versionadded:: 2.5
+
         """
         now = self._now()
 
@@ -1403,11 +1445,21 @@ class Reader:
             entry_hook(self, intent.entry, EntryUpdateStatus.NEW)
 
     def delete_entry(self, entry: EntryInput) -> None:
-        """
-        FIXME:
-        - entryerror if has the wrong type
-        - types of entry
-        - EntryNotFoundError
+        """Delete an entry.
+
+        Currently, only entries added by :meth:`~Reader.add_entry`
+        (:attr:`~Entry.added_by` ``'user'``) can be deleted.
+
+        Args:
+            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+
+        Raises:
+            EntryNotFoundError
+            EntryError: If the entry was not added by the user.
+            StorageError
+
+        .. versionadded:: 2.5
+
         """
         self._storage.delete_entries([_entry_argument(entry)], added_by='user')
 
