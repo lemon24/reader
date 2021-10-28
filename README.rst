@@ -46,6 +46,7 @@ and without enforcing a dependency on a particular framework.
 * add tags and metadata to feeds
 * filter feeds and articles
 * full-text search articles
+* get statistics on feed and user activity
 * write plugins to extend its functionality
 * skip all the low level stuff and focus on what makes your feed reader different
 
