@@ -1085,3 +1085,22 @@ def test_add_entry_repeatedly(reader):
     for _ in range(3):
         reader.add_entry(dict(feed_url='1', id='1'))
         reader.delete_entry(('1', '1'))
+
+
+def test_add_entry_basic(reader):
+    reader.enable_search()
+    reader.add_feed('1')
+    reader.add_entry(
+        dict(feed_url='1', id='1', title='my entry', summary='I am a summary')
+    )
+    reader.update_search()
+
+    (result,) = reader.search_entries('entry')
+    assert result.object_id == ('1', '1')
+    assert result.metadata['.title'].apply('*', '*') == 'my *entry*'
+    assert result.content['.summary'].apply('*', '*') == 'I am a summary'
+
+    (result,) = reader.search_entries('summary')
+    assert result.object_id == ('1', '1')
+    assert result.metadata['.title'].apply('*', '*') == 'my entry'
+    assert result.content['.summary'].apply('*', '*') == 'I am a *summary*'
