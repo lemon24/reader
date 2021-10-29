@@ -930,9 +930,6 @@ class Reader:
         #
         # Since we only need _parse_feed_for_update to run in parallel,
         # everything after that is in a single for loop for readability.
-        #
-        # It may make sense to also have _get_entries_for_update run in
-        # parallel with a different (slower) storage, but for now we're good.
 
         feeds_for_update = self._storage.get_feeds_for_update(url, new, enabled_only)
         feeds_for_update = builtins.map(

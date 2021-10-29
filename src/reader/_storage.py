@@ -4,8 +4,6 @@ import sqlite3
 from datetime import datetime
 from datetime import timedelta
 from functools import partial
-from itertools import chain
-from itertools import repeat
 from typing import Any
 from typing import Dict
 from typing import Iterable
@@ -624,12 +622,26 @@ class Storage:
 
         yield from join_paginated_iter(inner, self.chunk_size)
 
-    def _get_entries_for_update_n_queries(
-        self, entries: Sequence[Tuple[str, str]]
+    def _get_entries_for_update(
+        self, entries: Iterable[Tuple[str, str]]
     ) -> Iterable[Optional[EntryForUpdate]]:
-        # We use an explicit transaction for speed
-        # (otherwise we get an implicit one for each query).
+        # We could fetch everything in a single query,
+        # but there are limits to the number of variables used in a query,
+        # and we'd have to fall back to this anyway.
+        # This is only ~10% slower than the single query version.
+        # Single query version last in e39b0134cb3a2fe2bb346d42355a764181926a82.
+
+        # This can't be a generator;
+        # we must get the result inside the transaction, otherwise we get:
+        #   Cursor needed to be reset because of commit/rollback
+        #   and can no longer be fetched from.
+        rv = []
+
         with self.db:
+            # We use an explicit transaction for speed,
+            # otherwise we get an implicit one for each query).
+            self.db.execute('BEGIN;')
+
             for feed_url, id in entries:  # noqa: B007
                 context = dict(feed_url=feed_url, id=id)
                 row = self.db.execute(
@@ -645,41 +657,9 @@ class Storage:
                     """,
                     context,
                 ).fetchone()
-                yield EntryForUpdate._make(row) if row else None
+                rv.append(EntryForUpdate._make(row) if row else None)
 
-    def _get_entries_for_update_one_query(
-        self, entries: Sequence[Tuple[str, str]]
-    ) -> Iterable[Optional[EntryForUpdate]]:
-        if not entries:  # pragma: no cover
-            return []
-
-        values_snippet = ', '.join(repeat('(?, ?)', len(entries)))
-        parameters = list(chain.from_iterable(entries))
-
-        rows = self.db.execute(
-            f"""
-            WITH
-                input(feed, id) AS (
-                    VALUES {values_snippet}
-                )
-            SELECT
-                entries.id IS NOT NULL,
-                entries.updated,
-                entries.published,
-                entries.data_hash,
-                entries.data_hash_changed
-            FROM input
-            LEFT JOIN entries
-                ON (input.id, input.feed) == (entries.id, entries.feed);
-            """,
-            parameters,
-        )
-
-        # This can't be a generator because we need to get OperationalError
-        # in this function (so get_entries_for_update() below can catch it).
-        return (
-            EntryForUpdate._make(rest) if exists else None for exists, *rest in rows
-        )
+        return rv
 
     @wrap_exceptions_iter(StorageError)
     def get_entries_for_update(
@@ -688,20 +668,9 @@ class Storage:
         # It's acceptable for this method to not be atomic. TODO: Why?
 
         iterables = chunks(self.chunk_size, entries) if self.chunk_size else (entries,)
+
         for iterable in iterables:
-
-            # There are two implementations for this method because
-            # the number of parameters in a query varies
-            # (e.g. 999 when compiling from sources, 250k on Ubuntu 18.04);
-            # https://github.com/lemon24/reader/issues/109
-            iterable = list(iterable)
-            try:
-                rv = self._get_entries_for_update_one_query(iterable)
-            except sqlite3.OperationalError as e:
-                if "too many SQL variables" not in str(e):
-                    raise
-                rv = self._get_entries_for_update_n_queries(iterable)
-
+            rv = self._get_entries_for_update(iterable)
             if self.chunk_size:
                 rv = list(rv)
             yield from rv

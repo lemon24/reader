@@ -240,33 +240,13 @@ def raise_too_many_variables(reader):
     reader._storage._get_entries_for_update_one_query = wrapper
 
 
-@contextmanager
-def setup_reader_feed_new_fallback(num_entries):
-    with setup_reader_feed_new(num_entries) as reader:
-        raise_too_many_variables(reader)
-        yield reader
-
-
-@contextmanager
-def setup_reader_feed_old_fallback(num_entries):
-    with setup_reader_feed_old(num_entries) as reader:
-        raise_too_many_variables(reader)
-        yield reader
-
-
 def _time_update_feed(reader):
     feed_url = list(reader._parser.feeds.values())[0].url
     reader.update_feed(feed_url)
 
 
 time_update_feed_new = inject(reader=setup_reader_feed_new)(_time_update_feed)
-time_update_feed_new_fallback = inject(reader=setup_reader_feed_new_fallback)(
-    _time_update_feed
-)
 time_update_feed_old = inject(reader=setup_reader_feed_old)(_time_update_feed)
-time_update_feed_old_fallback = inject(reader=setup_reader_feed_old_fallback)(
-    _time_update_feed
-)
 
 
 @contextmanager
