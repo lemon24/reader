@@ -1425,11 +1425,18 @@ class Reader:
 
         Raises:
             EntryExistsError: If an entry with the same id already exists.
+            FeedNotFoundError
             StorageError
 
         .. versionadded:: 2.5
 
         """
+
+        # `entry` is of type Union[EntryDataLikeProtocol, EntryDataTypedDict],
+        # but modeling that is pretty cumbersome; we can do it later if needed;
+        # https://github.com/lemon24/reader/issues/239#issuecomment-951892271
+        # https://gist.github.com/lemon24/047f71abe76c47661634459eada7b50a#file-01-typing-py
+
         now = self._now()
 
         intent = EntryUpdateIntent(

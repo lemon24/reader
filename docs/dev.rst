@@ -284,6 +284,12 @@ As of late 2021, I closed :issue:`228` with `wontfix`,
 since I don't have a use case for it, nor enough bandwidth to implement it.
 
 
+User-added entries
+~~~~~~~~~~~~~~~~~~
+
+Discussion about API/typing, and things we didn't do: :issue:`239`.
+
+
 Feed updates
 ~~~~~~~~~~~~
 
