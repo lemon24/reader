@@ -866,28 +866,6 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    def _make_add_or_update_entries_args(
-        self, intent: EntryUpdateIntent
-    ) -> Mapping[str, Any]:
-        context = intent._asdict()
-        entry = context.pop('entry')
-        context.update(
-            entry._asdict(),
-            content=(
-                json.dumps([t._asdict() for t in entry.content])
-                if entry.content
-                else None
-            ),
-            enclosures=(
-                json.dumps([t._asdict() for t in entry.enclosures])
-                if entry.enclosures
-                else None
-            ),
-            data_hash=entry.hash,
-            data_hash_changed=context.pop('hash_changed'),
-        )
-        return context
-
     @wrap_exceptions(StorageError)
     def add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
         iterables = (
@@ -904,105 +882,93 @@ class Storage:
             self._add_or_update_entries(iterable)
 
     def _add_or_update_entries(
-        self, entry_tuples: Iterable[EntryUpdateIntent], exclusive: bool = False
+        self, intents: Iterable[EntryUpdateIntent], exclusive: bool = False
     ) -> None:
-        # We need to capture the last value for exception handling
-        # (it's not guaranteed all the entries belong to the same feed).
-        # FIXME: In this case, is it ok to just fail other feeds too
-        # if we have an exception? If no, we should force the entries to
-        # belong to a single feed!
-        last_param: Mapping[str, Any] = {}
-
-        def make_params() -> Iterable[Mapping[str, Any]]:
-            nonlocal last_param
-            for last_param in map(self._make_add_or_update_entries_args, entry_tuples):
-                yield last_param
+        query = f"""
+            INSERT {'OR ABORT' if exclusive else 'OR REPLACE'} INTO entries (
+                id,
+                feed,
+                --
+                title,
+                link,
+                updated,
+                author,
+                published,
+                summary,
+                content,
+                enclosures,
+                read,
+                read_modified,
+                important,
+                important_modified,
+                last_updated,
+                first_updated,
+                first_updated_epoch,
+                feed_order,
+                original_feed,
+                data_hash,
+                data_hash_changed,
+                added_by
+            ) VALUES (
+                :id,
+                :feed_url,
+                :title,
+                :link,
+                :updated,
+                :author,
+                :published,
+                :summary,
+                :content,
+                :enclosures,
+                coalesce((
+                    SELECT read
+                    FROM entries
+                    WHERE id = :id AND feed = :feed_url
+                ), 0),
+                (
+                    SELECT read_modified
+                    FROM entries
+                    WHERE id = :id AND feed = :feed_url
+                ),
+                coalesce((
+                    SELECT important
+                    FROM entries
+                    WHERE id = :id AND feed = :feed_url
+                ), 0),
+                (
+                    SELECT important_modified
+                    FROM entries
+                    WHERE id = :id AND feed = :feed_url
+                ),
+                :last_updated,
+                coalesce(:first_updated, (
+                    SELECT first_updated
+                    FROM entries
+                    WHERE id = :id AND feed = :feed_url
+                )),
+                coalesce(:first_updated_epoch, (
+                    SELECT first_updated_epoch
+                    FROM entries
+                    WHERE id = :id AND feed = :feed_url
+                )),
+                :feed_order,
+                NULL, -- original_feed
+                :data_hash,
+                :data_hash_changed,
+                :added_by
+            );
+        """
 
         with self.db:
-
             try:
-                self.db.executemany(
-                    f"""
-                    INSERT {'OR ABORT' if exclusive else 'OR REPLACE'} INTO entries (
-                        id,
-                        feed,
-                        --
-                        title,
-                        link,
-                        updated,
-                        author,
-                        published,
-                        summary,
-                        content,
-                        enclosures,
-                        read,
-                        read_modified,
-                        important,
-                        important_modified,
-                        last_updated,
-                        first_updated,
-                        first_updated_epoch,
-                        feed_order,
-                        original_feed,
-                        data_hash,
-                        data_hash_changed,
-                        added_by
-                    ) VALUES (
-                        :id,
-                        :feed_url,
-                        :title,
-                        :link,
-                        :updated,
-                        :author,
-                        :published,
-                        :summary,
-                        :content,
-                        :enclosures,
-                        coalesce((
-                            SELECT read
-                            FROM entries
-                            WHERE id = :id AND feed = :feed_url
-                        ), 0),
-                        (
-                            SELECT read_modified
-                            FROM entries
-                            WHERE id = :id AND feed = :feed_url
-                        ),
-                        coalesce((
-                            SELECT important
-                            FROM entries
-                            WHERE id = :id AND feed = :feed_url
-                        ), 0),
-                        (
-                            SELECT important_modified
-                            FROM entries
-                            WHERE id = :id AND feed = :feed_url
-                        ),
-                        :last_updated,
-                        coalesce(:first_updated, (
-                            SELECT first_updated
-                            FROM entries
-                            WHERE id = :id AND feed = :feed_url
-                        )),
-                        coalesce(:first_updated_epoch, (
-                            SELECT first_updated_epoch
-                            FROM entries
-                            WHERE id = :id AND feed = :feed_url
-                        )),
-                        :feed_order,
-                        NULL, -- original_feed
-                        :data_hash,
-                        :data_hash_changed,
-                        :added_by
-                    );
-                    """,
-                    make_params(),
-                )
+                # we could use executemany(), but it's not noticeably faster
+                for intent in intents:
+                    self.db.execute(query, entry_update_intent_to_dict(intent))
+
             except sqlite3.IntegrityError as e:
                 e_msg = str(e).lower()
+                feed_url, entry_id = intent.entry.object_id
 
-                feed_url = last_param['feed_url']
-                entry_id = last_param['id']
                 log.debug(
                     "add_entry %r of feed %r: got IntegrityError",
                     entry_id,
@@ -1036,10 +1002,6 @@ class Storage:
         # We'll deal with locking issues only if they start appearing
         # (hopefully, there are both fewer entries to be deleted and
         # this takes less time per entry).
-
-        # I don't know how to check *which* entry did not exit
-        # with executemany(), so we use execute().
-        # TODO: Maybe add_or_update_entries() doesn't need executemany() either.
 
         delete_query = "DELETE FROM entries WHERE feed = :feed AND id = :id"
         added_by_query = "SELECT added_by FROM entries WHERE feed = :feed AND id = :id"
@@ -1725,3 +1687,22 @@ def make_entry_counts_query(
         query.SELECT(f"(SELECT count(*) / :{days_param} FROM kfu_{period_i})")
 
     return query, context
+
+
+def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> Mapping[str, Any]:
+    context = intent._asdict()
+    entry = context.pop('entry')
+    context.update(
+        entry._asdict(),
+        content=(
+            json.dumps([t._asdict() for t in entry.content]) if entry.content else None
+        ),
+        enclosures=(
+            json.dumps([t._asdict() for t in entry.enclosures])
+            if entry.enclosures
+            else None
+        ),
+        data_hash=entry.hash,
+        data_hash_changed=context.pop('hash_changed'),
+    )
+    return context
