@@ -799,7 +799,7 @@ def test_feed_root_nonenmpty_bad_paths(data_dir, url, reason):
 
 
 BAD_PATHS_WINDOWS_BY_REASON = [
-    ('device file', ['NUL', 'CON']),
+    ('path must not be reserved', ['NUL', 'CON']),
     (
         'path must be relative',
         [

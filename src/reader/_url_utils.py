@@ -128,29 +128,3 @@ def is_rel_path(path: str) -> bool:
     is_abs = os.path.isabs(path)
     has_drive = os.name == 'nt' and os.path.splitdrive(path)[0]
     return not any([is_abs, has_drive])
-
-
-# TODO: pathlib.PurePath.is_reserved does the same thing, get rid of this?
-
-
-def is_windows_device_file(path: str) -> bool:
-    if os.name != 'nt':
-        return False
-    filename = os.path.basename(os.path.normpath(path)).upper()
-    return filename in _windows_device_files
-
-
-# from werkzeug.utils
-_windows_device_files = (
-    "CON",
-    "AUX",
-    "COM1",
-    "COM2",
-    "COM3",
-    "COM4",
-    "LPT1",
-    "LPT2",
-    "LPT3",
-    "PRN",
-    "NUL",
-)

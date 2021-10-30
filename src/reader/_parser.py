@@ -2,6 +2,7 @@ import calendar
 import json
 import logging
 import mimetypes
+import pathlib
 import time
 from collections import OrderedDict
 from contextlib import contextmanager
@@ -42,7 +43,6 @@ from ._types import EntryData
 from ._types import FeedData
 from ._types import ParsedFeed
 from ._url_utils import extract_path
-from ._url_utils import is_windows_device_file
 from ._url_utils import normalize_url
 from ._url_utils import resolve_root
 from .exceptions import InvalidFeedURLError
@@ -320,8 +320,8 @@ class FileRetriever:
         path = extract_path(url)
         if self.feed_root:
             path = resolve_root(self.feed_root, path)
-            if is_windows_device_file(path):
-                raise ValueError("path must not be a device file")
+            if pathlib.PurePath(path).is_reserved():
+                raise ValueError("path must not be reserved")
         return path
 
 
