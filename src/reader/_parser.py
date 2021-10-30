@@ -11,6 +11,7 @@ from datetime import datetime
 from datetime import timezone
 from typing import Any
 from typing import BinaryIO
+from typing import Callable
 from typing import cast
 from typing import ContextManager
 from typing import Dict
@@ -325,12 +326,6 @@ class FileRetriever:
         return path
 
 
-class _MakeSession(Protocol):
-    # https://github.com/python/mypy/issues/708#issuecomment-647124281 workaround
-    def __call__(self) -> SessionWrapper:  # pragma: no cover
-        ...
-
-
 @dataclass
 class HTTPRetriever:
 
@@ -358,7 +353,7 @@ class HTTPRetriever:
 
     """
 
-    make_session: _MakeSession
+    make_session: Callable[[], SessionWrapper]
 
     @contextmanager
     def __call__(
