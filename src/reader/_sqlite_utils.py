@@ -21,8 +21,6 @@ from typing import Sequence
 from typing import Tuple
 from typing import TypeVar
 
-from typing_extensions import Protocol
-
 
 SQLiteType = TypeVar('SQLiteType', None, int, float, str, bytes, datetime)
 
@@ -213,16 +211,12 @@ class IdError(DBError):
 db_errors = [DBError, SchemaVersionError, IntegrityError, RequirementError]
 
 
-class _DBFunction(Protocol):  # pragma: no cover
-    def __call__(self, db: sqlite3.Connection) -> None:
-        ...
+_DBFunction = Callable[[sqlite3.Connection], None]
 
 
 @dataclass
 class HeavyMigration:
 
-    # mypy will complain if we use Callable[[sqlite3.Connection], None].
-    # TODO: get rid of _DBFunction when https://github.com/python/mypy/issues/5485 is resolved?
     create: _DBFunction
     version: int  # must be positive
     migrations: Dict[int, _DBFunction]
