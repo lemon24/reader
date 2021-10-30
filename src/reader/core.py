@@ -789,6 +789,7 @@ class Reader:
         *,
         new: Optional[bool] = None,
         workers: int = 1,
+        url=None,
     ) -> Iterable[UpdateResult]:
         """Update all the feeds that have updates enabled.
 
@@ -834,7 +835,7 @@ class Reader:
         make_map = nullcontext(builtins.map) if workers == 1 else make_pool_map(workers)
 
         with make_map as map:
-            results = self._update_feeds(new=new, map=map)
+            results = self._update_feeds(new=new, map=map, url=url)
 
             for url, value in results:
                 if isinstance(value, FeedNotFoundError):
@@ -936,9 +937,30 @@ class Reader:
             self._updater.process_old_feed, feeds_for_update
         )
 
-        pairs = map(self._parse_feed_for_update, feeds_for_update)
+        def _retrieve(feed):
+            try:
+                return feed, self._parser.retrieve(
+                    feed.url, feed.http_etag, feed.http_last_modified
+                )
+            except ParseError as e:
+                print(e)
+                return feed, e
 
-        for feed_for_update, parse_result in pairs:
+        retrieve_results = map(_retrieve, feeds_for_update)
+
+        # for feed_for_update, parse_result in pairs:
+
+        for feed_for_update, retrieve_cm in retrieve_results:
+            if hasattr(retrieve_cm, '__enter__'):
+
+                try:
+                    with retrieve_cm as result:
+                        parse_result = self._parser.parse(feed_for_update.url, result)
+                except ParseError as e:
+                    parse_result = e
+            else:
+                parse_result = retrieve_cm
+
             rv: Union[UpdatedFeed, None, Exception]
 
             try:

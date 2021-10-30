@@ -128,6 +128,27 @@ def default_parser(
     return parser
 
 
+# previously removed in https://github.com/lemon24/reader/commit/dd7a1a3422acd33230efd73a829bf34e02744ce4
+
+
+class enter_context:
+
+    """Wrap a context manager and run its __enter__ immediately.
+    Less clunky version of
+    https://docs.python.org/3/library/contextlib.html#catching-exceptions-from-enter-methods
+    """
+
+    def __init__(self, context_manager):
+        self.context_manager = context_manager
+        self.enter_result = context_manager.__enter__()
+
+    def __enter__(self):
+        return self.enter_result
+
+    def __exit__(self, *args: Any) -> Any:
+        return self.context_manager.__exit__(*args)
+
+
 class Parser:
 
     """Meta-parser: retrieve and parse a feed by delegation."""
@@ -149,6 +170,11 @@ class Parser:
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
     ) -> Optional[ParsedFeed]:
+        with self.retrieve(url, http_etag, http_last_modified) as result:
+            return self.parse(url, result)
+
+    def retrieve(self, url, http_etag, http_last_modified):
+
         parser = self.get_parser_by_url(url)
 
         http_accept: Optional[str]
@@ -165,35 +191,36 @@ class Parser:
 
         retriever = self.get_retriever(url)
 
-        with retriever(url, http_etag, http_last_modified, http_accept) as result:
-            if not result:
-                return None
+        return enter_context(retriever(url, http_etag, http_last_modified, http_accept))
 
+    def parse(self, url, result):
+        if not result:
+            return None
+
+        parser = self.get_parser_by_url(url)
+        if not parser:
+            mime_type = result.mime_type
+            if not mime_type:
+                mime_type, _ = mimetypes.guess_type(url)
+
+            # https://tools.ietf.org/html/rfc7231#section-3.1.1.5
+            #
+            # > If a Content-Type header field is not present, the recipient
+            # > MAY either assume a media type of "application/octet-stream"
+            # > ([RFC2046], Section 4.5.1) or examine the data to determine its type.
+            #
+            if not mime_type:
+                mime_type = 'application/octet-stream'
+
+            parser = self.get_parser_by_mime_type(mime_type)
             if not parser:
-                mime_type = result.mime_type
-                if not mime_type:
-                    mime_type, _ = mimetypes.guess_type(url)
+                raise ParseError(url, message=f"no parser for MIME type {mime_type!r}")
 
-                # https://tools.ietf.org/html/rfc7231#section-3.1.1.5
-                #
-                # > If a Content-Type header field is not present, the recipient
-                # > MAY either assume a media type of "application/octet-stream"
-                # > ([RFC2046], Section 4.5.1) or examine the data to determine its type.
-                #
-                if not mime_type:
-                    mime_type = 'application/octet-stream'
-
-                parser = self.get_parser_by_mime_type(mime_type)
-                if not parser:
-                    raise ParseError(
-                        url, message=f"no parser for MIME type {mime_type!r}"
-                    )
-
-            feed, entries = parser(
-                url,
-                result.file,
-                result.headers,
-            )
+        feed, entries = parser(
+            url,
+            result.file,
+            result.headers,
+        )
 
         return ParsedFeed(feed, entries, result.http_etag, result.http_last_modified)
 
