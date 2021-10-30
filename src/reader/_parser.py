@@ -13,9 +13,9 @@ from typing import Any
 from typing import BinaryIO
 from typing import Callable
 from typing import cast
+from typing import Collection
 from typing import ContextManager
 from typing import Dict
-from typing import Iterable
 from typing import Iterator
 from typing import List
 from typing import Mapping
@@ -85,8 +85,7 @@ class RetrieverType(Protocol):
         """
 
 
-# TODO: use Collection instead of Iterable
-FeedAndEntries = Tuple[FeedData, Iterable[EntryData]]
+FeedAndEntries = Tuple[FeedData, Collection[EntryData]]
 
 
 class ParserType(Protocol):

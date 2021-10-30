@@ -259,7 +259,7 @@ class Search:
             );
             """
         )
-        # FIXME: we still need to tune the rank weights, these are just guesses
+        # TODO: we still need to tune the rank weights, these are just guesses
         self.db.execute(
             """
             INSERT INTO entries_search(entries_search, rank)
