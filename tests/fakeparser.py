@@ -1,5 +1,6 @@
 import threading
 from collections import OrderedDict
+from contextlib import nullcontext
 from datetime import timezone
 
 from reader import ParseError
@@ -32,6 +33,9 @@ def _make_entry(feed_number, number, updated=None, **kwargs):
     )
 
 
+RETRIEVE_RESULT_IS_OPAQUE = object()
+
+
 class Parser:
     tzinfo = timezone.utc
 
@@ -57,6 +61,14 @@ class Parser:
         return entry
 
     def __call__(self, url, http_etag, http_last_modified):
+        raise NotImplementedError
+
+    def retrieve(self, url, http_etag, http_last_modified):
+        return nullcontext(RETRIEVE_RESULT_IS_OPAQUE)
+
+    def parse(self, url, result):
+        assert result is RETRIEVE_RESULT_IS_OPAQUE, result
+
         for feed_number, feed in self.feeds.items():
             if feed.url == url:
                 break
@@ -87,10 +99,13 @@ class BlockingParser(Parser):
         self.in_parser = threading.Event()
         self.can_return_from_parser = threading.Event()
 
-    def __call__(self, *args, **kwargs):
+    def wait(self):
         self.in_parser.set()
         self.can_return_from_parser.wait()
-        return super().__call__(*args, **kwargs)
+
+    def retrieve(self, *args):
+        self.wait()
+        return super().retrieve(*args)
 
 
 class FailingParser(Parser):
@@ -99,19 +114,22 @@ class FailingParser(Parser):
         self.condition = condition
         self.exception = Exception('failing')
 
-    def __call__(self, url, http_etag, http_last_modified):
+    def raise_exc(self, url):
         if self.condition(url):
             try:
                 # We raise so the exception has a traceback set.
                 raise self.exception
             except Exception as e:
                 raise ParseError(url) from e
-        return super().__call__(url, http_etag, http_last_modified)
+
+    def retrieve(self, url, *args):
+        self.raise_exc(url)
+        return super().retrieve(url, *args)
 
 
 class NotModifiedParser(Parser):
-    def __call__(self, *args, **kwargs):
-        return None
+    def retrieve(self, *args):
+        return nullcontext(None)
 
 
 class ParserThatRemembers(Parser):
@@ -119,6 +137,8 @@ class ParserThatRemembers(Parser):
         super().__init__(*args, **kwargs)
         self.calls = []
 
-    def __call__(self, url, http_etag, http_last_modified):
-        self.calls.append((url, http_etag, http_last_modified))
-        return super().__call__(url, http_etag, http_last_modified)
+    def retrieve(self, *args):
+        self.calls.append(args)
+        return super().retrieve(*args)
+
+    # FIXME: remember parse() as well?

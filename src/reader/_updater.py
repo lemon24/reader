@@ -45,7 +45,7 @@ def make_update_intents(
     old_feed: FeedForUpdate,
     now: datetime,
     global_now: datetime,
-    parsed_feed: Union[ParsedFeed, ParseError],
+    parsed_feed: Union[ParsedFeed, None, ParseError],
     entry_pairs: Iterable[Tuple[EntryData, Optional[EntryForUpdate]]],
 ) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
     updater = _Updater(

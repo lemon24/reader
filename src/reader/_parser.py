@@ -149,6 +149,19 @@ class Parser:
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
     ) -> Optional[ParsedFeed]:
+        # FIXME: remove after split?
+        with self.retrieve(url, http_etag, http_last_modified) as result:
+            if not result:
+                return None
+            return self.parse(url, result)
+
+    def retrieve(
+        self,
+        url: str,
+        http_etag: Optional[str] = None,
+        http_last_modified: Optional[str] = None,
+    ) -> ContextManager[Optional[RetrieveResult]]:
+
         parser = self.get_parser_by_url(url)
 
         http_accept: Optional[str]
@@ -165,35 +178,33 @@ class Parser:
 
         retriever = self.get_retriever(url)
 
-        with retriever(url, http_etag, http_last_modified, http_accept) as result:
-            if not result:
-                return None
+        return retriever(url, http_etag, http_last_modified, http_accept)
 
+    def parse(self, url: str, result: RetrieveResult) -> ParsedFeed:
+        parser = self.get_parser_by_url(url)
+        if not parser:
+            mime_type = result.mime_type
+            if not mime_type:
+                mime_type, _ = mimetypes.guess_type(url)
+
+            # https://tools.ietf.org/html/rfc7231#section-3.1.1.5
+            #
+            # > If a Content-Type header field is not present, the recipient
+            # > MAY either assume a media type of "application/octet-stream"
+            # > ([RFC2046], Section 4.5.1) or examine the data to determine its type.
+            #
+            if not mime_type:
+                mime_type = 'application/octet-stream'
+
+            parser = self.get_parser_by_mime_type(mime_type)
             if not parser:
-                mime_type = result.mime_type
-                if not mime_type:
-                    mime_type, _ = mimetypes.guess_type(url)
+                raise ParseError(url, message=f"no parser for MIME type {mime_type!r}")
 
-                # https://tools.ietf.org/html/rfc7231#section-3.1.1.5
-                #
-                # > If a Content-Type header field is not present, the recipient
-                # > MAY either assume a media type of "application/octet-stream"
-                # > ([RFC2046], Section 4.5.1) or examine the data to determine its type.
-                #
-                if not mime_type:
-                    mime_type = 'application/octet-stream'
-
-                parser = self.get_parser_by_mime_type(mime_type)
-                if not parser:
-                    raise ParseError(
-                        url, message=f"no parser for MIME type {mime_type!r}"
-                    )
-
-            feed, entries = parser(
-                url,
-                result.file,
-                result.headers,
-            )
+        feed, entries = parser(
+            url,
+            result.file,
+            result.headers,
+        )
 
         return ParsedFeed(feed, entries, result.http_etag, result.http_last_modified)
 

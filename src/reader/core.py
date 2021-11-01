@@ -9,6 +9,7 @@ from datetime import timezone
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
+from typing import ContextManager
 from typing import Iterable
 from typing import Iterator
 from typing import List
@@ -25,6 +26,7 @@ from typing_extensions import Literal
 import reader._updater
 from ._parser import default_parser
 from ._parser import Parser
+from ._parser import RetrieveResult
 from ._parser import SESSION_TIMEOUT
 from ._requests_utils import TimeoutType
 from ._search import Search
@@ -40,6 +42,7 @@ from ._types import FeedUpdateIntent
 from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
 from ._types import ParsedFeed
+from ._utils import enter_context
 from ._utils import make_pool_map
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
@@ -923,12 +926,13 @@ class Reader:
         #
         #   self._storage.get_feeds_for_update \
         #   | self._updater.process_old_feed \
-        #   | xargs -n1 -P $workers self._parse_feed_for_update \
+        #   | xargs -n1 -P $workers retrieve \
+        #   | parse \
         #   | self._get_entries_for_update \
         #   | self._updater.make_update_intents \
         #   | self._update_feed
         #
-        # Since we only need _parse_feed_for_update to run in parallel,
+        # Since we only need retrieve() (and maybe parse()) to run in parallel,
         # everything after that is in a single for loop for readability.
 
         feeds_for_update = self._storage.get_feeds_for_update(url, new, enabled_only)
@@ -936,9 +940,59 @@ class Reader:
             self._updater.process_old_feed, feeds_for_update
         )
 
-        pairs = map(self._parse_feed_for_update, feeds_for_update)
+        ParallelRetrieveResult = Tuple[
+            FeedForUpdate, Union[ContextManager[Optional[RetrieveResult]], Exception]
+        ]
 
-        for feed_for_update, parse_result in pairs:
+        # why does this remind me of Twisted so much?
+
+        # we must pass around *all* exception types, bugs get swallowed by the threads
+
+        def retrieve(feed: FeedForUpdate) -> ParallelRetrieveResult:
+            try:
+                cm = self._parser.retrieve(
+                    feed.url, feed.http_etag, feed.http_last_modified
+                )
+
+                # __enter__() does the actual work of making requests;
+                # to benefit from parallelism, we invoke it early
+                cm = enter_context(cm)
+
+                return feed, cm
+
+            except Exception as e:
+                log.debug("retrieve() exception, traceback follows", exc_info=True)
+                return feed, e
+
+        def parse(
+            args: ParallelRetrieveResult,
+        ) -> Tuple[FeedForUpdate, Union[ParsedFeed, None, Exception]]:
+            feed, retrieve_cm = args
+            if not isinstance(retrieve_cm, ContextManager):
+                return feed, retrieve_cm
+
+            try:
+                with retrieve_cm as result:
+                    if not result:
+                        return feed, None
+                    return feed, self._parser.parse(feed.url, result)
+
+            except Exception as e:  # pragma: no cover
+                # FIXME: remove no cover
+                log.debug("parse() exception, traceback follows", exc_info=True)
+                return feed, e
+
+        # if stuff hangs weirdly during debugging, change this to builtins.map
+        retrieve_results = map(retrieve, feeds_for_update)
+
+        # we have the option to parallelize this as well
+        parse_results = builtins.map(parse, retrieve_results)
+
+        for feed_for_update, parse_result in parse_results:
+            if isinstance(parse_result, Exception):
+                if not isinstance(parse_result, ParseError):  # pragma: no cover
+                    raise parse_result
+
             rv: Union[UpdatedFeed, None, Exception]
 
             try:
@@ -978,17 +1032,6 @@ class Reader:
                 rv = e
 
             yield feed_for_update.url, rv
-
-    def _parse_feed_for_update(
-        self, feed: FeedForUpdate
-    ) -> Tuple[FeedForUpdate, Union[ParsedFeed, None, ParseError]]:
-        try:
-            return feed, self._parser(feed.url, feed.http_etag, feed.http_last_modified)
-        except ParseError as e:
-            log.debug(
-                "_parse_feed_for_update exception, traceback follows", exc_info=True
-            )
-            return feed, e
 
     def _update_feed(
         self,
