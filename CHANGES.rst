@@ -11,6 +11,12 @@ Version 2.6
 
 Unreleased
 
+* Retrieve feeds in parallel, but parse them serially;
+  previously, feeds would be parsed in parallel.
+  Decreases Linux memory usage by ~20% when using ``workers``;
+  the macOS decrease is less notable.
+  (:issue:`261`)
+
 
 Version 2.5
 -----------

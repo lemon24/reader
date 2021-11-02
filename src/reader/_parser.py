@@ -489,12 +489,16 @@ class HTTPRetriever:
 
             # Ensure we read everything *before* yielding the response,
             # i.e. __enter__() does most of the work.
-            # Gives a ~20% improvement over yielding response.raw
-            # when updating many feeds in parallel;
+            #
+            # Gives a ~20% speed improvement over yielding response.raw
+            # when updating many feeds in parallel,
+            # with a 2-8% increase in memory usage:
             # https://github.com/lemon24/reader/issues/261#issuecomment-956303210
+            #
+            # SpooledTemporaryFile() is just as fast as TemporaryFile():
+            # https://github.com/lemon24/reader/issues/261#issuecomment-957469041
 
             with wrap_exceptions(url, "while reading feed"):
-                # FIXME: or maybe SpooledTemporaryFile?
                 with tempfile.TemporaryFile() as temp:
 
                     with response:
