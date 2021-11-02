@@ -9,6 +9,7 @@ from datetime import timezone
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Iterable
 from typing import Iterator
 from typing import List
@@ -827,13 +828,15 @@ class Reader:
             All parameters are keyword-only.
 
         """
+        filter_options = FeedFilterOptions.from_args(new=new, updates_enabled=True)
+
         if workers < 1:
             raise ValueError("workers must be a positive integer")
 
         make_map = nullcontext(builtins.map) if workers == 1 else make_pool_map(workers)
 
         with make_map as map:
-            results = self._update_feeds(new=new, map=map)
+            results = self._update_feeds(filter_options, map)
 
             for url, value in results:
                 if isinstance(value, FeedNotFoundError):
@@ -873,9 +876,11 @@ class Reader:
             See :meth:`~Reader.update_feeds` for details.
 
         """
-        url = _feed_argument(feed)
+        filter_options = FeedFilterOptions.from_args(feed=feed)
+        url = cast(str, filter_options.feed_url)
+
         _, rv = zero_or_one(
-            self._update_feeds(url=url, enabled_only=False),
+            self._update_feeds(filter_options),
             lambda: FeedNotFoundError(url),
         )
         if isinstance(rv, Exception):
@@ -888,9 +893,7 @@ class Reader:
 
     def _update_feeds(
         self,
-        url: Optional[str] = None,
-        new: Optional[bool] = None,
-        enabled_only: bool = True,
+        filter_options: FeedFilterOptions,
         map: MapType = map,
     ) -> Iterator[Tuple[str, Union[UpdatedFeed, None, Exception]]]:
 
@@ -922,7 +925,7 @@ class Reader:
         # Since we only need retrieve() (and maybe parse()) to run in parallel,
         # everything after that is in a single for loop for readability.
 
-        feeds_for_update = self._storage.get_feeds_for_update(url, new, enabled_only)
+        feeds_for_update = self._storage.get_feeds_for_update(filter_options)
         feeds_for_update = builtins.map(
             self._updater.process_old_feed, feeds_for_update
         )

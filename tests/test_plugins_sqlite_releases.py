@@ -3,6 +3,7 @@ from utils import utc_datetime as datetime
 
 from reader._plugins.sqlite_releases import FULL_URL
 from reader._plugins.sqlite_releases import init
+from reader._types import FeedFilterOptions
 
 
 @pytest.mark.filterwarnings("ignore:No parser was explicitly specified")
@@ -31,7 +32,9 @@ def test_sqlite_releases(reader, requests_mock, data_dir):
     assert feed.title == 'Release History Of SQLite'
     assert feed.link == 'https://www.sqlite.org/changes.html'
 
-    (feed_for_update,) = reader._storage.get_feeds_for_update(url=FULL_URL)
+    (feed_for_update,) = reader._storage.get_feeds_for_update(
+        FeedFilterOptions(FULL_URL)
+    )
     assert feed_for_update.http_etag == 'm6008d7aes58501'
     assert feed_for_update.http_last_modified == 'Thu, 21 Jan 2021 01:23:58 +0000'
 

@@ -42,6 +42,7 @@ from reader import UpdatedFeed
 from reader import UpdateResult
 from reader._storage import Storage
 from reader._types import DEFAULT_RESERVED_NAME_SCHEME
+from reader._types import FeedFilterOptions
 from reader._types import FeedUpdateIntent
 from reader._types import fix_datetime_tzinfo
 
@@ -593,14 +594,19 @@ def test_update_last_updated_entries_updated_feed_not_updated(
     reader._now = lambda: naive_datetime(2010, 1, 1)
     call_update_method(reader, feed.url)
 
-    (feed_for_update,) = reader._storage.get_feeds_for_update(url=feed.url)
+    def get_feed_for_update(feed):
+        options = FeedFilterOptions.from_args(feed)
+        (rv,) = reader._storage.get_feeds_for_update(options)
+        return rv
+
+    feed_for_update = get_feed_for_update(feed)
     assert feed_for_update.last_updated == naive_datetime(2010, 1, 1)
 
     parser.entry(1, 1, datetime(2010, 1, 1))
     reader._now = lambda: naive_datetime(2010, 1, 2)
     call_update_method(reader, feed.url)
 
-    (feed_for_update,) = reader._storage.get_feeds_for_update(url=feed.url)
+    feed_for_update = get_feed_for_update(feed)
     assert feed_for_update.last_updated == naive_datetime(2010, 1, 2)
 
 
@@ -675,7 +681,12 @@ def test_last_exception_failed(reader, call_update_method):
     call_update_method(reader, '1')
     old_parser = reader._parser
 
-    old_last_updated = next(reader._storage.get_feeds_for_update('1')).last_updated
+    def get_feed_last_updated(feed):
+        options = FeedFilterOptions.from_args(feed)
+        (rv,) = reader._storage.get_feeds_for_update(options)
+        return rv.last_updated
+
+    old_last_updated = get_feed_last_updated('1')
     assert old_last_updated is not None
 
     reader._parser = FailingParser()
@@ -711,7 +722,7 @@ def test_last_exception_failed(reader, call_update_method):
     assert reader.get_feed('2').last_exception is None
 
     # None of the failures bumped last_updated.
-    new_last_updated = next(reader._storage.get_feeds_for_update('1')).last_updated
+    new_last_updated = get_feed_last_updated('1')
     assert new_last_updated == old_last_updated
 
 
@@ -1687,7 +1698,9 @@ def test_data_roundtrip(reader):
     ]
 
     # TODO: this should be a different test
-    (feed_for_update,) = reader._storage.get_feeds_for_update(url=feed.url)
+    (feed_for_update,) = reader._storage.get_feeds_for_update(
+        FeedFilterOptions.from_args(feed)
+    )
     assert feed.hash == feed_for_update.hash
     (entry_for_update,) = reader._storage.get_entries_for_update(
         [(entry.feed_url, entry.id)]
@@ -2435,8 +2448,11 @@ def test_change_feed_url_feeds_for_update(reader):
 
     reader._storage.mark_as_stale('1')
 
-    def get_feed(url):
-        return next(reader._storage.get_feeds_for_update(url=url), None)
+    def get_feed(feed):
+        return next(
+            reader._storage.get_feeds_for_update(FeedFilterOptions.from_args(feed)),
+            None,
+        )
 
     old_one = get_feed('1')
     assert old_one.http_etag == 'etag'

@@ -578,9 +578,7 @@ class Storage:
     @wrap_exceptions_iter(StorageError)
     def get_feeds_for_update(
         self,
-        url: Optional[str] = None,
-        new: Optional[bool] = None,
-        enabled_only: bool = True,
+        filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
     ) -> Iterable[FeedForUpdate]:
         # Reader shouldn't care this is paginated,
         # so we don't expose any pagination stuff.
@@ -602,17 +600,10 @@ class Storage:
                 )
                 .FROM("feeds")
             )
-            context: Dict[str, object] = {}
 
             # TODO: stale and last_exception should be bool, not int
 
-            if url:
-                query.WHERE("url = :url")
-                context.update(url=url)
-            if new is not None:
-                query.WHERE(f"last_updated is {'' if new else 'NOT'} NULL")
-            if enabled_only:
-                query.WHERE("updates_enabled")
+            context = apply_feed_filter_options(query, filter_options)
 
             query.scrolling_window_order_by("url")
 
@@ -1313,7 +1304,7 @@ def apply_feed_filter_options(
     query: Query,
     filter_options: FeedFilterOptions,
 ) -> Dict[str, Any]:
-    url, tags, broken, updates_enabled = filter_options
+    url, tags, broken, updates_enabled, new = filter_options
 
     context: Dict[str, object] = {}
 
@@ -1327,6 +1318,8 @@ def apply_feed_filter_options(
         query.WHERE(f"last_exception IS {'NOT' if broken else ''} NULL")
     if updates_enabled is not None:
         query.WHERE(f"{'' if updates_enabled else 'NOT'} updates_enabled")
+    if new is not None:
+        query.WHERE(f"last_updated is {'' if new else 'NOT'} NULL")
 
     return context
 
