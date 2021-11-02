@@ -868,6 +868,7 @@ def make_dummy_retriever(name, mime_type='type/subtype', headers=None):
         retriever.last_http_accept = http_accept
         yield RetrieveResult(name, mime_type, http_etag, http_last_modified, headers)
 
+    retriever.slow_to_read = False
     return retriever
 
 

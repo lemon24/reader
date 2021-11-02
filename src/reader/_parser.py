@@ -8,6 +8,7 @@ import tempfile
 import time
 from collections import OrderedDict
 from contextlib import contextmanager
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
@@ -50,7 +51,6 @@ from ._types import ParsedFeed
 from ._url_utils import extract_path
 from ._url_utils import normalize_url
 from ._url_utils import resolve_root
-from ._utils import enter_context
 from ._utils import MapType
 from .exceptions import InvalidFeedURLError
 from .exceptions import ParseError
@@ -73,6 +73,9 @@ class RetrieveResult(NamedTuple):
 
 
 class RetrieverType(Protocol):
+
+    slow_to_read: bool
+
     def __call__(
         self,
         url: str,
@@ -167,19 +170,16 @@ class Parser:
         self.session_timeout: TimeoutType = None
 
     def parallel(
-        self, feeds: Iterable[FA], map: MapType = map
+        self, feeds: Iterable[FA], map: MapType = map, is_parallel: bool = True
     ) -> Iterable[Tuple[FA, Union[Optional[ParsedFeed], ParseError]]]:
         def retrieve(
             feed: FA,
         ) -> Tuple[FA, Union[ContextManager[Optional[RetrieveResult]], Exception]]:
             try:
                 context = self.retrieve(
-                    feed.url, feed.http_etag, feed.http_last_modified
+                    feed.url, feed.http_etag, feed.http_last_modified, is_parallel
                 )
-                # __enter__() does the actual work of making requests;
-                # to benefit from parallelism, we invoke it early
-                return feed, enter_context(context)
-
+                return feed, context
             except Exception as e:
                 # pass around *all* exception types,
                 # unhandled exceptions get swallowed by the thread otherwise
@@ -200,7 +200,7 @@ class Parser:
                 continue
 
             if isinstance(context, Exception):  # pragma: no cover
-                raise
+                raise context
 
             with context as result:
                 if not result or isinstance(result, ParseError):
@@ -227,7 +227,8 @@ class Parser:
             http_last_modified=http_last_modified,
         )
 
-        ((_, result),) = self.parallel([feed])
+        # is_parallel=True ensures the parser tests cover more code
+        ((_, result),) = self.parallel([feed], is_parallel=True)
 
         if isinstance(result, Exception):
             raise result
@@ -238,6 +239,7 @@ class Parser:
         url: str,
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
+        is_parallel: bool = False,
     ) -> ContextManager[Optional[RetrieveResult]]:
 
         parser = self.get_parser_by_url(url)
@@ -255,8 +257,39 @@ class Parser:
             http_accept = None
 
         retriever = self.get_retriever(url)
+        context = retriever(url, http_etag, http_last_modified, http_accept)
 
-        return retriever(url, http_etag, http_last_modified, http_accept)
+        if not (is_parallel and retriever.slow_to_read):
+            return context
+
+        # Ensure we read everything *before* yielding the response,
+        # i.e. __enter__() does most of the work.
+        #
+        # Gives a ~20% speed improvement over yielding response.raw
+        # when updating many feeds in parallel,
+        # with a 2-8% increase in memory usage:
+        # https://github.com/lemon24/reader/issues/261#issuecomment-956303210
+        #
+        # SpooledTemporaryFile() is just as fast as TemporaryFile():
+        # https://github.com/lemon24/reader/issues/261#issuecomment-957469041
+
+        with context as result:
+            if not result:
+                return nullcontext()
+
+            temp = tempfile.TemporaryFile()
+            shutil.copyfileobj(result.file, temp)
+            temp.seek(0)
+
+            result = result._replace(file=temp)
+
+        @contextmanager
+        def make_context() -> Iterator[RetrieveResult]:
+            assert result is not None, result  # for mypy
+            with wrap_exceptions(url, "while reading feed"), temp:
+                yield result
+
+        return make_context()
 
     def parse(self, url: str, result: RetrieveResult) -> ParsedFeed:
         parser = self.get_parser_by_url(url)
@@ -387,6 +420,8 @@ class FileRetriever:
 
     feed_root: str
 
+    slow_to_read = False
+
     def __post_init__(self) -> None:
         # give feed_root checks a chance to fail early
         self._normalize_url('known-good-feed-url')
@@ -443,6 +478,8 @@ class HTTPRetriever:
 
     make_session: Callable[[], SessionWrapper]
 
+    slow_to_read = True
+
     @contextmanager
     def __call__(
         self,
@@ -487,32 +524,14 @@ class HTTPRetriever:
             else:
                 mime_type = None
 
-            # Ensure we read everything *before* yielding the response,
-            # i.e. __enter__() does most of the work.
-            #
-            # Gives a ~20% speed improvement over yielding response.raw
-            # when updating many feeds in parallel,
-            # with a 2-8% increase in memory usage:
-            # https://github.com/lemon24/reader/issues/261#issuecomment-956303210
-            #
-            # SpooledTemporaryFile() is just as fast as TemporaryFile():
-            # https://github.com/lemon24/reader/issues/261#issuecomment-957469041
-
-            with wrap_exceptions(url, "while reading feed"):
-                with tempfile.TemporaryFile() as temp:
-
-                    with response:
-                        shutil.copyfileobj(response.raw, temp)
-
-                    temp.seek(0)
-
-                    yield RetrieveResult(
-                        temp,
-                        mime_type,
-                        http_etag,
-                        http_last_modified,
-                        response_headers,
-                    )
+            with wrap_exceptions(url, "while reading feed"), response:
+                yield RetrieveResult(
+                    response.raw,
+                    mime_type,
+                    http_etag,
+                    http_last_modified,
+                    response_headers,
+                )
 
     def validate_url(self, url: str) -> None:
         session = self.make_session().session

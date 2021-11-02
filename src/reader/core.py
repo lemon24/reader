@@ -926,7 +926,9 @@ class Reader:
         feeds_for_update = builtins.map(
             self._updater.process_old_feed, feeds_for_update
         )
-        parse_results = self._parser.parallel(feeds_for_update, map)
+        parse_results = self._parser.parallel(
+            feeds_for_update, map, map is not builtins.map
+        )
 
         for feed_for_update, parse_result in parse_results:
             rv: Union[UpdatedFeed, None, Exception]

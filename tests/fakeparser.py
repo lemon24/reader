@@ -2,9 +2,11 @@ import threading
 from collections import OrderedDict
 from contextlib import nullcontext
 from datetime import timezone
+from io import BytesIO
 
 import reader._parser
 from reader import ParseError
+from reader._parser import RetrieveResult
 from reader._types import EntryData
 from reader._types import FeedData
 from reader._types import fix_datetime_tzinfo
@@ -32,9 +34,6 @@ def _make_entry(feed_number, number, updated=None, **kwargs):
         kwargs.pop('link', f'http://www.example.com/entries/{number}'),
         **kwargs,
     )
-
-
-RETRIEVE_RESULT_IS_OPAQUE = object()
 
 
 class Parser:
@@ -66,11 +65,11 @@ class Parser:
 
     parallel = reader._parser.Parser.parallel
 
-    def retrieve(self, url, http_etag, http_last_modified):
-        return nullcontext(RETRIEVE_RESULT_IS_OPAQUE)
+    def retrieve(self, url, http_etag, http_last_modified, is_parallel):
+        return nullcontext(RetrieveResult(BytesIO(b'opaque')))
 
     def parse(self, url, result):
-        assert result is RETRIEVE_RESULT_IS_OPAQUE, result
+        assert result.file.read() == b'opaque', result
 
         for feed_number, feed in self.feeds.items():
             if feed.url == url:
@@ -141,7 +140,7 @@ class ParserThatRemembers(Parser):
         self.calls = []
 
     def retrieve(self, *args):
-        self.calls.append(args)
+        self.calls.append(args[:3])
         return super().retrieve(*args)
 
     # FIXME: remember parse() as well?
