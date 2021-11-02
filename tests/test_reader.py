@@ -568,6 +568,11 @@ def test_update_new_not_modified(reader):
     assert len(list(reader.get_entries(feed=feed.url))) == 0
 
 
+def test_update_new_error(reader):
+    with pytest.raises(ValueError):
+        reader.update_feeds(new='x')
+
+
 @pytest.mark.parametrize('workers', [-1, 0])
 def test_update_workers(reader, workers):
     parser = Parser()

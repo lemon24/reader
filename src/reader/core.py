@@ -9,7 +9,6 @@ from datetime import timezone
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
-from typing import cast
 from typing import Iterable
 from typing import Iterator
 from typing import List
@@ -731,16 +730,29 @@ class Reader:
     def update_feeds(
         self,
         *,
+        feed: Optional[FeedInput] = None,
+        tags: TagFilterInput = None,
+        broken: Optional[bool] = None,
+        updates_enabled: Optional[bool] = True,
         new: Optional[bool] = None,
         workers: int = 1,
     ) -> None:
-        """Update all the feeds that have updates enabled.
+        """Update all or some of the feeds.
 
         Silently skip feeds that raise :exc:`ParseError`.
+
+        By default, update all the feeds that have updates enabled.
 
         Roughly equivalent to ``for _ in reader.update_feed_iter(...): pass``.
 
         Args:
+            feed (str or Feed or None): Only update the feed with this URL.
+            tags (None or bool or list(str or bool or list(str or bool))):
+                Only update feeds matching these tags.
+            broken (bool or None): Only update broken / healthy feeds.
+            updates_enabled (bool or None):
+                Only update feeds that have updates enabled / disabled.
+                Defaults to true.
             new (bool or None):
                 Only update feeds that have never been updated
                 / have been updated before. Defaults to None.
@@ -770,8 +782,21 @@ class Reader:
         .. versionchanged:: 2.0
             All parameters are keyword-only.
 
+        .. versionadded:: 2.6
+            The ``feed``, ``tags``, ``broken``, and ``updates_enabled``
+            keyword arguments.
+
         """
-        for url, value in self.update_feeds_iter(new=new, workers=workers):
+        results = self.update_feeds_iter(
+            feed=feed,
+            tags=tags,
+            broken=broken,
+            updates_enabled=updates_enabled,
+            new=new,
+            workers=workers,
+        )
+
+        for url, value in results:
             if isinstance(value, ParseError):
                 log.exception(
                     "update feed %r: error while getting/parsing feed, "
@@ -787,17 +812,31 @@ class Reader:
     def update_feeds_iter(
         self,
         *,
+        feed: Optional[FeedInput] = None,
+        tags: TagFilterInput = None,
+        broken: Optional[bool] = None,
+        updates_enabled: Optional[bool] = True,
         new: Optional[bool] = None,
         workers: int = 1,
     ) -> Iterable[UpdateResult]:
-        """Update all the feeds that have updates enabled.
+        """Update all or some of the feeds.
+
+        Yield information about each updated feed.
+
+        By default, update all the feeds that have updates enabled.
 
         Args:
+            feed (str or Feed or None): Only update the feed with this URL.
+            tags (None or bool or list(str or bool or list(str or bool))):
+                Only update feeds matching these tags.
+            broken (bool or None): Only update broken / healthy feeds.
+            updates_enabled (bool or None):
+                Only update feeds that have updates enabled / disabled.
+                Defaults to true.
             new (bool or None):
                 Only update feeds that have never been updated
                 / have been updated before. Defaults to None.
             workers (int): Number of threads to use when getting the feeds.
-
 
         Yields:
             :class:`UpdateResult`:
@@ -827,8 +866,14 @@ class Reader:
         .. versionchanged:: 2.0
             All parameters are keyword-only.
 
+        .. versionadded:: 2.6
+            The ``feed``, ``tags``, ``broken``, and ``updates_enabled``
+            keyword arguments.
+
         """
-        filter_options = FeedFilterOptions.from_args(new=new, updates_enabled=True)
+        filter_options = FeedFilterOptions.from_args(
+            feed, tags, broken, updates_enabled, new
+        )
 
         if workers < 1:
             raise ValueError("workers must be a positive integer")
@@ -854,6 +899,9 @@ class Reader:
 
         The feed will be updated even if updates are disabled for it.
 
+        Like ``next(iter(reader.update_feeds_iter(feed=feed, updates_enabled=None)))``,
+        but raises a custom exception instead of :exc:`StopIteration`.
+
         Args:
             feed (str or Feed): The feed URL.
 
@@ -876,12 +924,9 @@ class Reader:
             See :meth:`~Reader.update_feeds` for details.
 
         """
-        filter_options = FeedFilterOptions.from_args(feed=feed)
-        url = cast(str, filter_options.feed_url)
-
         _, rv = zero_or_one(
-            self._update_feeds(filter_options),
-            lambda: FeedNotFoundError(url),
+            self.update_feeds_iter(feed=feed, updates_enabled=None),
+            lambda: FeedNotFoundError(_feed_argument(feed)),
         )
         if isinstance(rv, Exception):
             raise rv

@@ -16,6 +16,9 @@ Unreleased
   Decreases Linux memory usage by ~20% when using ``workers``;
   the macOS decrease is less notable.
   (:issue:`261`)
+* Allow :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
+  to filter feeds by ``feed``, ``tags``, ``broken``, and ``updates_enabled``.
+  (:issue:`193`, :issue:`219`, :issue:`220`)
 
 
 Version 2.5

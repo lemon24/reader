@@ -11,10 +11,8 @@ import click
 import yaml
 
 import reader
-from . import ParseError
 from . import ReaderError
 from . import StorageError
-from . import UpdateResult
 from ._config import make_reader_config
 from ._config import make_reader_from_config
 from ._plugins import LoaderError
@@ -324,17 +322,9 @@ def update(reader, url, new_only, workers, verbose):
         -vvvv: + debug
 
     """
-    if url:
-
-        def make_it():
-            try:
-                yield UpdateResult(url, reader.update_feed(url))
-            except ParseError as e:
-                yield UpdateResult(url, e)
-
-        it = make_it()
-    else:
-        it = reader.update_feeds_iter(new=True if new_only else None, workers=workers)
+    it = reader.update_feeds_iter(
+        feed=url, new=True if new_only else None, workers=workers
+    )
 
     ok_count = 0
     not_modified_count = 0
