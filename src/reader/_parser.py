@@ -3,6 +3,8 @@ import json
 import logging
 import mimetypes
 import pathlib
+import shutil
+import tempfile
 import time
 from collections import OrderedDict
 from contextlib import contextmanager
@@ -10,12 +12,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
 from typing import Any
-from typing import BinaryIO
 from typing import Callable
 from typing import cast
 from typing import Collection
 from typing import ContextManager
 from typing import Dict
+from typing import IO
 from typing import Iterator
 from typing import List
 from typing import Mapping
@@ -59,7 +61,7 @@ Headers = Mapping[str, str]
 
 
 class RetrieveResult(NamedTuple):
-    file: BinaryIO
+    file: IO[bytes]
     mime_type: Optional[str] = None
     http_etag: Optional[str] = None
     http_last_modified: Optional[str] = None
@@ -90,7 +92,7 @@ FeedAndEntries = Tuple[FeedData, Collection[EntryData]]
 
 class ParserType(Protocol):
     def __call__(
-        self, url: str, file: BinaryIO, headers: Optional[Headers]
+        self, url: str, file: IO[bytes], headers: Optional[Headers]
     ) -> FeedAndEntries:  # pragma: no cover
         ...
 
@@ -409,14 +411,28 @@ class HTTPRetriever:
             else:
                 mime_type = None
 
-            with wrap_exceptions(url, "while reading feed"), response:
-                yield RetrieveResult(
-                    response.raw,
-                    mime_type,
-                    http_etag,
-                    http_last_modified,
-                    response_headers,
-                )
+            # Ensure we read everything *before* yielding the response,
+            # i.e. __enter__() does most of the work.
+            # Gives a ~20% improvement over yielding response.raw
+            # when updating many feeds in parallel;
+            # https://github.com/lemon24/reader/issues/261#issuecomment-956303210
+
+            with wrap_exceptions(url, "while reading feed"):
+                # FIXME: or maybe SpooledTemporaryFile?
+                with tempfile.TemporaryFile() as temp:
+
+                    with response:
+                        shutil.copyfileobj(response.raw, temp)
+
+                    temp.seek(0)
+
+                    yield RetrieveResult(
+                        temp,
+                        mime_type,
+                        http_etag,
+                        http_last_modified,
+                        response_headers,
+                    )
 
     def validate_url(self, url: str) -> None:
         session = self.make_session().session
@@ -462,7 +478,7 @@ class FeedparserParser:
     def __call__(
         self,
         url: str,
-        file: BinaryIO,
+        file: IO[bytes],
         headers: Optional[Headers] = None,
     ) -> FeedAndEntries:
         """Like feedparser.parse(), but return a feed and entries,
@@ -600,7 +616,7 @@ class JSONFeedParser:
     def __call__(
         self,
         url: str,
-        file: BinaryIO,
+        file: IO[bytes],
         headers: Optional[Headers] = None,
     ) -> FeedAndEntries:
         try:

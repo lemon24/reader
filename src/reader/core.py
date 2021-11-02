@@ -944,23 +944,18 @@ class Reader:
             FeedForUpdate, Union[ContextManager[Optional[RetrieveResult]], Exception]
         ]
 
-        # why does this remind me of Twisted so much?
-
-        # we must pass around *all* exception types, bugs get swallowed by the threads
-
         def retrieve(feed: FeedForUpdate) -> ParallelRetrieveResult:
             try:
                 cm = self._parser.retrieve(
                     feed.url, feed.http_etag, feed.http_last_modified
                 )
-
                 # __enter__() does the actual work of making requests;
                 # to benefit from parallelism, we invoke it early
-                cm = enter_context(cm)
-
-                return feed, cm
+                return feed, enter_context(cm)
 
             except Exception as e:
+                # pass around *all* exception types,
+                # unhandled exceptions get swallowed by the thread otherwise
                 log.debug("retrieve() exception, traceback follows", exc_info=True)
                 return feed, e
 
@@ -985,7 +980,13 @@ class Reader:
         # if stuff hangs weirdly during debugging, change this to builtins.map
         retrieve_results = map(retrieve, feeds_for_update)
 
-        # we have the option to parallelize this as well
+        # we could parallelize this as well;
+        # however, "map(parse, retrieve_results)" deadlocks,
+        # so we either have to move the work in the same worker as retrieve,
+        # or (better) use another pool that has cpu_count workers;
+        # regardless, most of the time is spent in pure-Python code anyway,
+        # which doesn't benefit from the threads on CPython:
+        # https://github.com/lemon24/reader/issues/261#issuecomment-956412131
         parse_results = builtins.map(parse, retrieve_results)
 
         for feed_for_update, parse_result in parse_results:
