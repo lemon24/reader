@@ -9,7 +9,6 @@ from datetime import timezone
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
-from typing import ContextManager
 from typing import Iterable
 from typing import Iterator
 from typing import List
@@ -26,7 +25,6 @@ from typing_extensions import Literal
 import reader._updater
 from ._parser import default_parser
 from ._parser import Parser
-from ._parser import RetrieveResult
 from ._parser import SESSION_TIMEOUT
 from ._requests_utils import TimeoutType
 from ._search import Search
@@ -37,13 +35,11 @@ from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import EntryUpdateIntent
 from ._types import FeedFilterOptions
-from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
-from ._types import ParsedFeed
-from ._utils import enter_context
 from ._utils import make_pool_map
+from ._utils import MapType
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedMetadataNotFoundError
@@ -890,21 +886,12 @@ class Reader:
     def _now() -> datetime:
         return datetime.utcnow()
 
-    # The type of map should be
-    #
-    #   Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
-    #
-    # but mypy gets confused; known issue:
-    #
-    # https://github.com/python/mypy/issues/1317
-    # https://github.com/python/mypy/issues/6697
-
     def _update_feeds(
         self,
         url: Optional[str] = None,
         new: Optional[bool] = None,
         enabled_only: bool = True,
-        map: Callable[[Callable[[Any], Any], Iterable[Any]], Iterator[Any]] = map,
+        map: MapType = map,
     ) -> Iterator[Tuple[str, Union[UpdatedFeed, None, Exception]]]:
 
         # global_now is used as first_updated_epoch for all new entries,
@@ -926,8 +913,8 @@ class Reader:
         #
         #   self._storage.get_feeds_for_update \
         #   | self._updater.process_old_feed \
-        #   | xargs -n1 -P $workers retrieve \
-        #   | parse \
+        #   | xargs -n1 -P $workers self._parser.retrieve \
+        #   | self._parser.parse \
         #   | self._get_entries_for_update \
         #   | self._updater.make_update_intents \
         #   | self._update_feed
@@ -939,61 +926,9 @@ class Reader:
         feeds_for_update = builtins.map(
             self._updater.process_old_feed, feeds_for_update
         )
-
-        ParallelRetrieveResult = Tuple[
-            FeedForUpdate, Union[ContextManager[Optional[RetrieveResult]], Exception]
-        ]
-
-        def retrieve(feed: FeedForUpdate) -> ParallelRetrieveResult:
-            try:
-                cm = self._parser.retrieve(
-                    feed.url, feed.http_etag, feed.http_last_modified
-                )
-                # __enter__() does the actual work of making requests;
-                # to benefit from parallelism, we invoke it early
-                return feed, enter_context(cm)
-
-            except Exception as e:
-                # pass around *all* exception types,
-                # unhandled exceptions get swallowed by the thread otherwise
-                log.debug("retrieve() exception, traceback follows", exc_info=True)
-                return feed, e
-
-        def parse(
-            args: ParallelRetrieveResult,
-        ) -> Tuple[FeedForUpdate, Union[ParsedFeed, None, Exception]]:
-            feed, retrieve_cm = args
-            if not isinstance(retrieve_cm, ContextManager):
-                return feed, retrieve_cm
-
-            try:
-                with retrieve_cm as result:
-                    if not result:
-                        return feed, None
-                    return feed, self._parser.parse(feed.url, result)
-
-            except Exception as e:  # pragma: no cover
-                # FIXME: remove no cover
-                log.debug("parse() exception, traceback follows", exc_info=True)
-                return feed, e
-
-        # if stuff hangs weirdly during debugging, change this to builtins.map
-        retrieve_results = map(retrieve, feeds_for_update)
-
-        # we could parallelize this as well;
-        # however, "map(parse, retrieve_results)" deadlocks,
-        # so we either have to move the work in the same worker as retrieve,
-        # or (better) use another pool that has cpu_count workers;
-        # regardless, most of the time is spent in pure-Python code anyway,
-        # which doesn't benefit from the threads on CPython:
-        # https://github.com/lemon24/reader/issues/261#issuecomment-956412131
-        parse_results = builtins.map(parse, retrieve_results)
+        parse_results = self._parser.parallel(feeds_for_update, map)
 
         for feed_for_update, parse_result in parse_results:
-            if isinstance(parse_result, Exception):
-                if not isinstance(parse_result, ParseError):  # pragma: no cover
-                    raise parse_result
-
             rv: Union[UpdatedFeed, None, Exception]
 
             try:

@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
+from types import SimpleNamespace
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -18,6 +19,7 @@ from typing import Collection
 from typing import ContextManager
 from typing import Dict
 from typing import IO
+from typing import Iterable
 from typing import Iterator
 from typing import List
 from typing import Mapping
@@ -48,6 +50,8 @@ from ._types import ParsedFeed
 from ._url_utils import extract_path
 from ._url_utils import normalize_url
 from ._url_utils import resolve_root
+from ._utils import enter_context
+from ._utils import MapType
 from .exceptions import InvalidFeedURLError
 from .exceptions import ParseError
 from .types import Content
@@ -104,6 +108,23 @@ class AwareParserType(ParserType, Protocol):
         ...
 
 
+class FeedArgument(Protocol):
+    @property
+    def url(self) -> str:  # pragma: no cover
+        ...
+
+    @property
+    def http_etag(self) -> Optional[str]:  # pragma: no cover
+        ...
+
+    @property
+    def http_last_modified(self) -> Optional[str]:  # pragma: no cover
+        ...
+
+
+FA = TypeVar('FA', bound=FeedArgument)
+
+
 SESSION_TIMEOUT = (3.05, 60)
 
 
@@ -145,17 +166,72 @@ class Parser:
         self.session_hooks = SessionHooks()
         self.session_timeout: TimeoutType = None
 
+    def parallel(
+        self, feeds: Iterable[FA], map: MapType = map
+    ) -> Iterable[Tuple[FA, Union[Optional[ParsedFeed], ParseError]]]:
+        def retrieve(
+            feed: FA,
+        ) -> Tuple[FA, Union[ContextManager[Optional[RetrieveResult]], Exception]]:
+            try:
+                context = self.retrieve(
+                    feed.url, feed.http_etag, feed.http_last_modified
+                )
+                # __enter__() does the actual work of making requests;
+                # to benefit from parallelism, we invoke it early
+                return feed, enter_context(context)
+
+            except Exception as e:
+                # pass around *all* exception types,
+                # unhandled exceptions get swallowed by the thread otherwise
+                log.debug("retrieve() exception, traceback follows", exc_info=True)
+                return feed, e
+
+        # if stuff hangs weirdly during debugging, change this to builtins.map
+        retrieve_results = map(retrieve, feeds)
+
+        # we could parallelize parse() as well;
+        # however, most of the time is spent in pure-Python code,
+        # which doesn't benefit from the threads on CPython:
+        # https://github.com/lemon24/reader/issues/261#issuecomment-956412131
+
+        for feed, context in retrieve_results:
+            if isinstance(context, ParseError):
+                yield feed, context
+                continue
+
+            if isinstance(context, Exception):  # pragma: no cover
+                raise
+
+            with context as result:
+                if not result or isinstance(result, ParseError):
+                    yield feed, result
+                    continue
+
+                try:
+                    yield feed, self.parse(feed.url, result)
+                except ParseError as e:
+                    log.debug("parse() exception, traceback follows", exc_info=True)
+                    yield feed, e
+
     def __call__(
         self,
         url: str,
         http_etag: Optional[str] = None,
         http_last_modified: Optional[str] = None,
     ) -> Optional[ParsedFeed]:
-        # FIXME: remove after split?
-        with self.retrieve(url, http_etag, http_last_modified) as result:
-            if not result:
-                return None
-            return self.parse(url, result)
+        """Thin wrapper for parallel(), to be used by parser tests."""
+
+        feed = SimpleNamespace(
+            url=url,
+            http_etag=http_etag,
+            http_last_modified=http_last_modified,
+        )
+
+        ((_, result),) = self.parallel([feed])
+
+        if isinstance(result, Exception):
+            raise result
+        return result
 
     def retrieve(
         self,

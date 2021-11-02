@@ -3,6 +3,7 @@ from collections import OrderedDict
 from contextlib import nullcontext
 from datetime import timezone
 
+import reader._parser
 from reader import ParseError
 from reader._types import EntryData
 from reader._types import FeedData
@@ -62,6 +63,8 @@ class Parser:
 
     def __call__(self, url, http_etag, http_last_modified):
         raise NotImplementedError
+
+    parallel = reader._parser.Parser.parallel
 
     def retrieve(self, url, http_etag, http_last_modified):
         return nullcontext(RETRIEVE_RESULT_IS_OPAQUE)

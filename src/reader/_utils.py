@@ -171,6 +171,18 @@ def wrap_map(map: F, workers: int) -> F:
     return cast(F, wrapper)
 
 
+# The type of map() should be
+#
+#   Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
+#
+# but mypy gets confused; known issue:
+#
+# https://github.com/python/mypy/issues/1317
+# https://github.com/python/mypy/issues/6697
+#
+MapType = Callable[[Callable[[Any], Any], Iterable[Any]], Iterator[Any]]
+
+
 class PrefixLogger(logging.LoggerAdapter):
 
     # if needed, add: with log.push('another prefix'): ...
