@@ -202,16 +202,18 @@ class Parser:
             if isinstance(context, Exception):  # pragma: no cover
                 raise context
 
-            with context as result:
-                if not result or isinstance(result, ParseError):
-                    yield feed, result
-                    continue
+            try:
+                with context as result:
 
-                try:
+                    if not result or isinstance(result, ParseError):
+                        yield feed, result
+                        continue
+
                     yield feed, self.parse(feed.url, result)
-                except ParseError as e:
-                    log.debug("parse() exception, traceback follows", exc_info=True)
-                    yield feed, e
+
+            except ParseError as e:
+                log.debug("parse() exception, traceback follows", exc_info=True)
+                yield feed, e
 
     def __call__(
         self,

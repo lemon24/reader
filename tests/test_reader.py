@@ -3,6 +3,7 @@ import os
 import sys
 import threading
 from collections import Counter
+from contextlib import contextmanager
 from datetime import timedelta
 from datetime import timezone
 from enum import Enum
@@ -618,9 +619,7 @@ def test_update_last_updated_entries_updated_feed_not_updated(
 @pytest.mark.parametrize('workers', [1, 2])
 def test_update_feeds_parse_error(reader, workers, caplog):
     caplog.set_level(logging.ERROR, 'reader')
-
-    parser = Parser()
-    reader._parser = parser
+    reader._parser = parser = Parser()
 
     one = parser.feed(1, datetime(2010, 1, 1), title='one')
     two = parser.feed(2, datetime(2010, 1, 1), title='two')
@@ -654,6 +653,33 @@ def test_update_feeds_parse_error(reader, workers, caplog):
     assert str(exc.__cause__) == 'failing'
     assert repr(exc.url) in record.message
     assert repr(exc.__cause__) in record.message
+
+
+@pytest.mark.parametrize('workers', [1, 2])
+def test_update_feeds_parse_error_on_retriever_enter(reader, workers):
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1, datetime(2010, 1, 1), title='one')
+    two = parser.feed(2, datetime(2010, 1, 1), title='two')
+    three = parser.feed(3, datetime(2010, 1, 1), title='three')
+
+    for feed in one, two, three:
+        reader.add_feed(feed.url)
+
+    def retrieve(url, *args):
+        @contextmanager
+        def make_context():
+            raise ParseError(url)
+            yield 'unreachable'
+
+        return make_context()
+
+    parser.retrieve = retrieve
+
+    reader.update_feeds(workers=workers)
+
+    assert {f.url for f in reader.get_feeds(new=True)} == {'1', '2', '3'}
+    assert {f.url for f in reader.get_feeds(broken=True)} == {'1', '2', '3'}
 
 
 @pytest.fixture
