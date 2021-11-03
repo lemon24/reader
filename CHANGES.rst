@@ -19,6 +19,9 @@ Unreleased
 * Allow :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
   to filter feeds by ``feed``, ``tags``, ``broken``, and ``updates_enabled``.
   (:issue:`193`, :issue:`219`, :issue:`220`)
+* Allow :meth:`~Reader.get_feeds()` and :meth:`~Reader.get_feed_counts()`
+  to filter feeds by ``new``.
+  (:issue:`217`)
 
 
 Version 2.5

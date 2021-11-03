@@ -496,6 +496,7 @@ class Reader:
         tags: TagFilterInput = None,
         broken: Optional[bool] = None,
         updates_enabled: Optional[bool] = None,
+        new: Optional[bool] = None,
         sort: FeedSortOrder = 'title',
         limit: Optional[int] = None,
         starting_after: Optional[FeedInput] = None,
@@ -557,6 +558,9 @@ class Reader:
             broken (bool or None): Only return broken / healthy feeds.
             updates_enabled (bool or None):
                 Only return feeds that have updates enabled / disabled.
+            new (bool or None):
+                Only return feeds that have never been updated
+                / have been updated before.
             sort (str): How to order feeds; one of ``'title'`` (by
                 :attr:`~Feed.user_title` or :attr:`~Feed.title`, case
                 insensitive; default), or ``'added'`` (last added first).
@@ -584,9 +588,12 @@ class Reader:
         .. versionadded:: 1.12
             The ``limit`` and ``starting_after`` keyword arguments.
 
+        .. versionadded:: 2.6
+            The ``new`` keyword argument.
+
         """
         filter_options = FeedFilterOptions.from_args(
-            feed, tags, broken, updates_enabled
+            feed, tags, broken, updates_enabled, new
         )
 
         if sort not in ('title', 'added'):
@@ -649,6 +656,7 @@ class Reader:
         tags: TagFilterInput = None,
         broken: Optional[bool] = None,
         updates_enabled: Optional[bool] = None,
+        new: Optional[bool] = None,
     ) -> FeedCounts:
         """Count all or some of the feeds.
 
@@ -661,6 +669,9 @@ class Reader:
             broken (bool or None): Only count broken / healthy feeds.
             updates_enabled (bool or None):
                 Only count feeds that have updates enabled / disabled.
+            new (bool or None):
+                Only count feeds that have never been updated
+                / have been updated before.
 
         Returns:
             FeedCounts:
@@ -670,9 +681,12 @@ class Reader:
 
         .. versionadded:: 1.11
 
+        .. versionadded:: 2.6
+            The ``new`` keyword argument.
+
         """
         filter_options = FeedFilterOptions.from_args(
-            feed, tags, broken, updates_enabled
+            feed, tags, broken, updates_enabled, new
         )
         return self._storage.get_feed_counts(filter_options)
 
@@ -899,8 +913,8 @@ class Reader:
 
         The feed will be updated even if updates are disabled for it.
 
-        Like ``next(iter(reader.update_feeds_iter(feed=feed, updates_enabled=None)))``,
-        but raises a custom exception instead of :exc:`StopIteration`.
+        Like ``next(iter(reader.update_feeds_iter(feed=feed, updates_enabled=None)))[1]``,
+        but raises the :exc:`ParseError`, if any.
 
         Args:
             feed (str or Feed): The feed URL.

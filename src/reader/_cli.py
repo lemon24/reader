@@ -322,9 +322,9 @@ def update(reader, url, new_only, workers, verbose):
         -vvvv: + debug
 
     """
-    it = reader.update_feeds_iter(
-        feed=url, new=True if new_only else None, workers=workers
-    )
+    new = True if new_only else None
+    it = reader.update_feeds_iter(feed=url, new=new, workers=workers)
+    length = reader.get_feed_counts(feed=url, new=new).total
 
     ok_count = 0
     not_modified_count = 0
@@ -344,15 +344,6 @@ def update(reader, url, new_only, workers, verbose):
             f"{red(f'{error_count} error') if error_count else '0 error'}, "
             f"{not_modified_count} not modified"
         )
-
-    if url:
-        length = 1
-    else:
-        if not new_only:
-            length = reader.get_feed_counts(updates_enabled=True).total
-        else:
-            # TODO: pending https://github.com/lemon24/reader/issues/217
-            length = None
 
     if not verbose:
         bar_context = click.progressbar(
