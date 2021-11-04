@@ -11,6 +11,7 @@ from utils import make_url_base
 
 from reader import Feed
 from reader._parser import default_parser
+from reader._parser import FeedArgumentTuple
 from reader._parser import FeedparserParser
 from reader._parser import FileRetriever
 from reader._parser import JSONFeedParser
@@ -453,6 +454,24 @@ def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
 
     headers = make_http_get_headers_url.request_headers
     assert 'reader' not in headers['User-Agent']
+
+
+def test_parallel_persistent_session(parse, make_http_url, data_dir):
+    sessions = []
+
+    def req_plugin(session, request, **kwargs):
+        sessions.append(session)
+
+    parse.session_hooks.request.append(req_plugin)
+
+    feeds = [
+        FeedArgumentTuple(make_http_url(data_dir.join(name)))
+        for name in ('empty.atom', 'empty.rss')
+    ]
+    list(parse.parallel(feeds))
+
+    assert len(sessions) == 2
+    assert sessions[0] is sessions[1]
 
 
 @pytest.mark.parametrize('exc_cls', [Exception, OSError])

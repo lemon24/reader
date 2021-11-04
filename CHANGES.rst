@@ -22,6 +22,8 @@ Unreleased
 * Allow :meth:`~Reader.get_feeds()` and :meth:`~Reader.get_feed_counts()`
   to filter feeds by ``new``.
   (:issue:`217`)
+* Reuse the `requests`_ session when retrieving feeds;
+  previously, each feed would get its own session.
 
 
 Version 2.5

@@ -12,7 +12,6 @@ from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
-from types import SimpleNamespace
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -125,6 +124,12 @@ class FeedArgument(Protocol):
         ...
 
 
+class FeedArgumentTuple(NamedTuple):
+    url: str
+    http_etag: Optional[str] = None
+    http_last_modified: Optional[str] = None
+
+
 FA = TypeVar('FA', bound=FeedArgument)
 
 
@@ -137,7 +142,7 @@ def default_parser(
     parser = Parser()
     parser.session_timeout = session_timeout
 
-    http_retriever = HTTPRetriever(parser.make_session)
+    http_retriever = HTTPRetriever(parser.get_session)
     parser.mount_retriever('https://', http_retriever)
     parser.mount_retriever('http://', http_retriever)
     if feed_root is not None:
@@ -168,6 +173,7 @@ class Parser:
         self.parsers_by_url: Dict[str, ParserType] = {}
         self.session_hooks = SessionHooks()
         self.session_timeout: TimeoutType = None
+        self.session: Optional[SessionWrapper] = None
 
     def parallel(
         self, feeds: Iterable[FA], map: MapType = map, is_parallel: bool = True
@@ -186,34 +192,36 @@ class Parser:
                 log.debug("retrieve() exception, traceback follows", exc_info=True)
                 return feed, e
 
-        # if stuff hangs weirdly during debugging, change this to builtins.map
-        retrieve_results = map(retrieve, feeds)
+        with self.persistent_session():
 
-        # we could parallelize parse() as well;
-        # however, most of the time is spent in pure-Python code,
-        # which doesn't benefit from the threads on CPython:
-        # https://github.com/lemon24/reader/issues/261#issuecomment-956412131
+            # if stuff hangs weirdly during debugging, change this to builtins.map
+            retrieve_results = map(retrieve, feeds)
 
-        for feed, context in retrieve_results:
-            if isinstance(context, ParseError):
-                yield feed, context
-                continue
+            # we could parallelize parse() as well;
+            # however, most of the time is spent in pure-Python code,
+            # which doesn't benefit from the threads on CPython:
+            # https://github.com/lemon24/reader/issues/261#issuecomment-956412131
 
-            if isinstance(context, Exception):  # pragma: no cover
-                raise context
+            for feed, context in retrieve_results:
+                if isinstance(context, ParseError):
+                    yield feed, context
+                    continue
 
-            try:
-                with context as result:
+                if isinstance(context, Exception):  # pragma: no cover
+                    raise context
 
-                    if not result or isinstance(result, ParseError):
-                        yield feed, result
-                        continue
+                try:
+                    with context as result:
 
-                    yield feed, self.parse(feed.url, result)
+                        if not result or isinstance(result, ParseError):
+                            yield feed, result
+                            continue
 
-            except ParseError as e:
-                log.debug("parse() exception, traceback follows", exc_info=True)
-                yield feed, e
+                        yield feed, self.parse(feed.url, result)
+
+                except ParseError as e:
+                    log.debug("parse() exception, traceback follows", exc_info=True)
+                    yield feed, e
 
     def __call__(
         self,
@@ -223,11 +231,7 @@ class Parser:
     ) -> Optional[ParsedFeed]:
         """Thin wrapper for parallel(), to be used by parser tests."""
 
-        feed = SimpleNamespace(
-            url=url,
-            http_etag=http_etag,
-            http_last_modified=http_last_modified,
-        )
+        feed = FeedArgumentTuple(url, http_etag, http_last_modified)
 
         # is_parallel=True ensures the parser tests cover more code
         ((_, result),) = self.parallel([feed], is_parallel=True)
@@ -397,6 +401,26 @@ class Parser:
 
         return session
 
+    def get_session(self) -> ContextManager[SessionWrapper]:
+        if self.session:
+            return nullcontext(self.session)
+        return self.make_session()
+
+    @contextmanager
+    def persistent_session(self) -> Iterator[SessionWrapper]:
+        # note: this is NOT threadsafe, but is reentrant
+
+        if self.session:  # pragma: no cover
+            yield self.session
+            return
+
+        with self.make_session() as session:
+            self.session = session
+            try:
+                yield session
+            finally:
+                self.session = None
+
 
 @contextmanager
 def wrap_exceptions(url: str, when: str) -> Iterator[None]:
@@ -478,7 +502,7 @@ class HTTPRetriever:
 
     """
 
-    make_session: Callable[[], SessionWrapper]
+    get_session: Callable[[], ContextManager[SessionWrapper]]
 
     slow_to_read = True
 
@@ -494,9 +518,7 @@ class HTTPRetriever:
         if http_accept:
             request_headers['Accept'] = http_accept
 
-        # TODO: maybe share the session in the parser?
-
-        with self.make_session() as session:
+        with self.get_session() as session:
             with wrap_exceptions(url, "while getting feed"):
                 response, http_etag, http_last_modified = _caching_get(
                     session,
@@ -536,9 +558,10 @@ class HTTPRetriever:
                 )
 
     def validate_url(self, url: str) -> None:
-        session = self.make_session().session
-        session.get_adapter(url)
-        session.prepare_request(requests.Request('GET', url))
+        with self.get_session() as session_wrapper:
+            session = session_wrapper.session
+            session.get_adapter(url)
+            session.prepare_request(requests.Request('GET', url))
 
 
 def _caching_get(
