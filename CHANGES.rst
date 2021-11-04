@@ -16,15 +16,19 @@ Unreleased
   Decreases Linux memory usage by ~20% when using ``workers``;
   the macOS decrease is less notable.
   (:issue:`261`)
+
 * Allow :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
   to filter feeds by ``feed``, ``tags``, ``broken``, and ``updates_enabled``.
   (:issue:`193`, :issue:`219`, :issue:`220`)
 * Allow :meth:`~Reader.get_feeds()` and :meth:`~Reader.get_feed_counts()`
   to filter feeds by ``new``.
   (:issue:`217`)
+
 * Reuse the `requests`_ session when retrieving feeds;
   previously, each feed would get its own session.
+
 * Add support for CLI plugins.
+* Add the :mod:`~reader._plugins.cli_status` experimental plugin.
 
 
 Version 2.5
