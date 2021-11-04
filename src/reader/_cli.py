@@ -15,6 +15,7 @@ from . import ReaderError
 from . import StorageError
 from ._config import make_reader_config
 from ._config import make_reader_from_config
+from ._plugins import Loader
 from ._plugins import LoaderError
 from ._sqlite_utils import DebugConnection
 
@@ -193,6 +194,12 @@ def pass_reader(fn):
     envvar=reader._PLUGIN_ENVVAR,
     help="Import path to a reader plug-in. Can be passed multiple times.",
 )
+@click.option(
+    '--cli-plugin',
+    multiple=True,
+    envvar=reader._CLI_PLUGIN_ENVVAR,
+    help="Import path to a CLI plug-in. Can be passed multiple times.",
+)
 @config_option(
     '--config',
     envvar=reader._CONFIG_ENVVAR,
@@ -217,7 +224,7 @@ def pass_reader(fn):
 )
 @click.version_option(reader.__version__, message='%(prog)s %(version)s')
 @click.pass_obj
-def cli(config, db, plugin, feed_root, debug_storage):
+def cli(config, db, plugin, cli_plugin, feed_root, debug_storage):
     # TODO: mention in docs that --db/--plugin/envvars ALWAYS override the config
     # (same for wsgi envvars)
     # NOTE: we can never use click defaults for --db/--plugin, because they would override the config always
@@ -236,12 +243,21 @@ def cli(config, db, plugin, feed_root, debug_storage):
     if plugin:
         config.all['reader']['plugins'] = dict.fromkeys(plugin)
 
+    if cli_plugin:
+        config['cli']['plugins'] = dict.fromkeys(cli_plugin)
+
     if feed_root is not None:
         config['default']['reader']['feed_root'] = feed_root
 
     # until we make debug_storage a proper make_reader argument,
     # and we get rid of make_reader_with_plugins
     config['default']['reader']['debug_storage'] = debug_storage
+
+    try:
+        loader = Loader()
+        loader.init(config, config.merged('cli').get('plugins', {}))
+    except LoaderError as e:
+        abort("{}; original traceback follows\n\n{}", e, format_tb(e.__cause__ or e))
 
 
 @cli.command()
@@ -464,13 +480,17 @@ class Dumper(yaml.SafeDumper):
         return True
 
 
+def dump_config(data):
+    return yaml.dump(data, sort_keys=False, Dumper=Dumper)
+
+
 @config.command()
 @click.option('--merge/--no-merge')
 @click.pass_obj
 def dump(config, merge):
     if merge:
         config = config.merge_all()
-    click.echo(yaml.dump(config.data, sort_keys=False, Dumper=Dumper))
+    click.echo(dump_config(config.data))
 
 
 try:

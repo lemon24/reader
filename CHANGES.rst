@@ -24,6 +24,7 @@ Unreleased
   (:issue:`217`)
 * Reuse the `requests`_ session when retrieving feeds;
   previously, each feed would get its own session.
+* Add support for CLI plugins.
 
 
 Version 2.5

@@ -39,14 +39,16 @@ be separated by one space::
     READER_PLUGIN='first.plugin:entry_point second_plugin:main' \
     python -m reader some-command
 
-To load web application plugins, set the ``READER_APP_PLUGIN`` environment
-variable in a similar way.
-
 For `built-in plugins`_, it is enough to use the plugin name (``reader.XYZ``).
 
 .. note::
 
     :func:`make_reader` ignores the plugin environment variables.
+
+
+To load web application plugins, set the ``READER_APP_PLUGIN`` environment variable.
+To load CLI plugins (that customize the CLI),
+set the ``READER_CLI_PLUGIN`` environment variable.
 
 
 Experimental plugins
