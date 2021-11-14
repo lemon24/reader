@@ -7,13 +7,9 @@
 
 
 {% block body %}
+
 {% set feed = entry.feed %}
-
-
-{% set content = macros.entry_content(entry) | trim %}
-{% if not content and entry.summary %}
-    {% set content = entry.summary %}
-{% endif %}
+{% set content, is_html = entry_content(entry) %}
 
 
 <div class="entry">
@@ -51,8 +47,13 @@
     {{ macros.confirm_button('.form_api', 'delete-entry', 'delete', leave_disabled=true, next=url_for('.entries', **request.args), context=context) }}
 {% endif %}
 
-<li>
-    {{ read_time(content).minutes | humanize_apnumber }} minute read
+{% if content %}
+    {% set minutes = read_time(content).minutes %}
+    {% if minutes > 1 %}
+    <li>
+        {{ minutes | humanize_apnumber }} minute read
+    {% endif %}
+{% endif %}
 
 
 {% for message in get_flashed_messages_by_prefix(
@@ -78,7 +79,12 @@
 
 {% if content %}
 <article>
+{% if not is_html -%}
+<pre class='plaintext'>{{ content }}</pre>
+{%- else -%}
 {{ content | safe }}
+{%- endif %}
+
 </article>
 {% else %}
 <p>no content</p>

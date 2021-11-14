@@ -58,6 +58,30 @@ def read_time(text):
     return readtime.of_html(text)
 
 
+PREFERRED_CONTENT_TYPES = ['text/html', 'text/xhtml', 'text/plain']
+HTML_CONTENT_TYPES = {'text/html', 'text/xhtml'}
+
+
+@blueprint.app_template_global()
+def entry_content(entry, prefer_summary=False):
+    """entry -> (content, is_html)"""
+
+    # TODO: maybe this should be an Entry method?
+
+    if prefer_summary and entry.summary:
+        return entry.summary, True
+
+    for type in PREFERRED_CONTENT_TYPES:
+        for content in entry.content:
+            if content.type == type and content.value:
+                return content.value, type in HTML_CONTENT_TYPES
+
+    if entry.summary:
+        return entry.summary, True
+
+    return None, False
+
+
 @blueprint.app_template_filter()
 def log_scale(n, p=2):
     # https://github.com/lemon24/reader/issues/249#issuecomment-893440484

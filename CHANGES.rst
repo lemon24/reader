@@ -30,6 +30,8 @@ Unreleased
 * Add support for CLI plugins.
 * Add the :mod:`~reader._plugins.cli_status` experimental plugin.
 
+* In the web application, show entry read time.
+
 
 Version 2.5
 -----------

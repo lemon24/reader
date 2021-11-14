@@ -22,24 +22,6 @@
 {% endmacro %}
 
 
-{% macro entry_content(entry) %}
-{%- set content = (
-    ( entry.content | selectattr('type', 'equalto', 'text/html') | first )
-    or
-    ( entry.content | selectattr('type', 'equalto', 'text/xhtml') | first )
-    or
-    ( entry.content | selectattr('type', 'equalto', 'text/plain') | first )
-) -%}
-{%- if content -%}
-    {%- if content.type == 'text/plain' -%}
-        <pre class='plaintext'>{{ content.value }}</pre>
-    {%- else -%}
-        {{ content.value | safe }}
-    {%- endif -%}
-{%- endif -%}
-{% endmacro %}
-
-
 {% macro entry_enclosures(entry) %}
 {% if entry.enclosures %}
 <ul>

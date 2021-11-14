@@ -245,7 +245,11 @@
 
 
 {% for entry in entries %}
+
 {% set feed = entry.feed %}
+{% set content, _ = entry_content(entry, prefer_summary=False) %}
+{% set summary, _ = entry_content(entry, prefer_summary=True) %}
+
 
 <div id="entry-{{ loop.index }}" class="entry">
 
@@ -292,8 +296,19 @@ untitled
         {{ macros.confirm_button('.form_api', 'delete-entry', 'delete', leave_disabled=true, next=url_for('.entries', **request.args), context=context) }}
     {% endif %}
 
-
 {% endif %} {# not read only #}
+
+
+{# TODO: this doesn't work for search #}
+{# TODO: also, for search we want the read time of the whole content, not of the snippet #}
+{# TODO: also, it'd be nice to cache the read time #}
+{% if content %}
+    {% set minutes = read_time(content).minutes %}
+    {% if minutes > 1 %}
+    <li>
+        {{ minutes | humanize_apnumber }} minute read
+    {% endif %}
+{% endif %}
 
 
 {% for message in get_flashed_messages_by_prefix(
@@ -310,20 +325,13 @@ untitled
 </ul>
 
 
-{% set content = none %}
-{% if entry.summary %}
-{% set content = entry.summary %}
-{% else %}
-    {% set content = macros.entry_content(entry) | trim %}
-{% endif %}
-
-{% if content %}
+{% if summary %}
 <p>
     {# TODO: maybe unify entry / search result content or something? #}
     {% if not request.args.q %}
-        {{ content | striptags | truncate }}
+        {{ summary | striptags | truncate }}
     {% else %}
-        {{ content }}
+        {{ summary }}
     {% endif %}
 
     {% if not read_only %}
