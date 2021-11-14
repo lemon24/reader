@@ -10,6 +10,7 @@ from datetime import timezone
 import flask.signals
 import humanize
 import markupsafe
+import readtime
 import yaml
 from flask import abort
 from flask import Blueprint
@@ -45,6 +46,16 @@ def humanize_naturaltime(dt):
     if dt.tzinfo:
         when = datetime.utcnow().replace(tzinfo=timezone.utc)
     return humanize.naturaltime(dt, when=when)
+
+
+@blueprint.app_template_filter()
+def humanize_apnumber(value):
+    return humanize.apnumber(value)
+
+
+@blueprint.app_template_global()
+def read_time(text):
+    return readtime.of_html(text)
 
 
 @blueprint.app_template_filter()
