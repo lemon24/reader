@@ -9,7 +9,7 @@ Changelog
 Version 2.6
 -----------
 
-Unreleased
+Released 2021-11-15
 
 * Retrieve feeds in parallel, but parse them serially;
   previously, feeds would be parsed in parallel.
