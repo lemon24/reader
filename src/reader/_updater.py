@@ -65,7 +65,7 @@ class _Updater:
     old_feed: FeedForUpdate
     now: datetime
     global_now: datetime
-    log: Union[logging.Logger, logging.LoggerAdapter] = log
+    log: Any = log
 
     def __post_init__(self) -> None:
         object.__setattr__(self, 'old_feed', process_old_feed(self.old_feed))

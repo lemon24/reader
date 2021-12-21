@@ -181,7 +181,7 @@ def wrap_map(map: F, workers: int) -> F:
 MapType = Callable[[Callable[[Any], Any], Iterable[Any]], Iterator[Any]]
 
 
-class PrefixLogger(logging.LoggerAdapter):
+class PrefixLogger(logging.LoggerAdapter):  # type: ignore
 
     # if needed, add: with log.push('another prefix'): ...
 

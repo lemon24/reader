@@ -31,7 +31,7 @@ from typing import TypeVar
 from typing import Union
 
 import feedparser  # type: ignore
-import iso8601  # type: ignore
+import iso8601
 import requests
 from typing_extensions import Protocol
 from typing_extensions import runtime_checkable
