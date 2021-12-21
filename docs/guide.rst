@@ -377,7 +377,7 @@ key-value pairs where the values are any JSON-serializable data::
     >>> reader.get_feed_metadata_item(feed, 'key', 'default')
     'default'
     >>> reader.set_feed_metadata_item(feed, 'key', 'value')
-    >>> reader.get_feed_metadata_item(feed, 'key', 'default')
+    >>> reader.get_feed_metadata_item(feed, 'key')
     'value'
     >>> reader.set_feed_metadata_item(feed, 'another', {'one': [2]})
     >>> dict(reader.get_feed_metadata(feed))

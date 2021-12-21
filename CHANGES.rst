@@ -11,6 +11,8 @@ Version 2.7
 
 Unreleased
 
+* Add the :mod:`~reader._plugins.global_metadata` experimental plugin.
+
 
 Version 2.6
 -----------
