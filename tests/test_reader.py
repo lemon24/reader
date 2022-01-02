@@ -3536,3 +3536,12 @@ def test_delete_entry(reader):
     assert {(e.id, e.added_by) for e in reader.get_entries()} == {
         ('1, 2', 'feed'),
     }
+
+
+def test_tags_and_metadata_share_the_same_namespace(reader):
+    feed = 'http://www.example.com'
+    reader.add_feed(feed)
+    reader.set_feed_metadata_item(feed, 'one', {})
+    reader.add_feed_tag(feed, 'two')
+    assert dict(reader.get_feed_metadata(feed)) == {'one': {}, 'two': None}
+    assert set(reader.get_feed_tags(feed)) == {'one', 'two'}

@@ -1541,7 +1541,7 @@ class Reader:
 
         # get_feed_metadata(feed, *, key=None) -> (key, value), ...
         feed_url = _feed_argument(feed)
-        return self._storage.iter_metadata((feed_url,), key)
+        return self._storage.get_tags((feed_url,), key)
 
     @overload
     def get_feed_metadata_item(
@@ -1606,7 +1606,7 @@ class Reader:
 
         """
         feed_url = _feed_argument(feed)
-        self._storage.set_metadata((feed_url,), key, value)
+        self._storage.set_tag((feed_url,), key, value)
 
     def delete_feed_metadata_item(self, feed: FeedInput, key: str) -> None:
         """Delete metadata for a feed.
@@ -1624,7 +1624,7 @@ class Reader:
 
         """
         feed_url = _feed_argument(feed)
-        self._storage.delete_metadata((feed_url,), key)
+        self._storage.delete_tag((feed_url,), key)
 
     def enable_search(self) -> None:
         """Enable full-text search.
@@ -1875,7 +1875,13 @@ class Reader:
 
         """
         feed_url = _feed_argument(feed)
-        self._storage.add_tag((feed_url,), tag)
+
+        # FIXME: race condition
+        self.set_feed_metadata_item(
+            feed_url,
+            tag,
+            self.get_feed_metadata_item(feed_url, tag, None),  # type: ignore
+        )
 
     def remove_feed_tag(self, feed: FeedInput, tag: str) -> None:
         """Remove a tag from a feed.
@@ -1893,7 +1899,10 @@ class Reader:
 
         """
         feed_url = _feed_argument(feed)
-        self._storage.remove_tag((feed_url,), tag)
+        try:
+            self.delete_feed_metadata_item(feed_url, tag)
+        except FeedMetadataNotFoundError:
+            pass
 
     def get_feed_tags(self, feed: Optional[FeedInput] = None) -> Iterable[str]:
         """Get all or some of the feed tags.
@@ -1911,7 +1920,7 @@ class Reader:
 
         """
         feed_url = _feed_argument(feed) if feed is not None else None
-        return self._storage.get_tags((feed_url,))
+        return (k for k, _ in self._storage.get_tags((feed_url,)))
 
     def make_reader_reserved_name(self, key: str) -> str:
         """Create a *reader*-reserved tag or metadata name.

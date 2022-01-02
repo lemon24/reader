@@ -67,7 +67,6 @@ _T = TypeVar('_T')
 def create_db(db: sqlite3.Connection) -> None:
     create_feeds(db)
     create_entries(db)
-    create_feed_metadata(db)
     create_feed_tags(db)
     create_indexes(db)
 
@@ -145,31 +144,15 @@ def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
     )
 
 
-def create_feed_metadata(db: sqlite3.Connection) -> None:
-    db.execute(
-        """
-        CREATE TABLE feed_metadata (
-            feed TEXT NOT NULL,
-            key TEXT NOT NULL,
-            value TEXT NOT NULL,
-
-            PRIMARY KEY (feed, key),
-            FOREIGN KEY (feed) REFERENCES feeds(url)
-                ON UPDATE CASCADE
-                ON DELETE CASCADE
-        );
-        """
-    )
-
-
 def create_feed_tags(db: sqlite3.Connection) -> None:
     db.execute(
         """
         CREATE TABLE feed_tags (
             feed TEXT NOT NULL,
-            tag TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,  -- FIXME: should be nullable
 
-            PRIMARY KEY (feed, tag),
+            PRIMARY KEY (feed, key),
             FOREIGN KEY (feed) REFERENCES feeds(url)
                 ON UPDATE CASCADE
                 ON DELETE CASCADE
@@ -325,6 +308,12 @@ def update_from_33_to_34(db: sqlite3.Connection) -> None:  # pragma: no cover
     recreate_search_triggers(db)
 
 
+def update_from_34_to_35(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/266
+    # FIXME
+    raise NotImplementedError
+
+
 MINIMUM_SQLITE_VERSION = (3, 15)
 REQUIRED_SQLITE_COMPILE_OPTIONS = ["ENABLE_JSON1"]
 
@@ -333,7 +322,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=34,
+        version=35,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
@@ -343,6 +332,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             31: update_from_31_to_32,
             32: update_from_32_to_33,
             33: update_from_33_to_34,
+            34: update_from_34_to_35,
         },
         id=APPLICATION_ID,
         # Row value support was added in 3.15.
@@ -1083,31 +1073,37 @@ class Storage:
 
         return EntryCounts(*row[:4], row[4:7])  # type: ignore[call-arg]
 
-    def iter_metadata(
+    def get_tags(
         self,
-        object_id: Tuple[str, ...],
+        object_id: Tuple[Optional[str], ...],
         key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
         yield from join_paginated_iter(
-            partial(self.iter_metadata_page, object_id, key),
+            partial(self.get_tags_page, object_id, key),
             self.chunk_size,
         )
 
     @wrap_exceptions_iter(StorageError)
-    def iter_metadata_page(
+    def get_tags_page(
         self,
-        object_id: Tuple[str, ...],
+        object_id: Tuple[Optional[str], ...],
         key: Optional[str] = None,
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[Tuple[str, JSONType], Optional[_T]]]:
         info = SCHEMA_INFO[len(object_id)]
 
-        query = Query().SELECT("key", "value").FROM(f"{info.table_prefix}metadata")
+        query = Query().SELECT("key").FROM(f"{info.table_prefix}tags")
+        context: Dict[str, Any] = dict()
 
-        for column in info.id_columns:
-            query.WHERE(f"{column} = :{column}")
-        context = dict(zip(info.id_columns, object_id))
+        if not any(p is None for p in object_id):
+            query.SELECT("value")
+            for column in info.id_columns:
+                query.WHERE(f"{column} = :{column}")
+            context.update(zip(info.id_columns, object_id))
+
+        else:
+            query.SELECT_DISTINCT("'null'")
 
         if key is not None:
             query.WHERE("key = :key")
@@ -1124,14 +1120,12 @@ class Storage:
         )
 
     @wrap_exceptions(StorageError)
-    def set_metadata(
-        self, object_id: Tuple[str, ...], key: str, value: JSONType
-    ) -> None:
+    def set_tag(self, object_id: Tuple[str, ...], key: str, value: JSONType) -> None:
         info = SCHEMA_INFO[len(object_id)]
 
         columns = info.id_columns + ('key', 'value')
         query = f"""
-            INSERT OR REPLACE INTO {info.table_prefix}metadata (
+            INSERT OR REPLACE INTO {info.table_prefix}tags (
                 {', '.join(columns)}
             ) VALUES (
                 {', '.join(('?' for _ in columns))}
@@ -1149,12 +1143,12 @@ class Storage:
                 raise info.not_found_exc(*object_id) from None
 
     @wrap_exceptions(StorageError)
-    def delete_metadata(self, object_id: Tuple[str, ...], key: str) -> None:
+    def delete_tag(self, object_id: Tuple[str, ...], key: str) -> None:
         info = SCHEMA_INFO[len(object_id)]
 
         columns = info.id_columns + ('key',)
         query = f"""
-            DELETE FROM {info.table_prefix}metadata
+            DELETE FROM {info.table_prefix}tags
             WHERE (
                 {', '.join(columns)}
             ) = (
@@ -1167,86 +1161,6 @@ class Storage:
             cursor = self.db.execute(query, params)
         rowcount_exactly_one(
             cursor, lambda: info.metadata_not_found_exc(*object_id, key=key)
-        )
-
-    @wrap_exceptions(StorageError)
-    def add_tag(self, object_id: Tuple[str, ...], tag: str) -> None:
-        info = SCHEMA_INFO[len(object_id)]
-
-        columns = info.id_columns + ('tag',)
-        query = f"""
-            INSERT INTO {info.table_prefix}tags (
-                {', '.join(columns)}
-            ) VALUES (
-                {', '.join(('?' for _ in columns))}
-            )
-        """
-        params = object_id + (tag,)
-
-        with self.db:
-            try:
-                self.db.execute(query, params)
-            except sqlite3.IntegrityError as e:
-                if "foreign key constraint failed" in str(e).lower():
-                    raise info.not_found_exc(*object_id) from None
-                # tag exists is a no-op; it looks like:
-                # "UNIQUE constraint failed: feed_tags.feed, feed_tags.tag"
-
-    @wrap_exceptions(StorageError)
-    def remove_tag(self, object_id: Tuple[str, ...], tag: str) -> None:
-        info = SCHEMA_INFO[len(object_id)]
-
-        columns = info.id_columns + ('tag',)
-        query = f"""
-            DELETE FROM {info.table_prefix}tags
-            WHERE (
-                {', '.join(columns)}
-            ) = (
-                {', '.join(('?' for _ in columns))}
-            )
-        """
-        params = object_id + (tag,)
-
-        with self.db:
-            self.db.execute(query, params)
-
-    # Tuple[Optional[str], ...] seems hacky,
-    # but we can't have Optional[Tuple[str, ...]]
-    # because we depend on the tuple length
-    # to distinguish between feeds and entries.
-
-    def get_tags(self, object_id: Tuple[Optional[str], ...]) -> Iterable[str]:
-        yield from join_paginated_iter(
-            partial(self.get_tags_page, object_id),
-            self.chunk_size,
-        )
-
-    @wrap_exceptions_iter(StorageError)
-    def get_tags_page(
-        self,
-        object_id: Tuple[Optional[str], ...],
-        chunk_size: Optional[int] = None,
-        last: Optional[_T] = None,
-    ) -> Iterable[Tuple[str, Optional[_T]]]:
-        info = SCHEMA_INFO[len(object_id)]
-
-        query = Query().SELECT_DISTINCT("tag").FROM(f"{info.table_prefix}tags")
-        context: Dict[str, Any] = dict()
-
-        if not any(p is None for p in object_id):
-            for column in info.id_columns:
-                query.WHERE(f"{column} = :{column}")
-            context.update(zip(info.id_columns, object_id))
-
-        query.scrolling_window_order_by("tag")
-
-        def row_factory(t: Tuple[Any, ...]) -> str:
-            tag = t[0]
-            assert isinstance(tag, str)
-            return tag
-
-        yield from paginated_query(
-            self.db, query, context, chunk_size, last, row_factory
         )
 
 
@@ -1475,13 +1389,13 @@ def apply_feed_tags_filter_options(
         add(str(tag_query))
 
     if add_tags_cte:
-        query.WITH(("tags", f"SELECT tag FROM feed_tags WHERE feed = {url_column}"))
+        query.WITH(("tags", f"SELECT key FROM feed_tags WHERE feed = {url_column}"))
 
     if add_tags_count_cte:
         query.WITH(
             (
                 "tags_count",
-                f"SELECT count(tag) FROM feed_tags WHERE feed = {url_column}",
+                f"SELECT count(key) FROM feed_tags WHERE feed = {url_column}",
             )
         )
 
