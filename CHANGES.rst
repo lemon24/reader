@@ -11,6 +11,9 @@ Version 2.7
 
 Unreleased
 
+* Tags and metadata now share the same namespace.
+  See the :ref:`feed-tags` user guide section for details.
+  (:issue:`266`)
 * Add the :mod:`~reader._plugins.global_metadata` experimental plugin.
 
 

@@ -391,7 +391,14 @@ starting with specific (configurable) prefixes are `reserved <Reserved names_>`_
 Other than that, they can be any unicode string,
 although UIs might want to restrict this to a smaller character set.
 
+.. versionchanged:: 2.7
 
+    Tags and metadata now share the same namespace.
+    See the :ref:`feed-tags` section for details.
+
+
+
+.. _feed-tags:
 
 Feed tags
 ---------
@@ -420,6 +427,19 @@ Note that tags
 starting with specific (configurable) prefixes are `reserved <Reserved names_>`_.
 Other than that, they can be any unicode string,
 although UIs might want to restrict this to a smaller character set.
+
+.. versionchanged:: 2.7
+
+    Tags and metadata now share the same namespace.
+    That is, ``add_feed_tag(feed, 'tag')`` is equivalent to
+    ``set_feed_metadata_item(feed, 'tag', None)``::
+
+        >>> reader.set_feed_metadata_item(feed, 'one', {})
+        >>> reader.add_feed_tag(feed, 'two')
+        >>> dict(reader.get_feed_metadata(feed))
+        {'one': {}, 'two': None}
+        >>> set(reader.get_feed_tags(feed))
+        {'one', 'two'}
 
 
 

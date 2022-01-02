@@ -18,6 +18,8 @@ These packages will be installed automatically when installing *reader*:
   it replaces feedparser's default use of :mod:`urllib`
   to make it easier to write plugins.
 * `iso8601`_  parses dates in ISO 8601 / RFC 3339; used for JSON Feed parsing.
+* `beautifulsoup4`_ is used to strip HTML tags before adding entries
+  to the search index.
 
 *reader* also depends on the :mod:`sqlite3` standard library module
 (at least SQLite 3.15), and on the `JSON1`_ SQLite extension.
@@ -52,6 +54,7 @@ As of version |version|, *reader* has the following extras:
   refer to their documentation for details.
 
 
+.. _beautifulsoup4: https://www.crummy.com/software/BeautifulSoup/
 .. _feedparser: https://feedparser.readthedocs.io/en/latest/
 .. _requests: https://requests.readthedocs.io/
 .. _iso8601: http://pyiso8601.readthedocs.org/
