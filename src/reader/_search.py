@@ -203,9 +203,11 @@ class Search:
     def chunk_size(self) -> int:
         return self.storage.chunk_size
 
-    # strip_html is not part of the Search interface,
-    # but is part of the private API of this implementation.
-    strip_html = staticmethod(strip_html)
+    @staticmethod
+    def strip_html(text: SQLiteType) -> SQLiteType:
+        # strip_html is not part of the Search interface,
+        # but is part of the private API of this implementation.
+        return strip_html(text)
 
     @wrap_exceptions(SearchError)
     def check_dependencies(self) -> None:
