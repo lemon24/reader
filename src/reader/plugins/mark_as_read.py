@@ -21,7 +21,9 @@ feed metadata to something like::
     Explicitly mark matching entries as unimportant.
 
 .. versionchanged:: 2.7
-
+    Use the ``.reader.mark-as-read`` metadata for configuration.
+    Feeds using the old metadata, ``.reader.mark_as_read``,
+    will be migrated automatically on update until `reader` 3.0.
 
 
 .. todo::
@@ -64,12 +66,15 @@ def _get_config(reader, feed_url, metadata_key, patterns_key):
     return []
 
 
+_METADATA_KEY = 'mark-as-read'
+
+
 def _mark_as_read(reader, entry, status):
     if status is EntryUpdateStatus.MODIFIED:
         return
 
-    metadata_name = reader.make_reader_reserved_name('mark_as_read')
-    patterns = _get_config(reader, entry.feed_url, metadata_name, 'title')
+    metadata_key = reader.make_reader_reserved_name(_METADATA_KEY)
+    patterns = _get_config(reader, entry.feed_url, metadata_key, 'title')
 
     for pattern in patterns or ():
         if re.search(pattern, entry.title):
@@ -77,5 +82,24 @@ def _mark_as_read(reader, entry, status):
             return
 
 
+_OLD_METADATA_KEY = 'mark_as_read'
+
+
+def _migrate_pre_2_7_metadata(reader, feed):
+    old_key = reader.make_reader_reserved_name(_OLD_METADATA_KEY)
+    old_value = reader.get_feed_metadata_item(feed, old_key, None)
+    if not old_value:
+        return
+
+    key = reader.make_reader_reserved_name(_METADATA_KEY)
+    value = reader.get_feed_metadata_item(feed, key, None)
+    if value:  # pragma: no cover
+        return
+
+    reader.set_feed_metadata_item(feed, key, old_value)
+    reader.delete_feed_metadata_item(feed, old_key)
+
+
 def init_reader(reader):
+    reader.before_feed_update_hooks.append(_migrate_pre_2_7_metadata)
     reader.after_entry_update_hooks.append(_mark_as_read)
