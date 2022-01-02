@@ -314,8 +314,18 @@ def update_from_33_to_34(db: sqlite3.Connection) -> None:  # pragma: no cover
 
 def update_from_34_to_35(db: sqlite3.Connection) -> None:  # pragma: no cover
     # for https://github.com/lemon24/reader/issues/266
-    # FIXME
-    raise NotImplementedError
+    db.execute(
+        """
+        INSERT OR REPLACE INTO feed_metadata (feed, key, value)
+        SELECT feed, tag, coalesce((
+            SELECT value FROM feed_metadata AS fm
+            WHERE (fm.feed, fm.key) == (feed, tag)
+        ), 'null')
+        FROM feed_tags;
+        """
+    )
+    db.execute("DROP TABLE feed_tags;")
+    db.execute("ALTER TABLE feed_metadata RENAME TO feed_tags;")
 
 
 MINIMUM_SQLITE_VERSION = (3, 15)
