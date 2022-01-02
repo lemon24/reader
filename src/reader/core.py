@@ -79,7 +79,7 @@ _U = TypeVar('_U')
 
 ReaderPluginType = Callable[['Reader'], None]
 AfterEntryUpdateHook = Callable[['Reader', EntryData, EntryUpdateStatus], None]
-AfterFeedUpdateHook = Callable[['Reader', str], None]
+FeedUpdateHook = Callable[['Reader', str], None]
 
 
 def make_reader(
@@ -336,7 +336,7 @@ class Reader:
         self._updater = reader._updater
 
         #: List of functions called for each updated entry
-        #: after the feed was updated.
+        #: after the feed is updated.
         #:
         #: Each function is called with:
         #:
@@ -359,7 +359,21 @@ class Reader:
         self.after_entry_update_hooks: MutableSequence[AfterEntryUpdateHook] = []
 
         #: List of functions called for each updated feed
-        #: after the feed was updated.
+        #: before the feed is updated.
+        #:
+        #: Each function is called with:
+        #:
+        #: * `reader` – the :class:`Reader` instance
+        #: * `feed` – the :class:`str` feed URL
+        #:
+        #: Each function should return :const:`None`.
+        #:
+        #: .. versionadded:: 2.7
+        #:
+        self.before_feed_update_hooks: MutableSequence[FeedUpdateHook] = []
+
+        #: List of functions called for each updated feed
+        #: after the feed is updated.
         #:
         #: Each function is called with:
         #:
@@ -370,7 +384,7 @@ class Reader:
         #:
         #: .. versionadded:: 2.2
         #:
-        self.after_feed_update_hooks: MutableSequence[AfterFeedUpdateHook] = []
+        self.after_feed_update_hooks: MutableSequence[FeedUpdateHook] = []
 
         if _called_directly:
             warnings.warn(
@@ -1039,6 +1053,10 @@ class Reader:
         feed_to_update: Optional[FeedUpdateIntent],
         entries_to_update: Iterable[EntryUpdateIntent],
     ) -> Tuple[int, int]:
+
+        for feed_hook in self.before_feed_update_hooks:
+            feed_hook(self, url)
+
         if feed_to_update:
             if entries_to_update:
                 self._storage.add_or_update_entries(entries_to_update)

@@ -8,8 +8,8 @@ reader.mark_as_read
 Mark added entries of specific feeds as read + unimportant
 if their title matches a regex.
 
-To configure, set the ``make_reader_reserved_name('mark_as_read')``
-(by default, ``.reader.mark_as_read``)
+To configure, set the ``make_reader_reserved_name('mark-as-read')``
+(by default, ``.reader.mark-as-read``)
 feed metadata to something like::
 
     {
@@ -19,6 +19,9 @@ feed metadata to something like::
 
 .. versionchanged:: 2.4
     Explicitly mark matching entries as unimportant.
+
+.. versionchanged:: 2.7
+
 
 
 .. todo::

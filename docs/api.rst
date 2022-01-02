@@ -20,10 +20,6 @@ Most of *reader*'s functionality can be accessed through a :class:`Reader` insta
 
 .. autoclass:: Reader(...)
     :members:
-    :exclude-members: after_entry_update_hooks
-
-    .. autoattribute:: after_entry_update_hooks
-        :annotation:
 
 
 Data objects

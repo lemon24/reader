@@ -74,11 +74,15 @@ def test_after_entry_update_hooks_add_entry(reader):
     ]
 
 
-def test_after_feed_update_hooks(reader):
+def test_feed_update_hooks(reader):
     reader._parser = parser = Parser()
     parser.tzinfo = False
 
     plugin_calls = []
+
+    def before_plugin(r, f):
+        assert r is reader
+        plugin_calls.append((before_plugin, f))
 
     def first_plugin(r, f):
         assert r is reader
@@ -95,35 +99,36 @@ def test_after_feed_update_hooks(reader):
     parser.entry(1, 1, datetime(2010, 1, 1))
     reader.add_feed(one)
     reader.after_feed_update_hooks.append(first_plugin)
+    reader.before_feed_update_hooks.append(before_plugin)
     reader.update_feeds()
-    assert plugin_calls == [(first_plugin, one.url)]
+    assert plugin_calls == [(before_plugin, one.url), (first_plugin, one.url)]
 
     plugin_calls[:] = []
 
     # gets called if something changes
     parser.entry(1, 1, datetime(2010, 1, 2))
     reader.update_feeds()
-    assert plugin_calls == [(first_plugin, one.url)]
+    assert plugin_calls == [(before_plugin, one.url), (first_plugin, one.url)]
 
     plugin_calls[:] = []
 
     # gets called even if there was no change
     reader.update_feeds()
-    assert plugin_calls == [(first_plugin, one.url)]
+    assert plugin_calls == [(before_plugin, one.url), (first_plugin, one.url)]
 
     plugin_calls[:] = []
 
-    # gets called even if the one was not modified
+    # gets called even if the feed was not modified
     reader._parser = NotModifiedParser()
     reader.update_feeds()
-    assert plugin_calls == [(first_plugin, one.url)]
+    assert plugin_calls == [(before_plugin, one.url), (first_plugin, one.url)]
 
     plugin_calls[:] = []
 
     # gets called even if there was an error
     reader._parser = FailingParser()
     reader.update_feeds()
-    assert plugin_calls == [(first_plugin, one.url)]
+    assert plugin_calls == [(before_plugin, one.url), (first_plugin, one.url)]
 
     plugin_calls[:] = []
 
@@ -134,8 +139,10 @@ def test_after_feed_update_hooks(reader):
     reader.after_feed_update_hooks.append(second_plugin)
     reader.update_feeds()
     assert plugin_calls == [
+        (before_plugin, one.url),
         (first_plugin, one.url),
         (second_plugin, one.url),
+        (before_plugin, two.url),
         (first_plugin, two.url),
         (second_plugin, two.url),
     ]
@@ -144,6 +151,10 @@ def test_after_feed_update_hooks(reader):
 
     # update_feed() only runs hooks for that plugin
     reader.update_feed(one)
-    assert plugin_calls == [(first_plugin, one.url), (second_plugin, one.url)]
+    assert plugin_calls == [
+        (before_plugin, one.url),
+        (first_plugin, one.url),
+        (second_plugin, one.url),
+    ]
 
     # TODO: What is the expected behavior if a plugin raises an exception?

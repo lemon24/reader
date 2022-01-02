@@ -14,6 +14,8 @@ Unreleased
 * Tags and metadata now share the same namespace.
   See the :ref:`feed-tags` user guide section for details.
   (:issue:`266`)
+* Allow running arbitrary actions before updating feeds
+  via :attr:`~Reader.before_feed_update_hooks`.
 * Add the :mod:`~reader._plugins.global_metadata` experimental plugin.
 
 
