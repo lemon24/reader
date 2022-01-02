@@ -1875,13 +1875,7 @@ class Reader:
 
         """
         feed_url = _feed_argument(feed)
-
-        # FIXME: race condition
-        self.set_feed_metadata_item(
-            feed_url,
-            tag,
-            self.get_feed_metadata_item(feed_url, tag, None),  # type: ignore
-        )
+        self._storage.set_tag((feed_url,), tag)
 
     def remove_feed_tag(self, feed: FeedInput, tag: str) -> None:
         """Remove a tag from a feed.

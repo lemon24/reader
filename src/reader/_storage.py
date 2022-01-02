@@ -10,10 +10,12 @@ from typing import Iterable
 from typing import Mapping
 from typing import NamedTuple
 from typing import Optional
+from typing import overload
 from typing import Sequence
 from typing import Tuple
 from typing import Type
 from typing import TypeVar
+from typing import Union
 
 from ._sql_utils import BaseQuery
 from ._sql_utils import paginated_query
@@ -54,6 +56,8 @@ from .types import Feed
 from .types import FeedCounts
 from .types import FeedSortOrder
 from .types import JSONType
+from .types import MISSING
+from .types import MissingType
 
 APPLICATION_ID = int(''.join(f'{ord(c):x}' for c in 'read'), 16)
 
@@ -150,7 +154,7 @@ def create_feed_tags(db: sqlite3.Connection) -> None:
         CREATE TABLE feed_tags (
             feed TEXT NOT NULL,
             key TEXT NOT NULL,
-            value TEXT NOT NULL,  -- FIXME: should be nullable
+            value TEXT NOT NULL,
 
             PRIMARY KEY (feed, key),
             FOREIGN KEY (feed) REFERENCES feeds(url)
@@ -1119,19 +1123,56 @@ class Storage:
             self.db, query, context, chunk_size, last, row_factory
         )
 
+    @overload
+    def set_tag(self, object_id: Tuple[str, ...], key: str) -> None:  # pragma: no cover
+        ...
+
+    @overload
+    def set_tag(
+        self, object_id: Tuple[str, ...], key: str, value: JSONType
+    ) -> None:  # pragma: no cover
+        ...
+
     @wrap_exceptions(StorageError)
-    def set_tag(self, object_id: Tuple[str, ...], key: str, value: JSONType) -> None:
+    def set_tag(
+        self,
+        object_id: Tuple[str, ...],
+        key: str,
+        value: Union[MissingType, JSONType] = MISSING,
+    ) -> None:
         info = SCHEMA_INFO[len(object_id)]
 
-        columns = info.id_columns + ('key', 'value')
-        query = f"""
-            INSERT OR REPLACE INTO {info.table_prefix}tags (
-                {', '.join(columns)}
-            ) VALUES (
-                {', '.join(('?' for _ in columns))}
-            )
-        """
-        params = object_id + (key, json.dumps(value))
+        params = dict(zip(info.id_columns, object_id), key=key)
+
+        if value is not MISSING:
+            query = f"""
+                INSERT OR REPLACE INTO {info.table_prefix}tags (
+                    {', '.join(info.id_columns)}, key, value
+                ) VALUES (
+                    {', '.join((f':{c}' for c in info.id_columns))},
+                    :key,
+                    :value
+                )
+            """
+            params.update(value=json.dumps(value))
+
+        else:
+            query = f"""
+                INSERT OR REPLACE INTO {info.table_prefix}tags (
+                    {', '.join(info.id_columns)}, key, value
+                ) VALUES (
+                    {', '.join((f':{c}' for c in info.id_columns))},
+                    :key,
+                    coalesce((
+                        SELECT value FROM {info.table_prefix}tags
+                        WHERE (
+                            {', '.join(info.id_columns)}, key
+                        ) == (
+                            {', '.join((f':{c}' for c in info.id_columns))}, :key
+                        )
+                    ), 'null')
+                )
+            """
 
         with self.db:
             try:
