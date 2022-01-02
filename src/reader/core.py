@@ -47,8 +47,8 @@ from .exceptions import FeedNotFoundError
 from .exceptions import InvalidPluginError
 from .exceptions import ParseError
 from .exceptions import SearchNotEnabledError
-from .plugins import _DEFAULT_PLUGINS
 from .plugins import _PLUGINS
+from .plugins import DEFAULT_PLUGINS
 from .types import _entry_argument
 from .types import _feed_argument
 from .types import Entry
@@ -86,7 +86,7 @@ def make_reader(
     url: str,
     *,
     feed_root: Optional[str] = None,
-    plugins: Iterable[Union[str, ReaderPluginType]] = _DEFAULT_PLUGINS,
+    plugins: Iterable[Union[str, ReaderPluginType]] = DEFAULT_PLUGINS,
     session_timeout: TimeoutType = SESSION_TIMEOUT,
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
     search_enabled: Union[bool, None, Literal['auto']] = 'auto',
@@ -156,7 +156,7 @@ def make_reader(
             The callables are called with the reader object
             before it is returned.
             Exceptions from plugin code will propagate to the caller.
-            The only plugin used by default is ``reader.ua_fallback``.
+            Defaults to :data:`~reader.plugins.DEFAULT_PLUGINS`.
 
         session_timeout (float or tuple(float, float) or None):
             When retrieving HTTP(S) feeds,

@@ -548,8 +548,8 @@ To use a built-in plugin, pass the plugin name to :func:`make_reader`::
     ... ])
 
 
-You can find the full list of built-in plugins :ref:`here <built-in plugins>`.
-By default, only :mod:`reader.ua_fallback <reader.plugins.ua_fallback>` is enabled.
+You can find the full list of built-in plugins :ref:`here <built-in plugins>`,
+and the list of plugins used by default in :data:`reader.plugins.DEFAULT_PLUGINS`.
 
 
 .. _custom plugins:

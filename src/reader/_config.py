@@ -9,8 +9,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from dataclasses import field
 
-from .plugins import _DEFAULT_PLUGINS
 from .plugins import _PLUGINS
+from .plugins import DEFAULT_PLUGINS
 from reader import make_reader
 from reader._plugins import Loader
 
@@ -35,7 +35,7 @@ def make_reader_from_config(*, plugins=None, plugin_loader=None, **kwargs):
             # use the default loader for these (we always want exceptions)
             kwargs[name] = loader.load(name, wrap=True)
 
-    plugins = plugins if plugins is not None else dict.fromkeys(_DEFAULT_PLUGINS)
+    plugins = plugins if plugins is not None else dict.fromkeys(DEFAULT_PLUGINS)
 
     plugins_arg = kwargs['plugins'] = []
     for name in list(plugins):

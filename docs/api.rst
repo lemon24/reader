@@ -149,3 +149,9 @@ Exceptions
 .. autoexception:: InvalidPluginError
 
     Subclass of :exc:`PluginError` and :exc:`ValueError`.
+
+
+Constants
+---------
+
+.. autodata:: reader.plugins.DEFAULT_PLUGINS

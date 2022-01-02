@@ -15,4 +15,7 @@ _PLUGINS = {
     'reader.ua_fallback': ua_fallback.init_reader,
 }
 
-_DEFAULT_PLUGINS = ('reader.ua_fallback',)
+#: The list of plugins :func:`~reader.make_reader` uses by default.
+DEFAULT_PLUGINS = [
+    'reader.ua_fallback',
+]

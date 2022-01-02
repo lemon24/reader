@@ -14,12 +14,13 @@ Unreleased
 * Tags and metadata now share the same namespace.
   See the :ref:`feed-tags` user guide section for details.
   (:issue:`266`)
-* Allow running arbitrary actions before updating feeds
-  via :attr:`~Reader.before_feed_update_hooks`
 * The :mod:`~reader.plugins.mark_as_read` plugin now uses the
   ``.reader.mark-as-read`` metadata for configuration.
   Feeds using the old metadata, ``.reader.mark_as_read``,
   will be migrated automatically on update until `reader` 3.0.
+* Allow running arbitrary actions before updating feeds
+  via :attr:`~Reader.before_feed_update_hooks`.
+* Expose :data:`reader.plugins.DEFAULT_PLUGINS`.
 * Add the :mod:`~reader._plugins.global_metadata` experimental plugin.
 
 
