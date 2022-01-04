@@ -9,7 +9,7 @@ Changelog
 Version 2.7
 -----------
 
-Unreleased
+Released 2022-01-04
 
 * Tags and metadata now share the same namespace.
   See the :ref:`feed-tags` user guide section for details.
