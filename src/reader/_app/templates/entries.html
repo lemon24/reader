@@ -243,8 +243,9 @@
 {% endif %}
 
 
-
+{% set vars = namespace(entry_index=0) %}
 {% for entry in entries %}
+{% set vars.entry_index = loop.index %}
 
 {% set feed = entry.feed %}
 {% set content, _ = entry_content(entry, prefer_summary=False) %}
@@ -360,15 +361,15 @@ untitled
 
 
 {% set limit = request.args.get('limit') | int %}
-{% if limit -%}
+{% if limit and vars.entry_index >= limit -%}
 {%- set args = request.args.copy() -%}
 {%- set _ = args.poplist('limit') -%}
 
 <p>
-showing only the first {{ limit }} entries;
+showing only the first {{ vars.entry_index }} entries;
 <a href='
     {{- url_for('.entries', **args) -}}
-    {%- if entries %}#entry-{{ entries | length }}{% endif -%}
+    {%- if entries %}#entry-{{ vars.entry_index }}{% endif -%}
 '>show all entries</a>
 </p>
 

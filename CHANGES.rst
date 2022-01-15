@@ -12,6 +12,11 @@ Version 2.8
 Unreleased
 
 * In the web application, show maxrss when debug is enabled. (:issue:`269`)
+* In the web application, decrease memory usage of the entries page
+  when there are a lot of entries
+  (e.g. for 2.5k entries, the maxrss decreased from 115 MiB to 75 MiB),
+  at the expense of making "entries for feed" slightly slower.
+  (:issue:`269`)
 
 
 Version 2.7

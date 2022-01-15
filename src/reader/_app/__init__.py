@@ -119,6 +119,7 @@ def get_reader():
         g.reader = current_app.config['READER_CONFIG'].make_reader(
             'app', plugin_loader=current_app.plugin_loader
         )
+        # TODO: lowering g.reader._storage.chunk_size may reduce memory usage slightly
     return g.reader
 
 
@@ -308,11 +309,14 @@ def entries():
         else:
             raise
 
-    entries = list(entries)
-
     entries_data = None
     if feed_url:
-        entries_data = [e.id for e in entries]
+        # TODO: duplicated from entries = ... above
+        # TODO: can be made faster with a get_entry_ids() method
+        entries_data = [
+            e.id
+            for e in get_entries(**kwargs, limit=request.args.get('limit', type=int))
+        ]
 
     feed_entry_counts = None
     if feed_url:
