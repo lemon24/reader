@@ -23,11 +23,19 @@ margin: 0;
 position: fixed;
 bottom: 0;
 right: 0;
-"
-title='{{ config.READER_CONFIG.data | tojson(indent=4) | escape }}'
-><code>{{ config.READER_CONFIG.merged('app').reader.url }}</code></p>
-{% endif %}
+">
 
+<span title='{{ config.READER_CONFIG.data | toyaml | escape }}'>
+    {{ config.READER_CONFIG.merged('app').reader.url }}
+</span>
+
+{% set maxrss = debug_maxrss_mib() %}
+<span title="maxrss = {{ maxrss | round(3) }} MiB">
+rss={{ maxrss | round(1) }}
+</span>
+
+</p>
+{% endif %}
 
 
 <div id="top-bar">

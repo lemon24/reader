@@ -11,6 +11,8 @@ Version 2.8
 
 Unreleased
 
+* In the web application, show maxrss when debug is enabled. (:issue:`269`)
+
 
 Version 2.7
 -----------

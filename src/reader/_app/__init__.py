@@ -58,6 +58,21 @@ def read_time(text):
     return readtime.of_html(text)
 
 
+@blueprint.app_template_filter()
+def toyaml(data):
+    return yaml.safe_dump(data)
+
+
+@blueprint.app_template_global()
+def debug_maxrss_mib():
+    import resource
+    import sys
+
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 2 ** (
+        20 if sys.platform == 'darwin' else 10
+    )
+
+
 PREFERRED_CONTENT_TYPES = ['text/html', 'text/xhtml', 'text/plain']
 HTML_CONTENT_TYPES = {'text/html', 'text/xhtml'}
 
