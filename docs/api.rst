@@ -142,6 +142,17 @@ Exceptions
 
     Subclass of :exc:`SearchError` and :exc:`ValueError`.
 
+
+.. autoexception:: TagError
+    :members:
+
+    Subclass of :exc:`ReaderError`.
+
+.. autoexception:: TagNotFoundError
+    :members:
+
+    Subclass of :exc:`TagError`.
+
 .. autoexception:: PluginError
 
     Subclass of :exc:`ReaderError`.

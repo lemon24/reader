@@ -2,10 +2,11 @@ import pickle
 
 import pytest
 
+from reader import EntryError
+from reader import FeedError
+from reader import MetadataError
+from reader import TagError
 from reader.exceptions import _FancyExceptionBase
-from reader.exceptions import EntryError
-from reader.exceptions import FeedError
-from reader.exceptions import MetadataError
 
 
 def test_fancy_exception_base():
@@ -80,3 +81,9 @@ def test_metadata_error_str(exc_type):
         args_prefix = ''
     exc = exc_type(*args, key='key')
     assert (args_prefix + repr('key')) in str(exc)
+
+
+@pytest.mark.parametrize('exc_type', all_classes(TagError))
+def test_tag_error_str(exc_type):
+    exc = exc_type('key')
+    assert repr('key') in str(exc)

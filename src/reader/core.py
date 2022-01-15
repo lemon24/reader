@@ -47,6 +47,7 @@ from .exceptions import FeedNotFoundError
 from .exceptions import InvalidPluginError
 from .exceptions import ParseError
 from .exceptions import SearchNotEnabledError
+from .exceptions import TagNotFoundError
 from .plugins import _PLUGINS
 from .plugins import DEFAULT_PLUGINS
 from .types import _entry_argument
@@ -1595,10 +1596,13 @@ class Reader:
             Renamed from :meth:`get_feed_metadata`.
 
         """
-        if isinstance(default, MissingType):
-            return self.get_tag(feed, key)
-        else:
-            return self.get_tag(feed, key, default)
+        try:
+            if isinstance(default, MissingType):
+                return self.get_tag(feed, key)
+            else:
+                return self.get_tag(feed, key, default)
+        except TagNotFoundError as e:
+            raise FeedMetadataNotFoundError(_feed_argument(feed), e.key) from None
 
     def set_feed_metadata_item(
         self, feed: FeedInput, key: str, value: JSONType
@@ -1636,7 +1640,10 @@ class Reader:
             Renamed from :meth:`delete_feed_metadata`.
 
         """
-        self.delete_tag(feed, key)
+        try:
+            self.delete_tag(feed, key)
+        except TagNotFoundError as e:
+            raise FeedMetadataNotFoundError(_feed_argument(feed), e.key) from None
 
     def enable_search(self) -> None:
         """Enable full-text search.
@@ -1954,10 +1961,9 @@ class Reader:
         self, resource: FeedInput, key: str, default: Union[MissingType, _T] = MISSING
     ) -> Union[JSONType, _T]:
         # FIXME: docstring (copy from get_feed_metadata_item)
-        # FIXME: raise TagNotFoundError
         return zero_or_one(
             (v for _, v in self.get_tags(resource, key=key)),
-            lambda: FeedMetadataNotFoundError(_feed_argument(resource), key),
+            lambda: TagNotFoundError(key),
             default,
         )
 
@@ -1989,11 +1995,10 @@ class Reader:
         self, resource: FeedInput, key: str, missing_ok: bool = False
     ) -> None:
         # FIXME: docstring (copy from delete_feed_metadata_item/remove_feed_tag)
-        # FIXME: raise TagNotFoundError
         feed_url = _feed_argument(resource)
         try:
             self._storage.delete_tag((feed_url,), key)
-        except FeedMetadataNotFoundError:
+        except TagNotFoundError:
             if not missing_ok:
                 raise
 

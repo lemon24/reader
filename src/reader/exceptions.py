@@ -248,3 +248,31 @@ class InvalidPluginError(PluginError, ValueError):
     .. versionadded:: 1.16
 
     """
+
+
+class TagError(ReaderError):
+    """A tag error occurred.
+
+    .. versionadded:: 2.8
+
+    """
+
+    def __init__(self, key: str, message: str = '') -> None:
+        super().__init__(message)
+
+        #: The tag key.
+        self.key = key
+
+    @property
+    def _str(self) -> str:
+        return repr(self.key)
+
+
+class TagNotFoundError(TagError):
+    """Tag not found.
+
+    .. versionadded:: 2.8
+
+    """
+
+    message = "no such tag"

@@ -38,14 +38,12 @@ from ._utils import join_paginated_iter
 from ._utils import zero_or_one
 from .exceptions import EntryError
 from .exceptions import EntryExistsError
-from .exceptions import EntryMetadataNotFoundError
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
-from .exceptions import FeedMetadataNotFoundError
 from .exceptions import FeedNotFoundError
-from .exceptions import MetadataNotFoundError
 from .exceptions import ReaderError
 from .exceptions import StorageError
+from .exceptions import TagNotFoundError
 from .types import Content
 from .types import Enclosure
 from .types import Entry
@@ -169,14 +167,11 @@ class SchemaInfo(NamedTuple):
     table_prefix: str
     id_columns: Tuple[str, ...]
     not_found_exc: Type[ReaderError]
-    metadata_not_found_exc: Type[MetadataNotFoundError]
 
 
 SCHEMA_INFO = {
-    1: SchemaInfo('feed_', ('feed',), FeedNotFoundError, FeedMetadataNotFoundError),
-    2: SchemaInfo(
-        'entry_', ('feed', 'id'), EntryNotFoundError, EntryMetadataNotFoundError
-    ),
+    1: SchemaInfo('feed_', ('feed',), FeedNotFoundError),
+    2: SchemaInfo('entry_', ('feed', 'id'), EntryNotFoundError),
 }
 
 
@@ -1210,9 +1205,7 @@ class Storage:
 
         with self.db:
             cursor = self.db.execute(query, params)
-        rowcount_exactly_one(
-            cursor, lambda: info.metadata_not_found_exc(*object_id, key=key)
-        )
+        rowcount_exactly_one(cursor, lambda: TagNotFoundError(key=key))
 
 
 def make_get_feeds_query(
