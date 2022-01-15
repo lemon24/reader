@@ -14,30 +14,6 @@ window.onload = function () {
 
 <title>{% block page_title %}{% endblock %}</title>
 
-{% if config.DEBUG  %}
-<p style="
-color: white;
-background: red;
-padding: .5rem 1rem;
-margin: 0;
-position: fixed;
-bottom: 0;
-right: 0;
-">
-
-<span title='{{ config.READER_CONFIG.data | toyaml | escape }}'>
-    {{ config.READER_CONFIG.merged('app').reader.url }}
-</span>
-
-{% set maxrss = debug_maxrss_mib() %}
-<span title="maxrss = {{ maxrss | round(3) }} MiB">
-rss={{ maxrss | round(1) }}
-</span>
-
-</p>
-{% endif %}
-
-
 <div id="top-bar">
 <ul class="controls">
 <li>
@@ -70,4 +46,29 @@ page generated in about {{ g.request_time() | round(3, 'ceil') }} seconds
 by <a href="https://github.com/lemon24/reader">reader</a>._app
 {{ g.reader_version }}
 </p>
+
 </div>
+
+
+{% if config.DEBUG  %}
+<p style="
+color: white;
+background: red;
+padding: .5rem 1rem;
+margin: 0;
+position: fixed;
+bottom: 0;
+right: 0;
+">
+
+<span title='{{ config.READER_CONFIG.data | toyaml | escape }}'>
+    {{ config.READER_CONFIG.merged('app').reader.url }}
+</span>
+
+{% set maxrss = debug_maxrss_mib() %}
+<span title="maxrss = {{ maxrss | round(3) }} MiB">
+rss={{ maxrss | round(1) }}
+</span>
+
+</p>
+{% endif %}
