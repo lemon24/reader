@@ -1556,10 +1556,7 @@ class Reader:
             :meth:`get_feed_metadata_item` alias was removed.
 
         """
-
-        # get_feed_metadata(feed, *, key=None) -> (key, value), ...
-        feed_url = _feed_argument(feed)
-        return self._storage.get_tags((feed_url,), key)
+        return self.get_tags(feed, key)
 
     @overload
     def get_feed_metadata_item(
@@ -1598,11 +1595,10 @@ class Reader:
             Renamed from :meth:`get_feed_metadata`.
 
         """
-        return zero_or_one(
-            (v for _, v in self.get_feed_metadata(feed, key=key)),
-            lambda: FeedMetadataNotFoundError(_feed_argument(feed), key),
-            default,
-        )
+        if isinstance(default, MissingType):
+            return self.get_tag(feed, key)
+        else:
+            return self.get_tag(feed, key, default)
 
     def set_feed_metadata_item(
         self, feed: FeedInput, key: str, value: JSONType
@@ -1623,8 +1619,7 @@ class Reader:
             Renamed from :meth:`set_feed_metadata`.
 
         """
-        feed_url = _feed_argument(feed)
-        self._storage.set_tag((feed_url,), key, value)
+        self.set_tag(feed, key, value)
 
     def delete_feed_metadata_item(self, feed: FeedInput, key: str) -> None:
         """Delete metadata for a feed.
@@ -1641,8 +1636,7 @@ class Reader:
             Renamed from :meth:`delete_feed_metadata`.
 
         """
-        feed_url = _feed_argument(feed)
-        self._storage.delete_tag((feed_url,), key)
+        self.delete_tag(feed, key)
 
     def enable_search(self) -> None:
         """Enable full-text search.
@@ -1892,8 +1886,7 @@ class Reader:
         .. versionadded:: 1.7
 
         """
-        feed_url = _feed_argument(feed)
-        self._storage.set_tag((feed_url,), tag)
+        self.set_tag(feed, tag)
 
     def remove_feed_tag(self, feed: FeedInput, tag: str) -> None:
         """Remove a tag from a feed.
@@ -1910,11 +1903,7 @@ class Reader:
         .. versionadded:: 1.7
 
         """
-        feed_url = _feed_argument(feed)
-        try:
-            self.delete_feed_metadata_item(feed_url, tag)
-        except FeedMetadataNotFoundError:
-            pass
+        self.delete_tag(feed, tag, True)
 
     def get_feed_tags(self, feed: Optional[FeedInput] = None) -> Iterable[str]:
         """Get all or some of the feed tags.
@@ -1931,8 +1920,82 @@ class Reader:
         .. versionadded:: 1.7
 
         """
-        feed_url = _feed_argument(feed) if feed is not None else None
-        return (k for k, _ in self._storage.get_tags((feed_url,)))
+        return (k for k, _ in self.get_tags(feed))
+
+    def get_tags(
+        self,
+        resource: Optional[FeedInput],
+        key: Optional[str] = None,
+    ) -> Iterable[Tuple[str, JSONType]]:
+        # FIXME: docstring (copy from get_feed_metadata)
+        feed_url = _feed_argument(resource) if resource is not None else None
+        return self._storage.get_tags((feed_url,), key)
+
+    def get_tag_keys(
+        self,
+        resource: Optional[FeedInput] = None,
+    ) -> Iterable[str]:  # pragma: no cover
+        # FIXME: cover
+        # FIXME: docstring (copy from get_feed_tags)
+        # TODO: (later) efficient implementation
+        return (k for k, _ in self.get_tags(resource))
+
+    @overload
+    def get_tag(self, resource: FeedInput, key: str) -> JSONType:  # pragma: no cover
+        ...
+
+    @overload
+    def get_tag(
+        self, resource: FeedInput, key: str, default: _T
+    ) -> Union[JSONType, _T]:  # pragma: no cover
+        ...
+
+    def get_tag(
+        self, resource: FeedInput, key: str, default: Union[MissingType, _T] = MISSING
+    ) -> Union[JSONType, _T]:
+        # FIXME: docstring (copy from get_feed_metadata_item)
+        # FIXME: raise TagNotFoundError
+        return zero_or_one(
+            (v for _, v in self.get_tags(resource, key=key)),
+            lambda: FeedMetadataNotFoundError(_feed_argument(resource), key),
+            default,
+        )
+
+    @overload
+    def set_tag(self, resource: FeedInput, key: str) -> None:  # pragma: no cover
+        ...
+
+    @overload
+    def set_tag(
+        self, resource: FeedInput, key: str, value: JSONType
+    ) -> None:  # pragma: no cover
+        ...
+
+    def set_tag(
+        self,
+        resource: FeedInput,
+        key: str,
+        value: Union[JSONType, MissingType] = MISSING,
+    ) -> None:
+        # FIXME: docstring (copy from set_feed_metadata_item)
+        # TODO: this would not need to be overloaded if JSONType could be None
+        feed_url = _feed_argument(resource)
+        if not isinstance(value, MissingType):
+            self._storage.set_tag((feed_url,), key, value)
+        else:
+            self._storage.set_tag((feed_url,), key)
+
+    def delete_tag(
+        self, resource: FeedInput, key: str, missing_ok: bool = False
+    ) -> None:
+        # FIXME: docstring (copy from delete_feed_metadata_item/remove_feed_tag)
+        # FIXME: raise TagNotFoundError
+        feed_url = _feed_argument(resource)
+        try:
+            self._storage.delete_tag((feed_url,), key)
+        except FeedMetadataNotFoundError:
+            if not missing_ok:
+                raise
 
     def make_reader_reserved_name(self, key: str) -> str:
         """Create a *reader*-reserved tag or metadata name.

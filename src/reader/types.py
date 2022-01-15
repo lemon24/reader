@@ -608,6 +608,7 @@ SearchSortOrder = Literal['relevant', 'recent', 'random']
 
 
 # https://github.com/python/typing/issues/182
+# TODO: allow JSONType to be str, int, ...
 JSONValue = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
 JSONType = Union[Dict[str, JSONValue], List[JSONValue]]
 

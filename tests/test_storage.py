@@ -254,10 +254,6 @@ def get_entries_chunk_size_1(storage, _, __):
     list(storage.get_entries_page(chunk_size=1, now=datetime(2010, 1, 1)))
 
 
-def iter_metadata(storage, feed, __):
-    list(storage.iter_metadata((feed.url,)))
-
-
 def get_tags(storage, feed, __):
     list(storage.get_tags((feed.url,)))
 
