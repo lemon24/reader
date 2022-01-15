@@ -197,15 +197,15 @@ class PrefixLogger(logging.LoggerAdapter):  # type: ignore
         return ': '.join(tuple(self._escape(p) for p in self.prefixes) + (msg,)), kwargs
 
 
-def deprecated_wrapper(
-    old_name: str, func: F, deprecated_in: str, removed_in: str
+def _deprecated_wrapper(
+    old_name: str, new_name: str, func: F, deprecated_in: str, removed_in: str
 ) -> F:
     @wraps(func)
     def old_func(*args, **kwargs):  # type: ignore
         warnings.warn(
             f"{old_name}() is deprecated "
             f"and will be removed in reader {removed_in}. "
-            f"Use {func.__name__}() instead.",
+            f"Use {new_name}() instead.",
             DeprecationWarning,
         )
         return func(*args, **kwargs)
@@ -213,16 +213,31 @@ def deprecated_wrapper(
     old_func.__name__ = old_name
     old_func.__doc__ = dedent(
         f"""\
-        Deprecated alias for :meth:`{func.__name__}`.
+        Deprecated alias for :meth:`{new_name}`.
 
         .. deprecated:: {deprecated_in}
             This method will be removed in *reader* {removed_in}.
-            Use :meth:`{func.__name__}` instead.
+            Use :meth:`{new_name}` instead.
 
         """
     )
 
     return cast(F, old_func)
+
+
+def deprecated_wrapper(
+    old_name: str, func: F, deprecated_in: str, removed_in: str
+) -> F:
+    return _deprecated_wrapper(old_name, func.__name__, func, deprecated_in, removed_in)
+
+
+def deprecated(new_name: str, deprecated_in: str, removed_in: str) -> Callable[[F], F]:
+    def decorator(func: F) -> F:
+        return _deprecated_wrapper(
+            func.__name__, new_name, func, deprecated_in, removed_in
+        )
+
+    return decorator
 
 
 def _name(thing: object) -> str:
