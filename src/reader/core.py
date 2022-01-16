@@ -643,7 +643,7 @@ class Reader:
     ) -> Union[Feed, _T]:
         """Get a feed.
 
-        Like ``next(iter(reader.get_feeds(feed=feed)), default)``,
+        Like ``next(iter(reader.get_feeds(feed=feed)))``,
         but raises a custom exception instead of :exc:`StopIteration`.
 
         Arguments:
@@ -1214,7 +1214,7 @@ class Reader:
     ) -> Union[Entry, _T]:
         """Get an entry.
 
-        Like ``next(iter(reader.get_entries(entry=entry)), default)``,
+        Like ``next(iter(reader.get_entries(entry=entry)))``,
         but raises a custom exception instead of :exc:`StopIteration`.
 
         Args:
@@ -1932,9 +1932,27 @@ class Reader:
     def get_tags(
         self,
         resource: Optional[FeedInput],
+        # FIXME: *,
         key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
-        # FIXME: docstring (copy from get_feed_metadata)
+        """Get all or some resource tags as ``(key, value)`` pairs.
+
+        Args:
+            resource (str or Feed or None):
+                The resource to get tags for.
+                :const:`None` means "any resource".
+            key (str or None): Only return the metadata for this key.
+
+        Yields:
+            tuple(str, JSONType): ``(key, value)`` pairs, in undefined order.
+            JSONType is whatever :py:func:`json.dumps` accepts.
+
+        Raises:
+            StorageError
+
+        .. versionadded:: 2.8
+
+        """
         feed_url = _feed_argument(resource) if resource is not None else None
         return self._storage.get_tags((feed_url,), key)
 
@@ -1942,8 +1960,23 @@ class Reader:
         self,
         resource: Optional[FeedInput] = None,
     ) -> Iterable[str]:  # pragma: no cover
+        """Get the keys of all or some resource tags.
+
+        Equivalent to ``sorted(k for k, _ in reader.get_tags(resource))``.
+
+        Args:
+            resource (str or Feed or None): Only return tag keys for this resource.
+
+        Yields:
+            str: The tag keys, in alphabetical order.
+
+        Raises:
+            StorageError
+
+        .. versionadded:: 2.8
+
+        """
         # FIXME: cover
-        # FIXME: docstring (copy from get_feed_tags)
         # TODO: (later) efficient implementation
         return (k for k, _ in self.get_tags(resource))
 
@@ -1960,7 +1993,27 @@ class Reader:
     def get_tag(
         self, resource: FeedInput, key: str, default: Union[MissingType, _T] = MISSING
     ) -> Union[JSONType, _T]:
-        # FIXME: docstring (copy from get_feed_metadata_item)
+        """Get the value of this resource tag.
+
+        Like ``next(iter(reader.get_tags(resource, key=key)))[1]``,
+        but raises a custom exception instead of :exc:`StopIteration`.
+
+        Args:
+            resource (str or Feed): The resource.
+            key (str): The key of the tag to retrieve.
+            default: Returned if given and no tag exists for `key`.
+
+        Returns:
+            JSONType: The tag value.
+            JSONType is whatever :py:func:`json.dumps` accepts.
+
+        Raises:
+            TagNotFoundError
+            StorageError
+
+        .. versionadded:: 2.8
+
+        """
         return zero_or_one(
             (v for _, v in self.get_tags(resource, key=key)),
             lambda: TagNotFoundError(key),
@@ -1983,7 +2036,22 @@ class Reader:
         key: str,
         value: Union[JSONType, MissingType] = MISSING,
     ) -> None:
-        # FIXME: docstring (copy from set_feed_metadata_item)
+        """Set the value of this resource tag.
+
+        Args:
+            resource (str or Feed): The resource.
+            key (str): The key of the tag to set.
+            value (JSONType): The value of the tag to set.
+                JSONType is whatever :py:func:`json.dumps` accepts.
+                Defaults to :const:`None`.
+
+        Raises:
+            ResourceNotFoundError
+            StorageError
+
+        .. versionadded:: 2.8
+
+        """
         # TODO: this would not need to be overloaded if JSONType could be None
         feed_url = _feed_argument(resource)
         if not isinstance(value, MissingType):
@@ -1994,7 +2062,19 @@ class Reader:
     def delete_tag(
         self, resource: FeedInput, key: str, missing_ok: bool = False
     ) -> None:
-        # FIXME: docstring (copy from delete_feed_metadata_item/remove_feed_tag)
+        """Delete this resource tag.
+
+        Args:
+            resource (str or Feed): The resource.
+            key (str): The key of the tag to delete.
+
+        Raises:
+            TagNotFoundError: If the tag does not exist, and `missing_ok` is false.
+            StorageError
+
+        .. versionadded:: 2.8
+
+        """
         feed_url = _feed_argument(resource)
         try:
             self._storage.delete_tag((feed_url,), key)
