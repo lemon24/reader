@@ -1,4 +1,5 @@
 import functools
+import inspect
 import itertools
 import logging
 import multiprocessing.dummy
@@ -6,7 +7,6 @@ import warnings
 from contextlib import contextmanager
 from functools import wraps
 from queue import Queue
-from textwrap import dedent
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -198,7 +198,12 @@ class PrefixLogger(logging.LoggerAdapter):  # type: ignore
 
 
 def _deprecated_wrapper(
-    old_name: str, new_name: str, func: F, deprecated_in: str, removed_in: str
+    old_name: str,
+    new_name: str,
+    func: F,
+    deprecated_in: str,
+    removed_in: str,
+    doc: str = '',
 ) -> F:
     @wraps(func)
     def old_func(*args, **kwargs):  # type: ignore
@@ -211,15 +216,12 @@ def _deprecated_wrapper(
         return func(*args, **kwargs)
 
     old_func.__name__ = old_name
-    old_func.__doc__ = dedent(
-        f"""\
-        Deprecated alias for :meth:`{new_name}`.
-
-        .. deprecated:: {deprecated_in}
-            This method will be removed in *reader* {removed_in}.
-            Use :meth:`{new_name}` instead.
-
-        """
+    old_func.__doc__ = (
+        f"Deprecated alias for :meth:`{new_name}`.\n"
+        f"{doc}\n"
+        f".. deprecated:: {deprecated_in}\n"
+        f"    This method will be removed in *reader* {removed_in}.\n"
+        f"    Use :meth:`{new_name}` instead.\n\n"
     )
 
     return cast(F, old_func)
@@ -233,8 +235,16 @@ def deprecated_wrapper(
 
 def deprecated(new_name: str, deprecated_in: str, removed_in: str) -> Callable[[F], F]:
     def decorator(func: F) -> F:
+        doc = inspect.getdoc(func) or ''
+        if doc:  # pragma: no cover
+            doc = '\n' + doc + '\n'
         return _deprecated_wrapper(
-            func.__name__, new_name, func, deprecated_in, removed_in
+            func.__name__,
+            new_name,
+            func,
+            deprecated_in,
+            removed_in,
+            doc=doc,
         )
 
     return decorator

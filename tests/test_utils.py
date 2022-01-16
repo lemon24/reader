@@ -19,7 +19,10 @@ def test_deprecated_wrapper():
 def test_deprecated():
     @deprecated('new', '1.0', '2.0')
     def old(arg):
+        "docstring"
         raise ValueError(arg)
+
+    assert '\n\ndocstring\n\n' in old.__doc__
 
     _check_deprecated(old)
 
@@ -31,8 +34,9 @@ def _check_deprecated(old):
     assert excinfo.value.args[0] == 'whatever'
 
     assert old.__name__ == 'old'
-    assert old.__doc__ == (
-        'Deprecated alias for :meth:`new`.\n\n'
+    assert old.__doc__.startswith('Deprecated alias for :meth:`new`.\n\n')
+    assert old.__doc__.endswith(
+        '\n'
         '.. deprecated:: 1.0\n'
         '    This method will be removed in *reader* 2.0.\n'
         '    Use :meth:`new` instead.\n\n'
