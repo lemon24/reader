@@ -84,7 +84,7 @@ Exceptions
 .. autoexception:: FeedNotFoundError
     :members:
 
-    Subclass of :exc:`FeedError`.
+    Subclass of :exc:`FeedError` and :exc:`ResourceNotFoundError`.
 
 .. autoexception:: ParseError
     :members:
@@ -108,7 +108,7 @@ Exceptions
 .. autoexception:: EntryNotFoundError
     :members:
 
-    Subclass of :exc:`EntryError`.
+    Subclass of :exc:`EntryError` and :exc:`ResourceNotFoundError`.
 
 .. autoexception:: MetadataError
     :members:
@@ -142,7 +142,6 @@ Exceptions
 
     Subclass of :exc:`SearchError` and :exc:`ValueError`.
 
-
 .. autoexception:: TagError
     :members:
 
@@ -152,6 +151,11 @@ Exceptions
     :members:
 
     Subclass of :exc:`TagError`.
+
+.. autoexception:: ResourceNotFoundError
+    :members:
+
+    Subclass of :exc:`ReaderError`.
 
 .. autoexception:: PluginError
 

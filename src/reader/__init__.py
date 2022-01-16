@@ -76,6 +76,7 @@ from .exceptions import (
     InvalidSearchQueryError,
     TagError,
     TagNotFoundError,
+    ResourceNotFoundError,
     PluginError,
     InvalidPluginError,
 )

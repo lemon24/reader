@@ -56,6 +56,16 @@ class ReaderError(_FancyExceptionBase):
     """Base for all public exceptions."""
 
 
+class ResourceNotFoundError(ReaderError):
+    """Resource (feed, entry) not found.
+
+    .. versionadded:: 2.8
+
+    """
+
+    # TODO: object_id: tuple[str, ...] (but FeedError must become tuple[str]!)
+
+
 class FeedError(ReaderError):
     """A feed error occurred."""
 
@@ -85,7 +95,7 @@ class FeedExistsError(FeedError):
     message = "feed exists"
 
 
-class FeedNotFoundError(FeedError):
+class FeedNotFoundError(FeedError, ResourceNotFoundError):
     """Feed not found."""
 
     message = "no such feed"
@@ -149,7 +159,7 @@ class EntryExistsError(EntryError):
     message = "entry exists"
 
 
-class EntryNotFoundError(EntryError):
+class EntryNotFoundError(EntryError, ResourceNotFoundError):
     """Entry not found."""
 
     message = "no such entry"
@@ -256,6 +266,8 @@ class TagError(ReaderError):
     .. versionadded:: 2.8
 
     """
+
+    # TODO: object_id: tuple[str, ...] | None
 
     def __init__(self, key: str, message: str = '') -> None:
         super().__init__(message)
