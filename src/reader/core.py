@@ -2016,7 +2016,7 @@ class Reader:
         """
         return zero_or_one(
             (v for _, v in self.get_tags(resource, key=key)),
-            lambda: TagNotFoundError(key),
+            lambda: TagNotFoundError(key, _feed_argument(resource)),
             default,
         )
 
@@ -2078,8 +2078,9 @@ class Reader:
         feed_url = _feed_argument(resource)
         try:
             self._storage.delete_tag((feed_url,), key)
-        except TagNotFoundError:
+        except TagNotFoundError as e:
             if not missing_ok:
+                e.object_id = feed_url
                 raise
 
     def make_reader_reserved_name(self, key: str) -> str:

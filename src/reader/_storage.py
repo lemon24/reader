@@ -5,6 +5,7 @@ from datetime import datetime
 from datetime import timedelta
 from functools import partial
 from typing import Any
+from typing import cast
 from typing import Dict
 from typing import Iterable
 from typing import Mapping
@@ -1205,7 +1206,7 @@ class Storage:
 
         with self.db:
             cursor = self.db.execute(query, params)
-        rowcount_exactly_one(cursor, lambda: TagNotFoundError(key=key))
+        rowcount_exactly_one(cursor, lambda: TagNotFoundError(key, cast(str, None)))
 
 
 def make_get_feeds_query(

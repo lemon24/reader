@@ -85,5 +85,5 @@ def test_metadata_error_str(exc_type):
 
 @pytest.mark.parametrize('exc_type', all_classes(TagError))
 def test_tag_error_str(exc_type):
-    exc = exc_type('key')
-    assert repr('key') in str(exc)
+    exc = exc_type('key', 'object')
+    assert "'object': 'key'" in str(exc)

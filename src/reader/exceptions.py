@@ -1,5 +1,6 @@
 from typing import Any
 from typing import Tuple
+from typing import Union
 
 from ._vendor.functools import cached_property
 
@@ -267,17 +268,22 @@ class TagError(ReaderError):
 
     """
 
-    # TODO: object_id: tuple[str, ...] | None
-
-    def __init__(self, key: str, message: str = '') -> None:
+    def __init__(
+        self, key: str, object_id: Union[str, Tuple[str, str]], message: str = ''
+    ) -> None:
         super().__init__(message)
 
         #: The tag key.
         self.key = key
 
+        # TODO: tuple[str, ...], once FeedError.object_id becomes tuple[str]
+
+        #: The resource id.
+        self.object_id = object_id
+
     @property
     def _str(self) -> str:
-        return repr(self.key)
+        return f"{self.object_id!r}: {self.key!r}"
 
 
 class TagNotFoundError(TagError):
