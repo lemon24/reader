@@ -174,6 +174,9 @@ class MetadataError(ReaderError):
         Signature changed from ``MetadataError(message='')``
         to ``MetadataError(key, message='')``.
 
+    .. deprecated:: 2.8
+        Will be removed in *reader* 3.0.
+
     """
 
     def __init__(self, *args: Any, key: str, **kwargs: Any) -> None:
@@ -195,6 +198,9 @@ class MetadataNotFoundError(MetadataError):
         Signature changed from ``MetadataNotFoundError(url, key, message='')``
         to ``MetadataNotFoundError(key, message='')``.
 
+    .. deprecated:: 2.8
+        Will be removed in *reader* 3.0.
+
     """
 
     message = "no such metadata"
@@ -204,6 +210,9 @@ class FeedMetadataNotFoundError(MetadataNotFoundError, FeedError):
     """Feed metadata not found.
 
     .. versionadded:: 1.18
+
+    .. deprecated:: 2.8
+        Will be removed in *reader* 3.0.
 
     """
 
@@ -215,6 +224,9 @@ class EntryMetadataNotFoundError(MetadataNotFoundError, EntryError):
     """Entry metadata not found.
 
     .. versionadded:: 1.18
+
+    .. deprecated:: 2.8
+        Will be removed in *reader* 3.0.
 
     """
 
@@ -278,7 +290,7 @@ class TagError(ReaderError):
 
         # TODO: tuple[str, ...], once FeedError.object_id becomes tuple[str]
 
-        #: The resource id.
+        #: The `object_id` of the resource.
         self.object_id = object_id
 
     @property

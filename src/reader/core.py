@@ -38,6 +38,7 @@ from ._types import FeedFilterOptions
 from ._types import FeedUpdateIntent
 from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
+from ._utils import deprecated
 from ._utils import make_pool_map
 from ._utils import MapType
 from ._utils import zero_or_one
@@ -1529,6 +1530,7 @@ class Reader:
         """
         self._storage.delete_entries([_entry_argument(entry)], added_by='user')
 
+    @deprecated('get_tags', '2.8', '3.0')
     def get_feed_metadata(
         self,
         feed: FeedInput,
@@ -1571,6 +1573,7 @@ class Reader:
     ) -> Union[JSONType, _T]:  # pragma: no cover
         ...
 
+    @deprecated('get_tag', '2.8', '3.0')
     def get_feed_metadata_item(
         self, feed: FeedInput, key: str, default: Union[MissingType, _T] = MISSING
     ) -> Union[JSONType, _T]:
@@ -1604,6 +1607,7 @@ class Reader:
         except TagNotFoundError as e:
             raise FeedMetadataNotFoundError(_feed_argument(feed), e.key) from None
 
+    @deprecated('set_tag', '2.8', '3.0')
     def set_feed_metadata_item(
         self, feed: FeedInput, key: str, value: JSONType
     ) -> None:
@@ -1625,6 +1629,7 @@ class Reader:
         """
         self.set_tag(feed, key, value)
 
+    @deprecated('delete_tag', '2.8', '3.0')
     def delete_feed_metadata_item(self, feed: FeedInput, key: str) -> None:
         """Delete metadata for a feed.
 
@@ -1877,6 +1882,7 @@ class Reader:
         now = self._now()
         return self._search.search_entry_counts(query, now, filter_options)
 
+    @deprecated('set_tag', '2.8', '3.0')
     def add_feed_tag(self, feed: FeedInput, tag: str) -> None:
         """Add a tag to a feed.
 
@@ -1895,6 +1901,7 @@ class Reader:
         """
         self.set_tag(feed, tag)
 
+    @deprecated('delete_tag', '2.8', '3.0')
     def remove_feed_tag(self, feed: FeedInput, tag: str) -> None:
         """Remove a tag from a feed.
 
@@ -1912,6 +1919,7 @@ class Reader:
         """
         self.delete_tag(feed, tag, True)
 
+    @deprecated('get_tag_keys', '2.8', '3.0')
     def get_feed_tags(self, feed: Optional[FeedInput] = None) -> Iterable[str]:
         """Get all or some of the feed tags.
 
@@ -2042,8 +2050,10 @@ class Reader:
             resource (str or Feed): The resource.
             key (str): The key of the tag to set.
             value (JSONType): The value of the tag to set.
+                If not provided, and the tag already exists,
+                the value remains unchanged;
+                if the tag does not exist, it is set to :const:`None`.
                 JSONType is whatever :py:func:`json.dumps` accepts.
-                Defaults to :const:`None`.
 
         Raises:
             ResourceNotFoundError
@@ -2052,7 +2062,6 @@ class Reader:
         .. versionadded:: 2.8
 
         """
-        # TODO: this would not need to be overloaded if JSONType could be None
         feed_url = _feed_argument(resource)
         if not isinstance(value, MissingType):
             self._storage.set_tag((feed_url,), key, value)
