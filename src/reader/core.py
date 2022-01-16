@@ -1557,7 +1557,7 @@ class Reader:
             :meth:`get_feed_metadata_item` alias was removed.
 
         """
-        return self.get_tags(feed, key)
+        return self.get_tags(feed, key=key)
 
     @overload
     def get_feed_metadata_item(
@@ -1932,7 +1932,7 @@ class Reader:
     def get_tags(
         self,
         resource: Optional[FeedInput],
-        # FIXME: *,
+        *,
         key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
         """Get all or some resource tags as ``(key, value)`` pairs.
