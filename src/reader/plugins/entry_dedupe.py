@@ -269,7 +269,7 @@ _IS_DUPLICATE_BY_TAG_SUFFIX = {
 
 
 def _after_feed_update(reader, feed, *, dry_run=False):
-    all_tags = set(reader.get_feed_tags(feed))
+    all_tags = set(reader.get_tag_keys(feed))
 
     dedupe_tags = []
     for suffix in _IS_DUPLICATE_BY_TAG_SUFFIX:
@@ -291,7 +291,7 @@ def _after_feed_update(reader, feed, *, dry_run=False):
         _dedupe_entries(reader, entry, duplicates, dry_run=dry_run)
 
     for tag, _ in dedupe_tags:
-        reader.remove_feed_tag(feed, tag)
+        reader.delete_tag(feed, tag)
 
 
 _MAX_GROUP_SIZE = 16
@@ -409,7 +409,7 @@ if __name__ == '__main__':  # pragma: no cover
 
     for feed in feeds:
         # if 'n-gate' not in feed.url: continue
-        reader.add_feed_tag(feed, reader.make_reader_reserved_name('dedupe.once'))
+        reader.set_tag(feed, reader.make_reader_reserved_name('dedupe.once'))
         _after_feed_update(reader, feed.url)
 
     import resource

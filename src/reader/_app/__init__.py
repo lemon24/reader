@@ -234,7 +234,7 @@ def entries():
         feed = reader.get_feed(feed_url, None)
         if not feed:
             abort(404)
-        feed_tags = list(reader.get_feed_tags(feed))
+        feed_tags = list(reader.get_tag_keys(feed))
 
     args = request.args.copy()
     query = args.pop('q', None)
@@ -438,7 +438,7 @@ def feeds():
         feed_data = (
             (
                 feed,
-                list(reader.get_feed_tags(feed)),
+                list(reader.get_tag_keys(feed)),
                 reader.get_entry_counts(feed=feed) if with_counts else None,
             )
             for feed in feeds
@@ -468,7 +468,7 @@ def metadata():
     if not feed:
         abort(404)
 
-    metadata = reader.get_feed_metadata(feed_url)
+    metadata = reader.get_tags(feed_url)
 
     # Ensure flashed messages get removed from the session.
     # https://github.com/lemon24/reader/issues/81
@@ -504,7 +504,7 @@ def tags():
     with_counts = {None: None, 'no': False, 'yes': True}[with_counts]
 
     def iter_tags():
-        for tag in itertools.chain([None, True, False], reader.get_feed_tags()):
+        for tag in itertools.chain([None, True, False], reader.get_tag_keys()):
             feed_counts = None
             entry_counts = None
 
@@ -628,7 +628,7 @@ def update_feed_title(data):
 def add_metadata(data):
     feed_url = data['feed-url']
     key = data['key']
-    get_reader().set_feed_metadata_item(feed_url, key, None)
+    get_reader().set_tag(feed_url, key, None)
 
 
 @form_api
@@ -640,7 +640,7 @@ def update_metadata(data):
         value = yaml.safe_load(data['value'])
     except yaml.YAMLError as e:
         raise APIError("invalid JSON: {}".format(e), (feed_url, key)) from e
-    get_reader().set_feed_metadata_item(feed_url, key, value)
+    get_reader().set_tag(feed_url, key, value)
 
 
 @form_api(really=True)
@@ -648,7 +648,7 @@ def update_metadata(data):
 def delete_metadata(data):
     feed_url = data['feed-url']
     key = data['key']
-    get_reader().delete_feed_metadata_item(feed_url, key)
+    get_reader().delete_tag(feed_url, key)
 
 
 @form_api
@@ -658,12 +658,12 @@ def update_feed_tags(data):
     feed_tags = set(data['feed-tags'].split())
 
     reader = get_reader()
-    tags = set(reader.get_feed_tags(feed_url))
+    tags = set(reader.get_tag_keys(feed_url))
 
     for tag in tags - feed_tags:
-        reader.remove_feed_tag(feed_url, tag)
+        reader.delete_tag(feed_url, tag, True)
     for tag in feed_tags - tags:
-        reader.add_feed_tag(feed_url, tag)
+        reader.set_tag(feed_url, tag)
 
 
 @form_api(really=True)

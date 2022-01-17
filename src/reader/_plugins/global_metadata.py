@@ -54,19 +54,19 @@ def init_reader(reader):
         pass
     else:
         reader.disable_feed_updates(url)
-        reader.add_feed_tag(url, tag)
+        reader.set_tag(url, tag)
 
     def get_global_metadata(*args):
-        return reader.get_feed_metadata(url, *args)
+        return reader.get_tags(url, *args)
 
     def get_global_metadata_item(*args):
-        return reader.get_feed_metadata_item(url, *args)
+        return reader.get_tag(url, *args)
 
     def set_global_metadata_item(*args):
-        reader.set_feed_metadata_item(url, *args)
+        reader.set_tag(url, *args)
 
     def delete_global_metadata_item(*args):
-        reader.delete_feed_metadata_item(url, *args)
+        reader.delete_tag(url, *args)
 
     reader.get_global_metadata = get_global_metadata
     reader.get_global_metadata_item = get_global_metadata_item

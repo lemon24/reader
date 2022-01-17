@@ -10,7 +10,7 @@ if their title matches a regex.
 
 To configure, set the ``make_reader_reserved_name('mark-as-read')``
 (by default, ``.reader.mark-as-read``)
-feed metadata to something like::
+tag to something like::
 
     {
         "title": ["first-regex", "second-regex"]
@@ -41,7 +41,6 @@ feed metadata to something like::
 import logging
 import re
 
-from reader.exceptions import MetadataNotFoundError
 from reader.types import EntryUpdateStatus
 
 # avoid circular imports
@@ -49,32 +48,31 @@ from reader.types import EntryUpdateStatus
 log = logging.getLogger(__name__)
 
 
-def _get_config(reader, feed_url, metadata_key, patterns_key):
-    try:
-        metadata = reader.get_feed_metadata_item(feed_url, metadata_key)
-    except MetadataNotFoundError:
+def _get_config(reader, feed_url, key, patterns_key):
+    value = reader.get_tag(feed_url, key, None)
+    if value is None:
         return None
 
-    if isinstance(metadata, dict):
-        patterns = metadata.get(patterns_key, [])
+    if isinstance(value, dict):
+        patterns = value.get(patterns_key, [])
         if isinstance(patterns, list):
             if all(isinstance(p, str) for p in patterns):
                 return patterns
 
-    # TODO: there should be a hook to allow plugins to validate metadata
-    log.warning("%s: invalid mark_as_read config metadata: %s", feed_url, metadata_key)
+    # TODO: there should be a hook to allow plugins to validate tags
+    log.warning("%s: invalid mark_as_read config: %s", feed_url, key)
     return []
 
 
-_METADATA_KEY = 'mark-as-read'
+_CONFIG_TAG = 'mark-as-read'
 
 
 def _mark_as_read(reader, entry, status):
     if status is EntryUpdateStatus.MODIFIED:
         return
 
-    metadata_key = reader.make_reader_reserved_name(_METADATA_KEY)
-    patterns = _get_config(reader, entry.feed_url, metadata_key, 'title')
+    key = reader.make_reader_reserved_name(_CONFIG_TAG)
+    patterns = _get_config(reader, entry.feed_url, key, 'title')
 
     for pattern in patterns or ():
         if re.search(pattern, entry.title):
@@ -82,22 +80,22 @@ def _mark_as_read(reader, entry, status):
             return
 
 
-_OLD_METADATA_KEY = 'mark_as_read'
+_OLD_CONFIG_TAG = 'mark_as_read'
 
 
 def _migrate_pre_2_7_metadata(reader, feed):
-    old_key = reader.make_reader_reserved_name(_OLD_METADATA_KEY)
-    old_value = reader.get_feed_metadata_item(feed, old_key, None)
+    old_key = reader.make_reader_reserved_name(_OLD_CONFIG_TAG)
+    old_value = reader.get_tag(feed, old_key, None)
     if not old_value:
         return
 
-    key = reader.make_reader_reserved_name(_METADATA_KEY)
-    value = reader.get_feed_metadata_item(feed, key, None)
+    key = reader.make_reader_reserved_name(_CONFIG_TAG)
+    value = reader.get_tag(feed, key, None)
     if value:  # pragma: no cover
         return
 
-    reader.set_feed_metadata_item(feed, key, old_value)
-    reader.delete_feed_metadata_item(feed, old_key)
+    reader.set_tag(feed, key, old_value)
+    reader.delete_tag(feed, old_key)
 
 
 def init_reader(reader):

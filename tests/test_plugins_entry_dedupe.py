@@ -278,11 +278,11 @@ def test_plugin_once(make_reader, db_path, monkeypatch, tags):
     }
 
     for tag in tags:
-        reader.add_feed_tag(feed, tag)
-    reader.add_feed_tag(feed, 'unrelated')
+        reader.set_tag(feed, tag)
+    reader.set_tag(feed, 'unrelated')
     reader.update_feeds()
 
-    assert set(reader.get_feed_tags(feed)) == {'unrelated'}
+    assert set(reader.get_tag_keys(feed)) == {'unrelated'}
 
     # if both 'once' and 'once.title' are in tags,
     # 'once' (the strictest) has priority
@@ -543,7 +543,7 @@ def _test_modified_copying(
 
     reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
     reader._parser = parser
-    reader.add_feed_tag(feed, '.reader.dedupe.once')
+    reader.set_tag(feed, '.reader.dedupe.once')
     reader.update_feeds()
 
     actual = sorted(

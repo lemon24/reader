@@ -1535,7 +1535,7 @@ class Reader:
         self,
         feed: FeedInput,
         key: Optional[str] = None,
-    ) -> Iterable[Tuple[str, JSONType]]:
+    ) -> Iterable[Tuple[str, JSONType]]:  # pragma: no cover
         """Get all or some of the metadata for a feed as ``(key, value)`` pairs.
 
         Args:
@@ -1576,7 +1576,7 @@ class Reader:
     @deprecated('get_tag', '2.8', '3.0')
     def get_feed_metadata_item(
         self, feed: FeedInput, key: str, default: Union[MissingType, _T] = MISSING
-    ) -> Union[JSONType, _T]:
+    ) -> Union[JSONType, _T]:  # pragma: no cover
         """Get metadata for a feed.
 
         Like ``next(iter(reader.get_feed_metadata(feed, key=key)), (None, default))[1]``,
@@ -1610,7 +1610,7 @@ class Reader:
     @deprecated('set_tag', '2.8', '3.0')
     def set_feed_metadata_item(
         self, feed: FeedInput, key: str, value: JSONType
-    ) -> None:
+    ) -> None:  # pragma: no cover
         """Set metadata for a feed.
 
         Args:
@@ -1630,7 +1630,9 @@ class Reader:
         self.set_tag(feed, key, value)
 
     @deprecated('delete_tag', '2.8', '3.0')
-    def delete_feed_metadata_item(self, feed: FeedInput, key: str) -> None:
+    def delete_feed_metadata_item(
+        self, feed: FeedInput, key: str
+    ) -> None:  # pragma: no cover
         """Delete metadata for a feed.
 
         Args:
@@ -1883,7 +1885,7 @@ class Reader:
         return self._search.search_entry_counts(query, now, filter_options)
 
     @deprecated('set_tag', '2.8', '3.0')
-    def add_feed_tag(self, feed: FeedInput, tag: str) -> None:
+    def add_feed_tag(self, feed: FeedInput, tag: str) -> None:  # pragma: no cover
         """Add a tag to a feed.
 
         Adding a tag that the feed already has is a no-op.
@@ -1902,7 +1904,7 @@ class Reader:
         self.set_tag(feed, tag)
 
     @deprecated('delete_tag', '2.8', '3.0')
-    def remove_feed_tag(self, feed: FeedInput, tag: str) -> None:
+    def remove_feed_tag(self, feed: FeedInput, tag: str) -> None:  # pragma: no cover
         """Remove a tag from a feed.
 
         Removing a tag that the feed does not have is a no-op.
@@ -1920,7 +1922,9 @@ class Reader:
         self.delete_tag(feed, tag, True)
 
     @deprecated('get_tag_keys', '2.8', '3.0')
-    def get_feed_tags(self, feed: Optional[FeedInput] = None) -> Iterable[str]:
+    def get_feed_tags(
+        self, feed: Optional[FeedInput] = None
+    ) -> Iterable[str]:  # pragma: no cover
         """Get all or some of the feed tags.
 
         Args:

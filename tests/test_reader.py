@@ -32,13 +32,13 @@ from reader import EntrySearchCounts
 from reader import Feed
 from reader import FeedCounts
 from reader import FeedExistsError
-from reader import FeedMetadataNotFoundError
 from reader import FeedNotFoundError
 from reader import InvalidFeedURLError
 from reader import InvalidPluginError
 from reader import ParseError
 from reader import Reader
 from reader import StorageError
+from reader import TagNotFoundError
 from reader import UpdatedFeed
 from reader import UpdateResult
 from reader._storage import Storage
@@ -1832,38 +1832,38 @@ def test_integration(reader, feed_type, data_dir, monkeypatch):
 
 def test_feed_metadata(reader):
     with pytest.raises(FeedNotFoundError) as excinfo:
-        reader.set_feed_metadata_item('one', 'key', 'value')
+        reader.set_tag('one', 'key', 'value')
     assert excinfo.value.url == 'one'
     assert 'no such feed' in excinfo.value.message
 
-    with pytest.raises(FeedMetadataNotFoundError) as excinfo:
-        reader.delete_feed_metadata_item('one', 'key')
-    assert (excinfo.value.url, excinfo.value.key) == ('one', 'key')
-    assert 'no such metadata' in excinfo.value.message
+    with pytest.raises(TagNotFoundError) as excinfo:
+        reader.delete_tag('one', 'key')
+    assert (excinfo.value.object_id, excinfo.value.key) == ('one', 'key')
+    assert 'no such tag' in excinfo.value.message
 
     reader.add_feed('feed')
 
-    assert set(reader.get_feed_metadata('feed')) == set()
-    with pytest.raises(FeedMetadataNotFoundError) as excinfo:
-        reader.get_feed_metadata_item('feed', 'key')
-    assert (excinfo.value.url, excinfo.value.key) == ('feed', 'key')
-    assert 'no such metadata' in excinfo.value.message
-    assert reader.get_feed_metadata_item('feed', 'key', None) is None
-    assert reader.get_feed_metadata_item('feed', 'key', 0) == 0
+    assert set(reader.get_tags('feed')) == set()
+    with pytest.raises(TagNotFoundError) as excinfo:
+        reader.get_tag('feed', 'key')
+    assert (excinfo.value.object_id, excinfo.value.key) == ('feed', 'key')
+    assert 'no such tag' in excinfo.value.message
+    assert reader.get_tag('feed', 'key', None) is None
+    assert reader.get_tag('feed', 'key', 0) == 0
 
-    with pytest.raises(FeedMetadataNotFoundError):
-        reader.delete_feed_metadata_item('one', 'key')
+    with pytest.raises(TagNotFoundError):
+        reader.delete_tag('one', 'key')
 
-    reader.set_feed_metadata_item('feed', 'key', 'value')
+    reader.set_tag('feed', 'key', 'value')
 
-    assert set(reader.get_feed_metadata('feed')) == {('key', 'value')}
-    assert reader.get_feed_metadata_item('feed', 'key') == 'value'
+    assert set(reader.get_tags('feed')) == {('key', 'value')}
+    assert reader.get_tag('feed', 'key') == 'value'
 
-    reader.delete_feed_metadata_item('feed', 'key')
+    reader.delete_tag('feed', 'key')
 
-    assert set(reader.get_feed_metadata('feed')) == set()
-    with pytest.raises(FeedMetadataNotFoundError):
-        reader.get_feed_metadata_item('feed', 'key')
+    assert set(reader.get_tags('feed')) == set()
+    with pytest.raises(TagNotFoundError):
+        reader.get_tag('feed', 'key')
 
 
 def test_get_entry(reader, entry_arg):
@@ -2144,63 +2144,63 @@ def test_tags_basic(reader, chunk_size):
     reader._storage.chunk_size = chunk_size
 
     with pytest.raises(FeedNotFoundError) as excinfo:
-        reader.add_feed_tag('one', 'tag')
+        reader.set_tag('one', 'tag')
     assert excinfo.value.url == 'one'
     assert 'no such feed' in excinfo.value.message
 
     # no-op
-    reader.remove_feed_tag('one', 'tag')
+    reader.delete_tag('one', 'tag', missing_ok=True)
 
     # also no-op
-    assert list(reader.get_feed_tags('one')) == []
-    assert list(reader.get_feed_tags()) == []
+    assert list(reader.get_tag_keys('one')) == []
+    assert list(reader.get_tag_keys()) == []
 
     reader.add_feed('one')
     reader.add_feed('two')
 
     # no tags
-    assert list(reader.get_feed_tags('one')) == []
-    assert list(reader.get_feed_tags()) == []
+    assert list(reader.get_tag_keys('one')) == []
+    assert list(reader.get_tag_keys()) == []
 
-    reader.add_feed_tag('one', 'tag-1')
-    assert list(reader.get_feed_tags('one')) == ['tag-1']
-    assert list(reader.get_feed_tags()) == ['tag-1']
-
-    # no-op
-    reader.add_feed_tag('one', 'tag-1')
-
-    reader.add_feed_tag('two', 'tag-2-2')
-    reader.add_feed_tag('two', 'tag-2-1')
-    assert list(reader.get_feed_tags('one')) == ['tag-1']
-    assert list(reader.get_feed_tags('two')) == ['tag-2-1', 'tag-2-2']
-    assert list(reader.get_feed_tags()) == ['tag-1', 'tag-2-1', 'tag-2-2']
+    reader.set_tag('one', 'tag-1')
+    assert list(reader.get_tag_keys('one')) == ['tag-1']
+    assert list(reader.get_tag_keys()) == ['tag-1']
 
     # no-op
-    reader.remove_feed_tag('one', 'tag-2-1')
-    assert list(reader.get_feed_tags('one')) == ['tag-1']
-    assert list(reader.get_feed_tags('two')) == ['tag-2-1', 'tag-2-2']
-    assert list(reader.get_feed_tags()) == ['tag-1', 'tag-2-1', 'tag-2-2']
+    reader.set_tag('one', 'tag-1')
 
-    reader.remove_feed_tag('two', 'tag-2-1')
-    assert list(reader.get_feed_tags('one')) == ['tag-1']
-    assert list(reader.get_feed_tags('two')) == ['tag-2-2']
-    assert list(reader.get_feed_tags()) == ['tag-1', 'tag-2-2']
+    reader.set_tag('two', 'tag-2-2')
+    reader.set_tag('two', 'tag-2-1')
+    assert list(reader.get_tag_keys('one')) == ['tag-1']
+    assert list(reader.get_tag_keys('two')) == ['tag-2-1', 'tag-2-2']
+    assert list(reader.get_tag_keys()) == ['tag-1', 'tag-2-1', 'tag-2-2']
 
-    reader.add_feed_tag('two', 'tag-2-3')
-    reader.add_feed_tag('two', 'tag-2-0')
-    reader.add_feed_tag('two', 'tag-2-1')
-    reader.add_feed_tag('one', 'tag-common')
-    reader.add_feed_tag('two', 'tag-common')
+    # no-op
+    reader.delete_tag('one', 'tag-2-1', missing_ok=True)
+    assert list(reader.get_tag_keys('one')) == ['tag-1']
+    assert list(reader.get_tag_keys('two')) == ['tag-2-1', 'tag-2-2']
+    assert list(reader.get_tag_keys()) == ['tag-1', 'tag-2-1', 'tag-2-2']
 
-    assert list(reader.get_feed_tags('one')) == ['tag-1', 'tag-common']
-    assert list(reader.get_feed_tags('two')) == [
+    reader.delete_tag('two', 'tag-2-1', missing_ok=True)
+    assert list(reader.get_tag_keys('one')) == ['tag-1']
+    assert list(reader.get_tag_keys('two')) == ['tag-2-2']
+    assert list(reader.get_tag_keys()) == ['tag-1', 'tag-2-2']
+
+    reader.set_tag('two', 'tag-2-3')
+    reader.set_tag('two', 'tag-2-0')
+    reader.set_tag('two', 'tag-2-1')
+    reader.set_tag('one', 'tag-common')
+    reader.set_tag('two', 'tag-common')
+
+    assert list(reader.get_tag_keys('one')) == ['tag-1', 'tag-common']
+    assert list(reader.get_tag_keys('two')) == [
         'tag-2-0',
         'tag-2-1',
         'tag-2-2',
         'tag-2-3',
         'tag-common',
     ]
-    assert list(reader.get_feed_tags()) == [
+    assert list(reader.get_tag_keys()) == [
         'tag-1',
         'tag-2-0',
         'tag-2-1',
@@ -2210,9 +2210,9 @@ def test_tags_basic(reader, chunk_size):
     ]
 
     reader.delete_feed('two')
-    assert list(reader.get_feed_tags('one')) == ['tag-1', 'tag-common']
-    assert list(reader.get_feed_tags('two')) == []
-    assert list(reader.get_feed_tags()) == ['tag-1', 'tag-common']
+    assert list(reader.get_tag_keys('one')) == ['tag-1', 'tag-common']
+    assert list(reader.get_tag_keys('two')) == []
+    assert list(reader.get_tag_keys()) == ['tag-1', 'tag-common']
 
 
 def get_entry_id(entry):
@@ -2337,10 +2337,10 @@ def test_filtering_tags(
 
     reader.update_feeds()
 
-    reader.add_feed_tag(one, 'tag')
-    reader.add_feed_tag(one, 'first')
-    reader.add_feed_tag(two, 'tag')
-    reader.add_feed_tag(two, 'second')
+    reader.set_tag(one, 'tag')
+    reader.set_tag(one, 'first')
+    reader.set_tag(two, 'tag')
+    reader.set_tag(two, 'second')
 
     pre_stuff(reader)
 
@@ -2686,22 +2686,22 @@ def test_change_feed_url_search(reader):
 
 @rename_argument('reader', 'reader_with_two_feeds')
 def test_change_feed_url_metadata(reader):
-    reader.set_feed_metadata_item('1', 'key', 'value')
+    reader.set_tag('1', 'key', 'value')
 
     reader.change_feed_url('1', '3')
 
-    assert dict(reader.get_feed_metadata('1')) == {}
-    assert dict(reader.get_feed_metadata('3')) == {'key': 'value'}
+    assert dict(reader.get_tags('1')) == {}
+    assert dict(reader.get_tags('3')) == {'key': 'value'}
 
 
 @rename_argument('reader', 'reader_with_two_feeds')
 def test_change_feed_url_tags(reader):
-    reader.add_feed_tag('1', 'tag')
+    reader.set_tag('1', 'tag')
 
     reader.change_feed_url('1', '3')
 
-    assert set(reader.get_feed_tags('1')) == set()
-    assert set(reader.get_feed_tags('3')) == {'tag'}
+    assert set(reader.get_tag_keys('1')) == set()
+    assert set(reader.get_tag_keys('3')) == {'tag'}
 
 
 # END change_feed_url tests
@@ -2841,8 +2841,8 @@ def test_feed_counts(reader, kwargs, expected):
 
     parser.condition = lambda url: url == two.url
     reader.disable_feed_updates(three)
-    reader.add_feed_tag(one, 'tag')
-    reader.add_feed_tag(two, 'tag')
+    reader.set_tag(one, 'tag')
+    reader.set_tag(two, 'tag')
 
     reader.update_feeds()
 
@@ -3063,7 +3063,7 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
     for feed in one, two, three:
         reader.add_feed(feed)
 
-    reader.add_feed_tag(one, 'tag')
+    reader.set_tag(one, 'tag')
 
     reader._now = lambda: naive_datetime(2011, 12, 16)
 
@@ -3541,7 +3541,7 @@ def test_delete_entry(reader):
 def test_tags_and_metadata_share_the_same_namespace(reader):
     feed = 'http://www.example.com'
     reader.add_feed(feed)
-    reader.set_feed_metadata_item(feed, 'one', {})
-    reader.add_feed_tag(feed, 'two')
-    assert dict(reader.get_feed_metadata(feed)) == {'one': {}, 'two': None}
-    assert set(reader.get_feed_tags(feed)) == {'one', 'two'}
+    reader.set_tag(feed, 'one', {})
+    reader.set_tag(feed, 'two')
+    assert dict(reader.get_tags(feed)) == {'one': {}, 'two': None}
+    assert set(reader.get_tag_keys(feed)) == {'one', 'two'}

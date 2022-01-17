@@ -30,7 +30,7 @@ def test_regex_mark_as_read(make_reader):
 
     reader.update_feeds()
 
-    reader.set_feed_metadata_item(one, key, value)
+    reader.set_tag(one, key, value)
 
     one = parser.feed(1, datetime(2010, 1, 2))
     match_new = parser.entry(1, 2, datetime(2010, 1, 2), title='match new')
@@ -69,7 +69,7 @@ def test_regex_mark_as_read_bad_metadata(make_reader, value):
     parser.entry(1, 1, datetime(2010, 1, 1), title='match')
 
     reader.add_feed(one)
-    reader.set_feed_metadata_item(one, '.reader.mark-as-read', value)
+    reader.set_tag(one, '.reader.mark-as-read', value)
 
     reader.update_feeds()
 
@@ -88,12 +88,12 @@ def test_regex_mark_as_read_pre_2_7_metadata(make_reader, with_entry):
         parser.entry(1, 1, datetime(2010, 1, 1), title='match old')
 
     reader.add_feed(one)
-    reader.set_feed_metadata_item(one, '.reader.mark_as_read', {'title': ['^match']})
+    reader.set_tag(one, '.reader.mark_as_read', {'title': ['^match']})
 
     reader.update_feeds()
 
     assert all(e.read for e in reader.get_entries())
 
-    metadata = dict(reader.get_feed_metadata(one))
-    assert '.reader.mark_as_read' not in metadata
-    assert metadata['.reader.mark-as-read'] == {'title': ['^match']}
+    tags = dict(reader.get_tags(one))
+    assert '.reader.mark_as_read' not in tags
+    assert tags['.reader.mark-as-read'] == {'title': ['^match']}
