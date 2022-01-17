@@ -1830,42 +1830,6 @@ def test_integration(reader, feed_type, data_dir, monkeypatch):
     }
 
 
-def test_feed_metadata(reader):
-    with pytest.raises(FeedNotFoundError) as excinfo:
-        reader.set_tag('one', 'key', 'value')
-    assert excinfo.value.url == 'one'
-    assert 'no such feed' in excinfo.value.message
-
-    with pytest.raises(TagNotFoundError) as excinfo:
-        reader.delete_tag('one', 'key')
-    assert (excinfo.value.object_id, excinfo.value.key) == ('one', 'key')
-    assert 'no such tag' in excinfo.value.message
-
-    reader.add_feed('feed')
-
-    assert set(reader.get_tags('feed')) == set()
-    with pytest.raises(TagNotFoundError) as excinfo:
-        reader.get_tag('feed', 'key')
-    assert (excinfo.value.object_id, excinfo.value.key) == ('feed', 'key')
-    assert 'no such tag' in excinfo.value.message
-    assert reader.get_tag('feed', 'key', None) is None
-    assert reader.get_tag('feed', 'key', 0) == 0
-
-    with pytest.raises(TagNotFoundError):
-        reader.delete_tag('one', 'key')
-
-    reader.set_tag('feed', 'key', 'value')
-
-    assert set(reader.get_tags('feed')) == {('key', 'value')}
-    assert reader.get_tag('feed', 'key') == 'value'
-
-    reader.delete_tag('feed', 'key')
-
-    assert set(reader.get_tags('feed')) == set()
-    with pytest.raises(TagNotFoundError):
-        reader.get_tag('feed', 'key')
-
-
 def test_get_entry(reader, entry_arg):
     parser = Parser()
     reader._parser = parser
@@ -2139,8 +2103,44 @@ def test_make_reader_feed_root(monkeypatch, make_reader, kwargs, feed_root):
     assert default_parser.feed_root == feed_root
 
 
+def test_feed_tags_as_metadata(reader):
+    with pytest.raises(FeedNotFoundError) as excinfo:
+        reader.set_tag('one', 'key', 'value')
+    assert excinfo.value.url == 'one'
+    assert 'no such feed' in excinfo.value.message
+
+    with pytest.raises(TagNotFoundError) as excinfo:
+        reader.delete_tag('one', 'key')
+    assert (excinfo.value.object_id, excinfo.value.key) == ('one', 'key')
+    assert 'no such tag' in excinfo.value.message
+
+    reader.add_feed('feed')
+
+    assert set(reader.get_tags('feed')) == set()
+    with pytest.raises(TagNotFoundError) as excinfo:
+        reader.get_tag('feed', 'key')
+    assert (excinfo.value.object_id, excinfo.value.key) == ('feed', 'key')
+    assert 'no such tag' in excinfo.value.message
+    assert reader.get_tag('feed', 'key', None) is None
+    assert reader.get_tag('feed', 'key', 0) == 0
+
+    with pytest.raises(TagNotFoundError):
+        reader.delete_tag('one', 'key')
+
+    reader.set_tag('feed', 'key', 'value')
+
+    assert set(reader.get_tags('feed')) == {('key', 'value')}
+    assert reader.get_tag('feed', 'key') == 'value'
+
+    reader.delete_tag('feed', 'key')
+
+    assert set(reader.get_tags('feed')) == set()
+    with pytest.raises(TagNotFoundError):
+        reader.get_tag('feed', 'key')
+
+
 @pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1])
-def test_tags_basic(reader, chunk_size):
+def test_tags_as_tags(reader, chunk_size):
     reader._storage.chunk_size = chunk_size
 
     with pytest.raises(FeedNotFoundError) as excinfo:
@@ -2213,6 +2213,16 @@ def test_tags_basic(reader, chunk_size):
     assert list(reader.get_tag_keys('one')) == ['tag-1', 'tag-common']
     assert list(reader.get_tag_keys('two')) == []
     assert list(reader.get_tag_keys()) == ['tag-1', 'tag-common']
+
+
+def test_set_arg_noop(reader):
+    feed = 'http://www.example.com'
+    reader.add_feed(feed)
+    reader.set_tag(feed, 'one', {})
+    reader.set_tag(feed, 'two')
+    reader.set_tag(feed, 'one')
+    assert dict(reader.get_tags(feed)) == {'one': {}, 'two': None}
+    assert set(reader.get_tag_keys(feed)) == {'one', 'two'}
 
 
 def get_entry_id(entry):
@@ -3536,12 +3546,3 @@ def test_delete_entry(reader):
     assert {(e.id, e.added_by) for e in reader.get_entries()} == {
         ('1, 2', 'feed'),
     }
-
-
-def test_tags_and_metadata_share_the_same_namespace(reader):
-    feed = 'http://www.example.com'
-    reader.add_feed(feed)
-    reader.set_tag(feed, 'one', {})
-    reader.set_tag(feed, 'two')
-    assert dict(reader.get_tags(feed)) == {'one': {}, 'two': None}
-    assert set(reader.get_tag_keys(feed)) == {'one', 'two'}
