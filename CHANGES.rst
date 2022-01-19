@@ -38,6 +38,8 @@ Unreleased
 
   All deprecated methods/exceptions **will be removed in version 3.0**.
 
+* Add the ``missing_ok`` argument to :meth:`~Reader.delete_feed`
+  and :meth:`~Reader.delete_entry`.
 * In the web application, show maxrss when debug is enabled. (:issue:`269`)
 * In the web application, decrease memory usage of the entries page
   when there are a lot of entries

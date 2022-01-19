@@ -440,22 +440,29 @@ class Reader:
         now = self._now()
         self._storage.add_feed(url, now)
 
-    def delete_feed(self, feed: FeedInput) -> None:
+    def delete_feed(self, feed: FeedInput, missing_ok: bool = False) -> None:
         """Delete a feed and all of its entries, metadata, and tags.
 
         Args:
             feed (str or Feed): The feed URL.
 
         Raises:
-            FeedNotFoundError
+            FeedNotFoundError: If the feed does not exist, and `missing_ok` is false.
             StorageError
 
         .. versionadded:: 1.18
             Renamed from :meth:`remove_feed`.
 
+        .. versionadded:: 2.8
+            The ``missing_ok`` argument.
+
         """
         url = _feed_argument(feed)
-        self._storage.delete_feed(url)
+        try:
+            self._storage.delete_feed(url)
+        except FeedNotFoundError:
+            if not missing_ok:
+                raise
 
     def change_feed_url(
         self, old: FeedInput, new: FeedInput, *, allow_invalid_url: bool = False
@@ -1511,7 +1518,7 @@ class Reader:
         for entry_hook in self.after_entry_update_hooks:
             entry_hook(self, intent.entry, EntryUpdateStatus.NEW)
 
-    def delete_entry(self, entry: EntryInput) -> None:
+    def delete_entry(self, entry: EntryInput, missing_ok: bool = False) -> None:
         """Delete an entry.
 
         Currently, only entries added by :meth:`~Reader.add_entry`
@@ -1521,14 +1528,21 @@ class Reader:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
 
         Raises:
-            EntryNotFoundError
+            EntryNotFoundError: If the entry does not exist, and `missing_ok` is false.
             EntryError: If the entry was not added by the user.
             StorageError
 
         .. versionadded:: 2.5
 
+        .. versionadded:: 2.8
+            The ``missing_ok`` argument.
+
         """
-        self._storage.delete_entries([_entry_argument(entry)], added_by='user')
+        try:
+            self._storage.delete_entries([_entry_argument(entry)], added_by='user')
+        except EntryNotFoundError:
+            if not missing_ok:
+                raise
 
     @deprecated('get_tags', '2.8', '3.0')
     def get_feed_metadata(

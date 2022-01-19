@@ -1524,6 +1524,9 @@ def test_add_remove_get_feeds(reader, feed_arg):
     assert excinfo.value.url == one.url
     assert 'no such feed' in excinfo.value.message
 
+    # no exception
+    reader.delete_feed(feed_arg(one), True)
+
     reader._now = lambda: naive_datetime(2010, 1, 1)
     reader.add_feed(feed_arg(one))
     reader.add_feed(feed_arg(two))
@@ -3523,6 +3526,9 @@ def test_delete_entry(reader):
     with pytest.raises(EntryNotFoundError) as excinfo:
         reader.delete_entry(('1', '1, 1'))
     assert excinfo.value.object_id == ('1', '1, 1')
+
+    # no exception
+    reader.delete_entry(('1', '1, 1'), True)
 
     feed = parser.feed(1)
     reader.add_feed(feed)
