@@ -11,6 +11,33 @@ Version 2.8
 
 Unreleased
 
+* Add generic tag methods
+  :meth:`~Reader.get_tags`,
+  :meth:`~Reader.get_tag_keys`,
+  :meth:`~Reader.get_tag`,
+  :meth:`~Reader.set_tag`,
+  and :meth:`~Reader.delete_tag`,
+  providing a unified interface for accessing tags as key-value pairs.
+  (:issue:`266`)
+
+  Add the :exc:`TagError`, :exc:`TagNotFoundError`,
+  and :exc:`ResourceNotFoundError` exceptions.
+
+* Deprecate feed-specific tag and metadata methods (:issue:`266`):
+
+  * :meth:`~Reader.get_feed_metadata`, use :meth:`~Reader.get_tags` instead
+  * :meth:`~Reader.get_feed_metadata_item`, use :meth:`~Reader.get_tag` instead
+  * :meth:`~Reader.set_feed_metadata_item`, use :meth:`~Reader.set_tag` instead
+  * :meth:`~Reader.delete_feed_metadata_item`, use :meth:`~Reader.delete_tag` instead
+  * :meth:`~Reader.get_feed_tags`, use :meth:`~Reader.get_tag_keys` instead
+  * :meth:`~Reader.add_feed_tag`, use :meth:`~Reader.set_tag` instead
+  * :meth:`~Reader.remove_feed_tag`, use :meth:`~Reader.delete_tag` instead
+
+  Deprecate :exc:`MetadataError`, :exc:`MetadataNotFoundError`, and
+  :exc:`FeedMetadataNotFoundError`.
+
+  All deprecated methods/exceptions **will be removed in version 3.0**.
+
 * In the web application, show maxrss when debug is enabled. (:issue:`269`)
 * In the web application, decrease memory usage of the entries page
   when there are a lot of entries
