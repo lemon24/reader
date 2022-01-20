@@ -40,6 +40,8 @@ Unreleased
 
 * Add the ``missing_ok`` argument to :meth:`~Reader.delete_feed`
   and :meth:`~Reader.delete_entry`.
+* Add the ``exist_ok`` argument to :meth:`~Reader.add_feed`.
+
 * In the web application, show maxrss when debug is enabled. (:issue:`269`)
 * In the web application, decrease memory usage of the entries page
   when there are a lot of entries

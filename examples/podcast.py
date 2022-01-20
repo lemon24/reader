@@ -12,7 +12,7 @@ import shutil
 
 import requests
 
-from reader import make_reader, FeedExistsError
+from reader import make_reader
 
 
 feed_url = "http://www.hellointernet.fm/podcast?format=rss"
@@ -22,10 +22,7 @@ reader = make_reader("db.sqlite")
 
 
 def add_and_update_feed():
-    try:
-        reader.add_feed(feed_url)
-    except FeedExistsError:
-        pass
+    reader.add_feed(feed_url, exist_ok=True)
     reader.update_feeds()
 
 

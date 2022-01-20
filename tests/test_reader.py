@@ -1542,6 +1542,9 @@ def test_add_remove_get_feeds(reader, feed_arg):
     assert excinfo.value.url == one.url
     assert 'feed exists' in excinfo.value.message
 
+    # no exception
+    reader.add_feed(feed_arg(one), True)
+
     reader._now = lambda: naive_datetime(2010, 1, 2)
     reader.update_feeds()
 

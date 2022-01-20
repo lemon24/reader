@@ -43,6 +43,7 @@ from ._utils import make_pool_map
 from ._utils import MapType
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
+from .exceptions import FeedExistsError
 from .exceptions import FeedMetadataNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import InvalidPluginError
@@ -408,7 +409,13 @@ class Reader:
         """
         self._storage.close()
 
-    def add_feed(self, feed: FeedInput, *, allow_invalid_url: bool = False) -> None:
+    def add_feed(
+        self,
+        feed: FeedInput,
+        exist_ok: bool = False,
+        *,
+        allow_invalid_url: bool = False,
+    ) -> None:
         """Add a new feed.
 
         Feed updates are enabled by default.
@@ -419,9 +426,12 @@ class Reader:
                 Add feed even if the current Reader configuration
                 does not know how to handle the feed URL
                 (and updates for it would fail).
+            exist_ok (bool):
+                If true, don't raise :exc:`FeedExistsError`
+                if the feed already exists.
 
         Raises:
-            FeedExistsError
+            FeedExistsError: If the feed already exists, and `exist_ok` is false.
             StorageError
             InvalidFeedURLError: If ``feed`` is invalid and ``allow_invalid_url`` is false.
 
@@ -433,18 +443,28 @@ class Reader:
             To get the previous behavior (no validation),
             use ``allow_invalid_url=True``.
 
+        .. versionadded:: 2.8
+            The ``exist_ok`` argument.
+
         """
         url = _feed_argument(feed)
         if not allow_invalid_url:
             self._parser.validate_url(url)
         now = self._now()
-        self._storage.add_feed(url, now)
+        try:
+            self._storage.add_feed(url, now)
+        except FeedExistsError:
+            if not exist_ok:
+                raise
 
     def delete_feed(self, feed: FeedInput, missing_ok: bool = False) -> None:
         """Delete a feed and all of its entries, metadata, and tags.
 
         Args:
             feed (str or Feed): The feed URL.
+            missing_ok (bool):
+                If true, don't raise :exc:`FeedNotFoundError`
+                if the feed does not exist.
 
         Raises:
             FeedNotFoundError: If the feed does not exist, and `missing_ok` is false.
@@ -1526,6 +1546,9 @@ class Reader:
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+            missing_ok (bool):
+                If true, don't raise :exc:`EntryNotFoundError`
+                if the entry does not exist.
 
         Raises:
             EntryNotFoundError: If the entry does not exist, and `missing_ok` is false.
@@ -2094,6 +2117,9 @@ class Reader:
         Args:
             resource (str or Feed): The resource.
             key (str): The key of the tag to delete.
+            missing_ok (bool):
+                If true, don't raise :exc:`TagNotFoundError`
+                if the tag does not exist.
 
         Raises:
             TagNotFoundError: If the tag does not exist, and `missing_ok` is false.
