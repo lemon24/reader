@@ -281,7 +281,7 @@ Released 2021-07-17
     .. code-block:: sh
 
         pip install 'reader>=1.15,<2' && \
-        cat << EOF | python - db.sqlite
+        python - db.sqlite << EOF
         import sys
         from reader import make_reader
         make_reader(sys.argv[1])
