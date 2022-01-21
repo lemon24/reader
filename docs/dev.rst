@@ -262,6 +262,9 @@ Feed tags
 
 Detailed requirements and API discussion: :issue:`184#issuecomment-689587006`.
 
+Merging tags and metadata, and the addition of a new,
+generic (global, feed, entry) tag API: :issue:`266#issuecomment-1013739526`.
+
 
 Entry user data
 ~~~~~~~~~~~~~~~
