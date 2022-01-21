@@ -1980,7 +1980,7 @@ class Reader:
 
     def get_tags(
         self,
-        resource: Optional[FeedInput],
+        resource: Union[FeedInput, None, Tuple[None]],
         *,
         key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
@@ -1989,6 +1989,7 @@ class Reader:
         Args:
             resource (str or Feed or None):
                 The resource to get tags for.
+                ``(None,)`` (a 1-tuple containing None) means "any feed".
                 :const:`None` means "any resource".
             key (str or None): Only return the metadata for this key.
 
@@ -2002,19 +2003,29 @@ class Reader:
         .. versionadded:: 2.8
 
         """
-        feed_url = _feed_argument(resource) if resource is not None else None
+        if resource is None:
+            feed_url = None
+        elif isinstance(resource, tuple):
+            if resource != (None,):
+                raise ValueError(f"invalid resource: {resource!r}")
+            feed_url = None
+        else:
+            feed_url = _feed_argument(resource)
         return self._storage.get_tags((feed_url,), key)
 
     def get_tag_keys(
         self,
-        resource: Optional[FeedInput] = None,
+        resource: Union[FeedInput, None, Tuple[None]] = None,
     ) -> Iterable[str]:  # pragma: no cover
         """Get the keys of all or some resource tags.
 
         Equivalent to ``sorted(k for k, _ in reader.get_tags(resource))``.
 
         Args:
-            resource (str or Feed or None): Only return tag keys for this resource.
+            resource (str or Feed or None):
+                Only return tag keys for this resource.
+                ``(None,)`` (a 1-tuple containing None) means "any feed".
+                :const:`None` means "any resource".
 
         Yields:
             str: The tag keys, in alphabetical order.

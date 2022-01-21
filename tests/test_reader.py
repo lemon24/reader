@@ -2160,6 +2160,8 @@ def test_tags_as_tags(reader, chunk_size):
     # also no-op
     assert list(reader.get_tag_keys('one')) == []
     assert list(reader.get_tag_keys()) == []
+    assert list(reader.get_tag_keys(None)) == []
+    assert list(reader.get_tag_keys((None,))) == []
 
     reader.add_feed('one')
     reader.add_feed('two')
@@ -2180,6 +2182,8 @@ def test_tags_as_tags(reader, chunk_size):
     assert list(reader.get_tag_keys('one')) == ['tag-1']
     assert list(reader.get_tag_keys('two')) == ['tag-2-1', 'tag-2-2']
     assert list(reader.get_tag_keys()) == ['tag-1', 'tag-2-1', 'tag-2-2']
+    assert list(reader.get_tag_keys(None)) == ['tag-1', 'tag-2-1', 'tag-2-2']
+    assert list(reader.get_tag_keys((None,))) == ['tag-1', 'tag-2-1', 'tag-2-2']
 
     # no-op
     reader.delete_tag('one', 'tag-2-1', missing_ok=True)
@@ -2219,6 +2223,11 @@ def test_tags_as_tags(reader, chunk_size):
     assert list(reader.get_tag_keys('one')) == ['tag-1', 'tag-common']
     assert list(reader.get_tag_keys('two')) == []
     assert list(reader.get_tag_keys()) == ['tag-1', 'tag-common']
+
+    with pytest.raises(ValueError):
+        list(reader.get_tag_keys(()))
+    with pytest.raises(ValueError):
+        list(reader.get_tag_keys(('a', 'b')))
 
 
 def test_set_arg_noop(reader):
