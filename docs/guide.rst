@@ -368,49 +368,40 @@ and enabled automatically on the first :meth:`~Reader.update_search()` call.
 
 
 
-Feed metadata
+.. _feed-tags:
+.. _feed-metadata:
+
+Resource tags
 -------------
 
-Feeds can have metadata,
+Resources (as of version |version|, only feeds) can have tags,
 key-value pairs where the values are any JSON-serializable data::
 
-    >>> reader.get_feed_metadata_item(feed, 'key', 'default')
+    >>> reader.get_tag(feed, 'one', 'default')
     'default'
-    >>> reader.set_feed_metadata_item(feed, 'key', 'value')
-    >>> reader.get_feed_metadata_item(feed, 'key')
+    >>> reader.set_tag(feed, 'one', 'value')
+    >>> reader.get_tag(feed, 'one')
     'value'
-    >>> reader.set_feed_metadata_item(feed, 'another', {'one': [2]})
-    >>> dict(reader.get_feed_metadata(feed))
-    {'another': {'one': [2]}, 'key': 'value'}
+    >>> reader.set_tag(feed, 'two', {2: ['ii']})
+    >>> dict(reader.get_tags(feed))
+    {'one': 'value', 'two': {'2': ['ii']}}
+
+Common uses for tag values are plugin and UI settings.
 
 
-Common uses for metadata are plugin and UI settings.
+When using :meth:`~Reader.set_tag`, the value can be omitted,
+in which case the behavior is to ensure the tag exists
+(if it doesn't, :const:`None` is used as value)::
 
-Note that metadata keys and the top-level keys of dict metadata values
-starting with specific (configurable) prefixes are `reserved <Reserved names_>`_.
-Other than that, they can be any unicode string,
-although UIs might want to restrict this to a smaller character set.
+    >>> reader.set_tag(feed, 'two')
+    >>> reader.set_tag(feed, 'three')
+    >>> set(reader.get_tag_keys(feed))
+    {'three', 'one', 'two'}
+    >>> dict(reader.get_tags(feed))
+    {'one': 'value', 'three': None, 'two': {'2': ['ii']}}
 
-.. versionchanged:: 2.7
-
-    Tags and metadata now share the same namespace.
-    See the :ref:`feed-tags` section for details.
-
-
-
-.. _feed-tags:
-
-Feed tags
----------
-
-Feeds can also have tags::
-
-    >>> reader.add_feed_tag(feed, 'one')
-    >>> reader.add_feed_tag(feed, 'two')
-    >>> set(reader.get_feed_tags(feed))
-    {'one', 'two'}
-
-Tags can be used for filtering feeds and entries
+Besides storing resource metadata,
+tags can be used for filtering feeds and entries
 (see the :meth:`~Reader.get_feeds()` documentation for more complex examples)::
 
     >>> # feeds that have the tag "one"
@@ -423,23 +414,32 @@ Tags can be used for filtering feeds and entries
     ... ][:2]
     [('Cortex', '106: Clear and Boring'), ('Cortex', '105: Atomic Notes')]
 
-Note that tags
+
+
+Note that tag keys and the top-level keys of dict tag values
 starting with specific (configurable) prefixes are `reserved <Reserved names_>`_.
 Other than that, they can be any unicode string,
-although UIs might want to restrict this to a smaller character set.
+although UIs might want to restrict this to a smaller set of characters.
 
-.. versionchanged:: 2.7
 
-    Tags and metadata now share the same namespace.
-    That is, ``add_feed_tag(feed, 'tag')`` is equivalent to
-    ``set_feed_metadata_item(feed, 'tag', None)``::
 
-        >>> reader.set_feed_metadata_item(feed, 'one', {})
-        >>> reader.add_feed_tag(feed, 'two')
-        >>> dict(reader.get_feed_metadata(feed))
-        {'one': {}, 'two': None}
-        >>> set(reader.get_feed_tags(feed))
-        {'one', 'two'}
+.. versionchanged:: 2.8
+
+    Prior to version 2.7, there were two separate APIs,
+    with independent namespaces:
+
+    * feed metadata (key/value pairs, could *not* be used for filtering)
+    * feed tags (plain strings, could be used for filtering)
+
+    In version 2.7, the two namespaces were merged
+    (such that adding a tag to a feed would result in the
+    metadata with the same key being set with a value of :const:`None`).
+
+    In version 2.8, these separate APIs were merged into
+    a new, unified API for generic resource tags
+    (key/value pairs which can be used for filtering).
+    The old, feed-only tags/metadata methods were deprecated,
+    and **will be removed in version 3.0**.
 
 
 
@@ -464,7 +464,7 @@ as their non-``_counts`` counterparts.
 The following example shows how to get counts only for feeds/entries
 with a specific tag::
 
-    >>> for tag in itertools.chain(reader.get_feed_tags(), [False]):
+    >>> for tag in itertools.chain(reader.get_tag_keys((None,)), [False]):
     ...     feeds = reader.get_feed_counts(tags=[tag])
     ...     entries = reader.get_entry_counts(feed_tags=[tag])
     ...     print(f"{tag or '<no tag>'}: {feeds.total} feeds, {entries.total} entries ")
@@ -636,9 +636,8 @@ In order to expose *reader* and plugin functionality directly to the end user,
 *names* starting with ``.reader.`` and ``.plugin.`` are *reserved*.
 This applies to the following names:
 
-* tags
-* metadata keys
-* the top-level keys of dict metadata values
+* tag keys
+* the top-level keys of dict tag values
 
 Currently, there are no *reader*-reserved names;
 new ones will be documented here.
@@ -790,7 +789,7 @@ Any unexpected exception raised by the underlying search implementation
 will be also be reraised as a :exc:`SearchError`,
 with the original exception as cause.
 
-When trying to create a feed, entry, metadata that already exists,
+When trying to create a feed, entry, or tag that already exists,
 or to operate on one that does not exist,
 a corresponding :exc:`*ExistsError` or :exc:`*NotFoundError`
 will be raised.
