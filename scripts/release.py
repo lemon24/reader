@@ -30,7 +30,7 @@ def run_no_venv(*args, **kwargs):
     return run(*args, env=env, **kwargs)
 
 
-def tox():
+def run_tox():
     run_no_venv('tox -p all', shell=True)
 
 
@@ -128,7 +128,8 @@ def add_and_push_tags(tags):
 @click.argument('version')
 @click.argument('new_version')
 @click.option('--date', type=click.DateTime(), default=str(datetime.date.today()))
-def main(version, new_version, date):
+@click.option('--tox/--no-tox', default=True)
+def main(version, new_version, date, tox):
     check_uncommited()
     check_unpushed()
 
@@ -136,7 +137,8 @@ def main(version, new_version, date):
     update_changelog_date(version, date)
     commit("Release {}.".format(version))
 
-    tox()
+    if tox:
+        run_tox()
 
     confirm("Push version {}?", version)
     push()
