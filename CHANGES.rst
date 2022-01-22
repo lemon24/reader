@@ -9,7 +9,7 @@ Changelog
 Version 2.8
 -----------
 
-Unreleased
+Released 2022-01-22
 
 * Add generic tag methods
   :meth:`~Reader.get_tags`,
