@@ -232,7 +232,7 @@ To get all the feeds, use the :meth:`~Reader.get_feeds` method::
     Hello Internet by CGP Grey, updated on 2020-02-28 09:34:02+00:00
 
 :meth:`~Reader.get_feeds` also allows
-filtering feeds by their `tags <Feed tags_>`_, if the last update succeeded,
+filtering feeds by their `tags <resource tags_>`_, if the last update succeeded,
 or if updates are enabled, and changing the feed sort order.
 
 
@@ -276,7 +276,7 @@ which generates :class:`Entry` objects::
 
 
 :meth:`~Reader.get_entries` allows filtering entries by their feed,
-`flags <Entry flags_>`_, `feed tags <Feed tags_>`_, or enclosures,
+`flags <Entry flags_>`_, `feed tags <resource tags_>`_, or enclosures,
 and changing the entry sort order.
 Here is an example of getting entries for a single feed::
 
