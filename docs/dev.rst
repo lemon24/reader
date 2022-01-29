@@ -195,6 +195,11 @@ Retriever / parser split:
 
 * :issue:`205#issuecomment-766321855`
 
+Alternative feed parsers:
+
+* the logical pipeline of parsing a feed: :issue:`264#issuecomment-973190028`
+* comparison between feedparser and Atoma: :issue:`264#issuecomment-981678120`, :issue:`263`
+
 
 Metrics
 ~~~~~~~
