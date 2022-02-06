@@ -30,7 +30,6 @@ from typing import Type
 from typing import TypeVar
 from typing import Union
 
-import feedparser  # type: ignore
 import iso8601
 import requests
 from typing_extensions import Protocol
@@ -51,6 +50,7 @@ from ._url_utils import extract_path
 from ._url_utils import normalize_url
 from ._url_utils import resolve_root
 from ._utils import MapType
+from ._vendor import feedparser
 from .exceptions import InvalidFeedURLError
 from .exceptions import ParseError
 from .types import Content
@@ -614,7 +614,7 @@ class FeedparserParser:
         # feedparser content sanitization and relative link resolution should be ON.
         # https://github.com/lemon24/reader/issues/125
         # https://github.com/lemon24/reader/issues/157
-        result = feedparser.parse(
+        result = feedparser.parse(  # type: ignore[attr-defined]
             file,
             resolve_relative_uris=True,
             sanitize_html=True,
@@ -625,8 +625,8 @@ class FeedparserParser:
 
 # https://feedparser.readthedocs.io/en/latest/character-encoding.html#handling-incorrectly-declared-encodings
 _survivable_feedparser_exceptions = (
-    feedparser.CharacterEncodingOverride,
-    feedparser.NonXMLContentType,
+    feedparser.CharacterEncodingOverride,  # type: ignore[attr-defined]
+    feedparser.NonXMLContentType,  # type: ignore[attr-defined]
 )
 
 

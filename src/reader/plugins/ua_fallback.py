@@ -23,7 +23,7 @@ Servers/CDNs known to not accept the *reader* UA: Cloudflare, WP Engine.
 """
 import logging
 
-import feedparser
+from .._vendor import feedparser
 
 _LOG_HEADERS = ['Server', 'X-Powered-By']
 _FEEDPARSER_UA_PREFIX = feedparser.USER_AGENT.partition(" ")[0]

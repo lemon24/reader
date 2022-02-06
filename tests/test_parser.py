@@ -4,7 +4,6 @@ import logging
 from contextlib import contextmanager
 from unittest.mock import MagicMock
 
-import feedparser
 import pytest
 import requests
 from utils import make_url_base
@@ -19,6 +18,7 @@ from reader._parser import Parser
 from reader._parser import RetrieveResult
 from reader._parser import SessionWrapper
 from reader._types import FeedData
+from reader._vendor import feedparser
 from reader.exceptions import ParseError
 
 
