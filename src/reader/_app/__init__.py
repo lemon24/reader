@@ -296,8 +296,7 @@ def entries():
     counts = get_entry_counts(**kwargs) if with_counts else None
 
     try:
-        first = next(entries)
-        entries = itertools.chain([first], entries)
+        entries = itertools.chain([next(entries)], entries)
     except StopIteration:
         pass
     except InvalidSearchQueryError as e:
@@ -395,6 +394,19 @@ def add_entry():
     )
 
 
+FEED_SORT_NATIVE = {'title', 'added'}
+FEED_SORT_FANCY = {
+    'important': lambda counts: counts.important,
+    # TODO: an unread/unimportant property would be nice
+    'unread': lambda counts: counts.total - counts.read,
+    # TODO: if we keep these average intervals, properties for them might be nice too
+    'avg1m': lambda counts: counts.averages[0],
+    'avg3m': lambda counts: counts.averages[1],
+    'avg1y': lambda counts: counts.averages[2],
+}
+FEED_SORT_ALL = FEED_SORT_NATIVE.union(FEED_SORT_FANCY)
+
+
 @blueprint.route('/feeds')
 def feeds():
     broken = request.args.get('broken')
@@ -404,7 +416,7 @@ def feeds():
     updates_enabled = {None: None, 'no': False, 'yes': True}[updates_enabled]
 
     sort = request.args.get('sort', 'title')
-    assert sort in ('title', 'added')
+    assert sort in FEED_SORT_ALL
 
     error = None
 
@@ -430,25 +442,55 @@ def feeds():
 
     with_counts = request.args.get('counts')
     with_counts = {None: None, 'no': False, 'yes': True}[with_counts]
-    counts = reader.get_feed_counts(**kwargs) if with_counts else None
 
-    feed_data = []
+    counts = None
     try:
-        feeds = reader.get_feeds(sort=sort, **kwargs)
-        feed_data = (
-            (
-                feed,
-                list(reader.get_tag_keys(feed)),
-                reader.get_entry_counts(feed=feed) if with_counts else None,
-            )
-            for feed in feeds
-        )
+        counts = reader.get_feed_counts(**kwargs) if with_counts else None
     except ValueError as e:
         # TODO: there should be a better way of matching this kind of error
         if 'tag' in str(e).lower():
             error = f"invalid tag query: {e}: {tags_str}"
         else:
             raise
+
+    if sort in FEED_SORT_NATIVE:
+        kwargs['sort'] = sort
+
+    feeds = reader.get_feeds(**kwargs)
+    try:
+        feeds = itertools.chain([next(feeds)], feeds)
+    except StopIteration:
+        pass
+    except ValueError as e:
+        # TODO: there should be a better way of matching this kind of error
+        if 'tag' in str(e).lower():
+            error = f"invalid tag query: {e}: {tags_str}"
+        else:
+            raise
+
+    feed_data = (
+        (
+            feed,
+            list(reader.get_tag_keys(feed)),
+            reader.get_entry_counts(feed=feed)
+            if with_counts or sort in FEED_SORT_FANCY
+            else None,
+        )
+        for feed in feeds
+    )
+
+    # TODO: it would be nice if get_feeds() did this for us (streaming too)
+    if sort in FEED_SORT_FANCY:
+
+        def fancy_sort_key(data):
+            feed, tags, counts = data
+            return (
+                -FEED_SORT_FANCY[sort](counts),
+                feed.user_title or feed.title or '',
+                feed.url,
+            )
+
+        feed_data = sorted(feed_data, key=fancy_sort_key)
 
     # Ensure flashed messages get removed from the session.
     # https://github.com/lemon24/reader/issues/81

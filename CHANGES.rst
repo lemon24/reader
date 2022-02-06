@@ -11,6 +11,10 @@ Version 2.9
 
 Unreleased
 
+* In the web application, allow sorting feeds by the number of entries:
+  important, unread, per day during the last 1, 3, 12 months.
+  (:issue:`249`, :issue:`245`).
+
 
 Version 2.8
 -----------
