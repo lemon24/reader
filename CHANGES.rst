@@ -9,7 +9,7 @@ Changelog
 Version 2.9
 -----------
 
-Unreleased
+Released 2022-02-07
 
 * Decrease :meth:`update_feeds()` memory usage by ~35%
   (using the maxrss before the call as baseline;
