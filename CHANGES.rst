@@ -11,6 +11,14 @@ Version 2.9
 
 Unreleased
 
+* Decrease :meth:`update_feeds()` memory usage by ~35%
+  (using the maxrss before the call as baseline;
+  overall process maxrss decreases by ~20%).
+  The improvement is not in *reader* code, but in feedparser;
+  *reader* will temporarily vendor feedparser
+  until the fix makes it upstream and is released on PyPI.
+  (:issue:`265`)
+
 * In the web application, allow sorting feeds by the number of entries:
   important, unread, per day during the last 1, 3, 12 months.
   (:issue:`249`, :issue:`245`).
@@ -55,7 +63,7 @@ Released 2022-01-22
 * In the web application, show maxrss when debug is enabled. (:issue:`269`)
 * In the web application, decrease memory usage of the entries page
   when there are a lot of entries
-  (e.g. for 2.5k entries, the maxrss decreased from 115 MiB to 75 MiB),
+  (e.g. for 2.5k entries, maxrss decreased from 115 MiB to 75 MiB),
   at the expense of making "entries for feed" slightly slower.
   (:issue:`269`)
 
