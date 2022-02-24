@@ -70,7 +70,9 @@ _T = TypeVar('_T')
 def create_db(db: sqlite3.Connection) -> None:
     create_feeds(db)
     create_entries(db)
+    create_global_tags(db)
     create_feed_tags(db)
+    create_entry_tags(db)
     create_indexes(db)
 
 
@@ -147,6 +149,18 @@ def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
     )
 
 
+def create_global_tags(db: sqlite3.Connection) -> None:
+    db.execute(
+        """
+        CREATE TABLE global_tags (
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            PRIMARY KEY (key)
+        );
+        """
+    )
+
+
 def create_feed_tags(db: sqlite3.Connection) -> None:
     db.execute(
         """
@@ -164,6 +178,24 @@ def create_feed_tags(db: sqlite3.Connection) -> None:
     )
 
 
+def create_entry_tags(db: sqlite3.Connection) -> None:
+    db.execute(
+        """
+        CREATE TABLE entry_tags (
+            id TEXT NOT NULL,
+            feed TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+
+            PRIMARY KEY (id, feed, key),
+            FOREIGN KEY (id, feed) REFERENCES entries(id, feed)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
+        );
+        """
+    )
+
+
 class SchemaInfo(NamedTuple):
     table_prefix: str
     id_columns: Tuple[str, ...]
@@ -171,6 +203,7 @@ class SchemaInfo(NamedTuple):
 
 
 SCHEMA_INFO = {
+    0: SchemaInfo('global_', (), ReaderError),
     1: SchemaInfo('feed_', ('feed',), FeedNotFoundError),
     2: SchemaInfo('entry_', ('feed', 'id'), EntryNotFoundError),
 }
@@ -324,6 +357,12 @@ def update_from_34_to_35(db: sqlite3.Connection) -> None:  # pragma: no cover
     db.execute("ALTER TABLE feed_metadata RENAME TO feed_tags;")
 
 
+def update_from_35_to_36(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/272
+    create_global_tags(db)
+    create_entry_tags(db)
+
+
 MINIMUM_SQLITE_VERSION = (3, 15)
 REQUIRED_SQLITE_COMPILE_OPTIONS = ["ENABLE_JSON1"]
 
@@ -332,7 +371,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=35,
+        version=36,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
@@ -343,6 +382,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             32: update_from_32_to_33,
             33: update_from_33_to_34,
             34: update_from_34_to_35,
+            35: update_from_35_to_36,
         },
         id=APPLICATION_ID,
         # Row value support was added in 3.15.
@@ -1150,35 +1190,32 @@ class Storage:
 
         params = dict(zip(info.id_columns, object_id), key=key)
 
-        if value is not MISSING:
-            query = f"""
-                INSERT OR REPLACE INTO {info.table_prefix}tags (
-                    {', '.join(info.id_columns)}, key, value
-                ) VALUES (
-                    {', '.join((f':{c}' for c in info.id_columns))},
-                    :key,
-                    :value
-                )
-            """
-            params.update(value=json.dumps(value))
+        id_columns = info.id_columns + ('key',)
+        id_columns_str = ', '.join(id_columns)
+        id_values_str = ', '.join(f':{c}' for c in id_columns)
 
+        if value is not MISSING:
+            value_str = ':value'
+            params.update(value=json.dumps(value))
         else:
-            query = f"""
-                INSERT OR REPLACE INTO {info.table_prefix}tags (
-                    {', '.join(info.id_columns)}, key, value
-                ) VALUES (
-                    {', '.join((f':{c}' for c in info.id_columns))},
-                    :key,
-                    coalesce((
-                        SELECT value FROM {info.table_prefix}tags
-                        WHERE (
-                            {', '.join(info.id_columns)}, key
-                        ) == (
-                            {', '.join((f':{c}' for c in info.id_columns))}, :key
-                        )
-                    ), 'null')
-                )
+            value_str = f"""
+                coalesce((
+                    SELECT value FROM {info.table_prefix}tags
+                    WHERE (
+                        {id_columns_str}
+                    ) == (
+                        {id_values_str}
+                    )
+                ), 'null')
             """
+
+        query = f"""
+            INSERT OR REPLACE INTO {info.table_prefix}tags (
+                {id_columns_str}, value
+            ) VALUES (
+                {id_values_str}, {value_str}
+            )
+        """
 
         with self.db:
             try:
