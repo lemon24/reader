@@ -21,39 +21,43 @@ def raises_TagNotFoundError(object_id, key):
     assert 'no such tag' in excinfo.value.message
 
 
-RESOURCE_ARG = {
-    'feed': ('1', FeedNotFoundError),
-    'entry': (('1', '1, 1'), EntryNotFoundError),
-    'global': ((), None),
-}
+@parametrize_dict(
+    'resource, not_found_exc',
+    {
+        'feed': ('1', FeedNotFoundError),
+        'entry': (('1', '1, 1'), EntryNotFoundError),
+        # no global, the global namespace always exists
+    },
+)
+def test_inexistent_resource(reader, subtests, resource, not_found_exc):
+    with subtests.test("get tag"):
+        assert sorted(reader.get_tags(resource)) == []
+        with raises_TagNotFoundError(resource, 'one'):
+            reader.get_tag(resource, 'one')
+        assert reader.get_tag(resource, 'one', 'default') == 'default'
+
+    with subtests.test("set tag"):
+        with pytest.raises(not_found_exc) as excinfo:
+            reader.set_tag(resource, 'one', 'value')
+        assert excinfo.value.object_id == resource
+        assert 'no such' in excinfo.value.message
+        assert 'no such tag' not in excinfo.value.message
+
+    with subtests.test("delete tag"):
+        with raises_TagNotFoundError(resource, 'one'):
+            reader.delete_tag(resource, 'one')
 
 
-@parametrize_dict('resource, not_found_exc', RESOURCE_ARG)
-def test_as_metadata(reader, subtests, resource, not_found_exc):
+@parametrize_dict(
+    'resource',
+    {
+        'feed': '1',
+        'entry': ('1', '1, 1'),
+        'global': (),
+    },
+)
+def test_as_metadata(reader, subtests, resource):
     reader._parser = parser = Parser()
-
-    with subtests.test("operations on inexistent resource"):
-        if resource == ():
-            pytest.skip("global namespace always exists")
-
-        with subtests.test("get tag on inexistent resource"):
-            assert sorted(reader.get_tags(resource)) == []
-            with raises_TagNotFoundError(resource, 'one'):
-                reader.get_tag(resource, 'one')
-            assert reader.get_tag(resource, 'one', 'default') == 'default'
-
-        with subtests.test("set tag on inexistent resource"):
-
-            with pytest.raises(not_found_exc) as excinfo:
-                reader.set_tag(resource, 'one', 'value')
-            assert excinfo.value.object_id == resource
-            assert 'no such' in excinfo.value.message
-            assert 'no such tag' not in excinfo.value.message
-
-        with subtests.test("delete tag on inexistent resource"):
-            with raises_TagNotFoundError(resource, 'one'):
-                reader.delete_tag(resource, 'one')
-
     parser.feed(1)
     parser.entry(1, 1)
     reader.add_feed('1')
@@ -104,16 +108,16 @@ def test_as_metadata(reader, subtests, resource, not_found_exc):
             reader.get_tag(resource, 'one')
 
 
-MAKE_RESOURCE_ARG = {
-    'global': lambda *_: (),
-    'feed': lambda f, _: f,
-    'feed_id': lambda f, _: f.object_id,
-    'entry': lambda _, e: e,
-    'entry_id': lambda _, e: e.object_id,
-}
-
-
-@parametrize_dict('make_resource_arg', MAKE_RESOURCE_ARG)
+@parametrize_dict(
+    'make_resource_arg',
+    {
+        'global': lambda *_: (),
+        'feed': lambda f, _: f,
+        'feed_id': lambda f, _: f.object_id,
+        'entry': lambda _, e: e,
+        'entry_id': lambda _, e: e.object_id,
+    },
+)
 def test_resource_argument(reader, make_resource_arg):
     reader._parser = parser = Parser()
     feed = parser.feed(1)
