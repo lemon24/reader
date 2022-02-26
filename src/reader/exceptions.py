@@ -281,7 +281,10 @@ class TagError(ReaderError):
     """
 
     def __init__(
-        self, key: str, object_id: Union[str, Tuple[str, str]], message: str = ''
+        self,
+        key: str,
+        object_id: Union[Tuple[()], str, Tuple[str, str]],
+        message: str = '',
     ) -> None:
         super().__init__(message)
 

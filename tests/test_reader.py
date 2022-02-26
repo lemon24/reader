@@ -2224,10 +2224,9 @@ def test_tags_as_tags(reader, chunk_size):
     assert list(reader.get_tag_keys('two')) == []
     assert list(reader.get_tag_keys()) == ['tag-1', 'tag-common']
 
-    with pytest.raises(ValueError):
-        list(reader.get_tag_keys(()))
-    with pytest.raises(ValueError):
-        list(reader.get_tag_keys(('a', 'b')))
+    # TODO: test wildcards
+    assert list(reader.get_tag_keys(())) == []
+    assert list(reader.get_tag_keys(('a', 'b'))) == []
 
 
 def test_set_arg_noop(reader):

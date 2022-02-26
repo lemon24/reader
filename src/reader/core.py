@@ -54,6 +54,9 @@ from .plugins import _PLUGINS
 from .plugins import DEFAULT_PLUGINS
 from .types import _entry_argument
 from .types import _feed_argument
+from .types import _resource_argument
+from .types import AnyResourceId
+from .types import AnyResourceInput
 from .types import Entry
 from .types import EntryCounts
 from .types import EntryInput
@@ -68,6 +71,7 @@ from .types import FeedSortOrder
 from .types import JSONType
 from .types import MISSING
 from .types import MissingType
+from .types import ResourceInput
 from .types import SearchSortOrder
 from .types import TagFilterInput
 from .types import UpdatedFeed
@@ -1976,11 +1980,13 @@ class Reader:
         .. versionadded:: 1.7
 
         """
-        return (k for k, _ in self.get_tags(feed))
+        return self.get_tag_keys(feed)
+
+    # FIXME: no wildcards allowed in get_tags, update docstring/changelog
 
     def get_tags(
         self,
-        resource: Union[FeedInput, None, Tuple[None]],
+        resource: ResourceInput,
         *,
         key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
@@ -2003,19 +2009,12 @@ class Reader:
         .. versionadded:: 2.8
 
         """
-        if resource is None:
-            feed_url = None
-        elif isinstance(resource, tuple):
-            if resource != (None,):
-                raise ValueError(f"invalid resource: {resource!r}")
-            feed_url = None
-        else:
-            feed_url = _feed_argument(resource)
-        return self._storage.get_tags((feed_url,), key)
+        resource_id = _resource_argument(resource)
+        return self._storage.get_tags(resource_id, key)
 
     def get_tag_keys(
         self,
-        resource: Union[FeedInput, None, Tuple[None]] = None,
+        resource: AnyResourceInput = None,
     ) -> Iterable[str]:  # pragma: no cover
         """Get the keys of all or some resource tags.
 
@@ -2038,20 +2037,34 @@ class Reader:
         """
         # FIXME: cover
         # TODO: (later) efficient implementation
-        return (k for k, _ in self.get_tags(resource))
+        resource_id: AnyResourceId
+        if resource is None:
+            resource_id = None
+        elif resource == (None,):
+            resource_id = (None,)
+        elif resource == (None, None):
+            resource_id = (None, None)
+        else:
+            resource_id = _resource_argument(resource)  # type: ignore[arg-type]
+        return (k for k, _ in self._storage.get_tags(resource_id))
 
     @overload
-    def get_tag(self, resource: FeedInput, key: str) -> JSONType:  # pragma: no cover
+    def get_tag(
+        self, resource: ResourceInput, key: str
+    ) -> JSONType:  # pragma: no cover
         ...
 
     @overload
     def get_tag(
-        self, resource: FeedInput, key: str, default: _T
+        self, resource: ResourceInput, key: str, default: _T
     ) -> Union[JSONType, _T]:  # pragma: no cover
         ...
 
     def get_tag(
-        self, resource: FeedInput, key: str, default: Union[MissingType, _T] = MISSING
+        self,
+        resource: ResourceInput,
+        key: str,
+        default: Union[MissingType, _T] = MISSING,
     ) -> Union[JSONType, _T]:
         """Get the value of this resource tag.
 
@@ -2074,25 +2087,27 @@ class Reader:
         .. versionadded:: 2.8
 
         """
+        resource_id = _resource_argument(resource)
+        object_id: Any = resource_id if len(resource_id) != 1 else resource_id[0]  # type: ignore
         return zero_or_one(
-            (v for _, v in self.get_tags(resource, key=key)),
-            lambda: TagNotFoundError(key, _feed_argument(resource)),
+            (v for _, v in self._storage.get_tags(resource_id, key)),
+            lambda: TagNotFoundError(key, object_id),
             default,
         )
 
     @overload
-    def set_tag(self, resource: FeedInput, key: str) -> None:  # pragma: no cover
+    def set_tag(self, resource: ResourceInput, key: str) -> None:  # pragma: no cover
         ...
 
     @overload
     def set_tag(
-        self, resource: FeedInput, key: str, value: JSONType
+        self, resource: ResourceInput, key: str, value: JSONType
     ) -> None:  # pragma: no cover
         ...
 
     def set_tag(
         self,
-        resource: FeedInput,
+        resource: ResourceInput,
         key: str,
         value: Union[JSONType, MissingType] = MISSING,
     ) -> None:
@@ -2114,14 +2129,14 @@ class Reader:
         .. versionadded:: 2.8
 
         """
-        feed_url = _feed_argument(resource)
+        resource_id = _resource_argument(resource)
         if not isinstance(value, MissingType):
-            self._storage.set_tag((feed_url,), key, value)
+            self._storage.set_tag(resource_id, key, value)
         else:
-            self._storage.set_tag((feed_url,), key)
+            self._storage.set_tag(resource_id, key)
 
     def delete_tag(
-        self, resource: FeedInput, key: str, missing_ok: bool = False
+        self, resource: ResourceInput, key: str, missing_ok: bool = False
     ) -> None:
         """Delete this resource tag.
 
@@ -2139,12 +2154,13 @@ class Reader:
         .. versionadded:: 2.8
 
         """
-        feed_url = _feed_argument(resource)
+        resource_id = _resource_argument(resource)
+        object_id: Any = resource_id if len(resource_id) != 1 else resource_id[0]  # type: ignore
         try:
-            self._storage.delete_tag((feed_url,), key)
+            self._storage.delete_tag(resource_id, key)
         except TagNotFoundError as e:
             if not missing_ok:
-                e.object_id = feed_url
+                e.object_id = object_id
                 raise
 
     def make_reader_reserved_name(self, key: str) -> str:

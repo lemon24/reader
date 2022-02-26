@@ -14,6 +14,7 @@ from typing import List
 from typing import Mapping
 from typing import NamedTuple
 from typing import Optional
+from typing import overload
 from typing import Sequence
 from typing import Tuple
 from typing import Type
@@ -639,26 +640,69 @@ class EntryLike(Protocol):
         ...
 
 
+# https://github.com/lemon24/reader/issues/266#issuecomment-1013739526
+GlobalInput = Tuple[()]
 FeedInput = Union[str, FeedLike]
 EntryInput = Union[Tuple[str, str], EntryLike]
+ResourceInput = Union[GlobalInput, FeedInput, EntryInput]
+AnyResourceInput = Union[ResourceInput, None, Tuple[None], Tuple[None, None]]
+ResourceId = Union[Tuple[()], Tuple[str], Tuple[str, str]]
+AnyResourceId = Union[ResourceId, None, Tuple[None], Tuple[None, None]]
 
 
 def _feed_argument(feed: FeedInput) -> str:
     if isinstance(feed, FeedLike):
-        return feed.url
-    if isinstance(feed, str):
-        return feed
+        rv = feed.url
+    elif isinstance(feed, tuple) and len(feed) == 1:
+        rv = feed[0]
+    else:
+        rv = feed
+    if isinstance(rv, str):
+        return rv
     raise ValueError(f'invalid feed argument: {feed!r}')
 
 
 def _entry_argument(entry: EntryInput) -> Tuple[str, str]:
     if isinstance(entry, EntryLike):
-        return _feed_argument(entry.feed_url), entry.id
-    if isinstance(entry, tuple) and len(entry) == 2:
-        feed_url, entry_id = entry
+        rv = _feed_argument(entry.feed_url), entry.id
+    elif isinstance(entry, tuple) and len(entry) == 2:
+        rv = entry
+    else:
+        rv = None
+    if rv:
+        feed_url, entry_id = rv
         if isinstance(feed_url, str) and isinstance(entry_id, str):
-            return entry
+            return rv
     raise ValueError(f'invalid entry argument: {entry!r}')
+
+
+@overload
+def _resource_argument(resource: GlobalInput) -> Tuple[()]:
+    ...  # pragma: no cover
+
+
+@overload
+def _resource_argument(resource: FeedInput) -> Tuple[str]:
+    ...  # pragma: no cover
+
+
+@overload
+def _resource_argument(resource: EntryInput) -> Tuple[str, str]:
+    ...  # pragma: no cover
+
+
+def _resource_argument(resource: ResourceInput) -> ResourceId:
+    if isinstance(resource, tuple) and len(resource) == 0:
+        return resource
+    try:
+        return (_feed_argument(resource),)  # type: ignore[arg-type]
+    except ValueError:
+        pass
+    try:
+        return _entry_argument(resource)  # type: ignore[arg-type]
+    except ValueError:
+        pass
+    raise ValueError(f"invalid resource argument: {resource!r}")
 
 
 # str explicitly excluded, to allow for a string-based query language;

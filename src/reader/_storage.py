@@ -45,6 +45,7 @@ from .exceptions import FeedNotFoundError
 from .exceptions import ReaderError
 from .exceptions import StorageError
 from .exceptions import TagNotFoundError
+from .types import AnyResourceId
 from .types import Content
 from .types import Enclosure
 from .types import Entry
@@ -57,6 +58,7 @@ from .types import FeedSortOrder
 from .types import JSONType
 from .types import MISSING
 from .types import MissingType
+from .types import ResourceId
 
 APPLICATION_ID = int(''.join(f'{ord(c):x}' for c in 'read'), 16)
 
@@ -1125,7 +1127,7 @@ class Storage:
 
     def get_tags(
         self,
-        object_id: Tuple[Optional[str], ...],
+        object_id: AnyResourceId,
         key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
         yield from join_paginated_iter(
@@ -1136,23 +1138,32 @@ class Storage:
     @wrap_exceptions_iter(StorageError)
     def get_tags_page(
         self,
-        object_id: Tuple[Optional[str], ...],
+        object_id: AnyResourceId,
         key: Optional[str] = None,
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[Tuple[str, JSONType], Optional[_T]]]:
-        info = SCHEMA_INFO[len(object_id)]
-
-        query = Query().SELECT("key").FROM(f"{info.table_prefix}tags")
+        query = Query().SELECT("key")
         context: Dict[str, Any] = dict()
 
-        if not any(p is None for p in object_id):
-            query.SELECT("value")
-            for column in info.id_columns:
-                query.WHERE(f"{column} = :{column}")
-            context.update(zip(info.id_columns, object_id))
+        if object_id is not None:
+            info = SCHEMA_INFO[len(object_id)]
+            query.FROM(f"{info.table_prefix}tags")
+
+            if not any(p is None for p in object_id):
+                query.SELECT("value")
+                for column in info.id_columns:
+                    query.WHERE(f"{column} = :{column}")
+                context.update(zip(info.id_columns, object_id))
+            else:
+                query.SELECT_DISTINCT("'null'")
 
         else:
+            union = '\nUNION\n'.join(
+                f"SELECT key, value FROM {i.table_prefix}tags"
+                for i in SCHEMA_INFO.values()
+            )
+            query.WITH(('tags', union)).FROM('tags')
             query.SELECT_DISTINCT("'null'")
 
         if key is not None:
@@ -1170,19 +1181,19 @@ class Storage:
         )
 
     @overload
-    def set_tag(self, object_id: Tuple[str, ...], key: str) -> None:  # pragma: no cover
+    def set_tag(self, object_id: ResourceId, key: str) -> None:  # pragma: no cover
         ...
 
     @overload
     def set_tag(
-        self, object_id: Tuple[str, ...], key: str, value: JSONType
+        self, object_id: ResourceId, key: str, value: JSONType
     ) -> None:  # pragma: no cover
         ...
 
     @wrap_exceptions(StorageError)
     def set_tag(
         self,
-        object_id: Tuple[str, ...],
+        object_id: ResourceId,
         key: str,
         value: Union[MissingType, JSONType] = MISSING,
     ) -> None:
@@ -1227,7 +1238,7 @@ class Storage:
                 raise info.not_found_exc(*object_id) from None
 
     @wrap_exceptions(StorageError)
-    def delete_tag(self, object_id: Tuple[str, ...], key: str) -> None:
+    def delete_tag(self, object_id: ResourceId, key: str) -> None:
         info = SCHEMA_INFO[len(object_id)]
 
         columns = info.id_columns + ('key',)

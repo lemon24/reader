@@ -19,6 +19,7 @@ from reader._types import FeedData
 from reader.types import _entry_argument
 from reader.types import _feed_argument
 from reader.types import _namedtuple_compat
+from reader.types import _resource_argument
 from reader.types import MISSING
 
 
@@ -39,12 +40,36 @@ def test_namedtuple_compat():
     assert Object(1, 2)._asdict() == {'one': 1, 'two': 2}
 
 
+BAD_RESOURCE_ARGUMENTS = [
+    1,
+    Feed(None),
+    Feed(1),
+    (1, 'b'),
+    ('a', 2),
+    (None, 'b'),
+    ('a', None),
+    ('a', 'b', 'c'),
+    Entry('entry', feed=None),
+    Entry(None, feed=Feed('url')),
+    Entry(1, feed=Feed('url')),
+    Entry('entry', feed=Feed(None)),
+]
+BAD_FEED_ARGUMENTS = [(), ('a', 'b')] + BAD_RESOURCE_ARGUMENTS
+BAD_ENTRY_ARGUMENTS = [(), 1, 'ab', Feed('url')] + BAD_RESOURCE_ARGUMENTS
+WILDCARD_ARGUMENTS = [None, (None,), (None, None)]
+
+
 def test__feed_argument():
     feed = Feed('url')
     assert _feed_argument(feed) == feed.url
     assert _feed_argument(feed.url) == feed.url
+    assert _resource_argument((feed.url,)) == (feed.url,)
+
+
+@pytest.mark.parametrize('feed', BAD_FEED_ARGUMENTS + WILDCARD_ARGUMENTS)
+def test__feed_argument_valueerror(feed):
     with pytest.raises(ValueError):
-        _feed_argument(1)
+        _feed_argument(feed)
 
 
 def test__entry_argument():
@@ -53,18 +78,30 @@ def test__entry_argument():
     entry_tuple = feed.url, entry.id
     assert _entry_argument(entry) == entry_tuple
     assert _entry_argument(entry_tuple) == entry_tuple
+
+
+@pytest.mark.parametrize('entry', BAD_ENTRY_ARGUMENTS + WILDCARD_ARGUMENTS)
+def test__entry_argument_valueerror(entry):
     with pytest.raises(ValueError):
-        _entry_argument(entry._replace(feed=None))
+        _entry_argument(entry)
+
+
+def test__resource_argument():
+    feed = Feed('url')
+    entry = Entry('entry', 'updated', feed=feed)
+    entry_tuple = feed.url, entry.id
+    assert _resource_argument(()) == ()
+    assert _resource_argument(feed) == (feed.url,)
+    assert _resource_argument(feed.url) == (feed.url,)
+    assert _resource_argument((feed.url,)) == (feed.url,)
+    assert _resource_argument(entry) == entry_tuple
+    assert _resource_argument(entry_tuple) == entry_tuple
+
+
+@pytest.mark.parametrize('resource', BAD_RESOURCE_ARGUMENTS + WILDCARD_ARGUMENTS)
+def test__resource_argument_valueerror(resource):
     with pytest.raises(ValueError):
-        _entry_argument(1)
-    with pytest.raises(ValueError):
-        _entry_argument('ab')
-    with pytest.raises(ValueError):
-        _entry_argument((1, 'b'))
-    with pytest.raises(ValueError):
-        _entry_argument(('a', 2))
-    with pytest.raises(ValueError):
-        _entry_argument(('a', 'b', 'c'))
+        _resource_argument(resource)
 
 
 def test_object_id():
