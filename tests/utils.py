@@ -114,3 +114,7 @@ def utc_datetime(*args, **kwargs):
 
 def naive_datetime(*args, **kwargs):
     return datetime(*args, tzinfo=None, **kwargs)
+
+
+def parametrize_dict(names, values, **kwargs):
+    return pytest.mark.parametrize(names, values.values(), ids=values, **kwargs)
