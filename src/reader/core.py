@@ -320,6 +320,8 @@ class Reader:
     .. versionadded:: 1.13
         JSON Feed support.
 
+    .. versionchanged:: 2.10
+        Allow passing a `(feed URL,)` 1-tuple anywhere a feed URL can be passed.
 
     """
 
@@ -425,7 +427,7 @@ class Reader:
         Feed updates are enabled by default.
 
         Args:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
             allow_invalid_url (bool):
                 Add feed even if the current Reader configuration
                 does not know how to handle the feed URL
@@ -465,7 +467,7 @@ class Reader:
         """Delete a feed and all of its entries, metadata, and tags.
 
         Args:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
             missing_ok (bool):
                 If true, don't raise :exc:`FeedNotFoundError`
                 if the feed does not exist.
@@ -506,8 +508,8 @@ class Reader:
         The entries, tags and metadata are preserved.
 
         Args:
-            old (str or Feed): The old feed; must exist.
-            new (str or Feed): The new feed; must not exist.
+            old (str or tuple(str) or Feed): The old feed; must exist.
+            new (str or tuple(str) or Feed): The new feed; must not exist.
             allow_invalid_url (bool):
                 Change feed URL even if the current Reader configuration
                 does not know how to handle the new feed URL
@@ -599,7 +601,7 @@ class Reader:
             *no tags* OR one
 
         Args:
-            feed (str or Feed or None): Only return the feed with this URL.
+            feed (str or tuple(str) or Feed or None): Only return the feed with this URL.
             tags (None or bool or list(str or bool or list(str or bool))):
                 Only return feeds matching these tags.
             broken (bool or None): Only return broken / healthy feeds.
@@ -613,7 +615,7 @@ class Reader:
                 insensitive; default), or ``'added'`` (last added first).
             limit (int or None): A limit on the number of feeds to be returned;
                 by default, all feeds are returned.
-            starting_after (str or Feed or None):
+            starting_after (str or tuple(str) or Feed or None):
                 Return feeds after this feed; a cursor for use in pagination.
 
         Yields:
@@ -679,7 +681,7 @@ class Reader:
         but raises a custom exception instead of :exc:`StopIteration`.
 
         Arguments:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
             default: Returned if given and the feed does not exist.
 
         Returns:
@@ -710,7 +712,7 @@ class Reader:
         See :meth:`~Reader.get_feeds()` for details on how filtering works.
 
         Args:
-            feed (str or Feed or None): Only count the feed with this URL.
+            feed (str or tuple(str) or Feed or None): Only count the feed with this URL.
             tags (None or bool or list(str or bool or list(str or bool))):
                 Only count feeds matching these tags.
             broken (bool or None): Only count broken / healthy feeds.
@@ -741,7 +743,7 @@ class Reader:
         """Set a user-defined title for a feed.
 
         Args:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
             title (str or None): The title, or None to remove the current title.
 
         Raises:
@@ -758,7 +760,7 @@ class Reader:
         See :meth:`~Reader.update_feeds` for details.
 
         Args:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
 
         Raises:
             FeedNotFoundError
@@ -776,7 +778,7 @@ class Reader:
         See :meth:`~Reader.update_feeds` for details.
 
         Args:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
 
         Raises:
             FeedNotFoundError
@@ -807,7 +809,7 @@ class Reader:
         Roughly equivalent to ``for _ in reader.update_feed_iter(...): pass``.
 
         Args:
-            feed (str or Feed or None): Only update the feed with this URL.
+            feed (str or tuple(str) or Feed or None): Only update the feed with this URL.
             tags (None or bool or list(str or bool or list(str or bool))):
                 Only update feeds matching these tags.
             broken (bool or None): Only update broken / healthy feeds.
@@ -887,7 +889,7 @@ class Reader:
         By default, update all the feeds that have updates enabled.
 
         Args:
-            feed (str or Feed or None): Only update the feed with this URL.
+            feed (str or tuple(str) or Feed or None): Only update the feed with this URL.
             tags (None or bool or list(str or bool or list(str or bool))):
                 Only update feeds matching these tags.
             broken (bool or None): Only update broken / healthy feeds.
@@ -964,7 +966,7 @@ class Reader:
         but raises the :exc:`ParseError`, if any.
 
         Args:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
 
         Returns:
             UpdatedFeed or None:
@@ -1155,7 +1157,7 @@ class Reader:
             .. versionadded:: 1.2
 
         Args:
-            feed (str or Feed or None): Only return the entries for this feed.
+            feed (str or tuple(str) or Feed or None): Only return the entries for this feed.
             entry (tuple(str, str) or Entry or None):
                 Only return the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only return (un)read entries.
@@ -1282,7 +1284,7 @@ class Reader:
         See :meth:`~Reader.get_entries()` for details on how filtering works.
 
         Args:
-            feed (str or Feed or None): Only count the entries for this feed.
+            feed (str or tuple(str) or Feed or None): Only count the entries for this feed.
             entry (tuple(str, str) or Entry or None):
                 Only count the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only count (un)read entries.
@@ -1580,7 +1582,7 @@ class Reader:
         """Get all or some of the metadata for a feed as ``(key, value)`` pairs.
 
         Args:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
             key (str or None): Only return the metadata for this key.
 
         Yields:
@@ -1624,7 +1626,7 @@ class Reader:
         but raises a custom exception instead of :exc:`StopIteration`.
 
         Args:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
             key (str): The key of the metadata to retrieve.
             default: Returned if given and no metadata exists for `key`.
 
@@ -1655,7 +1657,7 @@ class Reader:
         """Set metadata for a feed.
 
         Args:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
             key (str): The key of the metadata item to set.
             value (JSONType): The value of the metadata item to set.
                 JSONType is whatever :py:func:`json.dumps` accepts.
@@ -1677,7 +1679,7 @@ class Reader:
         """Delete metadata for a feed.
 
         Args:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
             key (str): The key of the metadata item to delete.
 
         Raises:
@@ -1814,7 +1816,7 @@ class Reader:
 
         Args:
             query (str): The search query.
-            feed (str or Feed or None): Only search the entries for this feed.
+            feed (str or tuple(str) or Feed or None): Only search the entries for this feed.
             entry (tuple(str, str) or Entry or None):
                 Only search for the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only search (un)read entries.
@@ -1896,7 +1898,7 @@ class Reader:
 
         Args:
             query (str): The search query.
-            feed (str or Feed or None): Only count the entries for this feed.
+            feed (str or tuple(str) or Feed or None): Only count the entries for this feed.
             entry (tuple(str, str) or Entry or None):
                 Only count the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only count (un)read entries.
@@ -1932,7 +1934,7 @@ class Reader:
         Adding a tag that the feed already has is a no-op.
 
         Args:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
             tag (str): The tag to add.
 
         Raises:
@@ -1951,7 +1953,7 @@ class Reader:
         Removing a tag that the feed does not have is a no-op.
 
         Args:
-            feed (str or Feed): The feed URL.
+            feed (str or tuple(str) or Feed): The feed URL.
             tag (str): The tag to remove.
 
         Raises:
@@ -1969,7 +1971,7 @@ class Reader:
         """Get all or some of the feed tags.
 
         Args:
-            feed (str or Feed or None): Only return the tags for this feed.
+            feed (str or tuple(str) or Feed or None): Only return the tags for this feed.
 
         Yields:
             str: The tags, in alphabetical order.
@@ -1990,13 +1992,24 @@ class Reader:
         *,
         key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
-        """Get all or some resource tags as ``(key, value)`` pairs.
+        """Get all or some tags of a resource as ``(key, value)`` pairs.
+
+        `resource` can have one of the following types:
+
+        :class:`Feed` or ``str`` or ``(str,)``
+
+            A feed or feed URL (possibly enclosed in a tuple).
+
+        :class:`Entry` or ``(str, str)``
+
+            An entry or a (feed URL, entry id) pair representing an entry.
+
+        ``()`` (empty tuple)
+
+            Special value representing the global tag namespace.
 
         Args:
-            resource (str or Feed or None):
-                The resource to get tags for.
-                ``(None,)`` (a 1-tuple containing None) means "any feed".
-                :const:`None` means "any resource".
+            resource: The resource to get tags for.
             key (str or None): Only return the metadata for this key.
 
         Yields:
@@ -2008,6 +2021,13 @@ class Reader:
 
         .. versionadded:: 2.8
 
+        .. versionchanged:: 2.10
+            Support entry and global tags.
+
+        .. versionchanged:: 2.10
+            Removed support for the ``(None,)`` (any feed) and
+            :const:`None` (any resource) wildcard resource values.
+
         """
         resource_id = _resource_argument(resource)
         return self._storage.get_tags(resource_id, key)
@@ -2015,16 +2035,28 @@ class Reader:
     def get_tag_keys(
         self,
         resource: AnyResourceInput = None,
-    ) -> Iterable[str]:  # pragma: no cover
+    ) -> Iterable[str]:
         """Get the keys of all or some resource tags.
 
         Equivalent to ``sorted(k for k, _ in reader.get_tags(resource))``.
 
+        See :meth:`get_tags` for possible `resource` values.
+        In addition, `resource` can have one of the following wildcard values:
+
+        ``(None,)``
+
+            Any feed.
+
+        ``(None, None)``
+
+            Any entry.
+
+        :const:`None`
+
+            Any resource (feed, entry, or the global namespace).
+
         Args:
-            resource (str or Feed or None):
-                Only return tag keys for this resource.
-                ``(None,)`` (a 1-tuple containing None) means "any feed".
-                :const:`None` means "any resource".
+            resource: Only return tag keys for this resource.
 
         Yields:
             str: The tag keys, in alphabetical order.
@@ -2034,9 +2066,11 @@ class Reader:
 
         .. versionadded:: 2.8
 
+        .. versionchanged:: 2.10
+            Support entry and global tags.
+
         """
-        # FIXME: cover
-        # TODO: (later) efficient implementation
+        # TODO: efficient implementation
         resource_id: AnyResourceId
         if resource is None:
             resource_id = None
@@ -2071,8 +2105,10 @@ class Reader:
         Like ``next(iter(reader.get_tags(resource, key=key)))[1]``,
         but raises a custom exception instead of :exc:`StopIteration`.
 
+        See :meth:`get_tags` for possible `resource` values.
+
         Args:
-            resource (str or Feed): The resource.
+            resource: The resource.
             key (str): The key of the tag to retrieve.
             default: Returned if given and no tag exists for `key`.
 
@@ -2085,6 +2121,9 @@ class Reader:
             StorageError
 
         .. versionadded:: 2.8
+
+        .. versionchanged:: 2.10
+            Support entry and global tags.
 
         """
         resource_id = _resource_argument(resource)
@@ -2113,8 +2152,10 @@ class Reader:
     ) -> None:
         """Set the value of this resource tag.
 
+        See :meth:`get_tags` for possible `resource` values.
+
         Args:
-            resource (str or Feed): The resource.
+            resource: The resource.
             key (str): The key of the tag to set.
             value (JSONType): The value of the tag to set.
                 If not provided, and the tag already exists,
@@ -2128,6 +2169,9 @@ class Reader:
 
         .. versionadded:: 2.8
 
+        .. versionchanged:: 2.10
+            Support entry and global tags.
+
         """
         resource_id = _resource_argument(resource)
         if not isinstance(value, MissingType):
@@ -2140,8 +2184,10 @@ class Reader:
     ) -> None:
         """Delete this resource tag.
 
+        See :meth:`get_tags` for possible `resource` values.
+
         Args:
-            resource (str or Feed): The resource.
+            resource: The resource.
             key (str): The key of the tag to delete.
             missing_ok (bool):
                 If true, don't raise :exc:`TagNotFoundError`
@@ -2152,6 +2198,9 @@ class Reader:
             StorageError
 
         .. versionadded:: 2.8
+
+        .. versionchanged:: 2.10
+            Support entry and global tags.
 
         """
         resource_id = _resource_argument(resource)

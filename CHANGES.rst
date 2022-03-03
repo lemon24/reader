@@ -11,13 +11,28 @@ Version 2.10
 
 Unreleased
 
+* Support entry and global tags. (:issue:`272`, :issue:`228`, :issue:`267`)
+
+* Remove :meth:`~Reader.get_tags()` support for the
+  ``(None,)`` (any feed) and :const:`None` (any resource)
+  wildcard resource values.
+
+  .. warning::
+
+    **This is a minor compatibility break**, but is unlikely to affect existing users;
+    the usefulness of the wildcards was limited, because
+    it was impossible to tell to which resource a (key, value) pair belongs.
+
+* Allow passing a `(feed URL,)` 1-tuple anywhere a feed URL can be passed
+  to a :class:`Reader` method.
+
 
 Version 2.9
 -----------
 
 Released 2022-02-07
 
-* Decrease :meth:`update_feeds()` memory usage by ~35%
+* Decrease :meth:`~Reader.update_feeds()` memory usage by ~35%
   (using the maxrss before the call as baseline;
   overall process maxrss decreases by ~20%).
   The improvement is not in *reader* code, but in feedparser;
