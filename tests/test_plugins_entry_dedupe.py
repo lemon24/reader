@@ -551,3 +551,124 @@ def _test_modified_copying(
         for e in reader.get_entries()
     )
     assert actual == expected
+
+
+COMPLEX_TAGS = {'tag': {'string': [10, True]}}
+
+# [one [two]] three three_expected
+ENTRY_TAGS_COPYING_DATA = [
+    ({}, {}),
+    (dict(tag=None), dict(tag=None)),
+    (dict(tag=None), {}, dict(tag=None)),
+    (dict(tag=None), dict(tag=None), {}, dict(tag=None)),
+    (COMPLEX_TAGS, COMPLEX_TAGS, COMPLEX_TAGS, COMPLEX_TAGS),
+    (dict(tag='one'), {}, dict(tag='one')),
+    (
+        dict(tag='one'),
+        dict(tag='two'),
+        {},
+        {
+            'tag': 'two',
+            '.reader.duplicate.1.of.tag': 'one',
+        },
+    ),
+    (
+        dict(tag='one'),
+        dict(tag='two'),
+        dict(tag='three'),
+        {
+            'tag': 'three',
+            '.reader.duplicate.1.of.tag': 'two',
+            '.reader.duplicate.2.of.tag': 'one',
+        },
+    ),
+    (
+        dict(tag='one'),
+        dict(tag='three'),
+        {
+            'tag': 'three',
+            '.reader.duplicate.1.of.tag': 'one',
+        },
+    ),
+    (
+        dict(tag='one'),
+        {
+            'tag': 'two',
+            '.reader.duplicate.1.of.tag': 'three',
+        },
+        {
+            'tag': 'two',
+            '.reader.duplicate.1.of.tag': 'three',
+            '.reader.duplicate.2.of.tag': 'one',
+        },
+    ),
+    (
+        dict(tag='one'),
+        {
+            'tag': 'two',
+            '.reader.duplicate.2.of.tag': 'three',
+        },
+        {
+            'tag': 'two',
+            '.reader.duplicate.1.of.tag': 'one',
+            '.reader.duplicate.2.of.tag': 'three',
+        },
+    ),
+    (
+        dict(tag='one'),
+        {
+            'tag': 'two',
+            '.reader.duplicate.1.of.tag': 'one',
+        },
+        {
+            'tag': 'two',
+            '.reader.duplicate.1.of.tag': 'one',
+        },
+    ),
+    pytest.param(
+        (
+            {
+                'tag': 'two',
+                '.reader.duplicate.1.of.tag': 'one',
+            },
+            {
+                'tag': 'four',
+                '.reader.duplicate.1.of.tag': 'three',
+            },
+            {
+                'tag': 'four',
+                '.reader.duplicate.1.of.tag': 'three',
+                '.reader.duplicate.2.of.tag': 'two',
+                '.reader.duplicate.3.of.tag': 'one',
+            },
+        ),
+        marks=pytest.mark.xfail(strict=True),
+    ),
+]
+
+
+@pytest.mark.parametrize('tags', ENTRY_TAGS_COPYING_DATA)
+def test_entry_tags_copying(make_reader, db_path, tags):
+    *old_tags, new_tags, expected_tags = tags
+
+    reader = make_reader(db_path)
+    reader._parser = parser = Parser()
+    feed = parser.feed(1)
+    one = parser.entry(1, 1, datetime(2010, 1, 1), title='title', summary='summary')
+    two = parser.entry(1, 2, datetime(2010, 1, 2), title='title', summary='summary')
+    three = parser.entry(1, 3, datetime(2010, 1, 3), title='title', summary='summary')
+    reader.add_feed(feed)
+    reader.update_feeds()
+
+    for entry, tags in list(zip([one, two], old_tags)) + [(three, new_tags)]:
+        for key, value in tags.items():
+            reader.set_tag(entry, key, value)
+
+    reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
+    reader._parser = parser
+    reader.set_tag(feed, '.reader.dedupe.once')
+    reader.update_feeds()
+
+    assert not list(reader.get_tag_keys(one))
+    assert not list(reader.get_tag_keys(two))
+    assert dict(reader.get_tags(three)) == expected_tags

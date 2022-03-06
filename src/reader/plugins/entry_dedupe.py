@@ -40,6 +40,20 @@ Entry user attributes are set as follows:
     Set to the oldest *modified* of the entries
     with the same status as the new read/important.
 
+entry tags
+
+    For each tag key:
+
+    * collect all the values from the duplicate entries
+    * if the new entry does not have the tag, set it to the first value
+    * copy the remaining values to the new entry,
+      using a key of the form ``.reader.duplicate.N.of.TAG``,
+      where N is an integer and TAG is the tag key
+
+    Only unique values are considered, such that
+    ``TAG``, ``.reader.duplicate.1.of.TAG``, ``.reader.duplicate.2.of.TAG``...
+    always have different values.
+
 
 To reduce false negatives when detecting duplicates:
 
@@ -92,13 +106,17 @@ To reduce false positives when detecting duplicates:
 
 """
 import logging
+import random
 import re
+import string
 from collections import Counter
+from collections import defaultdict
 from collections import deque
 from itertools import groupby
 from typing import NamedTuple
 
 from reader._utils import BetterStrPartial as partial
+from reader.exceptions import TagNotFoundError
 from reader.types import EntryUpdateStatus
 from reader.types import Feed
 
@@ -357,6 +375,78 @@ def _get_flag_args(entry, duplicates, name):
     return None
 
 
+_CANDIDATE_KEYS_LIMIT = 200
+_CANDIDATE_KEYS_RANDOM_THRESHOLD = 100
+
+
+def _generate_candidate_keys(fmt, key):
+    yield key
+    for i in range(1, _CANDIDATE_KEYS_RANDOM_THRESHOLD + 1):
+        yield fmt.format(key=key, i=i)
+    while True:  # pragma: no cover
+        yield fmt.format(key=key, i=int(''.join(random.choices(string.digits, k=9))))
+
+
+def _make_duplicate_key_re(reader, key):
+    prefix = re.escape(reader.make_reader_reserved_name("duplicate."))
+    suffix = re.escape('.of.' + key)
+    return re.compile(rf"^{prefix}\d+{suffix}$")
+
+
+def _get_tags(reader, entry, duplicates):
+    values_by_key = defaultdict(list)
+    for duplicate in duplicates:
+        for key, duplicate_value in reader.get_tags(duplicate):
+            values_by_key[key].append(duplicate_value)
+
+    # assuming there aren't enough keys to cause memory issues
+    initial_keys = set(reader.get_tag_keys(entry))
+    seen_keys = set(initial_keys)
+
+    # TODO: maybe match duplicate_key_re on the old values too...
+
+    for key, values in values_by_key.items():
+        # assuming there aren't enough values to cause memory issues
+        seen_values = []
+        try:
+            seen_values.append(reader.get_tag(entry, key))
+        except TagNotFoundError:
+            pass
+
+        duplicate_key_re = _make_duplicate_key_re(reader, key)
+        for initial_key in initial_keys:
+            if not duplicate_key_re.search(initial_key):
+                continue
+            try:
+                seen_values.append(reader.get_tag(entry, initial_key))
+            except TagNotFoundError:  # pragma: no cover
+                pass
+
+        candidate_keys = _generate_candidate_keys(
+            reader.make_reader_reserved_name("duplicate.{i}.of.{key}"), key
+        )
+        for value in values:
+            if value in seen_values:
+                continue
+
+            for _ in range(_CANDIDATE_KEYS_LIMIT):
+                key = next(candidate_keys)
+
+                if key in seen_keys:
+                    continue
+
+                yield key, value
+                seen_keys.add(key)
+                seen_values.append(value)
+                break
+
+            else:  # pragma: no cover
+                # TODO: custom exception
+                raise RuntimeError(
+                    f"could not find key for entry {entry.object_id} and tag {key}"
+                )
+
+
 def _make_actions(reader, entry, duplicates):
     args = _get_flag_args(entry, duplicates, 'read')
     if args:
@@ -365,6 +455,9 @@ def _make_actions(reader, entry, duplicates):
     args = _get_flag_args(entry, duplicates, 'important')
     if args:
         yield partial(reader.set_entry_important, entry, *args)
+
+    for key, value in _get_tags(reader, entry, duplicates):
+        yield partial(reader.set_tag, entry, key, value)
 
     duplicate_ids = [d.object_id for d in duplicates]
     yield partial(reader._storage.delete_entries, duplicate_ids)
@@ -382,7 +475,10 @@ def _dedupe_entries(reader, entry, duplicates, *, dry_run):
     if hasattr(entry, 'as_entry'):
         entry = entry.as_entry(feed=Feed(entry.feed_url))
 
-    for action in _make_actions(reader, entry, duplicates):
+    # don't do anything until we know all actions were generated successfully
+    actions = list(_make_actions(reader, entry, duplicates))
+
+    for action in actions:
         action()
         log.info("entry_dedupe: %s", action)
 
