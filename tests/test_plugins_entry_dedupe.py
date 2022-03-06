@@ -625,24 +625,21 @@ ENTRY_TAGS_COPYING_DATA = [
             '.reader.duplicate.1.of.tag': 'one',
         },
     ),
-    pytest.param(
-        (
-            {
-                'tag': 'two',
-                '.reader.duplicate.1.of.tag': 'one',
-            },
-            {
-                'tag': 'four',
-                '.reader.duplicate.1.of.tag': 'three',
-            },
-            {
-                'tag': 'four',
-                '.reader.duplicate.1.of.tag': 'three',
-                '.reader.duplicate.2.of.tag': 'two',
-                '.reader.duplicate.3.of.tag': 'one',
-            },
-        ),
-        marks=pytest.mark.xfail(strict=True),
+    (
+        {
+            'tag': 'two',
+            '.reader.duplicate.1.of.tag': 'one',
+        },
+        {
+            'tag': 'four',
+            '.reader.duplicate.1.of.tag': 'three',
+        },
+        {
+            'tag': 'four',
+            '.reader.duplicate.1.of.tag': 'three',
+            '.reader.duplicate.2.of.tag': 'one',
+            '.reader.duplicate.3.of.tag': 'two',
+        },
     ),
 ]
 

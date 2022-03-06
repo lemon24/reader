@@ -387,26 +387,38 @@ def _generate_candidate_keys(fmt, key):
         yield fmt.format(key=key, i=int(''.join(random.choices(string.digits, k=9))))
 
 
-def _make_duplicate_key_re(reader, key):
+def _make_duplicate_key_re(reader, key=None):
     prefix = re.escape(reader.make_reader_reserved_name("duplicate."))
-    suffix = re.escape('.of.' + key)
-    return re.compile(rf"^{prefix}\d+{suffix}$")
+    key_re = re.escape(key) if key is not None else '.*'
+    return re.compile(rf"^{prefix}\d+{re.escape('.of.')}({key_re})$")
+
+
+def _collect_tags_to_copy(reader, duplicates):
+    duplicate_key_re = _make_duplicate_key_re(reader)
+
+    rv = defaultdict(list)
+    for duplicate in duplicates:
+        for key, value in reader.get_tags(duplicate):
+
+            # handle existing .reader.duplicate.N.of.KEY tags
+            match = duplicate_key_re.search(key)
+            if match:
+                key = match.group(1)
+
+            rv[key].append(value)
+
+    return rv
 
 
 def _get_tags(reader, entry, duplicates):
-    values_by_key = defaultdict(list)
-    for duplicate in duplicates:
-        for key, duplicate_value in reader.get_tags(duplicate):
-            values_by_key[key].append(duplicate_value)
+    # the logic mostly assumes it's ok to hold everything in memory
 
-    # assuming there aren't enough keys to cause memory issues
+    values_by_key = _collect_tags_to_copy(reader, duplicates)
+
     initial_keys = set(reader.get_tag_keys(entry))
     seen_keys = set(initial_keys)
 
-    # TODO: maybe match duplicate_key_re on the old values too...
-
     for key, values in values_by_key.items():
-        # assuming there aren't enough values to cause memory issues
         seen_values = []
         try:
             seen_values.append(reader.get_tag(entry, key))
@@ -422,9 +434,9 @@ def _get_tags(reader, entry, duplicates):
             except TagNotFoundError:  # pragma: no cover
                 pass
 
-        candidate_keys = _generate_candidate_keys(
-            reader.make_reader_reserved_name("duplicate.{i}.of.{key}"), key
-        )
+        duplicate_key_fmt = reader.make_reader_reserved_name("duplicate.{i}.of.{key}")
+        candidate_keys = _generate_candidate_keys(duplicate_key_fmt, key)
+
         for value in values:
             if value in seen_values:
                 continue
