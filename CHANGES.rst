@@ -26,6 +26,9 @@ Unreleased
 * Allow passing a `(feed URL,)` 1-tuple anywhere a feed URL can be passed
   to a :class:`Reader` method.
 
+* Remove the ``global_metadata`` experimental plugin
+  (superseded by global tags).
+
 
 Version 2.9
 -----------
@@ -104,7 +107,7 @@ Released 2022-01-04
 * Allow running arbitrary actions before updating feeds
   via :attr:`~Reader.before_feed_update_hooks`.
 * Expose :data:`reader.plugins.DEFAULT_PLUGINS`.
-* Add the :mod:`~reader._plugins.global_metadata` experimental plugin.
+* Add the ``global_metadata`` experimental plugin.
 
 
 Version 2.6
