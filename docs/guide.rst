@@ -374,7 +374,7 @@ and enabled automatically on the first :meth:`~Reader.update_search()` call.
 Resource tags
 -------------
 
-Resources (as of version |version|, only feeds) can have tags,
+Resources (feeds and entries) can have tags,
 key-value pairs where the values are any JSON-serializable data::
 
     >>> reader.get_tag(feed, 'one', 'default')
@@ -389,6 +389,12 @@ key-value pairs where the values are any JSON-serializable data::
 Common uses for tag values are plugin and UI settings.
 
 
+In addition to feeds and entries,
+it is possible to store global (per-database) data.
+To work with global tags,
+use ``()`` (the empty tuple) as the first argument of the tag methods.
+
+
 When using :meth:`~Reader.set_tag`, the value can be omitted,
 in which case the behavior is to ensure the tag exists
 (if it doesn't, :const:`None` is used as value)::
@@ -400,9 +406,11 @@ in which case the behavior is to ensure the tag exists
     >>> dict(reader.get_tags(feed))
     {'one': 'value', 'three': None, 'two': {'2': ['ii']}}
 
+
 Besides storing resource metadata,
 tags can be used for filtering feeds and entries
-(see the :meth:`~Reader.get_feeds()` documentation for more complex examples)::
+(as of version |version|, only by feed tags;
+see the :meth:`~Reader.get_feeds()` documentation for more complex examples)::
 
     >>> # feeds that have the tag "one"
     >>> [f.title for f in reader.get_feeds(tags=['one'])]
@@ -441,6 +449,8 @@ although UIs might want to restrict this to a smaller set of characters.
     The old, feed-only tags/metadata methods were deprecated,
     and **will be removed in version 3.0**.
 
+.. versionchanged:: 2.10
+    Support entry and global tags.
 
 
 Counting things

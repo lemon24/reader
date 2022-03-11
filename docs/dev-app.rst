@@ -19,7 +19,7 @@ User interactions
 
 .. note::
 
-    This list might lag behing reality; anyway, it all started from here.
+    This list might lag behind reality; anyway, it all started from here.
 
 User interactions, by logical groups:
 

@@ -288,8 +288,10 @@ and why I want more use-cases before implementing them (basically, YAGNI):
 :issue:`253` discusses using entry tags to implement the current entry flags
 (read, important); tl;dr: it's not worth adding entry tags just for this.
 
-As of late 2021, I closed :issue:`228` with `wontfix`,
-since I don't have a use case for it, nor enough bandwidth to implement it.
+After closing :issue:`228` with `wontfix` in late 2021,
+in early 2022 (following the :issue:`266` tag/metadata unification)
+I implemented entry and global tags in :issue:`272`;
+there's a list of known use cases in the issue description.
 
 
 User-added entries
