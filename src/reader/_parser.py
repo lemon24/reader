@@ -625,8 +625,8 @@ class FeedparserParser:
 
 # https://feedparser.readthedocs.io/en/latest/character-encoding.html#handling-incorrectly-declared-encodings
 _survivable_feedparser_exceptions = (
-    feedparser.CharacterEncodingOverride,  # type: ignore[attr-defined]
-    feedparser.NonXMLContentType,  # type: ignore[attr-defined]
+    feedparser.CharacterEncodingOverride,
+    feedparser.NonXMLContentType,
 )
 
 
