@@ -2,8 +2,26 @@
 
 {% import "macros.html" as macros %}
 
-{% block page_title %}Metadata for {{ macros.feed_title(feed) }}{% endblock %}
-{% block main_title %}Metadata for {{ macros.feed_title(feed) }}{% endblock %}
+
+{% macro make_title() %}
+    {% if feed %}
+        {% if not entry %}
+            Metadata for
+            <b><a href="{{ url_for('.entries', feed=feed.url) }}"
+                title="{{ macros.feed_title_secondary(feed) }}">
+            {{ macros.feed_title(feed) }}</a></b>
+        {% else %}
+            Metadata for
+            <b><a href="{{ url_for('.entry', feed=entry.feed.url, entry=entry.id) }}">
+            {{ entry.title or "untitled" }}</a></b>
+        {% endif %}
+    {% else %}
+        Global metadata
+    {% endif %}
+{% endmacro %}
+
+{% block page_title %}{{ make_title() | striptags }}{% endblock %}
+{% block main_title %}{{ make_title() }}{% endblock %}
 
 
 {% block body %}
@@ -13,14 +31,30 @@
 <form action="{{ url_for('.form_api') }}" method="post">
 <input type="text" name="key" placeholder="key" autocomplete="off">
 <button type="submit" name="action" value="add-metadata" autocomplete="off">add</button>
+{% if feed %}
 <input type="hidden" name='feed-url' value='{{ feed.url }}'>
+{% if entry %}
+<input type="hidden" name='entry-id' value='{{ entry.id }}'>
+{% endif %}
+{% endif %}
 <input type="hidden" name='next' value='{{ url_for('.metadata', **request.args) }}'>
 </form>
 
+
 <ul class="controls">
 
+{% if feed %}
+    {% if entry %}
+        {% set resource_id = entry.object_id %}
+    {% else %}
+        {% set resource_id = (feed.url,) %}
+    {% endif %}
+{% else %}
+    {% set resource_id = () %}
+{% endif %}
+
 {% for message in get_flashed_messages_by_prefix(
-    ('add-metadata', feed.url),
+    ('add-metadata',) + resource_id,
 ) %}
 <li class="error">{{ message }}
 {% endfor %}
@@ -38,7 +72,7 @@
 <ul class="controls">
 
 {% for message in get_flashed_messages_by_prefix(
-    ('update-metadata', feed.url, key),
+    ('update-metadata',) + resource_id + (key,),
 ) %}
 <li class="error">{{ message }}
 {% endfor %}
@@ -52,14 +86,19 @@
 <button type="submit" name="action" value="delete-metadata" autocomplete="off">delete</button>
 </p>
 <input type="hidden" name='key' value='{{ key }}'>
+{% if feed %}
 <input type="hidden" name='feed-url' value='{{ feed.url }}'>
+{% if entry %}
+<input type="hidden" name='entry-id' value='{{ entry.id }}'>
+{% endif %}
+{% endif %}
 <input type="hidden" name='next' value='{{ url_for('.metadata', **request.args) }}#metadata-{{ loop.index }}'>
 </form>
 
 </div>
 
 {% else %}
-<p>no metadata for this feed</p>
+<p>no metadata for this resource</p>
 {% endfor %}
 
 {% endblock %}

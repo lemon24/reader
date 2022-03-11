@@ -47,6 +47,9 @@
     {{ macros.confirm_button('.form_api', 'delete-entry', 'delete', leave_disabled=true, next=url_for('.entries', **request.args), context=context) }}
 {% endif %}
 
+<li>
+<a href="{{ url_for('.metadata', feed=entry.feed.url, entry=entry.id) }}">update metadata</a>
+
 {% if content %}
     {% set minutes = read_time(content).minutes %}
     {% if minutes > 1 %}

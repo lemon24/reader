@@ -29,6 +29,10 @@ Unreleased
 * Remove the ``global_metadata`` experimental plugin
   (superseded by global tags).
 
+* In the web application, support editing entry and global metadata.
+  Fix broken delete metadata button.
+  Fix broken error flashing.
+
 
 Version 2.9
 -----------

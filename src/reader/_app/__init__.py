@@ -505,12 +505,22 @@ def feeds():
 def metadata():
     reader = get_reader()
 
-    feed_url = request.args['feed']
-    feed = reader.get_feed(feed_url, None)
-    if not feed:
-        abort(404)
+    feed = entry = None
+    if 'feed' in request.args:
+        if 'entry' not in request.args:
+            resource_id = request.args['feed']
+            feed = reader.get_feed(resource_id, None)
+        else:
+            resource_id = request.args['feed'], request.args['entry']
+            entry = reader.get_entry(resource_id, None)
+            if entry:
+                feed = entry.feed
+        if not feed:
+            abort(404)
+    else:
+        resource_id = ()
 
-    metadata = reader.get_tags(feed_url)
+    metadata = reader.get_tags(resource_id)
 
     # Ensure flashed messages get removed from the session.
     # https://github.com/lemon24/reader/issues/81
@@ -519,6 +529,7 @@ def metadata():
     return stream_template(
         'metadata.html',
         feed=feed,
+        entry=entry,
         metadata=metadata,
         to_pretty_json=lambda t: yaml.safe_dump(t),
     )
@@ -665,32 +676,43 @@ def update_feed_title(data):
     get_reader().set_feed_user_title(feed_url, feed_title)
 
 
+def _resource_id_from_data(data):
+    rv = ()
+    if 'feed-url' in data:
+        rv += (data['feed-url'],)
+        if 'entry-id' in data:
+            rv += (data['entry-id'],)
+    return rv
+
+
 @form_api
 @readererror_to_apierror()
 def add_metadata(data):
-    feed_url = data['feed-url']
+    resource_id = _resource_id_from_data(data)
     key = data['key']
-    get_reader().set_tag(feed_url, key, None)
+    get_reader().set_tag(resource_id, key, None)
 
 
 @form_api
 @readererror_to_apierror()
 def update_metadata(data):
-    feed_url = data['feed-url']
+    resource_id = _resource_id_from_data(data)
     key = data['key']
     try:
         value = yaml.safe_load(data['value'])
     except yaml.YAMLError as e:
-        raise APIError("invalid JSON: {}".format(e), (feed_url, key)) from e
-    get_reader().set_tag(feed_url, key, value)
+        raise APIError("invalid JSON: {}".format(e), resource_id + (key,)) from e
+    get_reader().set_tag(resource_id, key, value)
 
 
-@form_api(really=True)
+# TODO: @form_api(really=True)
+@form_api
 @readererror_to_apierror()
 def delete_metadata(data):
-    feed_url = data['feed-url']
+    resource_id = _resource_id_from_data(data)
+    print(resource_id)
     key = data['key']
-    get_reader().delete_tag(feed_url, key)
+    get_reader().delete_tag(resource_id, key)
 
 
 @form_api
