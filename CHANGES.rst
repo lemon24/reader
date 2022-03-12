@@ -9,7 +9,7 @@ Changelog
 Version 2.10
 ------------
 
-Unreleased
+Released 2022-03-12
 
 * Support entry and global tags. (:issue:`272`, :issue:`228`, :issue:`267`)
 
