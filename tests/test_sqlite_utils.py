@@ -11,7 +11,7 @@ from reader._sqlite_utils import ddl_transaction
 from reader._sqlite_utils import HeavyMigration
 from reader._sqlite_utils import IdError
 from reader._sqlite_utils import IntegrityError
-from reader._sqlite_utils import require_compile_options
+from reader._sqlite_utils import require_functions
 from reader._sqlite_utils import require_version
 from reader._sqlite_utils import RequirementError
 from reader._sqlite_utils import SchemaVersionError
@@ -343,17 +343,29 @@ class MockConnection:
         pass
 
 
-def test_require_compile_options():
-    db = MockConnection(execute_rv=[('ONE',), ('TWO',)])
+def test_require_functions(monkeypatch):
+    from reader._sqlite_utils import FUNCTION_TESTS
 
-    with pytest.raises(RequirementError):
-        require_compile_options(db, ['THREE'])
-    with pytest.raises(RequirementError):
-        require_compile_options(db, ['ONE', 'THREE'])
+    db = sqlite3.connect(':memory:')
 
     # shouldn't raise an exception
-    require_compile_options(db, ['ONE'])
-    require_compile_options(db, ['ONE', 'TWO'])
+    require_functions(db, list(FUNCTION_TESTS))
+    require_functions(db, ['json_array_length', 'json_object'])
+
+    monkeypatch.setitem(FUNCTION_TESTS, 'missing_function', "select missing_function()")
+    monkeypatch.setitem(FUNCTION_TESTS, 'missing_table', "select missing_table()")
+    monkeypatch.setitem(FUNCTION_TESTS, 'bad_sql', "bad sql")
+
+    with pytest.raises(RequirementError) as excinfo:
+        require_functions(db, ['missing_function', 'missing_table'])
+    assert 'missing_function' in str(excinfo.value)
+    assert 'missing_table' in str(excinfo.value)
+
+    with pytest.raises(ValueError):
+        require_functions(db, ['missing_function', 'unknown_function'])
+
+    with pytest.raises(sqlite3.OperationalError):
+        require_functions(db, ['missing_function', 'bad_sql'])
 
 
 @pytest.mark.parametrize(

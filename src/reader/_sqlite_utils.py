@@ -347,14 +347,35 @@ def require_version(db: sqlite3.Connection, version_info: Tuple[int, ...]) -> No
         )
 
 
-def require_compile_options(db: sqlite3.Connection, options: Sequence[str]) -> None:
+FUNCTION_TESTS = {
+    # storage
+    'json_array_length': "select json_array_length('[]')",
+    # search
+    'json': "select json(1)",
+    'json_object': "select json_object('key', 1)",
+    'json_group_array': "select json_group_array(1)",
+    'json_each': "select * from json_each(1)",
+}
+
+
+def require_functions(db: sqlite3.Connection, names: Sequence[str]) -> None:
+    missing = set()
     with closing(db.cursor()) as cursor:
-        actual_options = [r[0] for r in cursor.execute("PRAGMA compile_options;")]
-    missing = set(options).difference(actual_options)
+        for name in names:
+            sql = FUNCTION_TESTS.get(name)
+            if not sql:
+                raise ValueError(f"no test for function: {name}")
+
+            try:
+                list(cursor.execute(sql))
+            except sqlite3.OperationalError as e:
+                if "no such" not in str(e):
+                    # likely a bug in the sql, raise
+                    raise
+                missing.add(name)
+
     if missing:
-        raise RequirementError(
-            f"required SQLite compile options missing: {sorted(missing)}"
-        )
+        raise RequirementError(f"required SQLite functions missing: {sorted(missing)}")
 
 
 def setup_db(
@@ -365,11 +386,11 @@ def setup_db(
     migrations: Dict[int, _DBFunction],
     id: int,
     minimum_sqlite_version: Tuple[int, ...],
-    required_sqlite_compile_options: Sequence[str] = (),
+    required_sqlite_functions: Sequence[str] = (),
     wal_enabled: Optional[bool] = None,
 ) -> None:
     require_version(db, minimum_sqlite_version)
-    require_compile_options(db, required_sqlite_compile_options)
+    require_functions(db, required_sqlite_functions)
 
     with closing(db.cursor()) as cursor:
         cursor.execute("PRAGMA foreign_keys = ON;")

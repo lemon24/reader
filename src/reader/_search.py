@@ -28,6 +28,7 @@ from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
 from ._sqlite_utils import ddl_transaction
+from ._sqlite_utils import require_functions
 from ._sqlite_utils import require_version
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
@@ -141,6 +142,13 @@ def wrap_search_exceptions(enabled: bool = True, query: bool = False) -> Iterato
 # When adding a new method, add a new test_search.py::test_errors_locked test.
 
 
+# last_insert_rowid() / cursor.lastrowid works correctly for FTS5
+# tables only starting with SQLite 3.18.
+# https://www.sqlite.org/releaselog/3_18_0.html
+MINIMUM_SQLITE_VERSION = (3, 18)
+REQUIRED_SQLITE_FUNCTIONS = ['json', 'json_object', 'json_group_array', 'json_each']
+
+
 class Search:
 
     """Search provider tightly coupled to the SQLite storage.
@@ -212,12 +220,11 @@ class Search:
     @wrap_exceptions(SearchError)
     def check_dependencies(self) -> None:
         # Only update() requires these, so we don't check in __init__().
-
-        # last_insert_rowid() / cursor.lastrowid works correctly for FTS5
-        # tables only starting with SQLite 3.18.
-        # https://www.sqlite.org/releaselog/3_18_0.html
+        # ... except json_each(), which is used in one of the triggers
+        # (which is acceptable, we're trying to fail early for *most* cases).
         try:
-            require_version(self.db, (3, 18))
+            require_version(self.db, MINIMUM_SQLITE_VERSION)
+            require_functions(self.db, REQUIRED_SQLITE_FUNCTIONS)
         except DBError as e:
             raise SearchError(message=str(e)) from None
 

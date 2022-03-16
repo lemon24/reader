@@ -365,8 +365,11 @@ def update_from_35_to_36(db: sqlite3.Connection) -> None:  # pragma: no cover
     create_entry_tags(db)
 
 
+# Row value support was added in 3.15.
+# TODO: Remove the Search.update() check once this gets bumped to >=3.18.
 MINIMUM_SQLITE_VERSION = (3, 15)
-REQUIRED_SQLITE_COMPILE_OPTIONS = ["ENABLE_JSON1"]
+# We use the JSON1 extension for entries.content.
+REQUIRED_SQLITE_FUNCTIONS = ['json_array_length']
 
 
 def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
@@ -387,11 +390,8 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             35: update_from_35_to_36,
         },
         id=APPLICATION_ID,
-        # Row value support was added in 3.15.
-        # TODO: Remove the Search.update() check once this gets bumped to >=3.18.
         minimum_sqlite_version=MINIMUM_SQLITE_VERSION,
-        # We use the JSON1 extension for entries.content.
-        required_sqlite_compile_options=REQUIRED_SQLITE_COMPILE_OPTIONS,
+        required_sqlite_functions=REQUIRED_SQLITE_FUNCTIONS,
         wal_enabled=wal_enabled,
     )
 

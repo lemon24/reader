@@ -11,6 +11,11 @@ Version 2.11
 
 Unreleased
 
+* Fix issue causing :func:`make_reader` to fail with message
+  ``database requirement error: required SQLite compile options missing: ['ENABLE_JSON1']``
+  when using SQLite 3.38 or newer.
+  (:issue:`273`)
+
 
 Version 2.10
 ------------
