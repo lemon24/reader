@@ -9,7 +9,7 @@ Changelog
 Version 2.11
 ------------
 
-Unreleased
+Released 2022-03-17
 
 * Fix issue causing :func:`make_reader` to fail with message
   ``database requirement error: required SQLite compile options missing: ['ENABLE_JSON1']``
