@@ -643,11 +643,10 @@ def _process_feedparser_dict(url: str, d: Any) -> FeedAndEntries:
         raise ParseError(url, message="unknown feed type")
 
     is_rss = d.version.startswith('rss')
-    updated, _ = _get_updated_published(d.feed, is_rss)
 
     feed = FeedData(
         url,
-        updated,
+        _get_datetime_fp_attr(d.feed, 'updated_parsed'),
         d.feed.get('title'),
         d.feed.get('link'),
         d.feed.get('author'),
@@ -662,19 +661,11 @@ def _process_feedparser_dict(url: str, d: Any) -> FeedAndEntries:
     return feed, entries
 
 
-def _get_updated_published(
-    thing: Any, is_rss: bool
-) -> Tuple[Optional[datetime], Optional[datetime]]:
-    def convert(key: str) -> Any:
-        # feedparser.FeedParserDict.get('updated') defaults to published
-        # for historical reasons; "key in thing" bypasses that
-        value = thing[key] if key in thing else None
-        return _datetime_from_timetuple(value) if value else None
-
-    updated = convert('updated_parsed')
-    published = convert('published_parsed')
-
-    return updated, published
+def _get_datetime_fp_attr(thing: Any, key: str) -> Optional[datetime]:
+    # feedparser.FeedParserDict.get('updated') defaults to published
+    # for historical reasons; "key in thing" bypasses that
+    value = thing[key] if key in thing else None
+    return _datetime_from_timetuple(value) if value else None
 
 
 def _datetime_from_timetuple(tt: time.struct_time) -> datetime:
@@ -697,8 +688,6 @@ def _feedparser_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
     if not id:
         raise ParseError(feed_url, message="entry with no id or link fallback")
 
-    updated, published = _get_updated_published(entry, is_rss)
-
     content = []
     for data in entry.get('content', ()):
         data = {k: v for k, v in data.items() if k in ('value', 'type', 'language')}
@@ -720,11 +709,11 @@ def _feedparser_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
     return EntryData(
         feed_url,
         id,
-        updated,
+        _get_datetime_fp_attr(entry, 'updated_parsed'),
         entry.get('title'),
         entry.get('link'),
         entry.get('author'),
-        published,
+        _get_datetime_fp_attr(entry, 'published_parsed'),
         entry.get('summary'),
         tuple(content),
         tuple(enclosures),
