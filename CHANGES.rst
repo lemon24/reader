@@ -11,6 +11,10 @@ Version 2.12
 
 Unreleased
 
+* Allow running arbitrary actions *once* before/after updating feeds
+  via :attr:`~Reader.before_feeds_update_hooks` /
+  :attr:`~Reader.after_feeds_update_hooks`.
+
 
 Version 2.11
 ------------

@@ -158,3 +158,80 @@ def test_feed_update_hooks(reader):
     ]
 
     # TODO: What is the expected behavior if a plugin raises an exception?
+
+
+def test_feeds_update_hooks(reader):
+    reader._parser = parser = Parser()
+    parser.tzinfo = False
+
+    plugin_calls = []
+
+    def before_feed_plugin(r, f):
+        assert r is reader
+        plugin_calls.append((before_feed_plugin, f))
+
+    def after_feed_plugin(r, f):
+        assert r is reader
+        plugin_calls.append((after_feed_plugin, f))
+
+    def before_feeds_plugin(r):
+        assert r is reader
+        plugin_calls.append((before_feeds_plugin,))
+
+    def after_feeds_plugin(r):
+        assert r is reader
+        plugin_calls.append((after_feeds_plugin,))
+
+    reader.before_feed_update_hooks.append(before_feed_plugin)
+    reader.after_feed_update_hooks.append(after_feed_plugin)
+    reader.before_feeds_update_hooks.append(before_feeds_plugin)
+    reader.after_feeds_update_hooks.append(after_feeds_plugin)
+
+    # TODO: these should all be different tests
+
+    # no feeds
+    reader.update_feeds()
+    assert plugin_calls == [(before_feeds_plugin,), (after_feeds_plugin,)]
+
+    plugin_calls[:] = []
+
+    # two feeds + feed vs feeds order
+    one = parser.feed(1, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 1, 1))
+    reader.add_feed(one)
+    reader.add_feed(two)
+    reader.update_feeds()
+    assert plugin_calls[0] == (before_feeds_plugin,)
+    assert plugin_calls[-1] == (after_feeds_plugin,)
+    assert set(plugin_calls[1:-1]) == {
+        (before_feed_plugin, one.url),
+        (after_feed_plugin, one.url),
+        (before_feed_plugin, two.url),
+        (after_feed_plugin, two.url),
+    }
+
+    plugin_calls[:] = []
+
+    # not called for update_feed()
+    reader.update_feed(one)
+    assert set(plugin_calls) == {
+        (before_feed_plugin, one.url),
+        (after_feed_plugin, one.url),
+    }
+
+    plugin_calls[:] = []
+
+    # called even if there's an error
+    reader._parser = FailingParser()
+    reader.update_feeds()
+    assert plugin_calls[0] == (before_feeds_plugin,)
+    assert plugin_calls[-1] == (after_feeds_plugin,)
+    assert set(plugin_calls[1:-1]) == {
+        (before_feed_plugin, one.url),
+        (after_feed_plugin, one.url),
+        (before_feed_plugin, two.url),
+        (after_feed_plugin, two.url),
+    }
+
+
+# TODO: test relative order of different hooks

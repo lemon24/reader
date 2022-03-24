@@ -87,6 +87,7 @@ _U = TypeVar('_U')
 ReaderPluginType = Callable[['Reader'], None]
 AfterEntryUpdateHook = Callable[['Reader', EntryData, EntryUpdateStatus], None]
 FeedUpdateHook = Callable[['Reader', str], None]
+FeedsUpdateHook = Callable[['Reader'], None]
 
 
 def make_reader(
@@ -394,6 +395,34 @@ class Reader:
         #: .. versionadded:: 2.2
         #:
         self.after_feed_update_hooks: MutableSequence[FeedUpdateHook] = []
+
+        #: List of functions called *once* before updating any feeds,
+        #: at the beginning of :meth:`update_feeds` / :meth:`update_feeds_iter`,
+        #: but not :meth:`update_feed`.
+        #:
+        #: Each function is called with:
+        #:
+        #: * `reader` – the :class:`Reader` instance
+        #:
+        #: Each function should return :const:`None`.
+        #:
+        #: .. versionadded:: 2.12
+        #:
+        self.before_feeds_update_hooks: MutableSequence[FeedsUpdateHook] = []
+
+        #: List of functions called *once* after updating all feeds,
+        #: at the end of :meth:`update_feeds` / :meth:`update_feeds_iter`,
+        #: but not :meth:`update_feed`.
+        #:
+        #: Each function is called with:
+        #:
+        #: * `reader` – the :class:`Reader` instance
+        #:
+        #: Each function should return :const:`None`.
+        #:
+        #: .. versionadded:: 2.12
+        #:
+        self.after_feeds_update_hooks: MutableSequence[FeedsUpdateHook] = []
 
         if _called_directly:
             warnings.warn(
@@ -806,7 +835,7 @@ class Reader:
 
         By default, update all the feeds that have updates enabled.
 
-        Roughly equivalent to ``for _ in reader.update_feed_iter(...): pass``.
+        Roughly equivalent to ``for _ in reader.update_feeds_iter(...): pass``.
 
         Args:
             feed (str or tuple(str) or Feed or None): Only update the feed with this URL.
@@ -881,6 +910,7 @@ class Reader:
         updates_enabled: Optional[bool] = True,
         new: Optional[bool] = None,
         workers: int = 1,
+        _call_feeds_update_hooks: bool = True,
     ) -> Iterable[UpdateResult]:
         """Update all or some of the feeds.
 
@@ -943,6 +973,10 @@ class Reader:
 
         make_map = nullcontext(builtins.map) if workers == 1 else make_pool_map(workers)
 
+        if _call_feeds_update_hooks:
+            for hook in self.before_feeds_update_hooks:
+                hook(self)
+
         with make_map as map:
             results = self._update_feeds(filter_options, map)
 
@@ -956,6 +990,10 @@ class Reader:
                         raise value
 
                 yield UpdateResult(url, value)
+
+        if _call_feeds_update_hooks:
+            for hook in self.after_feeds_update_hooks:
+                hook(self)
 
     def update_feed(self, feed: FeedInput) -> Optional[UpdatedFeed]:
         """Update a single feed.
@@ -988,7 +1026,9 @@ class Reader:
 
         """
         _, rv = zero_or_one(
-            self.update_feeds_iter(feed=feed, updates_enabled=None),
+            self.update_feeds_iter(
+                feed=feed, updates_enabled=None, _call_feeds_update_hooks=False
+            ),
             lambda: FeedNotFoundError(_feed_argument(feed)),
         )
         if isinstance(rv, Exception):
