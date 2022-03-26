@@ -11,7 +11,6 @@ from typing import Any
 from typing import Callable
 from typing import Iterable
 from typing import Iterator
-from typing import List
 from typing import Mapping
 from typing import MutableSequence
 from typing import Optional
@@ -46,12 +45,12 @@ from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
 from .exceptions import FeedMetadataNotFoundError
 from .exceptions import FeedNotFoundError
-from .exceptions import InvalidPluginError
 from .exceptions import ParseError
 from .exceptions import SearchNotEnabledError
 from .exceptions import TagNotFoundError
-from .plugins import _PLUGINS
+from .plugins import _load_plugins
 from .plugins import DEFAULT_PLUGINS
+from .plugins import PluginInput
 from .types import _entry_argument
 from .types import _feed_argument
 from .types import _resource_argument
@@ -84,7 +83,6 @@ log = logging.getLogger('reader')
 _T = TypeVar('_T')
 _U = TypeVar('_U')
 
-ReaderPluginType = Callable[['Reader'], None]
 AfterEntryUpdateHook = Callable[['Reader', EntryData, EntryUpdateStatus], None]
 FeedUpdateHook = Callable[['Reader', str], None]
 FeedsUpdateHook = Callable[['Reader'], None]
@@ -94,7 +92,7 @@ def make_reader(
     url: str,
     *,
     feed_root: Optional[str] = None,
-    plugins: Iterable[Union[str, ReaderPluginType]] = DEFAULT_PLUGINS,
+    plugins: Iterable[PluginInput] = DEFAULT_PLUGINS,
     session_timeout: TimeoutType = SESSION_TIMEOUT,
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
     search_enabled: Union[bool, None, Literal['auto']] = 'auto',
@@ -237,15 +235,7 @@ def make_reader(
     except Exception as e:
         raise ValueError(f"invalid reserved name scheme: {reserved_name_scheme}") from e
 
-    plugin_funcs: List[ReaderPluginType] = []
-    for plugin in plugins:
-        if isinstance(plugin, str):
-            if plugin not in _PLUGINS:
-                raise InvalidPluginError(f"no such built-in plugin: {plugin!r}")
-            plugin_func = _PLUGINS[plugin]
-        else:
-            plugin_func = plugin
-        plugin_funcs.append(plugin_func)
+    plugin_funcs = list(_load_plugins(plugins))
 
     # If we ever need to change the signature of make_reader(),
     # or support additional storage/search implementations,
