@@ -36,6 +36,8 @@ from reader import InvalidSearchQueryError
 from reader import ParseError
 from reader import ReaderError
 from reader._plugins import Loader
+from reader.types import _get_entry_content
+
 
 blueprint = Blueprint('reader', __name__)
 
@@ -75,26 +77,6 @@ def debug_maxrss_mib():
 
 PREFERRED_CONTENT_TYPES = ['text/html', 'text/xhtml', 'text/plain']
 HTML_CONTENT_TYPES = {'text/html', 'text/xhtml'}
-
-
-@blueprint.app_template_global()
-def entry_content(entry, prefer_summary=False):
-    """entry -> (content, is_html)"""
-
-    # TODO: maybe this should be an Entry method?
-
-    if prefer_summary and entry.summary:
-        return entry.summary, True
-
-    for type in PREFERRED_CONTENT_TYPES:
-        for content in entry.content:
-            if content.type == type and content.value:
-                return content.value, type in HTML_CONTENT_TYPES
-
-    if entry.summary:
-        return entry.summary, True
-
-    return None, False
 
 
 @blueprint.app_template_filter()
@@ -189,6 +171,9 @@ class EntryProxy:
                 rv.append(Content(str(highlight), 'text/plain'))
                 rv.append(Content(highlighted(highlight), 'text/html'))
         return rv
+
+    def get_content(self, prefer_summary=False):
+        return _get_entry_content(self, prefer_summary)
 
 
 @dataclass(frozen=True)

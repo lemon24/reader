@@ -9,7 +9,7 @@
 {% block body %}
 
 {% set feed = entry.feed %}
-{% set content, is_html = entry_content(entry) %}
+{% set content = entry.get_content() %}
 
 
 <div class="entry">
@@ -51,7 +51,7 @@
 <a href="{{ url_for('.metadata', feed=entry.feed.url, entry=entry.id) }}">update metadata</a>
 
 {% if content %}
-    {% set minutes = read_time(content).minutes %}
+    {% set minutes = read_time(content.value).minutes %}
     {% if minutes > 1 %}
     <li>
         {{ minutes | humanize_apnumber }} minute read
@@ -82,10 +82,10 @@
 
 {% if content %}
 <article>
-{% if not is_html -%}
-<pre class='plaintext'>{{ content }}</pre>
+{% if not content.is_html -%}
+<pre class='plaintext'>{{ content.value }}</pre>
 {%- else -%}
-{{ content | safe }}
+{{ content.value | safe }}
 {%- endif %}
 
 </article>

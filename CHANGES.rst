@@ -14,6 +14,9 @@ Unreleased
 * Allow running arbitrary actions *once* before/after updating feeds
   via :attr:`~Reader.before_feeds_update_hooks` /
   :attr:`~Reader.after_feeds_update_hooks`.
+  (:issue:`275`)
+* Add convenience :meth:`Entry.get_content` and :attr:`Content.is_html`.
+  (:issue:`275`)
 
 
 Version 2.11

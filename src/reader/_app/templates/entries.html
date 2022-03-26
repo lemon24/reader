@@ -248,8 +248,8 @@
 {% set vars.entry_index = loop.index %}
 
 {% set feed = entry.feed %}
-{% set content, _ = entry_content(entry, prefer_summary=False) %}
-{% set summary, _ = entry_content(entry, prefer_summary=True) %}
+{% set content = entry.get_content(prefer_summary=False) %}
+{% set summary = entry.get_content(prefer_summary=True) %}
 
 
 <div id="entry-{{ loop.index }}" class="entry">
@@ -304,7 +304,7 @@ untitled
 {# TODO: also, for search we want the read time of the whole content, not of the snippet #}
 {# TODO: also, it'd be nice to cache the read time #}
 {% if content %}
-    {% set minutes = read_time(content).minutes %}
+    {% set minutes = read_time(content.value).minutes %}
     {% if minutes > 1 %}
     <li>
         {{ minutes | humanize_apnumber }} minute read
@@ -330,9 +330,9 @@ untitled
 <p>
     {# TODO: maybe unify entry / search result content or something? #}
     {% if not request.args.q %}
-        {{ summary | striptags | truncate }}
+        {{ summary.value | striptags | truncate }}
     {% else %}
-        {{ summary }}
+        {{ summary.value }}
     {% endif %}
 
     {% if not read_only %}

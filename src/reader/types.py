@@ -330,6 +330,22 @@ class Entry(_namedtuple_compat):
         """
         return self.updated or self.added
 
+    def get_content(self, *, prefer_summary: bool = False) -> Optional['Content']:
+        """Return a text content OR the summary.
+
+        Prefer HTML content, when available.
+
+        Args:
+            prefer_summary (bool): Return summary, if available.
+
+        Returns:
+            Content or none: The content, if found.
+
+        .. versionadded:: 2.12
+
+        """
+        return _get_entry_content(self, prefer_summary)
+
 
 @dataclass(frozen=True)
 class Content(_namedtuple_compat):
@@ -346,6 +362,41 @@ class Content(_namedtuple_compat):
 
     #: The content language.
     language: Optional[str] = None
+
+    @property
+    def is_html(self) -> bool:
+        """Whether the content is (X)HTML.
+
+        True if the content does not have a type.
+
+        .. versionadded:: 2.12
+        """
+        if self.type:
+            return self.type in _HTML_CONTENT_TYPES
+        return True
+
+
+_PREFERRED_CONTENT_TYPES = ['text/html', 'text/xhtml', 'text/plain', None]
+_HTML_CONTENT_TYPES = {'text/html', 'text/xhtml'}
+_HTML_CONTENT_TYPE = 'text/html'
+
+
+def _get_entry_content(entry: Entry, prefer_summary: bool = False) -> Optional[Content]:
+    # TODO: Make this public; Entry should be a protocol, Content should be generic.
+    # TODO: Use the type from .summary_detail (when we get it).
+
+    if prefer_summary and entry.summary:
+        return Content(entry.summary)
+
+    for type in _PREFERRED_CONTENT_TYPES:
+        for content in entry.content:
+            if content.type == type and content.value:
+                return content
+
+    if entry.summary:
+        return Content(entry.summary)
+
+    return None
 
 
 @dataclass(frozen=True)

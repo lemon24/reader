@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from reader import Content
 from reader import Entry
 from reader import EntryError
 from reader import EntrySearchResult
@@ -263,6 +264,64 @@ def test_entry_updated_not_none():
 
     # will be entry.updated or entry.first_updated at some point
     assert entry.updated_not_none == entry.updated
+
+
+@pytest.mark.parametrize(
+    'entry_kwargs, kwargs, expected',
+    [
+        ({}, {}, None),
+        (dict(summary='summary'), {}, Content('summary')),
+        (dict(content=[Content('content')]), {}, Content('content')),
+        (dict(summary='summary', content=[Content('content')]), {}, Content('content')),
+        (
+            dict(summary='summary', content=[Content('content')]),
+            dict(prefer_summary=False),
+            Content('content'),
+        ),
+        (
+            dict(summary='summary', content=[Content('content')]),
+            dict(prefer_summary=True),
+            Content('summary'),
+        ),
+        (
+            dict(
+                content=[
+                    Content('notype'),
+                    Content('html', type='text/html'),
+                    Content('plain', type='text/plain'),
+                ]
+            ),
+            {},
+            Content('html', type='text/html'),
+        ),
+        (
+            dict(content=[Content('notype'), Content('plain', type='text/plain')]),
+            {},
+            Content('plain', type='text/plain'),
+        ),
+        (
+            dict(content=[Content('notype'), Content('unknown', type='text/unknown')]),
+            {},
+            Content('notype'),
+        ),
+    ],
+)
+def test_entry_get_content(entry_kwargs, kwargs, expected):
+    assert Entry('id', **entry_kwargs).get_content(**kwargs) == expected
+
+
+@pytest.mark.parametrize(
+    'content, expected',
+    [
+        (Content('value'), True),
+        (Content('value', 'text/html'), True),
+        (Content('value', 'text/xhtml'), True),
+        (Content('value', 'text/plain'), False),
+        (Content('value', 'unknown'), False),
+    ],
+)
+def test_content_is_html(content, expected):
+    assert content.is_html == expected
 
 
 def test_update_result_properties():
