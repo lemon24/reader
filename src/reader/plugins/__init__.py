@@ -7,27 +7,20 @@ from typing import Iterable
 from typing import TYPE_CHECKING
 from typing import Union
 
-from . import enclosure_dedupe
-from . import entry_dedupe
-from . import mark_as_read
-from . import ua_fallback
+from .._vendor.pkgutil import resolve_name
 from ..exceptions import InvalidPluginError
 
 if TYPE_CHECKING:  # pragma: no cover
     from . import Reader
 
 
-_PLUGINS = {
-    'reader.enclosure_dedupe': enclosure_dedupe.init_reader,
-    'reader.entry_dedupe': entry_dedupe.init_reader,
-    'reader.mark_as_read': mark_as_read.init_reader,
-    'reader.ua_fallback': ua_fallback.init_reader,
-}
-
 #: The list of plugins :func:`~reader.make_reader` uses by default.
 DEFAULT_PLUGINS = [
     'reader.ua_fallback',
 ]
+
+_PLUGIN_PREFIX = 'reader.'
+_MODULE_PREFIX = 'reader.plugins.'
 
 
 PluginType = Callable[['Reader'], None]
@@ -36,10 +29,32 @@ PluginInput = Union[str, PluginType]
 
 def _load_plugins(plugins: Iterable[PluginInput]) -> Iterable[PluginType]:
     for plugin in plugins:
-        if isinstance(plugin, str):
-            if plugin not in _PLUGINS:
-                raise InvalidPluginError(f"no such built-in plugin: {plugin!r}")
-            plugin_func = _PLUGINS[plugin]
-        else:
-            plugin_func = plugin
-        yield plugin_func
+        yield _load_plugin(plugin)
+
+
+def _load_plugin(plugin: PluginInput) -> PluginType:
+    if not isinstance(plugin, str):
+        return plugin
+
+    if not plugin.startswith(_PLUGIN_PREFIX):
+        raise InvalidPluginError(f"no such built-in plugin: {plugin!r}")
+
+    module_name = plugin.replace(_PLUGIN_PREFIX, _MODULE_PREFIX, 1)
+    import_error = None
+
+    try:
+        return resolve_name(module_name + ':init_reader')
+    except ModuleNotFoundError as e:
+        import_error = e
+    except ValueError:
+        pass
+
+    try:
+        return resolve_name(plugin)
+    except (ModuleNotFoundError, AttributeError):
+        pass
+
+    if import_error and import_error.name != module_name:
+        raise import_error
+
+    raise InvalidPluginError(f"no such built-in plugin: {plugin!r}") from import_error

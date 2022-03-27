@@ -9,7 +9,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from dataclasses import field
 
-from .plugins import _PLUGINS
 from .plugins import DEFAULT_PLUGINS
 from reader import make_reader
 from reader._plugins import Loader
@@ -39,7 +38,7 @@ def make_reader_from_config(*, plugins=None, plugin_loader=None, **kwargs):
 
     plugins_arg = kwargs['plugins'] = []
     for name in list(plugins):
-        if name in _PLUGINS:
+        if name.startswith('reader.'):
             plugins_arg.append(name)
         else:
             plugin = plugin_loader.load(name, wrap=True)

@@ -152,6 +152,7 @@ def test_cli_plugin(db_path, monkeypatch):
             'list',
             'feeds',
         ],
+        catch_exceptions=False,
     )
 
     assert result.exit_code != 0
@@ -166,6 +167,7 @@ def test_cli_plugin_builtin_and_import_path(db_path, monkeypatch):
     monkeypatch.syspath_prepend(str(py.path.local(__file__).dirpath()))
 
     def store_reader_plugin(reader):
+        print('\n\nhello\n\n')
         store_reader_plugin.reader = reader
 
     monkeypatch.setattr('test_cli.store_reader_plugin', store_reader_plugin)
@@ -185,8 +187,10 @@ def test_cli_plugin_builtin_and_import_path(db_path, monkeypatch):
             'list',
             'feeds',
         ],
+        catch_exceptions=False,
     )
 
+    assert result.exit_code == 0, result.output
     assert len(store_reader_plugin.reader._parser.session_hooks.response) == 2
 
 

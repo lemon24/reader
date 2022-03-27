@@ -34,7 +34,6 @@ from reader import FeedCounts
 from reader import FeedExistsError
 from reader import FeedNotFoundError
 from reader import InvalidFeedURLError
-from reader import InvalidPluginError
 from reader import ParseError
 from reader import Reader
 from reader import StorageError
@@ -3140,28 +3139,6 @@ def test_session_timeout(monkeypatch, make_reader, kwargs, expected_timeout):
         reader.update_feed('http://www.example.com')
 
     assert exc_info.value.__cause__.args == ('timeout', expected_timeout)
-
-
-def test_plugins(monkeypatch, make_reader):
-    def one(reader):
-        one.reader = reader
-
-    def two(reader):
-        two.reader = reader
-
-    from reader.plugins import _PLUGINS
-
-    monkeypatch.setitem(_PLUGINS, 'one', one)
-
-    reader = make_reader(':memory:', plugins=['one', two])
-
-    assert one.reader is reader
-    assert two.reader is reader
-
-    with pytest.raises(InvalidPluginError) as exc_info:
-        make_reader(':memory:', plugins=['two'])
-
-    assert str(exc_info.value) == "no such built-in plugin: 'two'"
 
 
 def test_reserved_names(make_reader):
