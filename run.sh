@@ -32,7 +32,7 @@ readonly SCRIPT="$PROJECT_ROOT/$( basename "$0" )"
 
 
 function install-dev {
-    pip install -e '.[cli,app,tests,docs,dev,unstable-plugins]'
+    pip install -e '.[readtime,cli,app,tests,docs,dev,unstable-plugins]'
     pre-commit install
 }
 
@@ -149,7 +149,7 @@ function clean-pyc {
 
 
 function ci-install {
-    pip install -e '.[cli,app,tests,unstable-plugins]'
+    pip install -e '.[readtime,cli,app,tests,unstable-plugins]'
 }
 
 function ci-run {
