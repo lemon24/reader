@@ -19,6 +19,7 @@ for details on how built-in plugins are loaded.
 .. automodule:: reader.plugins.enclosure_dedupe
 .. automodule:: reader.plugins.entry_dedupe
 .. automodule:: reader.plugins.mark_as_read
+.. automodule:: reader.plugins.readtime
 .. automodule:: reader.plugins.ua_fallback
 
 

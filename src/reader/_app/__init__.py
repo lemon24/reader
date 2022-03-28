@@ -542,7 +542,7 @@ def tags():
     with_counts = {None: None, 'no': False, 'yes': True}[with_counts]
 
     def iter_tags():
-        for tag in itertools.chain([None, True, False], reader.get_tag_keys()):
+        for tag in itertools.chain([None, True, False], reader.get_tag_keys((None,))):
             feed_counts = None
             entry_counts = None
 

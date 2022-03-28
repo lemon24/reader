@@ -120,7 +120,7 @@ from reader.exceptions import TagNotFoundError
 from reader.types import EntryUpdateStatus
 from reader.types import Feed
 
-log = logging.getLogger('reader._plugins.feed_entry_dedupe')
+log = logging.getLogger('reader.plugins.entry_dedupe')
 
 
 _XML_TAG_RE = re.compile(r'<[^<]+?>', re.I)
