@@ -353,6 +353,10 @@ Why I want to postpone batch update/set methods:
 tl:dr: Performance is likely a non-issue with SQLite,
 convenience can be added on top as a plugin.
 
+See the 2.12 reader._app.ResourceTags class for an idea of how to
+represent a bunch of tags in a reserved-name-scheme-agnostic way
+(useful e.g. for when get_entries() should return tags x, y, z of each entry).
+
 
 Using a single Reader objects from multiple threads
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

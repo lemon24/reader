@@ -244,7 +244,7 @@
 
 
 {% set vars = namespace(entry_index=0) %}
-{% for entry in entries %}
+{% for entry, tags in entries_and_tags %}
 {% set vars.entry_index = loop.index %}
 
 {% set feed = entry.feed %}
@@ -300,16 +300,8 @@ untitled
 {% endif %} {# not read only #}
 
 
-{# TODO: this doesn't work for search #}
-{# TODO: also, for search we want the read time of the whole content, not of the snippet #}
-{# TODO: also, it'd be nice to cache the read time #}
-{% if content %}
-    {% set minutes = read_time(content.value).minutes %}
-    {% if minutes > 1 %}
-    <li>
-        {{ minutes | humanize_apnumber }} minute read
-    {% endif %}
-{% endif %}
+{{ macros.readtime(tags) }}
+
 
 
 {% for message in get_flashed_messages_by_prefix(

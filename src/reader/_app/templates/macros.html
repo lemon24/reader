@@ -280,3 +280,16 @@ data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
 {%- if have_tail %}<span class="ellipsis">{{ end }}</span></abbr>{% endif -%}
 
 {% endmacro %}
+
+
+
+{% macro readtime(tags) %}
+
+{% set seconds = tags.reader.get('readtime', {}).get('seconds', 0) %}
+{% set minutes = (seconds / 60) | round(method='ceil') %}
+{% if minutes > 1 %}
+<li>
+    {{ minutes | humanize_apnumber }} minute read
+{% endif %}
+
+{% endmacro %}

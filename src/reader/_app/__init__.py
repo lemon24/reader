@@ -10,7 +10,6 @@ from datetime import timezone
 import flask.signals
 import humanize
 import markupsafe
-import readtime
 import yaml
 from flask import abort
 from flask import Blueprint
@@ -55,11 +54,6 @@ def humanize_apnumber(value):
     return humanize.apnumber(value)
 
 
-@blueprint.app_template_global()
-def read_time(text):
-    return readtime.of_html(text)
-
-
 @blueprint.app_template_filter()
 def toyaml(data):
     return yaml.safe_dump(data)
@@ -73,10 +67,6 @@ def debug_maxrss_mib():
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 2 ** (
         20 if sys.platform == 'darwin' else 10
     )
-
-
-PREFERRED_CONTENT_TYPES = ['text/html', 'text/xhtml', 'text/plain']
-HTML_CONTENT_TYPES = {'text/html', 'text/xhtml'}
 
 
 @blueprint.app_template_filter()
@@ -190,6 +180,30 @@ class FeedProxy:
         if highlight:
             return str(highlight)
         return self._entry.feed.title
+
+
+@dataclass
+class ResourceTags:
+    """Represent a bunch of tags in a reserved-name-scheme-agnostic way."""
+
+    reader: dict
+    # plugin: dict
+    # user: dict
+
+
+ENTRY_TAGS_READER = ['readtime']
+
+
+def get_entry_tags(reader, entry):
+    missing = object()
+
+    reader_tags = {}
+    for key in ENTRY_TAGS_READER:
+        value = reader.get_tag(entry, reader.make_reader_reserved_name(key), missing)
+        if value is not missing:
+            reader_tags[key] = value
+
+    return ResourceTags(reader=reader_tags)
 
 
 @blueprint.route('/')
@@ -312,9 +326,11 @@ def entries():
     # https://github.com/lemon24/reader/issues/81
     get_flashed_messages()
 
+    entries_and_tags = ((e, get_entry_tags(reader, e)) for e in entries)
+
     return stream_template(
         'entries.html',
-        entries=entries,
+        entries_and_tags=entries_and_tags,
         feed=feed,
         feed_tags=feed_tags,
         entries_data=entries_data,
@@ -354,10 +370,12 @@ def preview():
     entries = list(reader.get_entries())
     feed_entry_counts = reader.get_entry_counts(feed=url)
 
+    entries_and_tags = ((e, get_entry_tags(reader, e)) for e in entries)
+
     # TODO: maybe limit
     return stream_template(
         'entries.html',
-        entries=entries,
+        entries_and_tags=entries_and_tags,
         feed=feed,
         read_only=True,
         feed_entry_counts=feed_entry_counts,
@@ -531,7 +549,9 @@ def entry():
     if not entry:
         abort(404)
 
-    return render_template('entry.html', entry=entry)
+    tags = get_entry_tags(reader, entry)
+
+    return render_template('entry.html', entry=entry, tags=tags)
 
 
 @blueprint.route('/tags')

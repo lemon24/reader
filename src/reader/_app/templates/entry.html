@@ -50,13 +50,7 @@
 <li>
 <a href="{{ url_for('.metadata', feed=entry.feed.url, entry=entry.id) }}">update metadata</a>
 
-{% if content %}
-    {% set minutes = read_time(content.value).minutes %}
-    {% if minutes > 1 %}
-    <li>
-        {{ minutes | humanize_apnumber }} minute read
-    {% endif %}
-{% endif %}
+{{ macros.readtime(tags) }}
 
 
 {% for message in get_flashed_messages_by_prefix(
