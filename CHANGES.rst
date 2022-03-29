@@ -11,12 +11,24 @@ Version 2.12
 
 Unreleased
 
+* Add the :mod:`~reader.plugins.readtime`
+  :ref:`built-in <built-in plugins>` plugin,
+  which stores the entry read time as a tag during feed update.
+  (:issue:`275`)
+
 * Allow running arbitrary actions *once* before/after updating feeds
   via :attr:`~Reader.before_feeds_update_hooks` /
   :attr:`~Reader.after_feeds_update_hooks`.
-  (:issue:`275`)
 * Add convenience :meth:`Entry.get_content` and :attr:`Content.is_html`.
+
+* In the web app, use the read time provided by the
+  :mod:`~reader.plugins.readtime` plugin,
+  instead of calculating it on each page load.
+  Speeds up the rendering of the entries page by 20-30%,
+  hopefully winning back the time lost
+  when the read time feature was first added in `2.6 <Version 2.6_>`_.
   (:issue:`275`)
+* In the web app, also show the read time for search results.
 
 
 Version 2.11
