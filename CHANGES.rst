@@ -9,7 +9,7 @@ Changelog
 Version 2.12
 ------------
 
-Unreleased
+Released 2022-03-31
 
 * Add the :mod:`~reader.plugins.readtime`
   :ref:`built-in <built-in plugins>` plugin,

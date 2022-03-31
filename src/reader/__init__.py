@@ -37,7 +37,7 @@ Print the titles of the unread entries::
 
 """
 
-__version__ = '2.12.dev0'
+__version__ = '2.12'
 
 from .core import Reader, make_reader
 
