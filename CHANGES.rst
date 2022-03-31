@@ -19,7 +19,7 @@ Unreleased
 * Allow running arbitrary actions *once* before/after updating feeds
   via :attr:`~Reader.before_feeds_update_hooks` /
   :attr:`~Reader.after_feeds_update_hooks`.
-* Add convenience :meth:`Entry.get_content` and :attr:`Content.is_html`.
+* Add :meth:`Entry.get_content` and :attr:`Content.is_html`.
 
 * In the web app, use the read time provided by the
   :mod:`~reader.plugins.readtime` plugin,

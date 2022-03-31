@@ -42,8 +42,8 @@ and without enforcing a dependency on a particular framework.
 *reader* allows you to:
 
 * retrieve, store, and manage **Atom**, **RSS**, and **JSON** feeds
-* mark entries as read or important
-* add tags and metadata to feeds
+* mark articles as read or important
+* add arbitrary tags/metadata to feeds and articles
 * filter feeds and articles
 * full-text search articles
 * get statistics on feed and user activity
@@ -109,7 +109,7 @@ Usage:
     >>>
     >>> reader.update_search()
     >>>
-    >>> for e in list(reader.search_entries('year'))[:3]:
+    >>> for e in reader.search_entries('year', limit=3):
     ...     title = e.metadata.get('.title')
     ...     print(title.value, title.highlights)
     ...
