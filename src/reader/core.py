@@ -1,5 +1,4 @@
 import builtins
-import itertools
 import logging
 import numbers
 import warnings
@@ -10,7 +9,6 @@ from types import MappingProxyType
 from typing import Any
 from typing import Callable
 from typing import Iterable
-from typing import Iterator
 from typing import Mapping
 from typing import MutableSequence
 from typing import Optional
@@ -21,7 +19,6 @@ from typing import Union
 
 from typing_extensions import Literal
 
-import reader._updater
 from ._parser import default_parser
 from ._parser import Parser
 from ._parser import SESSION_TIMEOUT
@@ -34,12 +31,11 @@ from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import EntryUpdateIntent
 from ._types import FeedFilterOptions
-from ._types import FeedUpdateIntent
 from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
+from ._update import Pipeline
 from ._utils import deprecated
 from ._utils import make_pool_map
-from ._utils import MapType
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
@@ -332,8 +328,6 @@ class Reader:
         self._reserved_name_scheme = _reserved_name_scheme
 
         self._enable_search = _enable_search
-
-        self._updater = reader._updater
 
         #: List of functions called for each updated entry
         #: after the feed is updated.
@@ -968,18 +962,7 @@ class Reader:
                 hook(self)
 
         with make_map as map:
-            results = self._update_feeds(filter_options, map)
-
-            for url, value in results:
-                if isinstance(value, FeedNotFoundError):
-                    log.info("update feed %r: feed removed during update", url)
-                    continue
-
-                if isinstance(value, Exception):
-                    if not isinstance(value, ParseError):
-                        raise value
-
-                yield UpdateResult(url, value)
+            yield from Pipeline.from_reader(self, map).update(filter_options)
 
         if _call_feeds_update_hooks:
             for hook in self.after_feeds_update_hooks:
@@ -1028,124 +1011,6 @@ class Reader:
     @staticmethod
     def _now() -> datetime:
         return datetime.utcnow()
-
-    def _update_feeds(
-        self,
-        filter_options: FeedFilterOptions,
-        map: MapType = map,
-    ) -> Iterator[Tuple[str, Union[UpdatedFeed, None, Exception]]]:
-
-        # global_now is used as first_updated_epoch for all new entries,
-        # so that the subset of new entries from an update appears before
-        # all others and the entries in it are sorted by published/updated;
-        # if we used last_updated (now) for this, they would be sorted
-        # by feed order first (due to now increasing for each feed).
-        #
-        # A side effect of relying first_updated_epoch for ordering is that
-        # for the second of two new feeds updated in the same update_feeds()
-        # call, first_updated_epoch != last_updated.
-        #
-        # Update: However, added == last_updated for the first update.
-        #
-        global_now = self._now()
-
-        # Excluding the special exception handling,
-        # this function is a pipeline that looks somewhat like this:
-        #
-        #   self._storage.get_feeds_for_update \
-        #   | self._updater.process_old_feed \
-        #   | xargs -n1 -P $workers self._parser.retrieve \
-        #   | self._parser.parse \
-        #   | self._get_entries_for_update \
-        #   | self._updater.make_update_intents \
-        #   | self._update_feed
-        #
-        # Since we only need retrieve() (and maybe parse()) to run in parallel,
-        # everything after that is in a single for loop for readability.
-
-        feeds_for_update = self._storage.get_feeds_for_update(filter_options)
-        feeds_for_update = builtins.map(
-            self._updater.process_old_feed, feeds_for_update
-        )
-        parse_results = self._parser.parallel(
-            feeds_for_update, map, map is not builtins.map
-        )
-
-        for feed_for_update, parse_result in parse_results:
-            rv: Union[UpdatedFeed, None, Exception]
-
-            try:
-                # give storage a chance to consume the entries in a streaming fashion;
-                parsed_entries = itertools.tee(
-                    parse_result.entries
-                    if parse_result and not isinstance(parse_result, Exception)
-                    else ()
-                )
-                entry_pairs = zip(
-                    parsed_entries[0],
-                    self._storage.get_entries_for_update(
-                        (e.feed_url, e.id) for e in parsed_entries[1]
-                    ),
-                )
-
-                now = self._now()
-                (
-                    feed_to_update,
-                    entries_to_update,
-                ) = self._updater.make_update_intents(
-                    feed_for_update, now, global_now, parse_result, entry_pairs
-                )
-
-                counts = self._update_feed(
-                    feed_for_update.url, feed_to_update, entries_to_update
-                )
-
-                if isinstance(parse_result, Exception):
-                    rv = parse_result
-                elif parse_result:
-                    rv = UpdatedFeed(feed_for_update.url, *counts)
-                else:
-                    rv = None
-
-            except Exception as e:
-                rv = e
-
-            yield feed_for_update.url, rv
-
-    def _update_feed(
-        self,
-        url: str,
-        feed_to_update: Optional[FeedUpdateIntent],
-        entries_to_update: Iterable[EntryUpdateIntent],
-    ) -> Tuple[int, int]:
-
-        for feed_hook in self.before_feed_update_hooks:
-            feed_hook(self, url)
-
-        if feed_to_update:
-            if entries_to_update:
-                self._storage.add_or_update_entries(entries_to_update)
-            self._storage.update_feed(feed_to_update)
-
-        # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
-        # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
-
-        new_count = 0
-        updated_count = 0
-        for entry in entries_to_update:
-            if entry.new:
-                new_count += 1
-                entry_status = EntryUpdateStatus.NEW
-            else:
-                updated_count += 1
-                entry_status = EntryUpdateStatus.MODIFIED
-            for entry_hook in self.after_entry_update_hooks:
-                entry_hook(self, entry.entry, entry_status)
-
-        for feed_hook in self.after_feed_update_hooks:
-            feed_hook(self, url)
-
-        return new_count, updated_count
 
     def get_entries(
         self,

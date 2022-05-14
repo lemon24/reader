@@ -1,10 +1,16 @@
+from __future__ import annotations
+
+import itertools
 import logging
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from typing import Callable
 from typing import Iterable
+from typing import Iterator
 from typing import Optional
 from typing import Tuple
+from typing import TYPE_CHECKING
 from typing import Union
 
 from ._types import EntryData
@@ -15,46 +21,26 @@ from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import ParsedFeed
 from ._utils import PrefixLogger
+from .exceptions import FeedNotFoundError
 from .exceptions import ParseError
+from .types import EntryUpdateStatus
 from .types import ExceptionInfo
+from .types import UpdatedFeed
+from .types import UpdateResult
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ._parser import Parser
+    from ._storage import Storage
+    from ._types import EntryUpdateIntent
+    from ._types import FeedFilterOptions
+    from ._types import FeedUpdateIntent
+    from ._utils import MapType
+    from .core import Reader
+
 
 log = logging.getLogger("reader")
 
 HASH_CHANGED_LIMIT = 24
-
-
-def process_old_feed(feed: FeedForUpdate) -> FeedForUpdate:
-    if feed.stale:
-        # db_updated=None not tested (removing it causes no tests to fail).
-        #
-        # This only matters if last_updated is None *and* db_updated is
-        # not None. The way the code is, this shouldn't be possible
-        # (last_updated is always set if the feed was updated at least
-        # once, unless the database predates last_updated).
-        #
-        feed = feed._replace(updated=None, http_etag=None, http_last_modified=None)
-        log.info(
-            "update feed %r: feed marked as stale, "
-            "ignoring updated, http_etag and http_last_modified",
-            feed.url,
-        )
-    return feed
-
-
-def make_update_intents(
-    old_feed: FeedForUpdate,
-    now: datetime,
-    global_now: datetime,
-    parsed_feed: Union[ParsedFeed, None, ParseError],
-    entry_pairs: Iterable[Tuple[EntryData, Optional[EntryForUpdate]]],
-) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
-    updater = _Updater(
-        old_feed,
-        now,
-        global_now,
-        PrefixLogger(log, ["update feed %r" % old_feed.url]),
-    )
-    return updater.update(parsed_feed, entry_pairs)
 
 
 @dataclass(frozen=True)
@@ -67,8 +53,43 @@ class _Updater:
     global_now: datetime
     log: Any = log
 
+    @classmethod
+    def process_old_feed(cls, feed: FeedForUpdate) -> FeedForUpdate:
+        if feed.stale:
+            # db_updated=None not tested (removing it causes no tests to fail).
+            #
+            # This only matters if last_updated is None *and* db_updated is
+            # not None. The way the code is, this shouldn't be possible
+            # (last_updated is always set if the feed was updated at least
+            # once, unless the database predates last_updated).
+            #
+            feed = feed._replace(updated=None, http_etag=None, http_last_modified=None)
+            log.info(
+                "update feed %r: feed marked as stale, "
+                "ignoring updated, http_etag and http_last_modified",
+                feed.url,
+            )
+        return feed
+
+    @classmethod
+    def make_update_intents(
+        cls,
+        old_feed: FeedForUpdate,
+        now: datetime,
+        global_now: datetime,
+        parsed_feed: Union[ParsedFeed, None, ParseError],
+        entry_pairs: Iterable[Tuple[EntryData, Optional[EntryForUpdate]]],
+    ) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
+        updater = cls(
+            old_feed,
+            now,
+            global_now,
+            PrefixLogger(log, ["update feed %r" % old_feed.url]),
+        )
+        return updater.update(parsed_feed, entry_pairs)
+
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'old_feed', process_old_feed(self.old_feed))
+        object.__setattr__(self, 'old_feed', self.process_old_feed(self.old_feed))
 
     @property
     def url(self) -> str:
@@ -250,3 +271,151 @@ class _Updater:
             feed_to_update = FeedUpdateIntent(self.url, self.old_feed.last_updated)
 
         return feed_to_update, entries_to_update
+
+
+@dataclass(frozen=True)
+class Pipeline:
+    storage: Storage
+    parser: Parser
+    now: Callable[[], datetime]
+    map: MapType
+    # for hooks' usage _only_
+    reader: Reader
+    updater = _Updater
+
+    @classmethod
+    def from_reader(cls, reader: Reader, map: MapType) -> 'Pipeline':
+        return cls(
+            storage=reader._storage,
+            parser=reader._parser,
+            now=reader._now,
+            map=map,
+            reader=reader,
+        )
+
+    def update(self, filter_options: FeedFilterOptions) -> Iterable[UpdateResult]:
+        results = self._update_feeds(filter_options)
+
+        for url, value in results:
+            if isinstance(value, FeedNotFoundError):
+                log.info("update feed %r: feed removed during update", url)
+                continue
+
+            if isinstance(value, Exception):
+                if not isinstance(value, ParseError):
+                    raise value
+
+            yield UpdateResult(url, value)
+
+    def _update_feeds(
+        self,
+        filter_options: FeedFilterOptions,
+        map: MapType = map,
+    ) -> Iterator[Tuple[str, Union[UpdatedFeed, None, Exception]]]:
+
+        # global_now is used as first_updated_epoch for all new entries,
+        # so that the subset of new entries from an update appears before
+        # all others and the entries in it are sorted by published/updated;
+        # if we used last_updated (now) for this, they would be sorted
+        # by feed order first (due to now increasing for each feed).
+        #
+        # A side effect of relying first_updated_epoch for ordering is that
+        # for the second of two new feeds updated in the same update_feeds()
+        # call, first_updated_epoch != last_updated.
+        #
+        # Update: However, added == last_updated for the first update.
+        #
+        global_now = self.now()
+
+        # Excluding the special exception handling,
+        # this function is a pipeline that looks somewhat like this:
+        #
+        #   self._storage.get_feeds_for_update \
+        #   | self._updater.process_old_feed \
+        #   | xargs -n1 -P $workers self._parser.retrieve \
+        #   | self._parser.parse \
+        #   | self._get_entries_for_update \
+        #   | self._updater.make_update_intents \
+        #   | self._update_feed
+        #
+        # Since we only need retrieve() (and maybe parse()) to run in parallel,
+        # everything after that is in a single for loop for readability.
+
+        feeds_for_update = self.storage.get_feeds_for_update(filter_options)
+        feeds_for_update = map(self.updater.process_old_feed, feeds_for_update)
+        parse_results = self.parser.parallel(
+            feeds_for_update, self.map, self.map is not map
+        )
+
+        for feed_for_update, parse_result in parse_results:
+            rv: Union[UpdatedFeed, None, Exception]
+
+            try:
+                # give storage a chance to consume the entries in a streaming fashion;
+                parsed_entries = itertools.tee(
+                    parse_result.entries
+                    if parse_result and not isinstance(parse_result, Exception)
+                    else ()
+                )
+                entry_pairs = zip(
+                    parsed_entries[0],
+                    self.storage.get_entries_for_update(
+                        (e.feed_url, e.id) for e in parsed_entries[1]
+                    ),
+                )
+
+                now = self.now()
+                (feed_to_update, entries_to_update,) = self.updater.make_update_intents(
+                    feed_for_update, now, global_now, parse_result, entry_pairs
+                )
+
+                counts = self._update_feed(
+                    feed_for_update.url, feed_to_update, entries_to_update
+                )
+
+                if isinstance(parse_result, Exception):
+                    rv = parse_result
+                elif parse_result:
+                    rv = UpdatedFeed(feed_for_update.url, *counts)
+                else:
+                    rv = None
+
+            except Exception as e:
+                rv = e
+
+            yield feed_for_update.url, rv
+
+    def _update_feed(
+        self,
+        url: str,
+        feed_to_update: Optional[FeedUpdateIntent],
+        entries_to_update: Iterable[EntryUpdateIntent],
+    ) -> Tuple[int, int]:
+
+        for feed_hook in self.reader.before_feed_update_hooks:
+            feed_hook(self.reader, url)
+
+        if feed_to_update:
+            if entries_to_update:
+                self.storage.add_or_update_entries(entries_to_update)
+            self.storage.update_feed(feed_to_update)
+
+        # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
+        # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
+
+        new_count = 0
+        updated_count = 0
+        for entry in entries_to_update:
+            if entry.new:
+                new_count += 1
+                entry_status = EntryUpdateStatus.NEW
+            else:
+                updated_count += 1
+                entry_status = EntryUpdateStatus.MODIFIED
+            for entry_hook in self.reader.after_entry_update_hooks:
+                entry_hook(self.reader, entry.entry, entry_status)
+
+        for feed_hook in self.reader.after_feed_update_hooks:
+            feed_hook(self.reader, url)
+
+        return new_count, updated_count

@@ -330,7 +330,7 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
 
     # Entry hash changes, but reaches the update limit.
     reader._now = lambda: naive_datetime(2010, 2, 5)
-    monkeypatch.setattr('reader._updater.HASH_CHANGED_LIMIT', 3)
+    monkeypatch.setattr('reader._update.HASH_CHANGED_LIMIT', 3)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
         for i in range(1, 6):
@@ -798,7 +798,7 @@ def test_last_exception_reset(reader, call_update_method, make_new_parser):
     assert reader.get_feed('1').last_exception is None
 
 
-def test_update_feeds_unexpected_error(reader):
+def test_update_feeds_unexpected_error(reader, monkeypatch):
     parser = Parser()
     reader._parser = parser
 
@@ -810,7 +810,7 @@ def test_update_feeds_unexpected_error(reader):
     def _update_feed(*_, **__):
         raise exc
 
-    reader._update_feed = _update_feed
+    monkeypatch.setattr('reader._update.Pipeline._update_feed', _update_feed)
 
     with pytest.raises(Exception) as excinfo:
         reader.update_feeds()
