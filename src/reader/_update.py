@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import itertools
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
+from itertools import starmap
+from itertools import tee
 from typing import Any
 from typing import Callable
 from typing import Iterable
-from typing import Iterator
 from typing import Optional
 from typing import Tuple
 from typing import TYPE_CHECKING
@@ -43,10 +44,19 @@ log = logging.getLogger("reader")
 HASH_CHANGED_LIMIT = 24
 
 
-@dataclass(frozen=True)
-class _Updater:
+EntryPairs = Iterable[Tuple[EntryData, Optional[EntryForUpdate]]]
 
-    """This is an object only to make logging easier."""
+
+@dataclass(frozen=True)
+class Decider:
+
+    """Decide whether a feed or entry should be updated.
+
+    Does not interact with any dependencies, only processes data.
+
+    This is an object only to make logging easier.
+
+    """
 
     old_feed: FeedForUpdate
     now: datetime
@@ -54,7 +64,7 @@ class _Updater:
     log: Any = log
 
     @classmethod
-    def process_old_feed(cls, feed: FeedForUpdate) -> FeedForUpdate:
+    def process_feed_for_update(cls, feed: FeedForUpdate) -> FeedForUpdate:
         if feed.stale:
             # db_updated=None not tested (removing it causes no tests to fail).
             #
@@ -72,24 +82,26 @@ class _Updater:
         return feed
 
     @classmethod
-    def make_update_intents(
+    def make_intents(
         cls,
         old_feed: FeedForUpdate,
         now: datetime,
         global_now: datetime,
         parsed_feed: Union[ParsedFeed, None, ParseError],
-        entry_pairs: Iterable[Tuple[EntryData, Optional[EntryForUpdate]]],
+        entry_pairs: EntryPairs,
     ) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
-        updater = cls(
+        decider = cls(
             old_feed,
             now,
             global_now,
             PrefixLogger(log, ["update feed %r" % old_feed.url]),
         )
-        return updater.update(parsed_feed, entry_pairs)
+        return decider.update(parsed_feed, entry_pairs)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, 'old_feed', self.process_old_feed(self.old_feed))
+        object.__setattr__(
+            self, 'old_feed', self.process_feed_for_update(self.old_feed)
+        )
 
     @property
     def url(self) -> str:
@@ -113,7 +125,7 @@ class _Updater:
             return True
 
         if self.stale:
-            # logging for stale happened in process_old_feed()
+            # logging for stale happened in process_feed_for_update()
             return True
 
         # we only care if feed.updated changed if any entries changed:
@@ -191,33 +203,29 @@ class _Updater:
 
         return None, False
 
-    def get_entries_to_update(
-        self,
-        pairs: Iterable[Tuple[EntryData, Optional[EntryForUpdate]]],
-    ) -> Iterable[EntryUpdateIntent]:
-        for feed_order, (new_entry, old_entry) in reversed(list(enumerate(pairs))):
+    def get_entries_to_update(self, pairs: EntryPairs) -> Iterable[EntryUpdateIntent]:
+        for feed_order, (new, old) in reversed(list(enumerate(pairs))):
 
             # This may fail if we ever implement changing the feed URL
             # in response to a permanent redirect.
-            assert (
-                new_entry.feed_url == self.url
-            ), f'{new_entry.feed_url!r}, {self.url!r}'
+            assert new.feed_url == self.url, f'{new.feed_url!r}, {self.url!r}'
 
-            entry_new = not old_entry
-            processed_new_entry, due_to_hash_changed = self.should_update_entry(
-                new_entry, old_entry
-            )
+            is_new = not old
+            processed_new, due_to_hash_changed = self.should_update_entry(new, old)
 
-            if processed_new_entry:
+            if processed_new:
+                if due_to_hash_changed:
+                    hash_changed = (old and old.hash_changed or 0) + 1
+                else:
+                    hash_changed = 0
+
                 yield EntryUpdateIntent(
-                    processed_new_entry,
+                    processed_new,
                     self.now,
-                    self.now if entry_new else None,
-                    self.global_now if entry_new else None,
+                    self.now if is_new else None,
+                    self.global_now if is_new else None,
                     feed_order,
-                    0
-                    if not due_to_hash_changed
-                    else ((old_entry and old_entry.hash_changed or 0) + 1),
+                    hash_changed,
                 )
 
     def get_feed_to_update(
@@ -240,7 +248,7 @@ class _Updater:
     def update(
         self,
         parsed_feed: Union[ParsedFeed, None, ParseError],
-        entry_pairs: Iterable[Tuple[EntryData, Optional[EntryForUpdate]]],
+        entry_pairs: EntryPairs,
     ) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
 
         # Not modified.
@@ -275,13 +283,34 @@ class _Updater:
 
 @dataclass(frozen=True)
 class Pipeline:
+
+    """Update multiple feeds.
+
+    Calls dependencies and hooks in the right order, possibly in parallel.
+
+    Does not decide whether a feed or entry *should* be updated.
+
+    Logical pipeline (pseudocode)::
+
+        storage.get_feeds_for_update \
+        | xargs -n1 decider.process_feed_for_update \
+        | xargs -n1 -P $workers parser.retrieve \
+        | xargs -n1 parser.parse \
+        | xargs -n1 storage.get_entries_for_update \
+        | xargs -n1 decider.make_intents \
+        | xargs -n1 update_feed
+
+    At the moment, only parser.retrieve runs in parallel.
+
+    """
+
     storage: Storage
     parser: Parser
     now: Callable[[], datetime]
     map: MapType
-    # for hooks' usage _only_
+    # for hooks' usage *only*
     reader: Reader
-    updater = _Updater
+    decider = Decider
 
     @classmethod
     def from_reader(cls, reader: Reader, map: MapType) -> 'Pipeline':
@@ -294,24 +323,6 @@ class Pipeline:
         )
 
     def update(self, filter_options: FeedFilterOptions) -> Iterable[UpdateResult]:
-        results = self._update_feeds(filter_options)
-
-        for url, value in results:
-            if isinstance(value, FeedNotFoundError):
-                log.info("update feed %r: feed removed during update", url)
-                continue
-
-            if isinstance(value, Exception):
-                if not isinstance(value, ParseError):
-                    raise value
-
-            yield UpdateResult(url, value)
-
-    def _update_feeds(
-        self,
-        filter_options: FeedFilterOptions,
-        map: MapType = map,
-    ) -> Iterator[Tuple[str, Union[UpdatedFeed, None, Exception]]]:
 
         # global_now is used as first_updated_epoch for all new entries,
         # so that the subset of new entries from an update appears before
@@ -323,89 +334,89 @@ class Pipeline:
         # for the second of two new feeds updated in the same update_feeds()
         # call, first_updated_epoch != last_updated.
         #
-        # Update: However, added == last_updated for the first update.
+        # However, added == last_updated for the first update.
         #
         global_now = self.now()
 
-        # Excluding the special exception handling,
-        # this function is a pipeline that looks somewhat like this:
-        #
-        #   self._storage.get_feeds_for_update \
-        #   | self._updater.process_old_feed \
-        #   | xargs -n1 -P $workers self._parser.retrieve \
-        #   | self._parser.parse \
-        #   | self._get_entries_for_update \
-        #   | self._updater.make_update_intents \
-        #   | self._update_feed
-        #
-        # Since we only need retrieve() (and maybe parse()) to run in parallel,
-        # everything after that is in a single for loop for readability.
+        is_parallel = self.map is not map
+        process_parse_result = partial(self.process_parse_result, global_now)
 
+        # assemble pipeline
         feeds_for_update = self.storage.get_feeds_for_update(filter_options)
-        feeds_for_update = map(self.updater.process_old_feed, feeds_for_update)
-        parse_results = self.parser.parallel(
-            feeds_for_update, self.map, self.map is not map
+        feeds_for_update = map(self.decider.process_feed_for_update, feeds_for_update)
+        parse_results = self.parser.parallel(feeds_for_update, self.map, is_parallel)
+        update_results = starmap(process_parse_result, parse_results)
+
+        for url, value in update_results:
+            if isinstance(value, FeedNotFoundError):
+                log.info("update feed %r: feed removed during update", url)
+                continue
+
+            if isinstance(value, Exception):
+                if not isinstance(value, ParseError):
+                    raise value
+
+            yield UpdateResult(url, value)
+
+    def process_parse_result(
+        self,
+        global_now: datetime,
+        feed: FeedForUpdate,
+        result: Union[Optional[ParsedFeed], ParseError],
+    ) -> Tuple[str, Union[UpdatedFeed, None, Exception]]:
+
+        make_intents = partial(
+            self.decider.make_intents, feed, self.now(), global_now, result
         )
 
-        for feed_for_update, parse_result in parse_results:
-            rv: Union[UpdatedFeed, None, Exception]
+        try:
+            # assemble pipeline
+            entry_pairs = self.get_entry_pairs(result)
+            intents = make_intents(entry_pairs)
+            counts = self.update_feed(feed.url, *intents)
 
-            try:
-                # give storage a chance to consume the entries in a streaming fashion;
-                parsed_entries = itertools.tee(
-                    parse_result.entries
-                    if parse_result and not isinstance(parse_result, Exception)
-                    else ()
-                )
-                entry_pairs = zip(
-                    parsed_entries[0],
-                    self.storage.get_entries_for_update(
-                        (e.feed_url, e.id) for e in parsed_entries[1]
-                    ),
-                )
+        except Exception as e:
+            return feed.url, e
 
-                now = self.now()
-                (feed_to_update, entries_to_update,) = self.updater.make_update_intents(
-                    feed_for_update, now, global_now, parse_result, entry_pairs
-                )
+        if not result or isinstance(result, Exception):
+            return feed.url, result
 
-                counts = self._update_feed(
-                    feed_for_update.url, feed_to_update, entries_to_update
-                )
+        return feed.url, UpdatedFeed(feed.url, *counts)
 
-                if isinstance(parse_result, Exception):
-                    rv = parse_result
-                elif parse_result:
-                    rv = UpdatedFeed(feed_for_update.url, *counts)
-                else:
-                    rv = None
+    def get_entry_pairs(
+        self, result: Union[Optional[ParsedFeed], ParseError]
+    ) -> EntryPairs:
+        if not result or isinstance(result, Exception):
+            return ()
 
-            except Exception as e:
-                rv = e
+        # give storage a chance to consume entries in a streaming fashion
+        entries1, entries2 = tee(result.entries)
+        entries_for_update = self.storage.get_entries_for_update(
+            (e.feed_url, e.id) for e in entries1
+        )
+        return zip(entries2, entries_for_update)
 
-            yield feed_for_update.url, rv
-
-    def _update_feed(
+    def update_feed(
         self,
         url: str,
-        feed_to_update: Optional[FeedUpdateIntent],
-        entries_to_update: Iterable[EntryUpdateIntent],
+        feed: Optional[FeedUpdateIntent],
+        entries: Iterable[EntryUpdateIntent],
     ) -> Tuple[int, int]:
 
         for feed_hook in self.reader.before_feed_update_hooks:
             feed_hook(self.reader, url)
 
-        if feed_to_update:
-            if entries_to_update:
-                self.storage.add_or_update_entries(entries_to_update)
-            self.storage.update_feed(feed_to_update)
+        if feed:
+            if entries:
+                self.storage.add_or_update_entries(entries)
+            self.storage.update_feed(feed)
 
         # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
 
         new_count = 0
         updated_count = 0
-        for entry in entries_to_update:
+        for entry in entries:
             if entry.new:
                 new_count += 1
                 entry_status = EntryUpdateStatus.NEW

@@ -810,7 +810,7 @@ def test_update_feeds_unexpected_error(reader, monkeypatch):
     def _update_feed(*_, **__):
         raise exc
 
-    monkeypatch.setattr('reader._update.Pipeline._update_feed', _update_feed)
+    monkeypatch.setattr('reader._update.Pipeline.update_feed', _update_feed)
 
     with pytest.raises(Exception) as excinfo:
         reader.update_feeds()
