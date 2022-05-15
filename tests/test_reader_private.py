@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from datetime import datetime
 
 import pytest
@@ -11,6 +12,10 @@ from reader import EntryNotFoundError
 from reader import Feed
 from reader import FeedNotFoundError
 from reader import make_reader
+from reader._parser import RetrieveResult
+from reader._types import EntryData
+from reader._types import FeedData
+from reader._types import FeedFilterOptions
 
 
 @pytest.mark.parametrize('entry_updated', [utc_datetime(2010, 1, 1), None])
@@ -144,3 +149,52 @@ def test_delete_entries(reader):
     parser.entries[1][1] = entry
     reader.update_feeds()
     assert get_entry_ids() == ['1, 1']
+
+
+def test_retriever_parser_process_hooks(reader):
+    """Test retriever.process_feed_for_update() and
+    parser.process_entry_pairs() get called
+    (both private, but used by plugins).
+
+    """
+
+    class Retriever:
+        slow_to_read = False
+
+        @contextmanager
+        def __call__(self, url, http_etag, *_, **__):
+            yield RetrieveResult('file', 'x.test', http_etag=http_etag.upper())
+
+        def validate_url(self, url):
+            pass
+
+        def process_feed_for_update(self, feed):
+            assert feed.http_etag is None
+            return feed._replace(http_etag='etag')
+
+    class Parser:
+        http_accept = 'x.test'
+
+        def __call__(self, url, file, headers):
+            feed = FeedData(url, title=file.upper())
+            entries = [EntryData(url, 'id', title='entry')]
+            return feed, entries
+
+        def process_entry_pairs(self, url, pairs):
+            for new, old in pairs:
+                yield new._replace(title=new.title.upper()), old
+
+    reader._parser.mount_retriever('test:', Retriever())
+    reader._parser.mount_parser_by_mime_type(Parser())
+
+    reader.add_feed('test:one')
+    reader.update_feeds()
+
+    (feed_for_update,) = reader._storage.get_feeds_for_update(
+        FeedFilterOptions('test:one')
+    )
+    assert feed_for_update.http_etag == 'ETAG'
+
+    (entry,) = reader.get_entries()
+    assert entry.title == 'ENTRY'
+    assert entry.feed.title == 'FILE'

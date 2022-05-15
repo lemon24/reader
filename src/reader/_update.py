@@ -292,12 +292,14 @@ class Pipeline:
 
     Logical pipeline (pseudocode)::
 
-        storage.get_feeds_for_update \
-        | xargs -n1 decider.process_feed_for_update \
-        | xargs -n1 -P $workers parser.retrieve \
-        | xargs -n1 parser.parse \
-        | xargs -n1 storage.get_entries_for_update \
-        | xargs -n1 decider.make_intents \
+        storage.get_feeds_for_update
+        | xargs -n1 parser.process_feed_for_update
+        | xargs -n1 decider.process_feed_for_update
+        | xargs -n1 -P $workers parser.retrieve
+        | xargs -n1 parser.parse
+        | xargs -n1 storage.get_entries_for_update
+        | xargs -n1 parser.process_entry_pairs
+        | xargs -n1 decider.make_intents
         | xargs -n1 update_feed
 
     At the moment, only parser.retrieve runs in parallel.
@@ -343,6 +345,7 @@ class Pipeline:
 
         # assemble pipeline
         feeds_for_update = self.storage.get_feeds_for_update(filter_options)
+        feeds_for_update = map(self.parser.process_feed_for_update, feeds_for_update)
         feeds_for_update = map(self.decider.process_feed_for_update, feeds_for_update)
         parse_results = self.parser.parallel(feeds_for_update, self.map, is_parallel)
         update_results = starmap(process_parse_result, parse_results)
@@ -372,6 +375,10 @@ class Pipeline:
         try:
             # assemble pipeline
             entry_pairs = self.get_entry_pairs(result)
+            if result and not isinstance(result, Exception):
+                entry_pairs = self.parser.process_entry_pairs(
+                    feed.url, result.mime_type, entry_pairs
+                )
             intents = make_intents(entry_pairs)
             counts = self.update_feed(feed.url, *intents)
 

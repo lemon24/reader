@@ -95,6 +95,12 @@ class Parser:
     def validate_url(self, url):
         pass
 
+    def process_feed_for_update(self, feed):
+        return feed
+
+    def process_entry_pairs(self, url, mime_type, pairs):
+        return pairs
+
 
 class BlockingParser(Parser):
     def __init__(self, *args, **kwargs):

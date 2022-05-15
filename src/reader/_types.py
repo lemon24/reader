@@ -209,6 +209,7 @@ class ParsedFeed(NamedTuple):
     entries: Iterable[EntryData]
     http_etag: Optional[str] = None
     http_last_modified: Optional[str] = None
+    mime_type: Optional[str] = None
 
 
 class FeedForUpdate(NamedTuple):

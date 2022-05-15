@@ -44,7 +44,9 @@ from ._requests_utils import SessionWrapper
 from ._requests_utils import TimeoutHTTPAdapter
 from ._requests_utils import TimeoutType
 from ._types import EntryData
+from ._types import EntryForUpdate
 from ._types import FeedData
+from ._types import FeedForUpdate
 from ._types import ParsedFeed
 from ._url_utils import extract_path
 from ._url_utils import normalize_url
@@ -71,7 +73,7 @@ class RetrieveResult(NamedTuple):
     headers: Optional[Headers] = None
 
 
-class RetrieverType(Protocol):
+class RetrieverType(Protocol):  # pragma: no cover
 
     slow_to_read: bool
 
@@ -81,7 +83,7 @@ class RetrieverType(Protocol):
         http_etag: Optional[str],
         http_last_modified: Optional[str],
         http_accept: Optional[str],
-    ) -> ContextManager[Optional[RetrieveResult]]:  # pragma: no cover
+    ) -> ContextManager[Optional[RetrieveResult]]:
         ...
 
     def validate_url(self, url: str) -> None:
@@ -93,34 +95,49 @@ class RetrieverType(Protocol):
         """
 
 
+@runtime_checkable
+class FeedForUpdateRetrieverType(RetrieverType, Protocol):  # pragma: no cover
+    def process_feed_for_update(self, feed: FeedForUpdate) -> FeedForUpdate:
+        ...
+
+
 FeedAndEntries = Tuple[FeedData, Collection[EntryData]]
+EntryPair = Tuple[EntryData, Optional[EntryForUpdate]]
 
 
-class ParserType(Protocol):
+class ParserType(Protocol):  # pragma: no cover
     def __call__(
         self, url: str, file: IO[bytes], headers: Optional[Headers]
-    ) -> FeedAndEntries:  # pragma: no cover
+    ) -> FeedAndEntries:
         ...
 
 
 @runtime_checkable
-class AwareParserType(ParserType, Protocol):
+class HTTPAcceptParserType(ParserType, Protocol):  # pragma: no cover
     @property
-    def http_accept(self) -> str:  # pragma: no cover
+    def http_accept(self) -> str:
         ...
 
 
-class FeedArgument(Protocol):
+@runtime_checkable
+class EntryPairsParserType(ParserType, Protocol):  # pragma: no cover
+    def process_entry_pairs(
+        self, url: str, pairs: Iterable[EntryPair]
+    ) -> Iterable[EntryPair]:
+        ...
+
+
+class FeedArgument(Protocol):  # pragma: no cover
     @property
-    def url(self) -> str:  # pragma: no cover
+    def url(self) -> str:
         ...
 
     @property
-    def http_etag(self) -> Optional[str]:  # pragma: no cover
+    def http_etag(self) -> Optional[str]:
         ...
 
     @property
-    def http_last_modified(self) -> Optional[str]:  # pragma: no cover
+    def http_last_modified(self) -> Optional[str]:
         ...
 
 
@@ -298,9 +315,17 @@ class Parser:
         return make_context()
 
     def parse(self, url: str, result: RetrieveResult) -> ParsedFeed:
+        parser, mime_type = self.get_parser(url, result.mime_type)
+        feed, entries = parser(url, result.file, result.headers)
+        return ParsedFeed(
+            feed, entries, result.http_etag, result.http_last_modified, mime_type
+        )
+
+    def get_parser(
+        self, url: str, mime_type: Optional[str]
+    ) -> Tuple[ParserType, Optional[str]]:
         parser = self.get_parser_by_url(url)
         if not parser:
-            mime_type = result.mime_type
             if not mime_type:
                 mime_type, _ = mimetypes.guess_type(url)
 
@@ -317,13 +342,7 @@ class Parser:
             if not parser:
                 raise ParseError(url, message=f"no parser for MIME type {mime_type!r}")
 
-        feed, entries = parser(
-            url,
-            result.file,
-            result.headers,
-        )
-
-        return ParsedFeed(feed, entries, result.http_etag, result.http_last_modified)
+        return parser, mime_type
 
     def validate_url(self, url: str) -> None:
         """Check if ``url`` is valid without actually retrieving it.
@@ -357,7 +376,7 @@ class Parser:
         self, parser: ParserType, http_accept: Optional[str] = None
     ) -> None:
         if not http_accept:
-            if not isinstance(parser, AwareParserType):
+            if not isinstance(parser, HTTPAcceptParserType):
                 raise TypeError("unaware parser type with no http_accept given")
             http_accept = parser.http_accept
 
@@ -420,6 +439,20 @@ class Parser:
                 yield session
             finally:
                 self.session = None
+
+    def process_feed_for_update(self, feed: FeedForUpdate) -> FeedForUpdate:
+        retriever = self.get_retriever(feed.url)
+        if not isinstance(retriever, FeedForUpdateRetrieverType):
+            return feed
+        return retriever.process_feed_for_update(feed)
+
+    def process_entry_pairs(
+        self, url: str, mime_type: Optional[str], pairs: Iterable[EntryPair]
+    ) -> Iterable[EntryPair]:
+        parser, _ = self.get_parser(url, mime_type)
+        if not isinstance(parser, EntryPairsParserType):
+            return pairs
+        return parser.process_entry_pairs(url, pairs)
 
 
 @contextmanager

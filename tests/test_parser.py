@@ -172,7 +172,7 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(data_dir.join(feed_filename + '.py').read(), expected)
 
-    feed, entries, _, _ = parse(feed_url)
+    feed, entries, _, _, mime_type = parse(feed_url)
     entries = list(entries)
 
     assert feed == expected['feed']
@@ -192,7 +192,7 @@ def test_no_mime_type(monkeypatch, parse, make_url, data_dir):
 
     parse.mount_parser_by_url(feed_url, custom_parser)
 
-    feed, entries, _, _ = parse(feed_url)
+    feed, entries, _, _, mime_type = parse(feed_url)
 
     with open(str(feed_path), encoding='utf-8') as f:
         expected_feed = FeedData(url=feed_url, title=f.read())
@@ -354,18 +354,18 @@ def test_parse_returns_etag_last_modified(
     make_http_etag_last_modified_url.last_modified = 'last_modified'
 
     feed_url = make_http_etag_last_modified_url(data_dir.join('full.' + feed_type))
-    _, _, etag, last_modified = parse(feed_url)
+    _, _, etag, last_modified, _ = parse(feed_url)
 
     assert etag == 'etag'
     assert last_modified == 'last_modified'
 
     feed_url = make_http_url(data_dir.join('full.atom'))
-    _, _, etag, last_modified = parse(feed_url)
+    _, _, etag, last_modified, _ = parse(feed_url)
 
     assert etag == last_modified == None
 
     feed_url = make_relative_path_url(data_dir.join('full.' + feed_type))
-    _, _, etag, last_modified = parse(feed_url)
+    _, _, etag, last_modified, _ = parse(feed_url)
 
     assert etag == last_modified == None
 
@@ -383,7 +383,7 @@ def test_parse_local_timezone(monkeypatch_tz, request, parse, tz, data_dir):
     exec(feed_path.new(ext='.atom.py').read(), expected)
 
     monkeypatch_tz(tz)
-    feed, _, _, _ = parse(str(feed_path))
+    feed, _, _, _, _ = parse(str(feed_path))
     assert feed.updated == expected['feed'].updated
 
 
@@ -414,7 +414,7 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
     parse.session_hooks.response.append(do_nothing_plugin)
     parse.session_hooks.response.append(rewrite_to_empty_plugin)
 
-    feed, _, _, _ = parse(feed_url)
+    feed, _, _, _, _ = parse(feed_url)
     assert req_plugin.called
     assert do_nothing_plugin.called
     assert rewrite_to_empty_plugin.called
@@ -920,6 +920,7 @@ def test_parser_selection():
         'http:one',
         'etag',
         None,
+        'type/http',
     )
     assert http_retriever.last_http_accept == 'type/http'
     assert http_parser.last_headers == 'headers'
@@ -942,6 +943,7 @@ def test_parser_selection():
         'file:one',
         None,
         'last-modified',
+        'type/file',
     )
     assert file_retriever.last_http_accept == 'type/http,type/file,text/plain;q=0.8'
     assert file_parser.last_headers is None
@@ -969,13 +971,25 @@ def test_parser_selection():
     assert "unaware parser" in str(excinfo.value)
 
     parse.mount_parser_by_mime_type(make_dummy_parser('fallbackp-'), '*/*')
-    assert parse('nomt:one') == ('fallbackp-nomt', 'nomt:one', None, None)
-    assert parse('unkn:one') == ('fallbackp-unkn', 'unkn:one', None, None)
+    assert parse('nomt:one') == (
+        'fallbackp-nomt',
+        'nomt:one',
+        None,
+        None,
+        'application/octet-stream',
+    )
+    assert parse('unkn:one') == (
+        'fallbackp-unkn',
+        'unkn:one',
+        None,
+        None,
+        'type/unknown',
+    )
     assert nomt_retriever.last_http_accept == 'type/http,type/file,*/*,text/plain;q=0.8'
 
-    assert parse('file:o') == ('urlp-file', 'file:o', None, None)
+    assert parse('file:o') == ('urlp-file', 'file:o', None, None, 'type/file')
     assert file_retriever.last_http_accept is None
-    assert parse('file:///o') == ('urlp-file', 'file:///o', None, None)
+    assert parse('file:///o') == ('urlp-file', 'file:///o', None, None, 'type/file')
 
 
 def test_retriever_selection():
@@ -990,12 +1004,14 @@ def test_retriever_selection():
         'http://generic.com/',
         'etag',
         None,
+        'type/subtype',
     )
     assert parse('http://specific.com/', None, 'last-modified') == (
         'specific',
         'http://specific.com/',
         None,
         'last-modified',
+        'type/subtype',
     )
 
     with pytest.raises(ParseError) as excinfo:
