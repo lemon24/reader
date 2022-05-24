@@ -197,16 +197,18 @@ def update_with_response(rv, response):
         else:
             data = rv[tweet.conversation_id] = Conversation(tweet.conversation_id)
 
+        user_ids = {tweet.author_id}
+
         data.tweets[tweet.id] = tweet
         for ref in tweet.referenced_tweets or ():
             if ref.id in incl_tweets:
-                data.tweets[ref.id] = incl_tweets[ref.id]
+                ref_tweet = incl_tweets[ref.id]
+                data.tweets[ref.id] = ref_tweet
+                user_ids.add(ref_tweet.author_id)
 
-        for user_id in filter(None, [tweet.author_id]):
+        for user_id in user_ids:
             if user_id in incl_users:
                 data.users[user_id] = incl_users[user_id]
-
-        # TODO: also for users in entities?
 
         if tweet.attachments:
             for media_key in tweet.attachments.get('media_keys', ()):

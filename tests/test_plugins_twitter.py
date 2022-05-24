@@ -7,6 +7,16 @@ from tweepy import User
 from reader._plugins import twitter
 
 
+# scenario "media":
+#   USER_0 tweets TWEET_MEDIA_0 including MEDIA_0
+#
+# scenario "replyquote"
+#   USER_0 tweets thread TWEET_REPLYQUOTE_0 and TWEET_REPLYQUOTE_1;
+#   TWEET_REPLYQUOTE_0 quotes TWEET_REPLYQUOTE_QUOTED of USER_QUOTED;
+#   TWEET_REPLYQUOTE_QUOTED replies to some other user, mentioning them;
+#   both TWEET_REPLYQUOTE_0 and TWEET_REPLYQUOTE_QUOTED are in includes
+
+
 USER_0 = {
     'description': 'one https://t.co/example two',
     'profile_image_url': 'https://pbs.twimg.com/profile/0.png',
@@ -41,7 +51,7 @@ USER_0 = {
     'name': 'name',
 }
 
-TWEET_0 = {
+TWEET_MEDIA_0 = {
     'created_at': '2022-01-01T00:00:00.000Z',
     'lang': 'en',
     'entities': {
@@ -102,8 +112,82 @@ MEDIA_0 = {
 }
 
 
-def make_response(data=(), users=None, media=None, tweets=None):
+TWEET_REPLYQUOTE_0 = {
+    'entities': {
+        'urls': [
+            {
+                'start': 4,
+                'end': 28,
+                'url': 'https://t.co/quotedtweet',
+                'expanded_url': 'https://twitter.com/quoteduser/status/2011',
+                'display_url': 'twitter.com/quoteduser/…',
+            }
+        ]
+    },
+    'conversation_id': '2100',
+    'referenced_tweets': [{'type': 'quoted', 'id': '2011'}],
+    'lang': 'en',
+    'created_at': '2022-01-01T00:21:00.000Z',
+    'public_metrics': {
+        'retweet_count': 10,
+        'reply_count': 1,
+        'like_count': 11,
+        'quote_count': 12,
+    },
+    'text': "one https://t.co/quotedtweet indeed",
+    'source': 'Twitter Web App',
+    'id': '2100',
+    'author_id': '1000',
+}
 
+TWEET_REPLYQUOTE_1 = {
+    'conversation_id': '2100',
+    'referenced_tweets': [{'type': 'replied_to', 'id': '2100'}],
+    'lang': 'en',
+    'created_at': '2022-01-01T00:21:01.000Z',
+    'public_metrics': {
+        'retweet_count': 21,
+        'reply_count': 0,
+        'like_count': 22,
+        'quote_count': 23,
+    },
+    'text': "two",
+    'source': 'Twitter Web App',
+    'id': '2101',
+    'author_id': '1000',
+}
+
+TWEET_REPLYQUOTE_QUOTED = {
+    'conversation_id': '2000',
+    'referenced_tweets': [{'type': 'replied_to', 'id': '2000'}],
+    'entities': {
+        'mentions': [{'start': 6, 'end': 18, 'username': 'someoneelse', 'id': '1102'}]
+    },
+    'lang': 'en',
+    'created_at': '2022-01-01T00:20:11.000Z',
+    'public_metrics': {
+        'retweet_count': 100,
+        'reply_count': 200,
+        'like_count': 300,
+        'quote_count': 400,
+    },
+    'text': "re to @someoneelse yes",
+    'source': 'some.app',
+    'id': '2011',
+    'author_id': '1101',
+}
+
+USER_QUOTED = {
+    'id': '1101',
+    'profile_image_url': 'https://pbs.twimg.com/profile/1101.jpg',
+    'username': 'quoteduser',
+    'description': 'whatever',
+    'verified': False,
+    'name': 'Quoted User',
+}
+
+
+def make_response(data=(), users=None, media=None, tweets=None):
     includes = {}
     if users:
         includes['users'] = list(map(User, users))
@@ -120,19 +204,31 @@ def make_response(data=(), users=None, media=None, tweets=None):
     )
 
 
-def test_basic(make_reader, monkeypatch):
-    def retrieve_user_responses(username, etag):
-        assert username == 'user'
-        assert etag.bearer_token == 'abcd'
-        return User(USER_0), [make_response([TWEET_0], [USER_0], [MEDIA_0])]
-
-    monkeypatch.setattr(twitter, 'retrieve_user_responses', retrieve_user_responses)
-
+@pytest.fixture
+def reader(make_reader):
     reader = make_reader(':memory:', plugins=[twitter.init_reader])
     reader.add_feed('https://twitter.com/user')
     reader.set_tag((), reader.make_reader_reserved_name('twitter'), {'token': 'abcd'})
+    return reader
 
-    reader.update_feeds()
+
+@pytest.fixture
+def update_with_user_response(reader, monkeypatch):
+    def update_with_user_response(data, users, media=None, tweets=None):
+        def retrieve_user_responses(username, etag):
+            assert username == 'user'
+            assert etag.bearer_token == 'abcd'
+            return User(users[0]), [make_response(data, users, media, tweets)]
+
+        monkeypatch.setattr(twitter, 'retrieve_user_responses', retrieve_user_responses)
+
+        return reader.update_feed('https://twitter.com/user')
+
+    return update_with_user_response
+
+
+def test_basic(reader, update_with_user_response):
+    rv = update_with_user_response([TWEET_MEDIA_0], [USER_0], [MEDIA_0])
 
     (entry,) = reader.get_entries()
     assert entry.id == '2000'
@@ -151,8 +247,103 @@ def test_basic(make_reader, monkeypatch):
 
     assert value == {
         'id': 2000,
-        'tweets': {'2000': TWEET_0},
+        'tweets': {'2000': TWEET_MEDIA_0},
         'users': {'1000': USER_0},
         'media': {'3_3000': MEDIA_0},
+        'polls': {},
+    }
+
+
+def get_entry_json(entry):
+    content = [c.value for c in entry.content if c.type == 'application/x.twitter+json']
+    assert len(content) == 1, entry
+    return content[0]
+
+
+def test_update_with_media(reader, update_with_user_response):
+    tweet = {
+        'created_at': '2022-01-01T00:00:00.000Z',
+        'conversation_id': '2000',
+        'text': 'text',
+        'id': '2000',
+        'attachments': {'media_keys': ['3_3000']},
+        'author_id': '1000',
+    }
+    user = {
+        'username': 'user',
+        'id': '1000',
+        'name': 'name',
+    }
+    media = {
+        'media_key': '3_3000',
+        'type': 'photo',
+    }
+    rv = update_with_user_response([tweet], [user], [media])
+
+    (entry,) = reader.get_entries()
+
+    assert entry.id == '2000'
+
+    # TODO: entry.published
+    # TODO: entry.updated
+
+    assert get_entry_json(entry) == {
+        'id': 2000,
+        'tweets': {'2000': tweet},
+        'users': {'1000': user},
+        'media': {'3_3000': media},
+        'polls': {},
+    }
+
+
+def test_update_with_reply_and_quote(reader, update_with_user_response):
+    # TODO: also test update in two parts, and also with quote in the second tweet
+
+    tweet_0 = {
+        'conversation_id': '2100',
+        'referenced_tweets': [{'type': 'quoted', 'id': '2011'}],
+        'created_at': '2022-01-01T00:21:00.000Z',
+        'text': "one",
+        'id': '2100',
+        'author_id': '1000',
+    }
+    tweet_1 = {
+        'conversation_id': '2100',
+        'referenced_tweets': [{'type': 'replied_to', 'id': '2100'}],
+        'created_at': '2022-01-01T00:21:01.000Z',
+        'text': "two",
+        'id': '2101',
+        'author_id': '1000',
+    }
+    tweet_quoted = {
+        'conversation_id': '2000',
+        'referenced_tweets': [{'type': 'replied_to', 'id': '2000'}],
+        'created_at': '2022-01-01T00:20:11.000Z',
+        'text': "quote",
+        'id': '2011',
+        'author_id': '1101',
+    }
+    user = {
+        'username': 'user',
+        'id': '1000',
+        'name': 'name',
+    }
+    user_quoted = {'id': '1101', 'username': 'quoteduser', 'name': 'quoted'}
+    rv = update_with_user_response(
+        [tweet_0, tweet_1], [user, user_quoted], tweets=[tweet_0, tweet_quoted]
+    )
+
+    (entry,) = reader.get_entries()
+
+    assert entry.id == '2100'
+
+    # TODO: entry.published
+    # TODO: entry.updated
+
+    assert get_entry_json(entry) == {
+        'id': 2100,
+        'tweets': {'2100': tweet_0, '2101': tweet_1, '2011': tweet_quoted},
+        'users': {'1000': user, '1101': user_quoted},
+        'media': {},
         'polls': {},
     }
