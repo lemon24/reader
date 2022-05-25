@@ -15,6 +15,9 @@ from reader._plugins import twitter
 #   TWEET_REPLYQUOTE_0 quotes TWEET_REPLYQUOTE_QUOTED of USER_QUOTED;
 #   TWEET_REPLYQUOTE_QUOTED replies to some other user, mentioning them;
 #   both TWEET_REPLYQUOTE_0 and TWEET_REPLYQUOTE_QUOTED are in includes
+#
+# scenario "retweet":
+#   USER_0 retweets TWEET_RETWEET_RETWEETED by USER_RETWEETED in TWEET_RETWEET_0
 
 
 USER_0 = {
@@ -187,6 +190,52 @@ USER_QUOTED = {
 }
 
 
+TWEET_RETWEET_0 = {
+    'conversation_id': '2100',
+    'referenced_tweets': [{'type': 'retweeted', 'id': '2000'}],
+    'entities': {
+        'mentions': [{'start': 3, 'end': 17, 'username': 'retweeteduser', 'id': '1100'}]
+    },
+    'lang': 'en',
+    'created_at': '2022-01-01T00:21:00.000Z',
+    'public_metrics': {
+        'retweet_count': 10,
+        'reply_count': 0,
+        'like_count': 0,
+        'quote_count': 0,
+    },
+    'text': "RT @retweeteduser: original tweet",
+    'source': 'Twitter Web App',
+    'id': '2100',
+    'author_id': '1000',
+}
+
+TWEET_RETWEET_RETWEETED = {
+    'conversation_id': '2000',
+    'lang': 'en',
+    'created_at': '2022-01-01T00:20:00.000Z',
+    'public_metrics': {
+        'retweet_count': 5,
+        'reply_count': 1,
+        'like_count': 2,
+        'quote_count': 3,
+    },
+    'text': "original tweet",
+    'source': 'Twitter for Android',
+    'id': '2000',
+    'author_id': '1100',
+}
+
+USER_RETWEETED = {
+    'id': '1100',
+    'profile_image_url': 'https://pbs.twimg.com/profile/1100.jpg',
+    'username': 'retweeteduser',
+    'description': 'also whatever',
+    'verified': True,
+    'name': 'also name',
+}
+
+
 def make_response(data=(), users=None, media=None, tweets=None):
     includes = {}
     if users:
@@ -269,15 +318,8 @@ def test_update_with_media(reader, update_with_user_response):
         'attachments': {'media_keys': ['3_3000']},
         'author_id': '1000',
     }
-    user = {
-        'username': 'user',
-        'id': '1000',
-        'name': 'name',
-    }
-    media = {
-        'media_key': '3_3000',
-        'type': 'photo',
-    }
+    user = {'username': 'user', 'id': '1000', 'name': 'name'}
+    media = {'media_key': '3_3000', 'type': 'photo'}
     rv = update_with_user_response([tweet], [user], [media])
 
     (entry,) = reader.get_entries()
@@ -323,11 +365,7 @@ def test_update_with_reply_and_quote(reader, update_with_user_response):
         'id': '2011',
         'author_id': '1101',
     }
-    user = {
-        'username': 'user',
-        'id': '1000',
-        'name': 'name',
-    }
+    user = {'username': 'user', 'id': '1000', 'name': 'name'}
     user_quoted = {'id': '1101', 'username': 'quoteduser', 'name': 'quoted'}
     rv = update_with_user_response(
         [tweet_0, tweet_1], [user, user_quoted], tweets=[tweet_0, tweet_quoted]
@@ -344,6 +382,45 @@ def test_update_with_reply_and_quote(reader, update_with_user_response):
         'id': 2100,
         'tweets': {'2100': tweet_0, '2101': tweet_1, '2011': tweet_quoted},
         'users': {'1000': user, '1101': user_quoted},
+        'media': {},
+        'polls': {},
+    }
+
+
+def test_update_with_retweet(reader, update_with_user_response):
+    tweet_0 = {
+        'conversation_id': '2100',
+        'referenced_tweets': [{'type': 'retweeted', 'id': '2000'}],
+        'created_at': '2022-01-01T00:21:00.000Z',
+        'text': "one",
+        'id': '2100',
+        'author_id': '1000',
+    }
+    tweet_retweeted = {
+        'conversation_id': '2000',
+        'referenced_tweets': [{'type': 'replied_to', 'id': '2000'}],
+        'created_at': '2022-01-01T00:20:00.000Z',
+        'text': "quote",
+        'id': '2000',
+        'author_id': '1100',
+    }
+    user = {'username': 'user', 'id': '1000', 'name': 'name'}
+    user_retweeted = {'id': '1100', 'username': 'retweeteduser', 'name': 'also name'}
+    rv = update_with_user_response(
+        [tweet_0], [user, user_retweeted], tweets=[tweet_0, tweet_retweeted]
+    )
+
+    (entry,) = reader.get_entries()
+
+    assert entry.id == '2100'
+
+    # TODO: entry.published
+    # TODO: entry.updated
+
+    assert get_entry_json(entry) == {
+        'id': 2100,
+        'tweets': {'2100': tweet_0, '2000': tweet_retweeted},
+        'users': {'1000': user, '1100': user_retweeted},
         'media': {},
         'polls': {},
     }
