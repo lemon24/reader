@@ -3,6 +3,7 @@ from tweepy import Media
 from tweepy import Response
 from tweepy import Tweet
 from tweepy import User
+from utils import utc_datetime as datetime
 
 from reader._plugins import twitter
 
@@ -311,7 +312,7 @@ def get_entry_json(entry):
 
 def test_update_with_media(reader, update_with_user_response):
     tweet = {
-        'created_at': '2022-01-01T00:00:00.000Z',
+        'created_at': '2022-01-01T00:20:00.000Z',
         'conversation_id': '2000',
         'text': 'text',
         'id': '2000',
@@ -325,9 +326,8 @@ def test_update_with_media(reader, update_with_user_response):
     (entry,) = reader.get_entries()
 
     assert entry.id == '2000'
-
-    # TODO: entry.published
-    # TODO: entry.updated
+    assert entry.published == datetime(2022, 1, 1, 0, 20, 0)
+    assert entry.updated == datetime(2022, 1, 1, 0, 20, 0)
 
     assert get_entry_json(entry) == {
         'id': 2000,
@@ -374,9 +374,8 @@ def test_update_with_reply_and_quote(reader, update_with_user_response):
     (entry,) = reader.get_entries()
 
     assert entry.id == '2100'
-
-    # TODO: entry.published
-    # TODO: entry.updated
+    assert entry.published == datetime(2022, 1, 1, 0, 21, 0)
+    assert entry.updated == datetime(2022, 1, 1, 0, 21, 1)
 
     assert get_entry_json(entry) == {
         'id': 2100,
@@ -413,9 +412,8 @@ def test_update_with_retweet(reader, update_with_user_response):
     (entry,) = reader.get_entries()
 
     assert entry.id == '2100'
-
-    # TODO: entry.published
-    # TODO: entry.updated
+    assert entry.published == datetime(2022, 1, 1, 0, 21, 0)
+    assert entry.updated == datetime(2022, 1, 1, 0, 21, 0)
 
     assert get_entry_json(entry) == {
         'id': 2100,

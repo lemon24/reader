@@ -228,61 +228,72 @@ class Parser:
 
     def __call__(self, url, file, headers):
         user, data = file
-
-        title = f"{user.name} (@{user.username})"
-        if user.verified:
-            title += " ✓"
-
-        feed = FeedData(
-            url,
-            # TODO: updated
-            title=title,
-            # TODO: expand from user.entities
-            link=user.url,
-            author=f"@{user.username}",
-            # TODO: expand urls from user.entities
-            subtitle=user.description,
-            version="twitter",
-        )
-
+        feed = render_user_feed(url, user)
         entries = (
             EntryData(
                 url,
-                int(conversation_id),
-                # tweetpy objects converted to JSON in process_entry_pairs
+                conversation_id,
+                # tweety objects converted to JSON in process_entry_pairs
                 content=[Content(conversation)],
             )
             for conversation_id, conversation in data.items()
         )
-
         return feed, entries
 
     def process_entry_pairs(self, url, pairs):
 
         for new, old_for_update in pairs:
-            data = new.content[0].value
-
+            old = None
             if old_for_update:
                 old = self.reader.get_entry(old_for_update)
-                data.update(
-                    Conversation.from_json(
-                        next(c for c in old.content if c.type == MIME_TYPE_JSON).value
-                    )
+                old_json = next(
+                    (c.value for c in old.content if c.type == MIME_TYPE_JSON), None
                 )
+                if old_json:
+                    new.content[0].value.update(Conversation.from_json(old_json))
 
-            new = new._replace(
-                content=[
-                    Content(data.to_json(), MIME_TYPE_JSON)
-                    # TODO: render to html
-                ]
-            )
-
-            # TODO: updated, title, link, author, published
-
+            new = render_user_entry(new, old)
             yield new, old_for_update
 
         # TODO: when we can get the content with old entry, just merge
         # TODO: use tweet.public_metrics to check for missing replies
+
+
+def render_user_feed(url, user):
+    title = f"{user.name} (@{user.username})"
+    if user.verified:
+        title += " ✓"
+
+    feed = FeedData(
+        url,
+        # TODO: updated
+        title=title,
+        # TODO: expand from user.entities
+        link=user.url,
+        author=f"@{user.username}",
+        # TODO: expand urls from user.entities
+        subtitle=user.description,
+        version="twitter",
+    )
+
+    return feed
+
+
+def render_user_entry(new, old):
+    data = new.content[0].value
+
+    dates = [t.created_at for t in data.tweets.values() if t.conversation_id == data.id]
+
+    return new._replace(
+        published=min(dates).astimezone(timezone.utc).replace(tzinfo=None),
+        updated=max(dates).astimezone(timezone.utc).replace(tzinfo=None),
+        content=[
+            Content(data.to_json(), MIME_TYPE_JSON),
+            # TODO: render to html
+        ],
+    )
+
+    # TODO: link, title, author (title and author should be of quoted tweet?)
 
 
 def init_reader(reader):
