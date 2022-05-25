@@ -283,17 +283,22 @@ def render_user_entry(new, old):
     data = new.content[0].value
 
     dates = [t.created_at for t in data.tweets.values() if t.conversation_id == data.id]
+    root = data.tweets[data.id]
+    user = data.users[root.author_id]
 
     return new._replace(
         published=min(dates).astimezone(timezone.utc).replace(tzinfo=None),
         updated=max(dates).astimezone(timezone.utc).replace(tzinfo=None),
+        title=root.text,
+        link=f"{new.feed_url}/status/{data.id}",
+        author=f"@{user.username}",
         content=[
             Content(data.to_json(), MIME_TYPE_JSON),
             # TODO: render to html
         ],
     )
 
-    # TODO: link, title, author (title and author should be of quoted tweet?)
+    # TODO: title and author should be of quoted tweet?
 
 
 def init_reader(reader):

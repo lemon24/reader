@@ -328,6 +328,9 @@ def test_update_with_media(reader, update_with_user_response):
     assert entry.id == '2000'
     assert entry.published == datetime(2022, 1, 1, 0, 20, 0)
     assert entry.updated == datetime(2022, 1, 1, 0, 20, 0)
+    assert entry.title == 'text'
+    assert entry.link == 'https://twitter.com/user/status/2000'
+    assert entry.author == '@user'
 
     assert get_entry_json(entry) == {
         'id': 2000,
@@ -376,6 +379,9 @@ def test_update_with_reply_and_quote(reader, update_with_user_response):
     assert entry.id == '2100'
     assert entry.published == datetime(2022, 1, 1, 0, 21, 0)
     assert entry.updated == datetime(2022, 1, 1, 0, 21, 1)
+    assert entry.title == 'one'
+    assert entry.link == 'https://twitter.com/user/status/2100'
+    assert entry.author == '@user'
 
     assert get_entry_json(entry) == {
         'id': 2100,
@@ -414,6 +420,9 @@ def test_update_with_retweet(reader, update_with_user_response):
     assert entry.id == '2100'
     assert entry.published == datetime(2022, 1, 1, 0, 21, 0)
     assert entry.updated == datetime(2022, 1, 1, 0, 21, 0)
+    assert entry.title == 'one'
+    assert entry.link == 'https://twitter.com/user/status/2100'
+    assert entry.author == '@user'
 
     assert get_entry_json(entry) == {
         'id': 2100,
