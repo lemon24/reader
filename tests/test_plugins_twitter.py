@@ -431,3 +431,77 @@ def test_update_with_retweet(reader, update_with_user_response):
         'media': {},
         'polls': {},
     }
+
+
+def test_update_with_lots_of_replies(reader, update_with_user_response):
+    tweet_0 = {
+        'created_at': '2022-01-01T00:20:00.000Z',
+        'conversation_id': '2000',
+        'text': 'one',
+        'id': '2000',
+        'author_id': '1000',
+    }
+    tweet_0_1 = {
+        'created_at': '2022-01-01T00:21:00.000Z',
+        'referenced_tweets': [{'type': 'replied_to', 'id': '2000'}],
+        'conversation_id': '2000',
+        'text': 'reply to one',
+        'id': '2100',
+        'author_id': '1100',
+    }
+    tweet_1 = {
+        'created_at': '2022-01-01T00:20:01.000Z',
+        'referenced_tweets': [{'type': 'replied_to', 'id': '2000'}],
+        'conversation_id': '2000',
+        'text': 'two',
+        'id': '2001',
+        'author_id': '1000',
+    }
+    tweet_1_0 = {
+        'created_at': '2022-01-01T00:21:01.000Z',
+        'referenced_tweets': [{'type': 'replied_to', 'id': '2001'}],
+        'conversation_id': '2000',
+        'text': 'reply to two',
+        'id': '2101',
+        'author_id': '1100',
+    }
+    tweet_1_0_0 = {
+        'created_at': '2022-01-01T00:22:00.000Z',
+        'referenced_tweets': [{'type': 'replied_to', 'id': '2101'}],
+        'conversation_id': '2000',
+        'text': 'first reply to reply',
+        'id': '2200',
+        'author_id': '1100',
+    }
+    tweet_1_0_1 = {
+        'created_at': '2022-01-01T00:22:01.000Z',
+        'referenced_tweets': [{'type': 'replied_to', 'id': '2101'}],
+        'conversation_id': '2000',
+        'text': 'second reply to reply',
+        'id': '2201',
+        'author_id': '1000',
+    }
+    tweet_2 = {
+        'created_at': '2022-01-01T00:20:02.000Z',
+        'referenced_tweets': [{'type': 'replied_to', 'id': '2001'}],
+        'conversation_id': '2000',
+        'text': 'two',
+        'id': '2002',
+        'author_id': '1000',
+    }
+
+    user_0 = {'username': 'user', 'id': '1000', 'name': 'name'}
+    user_1 = {'username': 'user', 'id': '1100', 'name': 'name'}
+
+    # this is for user's tweets only; the replies need to come in a separate call (and another test)
+    rv = update_with_user_response(
+        [tweet_0, tweet_1, tweet_2, tweet_1_0_1],
+        [user_0],
+        tweets=[tweet_0, tweet_1, tweet_1_0_0],
+    )
+
+    (entry,) = reader.get_entries()
+
+    # print('>>>')
+    # print(entry.content[1].value)
+    # print('<<<')

@@ -8,6 +8,7 @@ from typing import NamedTuple
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
+import jinja2
 import tweepy
 
 from reader import Content
@@ -172,11 +173,11 @@ def retrieve_user_responses(username, etag):
         media_fields="duration_ms,height,media_key,preview_image_url,public_metrics,type,url,width,alt_text",
         user_fields="id,name,username,description,profile_image_url,url,verified,entities",
         # FIXME: more?
-        max_results=20,
+        max_results=100,
         limit=2,
     )
 
-    # TODO: get new tweets from old conversations here
+    # TODO: get convo root if it falls just before limit here
 
     return user, paginator
 
@@ -252,6 +253,11 @@ class Parser:
                 if old_json:
                     new.content[0].value.update(Conversation.from_json(old_json))
 
+            # check if we have the root tweet; if not, don't return the entry;
+            # TODO: alternatively, ensure we get all the tweets in a thread
+            if new.content[0].value.id not in new.content[0].value.tweets:
+                continue
+
             new = render_user_entry(new, old)
             yield new, old_for_update
 
@@ -281,24 +287,178 @@ def render_user_feed(url, user):
 
 def render_user_entry(new, old):
     data = new.content[0].value
+    assert isinstance(data, Conversation), data
 
-    dates = [t.created_at for t in data.tweets.values() if t.conversation_id == data.id]
     root = data.tweets[data.id]
     user = data.users[root.author_id]
 
+    # TODO: maybe only keep the dates in the thread?
+    dates = [t.created_at for t in data.tweets.values() if t.conversation_id == data.id]
+    published = min(dates).astimezone(timezone.utc).replace(tzinfo=None)
+    updated = max(dates).astimezone(timezone.utc).replace(tzinfo=None)
+
+    # TODO: move rendering to post (get_entries() plugin), so we don't have to re-retrieve while testing (we can still cache it in metadata if needed)
+    tree = conversation_tree(data)
+    nodes = flatten_tree(tree)
+    html = jinja_env.get_template('tweet.html').render(nodes=nodes)
+
     return new._replace(
-        published=min(dates).astimezone(timezone.utc).replace(tzinfo=None),
-        updated=max(dates).astimezone(timezone.utc).replace(tzinfo=None),
+        updated=updated,
         title=root.text,
         link=f"{new.feed_url}/status/{data.id}",
         author=f"@{user.username}",
-        content=[
-            Content(data.to_json(), MIME_TYPE_JSON),
-            # TODO: render to html
-        ],
+        published=published,
+        content=[Content(data.to_json(), MIME_TYPE_JSON), Content(html, 'text/html')],
     )
 
     # TODO: title and author should be of quoted tweet?
+
+
+@dataclass
+class Node:
+    """Like a Tweet, but all references are resolved."""
+
+    tweet: 'Tweet'
+    author: 'User'
+    media: 'list[Media]' = field(default_factory=list)
+    polls: 'list[Poll]' = field(default_factory=list)
+    children: 'list[Node]' = field(default_factory=list)
+    retweeted: 'Node|None' = None
+    quoted: 'Node|None' = None
+
+
+def conversation_tree(data):
+    children_ids = {}
+
+    for tweet in data.tweets.values():
+        if tweet.conversation_id != data.id:
+            continue
+        children_ids.setdefault(tweet.id, [])
+        for referenced in tweet.referenced_tweets or ():
+            if referenced.type != 'replied_to':
+                continue
+            children_ids.setdefault(referenced.id, []).append(tweet.id)
+
+    def make_node(id, wrapped=False):
+        tweet = data.tweets[id]
+        author = data.users[tweet.author_id]
+
+        media = []
+        polls = []
+        if tweet.attachments:
+            # FIXME: retrieve media/polls in quoted/retweeted tweet
+            media.extend(
+                data.media.get(k) for k in tweet.attachments.get('media_keys', ())
+            )
+            polls.extend(
+                data.polls.get(k) for k in tweet.attachments.get('poll_ids', ())
+            )
+
+        def get_referenced(type):
+            tweets = [
+                data.tweets[r.id]
+                for r in tweet.referenced_tweets or ()
+                if r.type == type
+            ]
+
+            # FIXME: assert max one
+            if not tweets:
+                return None
+
+            return make_node(tweets[0].id, wrapped=True)
+
+        # TODO: make configurable
+        with_replies = False
+
+        if not wrapped:
+            children = []
+            for child_id in children_ids[id]:
+                child_tweet = data.tweets[child_id]
+                if (
+                    not with_replies
+                    and child_tweet.author_id != data.tweets[data.id].author_id
+                ):
+                    continue
+                children.append(make_node(child_id))
+            children.sort(key=lambda t: t.tweet.created_at.astimezone(timezone.utc))
+
+            # FIXME: handle retweeted/quoted of retweeted/quoted
+            retweeted = get_referenced('retweeted')
+            quoted = get_referenced('quoted')
+        else:
+            children = []
+            retweeted = None
+            quoted = None
+
+        return Node(tweet, author, media, polls, children, retweeted, quoted)
+
+    return make_node(data.id)
+
+
+def flatten_tree(root):
+    rv = [root]
+
+    def extract_thread_nodes(node):
+        for child in list(node.children):
+            if node.tweet.author_id != root.tweet.author_id:
+                continue
+            node.children.remove(child)
+            rv.append(child)
+            extract_thread_nodes(child)
+
+    extract_thread_nodes(root)
+
+    return rv
+
+
+TWEET_HTML_TEMPLATE = r"""
+
+{%- macro do_node(node, level=0, class="tweet") -%}
+
+{% if class %}<div class="{{ class }}">{% endif %}
+
+<p>{{ node.author.name }} @{{ node.author.username }} · {{ node.tweet.created_at.date() }}
+
+<p>{{ node.tweet.text }}
+
+<p>id: {{ node.tweet.id }}, referenced_tweets: {{ node.tweet.referenced_tweets | e }}
+
+{% if node.quoted %}
+{{ do_node(node.quoted, class="tweet quoted") }}
+{% endif %}
+
+{% if node.retweeted %}
+{{ do_node(node.retweeted, class="tweet retweeted") }}
+{% endif %}
+
+{% if class %}</div>{% endif -%}
+
+
+{% if node.children %}
+{% if level == 0 %}<details><summary>{{ node.children | length }} replies</summary>{% endif %}
+{% for child in node.children %}
+{{ do_node(child, level+1) }}
+{% endfor %}
+{% if level == 0 %}</details>{% endif %}
+{% endif %}
+
+{%- endmacro %}
+
+
+{% for node in nodes %}
+{{ do_node(node) }}
+{% endfor %}
+
+
+<pre>{{ nodes | pprint | escape }}</pre>
+
+
+"""
+
+jinja_env = jinja2.Environment(
+    undefined=jinja2.StrictUndefined,
+    loader=jinja2.DictLoader({'tweet.html': TWEET_HTML_TEMPLATE}),
+)
 
 
 def init_reader(reader):
