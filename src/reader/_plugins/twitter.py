@@ -6,6 +6,7 @@ from datetime import timedelta
 from datetime import timezone
 from typing import NamedTuple
 from typing import TYPE_CHECKING
+from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
 import jinja2
@@ -24,7 +25,53 @@ if TYPE_CHECKING:
 
 MIME_TYPE = 'application/x.twitter'
 MIME_TYPE_JSON = MIME_TYPE + '+json'
+
 URL_PREFIX = 'https://twitter.com/'
+
+
+@dataclass(frozen=True)
+class UserURL:
+    username: str
+    with_replies: bool = False
+
+
+def parse_url(url: str) -> UserURL:
+    error = None
+    if not url.startswith(URL_PREFIX):
+        error = "unexpected prefix (scheme or netloc)"
+
+    url_parsed = urlparse(url)
+    if url_parsed.fragment:
+        error = "fragment not allowed"
+
+    path = posixpath.relpath(posixpath.normpath(url_parsed.path), '/')
+    if not path or '/' in path:
+        error = "not a user URL (e.g. https://twitter.com/user)"
+
+    query = parse_qs(url_parsed.query, keep_blank_values=True)
+    if not query.keys() <= {'replies'}:
+        error = "bad query string"
+    replies_list = query.get('replies', ())
+
+    if len(replies_list) == 0:
+        with_replies = False
+    elif len(replies_list) == 1:
+        replies_str = replies_list[0]
+        if replies_str in ('', 'yes'):
+            with_replies = True
+        elif replies_str == 'no':
+            with_replies = False
+        else:
+            error = "bad query string"
+    else:
+        error = "bad query string"
+
+    if with_replies:
+        error = "replies not supported yet"
+
+    if error:
+        raise ValueError(f"invalid URL: {error}")
+    return UserURL(path, with_replies)
 
 
 class Etag(NamedTuple):
@@ -35,7 +82,7 @@ class Etag(NamedTuple):
 
 class UserFile(NamedTuple):
     user: 'User'
-    conversations: 'dict[int, Conversation]'
+    conversations: 'list[Conversation]'
 
 
 @dataclass(frozen=True)
@@ -47,40 +94,21 @@ class Retriever:
     @contextmanager
     def __call__(self, url, http_etag, *_, **__):
         try:
-            username = self._parse_url(url)
+            parsed_url = parse_url(url)
         except ValueError as e:
             raise ParseError(url, message=str(e)) from None
 
-        data = retrieve_user(username, http_etag)
+        data = retrieve_user(parsed_url, http_etag)
         if not data.conversations:
             yield None
             return
 
-        etag = str(max(t for d in data.conversations.values() for t in d.tweets))
+        etag = str(max(t for d in data.conversations for t in d.tweets))
 
         yield RetrieveResult(data, MIME_TYPE, http_etag=etag)
 
     def validate_url(self, url):
-        self._parse_url(url)
-
-    def _parse_url(self, url):
-        error = None
-        if not url.startswith(URL_PREFIX):
-            error = "unexpected prefix (scheme or netloc)"
-
-        url_parsed = urlparse(url)
-        if url_parsed.query:
-            error = "query not allowed"
-        if url_parsed.fragment:
-            error = "fragment not allowed"
-
-        path = posixpath.relpath(posixpath.normpath(url_parsed.path), '/')
-        if '/' in path:
-            error = "not a user URL (e.g. https://twitter.com/user)"
-
-        if error:
-            raise ValueError(f"invalid URL: {error}")
-        return path
+        parse_url(url)
 
     def process_feed_for_update(self, feed):
         now = self.reader._now()
@@ -147,15 +175,19 @@ class Conversation:
             getattr(self, name).update(getattr(other, name))
 
 
-def retrieve_user(username, etag):
-    user, responses = retrieve_user_responses(username, etag)
-    rv = {}
+def retrieve_user(parsed_url, etag):
+    user, responses = retrieve_user_responses(
+        parsed_url.username, parsed_url.with_replies, etag
+    )
+    conversations = {}
     for response in responses:
-        update_with_response(rv, response)
-    return UserFile(user, rv)
+        update_with_response(conversations, response)
+    return UserFile(user, list(conversations.values()))
 
 
-def retrieve_user_responses(username, etag):
+def retrieve_user_responses(username, with_replies, etag):
+    # based on https://github.com/lemon24/reader/issues/271#issuecomment-1111789547
+
     # TODO: maybe use our own requests session
     client = tweepy.Client(etag.bearer_token)
     user = client.get_user(username=username).data
@@ -178,6 +210,10 @@ def retrieve_user_responses(username, etag):
     )
 
     # TODO: get convo root if it falls just before limit here
+
+    if with_replies:
+        raise NotImplementedError(with_replies)
+        # TODO: paginator.extend(get_convo_tweets(id) for id in etag.recent_conversations)
 
     return user, paginator
 
@@ -228,16 +264,16 @@ class Parser:
     http_accept = MIME_TYPE
 
     def __call__(self, url, file, headers):
-        user, data = file
+        user, conversations = file
         feed = render_user_feed(url, user)
         entries = (
             EntryData(
                 url,
-                conversation_id,
+                conversation.id,
                 # tweety objects converted to JSON in process_entry_pairs
                 content=[Content(conversation)],
             )
-            for conversation_id, conversation in data.items()
+            for conversation in conversations
         )
         return feed, entries
 
@@ -258,7 +294,7 @@ class Parser:
             if new.content[0].value.id not in new.content[0].value.tweets:
                 continue
 
-            new = render_user_entry(new, old)
+            new = render_user_entry(new)
             yield new, old_for_update
 
         # TODO: when we can get the content with old entry, just merge
@@ -285,8 +321,10 @@ def render_user_feed(url, user):
     return feed
 
 
-def render_user_entry(new, old):
-    data = new.content[0].value
+def render_user_entry(entry):
+    parsed_url = parse_url(entry.feed_url)
+
+    data = entry.content[0].value
     assert isinstance(data, Conversation), data
 
     root = data.tweets[data.id]
@@ -297,15 +335,14 @@ def render_user_entry(new, old):
     published = min(dates).astimezone(timezone.utc).replace(tzinfo=None)
     updated = max(dates).astimezone(timezone.utc).replace(tzinfo=None)
 
-    # TODO: move rendering to post (get_entries() plugin), so we don't have to re-retrieve while testing (we can still cache it in metadata if needed)
-    tree = conversation_tree(data)
+    tree = conversation_tree(data, parsed_url.with_replies)
     nodes = flatten_tree(tree)
     html = jinja_env.get_template('tweet.html').render(nodes=nodes)
 
-    return new._replace(
+    return entry._replace(
         updated=updated,
         title=root.text,
-        link=f"{new.feed_url}/status/{data.id}",
+        link=f"{entry.feed_url}/status/{data.id}",
         author=f"@{user.username}",
         published=published,
         content=[Content(data.to_json(), MIME_TYPE_JSON), Content(html, 'text/html')],
@@ -327,7 +364,7 @@ class Node:
     quoted: 'Node|None' = None
 
 
-def conversation_tree(data):
+def conversation_tree(data, with_replies):
     children_ids = {}
 
     for tweet in data.tweets.values():
@@ -366,9 +403,6 @@ def conversation_tree(data):
                 return None
 
             return make_node(tweets[0].id, wrapped=True)
-
-        # TODO: make configurable
-        with_replies = False
 
         if not wrapped:
             children = []

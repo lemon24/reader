@@ -8,6 +8,38 @@ from utils import utc_datetime as datetime
 from reader._plugins import twitter
 
 
+"""
+# testing strategy
+
+## with_replies == False
+
+mock retrieve_user_responses(), check feed title,
+entry title, entry json, entry published/updated
+
+* [ ] almost end-to-end: check entry html
+* update
+  * zero tweets
+  * one tweet: check title, entry json, assert render html called
+    * [ ] plain, [ ] media, [ ] poll, [ ] quote, [ ] retweet
+  * two tweets, one convo: check title, entry json, assert render html called
+    * [ ] plain, [ ] media, [ ] poll, [ ] quote, [ ] retweet
+    * [ ] first plain, second fancy, [ ] first fancy, second plain
+    * in updates (assert etag): [ ] 2, [ ] 2+0, [ ] 1+1, [ ] 0+2
+  * two tweets, two convos
+
+render: conversation json -> html
+
+* one tweet
+    * [ ] plain, [ ] media, [ ] poll, [ ] quote, [ ] retweet
+* two tweets
+    * [ ] plain, [ ] media, [ ] poll, [ ] quote, [ ] retweet
+    * first fancy, second plain
+* one tweet with 2 media
+* stray reply should not show up in html even if in convo json
+
+"""
+
+
 # scenario "media":
 #   USER_0 tweets TWEET_MEDIA_0 including MEDIA_0
 #
@@ -19,7 +51,6 @@ from reader._plugins import twitter
 #
 # scenario "retweet":
 #   USER_0 retweets TWEET_RETWEET_RETWEETED by USER_RETWEETED in TWEET_RETWEET_0
-
 
 USER_0 = {
     'description': 'one https://t.co/example two',
@@ -265,7 +296,7 @@ def reader(make_reader):
 @pytest.fixture
 def update_with_user_response(reader, monkeypatch):
     def update_with_user_response(data, users, media=None, tweets=None):
-        def retrieve_user_responses(username, etag):
+        def retrieve_user_responses(username, with_replies, etag):
             assert username == 'user'
             assert etag.bearer_token == 'abcd'
             return User(users[0]), [make_response(data, users, media, tweets)]
