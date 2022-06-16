@@ -6,6 +6,9 @@ from tweepy import User
 from utils import utc_datetime as datetime
 
 from reader._plugins import twitter
+from reader._plugins.twitter import Etag
+from reader._plugins.twitter import UserFile
+from reader._plugins.twitter import UserURL
 
 
 """
@@ -16,16 +19,16 @@ from reader._plugins import twitter
 mock retrieve_user_responses(), check feed title,
 entry title, entry json, entry published/updated
 
-* [ ] almost end-to-end: check entry html
+* [ ] almost end-to-end: check entry html (plain)
 * update
+  * assert render html called with data, assert etag
   * zero tweets
-  * one tweet: check title, entry json, assert render html called
-    * [ ] plain, [ ] media, [ ] poll, [ ] quote, [ ] retweet
-  * two tweets, one convo: check title, entry json, assert render html called
-    * [ ] plain, [ ] media, [ ] poll, [ ] quote, [ ] retweet
-    * [ ] first plain, second fancy, [ ] first fancy, second plain
-    * in updates (assert etag): [ ] 2, [ ] 2+0, [ ] 1+1, [ ] 0+2
-  * two tweets, two convos
+  * two tweets, one convo; parametrize by:
+    * content: [ ] plain, [ ] media, [ ] poll, [ ] quote, [ ] retweet
+    * order: first plain, second fancy, [ ] first fancy, second plain
+    * sequence: [ ] 2+0, [ ] 1+1+0
+  * two convos, one tweet each (both plain)
+    * sequence: [ ] 2+0, [ ] 1+1+0
 
 render: conversation json -> html
 
@@ -34,8 +37,11 @@ render: conversation json -> html
 * two tweets
     * [ ] plain, [ ] media, [ ] poll, [ ] quote, [ ] retweet
     * first fancy, second plain
-* one tweet with 2 media
-* stray reply should not show up in html even if in convo json
+* [ ] stray reply should not show up in html even if in convo json
+
+## with_replies == True
+
+TODO
 
 """
 
@@ -296,12 +302,14 @@ def reader(make_reader):
 @pytest.fixture
 def update_with_user_response(reader, monkeypatch):
     def update_with_user_response(data, users, media=None, tweets=None):
-        def retrieve_user_responses(username, with_replies, etag):
-            assert username == 'user'
+        def retrieve_user_responses(self, url, etag):
+            assert url.username == 'user'
             assert etag.bearer_token == 'abcd'
             return User(users[0]), [make_response(data, users, media, tweets)]
 
-        monkeypatch.setattr(twitter, 'retrieve_user_responses', retrieve_user_responses)
+        monkeypatch.setattr(
+            twitter.Twitter, 'retrieve_user_responses', retrieve_user_responses
+        )
 
         return reader.update_feed('https://twitter.com/user')
 

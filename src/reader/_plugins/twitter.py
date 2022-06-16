@@ -1,3 +1,29 @@
+"""
+
+To do before the next release:
+
+* docs
+* clean up rendered HTML
+  * say "there is a poll not shown"
+  * show media as a list of plain elements (just <img src="..." />)
+  * for retweets, don't show the retweeter's text
+* basic CSS
+* basic tests
+* retrieve media/polls in quoted/retweeted tweet
+* think of a mechanism to re-render entry HTML on plugin update
+* remove Paginator(max_results=..., limit=...) used during development
+
+
+To do after the next release:
+
+* render media
+* render polls
+* expand urls
+* https://twitter.com/user?replies=yes
+
+"""
+from __future__ import annotations
+
 import posixpath
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -5,7 +31,6 @@ from dataclasses import field
 from datetime import timedelta
 from datetime import timezone
 from typing import NamedTuple
-from typing import TYPE_CHECKING
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
@@ -14,13 +39,10 @@ import tweepy
 
 from reader import Content
 from reader import ParseError
+from reader import Reader
 from reader._parser import RetrieveResult
 from reader._types import EntryData
 from reader._types import FeedData
-
-if TYPE_CHECKING:
-    from reader import Reader
-    from tweepy import Media, Tweet, User, Poll
 
 
 MIME_TYPE = 'application/x.twitter'
@@ -29,8 +51,7 @@ MIME_TYPE_JSON = MIME_TYPE + '+json'
 URL_PREFIX = 'https://twitter.com/'
 
 
-@dataclass(frozen=True)
-class UserURL:
+class UserURL(NamedTuple):
     username: str
     with_replies: bool = False
 
@@ -66,6 +87,7 @@ def parse_url(url: str) -> UserURL:
     else:
         error = "bad query string"
 
+    # TODO: remove when we have with_replies support
     if with_replies:
         error = "replies not supported yet"
 
@@ -75,42 +97,69 @@ def parse_url(url: str) -> UserURL:
 
 
 class Etag(NamedTuple):
-    since_id: 'int|None'
+    since_id: int | None
     bearer_token: str
-    recent_conversations: 'list[int]'
+    recent_conversations: list[int]
 
 
 class UserFile(NamedTuple):
-    user: 'User'
-    conversations: 'list[Conversation]'
+    user: tweepy.User
+    conversations: list[Conversation]
+
+
+@dataclass
+class Conversation:
+    """Collection of resources belonging to a conversation."""
+
+    id: int
+    tweets: dict[int, tweepy.Tweet] = field(default_factory=dict)
+    users: dict[int, tweepy.User] = field(default_factory=dict)
+    media: dict[str, tweepy.Media] = field(default_factory=dict)
+    polls: dict[str, tweepy.Poll] = field(default_factory=dict)
+
+    _factories = dict(
+        tweets=(int, tweepy.Tweet),
+        users=(int, tweepy.User),
+        media=(lambda k: k, tweepy.Media),
+        polls=(lambda k: k, tweepy.Poll),
+    )
+
+    def to_json(self):
+        rv = {'id': self.id}
+        for name in self._factories:
+            rv[name] = {str(k): v.data for k, v in getattr(self, name).items()}
+        return rv
+
+    @classmethod
+    def from_json(cls, data):
+        kwargs = {
+            name: {k_cls(k): v_cls(v) for k, v in data[name].items()}
+            for name, k_cls, v_cls in cls._factories
+        }
+        return cls(id=data['id'], **kwargs)
+
+    def update(self, other):
+        """Merge another conversation into this one."""
+        for name in self._factories:
+            getattr(self, name).update(getattr(other, name))
 
 
 @dataclass(frozen=True)
 class Retriever:
-    reader: 'Reader'
+    reader: Reader
     slow_to_read = False
     recent_threshold = timedelta(30)
-
-    @contextmanager
-    def __call__(self, url, http_etag, *_, **__):
-        try:
-            parsed_url = parse_url(url)
-        except ValueError as e:
-            raise ParseError(url, message=str(e)) from None
-
-        data = retrieve_user(parsed_url, http_etag)
-        if not data.conversations:
-            yield None
-            return
-
-        etag = str(max(t for d in data.conversations for t in d.tweets))
-
-        yield RetrieveResult(data, MIME_TYPE, http_etag=etag)
 
     def validate_url(self, url):
         parse_url(url)
 
-    def process_feed_for_update(self, feed):
+    def process_feed_for_update(self, feed) -> RetrieveResult[UserFile]:
+        """Enrich the etag that gets passed to __call__() with:
+
+        * the bearer token (from global metadata)
+        * the ids of recent converstations (so we can retrieve retries)
+
+        """
         now = self.reader._now()
 
         since_id = int(feed.http_etag) if feed.http_etag else None
@@ -140,88 +189,128 @@ class Retriever:
             )
         )
 
+    @contextmanager
+    def __call__(self, url, http_etag: Etag, *_, **__):
+        try:
+            parsed_url = parse_url(url)
+        except ValueError as e:
+            raise ParseError(url, message=str(e)) from None
 
-@dataclass
-class Conversation:
-    id: int
-    tweets: 'dict[int, Tweet]' = field(default_factory=dict)
-    users: 'dict[int, User]' = field(default_factory=dict)
-    media: 'dict[str, Media]' = field(default_factory=dict)
-    polls: 'dict[str, Poll]' = field(default_factory=dict)
+        twitter = Twitter.from_bearer_token(http_etag.bearer_token)
 
-    _factories = dict(
-        tweets=(int, tweepy.Tweet),
-        users=(int, tweepy.User),
-        media=(lambda k: k, tweepy.Media),
-        polls=(lambda k: k, tweepy.Poll),
-    )
+        data = twitter.retrieve_user(parsed_url, http_etag)
+        if not data.conversations:
+            yield None
+            return
 
-    def to_json(self):
-        rv = {'id': self.id}
-        for name in self._factories:
-            rv[name] = {str(k): v.data for k, v in getattr(self, name).items()}
-        return rv
+        # store the id of newest tweet as etag
+        etag = str(max(t for d in data.conversations for t in d.tweets))
+
+        yield RetrieveResult(data, MIME_TYPE, http_etag=etag)
+
+
+@dataclass(frozen=True)
+class Twitter:
+    """Light wrapper over tweepy.Client.
+
+    Currently only supports user tweets without replies.
+
+    https://github.com/lemon24/reader/issues/271#issuecomment-1111789547
+
+    """
+
+    # TODO: do we need to handle retries?
+
+    client: tweepy.Client
 
     @classmethod
-    def from_json(cls, data):
-        kwargs = {
-            name: {k_cls(k): v_cls(v) for k, v in data[name].items()}
-            for name, k_cls, v_cls in cls._factories
-        }
-        return cls(id=data['id'], **kwargs)
+    def from_bearer_token(cls, bearer_token):
+        # TODO: maybe use our own requests session
+        return cls(tweepy.Client(bearer_token))
 
-    def update(self, other):
-        for name in self._factories:
-            getattr(self, name).update(getattr(other, name))
+    def retrieve_user(self, url: UserURL, etag: Etag) -> UserFile:
+        user, responses = self.retrieve_user_responses(url, etag)
+        conversations = {}
+        for response in responses:
+            update_with_response(conversations, response)
+        return UserFile(user, list(conversations.values()))
 
+    def retrieve_user_responses(self, url: UserURL, etag: Etag):
+        user = self.client.get_user(username=url.username).data
 
-def retrieve_user(parsed_url, etag):
-    user, responses = retrieve_user_responses(
-        parsed_url.username, parsed_url.with_replies, etag
-    )
-    conversations = {}
-    for response in responses:
-        update_with_response(conversations, response)
-    return UserFile(user, list(conversations.values()))
+        # are we getting billed twice for a tweet that's
+        # both in .data and in .includes['tweets']?
+        paginator = tweepy.Paginator(
+            self.client.get_users_tweets,
+            user.id,
+            since_id=etag.since_id,
+            # FIXME: these are good only for testing
+            max_results=100,
+            limit=2,
+            **TWITTER_FIELDS_KWARGS,
+        )
 
+        # TODO: maybe get conversation root if it falls just before limit here
 
-def retrieve_user_responses(username, with_replies, etag):
-    # based on https://github.com/lemon24/reader/issues/271#issuecomment-1111789547
+        # TODO: remove when we have with_replies support
+        if url.with_replies:
+            raise NotImplementedError(url.replies)
 
-    # TODO: maybe use our own requests session
-    client = tweepy.Client(etag.bearer_token)
-    user = client.get_user(username=username).data
-
-    # FIXME: retries?
-    # are we getting billed twice for a tweet that's in .data and in .includes['tweets']?
-
-    paginator = tweepy.Paginator(
-        client.get_users_tweets,
-        user.id,
-        since_id=etag.since_id,
-        tweet_fields="id,text,author_id,conversation_id,created_at,referenced_tweets,attachments,entities,lang,public_metrics,source",
-        exclude="replies",
-        expansions="author_id,attachments.media_keys,referenced_tweets.id,referenced_tweets.id.author_id,attachments.poll_ids",
-        media_fields="duration_ms,height,media_key,preview_image_url,public_metrics,type,url,width,alt_text",
-        user_fields="id,name,username,description,profile_image_url,url,verified,entities",
-        # FIXME: more?
-        max_results=100,
-        limit=2,
-    )
-
-    # TODO: get convo root if it falls just before limit here
-
-    if with_replies:
-        raise NotImplementedError(with_replies)
-        # TODO: paginator.extend(get_convo_tweets(id) for id in etag.recent_conversations)
-
-    return user, paginator
+        return user, paginator
 
 
-def update_with_response(rv, response):
+TWITTER_FIELDS_KWARGS = {
+    'tweet_fields': [
+        'id',
+        'text',
+        'author_id',
+        'conversation_id',
+        'created_at',
+        'referenced_tweets',
+        'attachments',
+        'entities',
+        'lang',
+        'public_metrics',
+        'source',
+    ],
+    'exclude': ['replies'],
+    'expansions': [
+        'author_id',
+        'attachments.media_keys',
+        'referenced_tweets.id',
+        'referenced_tweets.id.author_id',
+        'attachments.poll_ids',
+    ],
+    'media_fields': [
+        'duration_ms',
+        'height',
+        'media_key',
+        'preview_image_url',
+        'public_metrics',
+        'type',
+        'url',
+        'width',
+        'alt_text',
+    ],
+    'user_fields': [
+        'id',
+        'name',
+        'username',
+        'description',
+        'profile_image_url',
+        'url',
+        'verified',
+        'entities',
+    ],
+}
+
+
+def update_with_response(conversations, response):
     assert not response.errors, response.errors
     if not response.data:
         return
+
+    # FIXME: retrieve media/polls in quoted/retweeted tweet
 
     incl_tweets = {t.id: t for t in response.includes.get('tweets', ())}
     incl_users = {u.id: u for u in response.includes.get('users', ())}
@@ -229,38 +318,39 @@ def update_with_response(rv, response):
     incl_polls = {p.id: p for p in response.includes.get('polls', ())}
 
     for tweet in response.data:
-        if tweet.conversation_id in rv:
-            data = rv[tweet.conversation_id]
+        if tweet.conversation_id in conversations:
+            conversation = conversations[tweet.conversation_id]
         else:
-            data = rv[tweet.conversation_id] = Conversation(tweet.conversation_id)
+            conversation = Conversation(tweet.conversation_id)
+            conversations[tweet.conversation_id] = conversation
 
         user_ids = {tweet.author_id}
 
-        data.tweets[tweet.id] = tweet
+        conversation.tweets[tweet.id] = tweet
         for ref in tweet.referenced_tweets or ():
             if ref.id in incl_tweets:
                 ref_tweet = incl_tweets[ref.id]
-                data.tweets[ref.id] = ref_tweet
+                conversation.tweets[ref.id] = ref_tweet
                 user_ids.add(ref_tweet.author_id)
 
         for user_id in user_ids:
             if user_id in incl_users:
-                data.users[user_id] = incl_users[user_id]
+                conversation.users[user_id] = incl_users[user_id]
 
         if tweet.attachments:
             for media_key in tweet.attachments.get('media_keys', ()):
                 if media_key in incl_media:
-                    data.media[media_key] = incl_media[media_key]
+                    conversation.media[media_key] = incl_media[media_key]
 
         if tweet.attachments:
             for poll_id in tweet.attachments.get('poll_ids', ()):
                 if poll_id in incl_polls:
-                    data.polls[poll_id] = incl_polls[poll_id]
+                    conversation.polls[poll_id] = incl_polls[poll_id]
 
 
 @dataclass(frozen=True)
 class Parser:
-    reader: 'Reader'
+    reader: Reader
     http_accept = MIME_TYPE
 
     def __call__(self, url, file, headers):
@@ -289,8 +379,8 @@ class Parser:
                 if old_json:
                     new.content[0].value.update(Conversation.from_json(old_json))
 
-            # check if we have the root tweet; if not, don't return the entry;
-            # TODO: alternatively, ensure we get all the tweets in a thread
+            # if we don't have the root, don't return the entry
+            # TODO: alternatively, always retrieve the entire conversation
             if new.content[0].value.id not in new.content[0].value.tweets:
                 continue
 
@@ -298,10 +388,10 @@ class Parser:
             yield new, old_for_update
 
         # TODO: when we can get the content with old entry, just merge
-        # TODO: use tweet.public_metrics to check for missing replies
+        # TODO: maybe use tweet.public_metrics to check for missing replies
 
 
-def render_user_feed(url, user):
+def render_user_feed(url: str, user: tweepy.User) -> FeedData:
     title = f"{user.name} (@{user.username})"
     if user.verified:
         title += " ✓"
@@ -321,7 +411,7 @@ def render_user_feed(url, user):
     return feed
 
 
-def render_user_entry(entry):
+def render_user_entry(entry: EntryData) -> EntryData:
     parsed_url = parse_url(entry.feed_url)
 
     data = entry.content[0].value
@@ -353,18 +443,18 @@ def render_user_entry(entry):
 
 @dataclass
 class Node:
-    """Like a Tweet, but all references are resolved."""
+    """Like a tweepy.Tweet, but all references are resolved."""
 
-    tweet: 'Tweet'
-    author: 'User'
-    media: 'list[Media]' = field(default_factory=list)
-    polls: 'list[Poll]' = field(default_factory=list)
-    children: 'list[Node]' = field(default_factory=list)
-    retweeted: 'Node|None' = None
-    quoted: 'Node|None' = None
+    tweet: tweepy.Tweet
+    author: tweepy.User
+    media: list[tweepy.Media] = field(default_factory=list)
+    polls: list[tweepy.Poll] = field(default_factory=list)
+    children: list[Node] = field(default_factory=list)
+    retweeted: Node | None = None
+    quoted: Node | None = None
 
 
-def conversation_tree(data, with_replies):
+def conversation_tree(data: Conversation, with_replies: bool) -> Node:
     children_ids = {}
 
     for tweet in data.tweets.values():
@@ -383,7 +473,6 @@ def conversation_tree(data, with_replies):
         media = []
         polls = []
         if tweet.attachments:
-            # FIXME: retrieve media/polls in quoted/retweeted tweet
             media.extend(
                 data.media.get(k) for k in tweet.attachments.get('media_keys', ())
             )
@@ -398,7 +487,7 @@ def conversation_tree(data, with_replies):
                 if r.type == type
             ]
 
-            # FIXME: assert max one
+            # TODO: assert we got exactly one
             if not tweets:
                 return None
 
@@ -416,7 +505,7 @@ def conversation_tree(data, with_replies):
                 children.append(make_node(child_id))
             children.sort(key=lambda t: t.tweet.created_at.astimezone(timezone.utc))
 
-            # FIXME: handle retweeted/quoted of retweeted/quoted
+            # TODO: handle retweeted/quoted of retweeted/quoted
             retweeted = get_referenced('retweeted')
             quoted = get_referenced('quoted')
         else:
@@ -429,7 +518,7 @@ def conversation_tree(data, with_replies):
     return make_node(data.id)
 
 
-def flatten_tree(root):
+def flatten_tree(root: Node) -> None:
     rv = [root]
 
     def extract_thread_nodes(node):
@@ -454,8 +543,6 @@ TWEET_HTML_TEMPLATE = r"""
 <p>{{ node.author.name }} @{{ node.author.username }} · {{ node.tweet.created_at.date() }}
 
 <p>{{ node.tweet.text }}
-
-<p>id: {{ node.tweet.id }}, referenced_tweets: {{ node.tweet.referenced_tweets | e }}
 
 {% if node.quoted %}
 {{ do_node(node.quoted, class="tweet quoted") }}
@@ -482,9 +569,6 @@ TWEET_HTML_TEMPLATE = r"""
 {% for node in nodes %}
 {{ do_node(node) }}
 {% endfor %}
-
-
-<pre>{{ nodes | pprint | escape }}</pre>
 
 
 """
