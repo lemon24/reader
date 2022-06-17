@@ -19,6 +19,7 @@ To do after the next release:
 * render media
 * render polls
 * expand urls
+* mark updated entry as unread
 * https://twitter.com/user?replies=yes
 
 """
@@ -99,7 +100,7 @@ def parse_url(url: str) -> UserURL:
 class Etag(NamedTuple):
     since_id: int | None
     bearer_token: str
-    recent_conversations: list[int]
+    recent_conversations: tuple[int, ...] = ()
 
 
 class UserFile(NamedTuple):
@@ -134,7 +135,7 @@ class Conversation:
     def from_json(cls, data):
         kwargs = {
             name: {k_cls(k): v_cls(v) for k, v in data[name].items()}
-            for name, k_cls, v_cls in cls._factories
+            for name, (k_cls, v_cls) in cls._factories.items()
         }
         return cls(id=data['id'], **kwargs)
 
@@ -185,7 +186,7 @@ class Retriever:
             http_etag=Etag(
                 since_id=since_id,
                 bearer_token=token,
-                recent_conversations=recent_conversations,
+                recent_conversations=tuple(recent_conversations),
             )
         )
 
@@ -359,7 +360,7 @@ class Parser:
         entries = (
             EntryData(
                 url,
-                conversation.id,
+                str(conversation.id),
                 # tweety objects converted to JSON in process_entry_pairs
                 content=[Content(conversation)],
             )
@@ -372,7 +373,7 @@ class Parser:
         for new, old_for_update in pairs:
             old = None
             if old_for_update:
-                old = self.reader.get_entry(old_for_update)
+                old = self.reader.get_entry(new)
                 old_json = next(
                     (c.value for c in old.content if c.type == MIME_TYPE_JSON), None
                 )
