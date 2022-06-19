@@ -6,6 +6,7 @@ import pathlib
 import shutil
 import tempfile
 import time
+import warnings
 from collections import OrderedDict
 from contextlib import contextmanager
 from contextlib import nullcontext
@@ -708,7 +709,16 @@ def _process_feedparser_dict(url: str, d: Any) -> FeedAndEntries:
     # This must be a list, not a generator expression,
     # otherwise the user may get a ParseError when calling
     # next(parse_result.entries), i.e. after parse() returned.
-    entries = [_feedparser_entry(url, e, is_rss) for e in d.entries]
+    entries = []
+    for e in d.entries:
+        try:
+            entry = _feedparser_entry(url, e, is_rss)
+            entries.append(entry)
+        except ParseError as exc:
+            warnings.warn(f"{exc.url}: {exc.message}")
+
+    if not entries:
+        raise ParseError(url, message="all entries with no id or link fallback")
 
     return feed, entries
 
