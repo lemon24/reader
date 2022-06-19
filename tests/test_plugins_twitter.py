@@ -32,7 +32,7 @@ mock retrieve_user_responses()
 * [x] assert etag
 * [x] assert recent_conversations
 
-* [ ] almost end-to-end: check entry html (plain)
+* [x] almost end-to-end: check entry html (plain)
 
 * [x] zero tweets
 * update
@@ -48,10 +48,8 @@ mock retrieve_user_responses()
 
 render: conversation json -> html
 
-* one tweet
-    * [ ] plain, [ ] media, [ ] poll, [ ] quote, [ ] retweet
 * two tweets
-    * [ ] plain, [ ] media, [ ] poll, [ ] quote, [ ] retweet
+    * [x] plain, [x] media, [x] poll, [x] quote, [x] retweet
     * first fancy, second plain
 * [ ] stray reply should not show up in html even if in convo json
 
@@ -278,21 +276,21 @@ def test_feed_attribs(reader, update_with):
     )
 
 
-def update_data_noop(tweet, page, expected_json):
+def update_data_plain(tweet, page, expected_json):
     pass
 
 
 def update_data_media(tweet, page, expected_json):
     media = {'media_key': '3_3000', 'type': 'photo'}
     tweet.setdefault('attachments', {}).setdefault('media_keys', []).append('3_3000')
-    page['media'].append(media)
+    page.setdefault('media', []).append(media)
     expected_json['media']['3_3000'] = media
 
 
 def update_data_poll(tweet, page, expected_json):
     poll = {'id': '4000', 'options': []}
     tweet.setdefault('attachments', {}).setdefault('poll_ids', []).append('4000')
-    page['polls'].append(poll)
+    page.setdefault('polls', []).append(poll)
     expected_json['polls']['4000'] = poll
 
 
@@ -307,8 +305,8 @@ def update_data_quote(tweet, page, expected_json):
     user_quoted = {'id': '1100', 'username': 'quoteduser', 'name': 'quoted'}
 
     tweet.setdefault('referenced_tweets', []).append({'type': 'quoted', 'id': '2000'})
-    page['tweets'].append(tweet_quoted)
-    page['users'].append(user_quoted)
+    page.setdefault('tweets', []).append(tweet_quoted)
+    page.setdefault('users', []).append(user_quoted)
 
     expected_json['tweets']['2000'] = tweet_quoted
     expected_json['users']['1100'] = user_quoted
@@ -327,8 +325,8 @@ def update_data_retweet(tweet, page, expected_json):
     tweet.setdefault('referenced_tweets', []).append(
         {'type': 'retweeted', 'id': '2000'}
     )
-    page['tweets'].append(tweet_retweeted)
-    page['users'].append(user_retweeted)
+    page.setdefault('tweets', []).append(tweet_retweeted)
+    page.setdefault('users', []).append(user_retweeted)
 
     expected_json['tweets']['2000'] = tweet_retweeted
     expected_json['users']['1100'] = user_retweeted
@@ -337,7 +335,7 @@ def update_data_retweet(tweet, page, expected_json):
 with_update_data = pytest.mark.parametrize(
     'update_data',
     [
-        update_data_noop,
+        update_data_plain,
         update_data_media,
         update_data_poll,
         update_data_quote,
@@ -426,13 +424,7 @@ def test_update_one_call(reader, update_with, render_user_html, update_data, ind
         'polls': {},
     }
 
-    page = {
-        'data': list(tweets),
-        'users': [USER],
-        'media': [],
-        'polls': [],
-        'tweets': [],
-    }
+    page = {'data': list(tweets), 'users': [USER]}
     update_data(tweets[index], page, expected_json)
     update_with(**page)
 
@@ -456,15 +448,7 @@ def test_update_two_calls(reader, update_with, render_user_html, update_data, in
 
     pages = []
     for tweet in tweets:
-        pages.append(
-            {
-                'data': [tweet],
-                'users': [USER],
-                'media': [],
-                'polls': [],
-                'tweets': [],
-            }
-        )
+        pages.append({'data': [tweet], 'users': [USER]})
     update_data(tweets[index], pages[index], expected_json)
     for page in pages:
         update_with(**page)
@@ -491,15 +475,7 @@ def test_update_two_responses(
 
     pages = []
     for tweet in tweets:
-        pages.append(
-            {
-                'data': [tweet],
-                'users': [USER],
-                'media': [],
-                'polls': [],
-                'tweets': [],
-            }
-        )
+        pages.append({'data': [tweet], 'users': [USER]})
     update_data(tweets[index], pages[index], expected_json)
     update_with(pages=pages)
 
@@ -531,13 +507,7 @@ def test_update_two_entries(reader, update_with, update_data, index):
         },
     ]
 
-    page = {
-        'data': list(tweets),
-        'users': [USER],
-        'media': [],
-        'polls': [],
-        'tweets': [],
-    }
+    page = {'data': list(tweets), 'users': [USER]}
     update_data(tweets[index], page, expected_jsons[index])
     update_with(**page)
 
@@ -545,6 +515,88 @@ def test_update_two_entries(reader, update_with, update_data, index):
         get_entry_json(e) for e in sorted(reader.get_entries(), key=lambda e: e.id)
     ]
     assert actual_jsons == expected_jsons
+
+
+UPDATE_FN_TO_HTML = {
+    update_data_plain: """
+        <div class="tweet">
+        <p>name @user · 2100-01-01
+        <p>one
+        </div>
+        <div class="tweet">
+        <p>name @user · 2101-01-01
+        <p>two
+        </div>
+        """,
+    update_data_media: """
+        <div class="tweet">
+        <p>name @user · 2100-01-01
+        <p>one
+        </div>
+        <div class="tweet">
+        <p>name @user · 2101-01-01
+        <p>two
+        </div>
+        """,
+    update_data_poll: """
+        <div class="tweet">
+        <p>name @user · 2100-01-01
+        <p>one
+        </div>
+        <div class="tweet">
+        <p>name @user · 2101-01-01
+        <p>two
+        </div>
+        """,
+    update_data_quote: """
+        <div class="tweet">
+        <p>name @user · 2100-01-01
+        <p>one
+        <div class="tweet quoted">
+        <p>quoted @quoteduser · 2000-01-01
+        <p>quote
+        </div>
+        </div>
+        <div class="tweet">
+        <p>name @user · 2101-01-01
+        <p>two
+        </div>
+        """,
+    update_data_retweet: """
+        <div class="tweet">
+        <p>name @user · 2100-01-01
+        <p>one
+        <div class="tweet retweeted">
+        <p>retweeted @retweeteduser · 2000-01-01
+        <p>retweet
+        </div>
+        </div>
+        <div class="tweet">
+        <p>name @user · 2101-01-01
+        <p>two
+        </div>
+        """,
+}
+
+
+@with_update_data
+def test_render_user_html(reader, update_with, update_data):
+    tweets = [deepcopy(TWEET_0), deepcopy(TWEET_1)]
+
+    expected_json = {
+        'id': 2100,
+        'tweets': {'2100': tweets[0], '2101': tweets[1]},
+        'users': {'1000': USER},
+        'media': {},
+        'polls': {},
+    }
+
+    update_data(tweets[0], {}, expected_json)
+
+    conversation = Conversation.from_json(expected_json)
+    actual_html = clean_html(twitter.render_user_html(conversation, False))
+
+    assert actual_html == clean_html(UPDATE_FN_TO_HTML[update_data])
 
 
 # preliminary tests; to be replaced by the ones above when they're all done

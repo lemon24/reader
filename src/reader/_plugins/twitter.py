@@ -5,10 +5,9 @@ To do before the next release:
 * docs
 * clean up rendered HTML
   * say "there is a poll not shown"
-  * show media as a list of plain elements (just <img src="..." />)
+  * show media as a list of plain elements (just <img|video src="..." />)
   * for retweets, don't show the retweeter's text
 * basic CSS
-* basic tests
 * retrieve media/polls in quoted/retweeted tweet
 * think of a mechanism to re-render entry HTML on plugin update
 * remove Paginator(max_results=..., limit=...) used during development
