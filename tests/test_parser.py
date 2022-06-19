@@ -546,7 +546,36 @@ def test_missing_entry_id():
             """.strip(),
         )
     assert excinfo.value.url == 'url'
-    assert 'entry with no id' in excinfo.value.message
+    assert 'all entries with no id' in excinfo.value.message
+
+    # single malformed entry shouldn't fail entire feed
+    with pytest.warns(UserWarning) as warnings:
+        feed, entries = feedparser_parse(
+            'url',
+            """
+            <?xml version="1.0" encoding="UTF-8" ?>
+            <rss version="2.0">
+            <channel>
+                <item>
+                    <title>Example entry without id or link</title>
+                    <description>Here is some text.</description>
+                    <pubDate>Sun, 07 Sep 2009 16:20:00 +0000</pubDate>
+                </item>
+                <item>
+                    <link>http://www.example.com/blog/post/1</link>
+                    <title>Example entry</title>
+                    <description>Here is some text.</description>
+                    <pubDate>Sun, 06 Sep 2009 16:20:00 +0000</pubDate>
+                </item>
+            </channel>
+            </rss>
+            """.strip(),
+        )
+    assert len(entries) == 1
+    (warninfo,) = warnings
+    (warnmsg,) = warninfo.message.args
+    assert warnmsg.startswith('url')
+    assert 'entry with no id' in warnmsg
 
     # There is no fallback for Atom.
     with pytest.raises(ParseError) as excinfo:
@@ -565,7 +594,7 @@ def test_missing_entry_id():
             """.strip(),
         )
     assert excinfo.value.url == 'url'
-    assert 'entry with no id' in excinfo.value.message
+    assert 'all entries with no id' in excinfo.value.message
 
     # Same for JSON Feed.
     with pytest.raises(ParseError) as excinfo:
