@@ -415,31 +415,43 @@ def render_user_feed(url: str, user: tweepy.User) -> FeedData:
 def render_user_entry(entry: EntryData) -> EntryData:
     parsed_url = parse_url(entry.feed_url)
 
-    data = entry.content[0].value
-    assert isinstance(data, Conversation), data
+    conversation = entry.content[0].value
+    assert isinstance(conversation, Conversation), conversation
 
-    root = data.tweets[data.id]
-    user = data.users[root.author_id]
+    root = conversation.tweets[conversation.id]
+    user = conversation.users[root.author_id]
 
-    # TODO: maybe only keep the dates in the thread?
-    dates = [t.created_at for t in data.tweets.values() if t.conversation_id == data.id]
+    # TODO: maybe only keep the dates in the tree?
+    dates = [
+        t.created_at
+        for t in conversation.tweets.values()
+        if t.conversation_id == conversation.id
+    ]
     published = min(dates).astimezone(timezone.utc).replace(tzinfo=None)
     updated = max(dates).astimezone(timezone.utc).replace(tzinfo=None)
-
-    tree = conversation_tree(data, parsed_url.with_replies)
-    nodes = flatten_tree(tree)
-    html = jinja_env.get_template('tweet.html').render(nodes=nodes)
 
     return entry._replace(
         updated=updated,
         title=root.text,
-        link=f"{entry.feed_url}/status/{data.id}",
+        link=f"{entry.feed_url}/status/{conversation.id}",
         author=f"@{user.username}",
         published=published,
-        content=[Content(data.to_json(), MIME_TYPE_JSON), Content(html, 'text/html')],
+        content=[
+            Content(conversation.to_json(), MIME_TYPE_JSON),
+            Content(
+                render_user_html(conversation, parsed_url.with_replies), 'text/html'
+            ),
+        ],
     )
 
     # TODO: title and author should be of quoted tweet?
+
+
+def render_user_html(conversation, with_replies):
+    tree = conversation_tree(conversation, with_replies)
+    nodes = flatten_tree(tree)
+    html = jinja_env.get_template('tweet.html').render(nodes=nodes)
+    return html
 
 
 @dataclass

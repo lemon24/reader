@@ -1,5 +1,8 @@
+from copy import deepcopy
+
 import pytest
 from tweepy import Media
+from tweepy import Poll
 from tweepy import Response
 from tweepy import Tweet
 from tweepy import User
@@ -11,6 +14,7 @@ from reader import Entry
 from reader import Feed
 from reader import UpdatedFeed
 from reader._plugins import twitter
+from reader._plugins.twitter import Conversation
 from reader._plugins.twitter import Etag
 from reader._plugins.twitter import UserFile
 from reader._plugins.twitter import UserURL
@@ -21,7 +25,7 @@ from reader._plugins.twitter import UserURL
 
 ## with_replies == False
 
-mock retrieve_user_responses(),
+mock retrieve_user_responses()
 * [x] check feed title
 * [x] entry titleentry json
 * [x] entry published/updated
@@ -30,15 +34,17 @@ mock retrieve_user_responses(),
 
 * [ ] almost end-to-end: check entry html (plain)
 
-* [ ] zero tweets
+* [x] zero tweets
 * update
-  * [x] assert render html called with data
-  * [x] assert entry json
-  * two tweets, one convo; parametrize by:
-    * content: [ ] plain, [ ] media, [ ] poll, [ ] quote, [ ] retweet
-    * order: first plain, second fancy, [ ] first fancy, second plain
-  * two convos, one tweet each (both plain)
-    * sequence: [ ] 2+0, [ ] 1+1+0
+  * assert render html called with data
+  * assert entry json
+  * [x] two tweets, one convo; parametrize by:
+    * content: [x] plain, [x] media, [x] poll, [x] quote, [x] retweet
+    * order: [x] first plain, second fancy, [x] first fancy, second plain
+  * [x] two convos, one tweet each (both plain)
+    * sequence: [x] 2+0, [x] 1+1+0
+  * [x] two tweets, across 2 pages
+  * [ ] resources for quoted/retweeted are included
 
 render: conversation json -> html
 
@@ -56,7 +62,7 @@ TODO
 """
 
 
-def make_response(data=(), users=None, media=None, tweets=None):
+def make_response(data=(), users=None, *, media=None, polls=None, tweets=None):
     includes = {}
     if users:
         includes['users'] = list(map(User, users))
@@ -64,6 +70,8 @@ def make_response(data=(), users=None, media=None, tweets=None):
         includes['media'] = list(map(Media, media))
     if tweets:
         includes['tweets'] = list(map(Tweet, tweets))
+    if polls:
+        includes['polls'] = list(map(Poll, polls))
 
     return Response(
         data=list(map(Tweet, data)),
@@ -83,15 +91,24 @@ def reader(make_reader):
 
 @pytest.fixture
 def update_with(reader, monkeypatch):
-    def update(data, users, media=None, tweets=None):
+    def update(data=None, users=None, *, pages=None, **kwargs):
+        if bool(data or users or kwargs) + bool(pages) != 1:
+            raise ValueError("either update_with(data, users, ...) or data(pages)")
+
+        if not pages:
+            user = users[0]
+            responses = [make_response(data, users, **kwargs)]
+        else:
+            user = pages[0]['users'][0]
+            responses = [make_response(**page) for page in pages]
+
         def retrieve_user_responses(self, url, etag):
             update.url, update.etag = url, etag
-            return User(users[0]), [make_response(data, users, media, tweets)]
+            return User(user), responses
 
         monkeypatch.setattr(
             twitter.Twitter, 'retrieve_user_responses', retrieve_user_responses
         )
-
         return reader.update_feed('https://twitter.com/user')
 
     return update
@@ -139,11 +156,11 @@ def test_retrieve_user_responses_args(reader, update_with):
 
 
 def test_etag_recent_conversations(reader, update_with):
-    tweet_0 = TWEET_0.copy()
+    tweet_0 = deepcopy(TWEET_0)
     tweet_0.update(id='0', conversation_id='0', created_at='2100-01-01T00:00:00.000Z')
-    tweet_1 = TWEET_0.copy()
+    tweet_1 = deepcopy(TWEET_0)
     tweet_1.update(id='1', conversation_id='1', created_at='2100-01-20T00:00:00.000Z')
-    tweet_2 = TWEET_0.copy()
+    tweet_2 = deepcopy(TWEET_0)
     tweet_2.update(id='2', conversation_id='2', created_at='2100-01-20T00:00:00.000Z')
 
     reader._now = lambda: naive_datetime(2100, 1, 25)
@@ -162,7 +179,8 @@ def test_etag_recent_conversations(reader, update_with):
 
 
 def test_update_result(reader, update_with):
-    # rv = update_with([], [])
+    rv = update_with([], [USER])
+    assert rv == None
 
     rv = update_with([TWEET_0, TWEET_1], [USER])
     assert rv == UpdatedFeed('https://twitter.com/user', new=1, modified=0)
@@ -201,6 +219,9 @@ def test_feed_attribs(reader, update_with):
         (feed,) = reader.get_feeds()
         return feed._replace(added=None, last_updated=None)
 
+    update_with([], [USER])
+    assert get_feed() == Feed(url='https://twitter.com/user')
+
     expected = Feed(
         url='https://twitter.com/user',
         updated=None,
@@ -214,7 +235,7 @@ def test_feed_attribs(reader, update_with):
     update_with([TWEET_0, TWEET_1], [USER])
     assert get_feed() == expected
 
-    user = USER.copy()
+    user = deepcopy(USER)
     user.update(
         {
             'name': 'newname',
@@ -257,163 +278,276 @@ def test_feed_attribs(reader, update_with):
     )
 
 
-# preliminary tests; to be replaced by the ones above when they're all done
+def update_data_noop(tweet, page, expected_json):
+    pass
 
 
-def test_basic(reader, update_with):
-    rv = update_with([TWEET_MEDIA_0], [USER_0], [MEDIA_0])
-
-    (entry,) = reader.get_entries()
-    assert entry.id == '2000'
-
-    feed = entry.feed
-    assert feed.url == 'https://twitter.com/user'
-    assert feed.title == 'name (@user)'
-    assert feed.link == 'https://t.co/url'
-    assert feed.author == '@user'
-    assert feed.subtitle == 'one https://t.co/example two'
-    assert feed.version == 'twitter'
-
-    (value,) = [
-        c.value for c in entry.content if c.type == 'application/x.twitter+json'
-    ]
-
-    assert value == {
-        'id': 2000,
-        'tweets': {'2000': TWEET_MEDIA_0},
-        'users': {'1000': USER_0},
-        'media': {'3_3000': MEDIA_0},
-        'polls': {},
-    }
-
-
-def get_entry_json(entry):
-    content = [c.value for c in entry.content if c.type == 'application/x.twitter+json']
-    assert len(content) == 1, entry
-    return content[0]
-
-
-def test_update_with_media(reader, update_with):
-    tweet = {
-        'created_at': '2022-01-01T00:20:00.000Z',
-        'conversation_id': '2000',
-        'text': 'text',
-        'id': '2000',
-        'attachments': {'media_keys': ['3_3000']},
-        'author_id': '1000',
-    }
-    user = {'username': 'user', 'id': '1000', 'name': 'name'}
+def update_data_media(tweet, page, expected_json):
     media = {'media_key': '3_3000', 'type': 'photo'}
-    rv = update_with([tweet], [user], [media])
-
-    (entry,) = reader.get_entries()
-
-    assert entry.id == '2000'
-    assert entry.published == datetime(2022, 1, 1, 0, 20, 0)
-    assert entry.updated == datetime(2022, 1, 1, 0, 20, 0)
-    assert entry.title == 'text'
-    assert entry.link == 'https://twitter.com/user/status/2000'
-    assert entry.author == '@user'
-
-    assert get_entry_json(entry) == {
-        'id': 2000,
-        'tweets': {'2000': tweet},
-        'users': {'1000': user},
-        'media': {'3_3000': media},
-        'polls': {},
-    }
+    tweet.setdefault('attachments', {}).setdefault('media_keys', []).append('3_3000')
+    page['media'].append(media)
+    expected_json['media']['3_3000'] = media
 
 
-def test_update_with_reply_and_quote(reader, update_with):
-    # TODO: also test update in two parts, and also with quote in the second tweet
+def update_data_poll(tweet, page, expected_json):
+    poll = {'id': '4000', 'options': []}
+    tweet.setdefault('attachments', {}).setdefault('poll_ids', []).append('4000')
+    page['polls'].append(poll)
+    expected_json['polls']['4000'] = poll
 
-    tweet_0 = {
-        'conversation_id': '2100',
-        'referenced_tweets': [{'type': 'quoted', 'id': '2011'}],
-        'created_at': '2022-01-01T00:21:00.000Z',
-        'text': "one",
-        'id': '2100',
-        'author_id': '1000',
-    }
-    tweet_1 = {
-        'conversation_id': '2100',
-        'referenced_tweets': [{'type': 'replied_to', 'id': '2100'}],
-        'created_at': '2022-01-01T00:21:01.000Z',
-        'text': "two",
-        'id': '2101',
-        'author_id': '1000',
-    }
+
+def update_data_quote(tweet, page, expected_json):
     tweet_quoted = {
         'conversation_id': '2000',
-        'referenced_tweets': [{'type': 'replied_to', 'id': '2000'}],
-        'created_at': '2022-01-01T00:20:11.000Z',
-        'text': "quote",
-        'id': '2011',
-        'author_id': '1101',
-    }
-    user = {'username': 'user', 'id': '1000', 'name': 'name'}
-    user_quoted = {'id': '1101', 'username': 'quoteduser', 'name': 'quoted'}
-    rv = update_with(
-        [tweet_0, tweet_1], [user, user_quoted], tweets=[tweet_0, tweet_quoted]
-    )
-
-    (entry,) = reader.get_entries()
-
-    assert entry.id == '2100'
-    assert entry.published == datetime(2022, 1, 1, 0, 21, 0)
-    assert entry.updated == datetime(2022, 1, 1, 0, 21, 1)
-    assert entry.title == 'one'
-    assert entry.link == 'https://twitter.com/user/status/2100'
-    assert entry.author == '@user'
-
-    assert get_entry_json(entry) == {
-        'id': 2100,
-        'tweets': {'2100': tweet_0, '2101': tweet_1, '2011': tweet_quoted},
-        'users': {'1000': user, '1101': user_quoted},
-        'media': {},
-        'polls': {},
-    }
-
-
-def test_update_with_retweet(reader, update_with):
-    tweet_0 = {
-        'conversation_id': '2100',
-        'referenced_tweets': [{'type': 'retweeted', 'id': '2000'}],
-        'created_at': '2022-01-01T00:21:00.000Z',
-        'text': "one",
-        'id': '2100',
-        'author_id': '1000',
-    }
-    tweet_retweeted = {
-        'conversation_id': '2000',
-        'referenced_tweets': [{'type': 'replied_to', 'id': '2000'}],
-        'created_at': '2022-01-01T00:20:00.000Z',
+        'created_at': '2000-01-01T00:00:00.000Z',
         'text': "quote",
         'id': '2000',
         'author_id': '1100',
     }
-    user = {'username': 'user', 'id': '1000', 'name': 'name'}
-    user_retweeted = {'id': '1100', 'username': 'retweeteduser', 'name': 'also name'}
-    rv = update_with(
-        [tweet_0], [user, user_retweeted], tweets=[tweet_0, tweet_retweeted]
+    user_quoted = {'id': '1100', 'username': 'quoteduser', 'name': 'quoted'}
+
+    tweet.setdefault('referenced_tweets', []).append({'type': 'quoted', 'id': '2000'})
+    page['tweets'].append(tweet_quoted)
+    page['users'].append(user_quoted)
+
+    expected_json['tweets']['2000'] = tweet_quoted
+    expected_json['users']['1100'] = user_quoted
+
+
+def update_data_retweet(tweet, page, expected_json):
+    tweet_retweeted = {
+        'conversation_id': '2000',
+        'created_at': '2000-01-01T00:00:00.000Z',
+        'text': "retweet",
+        'id': '2000',
+        'author_id': '1100',
+    }
+    user_retweeted = {'id': '1100', 'username': 'retweeteduser', 'name': 'retweeted'}
+
+    tweet.setdefault('referenced_tweets', []).append(
+        {'type': 'retweeted', 'id': '2000'}
     )
+    page['tweets'].append(tweet_retweeted)
+    page['users'].append(user_retweeted)
+
+    expected_json['tweets']['2000'] = tweet_retweeted
+    expected_json['users']['1100'] = user_retweeted
+
+
+with_update_data = pytest.mark.parametrize(
+    'update_data',
+    [
+        update_data_noop,
+        update_data_media,
+        update_data_poll,
+        update_data_quote,
+        update_data_retweet,
+    ],
+)
+
+
+@pytest.fixture
+def render_user_html(monkeypatch):
+    original = twitter.render_user_html
+
+    def wrapper(conversation, with_replies):
+        wrapper.conversation = conversation
+        # for now
+        assert with_replies is False
+        return original(conversation, with_replies)
+
+    monkeypatch.setattr(twitter, 'render_user_html', wrapper)
+    return wrapper
+
+
+# TODO: should Entry.get_content() do this?
+
+
+def get_entry_content(entry, mime_type):
+    content = [c.value for c in entry.content if c.type == mime_type]
+    assert len(content) == 1, entry
+    return content[0]
+
+
+def get_entry_json(entry):
+    return get_entry_content(entry, 'application/x.twitter+json')
+
+
+def get_entry_html(entry):
+    return get_entry_content(entry, 'text/html')
+
+
+def clean_html(html):
+    lines = []
+    for line in html.splitlines():
+        line = line.strip()
+        if line:
+            lines.append(line)
+    return '\n'.join(lines)
+
+
+def test_update_end_to_end(reader, update_with):
+    # ... almost end to end, to make sure everything is called
+    tweets = [deepcopy(TWEET_0), deepcopy(TWEET_1)]
+    update_with(tweets, [USER])
 
     (entry,) = reader.get_entries()
-
-    assert entry.id == '2100'
-    assert entry.published == datetime(2022, 1, 1, 0, 21, 0)
-    assert entry.updated == datetime(2022, 1, 1, 0, 21, 0)
-    assert entry.title == 'one'
-    assert entry.link == 'https://twitter.com/user/status/2100'
-    assert entry.author == '@user'
-
     assert get_entry_json(entry) == {
         'id': 2100,
-        'tweets': {'2100': tweet_0, '2000': tweet_retweeted},
-        'users': {'1000': user, '1100': user_retweeted},
+        'tweets': {'2100': tweets[0], '2101': tweets[1]},
+        'users': {'1000': USER},
         'media': {},
         'polls': {},
     }
+    assert clean_html(get_entry_html(entry)) == clean_html(
+        """
+        <div class="tweet">
+        <p>name @user · 2100-01-01
+        <p>one
+        </div>
+        <div class="tweet">
+        <p>name @user · 2101-01-01
+        <p>two
+        </div>
+        """
+    )
+
+
+@with_update_data
+@pytest.mark.parametrize('index', [0, 1])
+def test_update_one_call(reader, update_with, render_user_html, update_data, index):
+    tweets = [deepcopy(TWEET_0), deepcopy(TWEET_1)]
+
+    expected_json = {
+        'id': 2100,
+        'tweets': {'2100': tweets[0], '2101': tweets[1]},
+        'users': {'1000': USER},
+        'media': {},
+        'polls': {},
+    }
+
+    page = {
+        'data': list(tweets),
+        'users': [USER],
+        'media': [],
+        'polls': [],
+        'tweets': [],
+    }
+    update_data(tweets[index], page, expected_json)
+    update_with(**page)
+
+    assert render_user_html.conversation == Conversation.from_json(expected_json)
+    (entry,) = reader.get_entries()
+    assert get_entry_json(entry) == expected_json
+
+
+@with_update_data
+@pytest.mark.parametrize('index', [0, 1])
+def test_update_two_calls(reader, update_with, render_user_html, update_data, index):
+    tweets = [deepcopy(TWEET_0), deepcopy(TWEET_1)]
+
+    expected_json = {
+        'id': 2100,
+        'tweets': {'2100': tweets[0], '2101': tweets[1]},
+        'users': {'1000': USER},
+        'media': {},
+        'polls': {},
+    }
+
+    pages = []
+    for tweet in tweets:
+        pages.append(
+            {
+                'data': [tweet],
+                'users': [USER],
+                'media': [],
+                'polls': [],
+                'tweets': [],
+            }
+        )
+    update_data(tweets[index], pages[index], expected_json)
+    for page in pages:
+        update_with(**page)
+
+    assert render_user_html.conversation == Conversation.from_json(expected_json)
+    (entry,) = reader.get_entries()
+    assert get_entry_json(entry) == expected_json
+
+
+@with_update_data
+@pytest.mark.parametrize('index', [0, 1])
+def test_update_two_responses(
+    reader, update_with, render_user_html, update_data, index
+):
+    tweets = [deepcopy(TWEET_0), deepcopy(TWEET_1)]
+
+    expected_json = {
+        'id': 2100,
+        'tweets': {'2100': tweets[0], '2101': tweets[1]},
+        'users': {'1000': USER},
+        'media': {},
+        'polls': {},
+    }
+
+    pages = []
+    for tweet in tweets:
+        pages.append(
+            {
+                'data': [tweet],
+                'users': [USER],
+                'media': [],
+                'polls': [],
+                'tweets': [],
+            }
+        )
+    update_data(tweets[index], pages[index], expected_json)
+    update_with(pages=pages)
+
+    assert render_user_html.conversation == Conversation.from_json(expected_json)
+    (entry,) = reader.get_entries()
+    assert get_entry_json(entry) == expected_json
+
+
+@with_update_data
+@pytest.mark.parametrize('index', [0, 1])
+def test_update_two_entries(reader, update_with, update_data, index):
+    tweets = [deepcopy(TWEET_0), deepcopy(TWEET_0)]
+    tweets[1].update(id='2200', conversation_id='2200', text="two")
+
+    expected_jsons = [
+        {
+            'id': 2100,
+            'tweets': {'2100': tweets[0]},
+            'users': {'1000': USER},
+            'media': {},
+            'polls': {},
+        },
+        {
+            'id': 2200,
+            'tweets': {'2200': tweets[1]},
+            'users': {'1000': USER},
+            'media': {},
+            'polls': {},
+        },
+    ]
+
+    page = {
+        'data': list(tweets),
+        'users': [USER],
+        'media': [],
+        'polls': [],
+        'tweets': [],
+    }
+    update_data(tweets[index], page, expected_jsons[index])
+    update_with(**page)
+
+    actual_jsons = [
+        get_entry_json(e) for e in sorted(reader.get_entries(), key=lambda e: e.id)
+    ]
+    assert actual_jsons == expected_jsons
+
+
+# preliminary tests; to be replaced by the ones above when they're all done
 
 
 def test_update_with_lots_of_replies(reader, update_with):
