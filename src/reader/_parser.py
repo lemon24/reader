@@ -706,19 +706,28 @@ def _process_feedparser_dict(url: str, d: Any) -> FeedAndEntries:
         d.feed.get('subtitle') or None,
         d.version,
     )
-    # This must be a list, not a generator expression,
+
+    # entries must be a list, not a generator expression,
     # otherwise the user may get a ParseError when calling
     # next(parse_result.entries), i.e. after parse() returned.
     entries = []
+    first_parse_error = None
+
     for e in d.entries:
         try:
             entry = _feedparser_entry(url, e, is_rss)
+        except ParseError as e:
+            # Skip entries that raise ParseError with a warning.
+            # https://github.com/lemon24/reader/issues/281
+            warnings.warn(e)
+            if not first_parse_error:
+                first_parse_error = e
+        else:
             entries.append(entry)
-        except ParseError as exc:
-            warnings.warn(f"{exc.url}: {exc.message}")
 
-    if not entries:
-        raise ParseError(url, message="all entries with no id or link fallback")
+    # If all entries failed, raise the first exception.
+    if first_parse_error and not entries:
+        raise first_parse_error
 
     return feed, entries
 
@@ -748,7 +757,7 @@ def _feedparser_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
         )
 
     if not id:
-        raise ParseError(feed_url, message="entry with no id or link fallback")
+        raise ParseError(feed_url, message="entry with no id or fallback")
 
     content = []
     for data in entry.get('content', ()):

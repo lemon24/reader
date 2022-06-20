@@ -57,6 +57,15 @@ class ReaderError(_FancyExceptionBase):
     """Base for all public exceptions."""
 
 
+class ReaderWarning(UserWarning):
+    """Base for all warnings emitted by *reader*.
+    that are not :exc:`DeprecationWarning`.
+
+    .. versionadded:: 2.13
+
+    """
+
+
 class ResourceNotFoundError(ReaderError):
     """Resource (feed, entry) not found.
 
@@ -112,7 +121,7 @@ class InvalidFeedURLError(FeedError, ValueError):
     message = "invalid feed URL"
 
 
-class ParseError(FeedError):
+class ParseError(FeedError, ReaderWarning):
     """An error occurred while getting/parsing feed.
 
     The original exception should be chained to this one (e.__cause__).

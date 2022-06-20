@@ -529,7 +529,7 @@ def test_missing_entry_id():
     assert entry.id == entry.link
 
     # ... and only link.
-    with pytest.raises(ParseError) as excinfo:
+    with pytest.raises(ParseError) as excinfo, pytest.warns(ParseError):
         feedparser_parse(
             'url',
             """
@@ -546,10 +546,10 @@ def test_missing_entry_id():
             """.strip(),
         )
     assert excinfo.value.url == 'url'
-    assert 'all entries with no id' in excinfo.value.message
+    assert 'entry with no id' in excinfo.value.message
 
-    # single malformed entry shouldn't fail entire feed
-    with pytest.warns(UserWarning) as warnings:
+    # But we only raise an exception if *all* entries fail, warn otherwise.
+    with pytest.warns(ParseError) as warnings:
         feed, entries = feedparser_parse(
             'url',
             """
@@ -558,27 +558,25 @@ def test_missing_entry_id():
             <channel>
                 <item>
                     <title>Example entry without id or link</title>
-                    <description>Here is some text.</description>
-                    <pubDate>Sun, 07 Sep 2009 16:20:00 +0000</pubDate>
+                </item>
+                <item>
+                    <title>Another one</title>
                 </item>
                 <item>
                     <link>http://www.example.com/blog/post/1</link>
                     <title>Example entry</title>
-                    <description>Here is some text.</description>
-                    <pubDate>Sun, 06 Sep 2009 16:20:00 +0000</pubDate>
                 </item>
             </channel>
             </rss>
             """.strip(),
         )
-    assert len(entries) == 1
-    (warninfo,) = warnings
-    (warnmsg,) = warninfo.message.args
-    assert warnmsg.startswith('url')
-    assert 'entry with no id' in warnmsg
+    assert [e.title for e in entries] == ["Example entry"]
+    assert len(warnings) == 2, warnings
+    assert warnings[0].message.url == 'url'
+    assert 'entry with no id' in warnings[0].message.message
 
     # There is no fallback for Atom.
-    with pytest.raises(ParseError) as excinfo:
+    with pytest.raises(ParseError) as excinfo, pytest.warns(ParseError):
         feedparser_parse(
             'url',
             """
@@ -594,7 +592,7 @@ def test_missing_entry_id():
             """.strip(),
         )
     assert excinfo.value.url == 'url'
-    assert 'all entries with no id' in excinfo.value.message
+    assert 'entry with no id' in excinfo.value.message
 
     # Same for JSON Feed.
     with pytest.raises(ParseError) as excinfo:

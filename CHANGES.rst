@@ -11,6 +11,14 @@ Version 2.13
 
 Unreleased
 
+* Skip with a warning entries that have no <guid> or <link> in an RSS feed;
+  only raise :exc:`ParseError` if *all* entries have a missing id.
+  (Note that both Atom and JSON Feed entries are required to have an id
+  by their respective specifications.)
+  Thanks to `Mirek Długosz`_ for the issue and pull request.
+  (:issue:`281`)
+* Add :exc:`ReaderWarning`.
+
 
 Version 2.12
 ------------

@@ -89,7 +89,7 @@ Exceptions
 .. autoexception:: ParseError
     :members:
 
-    Subclass of :exc:`FeedError`.
+    Subclass of :exc:`FeedError` and :exc:`ReaderWarning`.
 
 .. autoexception:: InvalidFeedURLError
 
@@ -164,6 +164,11 @@ Exceptions
 .. autoexception:: InvalidPluginError
 
     Subclass of :exc:`PluginError` and :exc:`ValueError`.
+
+
+.. autoexception:: ReaderWarning
+
+    Subclass of :exc:`UserWarning`.
 
 
 Constants
