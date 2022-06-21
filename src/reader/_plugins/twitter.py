@@ -6,7 +6,7 @@ To do before the next release:
 * clean up rendered HTML
   * say "there is a poll not shown"
   * show media as a list of plain elements (just <img|video src="..." />)
-  * for retweets, don't show the retweeter's text
+  * how about tweets that contain an url? (make it <a href="..."> at least)
 * basic CSS
 * retrieve media/polls in quoted/retweeted tweet
 * think of a mechanism to re-render entry HTML on plugin update
@@ -548,20 +548,48 @@ def flatten_tree(root: Node) -> None:
 
 TWEET_HTML_TEMPLATE = r"""
 
+{%- macro nl2br(text) -%}
+{#- assumes text is unsafe -#}
+{{ (text|escape).replace('\n', '<br>\n'|safe)|safe }}
+{%- endmacro %}
+
+{%- macro author_link(node, class=none) -%}
+<a href="https://twitter.com/{{ node.author.username }}"
+{%- if class %} class="{{ class }}"{% endif -%}
+>{{ caller() }}</a>
+{%- endmacro -%}
+
+{%- macro tweet_link(node, class=none) -%}
+<a href="https://twitter.com/{{ node.author.username }}/status/{{ node.tweet.id }}"
+{%- if class %} class="{{ class }}"{% endif -%}
+>{{ caller() }}</a>
+{%- endmacro -%}
+
+
 {%- macro do_node(node, level=0, class="tweet") -%}
 
 {% if class %}<div class="{{ class }}">{% endif %}
 
-<p>{{ node.author.name }} @{{ node.author.username }} · {{ node.tweet.created_at.date() }}
+<p class="top-line">
+{% if not node.retweeted %}
+{% call author_link(node, "name") %}{{ node.author.name }}{% endcall %}
+{% call author_link(node, "username") %}@{{ node.author.username }}{% endcall %}
+· {% call tweet_link(node, "created-at") %}{{ node.tweet.created_at.date() }}{% endcall %}
+{% else %}
+{% call author_link(node, "name-retweeted") %}{{ node.author.name }} retweeted{% endcall %}
+{% endif %}
+</p>
 
-<p>{{ node.tweet.text }}
+{% if not node.retweeted %}
+<p class="text">{{ nl2br(node.tweet.text) }}</p>
+{% endif %}
 
 {% if node.quoted %}
-{{ do_node(node.quoted, class="tweet quoted") }}
+{{ do_node(node.quoted, class="tweet quote") }}
 {% endif %}
 
 {% if node.retweeted %}
-{{ do_node(node.retweeted, class="tweet retweeted") }}
+{{ do_node(node.retweeted, class="tweet retweet") }}
 {% endif %}
 
 {% if class %}</div>{% endif -%}

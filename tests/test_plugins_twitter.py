@@ -397,18 +397,7 @@ def test_update_end_to_end(reader, update_with):
         'media': {},
         'polls': {},
     }
-    assert clean_html(get_entry_html(entry)) == clean_html(
-        """
-        <div class="tweet">
-        <p>name @user · 2100-01-01
-        <p>one
-        </div>
-        <div class="tweet">
-        <p>name @user · 2101-01-01
-        <p>two
-        </div>
-        """
-    )
+    assert clean_html(get_entry_html(entry)) == clean_html(TWEET_0_HTML + TWEET_1_HTML)
 
 
 @with_update_data
@@ -517,65 +506,102 @@ def test_update_two_entries(reader, update_with, update_data, index):
     assert actual_jsons == expected_jsons
 
 
+TWEET_0_HTML = """
+<div class="tweet">
+<p class="top-line">
+<a href="https://twitter.com/user" class="name">name</a>
+<a href="https://twitter.com/user" class="username">@user</a>
+· <a href="https://twitter.com/user/status/2100" class="created-at">2100-01-01</a>
+</p>
+
+<p class="text">one</p>
+
+</div>
+"""
+
+TWEET_1_HTML = """
+<div class="tweet">
+<p class="top-line">
+<a href="https://twitter.com/user" class="name">name</a>
+<a href="https://twitter.com/user" class="username">@user</a>
+· <a href="https://twitter.com/user/status/2101" class="created-at">2101-01-01</a>
+</p>
+
+<p class="text">two</p>
+
+</div>
+"""
+
 UPDATE_FN_TO_HTML = {
-    update_data_plain: """
-        <div class="tweet">
-        <p>name @user · 2100-01-01
-        <p>one
-        </div>
-        <div class="tweet">
-        <p>name @user · 2101-01-01
-        <p>two
-        </div>
-        """,
+    update_data_plain: TWEET_0_HTML + TWEET_1_HTML,
     update_data_media: """
         <div class="tweet">
-        <p>name @user · 2100-01-01
-        <p>one
+        <p class="top-line">
+        <a href="https://twitter.com/user" class="name">name</a>
+        <a href="https://twitter.com/user" class="username">@user</a>
+        · <a href="https://twitter.com/user/status/2100" class="created-at">2100-01-01</a>
+        </p>
+
+        <p class="text">one</p>
+
         </div>
-        <div class="tweet">
-        <p>name @user · 2101-01-01
-        <p>two
-        </div>
-        """,
+        """
+    + TWEET_1_HTML,
     update_data_poll: """
         <div class="tweet">
-        <p>name @user · 2100-01-01
-        <p>one
+        <p class="top-line">
+        <a href="https://twitter.com/user" class="name">name</a>
+        <a href="https://twitter.com/user" class="username">@user</a>
+        · <a href="https://twitter.com/user/status/2100" class="created-at">2100-01-01</a>
+        </p>
+
+        <p class="text">one</p>
+
         </div>
-        <div class="tweet">
-        <p>name @user · 2101-01-01
-        <p>two
-        </div>
-        """,
+        """
+    + TWEET_1_HTML,
     update_data_quote: """
         <div class="tweet">
-        <p>name @user · 2100-01-01
-        <p>one
-        <div class="tweet quoted">
-        <p>quoted @quoteduser · 2000-01-01
-        <p>quote
+        <p class="top-line">
+        <a href="https://twitter.com/user" class="name">name</a>
+        <a href="https://twitter.com/user" class="username">@user</a>
+        · <a href="https://twitter.com/user/status/2100" class="created-at">2100-01-01</a>
+        </p>
+
+        <p class="text">one</p>
+
+        <div class="tweet quote">
+        <p class="top-line">
+        <a href="https://twitter.com/quoteduser" class="name">quoted</a>
+        <a href="https://twitter.com/quoteduser" class="username">@quoteduser</a>
+        · <a href="https://twitter.com/quoteduser/status/2000" class="created-at">2000-01-01</a>
+        </p>
+
+        <p class="text">quote</p>
+
         </div>
         </div>
-        <div class="tweet">
-        <p>name @user · 2101-01-01
-        <p>two
-        </div>
-        """,
+        """
+    + TWEET_1_HTML,
     update_data_retweet: """
         <div class="tweet">
-        <p>name @user · 2100-01-01
-        <p>one
-        <div class="tweet retweeted">
-        <p>retweeted @retweeteduser · 2000-01-01
-        <p>retweet
+        <p class="top-line">
+        <a href="https://twitter.com/user" class="name-retweeted">name retweeted</a>
+        </p>
+
+        <div class="tweet retweet">
+        <p class="top-line">
+        <a href="https://twitter.com/retweeteduser" class="name">retweeted</a>
+        <a href="https://twitter.com/retweeteduser" class="username">@retweeteduser</a>
+        · <a href="https://twitter.com/retweeteduser/status/2000" class="created-at">2000-01-01</a>
+        </p>
+
+        <p class="text">retweet</p>
+
         </div>
         </div>
-        <div class="tweet">
-        <p>name @user · 2101-01-01
-        <p>two
-        </div>
-        """,
+        """
+    + TWEET_1_HTML,
 }
 
 
