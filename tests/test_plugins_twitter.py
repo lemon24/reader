@@ -281,10 +281,18 @@ def update_data_plain(tweet, page, expected_json):
 
 
 def update_data_media(tweet, page, expected_json):
-    media = {'media_key': '3_3000', 'type': 'photo'}
-    tweet.setdefault('attachments', {}).setdefault('media_keys', []).append('3_3000')
-    page.setdefault('media', []).append(media)
-    expected_json['media']['3_3000'] = media
+    photo = {'media_key': '3_3000', 'type': 'photo', 'url': './photo.jpg'}
+    video = {
+        'media_key': '3_3001',
+        'type': 'video',
+        'preview_image_url': './video.webp',
+    }
+    tweet.setdefault('attachments', {}).setdefault('media_keys', []).extend(
+        ['3_3000', '3_3001']
+    )
+    page.setdefault('media', []).extend([photo, video])
+    expected_json['media']['3_3000'] = photo
+    expected_json['media']['3_3001'] = video
 
 
 def update_data_poll(tweet, page, expected_json):
@@ -550,6 +558,13 @@ UPDATE_FN_TO_HTML = {
         </p>
 
         <p class="text">one</p>
+
+        <a href="https://twitter.com/user/status/2100">
+        <img class="media photo" src="./photo.jpg">
+        </a>
+        <a href="https://twitter.com/user/status/2100">
+        <img class="media video" src="./video.webp">
+        </a>
 
         </div>
         """

@@ -4,7 +4,6 @@ To do before the next release:
 
 * docs
 * clean up rendered HTML
-  * show media as a list of plain elements (just <img|video src="..." />)
   * how about tweets that contain an url? (make it <a href="..."> at least)
 * basic CSS
 * retrieve media/polls in quoted/retweeted tweet
@@ -584,13 +583,42 @@ TWEET_HTML_TEMPLATE = r"""
 {% endif %}
 
 {% for poll in node.polls %}
+{% if poll %}
 <ul class="poll">
 {% for option in poll.options | sort(attribute='position') %}
 <li><span class="label">{{ option.label }}</span><span class="votes">{{ option.votes }}</span>
 {% endfor %}
 </ul>
+{% else %}
+<p class="poll">[missing poll object]</p>
+{% endif %}
 {% endfor %}
 
+{% for media in node.media %}
+{% if media %}
+
+{% if media.type in ('animated_gif', 'photo') %}
+
+{% call tweet_link(node) %}
+<img class="media {{ 'gif' if media.type == 'animated_gif' else media.type }}" src="{{ media.url }}"
+    {%- if media.alt_text %} alt="{{ media.alt_text }}"{% endif -%}
+>
+{% endcall %}
+
+{% elif media.type == 'video' %}
+
+{% call tweet_link(node) %}
+<img class="media video" src="{{ media.preview_image_url }}"
+    {%- if media.alt_text %} alt="{{ media.alt_text }}"{% endif -%}
+>
+{% endcall %}
+
+{% endif %}
+
+{% else %}
+<p class="media">[missing media object]</p>
+{% endif %}
+{% endfor %}
 
 {% if node.quoted %}
 {{ do_node(node.quoted, class="tweet quote") }}
