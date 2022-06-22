@@ -3,8 +3,6 @@
 To do before the next release:
 
 * docs
-* clean up rendered HTML
-  * how about tweets that contain an url? (make it <a href="..."> at least)
 * basic CSS
 * retrieve media/polls in quoted/retweeted tweet
 * think of a mechanism to re-render entry HTML on plugin update
@@ -13,16 +11,21 @@ To do before the next release:
 
 To do after the next release:
 
-* render media
-* render polls
-* expand urls
+* better media rendering
+* better poll rendering
+* better url/entity expansion
+  * feed subtitle
+  * don't show url for quoted tweets
+  * hashtags, usernames
 * mark updated entry as unread
-* https://twitter.com/user?replies=yes
+* more tests
+* retrieve and render tweet replies (https://twitter.com/user?replies=yes)
 
 """
 from __future__ import annotations
 
 import posixpath
+import re
 from contextlib import contextmanager
 from dataclasses import dataclass
 from dataclasses import field
@@ -33,9 +36,11 @@ from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
 import jinja2
+import markupsafe
 import tweepy
 
 from reader import Content
+from reader import HighlightedString
 from reader import ParseError
 from reader import Reader
 from reader._parser import RetrieveResult
@@ -429,7 +434,7 @@ def render_user_entry(entry: EntryData) -> EntryData:
 
     return entry._replace(
         updated=updated,
-        title=root.text,
+        title=render_user_title(conversation),
         link=f"{entry.feed_url}/status/{conversation.id}",
         author=f"@{user.username}",
         published=published,
@@ -442,6 +447,13 @@ def render_user_entry(entry: EntryData) -> EntryData:
     )
 
     # TODO: title and author should be of quoted tweet?
+
+
+def render_user_title(conversation):
+    # TODO: don't call conversation_tree() twice?
+    tree = conversation_tree(conversation, False)
+    title = expand_entities(tree)
+    return title
 
 
 def render_user_html(conversation, with_replies):
@@ -546,11 +558,6 @@ def flatten_tree(root: Node) -> None:
 
 TWEET_HTML_TEMPLATE = r"""
 
-{%- macro nl2br(text) -%}
-{#- assumes text is unsafe -#}
-{{ (text|escape).replace('\n', '<br>\n'|safe)|safe }}
-{%- endmacro %}
-
 {%- macro author_link(node, class=none) -%}
 <a href="https://twitter.com/{{ node.author.username }}"
 {%- if class %} class="{{ class }}"{% endif -%}
@@ -579,7 +586,7 @@ TWEET_HTML_TEMPLATE = r"""
 </p>
 
 {% if not node.retweeted %}
-<p class="text">{{ nl2br(node.tweet.text) }}</p>
+<p class="text">{{ node | expand_entities | nl2br }}</p>
 {% endif %}
 
 {% for poll in node.polls %}
@@ -649,10 +656,73 @@ TWEET_HTML_TEMPLATE = r"""
 
 """
 
+
+@jinja2.pass_eval_context
+def nl2br(eval_ctx, value):
+    # from https://jinja.palletsprojects.com/en/3.0.x/api/#writing-filters
+    br = "<br>\n"
+    if eval_ctx.autoescape:
+        value = markupsafe.escape(value)
+        br = markupsafe.Markup(br)
+    result = "\n\n".join(
+        f"{br.join(p.splitlines())}"
+        for p in re.split(r"(?:\r\n|\r(?!\n)|\n){2,}", value)
+    )
+    return markupsafe.Markup(result) if eval_ctx.autoescape else result
+
+
+def expand_entities(node) -> str:
+    tweet = node.tweet
+
+    highlights = []
+    replacements = {}
+
+    have_media_keys = {m.media_key for m in node.media if m}
+    for entity in (tweet.entities or {}).get('urls', ()):
+        highlight = slice(entity['start'], entity['end'])
+        original = tweet.text[highlight]
+
+        if original in replacements:
+            continue
+
+        highlights.append(highlight)
+
+        media_key = entity.get('media_key')
+        if media_key and media_key in have_media_keys:
+            # we're already showing it in media, no point in linking it
+            replacements[original] = ''
+        else:
+            replacements[original] = (
+                jinja_env.get_template('url.html')
+                .render(original=original, entity=entity)
+                .strip()
+            )
+
+    def func(part):
+        return replacements.get(part, part)
+
+    return HighlightedString(tweet.text, highlights).apply('', '', func)
+
+
+URL_HTML_TEMPLATE = """
+<a href="{{ entity.expanded_url }}"
+{%- if entity.get('title') %} title="{{ entity.title }}"{% endif -%}
+>{{ entity.display_url }}</a>
+"""
+
+
 jinja_env = jinja2.Environment(
     undefined=jinja2.StrictUndefined,
-    loader=jinja2.DictLoader({'tweet.html': TWEET_HTML_TEMPLATE}),
+    loader=jinja2.DictLoader(
+        {
+            'tweet.html': TWEET_HTML_TEMPLATE,
+            'url.html': URL_HTML_TEMPLATE,
+        }
+    ),
 )
+
+jinja_env.filters['nl2br'] = nl2br
+jinja_env.filters['expand_entities'] = expand_entities
 
 
 def init_reader(reader):

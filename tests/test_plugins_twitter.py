@@ -45,6 +45,7 @@ mock retrieve_user_responses()
     * sequence: [x] 2+0, [x] 1+1+0
   * [x] two tweets, across 2 pages
   * [ ] resources for quoted/retweeted are included
+  * [ ] entry title has entities expanded
 
 render: conversation json -> html
 
@@ -347,16 +348,20 @@ def update_data_retweet(tweet, page, expected_json):
     expected_json['users']['1100'] = user_retweeted
 
 
-with_update_data = pytest.mark.parametrize(
-    'update_data',
-    [
-        update_data_plain,
-        update_data_media,
-        update_data_poll,
-        update_data_quote,
-        update_data_retweet,
-    ],
-)
+DEFAULT_UPDATE_DATA_FNS = [
+    update_data_plain,
+    update_data_media,
+    update_data_poll,
+    update_data_quote,
+    update_data_retweet,
+]
+
+
+def with_update_data(fn=None, update_fns=tuple(DEFAULT_UPDATE_DATA_FNS)):
+    decorator = pytest.mark.parametrize('update_data', update_fns)
+    if fn:
+        return decorator(fn)
+    return decorator
 
 
 @pytest.fixture
@@ -521,6 +526,46 @@ def test_update_two_entries(reader, update_with, update_data, index):
     assert actual_jsons == expected_jsons
 
 
+def update_data_entities(tweet, page, expected_json):
+    assert not page
+    tweet['text'] = 'interesting article https://t.co/article https://t.co/screenshot'
+    tweet['entities'] = {
+        'urls': [
+            {
+                'start': 20,
+                'end': 40,
+                'url': 'https://t.co/article',
+                'expanded_url': 'https://example.com/article',
+                'display_url': 'example.com/article',
+                'images': [
+                    {
+                        'url': 'https://pbs.twimg.com/news_img/article?format=jpg&name=orig',
+                        'width': 1200,
+                        'height': 600,
+                    },
+                    {
+                        'url': 'https://pbs.twimg.com/news_img/article?format=jpg&name=150x150',
+                        'width': 150,
+                        'height': 150,
+                    },
+                ],
+                'status': 200,
+                'title': 'Article Title',
+                'description': 'Article description.',
+                'unwound_url': 'https://example.com/article',
+            },
+            {
+                'start': 41,
+                'end': 64,
+                'url': 'https://t.co/screenshot',
+                'expanded_url': 'https://twitter.com/user/status/2000/photo/1',
+                'display_url': 'pic.twitter.com/screenshot',
+                'media_key': '3_3000',
+            },
+        ]
+    }
+
+
 TWEET_0_HTML = """
 <div class="tweet">
 <p class="top-line">
@@ -548,7 +593,7 @@ TWEET_1_HTML = """
 """
 
 UPDATE_FN_TO_HTML = {
-    update_data_plain: TWEET_0_HTML + TWEET_1_HTML,
+    update_data_plain: TWEET_0_HTML,
     update_data_media: """
         <div class="tweet">
         <p class="top-line">
@@ -567,8 +612,7 @@ UPDATE_FN_TO_HTML = {
         </a>
 
         </div>
-        """
-    + TWEET_1_HTML,
+        """,
     update_data_poll: """
         <div class="tweet">
         <p class="top-line">
@@ -585,8 +629,7 @@ UPDATE_FN_TO_HTML = {
         </ul>
 
         </div>
-        """
-    + TWEET_1_HTML,
+        """,
     update_data_quote: """
         <div class="tweet">
         <p class="top-line">
@@ -608,8 +651,7 @@ UPDATE_FN_TO_HTML = {
 
         </div>
         </div>
-        """
-    + TWEET_1_HTML,
+        """,
     update_data_retweet: """
         <div class="tweet">
         <p class="top-line">
@@ -627,12 +669,23 @@ UPDATE_FN_TO_HTML = {
 
         </div>
         </div>
-        """
-    + TWEET_1_HTML,
+        """,
+    update_data_entities: """
+        <div class="tweet">
+        <p class="top-line">
+        <a href="https://twitter.com/user" class="name">name</a>
+        <a href="https://twitter.com/user" class="username">@user</a>
+        · <a href="https://twitter.com/user/status/2100" class="created-at">2100-01-01</a>
+        </p>
+
+        <p class="text">interesting article <a href="https://example.com/article" title="Article Title">example.com/article</a> <a href="https://twitter.com/user/status/2000/photo/1">pic.twitter.com/screenshot</a></p>
+
+        </div>
+        """,
 }
 
 
-@with_update_data
+@with_update_data(update_fns=UPDATE_FN_TO_HTML)
 def test_render_user_html(reader, update_with, update_data):
     tweets = [deepcopy(TWEET_0), deepcopy(TWEET_1)]
 
@@ -649,7 +702,7 @@ def test_render_user_html(reader, update_with, update_data):
     conversation = Conversation.from_json(expected_json)
     actual_html = clean_html(twitter.render_user_html(conversation, False))
 
-    assert actual_html == clean_html(UPDATE_FN_TO_HTML[update_data])
+    assert actual_html == clean_html(UPDATE_FN_TO_HTML[update_data] + TWEET_1_HTML)
 
 
 # preliminary tests; to be replaced by the ones above when they're all done
