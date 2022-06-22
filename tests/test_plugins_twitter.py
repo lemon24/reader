@@ -640,7 +640,7 @@ UPDATE_FN_TO_HTML = {
 
         <p class="text">one</p>
 
-        <div class="tweet quote">
+        <div class="tweet tweet-quote">
         <p class="top-line">
         <a href="https://twitter.com/quoteduser" class="name">quoted</a>
         <a href="https://twitter.com/quoteduser" class="username">@quoteduser</a>
@@ -658,7 +658,7 @@ UPDATE_FN_TO_HTML = {
         <a href="https://twitter.com/user" class="name-retweeted">name retweeted</a>
         </p>
 
-        <div class="tweet retweet">
+        <div class="tweet tweet-retweet">
         <p class="top-line">
         <a href="https://twitter.com/retweeteduser" class="name">retweeted</a>
         <a href="https://twitter.com/retweeteduser" class="username">@retweeteduser</a>

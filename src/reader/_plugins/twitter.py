@@ -3,14 +3,11 @@
 To do before the next release:
 
 * docs
-* basic CSS
-* retrieve media/polls in quoted/retweeted tweet
-* think of a mechanism to re-render entry HTML on plugin update
-* remove Paginator(max_results=..., limit=...) used during development
-
 
 To do after the next release:
 
+* think of a mechanism to re-render entry HTML on plugin update
+* retrieve media/polls in quoted/retweeted tweet
 * better media rendering
 * better poll rendering
 * better url/entity expansion
@@ -222,14 +219,12 @@ class Twitter:
 
     """
 
-    # TODO: do we need to handle retries?
-
     client: tweepy.Client
 
     @classmethod
     def from_bearer_token(cls, bearer_token):
         # TODO: maybe use our own requests session
-        return cls(tweepy.Client(bearer_token))
+        return cls(tweepy.Client(bearer_token, wait_on_rate_limit=True))
 
     def retrieve_user(self, url: UserURL, etag: Etag) -> UserFile:
         user, responses = self.retrieve_user_responses(url, etag)
@@ -239,7 +234,9 @@ class Twitter:
         return UserFile(user, list(conversations.values()))
 
     def retrieve_user_responses(self, url: UserURL, etag: Etag):
-        user = self.client.get_user(username=url.username).data
+        user = self.client.get_user(
+            username=url.username, user_fields=TWITTER_FIELDS_KWARGS['user_fields']
+        ).data
 
         # are we getting billed twice for a tweet that's
         # both in .data and in .includes['tweets']?
@@ -247,9 +244,10 @@ class Twitter:
             self.client.get_users_tweets,
             user.id,
             since_id=etag.since_id,
-            # FIXME: these are good only for testing
+            # > the number of Tweets to try and retrieve,
+            # > up to a maximum of 100 per distinct request
             max_results=100,
-            limit=2,
+            limit=10,
             **TWITTER_FIELDS_KWARGS,
         )
 
@@ -597,7 +595,7 @@ TWEET_HTML_TEMPLATE = r"""
 {% endfor %}
 </ul>
 {% else %}
-<p class="poll">[missing poll object]</p>
+<p class="poll"><em>[missing poll object]</em></p>
 {% endif %}
 {% endfor %}
 
@@ -623,16 +621,16 @@ TWEET_HTML_TEMPLATE = r"""
 {% endif %}
 
 {% else %}
-<p class="media">[missing media object]</p>
+<p class="media"><em>[missing media object]</em></p>
 {% endif %}
 {% endfor %}
 
 {% if node.quoted %}
-{{ do_node(node.quoted, class="tweet quote") }}
+{{ do_node(node.quoted, class="tweet tweet-quote") }}
 {% endif %}
 
 {% if node.retweeted %}
-{{ do_node(node.retweeted, class="tweet retweet") }}
+{{ do_node(node.retweeted, class="tweet tweet-retweet") }}
 {% endif %}
 
 {% if class %}</div>{% endif -%}

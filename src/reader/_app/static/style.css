@@ -194,6 +194,28 @@ abbr[title]:focus .ellipsis {
 
 
 
+.tweet {
+    margin: 1em 0;
+}
+.tweet + .tweet {
+    border-top: .1em solid rgba(0, 0, 0, 0.2);
+    padding-top: .5em;
+}
+.tweet .tweet  {
+    border: .1em solid rgba(0, 0, 0, 0.2);
+    padding: .5em 1em;
+    margin-bottom: 1em;
+}
+.tweet .tweet p:last-child {
+    margin-bottom: 0;
+}
+.tweet .top-line {
+    font-size: smaller;
+}
+
+
+
+
 /* TODO: same for <strong>? */
 h1 b,
 h2 b,
