@@ -288,7 +288,14 @@ def update_data_media(tweet, page, expected_json):
 
 
 def update_data_poll(tweet, page, expected_json):
-    poll = {'id': '4000', 'options': []}
+    poll = {
+        'id': '4000',
+        'options': [
+            {'position': 1, 'label': "first", 'votes': 123},
+            {'position': 2, 'label': "second", 'votes': 321},
+        ],
+    }
+
     tweet.setdefault('attachments', {}).setdefault('poll_ids', []).append('4000')
     page.setdefault('polls', []).append(poll)
     expected_json['polls']['4000'] = poll
@@ -556,6 +563,11 @@ UPDATE_FN_TO_HTML = {
         </p>
 
         <p class="text">one</p>
+
+        <ul class="poll">
+        <li><span class="label">first</span><span class="votes">123</span>
+        <li><span class="label">second</span><span class="votes">321</span>
+        </ul>
 
         </div>
         """

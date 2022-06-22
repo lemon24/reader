@@ -4,7 +4,6 @@ To do before the next release:
 
 * docs
 * clean up rendered HTML
-  * say "there is a poll not shown"
   * show media as a list of plain elements (just <img|video src="..." />)
   * how about tweets that contain an url? (make it <a href="..."> at least)
 * basic CSS
@@ -583,6 +582,15 @@ TWEET_HTML_TEMPLATE = r"""
 {% if not node.retweeted %}
 <p class="text">{{ nl2br(node.tweet.text) }}</p>
 {% endif %}
+
+{% for poll in node.polls %}
+<ul class="poll">
+{% for option in poll.options | sort(attribute='position') %}
+<li><span class="label">{{ option.label }}</span><span class="votes">{{ option.votes }}</span>
+{% endfor %}
+</ul>
+{% endfor %}
+
 
 {% if node.quoted %}
 {{ do_node(node.quoted, class="tweet quote") }}
