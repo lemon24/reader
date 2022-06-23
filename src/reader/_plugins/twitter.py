@@ -3,6 +3,9 @@
 To do before the next release:
 
 * docs
+* handle missing tweets in response
+* process_feed_for_update ParseError should be stored on feed
+
 
 To do after the next release:
 
@@ -307,7 +310,29 @@ TWITTER_FIELDS_KWARGS = {
 
 
 def update_with_response(conversations, response):
-    assert not response.errors, response.errors
+    errors = list(response.errors)
+
+    for error in response.errors:
+        # [{'value': '123', 'detail': 'Could not find tweet with referenced_tweets.id: [123].', 'title': 'Not Found Error', 'resource_type': 'tweet', 'parameter': 'referenced_tweets.id', 'resource_id': '123', 'type': 'https://api.twitter.com/2/problems/resource-not-found'}]
+        if error['type'] == 'https://api.twitter.com/2/problems/resource-not-found':
+            errors.remove(error)
+    # FIXME: all tweets can be deleted, need to handle it somehow
+    """
+    File "/Users/lemon/code/reader/src/reader/_plugins/twitter.py", line 464, in render_user_title
+        tree = conversation_tree(conversation, False)
+    File "/Users/lemon/code/reader/src/reader/_plugins/twitter.py", line 550, in conversation_tree
+        return make_node(data.id)
+    File "/Users/lemon/code/reader/src/reader/_plugins/twitter.py", line 542, in make_node
+        quoted = get_referenced('quoted')
+    File "/Users/lemon/code/reader/src/reader/_plugins/twitter.py", line 516, in get_referenced
+        tweets = [
+    File "/Users/lemon/code/reader/src/reader/_plugins/twitter.py", line 517, in <listcomp>
+        data.tweets[r.id]
+    KeyError: 123
+    """
+
+    assert not errors, errors
+
     if not response.data:
         return
 

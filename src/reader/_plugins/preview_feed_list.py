@@ -20,6 +20,7 @@ To load::
 Implemented for https://github.com/lemon24/reader/issues/150.
 
 """
+import traceback
 import urllib.parse
 import warnings
 
@@ -127,7 +128,13 @@ class GotPreviewParseError(Exception):
 
 @got_preview_parse_error.connect
 def raise_got_preview_parse_error(error):
-    # TODO: it would be nice if we could distinguish http-related parse errors from other parse errors
+    # TODO: ParseError should be more specific, it should be clear if retrieving or parsing failed
+    function_names = {f.name for f in traceback.extract_tb(error.__traceback__)}
+    if 'process_feed_for_update' in function_names:
+        return
+    if 'retrieve' in function_names:
+        return
+
     if error.url.startswith('http:') or error.url.startswith('https:'):
         raise GotPreviewParseError() from error
 
@@ -142,7 +149,6 @@ def handle_parse_error_i_guess(error):
     # TODO: we should check if we got a requests exception, and not redirect then
     # we can't reuse the text of the original response, because parser is using streaming=True;
     # TODO: maybe we should still expose the response on the exception, we could at least reuse the status code
-    # TODO: ParseError should be more specific, it should be clear if retrieving or parsing failed
 
     return redirect(url_for('preview_feed_list.feed_list', url=parse_error.url))
 
