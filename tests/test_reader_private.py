@@ -12,6 +12,7 @@ from reader import EntryNotFoundError
 from reader import Feed
 from reader import FeedNotFoundError
 from reader import make_reader
+from reader import ParseError
 from reader._parser import RetrieveResult
 from reader._types import EntryData
 from reader._types import FeedData
@@ -151,41 +152,42 @@ def test_delete_entries(reader):
     assert get_entry_ids() == ['1, 1']
 
 
+class CustomRetriever:
+    slow_to_read = False
+
+    @contextmanager
+    def __call__(self, url, http_etag, *_, **__):
+        yield RetrieveResult('file', 'x.test', http_etag=http_etag.upper())
+
+    def validate_url(self, url):
+        pass
+
+    def process_feed_for_update(self, feed):
+        assert feed.http_etag is None
+        return feed._replace(http_etag='etag')
+
+
+class CustomParser:
+    http_accept = 'x.test'
+
+    def __call__(self, url, file, headers):
+        feed = FeedData(url, title=file.upper())
+        entries = [EntryData(url, 'id', title='entry')]
+        return feed, entries
+
+    def process_entry_pairs(self, url, pairs):
+        for new, old in pairs:
+            yield new._replace(title=new.title.upper()), old
+
+
 def test_retriever_parser_process_hooks(reader):
     """Test retriever.process_feed_for_update() and
     parser.process_entry_pairs() get called
     (both private, but used by plugins).
 
     """
-
-    class Retriever:
-        slow_to_read = False
-
-        @contextmanager
-        def __call__(self, url, http_etag, *_, **__):
-            yield RetrieveResult('file', 'x.test', http_etag=http_etag.upper())
-
-        def validate_url(self, url):
-            pass
-
-        def process_feed_for_update(self, feed):
-            assert feed.http_etag is None
-            return feed._replace(http_etag='etag')
-
-    class Parser:
-        http_accept = 'x.test'
-
-        def __call__(self, url, file, headers):
-            feed = FeedData(url, title=file.upper())
-            entries = [EntryData(url, 'id', title='entry')]
-            return feed, entries
-
-        def process_entry_pairs(self, url, pairs):
-            for new, old in pairs:
-                yield new._replace(title=new.title.upper()), old
-
-    reader._parser.mount_retriever('test:', Retriever())
-    reader._parser.mount_parser_by_mime_type(Parser())
+    reader._parser.mount_retriever('test:', CustomRetriever())
+    reader._parser.mount_parser_by_mime_type(CustomParser())
 
     reader.add_feed('test:one')
     reader.update_feeds()
@@ -198,3 +200,28 @@ def test_retriever_parser_process_hooks(reader):
     (entry,) = reader.get_entries()
     assert entry.title == 'ENTRY'
     assert entry.feed.title == 'FILE'
+
+
+def test_retriever_process_feed_for_update_parse_error(reader):
+    cause = Exception('bar')
+
+    def process_feed_for_update(feed):
+        raise ParseError(feed.url, 'foo') from cause
+
+    retriever = CustomRetriever()
+    retriever.process_feed_for_update = process_feed_for_update
+
+    reader._parser.mount_retriever('test:', retriever)
+    reader._parser.mount_parser_by_mime_type(CustomParser())
+
+    reader.add_feed('test:one')
+
+    with pytest.raises(ParseError) as excinfo:
+        reader.update_feed('test:one')
+    assert 'foo' == excinfo.value.message
+    assert excinfo.value.__cause__ is cause
+
+    (feed,) = reader.get_feeds()
+    assert feed.last_exception is not None
+    assert feed.last_exception.type_name == 'builtins.Exception'
+    assert feed.last_exception.value_str == 'bar'

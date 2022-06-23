@@ -4,7 +4,6 @@ To do before the next release:
 
 * docs
 * handle missing tweets in response
-* process_feed_for_update ParseError should be stored on feed
 
 
 To do after the next release:
@@ -20,6 +19,7 @@ To do after the next release:
 * mark updated entry as unread
 * more tests
 * retrieve and render tweet replies (https://twitter.com/user?replies=yes)
+* /preview web app support
 
 """
 from __future__ import annotations

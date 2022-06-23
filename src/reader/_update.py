@@ -4,6 +4,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from functools import partial
+from itertools import chain
 from itertools import starmap
 from itertools import tee
 from typing import Any
@@ -343,11 +344,32 @@ class Pipeline:
         is_parallel = self.map is not map
         process_parse_result = partial(self.process_parse_result, global_now)
 
+        # ಠ_ಠ
+        # The pipeline is not equipped to handle ParseErrors
+        # as early as parser.process_feed_for_update().
+        # So, we stash them away and don't retrieve/parse those feeds,
+        # and then tack them on at the end of parse_results.
+        # Storing the exceptions until the end of the generator
+        # might cause memory issues, but the caller may need to raise them.
+        # TODO: Rework update pipeline to support process_feed_for_update() exceptions.
+        parser_process_feeds_for_update_errors = []
+
+        def parser_process_feeds_for_update(
+            feeds: Iterable[FeedForUpdate],
+        ) -> Iterable[FeedForUpdate]:
+            for feed in feeds:
+                try:
+                    yield self.parser.process_feed_for_update(feed)
+                except ParseError as e:
+                    parser_process_feeds_for_update_errors.append((feed, e))
+
         # assemble pipeline
         feeds_for_update = self.storage.get_feeds_for_update(filter_options)
-        feeds_for_update = map(self.parser.process_feed_for_update, feeds_for_update)
+        # feeds_for_update = map(self.parser.process_feed_for_update, feeds_for_update)
+        feeds_for_update = parser_process_feeds_for_update(feeds_for_update)
         feeds_for_update = map(self.decider.process_feed_for_update, feeds_for_update)
         parse_results = self.parser.parallel(feeds_for_update, self.map, is_parallel)
+        parse_results = chain(parse_results, parser_process_feeds_for_update_errors)
         update_results = starmap(process_parse_result, parse_results)
 
         for url, value in update_results:
