@@ -46,12 +46,14 @@ mock retrieve_user_responses()
   * [x] two tweets, across 2 pages
   * [ ] resources for quoted/retweeted are included
   * [ ] entry title has entities expanded
+  * missing [ ] plain, [x] quote, [x] retweet
 
 render: conversation json -> html
 
 * two tweets
     * [x] plain, [x] media, [x] poll, [x] quote, [x] retweet
     * first fancy, second plain
+    * missing [ ] plain, [x] quote, [x] retweet
 * [ ] stray reply should not show up in html even if in convo json
 
 ## with_replies == True
@@ -348,12 +350,28 @@ def update_data_retweet(tweet, page, expected_json):
     expected_json['users']['1100'] = user_retweeted
 
 
+def update_data_quote_missing(tweet, page, expected_json):
+    update_data_quote(tweet, page, expected_json)
+    page['tweets'].pop()
+    del expected_json['tweets']['2000']
+    del expected_json['users']['1100']
+
+
+def update_data_retweet_missing(tweet, page, expected_json):
+    update_data_retweet(tweet, page, expected_json)
+    page['tweets'].pop()
+    del expected_json['tweets']['2000']
+    del expected_json['users']['1100']
+
+
 DEFAULT_UPDATE_DATA_FNS = [
     update_data_plain,
     update_data_media,
     update_data_poll,
     update_data_quote,
+    update_data_quote_missing,
     update_data_retweet,
+    update_data_retweet_missing,
 ]
 
 
@@ -652,6 +670,22 @@ UPDATE_FN_TO_HTML = {
         </div>
         </div>
         """,
+    update_data_quote_missing: """
+        <div class="tweet">
+        <p class="top-line">
+        <a href="https://twitter.com/user" class="name">name</a>
+        <a href="https://twitter.com/user" class="username">@user</a>
+        · <a href="https://twitter.com/user/status/2100" class="created-at">2100-01-01</a>
+        </p>
+
+        <p class="text">one</p>
+
+        <div class="tweet tweet-quote">
+        <p class="text"><em>[missing tweet object]</em></p>
+
+        </div>
+        </div>
+        """,
     update_data_retweet: """
         <div class="tweet">
         <p class="top-line">
@@ -666,6 +700,18 @@ UPDATE_FN_TO_HTML = {
         </p>
 
         <p class="text">retweet</p>
+
+        </div>
+        </div>
+        """,
+    update_data_retweet_missing: """
+        <div class="tweet">
+        <p class="top-line">
+        <a href="https://twitter.com/user" class="name-retweeted">name retweeted</a>
+        </p>
+
+        <div class="tweet tweet-retweet">
+        <p class="text"><em>[missing tweet object]</em></p>
 
         </div>
         </div>

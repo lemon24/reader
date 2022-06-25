@@ -160,7 +160,7 @@ class Retriever:
         """Enrich the etag that gets passed to __call__() with:
 
         * the bearer token (from global metadata)
-        * the ids of recent converstations (so we can retrieve retries)
+        * the ids of recent converstations (so we can retrieve replies)
 
         """
         now = self.reader._now()
@@ -527,16 +527,20 @@ def conversation_tree(data: Conversation, with_replies: bool) -> Node:
 
         def get_referenced(type):
             tweets = [
-                data.tweets[r.id]
+                data.tweets.get(r.id)
                 for r in tweet.referenced_tweets or ()
                 if r.type == type
             ]
 
-            # TODO: assert we got exactly one
             if not tweets:
                 return None
 
-            return make_node(tweets[0].id, wrapped=True)
+            # TODO: assert we got exactly one
+            referenced_tweet = tweets[0]
+            if not referenced_tweet:
+                return Node(None, None)
+
+            return make_node(referenced_tweet.id, wrapped=True)
 
         if not wrapped:
             children = []
@@ -595,8 +599,8 @@ TWEET_HTML_TEMPLATE = r"""
 
 
 {%- macro do_node(node, level=0, class="tweet") -%}
-
-{% if class %}<div class="{{ class }}">{% endif %}
+<div{% if class %} class="{{ class }}"{% endif %}>
+{% if node.tweet %}
 
 <p class="top-line">
 {% if not node.retweeted %}
@@ -658,7 +662,10 @@ TWEET_HTML_TEMPLATE = r"""
 {{ do_node(node.retweeted, class="tweet tweet-retweet") }}
 {% endif %}
 
-{% if class %}</div>{% endif -%}
+{% else %}
+<p class="text"><em>[missing tweet object]</em></p>
+{% endif %}
+</div>
 
 
 {% if node.children %}
