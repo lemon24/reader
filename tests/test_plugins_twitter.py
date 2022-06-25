@@ -135,7 +135,7 @@ TWEET_2 = {
     'conversation_id': '2100',
     'referenced_tweets': [{'type': 'replied_to', 'id': '2101'}],
     'created_at': '2102-01-01T00:00:00.000Z',
-    'text': "two",
+    'text': "three",
     'id': '2102',
     'author_id': '1000',
 }
@@ -284,6 +284,18 @@ def update_data_plain(tweet, page, expected_json):
     pass
 
 
+def update_data_plain_missing_one_of_two(tweet, page, expected_json):
+    page['data'] = [t for t in page['data'] if t['id'] != '2100']
+    del expected_json['tweets']['2100']
+
+
+def update_data_plain_missing_two_of_three(tweet, page, expected_json):
+    three = deepcopy(TWEET_2)
+    page['data'] = [t for t in page['data'] if t['id'] != '2101'] + [three]
+    del expected_json['tweets']['2101']
+    expected_json['tweets']['2102'] = three
+
+
 def update_data_media(tweet, page, expected_json):
     photo = {'media_key': '3_3000', 'type': 'photo', 'url': './photo.jpg'}
     video = {
@@ -367,6 +379,8 @@ def update_data_retweet_missing(tweet, page, expected_json):
 
 DEFAULT_UPDATE_DATA_FNS = [
     update_data_plain,
+    # update_data_plain_missing_one_of_two,
+    # update_data_plain_missing_two_of_three,
     update_data_media,
     update_data_poll,
     update_data_quote,
@@ -512,7 +526,17 @@ def test_update_two_responses(
     assert get_entry_json(entry) == expected_json
 
 
-@with_update_data
+@with_update_data(
+    update_fns=[
+        f
+        for f in DEFAULT_UPDATE_DATA_FNS
+        if f
+        not in (
+            update_data_plain_missing_one_of_two,
+            update_data_plain_missing_two_of_three,
+        )
+    ]
+)
 @pytest.mark.parametrize('index', [0, 1])
 def test_update_two_entries(reader, update_with, update_data, index):
     tweets = [deepcopy(TWEET_0), deepcopy(TWEET_0)]
