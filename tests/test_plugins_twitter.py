@@ -1,3 +1,4 @@
+import json
 from copy import deepcopy
 
 import pytest
@@ -406,7 +407,7 @@ def get_entry_content(entry, mime_type):
 
 
 def get_entry_json(entry):
-    return get_entry_content(entry, 'application/x.twitter+json')
+    return json.loads(get_entry_content(entry, 'application/x.twitter+json'))
 
 
 def get_entry_html(entry):

@@ -4,6 +4,7 @@ To do before the next release:
 
 * docs
 * handle missing tweets in response
+* web app: if feed type is twitter, don't show title and show full conversation
 
 
 To do after the next release:
@@ -24,6 +25,7 @@ To do after the next release:
 """
 from __future__ import annotations
 
+import json
 import posixpath
 import re
 from contextlib import contextmanager
@@ -400,7 +402,12 @@ class Parser:
             if old_for_update:
                 old = self.reader.get_entry(new)
                 old_json = next(
-                    (c.value for c in old.content if c.type == MIME_TYPE_JSON), None
+                    (
+                        json.loads(c.value)
+                        for c in old.content
+                        if c.type == MIME_TYPE_JSON
+                    ),
+                    None,
                 )
                 if old_json:
                     new.content[0].value.update(Conversation.from_json(old_json))
@@ -462,7 +469,7 @@ def render_user_entry(entry: EntryData) -> EntryData:
         author=f"@{user.username}",
         published=published,
         content=[
-            Content(conversation.to_json(), MIME_TYPE_JSON),
+            Content(json.dumps(conversation.to_json()), MIME_TYPE_JSON),
             Content(
                 render_user_html(conversation, parsed_url.with_replies), 'text/html'
             ),
