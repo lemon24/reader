@@ -2,8 +2,8 @@
 
 {% import "macros.html" as macros %}
 
-{% block page_title %}Entry: {{ entry.title or entry.link or entry.id }}{% endblock %}
-{% block main_title %}Entry: <a href="{{ entry.link }}">{{ entry.title or entry.link or entry.id }}</a>{% endblock %}
+{% block page_title %}Entry: {{ (entry.title or entry.link or entry.id) | trim | striptags }}{% endblock %}
+{% block main_title %}Entry: <a href="{{ entry.link }}">{{ (entry.title or entry.link or entry.id) | striptags }}</a>{% endblock %}
 
 
 {% block body %}

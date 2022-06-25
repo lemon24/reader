@@ -3,7 +3,6 @@
 To do before the next release:
 
 * docs
-* web app: if feed type is twitter, don't show title and show full conversation
 
 
 To do after the next release:
