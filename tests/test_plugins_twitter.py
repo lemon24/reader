@@ -609,6 +609,10 @@ def update_data_entities(tweet, page, expected_json):
     }
 
 
+def update_data_nl2br(tweet, page, expected_json):
+    tweet['text'] = "intro:\n\n* one\r\n* two\r* three"
+
+
 TWEET_0_HTML = """
 <div class="tweet">
 <p class="top-line">
@@ -667,8 +671,8 @@ UPDATE_FN_TO_HTML = {
         <p class="text">one</p>
 
         <ul class="poll">
-        <li><span class="label">first</span><span class="votes">123</span>
-        <li><span class="label">second</span><span class="votes">321</span>
+        <li><span class="label">first</span> <span class="votes">123</span>
+        <li><span class="label">second</span> <span class="votes">321</span>
         </ul>
 
         </div>
@@ -753,6 +757,22 @@ UPDATE_FN_TO_HTML = {
 
         </div>
         """,
+    update_data_nl2br: """
+        <div class="tweet">
+        <p class="top-line">
+        <a href="https://twitter.com/user" class="name">name</a>
+        <a href="https://twitter.com/user" class="username">@user</a>
+        · <a href="https://twitter.com/user/status/2100" class="created-at">2100-01-01</a>
+        </p>
+
+        <p class="text">intro:<br>
+        <br>
+        * one<br>
+        * two<br>
+        * three</p>
+
+        </div>
+    """,
 }
 
 

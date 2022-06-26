@@ -7,6 +7,7 @@ To do before the next release:
 
 To do after the next release:
 
+* allow using an initial limit lower than 1000 (max_results=100, limit=10)
 * think of a mechanism to re-render entry HTML on plugin update
 * deleted tweet in conversation leads to truncated/missing conversation
 * retrieve media/polls in quoted/retweeted tweet
@@ -314,7 +315,15 @@ def update_with_response(conversations, response):
     errors = list(response.errors)
 
     for error in response.errors:
-        # [{'value': '123', 'detail': 'Could not find tweet with referenced_tweets.id: [123].', 'title': 'Not Found Error', 'resource_type': 'tweet', 'parameter': 'referenced_tweets.id', 'resource_id': '123', 'type': 'https://api.twitter.com/2/problems/resource-not-found'}]
+        # {
+        #   'value': '123',
+        #   'detail': 'Could not find tweet with referenced_tweets.id: [123].',
+        #   'title': 'Not Found Error',
+        #   'resource_type': 'tweet',
+        #   'parameter': 'referenced_tweets.id',
+        #   'resource_id': '123',
+        #   'type': 'https://api.twitter.com/2/problems/resource-not-found',
+        # }
         if error['type'] == 'https://api.twitter.com/2/problems/resource-not-found':
             errors.remove(error)
 
@@ -612,7 +621,7 @@ TWEET_HTML_TEMPLATE = r"""
 {% if poll %}
 <ul class="poll">
 {% for option in poll.options | sort(attribute='position') %}
-<li><span class="label">{{ option.label }}</span><span class="votes">{{ option.votes }}</span>
+<li><span class="label">{{ option.label }}</span> <span class="votes">{{ option.votes }}</span>
 {% endfor %}
 </ul>
 {% else %}
@@ -686,10 +695,8 @@ def nl2br(eval_ctx, value):
     if eval_ctx.autoescape:
         value = markupsafe.escape(value)
         br = markupsafe.Markup(br)
-    result = "\n\n".join(
-        f"{br.join(p.splitlines())}"
-        for p in re.split(r"(?:\r\n|\r(?!\n)|\n){2,}", value)
-    )
+    value = value.replace('\r\n', '\n').replace('\r', '\n')
+    result = re.sub('\n', br, value)
     return markupsafe.Markup(result) if eval_ctx.autoescape else result
 
 
