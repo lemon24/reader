@@ -8,7 +8,7 @@ To do before the next release:
 To do after the next release:
 
 * allow using an initial limit lower than 1000 (max_results=100, limit=10)
-* think of a mechanism to re-render entry HTML on plugin update
+* think of a mechanism to (automatically) re-render entry HTML on plugin update
 * deleted tweet in conversation leads to truncated/missing conversation
 * retrieve media/polls in quoted/retweeted tweet
 * better media rendering
@@ -26,6 +26,7 @@ To do after the next release:
 from __future__ import annotations
 
 import json
+import logging
 import posixpath
 import re
 from contextlib import contextmanager
@@ -48,6 +49,9 @@ from reader import Reader
 from reader._parser import RetrieveResult
 from reader._types import EntryData
 from reader._types import FeedData
+
+
+log = logging.getLogger('reader._plugins.twitter')
 
 
 MIME_TYPE = 'application/x.twitter'
@@ -105,6 +109,7 @@ class Etag(NamedTuple):
     since_id: int | None
     bearer_token: str
     recent_conversations: tuple[int, ...] = ()
+    rerender_conversations: tuple[int, ...] = ()
 
 
 class UserFile(NamedTuple):
@@ -186,11 +191,27 @@ class Retriever:
                 break
             recent_conversations.append(int(entry.id))
 
+        rerender_key = self.reader.make_reader_reserved_name('twitter.rerender')
+        missing = object()
+        rerender_conversations = []
+        if self.reader.get_tag(feed, rerender_key, missing) is not missing:
+            rerender_conversations = []
+            for entry in self.reader.get_entries(feed=feed):
+                try:
+                    id = int(entry.id)
+                except ValueError:
+                    continue
+                else:
+                    rerender_conversations.append(id)
+
+            self.reader.delete_tag(feed, rerender_key, missing_ok=True)
+
         return feed._replace(
             http_etag=Etag(
                 since_id=since_id,
                 bearer_token=token,
                 recent_conversations=tuple(recent_conversations),
+                rerender_conversations=tuple(rerender_conversations),
             )
         )
 
@@ -204,12 +225,30 @@ class Retriever:
         twitter = Twitter.from_bearer_token(http_etag.bearer_token)
 
         data = twitter.retrieve_user(parsed_url, http_etag)
+
+        # store the id of newest tweet as etag
+        since_ids = [t for d in data.conversations for t in d.tweets]
+        if http_etag.since_id is not None:
+            since_ids.append(http_etag.since_id)
+        etag = None
+        if since_ids:
+            etag = str(max(since_ids))
+
+        if http_etag.rerender_conversations:
+            log.info("rerendering %s", http_etag.rerender_conversations)
+            new_or_updated_conversations = {c.id for c in data.conversations}
+            data = data._replace(
+                conversations=data.conversations
+                + [
+                    Conversation(id)
+                    for id in http_etag.rerender_conversations
+                    if id not in new_or_updated_conversations
+                ]
+            )
+
         if not data.conversations:
             yield None
             return
-
-        # store the id of newest tweet as etag
-        etag = str(max(t for d in data.conversations for t in d.tweets))
 
         yield RetrieveResult(data, MIME_TYPE, http_etag=etag)
 
