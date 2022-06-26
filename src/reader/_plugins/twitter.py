@@ -7,6 +7,7 @@ To do before the next release:
 
 To do after the next release:
 
+* don't expand image/entity in retweet text, only in original tweet
 * allow using an initial limit lower than 1000 (max_results=100, limit=10)
 * think of a mechanism to (automatically) re-render entry HTML on plugin update
 * deleted tweet in conversation leads to truncated/missing conversation
