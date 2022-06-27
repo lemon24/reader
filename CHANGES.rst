@@ -11,6 +11,8 @@ Version 2.13
 
 Unreleased
 
+* Add the :mod:`~reader._plugins.twitter` experimental plugin,
+  which allows using a Twitter account as a feed.
 * Skip with a warning entries that have no <guid> or <link> in an RSS feed;
   only raise :exc:`ParseError` if *all* entries have a missing id.
   (Note that both Atom and JSON Feed entries are required to have an id

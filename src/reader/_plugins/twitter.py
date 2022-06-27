@@ -1,27 +1,87 @@
 """
+twitter
+~~~~~~~
 
-To do before the next release:
+.. module:: reader
+  :noindex:
 
-* docs
+Create a feed out of a Twitter account.
+
+Feed URLs must be of the of the form ``https://twitter.com/user`` (no query string).
+
+In order to authenticate,
+an `OAuth 2.0 Bearer Token (app-only)`_ is required
+(corresponding `Tweepy documentation`_);
+set the value of the ``.reader.twitter`` global tag to::
+
+    {"token": "Bearer Token here"}
+
+From within Python code::
+
+    key = reader.make_reader_reserved_name('twitter')
+    value = {"token": "Bearer Token here"}
+    reader.set_tag((), key, value)
+
+.. _OAuth 2.0 Bearer Token (app-only): https://developer.twitter.com/en/docs/authentication/oauth-2-0/bearer-tokens
+.. _Tweepy documentation: https://docs.tweepy.org/en/stable/authentication.html#twitter-api-v2
+.. _Essential access: https://developer.twitter.com/en/portal/products/essential
+
+Each entry in the feed corresponds to a thread;
+currently, replies from other users are not included.
+An HTML version of the thread is available
+as a :class:`Content` with type ``text/html``;
+the original JSON data is also available with type ``application/x.twitter+json``.
+
+On the first update, up to 1,000 tweets are retrieved;
+on subsequent updates, only new tweets are retrieved
+(for reference, `Essential access`_ caps at 500K tweets per month).
+When a new tweet is published in an existing thread,
+the corresponding entry is updated accordingly.
+
+The HTML content can be rerendered from the existing JSON data
+by adding the ``.reader.twitter.rerender`` tag to the feed;
+on the next feed update, the plugin will rerender the HTML content
+and remove the tag.
 
 
-To do after the next release:
+Screenshots:
 
-* don't expand image/entity in retweet text, only in original tweet
-* allow using an initial limit lower than 1000 (max_results=100, limit=10)
-* think of a mechanism to (automatically) re-render entry HTML on plugin update
-* deleted tweet in conversation leads to truncated/missing conversation
+.. figure:: screenshots/twitter-one.png
+    :width: 240px
+
+.. figure:: screenshots/twitter-two.png
+    :width: 240px
+
+
+To do (rougly in order of importance):
+
 * retrieve media/polls in quoted/retweeted tweet
+* retrieve retweets/quotes of retweets/quotes
+* handle deleted tweets in conversations
+  (currently leads to truncated/missing conversation)
+* lower the initial tweet limit, but allow increasing it
+* automatically re-render entry HTML on plugin update
+* show images / expanded URLs only in the original tweet, not in retweets
+* mark updated entries as unread
+* better URL/entity expansion (feed subtitle, entry hashtags and usernames)
 * better media rendering
 * better poll rendering
-* better url/entity expansion
-  * feed subtitle
-  * don't show url for quoted tweets
-  * hashtags, usernames
-* mark updated entry as unread
-* more tests
-* retrieve and render tweet replies (https://twitter.com/user?replies=yes)
-* /preview web app support
+* retrieve and render tweet replies (``https://twitter.com/user?replies=yes``)
+* support previewing Twitter feeds in the web app
+
+
+This plugin needs additional dependencies, use the ``unstable-plugins`` extra
+to install them:
+
+.. code-block:: bash
+
+    pip install reader[unstable-plugins]
+
+To load::
+
+    READER_PLUGIN='reader._plugins.twitter:init_reader' \\
+    python -m reader ...
+
 
 """
 from __future__ import annotations
@@ -57,6 +117,7 @@ log = logging.getLogger('reader._plugins.twitter')
 
 MIME_TYPE = 'application/x.twitter'
 MIME_TYPE_JSON = MIME_TYPE + '+json'
+MIME_TYPE_HTML = 'text/html'
 
 URL_PREFIX = 'https://twitter.com/'
 
@@ -505,7 +566,7 @@ def render_user_entry(entry: EntryData) -> EntryData:
         content=[
             Content(json.dumps(conversation.to_json()), MIME_TYPE_JSON),
             Content(
-                render_user_html(conversation, parsed_url.with_replies), 'text/html'
+                render_user_html(conversation, parsed_url.with_replies), MIME_TYPE_HTML
             ),
         ],
     )

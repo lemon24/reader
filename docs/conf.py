@@ -46,6 +46,8 @@ autodoc_mock_imports = [
     'humanize',
     'markupsafe',
     'yaml',
+    'jinja2',
+    'tweepy',
 ]
 
 master_doc = 'index'

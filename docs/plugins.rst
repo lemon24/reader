@@ -71,3 +71,4 @@ use the entry point as a :ref:`custom plugin <custom plugins>`::
 .. automodule:: reader._plugins.preview_feed_list
 .. automodule:: reader._plugins.sqlite_releases
 .. automodule:: reader._plugins.cli_status
+.. automodule:: reader._plugins.twitter

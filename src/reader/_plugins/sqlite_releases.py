@@ -19,7 +19,7 @@ to install them:
 To load::
 
     READER_PLUGIN='reader._plugins.sqlite_releases:init' \\
-    python -m reader serve
+    python -m reader ...
 
 """
 import warnings
