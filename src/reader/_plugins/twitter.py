@@ -53,9 +53,10 @@ Screenshots:
     :width: 240px
 
 
-To do (rougly in order of importance):
+To do (roughly in order of importance):
 
 * retrieve media/polls in quoted/retweeted tweet
+* media URL might be None
 * retrieve retweets/quotes of retweets/quotes
 * handle deleted tweets in conversations
   (currently leads to truncated/missing conversation)
@@ -81,6 +82,9 @@ To load::
 
     READER_PLUGIN='reader._plugins.twitter:init_reader' \\
     python -m reader ...
+
+..
+    Implemented for https://github.com/lemon24/reader/issues/271
 
 
 """
