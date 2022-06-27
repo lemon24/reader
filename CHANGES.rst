@@ -9,7 +9,7 @@ Changelog
 Version 2.13
 ------------
 
-Unreleased
+Released 2022-06-28
 
 * Add the :mod:`~reader._plugins.twitter` experimental plugin,
   which allows using a Twitter account as a feed.
