@@ -3,7 +3,7 @@ recursive-include src/reader/_app/static *
 recursive-include src/reader/_plugins/templates *
 recursive-include src/reader *.pyi
 recursive-include src/reader py.typed
-include Makefile CHANGES.rst LICENSE tox.ini
+include run.sh CHANGES.rst LICENSE tox.ini
 recursive-include tests *
 recursive-include examples *
 recursive-include docs *
