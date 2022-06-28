@@ -86,7 +86,13 @@ function typing {
         return
     fi
 
-    mypy --strict src --show-error-codes "$@"
+    mypy --strict --show-error-codes src "$@"
+
+    mkdir -p build
+    local import_all=build/import_all.py
+    python scripts/generate_import_all.py > "$import_all" \
+        && mypy --strict --show-error-codes "$import_all" "$@" \
+        && rm "$import_all"
 }
 
 

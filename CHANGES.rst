@@ -11,6 +11,12 @@ Version 2.14
 
 Unreleased
 
+* Mark *reader* as providing type information.
+  Previously, code importing from :mod:`reader` would fail type checking with
+  ``error: Skipping analyzing "reader": module is installed,
+  but missing library stubs or py.typed marker``.
+  (:issue:`280`)
+
 
 Version 2.13
 ------------
@@ -19,6 +25,7 @@ Released 2022-06-28
 
 * Add the :mod:`~reader._plugins.twitter` experimental plugin,
   which allows using a Twitter account as a feed.
+  (:issue:`271`)
 * Skip with a warning entries that have no <guid> or <link> in an RSS feed;
   only raise :exc:`ParseError` if *all* entries have a missing id.
   (Note that both Atom and JSON Feed entries are required to have an id
