@@ -1,8 +1,7 @@
+from functools import cached_property
 from typing import Any
 from typing import Tuple
 from typing import Union
-
-from ._vendor.functools import cached_property
 
 
 class _FancyExceptionBase(Exception):

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
+from functools import cached_property
 from types import MappingProxyType
 from types import SimpleNamespace
 from typing import Any
@@ -15,7 +16,6 @@ from typing import TypeVar
 from typing import Union
 
 from ._hash_utils import get_hash
-from ._vendor.functools import cached_property
 from .types import _entry_argument
 from .types import _feed_argument
 from .types import _namedtuple_compat
