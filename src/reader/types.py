@@ -11,19 +11,18 @@ from typing import cast
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Literal
 from typing import Mapping
 from typing import NamedTuple
 from typing import Optional
 from typing import overload
+from typing import Protocol
+from typing import runtime_checkable
 from typing import Sequence
 from typing import Tuple
 from typing import Type
 from typing import TypeVar
 from typing import Union
-
-from typing_extensions import Literal
-from typing_extensions import Protocol
-from typing_extensions import runtime_checkable
 
 from reader.exceptions import ReaderError
 

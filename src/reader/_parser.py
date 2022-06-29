@@ -27,6 +27,8 @@ from typing import List
 from typing import Mapping
 from typing import NamedTuple
 from typing import Optional
+from typing import Protocol
+from typing import runtime_checkable
 from typing import Tuple
 from typing import Type
 from typing import TypeVar
@@ -34,8 +36,6 @@ from typing import Union
 
 import iso8601
 import requests
-from typing_extensions import Protocol
-from typing_extensions import runtime_checkable
 
 import reader
 from ._http_utils import parse_accept_header

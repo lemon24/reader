@@ -8,13 +8,13 @@ from dataclasses import field
 from typing import Any
 from typing import Mapping
 from typing import Optional
+from typing import Protocol
 from typing import Sequence
 from typing import Tuple
 from typing import TypeVar
 from typing import Union
 
 import requests.adapters
-from typing_extensions import Protocol
 
 
 _T = TypeVar('_T')
