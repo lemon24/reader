@@ -22,15 +22,23 @@ Roadmap
 
 In no particular order:
 
-* update_feeds() filtering. (:issue:`193`)
-
-* Web application re-design.
-
 * Internal API stabilization.
 * CLI stabilization.
+* Web application re-design.
 * Web application stabilization.
 
-* OPML support. (:issue:`165`)
+Also see open issues: https://github.com/lemon24/reader/issues
+
+
+Supported Python versions
+-------------------------
+
+The oldest Python version reader should support is:
+
+* the newest CPython available on the latest Ubuntu LTS (3 months after LTS release)
+* at least 1 stable PyPy version
+
+This usually ends up being the last 3 stable CPython versions.
 
 
 Style guide
