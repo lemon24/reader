@@ -5,7 +5,7 @@ Installation
 Python versions
 ---------------
 
-*reader* supports Python 3.7 and newer, and PyPy.
+*reader* supports Python 3.8 and newer, and PyPy.
 
 
 Dependencies

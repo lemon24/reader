@@ -16,6 +16,7 @@ Unreleased
   ``error: Skipping analyzing "reader": module is installed,
   but missing library stubs or py.typed marker``.
   (:issue:`280`)
+* Drop Python 3.7 support. (:issue:`278`)
 
 
 Version 2.13
