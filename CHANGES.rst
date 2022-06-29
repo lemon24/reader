@@ -17,6 +17,7 @@ Unreleased
   but missing library stubs or py.typed marker``.
   (:issue:`280`)
 * Drop Python 3.7 support. (:issue:`278`)
+* Support PyPy 3.9.
 
 
 Version 2.13

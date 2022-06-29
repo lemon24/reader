@@ -155,7 +155,13 @@ function clean-pyc {
 
 
 function ci-install {
-    pip install -e '.[readtime,cli,app,tests,unstable-plugins]'
+    if on-pypy && on-nt; then
+        # readtime 2.0 requires pyquery requires lxml
+        # (lxml wheel not available for PyPy+Windows)
+        pip install -e '.[cli,app,tests,docs,dev,unstable-plugins]'
+    else
+        pip install -e '.[readtime,cli,app,tests,docs,dev,unstable-plugins]'
+    fi
 }
 
 function ci-run {
@@ -165,6 +171,10 @@ function ci-run {
 
 function on-pypy {
     [[ $( python -c 'import sys; print(sys.implementation.name)' ) == pypy ]]
+}
+
+function on-nt {
+    [[ $( python -c 'import os; print(os.name)' ) == nt ]]
 }
 
 

@@ -6,6 +6,10 @@ from utils import utc_datetime as datetime
 from reader import Content
 
 
+# readtime 2.0 requires pyquery requires lxml
+pytestmark = pytest.mark.requires_lxml
+
+
 def get_readtimes(reader):
     return {
         e.id: reader.get_tag(e, '.reader.readtime', {}).get('seconds')
