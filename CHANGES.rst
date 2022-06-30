@@ -9,7 +9,7 @@ Changelog
 Version 2.14
 ------------
 
-Unreleased
+Released 2022-06-30
 
 * Mark *reader* as providing type information.
   Previously, code importing from :mod:`reader` would fail type checking with
