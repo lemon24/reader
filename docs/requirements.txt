@@ -1,2 +1,0 @@
-# required by Read the Docs, do not remove
-.[docs]
