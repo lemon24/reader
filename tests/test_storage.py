@@ -116,21 +116,19 @@ def test_path(db_path):
     assert storage.path == db_path
 
 
-def test_timeout(db_path):
+def test_timeout(db_path, monkeypatch):
     """Storage.__init__ must pass timeout= to connect."""
 
-    expected_timeout = None
+    original_connect = sqlite3.connect
 
-    class MyStorage(Storage):
-        @classmethod
-        def connect(cls, *args, **kwargs):
-            nonlocal expected_timeout
-            expected_timeout = kwargs.get('timeout')
-            return super().connect(*args, **kwargs)
+    def connect(*args, **kwargs):
+        connect.expected_timeout = kwargs.get('timeout')
+        return original_connect(*args, **kwargs)
 
-    MyStorage(db_path, 19)
+    monkeypatch.setattr('sqlite3.connect', connect)
+    Storage(db_path, 19)
 
-    assert expected_timeout == 19
+    assert connect.expected_timeout == 19
 
 
 def test_close():

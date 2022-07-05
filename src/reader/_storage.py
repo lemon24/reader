@@ -22,6 +22,7 @@ from ._sql_utils import BaseQuery
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
+from ._sqlite_utils import LocalConnectionFactory
 from ._sqlite_utils import rowcount_exactly_one
 from ._sqlite_utils import setup_db as setup_sqlite_db
 from ._sqlite_utils import wrap_exceptions
@@ -396,6 +397,15 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     )
 
 
+def optimize_db(db: sqlite3.Connection) -> None:
+    # If "PRAGMA optimize" on every close becomes too expensive, we can
+    # add an option to disable it, or call db.interrupt() after some time.
+    # TODO: Once SQLite 3.32 becomes widespread, use "PRAGMA analysis_limit"
+    # for the same purpose. Details:
+    # https://github.com/lemon24/reader/issues/143#issuecomment-663433197
+    db.execute("PRAGMA optimize;")
+
+
 # There are two reasons for paginating methods that return an iterator:
 #
 # * to avoid locking the database for too long
@@ -443,7 +453,14 @@ class Storage:
             kwargs['factory'] = factory
 
         with wrap_exceptions(StorageError, "error while opening database"):
-            db = self.connect(path, detect_types=sqlite3.PARSE_DECLTYPES, **kwargs)
+            self.factory = LocalConnectionFactory(
+                path,
+                detect_types=sqlite3.PARSE_DECLTYPES,
+                before_close=optimize_db,
+                **kwargs,
+            )
+
+        db = self.factory.get()
 
         with wrap_exceptions(StorageError, "error while setting up database"):
             try:
@@ -458,30 +475,25 @@ class Storage:
                     message += "; you may have skipped some required migrations, see https://reader.readthedocs.io/en/latest/changelog.html#removed-migrations-2-0"
                 raise StorageError(message=message) from None
 
-        self.db: sqlite3.Connection = db
         self.path = path
         self.timeout = timeout
 
+    @property
+    def db(self) -> sqlite3.Connection:
+        try:
+            return self.factory.get()
+        except DBError as e:  # pragma: no cover
+            raise StorageError(message=str(e)) from None
+
     # TODO: these are not part of the Storage API
-    connect = staticmethod(sqlite3.connect)
     setup_db = staticmethod(setup_db)
 
     @wrap_exceptions(StorageError)
     def close(self) -> None:
-        # If "PRAGMA optimize" on every close becomes too expensive, we can
-        # add an option to disable it, or call db.interrupt() after some time.
-        # TODO: Once SQLite 3.32 becomes widespread, use "PRAGMA analysis_limit"
-        # for the same purpose. Details:
-        # https://github.com/lemon24/reader/issues/143#issuecomment-663433197
         try:
-            self.db.execute("PRAGMA optimize;")
-        except sqlite3.ProgrammingError as e:
-            # Calling close() a second time is a noop.
-            if "cannot operate on a closed database" in str(e).lower():
-                return
-            raise
-
-        self.db.close()
+            self.factory.close()
+        except DBError as e:  # pragma: no cover
+            raise StorageError(message=str(e)) from None
 
     @wrap_exceptions(StorageError)
     def add_feed(self, url: str, added: datetime) -> None:

@@ -8,6 +8,7 @@ import time
 import traceback
 from contextlib import closing
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -419,6 +420,84 @@ def rowcount_exactly_one(
     if cursor.rowcount == 0:
         raise make_exc()
     assert cursor.rowcount == 1, "shouldn't have more than 1 row"
+
+
+class UsageError(DBError):
+    display_name = "usage error"
+
+
+def do_nothing(db: sqlite3.Connection) -> None:  # pragma: no cover
+    pass
+
+
+class LocalConnectionFactory:
+
+    """Maintain a set of connections to the same database, one per thread.
+
+    Use is enforced as follows:
+
+    * The thead creating the factory can get() the connection immediately.
+      Clean-up can be done by usign close() *or* a with statement.
+    * Other threads *must* use a with statement;
+      calling get() outside one results in an error.
+      Calling close() *always* results in an error.
+
+    The context manager is not re-entrant.
+
+    https://github.com/lemon24/reader/issues/206#issuecomment-1173147462
+
+    FIXME: better error messages
+    FIXME: remove "no cover"
+
+    """
+
+    def __init__(
+        self, *args: Any, before_close: _DBFunction = do_nothing, **kwargs: Any
+    ):
+        self.args = args
+        self.kwargs = kwargs
+        self.before_close = before_close
+        self._local = ContextVar[sqlite3.Connection]('_local')
+        self._main = self.__enter__()
+
+    def get(self) -> sqlite3.Connection:
+        db = self._local.get(None)
+        if not db:  # pragma: no cover
+            raise UsageError("must be used as a context manager from another thread")
+        return db
+
+    def __enter__(self) -> sqlite3.Connection:
+        try:
+            return self._local.get()
+        except LookupError:
+            db = sqlite3.connect(*self.args, **self.kwargs)
+            self._local.set(db)
+            return db
+
+    def __exit__(self, *args: Any) -> None:  # pragma: no cover
+        self._close()
+
+    def close(self) -> None:
+        db = self._local.get(None)
+        if db is not self._main:  # pragma: no cover
+            raise UsageError(
+                "cannot close() from another thread, use as a context manger"
+            )
+        self._close()
+
+    def _close(self) -> None:
+        db = self._local.get(None)
+        if not db:  # pragma: no cover
+            return
+        try:
+            self.before_close(db)
+        except sqlite3.ProgrammingError as e:
+            # Calling close() a second time is a noop.
+            if "cannot operate on a closed database" in str(e).lower():
+                pass
+            else:
+                raise
+        db.close()
 
 
 # BEGIN DebugConnection
