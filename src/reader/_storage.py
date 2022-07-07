@@ -427,6 +427,12 @@ def optimize_db(db: sqlite3.Connection) -> None:
 # When adding a new method, add a new test_storage.py::test_errors_locked test.
 
 
+MISSING_MIGRATION_DETAIL = (
+    "; you may have skipped some required migrations, see "
+    "https://reader.readthedocs.io/en/latest/changelog.html#removed-migrations-2-0"
+)
+
+
 class Storage:
 
     # recent_threshold, chunk_size, and entry_counts_average_periods
@@ -472,7 +478,7 @@ class Storage:
             except DBError as e:
                 message = str(e)
                 if 'no migration' in message:
-                    message += "; you may have skipped some required migrations, see https://reader.readthedocs.io/en/latest/changelog.html#removed-migrations-2-0"
+                    message += MISSING_MIGRATION_DETAIL
                 raise StorageError(message=message) from None
 
         self.path = path
@@ -480,19 +486,30 @@ class Storage:
 
     @property
     def db(self) -> sqlite3.Connection:
+        # Not part of the Storage API to Reader.
+        # Used internally.
         try:
             return self.factory.get()
-        except DBError as e:  # pragma: no cover
+        except DBError as e:
             raise StorageError(message=str(e)) from None
 
-    # TODO: these are not part of the Storage API
+    # Not part of the Storage API to Reader.
+    # Used for testing.
     setup_db = staticmethod(setup_db)
+
+    @wrap_exceptions(StorageError)
+    def __enter__(self) -> None:
+        self.factory.__enter__()
+
+    @wrap_exceptions(StorageError)
+    def __exit__(self, *_: Any) -> None:
+        self.factory.__exit__()
 
     @wrap_exceptions(StorageError)
     def close(self) -> None:
         try:
             self.factory.close()
-        except DBError as e:  # pragma: no cover
+        except DBError as e:
             raise StorageError(message=str(e)) from None
 
     @wrap_exceptions(StorageError)

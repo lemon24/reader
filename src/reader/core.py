@@ -77,6 +77,8 @@ log = logging.getLogger('reader')
 
 _T = TypeVar('_T')
 _U = TypeVar('_U')
+# mypy doesn't seem to support Self yet.
+_TReader = TypeVar('_TReader', bound='Reader')
 
 AfterEntryUpdateHook = Callable[['Reader', EntryData, EntryUpdateStatus], None]
 FeedUpdateHook = Callable[['Reader', str], None]
@@ -412,6 +414,13 @@ class Reader:
                 "Reader objects should be created using make_reader(); the Reader "
                 "constructor is not stable yet and may change without any notice.",
             )
+
+    def __enter__(self: _TReader) -> _TReader:
+        self._storage.__enter__()
+        return self
+
+    def __exit__(self, *_: Any) -> None:
+        self._storage.__exit__()
 
     def close(self) -> None:
         """Close this :class:`Reader`.

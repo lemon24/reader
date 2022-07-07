@@ -1938,25 +1938,6 @@ def test_mark_as_important_unimportant_error(reader, exc, meth):
     assert excinfo.value is exc
 
 
-def test_close(reader):
-    reader._storage = FakeStorage()
-    reader.close()
-    assert reader._storage.calls == [('close',)]
-
-
-def test_closed(reader):
-    reader.close()
-    # TODO: Maybe parametrize with all the methods.
-    with pytest.raises(StorageError) as excinfo:
-        reader.add_feed('one')
-    assert 'closed' in excinfo.value.message
-    with pytest.raises(StorageError):
-        list(reader.get_entries())
-    assert 'closed' in excinfo.value.message
-    # however, we must be able to call close() again:
-    reader.close()
-
-
 def test_direct_instantiation():
     with pytest.warns(UserWarning):
         Reader('storage', 'search', 'parser', DEFAULT_RESERVED_NAME_SCHEME)

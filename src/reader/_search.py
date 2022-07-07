@@ -197,7 +197,10 @@ class Search:
     def db(self) -> sqlite3.Connection:
         if isinstance(self._storage, sqlite3.Connection):  # pragma: no cover
             return self._storage
-        return self._storage.db
+        try:
+            return self._storage.factory.get()
+        except DBError as e:
+            raise SearchError(message=str(e)) from None
 
     @property
     def storage(self) -> Storage:

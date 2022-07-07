@@ -447,41 +447,44 @@ class LocalConnectionFactory:
     https://github.com/lemon24/reader/issues/206#issuecomment-1173147462
 
     FIXME: better error messages
-    FIXME: remove "no cover"
 
     """
 
     def __init__(
-        self, *args: Any, before_close: _DBFunction = do_nothing, **kwargs: Any
+        self, path: str, before_close: _DBFunction = do_nothing, **kwargs: Any
     ):
-        self.args = args
-        self.kwargs = kwargs
+        self.path = path
         self.before_close = before_close
+        self.kwargs = kwargs
+        if kwargs.get('uri'):  # pragma: no cover
+            raise NotImplementedError("_is_private() does not work for uri=True")
         self._local = ContextVar[sqlite3.Connection]('_local')
         self._main = self.__enter__()
 
     def get(self) -> sqlite3.Connection:
         db = self._local.get(None)
-        if not db:  # pragma: no cover
+        if not db:
             raise UsageError("must be used as a context manager from another thread")
+        if self._is_private(self.path) and db is not self._main:
+            raise UsageError("cannot use a private database from another thread")
         return db
 
     def __enter__(self) -> sqlite3.Connection:
         try:
             return self._local.get()
         except LookupError:
-            db = sqlite3.connect(*self.args, **self.kwargs)
+            db = sqlite3.connect(self.path, **self.kwargs)
             self._local.set(db)
             return db
 
-    def __exit__(self, *args: Any) -> None:  # pragma: no cover
+    def __exit__(self, *args: Any) -> None:
         self._close()
 
     def close(self) -> None:
         db = self._local.get(None)
-        if db is not self._main:  # pragma: no cover
+        if db is not self._main:
             raise UsageError(
-                "cannot close() from another thread, use as a context manger"
+                "cannot close() from another thread, use as a context manager"
             )
         self._close()
 
@@ -498,6 +501,25 @@ class LocalConnectionFactory:
             else:
                 raise
         db.close()
+
+    @staticmethod
+    def _is_private(path: str) -> bool:
+        """Does connect(path) from another thread connect to a different database?
+
+        With uri=False (the default), only ':memory:' and '' are private.
+
+        With uri=True:
+
+        * file::memory: and file: are private
+        * file::memory:?&cache=shared is shared (one per process)
+        * file:mydb?mode=memory&cache=shared is shared
+        * file:?&cache=shared is ???
+
+        https://www.sqlite.org/c3ref/open.html#urifilenamesinsqlite3open
+        https://www.sqlite.org/uri.html
+
+        """
+        return path in [':memory:', '']
 
 
 # BEGIN DebugConnection
