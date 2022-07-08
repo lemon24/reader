@@ -446,8 +446,6 @@ class LocalConnectionFactory:
 
     https://github.com/lemon24/reader/issues/206#issuecomment-1173147462
 
-    FIXME: better error messages
-
     """
 
     def __init__(
@@ -464,9 +462,15 @@ class LocalConnectionFactory:
     def get(self) -> sqlite3.Connection:
         db = self._local.get(None)
         if not db:
-            raise UsageError("must be used as a context manager from another thread")
+            raise UsageError(
+                "must be used as a context manager "
+                "when using from threads other than the creating thread"
+            )
         if self._is_private(self.path) and db is not self._main:
-            raise UsageError("cannot use a private database from another thread")
+            raise UsageError(
+                "cannot use a private database "
+                "from threads other than the creating thread"
+            )
         return db
 
     def __enter__(self) -> sqlite3.Connection:
@@ -484,7 +488,8 @@ class LocalConnectionFactory:
         db = self._local.get(None)
         if db is not self._main:
             raise UsageError(
-                "cannot close() from another thread, use as a context manager"
+                "cannot close() from threads other than the creating thread, "
+                "use as a context manager"
             )
         self._close()
 

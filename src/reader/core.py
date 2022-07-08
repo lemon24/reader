@@ -289,20 +289,17 @@ class Reader:
     .. _feedparser: https://feedparser.readthedocs.io/en/latest/
 
 
+    The Reader object should be used as a context manager,
+    so that underlying resources are released in a predictable manner.
+    For convenience, it is possible to use a Reader object directly
+    from the thread that created it,
+    but it *must* be used as a context manager from other threads.
+
+
     .. important::
 
         Reader objects should be created using :func:`make_reader`; the Reader
         constructor is not stable yet and may change without any notice.
-
-    .. important::
-
-        The :class:`Reader` object is not thread safe;
-        its methods should be called only from the thread that created it.
-
-        To access the same database from multiple threads,
-        create one instance in each thread.
-        If you have a strong use case preventing you to do so,
-        please +1 / comment in :issue:`206`.
 
 
     .. versionadded:: 1.13
@@ -310,6 +307,12 @@ class Reader:
 
     .. versionchanged:: 2.10
         Allow passing a `(feed URL,)` 1-tuple anywhere a feed URL can be passed.
+
+    .. versionchanged:: 2.15
+        Allow using Reader objects as context managers.
+
+    .. versionchanged:: 2.15
+        Allow using Reader objects from threads other than the creating thread.
 
     """
 
@@ -429,6 +432,9 @@ class Reader:
 
         The reader becomes unusable from this point forward;
         a :exc:`ReaderError` will be raised if any other method is called.
+
+        close() can only be called from the thread that created the reader.
+        Prefer using the reader as a context manager instead.
 
         Raises:
             ReaderError

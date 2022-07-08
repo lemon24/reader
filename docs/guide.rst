@@ -37,21 +37,51 @@ so the path behaves like the ``database`` argument of :func:`sqlite3.connect`:
   the data will disappear when the reader is closed.
 
 
-After you are done with the reader,
-call :meth:`~Reader.close()` to release the resources associated with it::
+In production code, you should use the reader as a context manager,
+so that underlying resources are released in a predictable manner::
 
-    >>> reader.close()
+    with make_reader('db.sqlite') as reader:
+        ... # do stuff with reader
 
-While the same thing will eventually happen when the reader is garbage-collected,
-it is recommended to call :meth:`~Reader.close()` explicitly,
-especially in long-running processes
-or when you create multiple readers pointing to the same database.
-You can use :func:`contextlib.closing` to do this automatically::
+After exiting the context, the reader becomes unusable;
+a :exc:`ReaderError` will be raised if any method is called.
+(It may become possible to reuse reader objects in the future.)
 
-    >>> from contextlib import closing
-    >>> with closing(make_reader('db.sqlite')) as reader:
-    ...     ... # do stuff with reader
+For convenience, you can use a Reader object directly,
+but only from the thread that created it.
+
+
+Threading
+~~~~~~~~~
+
+You can use a Reader instance from multiple threads,
+but it *must* be used as a context manager::
+
+    >>> def background_update(reader):
+    ...     with reader:
+    ...         reader.update_feeds()
     ...
+    >>> Thread(target=background_update, args=(reader,)).start()
+
+If used outside of a context, calling any method will result in an exception::
+
+    >>> Thread(target=reader.update_feeds).start()
+    Exception in thread Thread-1 (update_feeds):
+    Traceback (most recent call last):
+      ...
+    reader.exceptions.StorageError: usage error: must be used as a context manager when using from threads other than the creating thread
+
+
+It is not possible to use a private SQLite database from other threads,
+even when using the reader as a context manager
+(since each connection would be to a *different* database)::
+
+    >>> reader = make_reader(':memory:')
+    >>> Thread(target=background_update, args=(reader,)).start()
+    Exception in thread Thread-1 (background_update):
+    Traceback (most recent call last):
+      ...
+    reader.exceptions.StorageError: usage error: cannot use a private database from threads other than the creating thread
 
 
 

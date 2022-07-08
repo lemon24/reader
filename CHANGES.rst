@@ -11,6 +11,11 @@ Version 2.15
 
 Unreleased
 
+* Allow using :class:`Reader` objects from threads other than the creating thread.
+  (:issue:`206`)
+* Allow using :class:`Reader` objects as context managers.
+  (:issue:`206`)
+
 
 Version 2.14
 ------------
