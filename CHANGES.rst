@@ -9,7 +9,7 @@ Changelog
 Version 2.15
 ------------
 
-Unreleased
+Released 2022-07-08
 
 * Allow using :class:`Reader` objects from threads other than the creating thread.
   (:issue:`206`)
