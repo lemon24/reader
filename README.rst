@@ -2,9 +2,9 @@
 
 **reader** is a Python feed reader library.
 
-It aims to allow writing feed reader applications
+It is designed to allow writing feed reader applications
 without any business code,
-and without enforcing a dependency on a particular framework.
+and without depending on a particular framework.
 
 .. end-intro
 
@@ -42,6 +42,9 @@ and without enforcing a dependency on a particular framework.
 *reader* allows you to:
 
 * retrieve, store, and manage **Atom**, **RSS**, and **JSON** feeds
+
+  * and even follow **Twitter** accounts
+
 * mark articles as read or important
 * add arbitrary tags/metadata to feeds and articles
 * filter feeds and articles

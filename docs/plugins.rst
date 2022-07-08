@@ -23,6 +23,31 @@ for details on how built-in plugins are loaded.
 .. automodule:: reader.plugins.ua_fallback
 
 
+
+Experimental plugins
+--------------------
+
+*reader* also ships with a number of experimental plugins.
+
+For these, the full entry point *must* be specified.
+
+To use them from within Python code,
+use the entry point as a :ref:`custom plugin <custom plugins>`::
+
+    >>> from reader._plugins import sqlite_releases
+    >>> reader = make_reader("db.sqlite", plugins=[sqlite_releases.init])
+
+
+.. _twitter:
+.. automodule:: reader._plugins.twitter
+.. automodule:: reader._plugins.cli_status
+.. automodule:: reader._plugins.preview_feed_list
+.. automodule:: reader._plugins.enclosure_tags
+.. automodule:: reader._plugins.sqlite_releases
+.. automodule:: reader._plugins.tumblr_gdpr
+
+
+
 Loading plugins from the CLI and the web application
 ----------------------------------------------------
 
@@ -50,25 +75,3 @@ For `built-in plugins`_, it is enough to use the plugin name (``reader.XYZ``).
 To load web application plugins, set the ``READER_APP_PLUGIN`` environment variable.
 To load CLI plugins (that customize the CLI),
 set the ``READER_CLI_PLUGIN`` environment variable.
-
-
-Experimental plugins
---------------------
-
-*reader* also ships with a number of experimental plugins.
-
-For these, the full entry point *must* be specified.
-
-To use them from within Python code,
-use the entry point as a :ref:`custom plugin <custom plugins>`::
-
-    >>> from reader._plugins import sqlite_releases
-    >>> reader = make_reader("db.sqlite", plugins=[sqlite_releases.init])
-
-
-.. automodule:: reader._plugins.tumblr_gdpr
-.. automodule:: reader._plugins.enclosure_tags
-.. automodule:: reader._plugins.preview_feed_list
-.. automodule:: reader._plugins.sqlite_releases
-.. automodule:: reader._plugins.cli_status
-.. automodule:: reader._plugins.twitter

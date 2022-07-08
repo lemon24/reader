@@ -20,6 +20,8 @@ Are you already working with `feedparser`_, but:
 * want to restrict or deny file-system access?
 * want to change the way feeds are retrieved by using the more familiar `requests`_ library?
 * want to also support `JSON Feed`_?
+* want to follow :ref:`Twitter <twitter>` accounts?
+* want to support custom information sources?
 
 ... while still supporting all the feed types feedparser does?
 

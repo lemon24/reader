@@ -280,11 +280,14 @@ class Reader:
     Persists feed and entry state, provides operations on them,
     and stores configuration.
 
+
     Currently, the following feed types are supported:
 
     * Atom (provided by `feedparser`_)
     * RSS (provided by `feedparser`_)
     * JSON Feed
+
+    Additional sources can be added through :ref:`plugins <plugins>`.
 
     .. _feedparser: https://feedparser.readthedocs.io/en/latest/
 
