@@ -397,15 +397,6 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     )
 
 
-def optimize_db(db: sqlite3.Connection) -> None:
-    # If "PRAGMA optimize" on every close becomes too expensive, we can
-    # add an option to disable it, or call db.interrupt() after some time.
-    # TODO: Once SQLite 3.32 becomes widespread, use "PRAGMA analysis_limit"
-    # for the same purpose. Details:
-    # https://github.com/lemon24/reader/issues/143#issuecomment-663433197
-    db.execute("PRAGMA optimize;")
-
-
 # There are two reasons for paginating methods that return an iterator:
 #
 # * to avoid locking the database for too long
@@ -462,11 +453,9 @@ class Storage:
             self.factory = LocalConnectionFactory(
                 path,
                 detect_types=sqlite3.PARSE_DECLTYPES,
-                before_close=optimize_db,
                 **kwargs,
             )
-
-        db = self.factory.get()
+            db = self.factory()
 
         with wrap_exceptions(StorageError, "error while setting up database"):
             try:
@@ -489,7 +478,7 @@ class Storage:
         # Not part of the Storage API to Reader.
         # Used internally.
         try:
-            return self.factory.get()
+            return self.factory()
         except DBError as e:
             raise StorageError(message=str(e)) from None
 
@@ -499,7 +488,10 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def __enter__(self) -> None:
-        self.factory.__enter__()
+        try:
+            self.factory.__enter__()
+        except DBError as e:
+            raise StorageError(message=str(e)) from None
 
     @wrap_exceptions(StorageError)
     def __exit__(self, *_: Any) -> None:
@@ -507,10 +499,7 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def close(self) -> None:
-        try:
-            self.factory.close()
-        except DBError as e:
-            raise StorageError(message=str(e)) from None
+        self.factory.close()
 
     @wrap_exceptions(StorageError)
     def add_feed(self, url: str, added: datetime) -> None:
@@ -699,14 +688,14 @@ class Storage:
         #   and can no longer be fetched from.
         rv = []
 
-        with self.db:
+        with self.db as db:
             # We use an explicit transaction for speed,
             # otherwise we get an implicit one for each query).
-            self.db.execute('BEGIN;')
+            db.execute('BEGIN;')
 
             for feed_url, id in entries:  # noqa: B007
                 context = dict(feed_url=feed_url, id=id)
-                row = self.db.execute(
+                row = db.execute(
                     """
                     SELECT
                         updated,

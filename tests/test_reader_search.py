@@ -23,15 +23,6 @@ from reader._search import Search
 from reader._storage import Storage
 
 
-def test_closed(reader):
-    reader.close()
-    # TODO: Maybe parametrize with all the methods
-    # (also, unify with test_reader.py::test_closed)
-    with pytest.raises(SearchError) as excinfo:
-        reader.is_search_enabled()
-    assert 'closed' in excinfo.value.message
-
-
 @pytest.fixture(params=[False, True], ids=['without_entries', 'with_entries'])
 def reader_without_and_with_entries(request, make_reader):
     reader = make_reader(':memory:', search_enabled=None)

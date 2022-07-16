@@ -880,11 +880,7 @@ def test_update_feed_deleted(
     blocking_parser = parser_cls.from_parser(parser)
 
     def target():
-        # can't use fixture because it would run close() in a different thread
-        from reader import make_reader
-
         blocking_parser.in_parser.wait()
-        reader = make_reader(db_path)
         try:
             reader.delete_feed(feed.url)
         finally:

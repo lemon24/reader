@@ -198,7 +198,7 @@ class Search:
         if isinstance(self._storage, sqlite3.Connection):  # pragma: no cover
             return self._storage
         try:
-            return self._storage.factory.get()
+            return self._storage.factory()
         except DBError as e:
             raise SearchError(message=str(e)) from None
 

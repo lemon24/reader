@@ -4,11 +4,12 @@ sqlite3 utilities. Contains no business logic.
 """
 import functools
 import sqlite3
+import threading
 import time
 import traceback
+import weakref
 from contextlib import closing
 from contextlib import contextmanager
-from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -16,6 +17,7 @@ from typing import Callable
 from typing import cast
 from typing import Dict
 from typing import Iterator
+from typing import List
 from typing import no_type_check
 from typing import Optional
 from typing import Sequence
@@ -426,86 +428,120 @@ class UsageError(DBError):
     display_name = "usage error"
 
 
-def do_nothing(db: sqlite3.Connection) -> None:  # pragma: no cover
-    pass
-
-
 class LocalConnectionFactory:
 
     """Maintain a set of connections to the same database, one per thread.
 
-    Use is enforced as follows:
+    connect() on object creation in the creating thread,
+    and on the first call in all other threads.
 
-    * The thead creating the factory can get() the connection immediately.
-      Clean-up can be done by usign close() *or* a with statement.
-    * Other threads *must* use a with statement;
-      calling get() outside one results in an error.
-      Calling close() *always* results in an error.
+    When close() is called in a thread, run "pragma optimize" and
+    close the connection in that thread.
 
-    The context manager is not re-entrant.
+    If close() is not called, attempt to call close() before the thread ends.
+    This is unreliable: it doesn't work on PyPy,
+    or if the thread was not created through the threading module.
 
-    https://github.com/lemon24/reader/issues/206#issuecomment-1173147462
+    To account for that and for long-running threads,
+    run optimize regularly (currently, every 1024 calls).
+
+    When used as a context manager, don't run optimize regulary,
+    and call close() automatically when exiting the with block.
+
+    https://github.com/lemon24/reader/issues/206#issuecomment-1183660880
 
     """
 
-    def __init__(
-        self, path: str, before_close: _DBFunction = do_nothing, **kwargs: Any
-    ):
+    def __init__(self, path: str, **kwargs: Any):
         self.path = path
-        self.before_close = before_close
         self.kwargs = kwargs
         if kwargs.get('uri'):  # pragma: no cover
             raise NotImplementedError("_is_private() does not work for uri=True")
-        self._local = ContextVar[sqlite3.Connection]('_local')
-        self._main = self.__enter__()
+        self._local = _LocalConnectionFactoryState()
+        self._local.is_creating_thread = True
+        # connect immediately, so exceptions are raised before the first call
+        self.__call__()
 
-    def get(self) -> sqlite3.Connection:
-        db = self._local.get(None)
-        if not db:
-            raise UsageError(
-                "must be used as a context manager "
-                "when using from threads other than the creating thread"
-            )
-        if self._is_private(self.path) and db is not self._main:
+    def __call__(self) -> sqlite3.Connection:
+        db = self._local.db
+        if db:
+            if not self._local.context_stack:
+                if self._should_optimize(self._local.call_count):
+                    self._optimize(db)
+                self._local.call_count += 1
+            return db
+
+        if self._is_private(self.path) and not self._local.is_creating_thread:
             raise UsageError(
                 "cannot use a private database "
                 "from threads other than the creating thread"
             )
+
+        if self._is_private(self.path) and self._local.closed:
+            raise UsageError("cannot reuse a private databse after close()")
+
+        self._local.db = db = sqlite3.connect(self.path, **self.kwargs)
+        self._local.call_count = 0
+
+        # http://threebean.org/blog/atexit-for-threads/
+        # works on cpython (finalizer runs in thread),
+        # but not on pypy (finalizer runs in main thread);
+        # also see https://bugs.python.org/issue14073
+        self._local.finalizer = weakref.finalize(
+            threading.current_thread(), self._close, db
+        )
+
         return db
 
     def __enter__(self) -> sqlite3.Connection:
-        try:
-            return self._local.get()
-        except LookupError:
-            db = sqlite3.connect(self.path, **self.kwargs)
-            self._local.set(db)
-            return db
+        self._local.context_stack.append(None)
+        return self.__call__()
 
     def __exit__(self, *args: Any) -> None:
-        self._close()
+        self._local.context_stack.pop()
+        if not self._local.context_stack and not self._is_private(self.path):
+            self.close()
 
     def close(self) -> None:
-        db = self._local.get(None)
-        if db is not self._main:
-            raise UsageError(
-                "cannot close() from threads other than the creating thread, "
-                "use as a context manager"
-            )
-        self._close()
+        if self._local.finalizer:
+            self._local.finalizer()
+            self._local.db = None
+            self._local.finalizer = None
+            self._local.call_count = 0
+            self._local.closed = True
 
-    def _close(self) -> None:
-        db = self._local.get(None)
-        if not db:  # pragma: no cover
-            return
+    @classmethod
+    def _close(cls, db: sqlite3.Connection) -> None:
         try:
-            self.before_close(db)
+            try:
+                cls._optimize(db)
+            finally:
+                db.close()
         except sqlite3.ProgrammingError as e:
-            # Calling close() a second time is a noop.
-            if "cannot operate on a closed database" in str(e).lower():
-                pass
-            else:
-                raise
-        db.close()
+            message = str(e).lower()
+            # calling close() a second time is a noop
+            if "cannot operate on a closed database" in message:  # pragma: no cover
+                return
+            # can't close() a connection from a thread that didn't create it;
+            # SQLAlchemy ignores this as well in SingletonThreadPool.dispose()
+            if "objects created in a thread" in message:
+                return
+            raise
+
+    @staticmethod
+    def _optimize(db: sqlite3.Connection) -> None:
+        # If "PRAGMA optimize" on every close becomes too expensive, we can
+        # add an option to disable it, or call db.interrupt() after some time.
+        # TODO: Once SQLite 3.32 becomes widespread, use "PRAGMA analysis_limit"
+        # for the same purpose. Details:
+        # https://github.com/lemon24/reader/issues/143#issuecomment-663433197
+        db.execute("PRAGMA optimize;")
+
+    @staticmethod
+    def _should_optimize(count: int) -> bool:
+        if count > 1024:
+            return count % 1024 == 0
+        return count in {2, 4, 8, 16, 64, 256, 1024}
 
     @staticmethod
     def _is_private(path: str) -> bool:
@@ -525,6 +561,16 @@ class LocalConnectionFactory:
 
         """
         return path in [':memory:', '']
+
+
+class _LocalConnectionFactoryState(threading.local):
+    def __init__(self) -> None:
+        self.db: Optional[sqlite3.Connection] = None
+        self.finalizer: Optional[weakref.finalize] = None
+        self.is_creating_thread: bool = False
+        self.context_stack: List[None] = []
+        self.call_count: int = 0
+        self.closed: bool = False
 
 
 # BEGIN DebugConnection

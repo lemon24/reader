@@ -132,16 +132,22 @@ def test_timeout(db_path, monkeypatch):
 
 
 def test_close():
-    storage = Storage(':memory:')
+    close_called = False
 
+    class Connection(sqlite3.Connection):
+        def close(self):
+            super().close()
+            nonlocal close_called
+            close_called = True
+
+    storage = Storage(':memory:', factory=Connection)
     storage.db.execute('values (1)')
 
     storage.close()
+    assert close_called
+
     # no-op a second time
     storage.close()
-
-    with pytest.raises(sqlite3.ProgrammingError):
-        storage.db.execute('values (1)')
 
 
 def test_close_error():
