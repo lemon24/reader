@@ -250,10 +250,9 @@ def update_from_29_to_30(db: sqlite3.Connection) -> None:  # pragma: no cover
 def recreate_search_triggers(db: sqlite3.Connection) -> None:  # pragma: no cover
     from ._search import Search
 
-    search = Search(db)
-    if search.is_enabled():
-        search._drop_triggers()
-        search._create_triggers()
+    if Search._is_enabled(db):
+        Search._drop_triggers(db)
+        Search._create_triggers(db)
 
 
 def update_from_31_to_32(db: sqlite3.Connection) -> None:  # pragma: no cover
@@ -473,8 +472,7 @@ class Storage:
         self.path = path
         self.timeout = timeout
 
-    @property
-    def db(self) -> sqlite3.Connection:
+    def get_db(self) -> sqlite3.Connection:
         # Not part of the Storage API to Reader.
         # Used internally.
         try:
@@ -503,9 +501,9 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def add_feed(self, url: str, added: datetime) -> None:
-        with self.db:
+        with self.get_db() as db:
             try:
-                self.db.execute(
+                db.execute(
                     "INSERT INTO feeds (url, added) VALUES (:url, :added);",
                     dict(url=url, added=added),
                 )
@@ -516,17 +514,15 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def delete_feed(self, url: str) -> None:
-        with self.db:
-            cursor = self.db.execute(
-                "DELETE FROM feeds WHERE url = :url;", dict(url=url)
-            )
+        with self.get_db() as db:
+            cursor = db.execute("DELETE FROM feeds WHERE url = :url;", dict(url=url))
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     @wrap_exceptions(StorageError)
     def change_feed_url(self, old: str, new: str) -> None:
-        with self.db:
+        with self.get_db() as db:
             try:
-                cursor = self.db.execute(
+                cursor = db.execute(
                     "UPDATE feeds SET url = :new WHERE url = :old;",
                     dict(old=old, new=new),
                 )
@@ -539,7 +535,7 @@ class Storage:
 
             # Some of the fields are not kept from the old feed; details:
             # https://github.com/lemon24/reader/issues/149#issuecomment-700532183
-            self.db.execute(
+            db.execute(
                 """
                 UPDATE feeds
                 SET
@@ -555,7 +551,7 @@ class Storage:
                 (new,),
             )
 
-            self.db.execute(
+            db.execute(
                 """
                 UPDATE entries
                 SET original_feed = (
@@ -598,7 +594,8 @@ class Storage:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
         return zero_or_one(
-            self.db.execute(str(query), dict(url=url)), lambda: FeedNotFoundError(url)
+            self.get_db().execute(str(query), dict(url=url)),
+            lambda: FeedNotFoundError(url),
         )
 
     @wrap_exceptions_iter(StorageError)
@@ -611,7 +608,7 @@ class Storage:
     ) -> Iterable[Tuple[Feed, Optional[_T]]]:
         query, context = make_get_feeds_query(filter_options, sort)
         yield from paginated_query(
-            self.db, query, context, chunk_size, last, feed_factory
+            self.get_db(), query, context, chunk_size, last, feed_factory
         )
 
     @wrap_exceptions(StorageError)
@@ -631,7 +628,7 @@ class Storage:
 
         context = apply_feed_filter_options(query, filter_options)
 
-        row = exactly_one(self.db.execute(str(query), context))
+        row = exactly_one(self.get_db().execute(str(query), context))
 
         return FeedCounts(*row)
 
@@ -668,7 +665,7 @@ class Storage:
             query.scrolling_window_order_by("url")
 
             yield from paginated_query(
-                self.db, query, context, chunk_size, last, FeedForUpdate._make
+                self.get_db(), query, context, chunk_size, last, FeedForUpdate._make
             )
 
         yield from join_paginated_iter(inner, self.chunk_size)
@@ -688,7 +685,7 @@ class Storage:
         #   and can no longer be fetched from.
         rv = []
 
-        with self.db as db:
+        with self.get_db() as db:
             # We use an explicit transaction for speed,
             # otherwise we get an implicit one for each query).
             db.execute('BEGIN;')
@@ -728,8 +725,8 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def set_feed_user_title(self, url: str, title: Optional[str]) -> None:
-        with self.db:
-            cursor = self.db.execute(
+        with self.get_db() as db:
+            cursor = db.execute(
                 "UPDATE feeds SET user_title = :title WHERE url = :url;",
                 dict(url=url, title=title),
             )
@@ -737,8 +734,8 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def set_feed_updates_enabled(self, url: str, enabled: bool) -> None:
-        with self.db:
-            cursor = self.db.execute(
+        with self.get_db() as db:
+            cursor = db.execute(
                 "UPDATE feeds SET updates_enabled = :updates_enabled WHERE url = :url;",
                 dict(url=url, updates_enabled=enabled),
             )
@@ -746,8 +743,8 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def mark_as_stale(self, url: str) -> None:
-        with self.db:
-            cursor = self.db.execute(
+        with self.get_db() as db:
+            cursor = db.execute(
                 "UPDATE feeds SET stale = 1 WHERE url = :url;", dict(url=url)
             )
             rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
@@ -756,8 +753,8 @@ class Storage:
     def mark_as_read(
         self, feed_url: str, entry_id: str, read: bool, modified: Optional[datetime]
     ) -> None:
-        with self.db:
-            cursor = self.db.execute(
+        with self.get_db() as db:
+            cursor = db.execute(
                 """
                 UPDATE entries
                 SET
@@ -779,8 +776,8 @@ class Storage:
         important: bool,
         modified: Optional[datetime],
     ) -> None:
-        with self.db:
-            cursor = self.db.execute(
+        with self.get_db() as db:
+            cursor = db.execute(
                 """
                 UPDATE entries
                 SET
@@ -833,8 +830,8 @@ class Storage:
 
         context.update(feed._asdict(), data_hash=feed.hash)
 
-        with self.db:
-            cursor = self.db.execute(
+        with self.get_db() as db:
+            cursor = db.execute(
                 """
                 UPDATE feeds
                 SET
@@ -858,8 +855,8 @@ class Storage:
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(intent.url))
 
     def _update_feed_last_updated(self, url: str, last_updated: datetime) -> None:
-        with self.db:
-            cursor = self.db.execute(
+        with self.get_db() as db:
+            cursor = db.execute(
                 """
                 UPDATE feeds
                 SET
@@ -874,8 +871,8 @@ class Storage:
     def _update_feed_last_exception(
         self, url: str, last_exception: ExceptionInfo
     ) -> None:
-        with self.db:
-            cursor = self.db.execute(
+        with self.get_db() as db:
+            cursor = db.execute(
                 """
                 UPDATE feeds
                 SET
@@ -979,11 +976,11 @@ class Storage:
             );
         """
 
-        with self.db:
+        with self.get_db() as db:
             try:
                 # we could use executemany(), but it's not noticeably faster
                 for intent in intents:
-                    self.db.execute(query, entry_update_intent_to_dict(intent))
+                    db.execute(query, entry_update_intent_to_dict(intent))
 
             except sqlite3.IntegrityError as e:
                 e_msg = str(e).lower()
@@ -1026,8 +1023,8 @@ class Storage:
         delete_query = "DELETE FROM entries WHERE feed = :feed AND id = :id"
         added_by_query = "SELECT added_by FROM entries WHERE feed = :feed AND id = :id"
 
-        with self.db:
-            cursor = self.db.cursor()
+        with self.get_db() as db:
+            cursor = db.cursor()
 
             for feed_url, entry_id in entries:
                 context = dict(feed=feed_url, id=entry_id)
@@ -1105,7 +1102,7 @@ class Storage:
         )
 
         return zero_or_one(
-            self.db.execute(str(query), context),
+            self.get_db().execute(str(query), context),
             lambda: EntryNotFoundError(feed_url, entry_id),
         )
 
@@ -1121,7 +1118,7 @@ class Storage:
         query, context = make_get_entries_query(filter_options, sort)
         context.update(recent_threshold=now - self.recent_threshold)
         yield from paginated_query(
-            self.db, query, context, chunk_size, last, entry_factory
+            self.get_db(), query, context, chunk_size, last, entry_factory
         )
 
     @wrap_exceptions(StorageError)
@@ -1139,7 +1136,7 @@ class Storage:
         )
         context.update(new_context)
 
-        row = exactly_one(self.db.execute(str(query), context))
+        row = exactly_one(self.get_db().execute(str(query), context))
 
         return EntryCounts(*row[:4], row[4:7])  # type: ignore[call-arg]
 
@@ -1195,7 +1192,7 @@ class Storage:
             return key, json.loads(value)
 
         yield from paginated_query(
-            self.db, query, context, chunk_size, last, row_factory
+            self.get_db(), query, context, chunk_size, last, row_factory
         )
 
     @overload
@@ -1246,9 +1243,9 @@ class Storage:
             )
         """
 
-        with self.db:
+        with self.get_db() as db:
             try:
-                self.db.execute(query, params)
+                db.execute(query, params)
             except sqlite3.IntegrityError as e:
                 foreign_key_error = "foreign key constraint failed" in str(e).lower()
                 if not foreign_key_error:  # pragma: no cover
@@ -1270,8 +1267,8 @@ class Storage:
         """
         params = object_id + (key,)
 
-        with self.db:
-            cursor = self.db.execute(query, params)
+        with self.get_db() as db:
+            cursor = db.execute(query, params)
         rowcount_exactly_one(cursor, lambda: TagNotFoundError(key, cast(str, None)))
 
 

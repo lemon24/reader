@@ -187,28 +187,16 @@ class Search:
 
     """
 
-    def __init__(self, storage: Union[Storage, sqlite3.Connection]):
-        # during migrations there's no storage, so we need to pass the DB in
-        self._storage = storage
+    def __init__(self, storage: Storage):
+        self.storage = storage
 
-    # db, storage, and chunk_size exposed for (typing) convenience.
+    # get_db() and chunk_size exposed for convenience.
 
-    @property
-    def db(self) -> sqlite3.Connection:
-        if isinstance(self._storage, sqlite3.Connection):  # pragma: no cover
-            return self._storage
+    def get_db(self) -> sqlite3.Connection:
         try:
-            return self._storage.factory()
+            return self.storage.factory()
         except DBError as e:
             raise SearchError(message=str(e)) from None
-
-    @property
-    def storage(self) -> Storage:
-        if isinstance(self._storage, sqlite3.Connection):  # pragma: no cover
-            raise NotImplementedError(
-                f"self.storage is {self.storage!r}, should be Storage"
-            )
-        return self._storage
 
     @property
     def chunk_size(self) -> int:
@@ -225,31 +213,34 @@ class Search:
         # Only update() requires these, so we don't check in __init__().
         # ... except json_each(), which is used in one of the triggers
         # (which is acceptable, we're trying to fail early for *most* cases).
+        db = self.get_db()
         try:
-            require_version(self.db, MINIMUM_SQLITE_VERSION)
-            require_functions(self.db, REQUIRED_SQLITE_FUNCTIONS)
+            require_version(db, MINIMUM_SQLITE_VERSION)
+            require_functions(db, REQUIRED_SQLITE_FUNCTIONS)
         except DBError as e:
             raise SearchError(message=str(e)) from None
 
     @wrap_exceptions(SearchError)
     def enable(self) -> None:
         try:
-            with ddl_transaction(self.db):
-                self._enable()
+            with ddl_transaction(self.get_db()) as db:
+                self._enable(db)
         except sqlite3.OperationalError as e:
             if "table entries_search already exists" in str(e).lower():
                 return
             raise
 
-    def _enable(self) -> None:
+    @classmethod
+    def _enable(cls, db: sqlite3.Connection) -> None:
         # Private API, may be called from migrations.
-        self._create_tables()
-        self._create_triggers()
+        cls._create_tables(db)
+        cls._create_triggers(db)
 
-    def _create_tables(self) -> None:
+    @staticmethod
+    def _create_tables(db: sqlite3.Connection) -> None:
         # Private API, may be called from migrations.
 
-        assert self.db.in_transaction
+        assert db.in_transaction
 
         # The column names matter, as they can be used in column filters;
         # https://www.sqlite.org/fts5.html#fts5_column_filters
@@ -257,7 +248,7 @@ class Search:
         # We put the unindexed stuff at the end to avoid having to adjust
         # stuff depended on the column index if we add new columns.
         #
-        self.db.execute(
+        db.execute(
             """
             CREATE VIRTUAL TABLE entries_search USING fts5(
                 title,  -- entries.title
@@ -272,14 +263,14 @@ class Search:
             """
         )
         # TODO: we still need to tune the rank weights, these are just guesses
-        self.db.execute(
+        db.execute(
             """
             INSERT INTO entries_search(entries_search, rank)
             VALUES ('rank', 'bm25(4, 1, 2)');
             """
         )
 
-        self.db.execute(
+        db.execute(
             """
             CREATE TABLE entries_search_sync_state (
                 id TEXT NOT NULL,
@@ -293,7 +284,7 @@ class Search:
         )
         # TODO: This should probably be paginated,
         # but it's called once and should not take too long, so we can do it later.
-        self.db.execute(
+        db.execute(
             """
             INSERT INTO entries_search_sync_state (id, feed)
             SELECT id, feed
@@ -301,10 +292,11 @@ class Search:
             """
         )
 
-    def _create_triggers(self) -> None:
+    @staticmethod
+    def _create_triggers(db: sqlite3.Connection) -> None:
         # Private API, may be called from migrations.
 
-        assert self.db.in_transaction
+        assert db.in_transaction
 
         # We can't use just "INSERT INTO entries_search_sync_state (id, feed)",
         # because this trigger also gets called in case of
@@ -318,7 +310,7 @@ class Search:
         # Note the entries_search_entries_insert{,_esss_exists} trigers
         # cannot use OR REPLACE, so we must have one trigger for each case.
 
-        self.db.execute(
+        db.execute(
             """
             CREATE TRIGGER entries_search_entries_insert
             AFTER INSERT ON entries
@@ -336,7 +328,7 @@ class Search:
             END;
             """
         )
-        self.db.execute(
+        db.execute(
             """
             CREATE TRIGGER entries_search_entries_insert_esss_exists
             AFTER INSERT ON entries
@@ -360,7 +352,7 @@ class Search:
             END;
             """
         )
-        self.db.execute(
+        db.execute(
             """
             CREATE TRIGGER entries_search_entries_update
             AFTER UPDATE
@@ -382,7 +374,7 @@ class Search:
             END;
             """
         )
-        self.db.execute(
+        db.execute(
             """
             CREATE TRIGGER entries_search_entries_delete
             AFTER DELETE ON entries
@@ -400,7 +392,7 @@ class Search:
         # No need to do anything for added feeds, since they don't have
         # any entries. No need to do anything for deleted feeds, since
         # the entries delete trigger will take care of its entries.
-        self.db.execute(
+        db.execute(
             """
             CREATE TRIGGER entries_search_feeds_update
             AFTER UPDATE
@@ -424,7 +416,7 @@ class Search:
         # with the same id as one from the new feed, we'll get an
         # "UNIQUE constraint failed" for esss(id, feed)
         # when we update esss.feed to new.url.
-        self.db.execute(
+        db.execute(
             """
             CREATE TRIGGER entries_search_feeds_update_url
             AFTER UPDATE
@@ -461,36 +453,42 @@ class Search:
 
     @wrap_exceptions(SearchError)
     def disable(self) -> None:
-        with ddl_transaction(self.db):
-            self._disable()
+        with ddl_transaction(self.get_db()) as db:
+            self._disable(db)
 
-    def _disable(self) -> None:
+    @classmethod
+    def _disable(cls, db: sqlite3.Connection) -> None:
         # Private API, may be called from migrations.
-        self._drop_triggers()
-        self._drop_tables()
+        cls._drop_triggers(db)
+        cls._drop_tables(db)
 
-    def _drop_tables(self) -> None:
+    @staticmethod
+    def _drop_tables(db: sqlite3.Connection) -> None:
         # Private API, may be called from migrations.
-        assert self.db.in_transaction
-        self.db.execute("DROP TABLE IF EXISTS entries_search;")
-        self.db.execute("DROP TABLE IF EXISTS entries_search_sync_state;")
+        assert db.in_transaction
+        db.execute("DROP TABLE IF EXISTS entries_search;")
+        db.execute("DROP TABLE IF EXISTS entries_search_sync_state;")
 
-    def _drop_triggers(self) -> None:
+    @staticmethod
+    def _drop_triggers(db: sqlite3.Connection) -> None:
         # Private API, may be called from migrations.
-        assert self.db.in_transaction
-        self.db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert;")
-        self.db.execute(
-            "DROP TRIGGER IF EXISTS entries_search_entries_insert_esss_exists;"
-        )
-        self.db.execute("DROP TRIGGER IF EXISTS entries_search_entries_update;")
-        self.db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
-        self.db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")
-        self.db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update_url;")
+        assert db.in_transaction
+        db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert;")
+        db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert_esss_exists;")
+        db.execute("DROP TRIGGER IF EXISTS entries_search_entries_update;")
+        db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
+        db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")
+        db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update_url;")
 
     @wrap_exceptions(SearchError)
     def is_enabled(self) -> bool:
+        return self._is_enabled(self.get_db())
+
+    @staticmethod
+    def _is_enabled(db: sqlite3.Connection) -> bool:
+        # Private API, may be called from migrations.
         search_table_exists = (
-            self.db.execute(
+            db.execute(
                 """
                 SELECT name
                 FROM sqlite_master
@@ -518,7 +516,7 @@ class Search:
         # we can't / don't want to pull all the entries into memory
         chunk_size = self.chunk_size or 1
 
-        with self.db as db:
+        with self.get_db() as db:
             # See _insert_into_search_one_chunk for why we're doing this.
             db.execute('BEGIN IMMEDIATE;')
 
@@ -599,8 +597,10 @@ class Search:
         # See this comment for pseudocode of both approaches:
         # https://github.com/lemon24/reader/issues/175#issuecomment-652489019
 
+        db = self.get_db()
+
         rows = list(
-            self.db.execute(
+            db.execute(
                 """
                 SELECT
                     entries.id,
@@ -700,7 +700,7 @@ class Search:
         groups = groupby(stripped, lambda d: (d['_id'], d['_feed']))
         for (id, feed_url), group_iter in groups:
             group = list(group_iter)
-            with self.db as db:
+            with db:
                 # With the default isolation mode, a BEGIN is emitted
                 # only when a DML statement is executed (I think);
                 # this means that any SELECTs aren't actually
@@ -852,7 +852,7 @@ class Search:
         context = dict(feed=feed_url, id=entry_id, query=query)
 
         return zero_or_one(
-            self.db.execute(str(sql_query), context),
+            self.get_db().execute(str(sql_query), context),
             lambda: EntryNotFoundError(feed_url, entry_id),
         )
 
@@ -891,7 +891,7 @@ class Search:
 
         with wrap_search_exceptions(query=True):
             yield from paginated_query(
-                self.db, sql_query, context, chunk_size, last, row_factory
+                self.get_db(), sql_query, context, chunk_size, last, row_factory
             )
 
     @wrap_exceptions(SearchError)
@@ -927,7 +927,7 @@ class Search:
         query_context.update(new_context)
 
         context = dict(query=query, **query_context)
-        row = exactly_one(self.db.execute(str(sql_query), context))
+        row = exactly_one(self.get_db().execute(str(sql_query), context))
         return EntrySearchCounts(*row[:4], row[4:7])  # type: ignore[call-arg]
 
 

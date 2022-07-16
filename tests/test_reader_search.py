@@ -448,7 +448,7 @@ def test_update_triggers_no_change(db_path, make_reader, monkeypatch, set_user_t
     # never fires at the moment).
     #
     # Meanwhile, we do a (more intrusive/brittle) manual update:
-    with reader._search.db as db:
+    with reader._search.get_db() as db:
         db.execute(
             """
             UPDATE entries
@@ -902,7 +902,7 @@ def test_update_search_entry_changed_during_strip_html(
     try:
         feed = parser.feed(1, datetime(2010, 1, 3), title='three')
         parser.entry(1, 1, datetime(2010, 1, 3), title='three')
-        reader._storage.db.execute("PRAGMA busy_timeout = 0;")
+        reader._storage.get_db().execute("PRAGMA busy_timeout = 0;")
         reader.update_feed(feed.url)
         expected_title = 'three'
     except StorageError:
@@ -995,7 +995,9 @@ def test_update_search_entry_changed_between_insert_loops(
     (result,) = reader.search_entries('entry')
     assert len(result.content) == 1
 
-    ((rowcount,),) = reader._search.db.execute("select count(*) from entries_search;")
+    ((rowcount,),) = reader._search.get_db().execute(
+        "select count(*) from entries_search;"
+    )
     assert rowcount == 1
 
 
@@ -1055,7 +1057,9 @@ def test_update_search_concurrent_calls(db_path, make_reader, monkeypatch):
     (result,) = reader.search_entries('entry')
     assert len(result.content) == 2
 
-    ((rowcount,),) = reader._search.db.execute("select count(*) from entries_search;")
+    ((rowcount,),) = reader._search.get_db().execute(
+        "select count(*) from entries_search;"
+    )
     assert rowcount == 2
 
 

@@ -141,7 +141,7 @@ def test_close():
             close_called = True
 
     storage = Storage(':memory:', factory=Connection)
-    storage.db.execute('values (1)')
+    storage.get_db().execute('values (1)')
 
     storage.close()
     assert close_called
@@ -158,7 +158,7 @@ def test_close_error():
         raise sqlite3.ProgrammingError('unexpected error')
 
     storage = Storage(':memory:', factory=Connection)
-    storage.db.execute = execute
+    storage.get_db().execute = execute
 
     # should not be StorageError, because it's likely a bug
     with pytest.raises(sqlite3.ProgrammingError):
@@ -329,7 +329,7 @@ def check_errors_locked(db_path, pre_stuff, do_stuff, exc_type):
 
     # WAL provides more concurrency; some things won't to block with it enabled.
     storage = Storage(db_path, wal_enabled=False)
-    storage.db.execute("PRAGMA busy_timeout = 0;")
+    storage.get_db().execute("PRAGMA busy_timeout = 0;")
 
     feed = FeedData('one')
     entry = EntryData('one', 'entry', datetime(2010, 1, 2))
@@ -345,11 +345,12 @@ def check_errors_locked(db_path, pre_stuff, do_stuff, exc_type):
 
     def target():
         storage = Storage(db_path, wal_enabled=False)
-        storage.db.isolation_level = None
-        storage.db.execute("BEGIN EXCLUSIVE;")
+        db = storage.get_db()
+        db.isolation_level = None
+        db.execute("BEGIN EXCLUSIVE;")
         in_transaction.set()
         can_return_from_transaction.wait()
-        storage.db.execute("ROLLBACK;")
+        db.execute("ROLLBACK;")
 
     if pre_stuff:
         pre_stuff(storage, feed, entry)
@@ -581,9 +582,9 @@ def test_migration_minimum_version(db_path, request):
     storage = Storage(db_path)
     request.addfinalizer(storage.close)
 
-    assert HeavyMigration.get_version(storage.db) >= MIGRATION_MINIMUM_VERSION
+    assert HeavyMigration.get_version(storage.get_db()) >= MIGRATION_MINIMUM_VERSION
 
-    HeavyMigration.set_version(storage.db, MIGRATION_MINIMUM_VERSION - 1)
+    HeavyMigration.set_version(storage.get_db(), MIGRATION_MINIMUM_VERSION - 1)
 
     with pytest.raises(StorageError) as excinfo:
         Storage(db_path)

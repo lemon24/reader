@@ -2492,13 +2492,15 @@ def test_change_feed_url_search_entry_id_repeats(reader):
     assert entry.title == result.metadata['.title'].value
 
     assert (
-        reader._search.db.execute(
-            "select count(*) from entries_search_sync_state;"
-        ).fetchone()[0]
+        reader._search.get_db()
+        .execute("select count(*) from entries_search_sync_state;")
+        .fetchone()[0]
         == 1
     )
     assert (
-        reader._search.db.execute("select count(*) from entries_search;").fetchone()[0]
+        reader._search.get_db()
+        .execute("select count(*) from entries_search;")
+        .fetchone()[0]
         == 1
     )
 

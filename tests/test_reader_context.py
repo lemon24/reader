@@ -108,7 +108,7 @@ def run_in_thread(fn):
 
 
 def check_direct_usage(reader):
-    db = reader._storage.db
+    db = reader._storage.get_db()
 
     check_usage(reader)
     assert not db.closed
@@ -157,7 +157,7 @@ def check_with_usage(reader):
         assert result is reader
         # no exception
         check_usage(reader)
-        db = reader._storage.db
+        db = reader._storage.get_db()
 
     assert db.closed
 
@@ -184,7 +184,7 @@ def test_main_thread_with_usage_private(reader):
         assert result is reader
         # no exception
         check_usage(reader)
-        db = reader._storage.db
+        db = reader._storage.get_db()
 
     # close() is *not* called
     assert not db.closed
@@ -249,7 +249,7 @@ def count_optimize_calls(statements):
 @pytest.mark.slow
 @rename_argument('reader', 'reader_shared')
 def test_optimize_direct_usage(reader):
-    statements = reader._storage.db.statements
+    statements = reader._storage.get_db().statements
 
     for _ in range(1000):
         reader.set_tag((), 'tag')
@@ -264,7 +264,7 @@ def test_optimize_direct_usage(reader):
 
 @rename_argument('reader', 'reader_shared')
 def test_optimize_close(reader):
-    statements = reader._storage.db.statements
+    statements = reader._storage.get_db().statements
     statements.clear()
 
     reader.close()
@@ -274,7 +274,7 @@ def test_optimize_close(reader):
 
 @rename_argument('reader', 'reader_shared')
 def test_optimize_with(reader):
-    statements = reader._storage.db.statements
+    statements = reader._storage.get_db().statements
     statements.clear()
 
     with reader:
@@ -290,7 +290,7 @@ def test_optimize_thread_end(reader):
 
     def target():
         nonlocal statements
-        statements = reader._storage.db.statements
+        statements = reader._storage.get_db().statements
         statements.clear()
 
     thread = threading.Thread(target=target)
