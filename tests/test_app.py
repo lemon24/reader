@@ -21,8 +21,12 @@ pytestmark = pytest.mark.requires_lxml
 
 
 @pytest.fixture
-def browser(db_path):
-    app = create_app(make_reader_config({'reader': {'url': db_path}}))
+def app(db_path):
+    return create_app(make_reader_config({'reader': {'url': db_path}}))
+
+
+@pytest.fixture
+def browser(app):
     session = requests.Session()
     session.mount('http://app/', wsgiadapter.WSGIAdapter(app))
     browser = mechanicalsoup.StatefulBrowser(session)
@@ -108,12 +112,14 @@ def test_mark_all_as_read_unread(db_path, make_reader, browser):
 
 
 @pytest.mark.slow
-def test_add_delete_feed(db_path, make_reader, browser, monkeypatch):
+def test_add_delete_feed(db_path, browser, app, monkeypatch):
     parser = Parser()
     parser.tzinfo = None
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
+
+    app.reader._parser = parser
 
     def app_make_reader(**kwargs):
         reader = make_reader_from_config(**kwargs)
@@ -143,7 +149,7 @@ def test_add_delete_feed(db_path, make_reader, browser, monkeypatch):
 
     # actually add the feed
     form = browser.select_form('form.action-add-feed')
-    response = browser.submit_selected(form.form.find('button', text='add_feed'))
+    response = browser.submit_selected(form.form.find('button', text='add feed'))
 
     # we should be at the feed page, via a redirect
     assert response.status_code == 200

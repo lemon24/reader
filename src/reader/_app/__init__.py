@@ -87,17 +87,7 @@ got_preview_parse_error = signals.signal('preview-parse-error')
 
 
 def get_reader():
-    if not hasattr(g, 'reader'):
-        g.reader = current_app.config['READER_CONFIG'].make_reader(
-            'app', plugin_loader=current_app.plugin_loader
-        )
-        # TODO: lowering g.reader._storage.chunk_size may reduce memory usage slightly
-    return g.reader
-
-
-def close_db(error):
-    if hasattr(g, 'reader'):
-        g.reader.close()
+    return current_app.reader
 
 
 def stream_template(template_name_or_list, **kwargs):
@@ -805,7 +795,6 @@ def create_app(config):
     app.secret_key = 'secret'
 
     app.config['READER_CONFIG'] = config
-    app.teardown_appcontext(close_db)
 
     app.register_blueprint(blueprint)
 
@@ -823,11 +812,11 @@ def create_app(config):
     loader.handle_import_error = log_exception
     loader.handle_init_error = log_exception
 
-    # Fail fast for reader plugin import/init errors
-    # (although depending on the handler they may just be logged).
-    with app.app_context():
-        get_reader()
+    # There's one reader instance per app.
+    app.reader = app.config['READER_CONFIG'].make_reader('app', plugin_loader=loader)
 
     loader.init(app, config.merged('app').get('plugins', {}))
+
+    # TODO: lowering app.reader._storage.chunk_size may reduce memory usage slightly
 
     return app
