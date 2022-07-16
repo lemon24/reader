@@ -240,7 +240,6 @@ def test_search(db_path, make_reader, browser):
 
     reader.add_feed(feed.url)
     reader.update_feeds()
-    reader.enable_search()
     reader.update_search()
 
     browser.open('http://app/', params={'q': 'feed'})

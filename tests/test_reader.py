@@ -2401,7 +2401,6 @@ def test_change_feed_url_second_update(reader, new_feed_url):
         1, datetime(2010, 1, 1), title='old title', author='old author', link='old link'
     )
     reader.update_feeds()
-    reader.enable_search()
     reader.update_search()
 
     reader.delete_feed('2')
@@ -2459,8 +2458,6 @@ def test_change_feed_url_search_entry_id_repeats(reader):
     for feed in one, two:
         reader.add_feed(feed)
     reader.update_feeds()
-
-    reader.enable_search()
     reader.update_search()
 
     # TODO: write another test to make sure things marked as to_update remain marked after change
@@ -2538,7 +2535,6 @@ def test_change_feed_url_original_feed_url(reader):
 @rename_argument('reader', 'reader_with_two_feeds')
 def test_change_feed_url_search(reader):
     reader.update_feeds()
-    reader.enable_search()
     reader.update_search()
 
     old = list(reader.search_entries('entry', feed='1'))
