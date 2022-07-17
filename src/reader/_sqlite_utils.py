@@ -478,7 +478,7 @@ class LocalConnectionFactory:
             )
 
         if self._is_private(self.path) and self._local.closed:
-            raise UsageError("cannot reuse a private databse after close()")
+            raise UsageError("cannot reuse a private database after close()")
 
         self._local.db = db = sqlite3.connect(self.path, **self.kwargs)
         self._local.call_count = 0
@@ -540,7 +540,7 @@ class LocalConnectionFactory:
     @staticmethod
     def _should_optimize(count: int) -> bool:
         if count > 1024:
-            return count % 1024 == 0
+            return count % 2048 == 0
         return count in {2, 4, 8, 16, 64, 256, 1024}
 
     @staticmethod

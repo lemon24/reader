@@ -292,11 +292,13 @@ class Reader:
     .. _feedparser: https://feedparser.readthedocs.io/en/latest/
 
 
-    The Reader object should be used as a context manager,
-    so that underlying resources are released in a predictable manner.
-    For convenience, it is possible to use a Reader object directly
-    from the thread that created it,
-    but it *must* be used as a context manager from other threads.
+    In order to perform maintenance tasks and
+    release underlying resources in a predictable manner,
+    the Reader object should be used as a context manager
+    *from each thread* where it is used.
+    For convenience, it is possible to use a Reader object directly;
+    in this case, maintenance tasks may sometimes be performed
+    before arbitrary method calls return.
 
 
     .. important::
@@ -316,6 +318,16 @@ class Reader:
 
     .. versionchanged:: 2.15
         Allow using Reader objects from threads other than the creating thread.
+
+    .. versionchanged:: 2.16
+        Allow using a Reader object from multiple threads directly
+        (do not require it to be used as a context manager anymore).
+
+    .. versionchanged:: 2.16
+        Allow Reader objects to be reused after closing.
+
+    .. versionchanged:: 2.16
+        Allow using a Reader object from multiple asyncio tasks.
 
     """
 
@@ -433,14 +445,17 @@ class Reader:
 
         Releases any underlying resources associated with the reader.
 
-        The reader becomes unusable from this point forward;
-        a :exc:`ReaderError` will be raised if any other method is called.
+        The reader can be reused after being closed
+        (but you have to call close() again after that).
 
-        close() can only be called from the thread that created the reader.
+        close() should be called *from each thread* where the reader is used.
         Prefer using the reader as a context manager instead.
 
         Raises:
             ReaderError
+
+        .. versionchanged:: 2.16
+            Allow calling close() from any thread.
 
         """
         self._storage.close()

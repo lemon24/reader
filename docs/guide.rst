@@ -37,48 +37,83 @@ so the path behaves like the ``database`` argument of :func:`sqlite3.connect`:
   the data will disappear when the reader is closed.
 
 
-In production code, you should use the reader as a context manager,
-so that underlying resources are released in a predictable manner::
+Lifecycle
+~~~~~~~~~
+
+In order to perform maintenance tasks and
+release underlying resources in a predictable manner,
+you should use the reader as a context manager::
 
     with make_reader('db.sqlite') as reader:
         ... # do stuff with reader
 
-After exiting the context, the reader becomes unusable;
-a :exc:`ReaderError` will be raised if any method is called.
-(It may become possible to reuse reader objects in the future.)
+For convenience, you can also use the reader directly.
+In this case, maintenance tasks may sometimes (rarely) be performed
+before arbitrary method calls return.
+You can still release the underlying resources
+by calling :meth:`~Reader.close`.
+``with reader`` is roughly equivalent to ``with contextlib.closing(reader)``,
+but the former suspends regular maintenance tasks
+for the duration of the with block.
 
-For convenience, you can use a Reader object directly,
-but only from the thread that created it.
+In either case, you can reuse the reader object after closing it;
+database connections will be re-created automatically.
 
 
 Threading
 ~~~~~~~~~
 
-You can use a Reader instance from multiple threads,
-but it *must* be used as a context manager::
+You can use the same reader instance from multiple threads::
 
-    >>> def background_update(reader):
-    ...     with reader:
-    ...         reader.update_feeds()
+    >>> Thread(target=reader.update_feeds).start()
+
+You should use the reader as a context manager
+or call its :meth:`~Reader.close` method
+*from each thread* where it is used.
+
+
+It is not always possible to close the reader from your code,
+especially when you do not control how threads are shut down
+– for example, if you want
+to use a reader across requests in a Flask web application,
+or with a :class:`~concurrent.futures.ThreadPoolExecutor`.
+If you do not close the reader, it will attempt
+to call :meth:`~Reader.close` before the thread ends.
+Currently, this does not work on PyPy,
+or if the thread was not created through the :mod:`threading` module
+(but note that database connections will eventually be closed anyway
+when garbage-collected).
+
+
+Temporary databases
+~~~~~~~~~~~~~~~~~~~
+
+In order to maximize the usefulness temporary databases,
+the database connection is closed (and the data discarded)
+only when calling :meth:`~Reader.close`,
+not when using the reader as a context manager.
+The reader cannot be reused after calling :meth:`~Reader.close`.
+
+::
+
+    >>> reader = make_reader(':memory:')
+    >>> with reader:
+    ...     reader.set_tag((), 'tag')
     ...
-    >>> Thread(target=background_update, args=(reader,)).start()
+    >>> list(reader.get_tag_keys(()))
+    ['tag']
+    >>> reader.close()
+    >>> list(reader.get_tag_keys(()))
+    Traceback (most recent call last):
+      ...
+    reader.exceptions.StorageError: usage error: cannot reuse a private database after close()
 
-If used outside of a context, calling any method will result in an exception::
+
+It is not possible to use a private, temporary SQLite database from other threads,
+since each connection would be to a *different* database::
 
     >>> Thread(target=reader.update_feeds).start()
     Exception in thread Thread-1 (update_feeds):
-    Traceback (most recent call last):
-      ...
-    reader.exceptions.StorageError: usage error: must be used as a context manager when using from threads other than the creating thread
-
-
-It is not possible to use a private SQLite database from other threads,
-even when using the reader as a context manager
-(since each connection would be to a *different* database)::
-
-    >>> reader = make_reader(':memory:')
-    >>> Thread(target=background_update, args=(reader,)).start()
-    Exception in thread Thread-1 (background_update):
     Traceback (most recent call last):
       ...
     reader.exceptions.StorageError: usage error: cannot use a private database from threads other than the creating thread

@@ -11,6 +11,15 @@ Version 2.16
 
 Unreleased
 
+* Allow using a :class:`Reader` object from multiple threads directly
+  (do not require it to be used as a context manager anymore).
+  (:issue:`206`)
+* Allow :class:`Reader` objects to be reused after closing.
+  (:issue:`206`, :issue:`284`)
+* Allow calling :meth:`~Reader.close` from any thread. (:issue:`206`)
+* Allow using a :class:`Reader` object from multiple asyncio tasks.
+  (:issue:`206`)
+
 
 Version 2.15
 ------------
