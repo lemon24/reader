@@ -10,6 +10,7 @@ import asyncio
 import functools
 import gc
 import sqlite3
+import sys
 import threading
 
 import pytest
@@ -228,6 +229,13 @@ def test_asyncio_shared(reader):
     asyncio.run(main())
 
 
+@pytest.mark.xfail(
+    # https://github.com/lemon24/reader/runs/7379033828?check_suite_focus=true
+    sys.version_info[:2] == (3, 8),
+    # sqlite3.OperationalError: database is locked
+    raises=sqlite3.OperationalError,
+    reason="weird problem that only happens on 3.8 on Ubuntu",
+)
 @rename_argument('reader', 'reader_private')
 def test_asyncio_private(reader):
     async def main():
