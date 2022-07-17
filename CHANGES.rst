@@ -9,7 +9,7 @@ Changelog
 Version 2.16
 ------------
 
-Unreleased
+Released 2022-07-17
 
 * Allow using a :class:`Reader` object from multiple threads directly
   (do not require it to be used as a context manager anymore).
