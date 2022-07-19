@@ -20,15 +20,21 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
-from .types import MISSING
-from .types import MissingType
-
 
 FuncType = Callable[..., Any]
 F = TypeVar('F', bound=FuncType)
 
 _T = TypeVar('_T')
 _U = TypeVar('_U')
+
+
+class MissingType:
+    def __repr__(self) -> str:
+        return "no value"
+
+
+#: Sentinel object used to detect if the `default` argument was provided."""
+MISSING = MissingType()
 
 
 def zero_or_one(
@@ -197,6 +203,33 @@ class PrefixLogger(logging.LoggerAdapter):  # type: ignore
         return ': '.join(tuple(self._escape(p) for p in self.prefixes) + (msg,)), kwargs
 
 
+_DEPRECATED_FUNC_WARNING = """\
+{old_name}() is deprecated and will be removed in reader {removed_in}. \
+Use {new_name}() instead.\
+"""
+_DEPRECATED_FUNC_DOCSTRING = """\
+Deprecated alias for :meth:`{new_name}`.
+{doc}
+.. deprecated:: {deprecated_in}
+    This method will be removed in *reader* {removed_in}.
+    Use :meth:`{new_name}` instead.
+
+"""
+
+_DEPRECATED_PROP_WARNING = """\
+{old_name} is deprecated and will be removed in reader {removed_in}. \
+Use {new_name} instead.\
+"""
+_DEPRECATED_PROP_DOCSTRING = """\
+Deprecated variant of :attr:`{new_name}`.
+{doc}
+.. deprecated:: {deprecated_in}
+    This property will be removed in *reader* {removed_in}.
+    Use :attr:`{new_name}` instead.
+
+"""
+
+
 def _deprecated_wrapper(
     old_name: str,
     new_name: str,
@@ -204,26 +237,18 @@ def _deprecated_wrapper(
     deprecated_in: str,
     removed_in: str,
     doc: str = '',
+    warning_template: str = _DEPRECATED_FUNC_WARNING,
+    docstring_template: str = _DEPRECATED_FUNC_DOCSTRING,
 ) -> F:
+    format_kwargs = dict(locals())
+
     @wraps(func)
     def old_func(*args, **kwargs):  # type: ignore
-        warnings.warn(
-            f"{old_name}() is deprecated "
-            f"and will be removed in reader {removed_in}. "
-            f"Use {new_name}() instead.",
-            DeprecationWarning,
-        )
+        warnings.warn(warning_template.format_map(format_kwargs), DeprecationWarning)
         return func(*args, **kwargs)
 
     old_func.__name__ = old_name
-    old_func.__doc__ = (
-        f"Deprecated alias for :meth:`{new_name}`.\n"
-        f"{doc}\n"
-        f".. deprecated:: {deprecated_in}\n"
-        f"    This method will be removed in *reader* {removed_in}.\n"
-        f"    Use :meth:`{new_name}` instead.\n\n"
-    )
-
+    old_func.__doc__ = docstring_template.format_map(format_kwargs)
     return cast(F, old_func)
 
 
@@ -233,18 +258,23 @@ def deprecated_wrapper(
     return _deprecated_wrapper(old_name, func.__name__, func, deprecated_in, removed_in)
 
 
-def deprecated(new_name: str, deprecated_in: str, removed_in: str) -> Callable[[F], F]:
+def deprecated(
+    new_name: str, deprecated_in: str, removed_in: str, property: bool = False
+) -> Callable[[F], F]:
+    if not property:
+        kwargs = {}
+    else:
+        kwargs = dict(
+            warning_template=_DEPRECATED_PROP_WARNING,
+            docstring_template=_DEPRECATED_PROP_DOCSTRING,
+        )
+
     def decorator(func: F) -> F:
         doc = inspect.getdoc(func) or ''
         if doc:  # pragma: no cover
             doc = '\n' + doc + '\n'
         return _deprecated_wrapper(
-            func.__name__,
-            new_name,
-            func,
-            deprecated_in,
-            removed_in,
-            doc=doc,
+            func.__name__, new_name, func, deprecated_in, removed_in, doc=doc, **kwargs
         )
 
     return decorator

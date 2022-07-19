@@ -3,6 +3,8 @@ from typing import Any
 from typing import Tuple
 from typing import Union
 
+from ._utils import deprecated
+
 
 class _FancyExceptionBase(Exception):
 
@@ -72,7 +74,10 @@ class ResourceNotFoundError(ReaderError):
 
     """
 
-    # TODO: object_id: tuple[str, ...] (but FeedError must become tuple[str]!)
+    @property
+    def resource_id(self) -> Tuple[str, ...]:  # pragma: no cover
+        """The `resource_id` of the resource."""
+        raise NotImplementedError
 
 
 class FeedError(ReaderError):
@@ -89,7 +94,17 @@ class FeedError(ReaderError):
         return repr(self.url)
 
     @property
-    def object_id(self) -> str:
+    def resource_id(self) -> Tuple[str]:
+        """Alias for (:attr:`~url`,).
+
+        .. versionadded:: 2.17
+
+        """
+        return (self.url,)
+
+    @property  # type: ignore
+    @deprecated('resource_id', '2.17', '3.0', property=True)
+    def object_id(self) -> str:  # pragma: no cover
         """Alias for :attr:`~FeedError.url`.
 
         .. versionadded:: 1.12
@@ -149,7 +164,17 @@ class EntryError(ReaderError):
         return repr((self.feed_url, self.id))
 
     @property
-    def object_id(self) -> Tuple[str, str]:
+    def resource_id(self) -> Tuple[str, str]:
+        """Alias for (:attr:`~feed_url`, :attr:`~id`).
+
+        .. versionadded:: 2.17
+
+        """
+        return self.feed_url, self.id
+
+    @property  # type: ignore
+    @deprecated('resource_id', '2.17', '3.0', property=True)
+    def object_id(self) -> Tuple[str, str]:  # pragma: no cover
         """Alias for (:attr:`~EntryError.feed_url`, :attr:`~EntryError.id`).
 
         .. versionadded:: 1.12
@@ -286,27 +311,39 @@ class TagError(ReaderError):
 
     .. versionadded:: 2.8
 
+    .. versionchanged:: 2.17
+        Signature changed from ``TagError(key, object_id, message='')``
+        to ``TagError(key, resource_id, message='')``.
+
     """
 
     def __init__(
-        self,
-        key: str,
-        object_id: Union[Tuple[()], str, Tuple[str, str]],
-        message: str = '',
+        self, key: str, resource_id: Tuple[str, ...], message: str = ''
     ) -> None:
         super().__init__(message)
 
         #: The tag key.
         self.key = key
 
-        # TODO: tuple[str, ...], once FeedError.object_id becomes tuple[str]
-
-        #: The `object_id` of the resource.
-        self.object_id = object_id
+        #: The `resource_id` of the resource.
+        self.resource_id = resource_id
 
     @property
     def _str(self) -> str:
-        return f"{self.object_id!r}: {self.key!r}"
+        parts = self.resource_id + (self.key,)
+        return ': '.join(repr(part) for part in parts)
+
+    @property  # type: ignore
+    @deprecated('resource_id', '2.17', '3.0', property=True)
+    def object_id(self) -> Union[Tuple[()], str, Tuple[str, str]]:  # pragma: no cover
+        """The `object_id` of the resource."""
+        if len(self.resource_id) == 0:
+            return ()
+        if len(self.resource_id) == 1:
+            return self.resource_id[0]
+        if len(self.resource_id) == 2:
+            return self.resource_id[0], self.resource_id[1]
+        assert False, "shouldn't happen"  # noqa: B011
 
 
 class TagNotFoundError(TagError):

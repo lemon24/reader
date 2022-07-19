@@ -13,10 +13,12 @@ from reader._storage import Storage
 
 
 @contextmanager
-def raises_TagNotFoundError(object_id, key):
+def raises_TagNotFoundError(resource_id, key):
+    if isinstance(resource_id, str):
+        resource_id = (resource_id,)
     with pytest.raises(TagNotFoundError) as excinfo:
         yield
-    assert excinfo.value.object_id == object_id
+    assert excinfo.value.resource_id == resource_id
     assert excinfo.value.key == key
     assert 'no such tag' in excinfo.value.message
 
@@ -24,7 +26,7 @@ def raises_TagNotFoundError(object_id, key):
 @parametrize_dict(
     'resource, not_found_exc',
     {
-        'feed': ('1', FeedNotFoundError),
+        'feed': (('1',), FeedNotFoundError),
         'entry': (('1', '1, 1'), EntryNotFoundError),
         # no global, the global namespace always exists
     },
@@ -41,7 +43,7 @@ def test_inexistent_resource(reader, subtests, resource, not_found_exc):
     with subtests.test("set tag"):
         with pytest.raises(not_found_exc) as excinfo:
             reader.set_tag(resource, 'one', 'value')
-        assert excinfo.value.object_id == resource
+        assert excinfo.value.resource_id == resource
         assert 'no such' in excinfo.value.message
         assert 'no such tag' not in excinfo.value.message
 
@@ -329,10 +331,10 @@ def test_set_no_value(reader, resource, value):
     {
         'global': lambda *_: (),
         'feed': lambda f, _: f,
-        'feed_id': lambda f, _: f.object_id,
+        'feed_id': lambda f, _: f.resource_id,
         'feed_tuple': lambda f, _: (f.url,),
         'entry': lambda _, e: e,
-        'entry_id': lambda _, e: e.object_id,
+        'entry_id': lambda _, e: e.resource_id,
     },
 )
 def test_resource_argument(reader, make_resource_arg):

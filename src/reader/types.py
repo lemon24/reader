@@ -24,7 +24,13 @@ from typing import Type
 from typing import TypeVar
 from typing import Union
 
+from reader._utils import deprecated
 from reader.exceptions import ReaderError
+
+# noreorder
+# can't be defined here because of circular imports
+from reader._utils import MISSING as MISSING  # noqa: F401
+from reader._utils import MissingType as MissingType  # noqa: F401
 
 
 _T = TypeVar('_T')
@@ -144,7 +150,17 @@ class Feed(_namedtuple_compat):
     updates_enabled: bool = True
 
     @property
-    def object_id(self) -> str:
+    def resource_id(self) -> Tuple[str]:
+        """Alias for (:attr:`~url`,).
+
+        .. versionadded:: 2.17
+
+        """
+        return (self.url,)
+
+    @property  # type: ignore
+    @deprecated('resource_id', '2.17', '3.0', property=True)
+    def object_id(self) -> str:  # pragma: no cover
         """Alias for :attr:`~Feed.url`.
 
         .. versionadded:: 1.12
@@ -308,7 +324,17 @@ class Entry(_namedtuple_compat):
     feed: Feed = cast(Feed, None)
 
     @property
-    def object_id(self) -> Tuple[str, str]:
+    def resource_id(self) -> Tuple[str, str]:
+        """Alias for (:attr:`~feed_url`, :attr:`~id`).
+
+        .. versionadded:: 2.17
+
+        """
+        return self.feed_url, self.id
+
+    @property  # type: ignore
+    @deprecated('resource_id', '2.17', '3.0', property=True)
+    def object_id(self) -> Tuple[str, str]:  # pragma: no cover
         """Alias for (:attr:`~Entry.feed_url`, :attr:`~Entry.id`).
 
         .. versionadded:: 1.12
@@ -611,7 +637,17 @@ class EntrySearchResult(_namedtuple_compat):
     # TODO: entry: Optional[Entry]; model it through typing if possible
 
     @property
-    def object_id(self) -> Tuple[str, str]:
+    def resource_id(self) -> Tuple[str, str]:
+        """Alias for (:attr:`~feed_url`, :attr:`~id`).
+
+        .. versionadded:: 2.17
+
+        """
+        return self.feed_url, self.id
+
+    @property  # type: ignore
+    @deprecated('resource_id', '2.17', '3.0', property=True)
+    def object_id(self) -> Tuple[str, str]:  # pragma: no cover
         """Alias for (:attr:`~EntrySearchResult.feed_url`, :attr:`~EntrySearchResult.id`).
 
         .. versionadded:: 1.12
@@ -760,15 +796,6 @@ def _resource_argument(resource: ResourceInput) -> ResourceId:
 TagFilterInput = Union[
     None, bool, Sequence[Union[str, bool, Sequence[Union[str, bool]]]]
 ]
-
-
-class MissingType:
-    def __repr__(self) -> str:
-        return "no value"
-
-
-#: Sentinel object used to detect if the `default` argument was provided."""
-MISSING = MissingType()
 
 
 @dataclass(frozen=True)

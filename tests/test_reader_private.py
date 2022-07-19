@@ -128,8 +128,8 @@ def test_delete_entries(reader):
         return [e.id for e in reader.get_entries()]
 
     with pytest.raises(EntryNotFoundError) as excinfo:
-        reader._storage.delete_entries([entry.object_id])
-    assert (excinfo.value.feed_url, excinfo.value.id) == entry.object_id
+        reader._storage.delete_entries([entry.resource_id])
+    assert (excinfo.value.feed_url, excinfo.value.id) == entry.resource_id
     assert 'no such entry' in excinfo.value.message
 
     assert get_entry_ids() == []
@@ -137,11 +137,11 @@ def test_delete_entries(reader):
     reader.update_feeds()
     assert get_entry_ids() == ['1, 1']
 
-    reader._storage.delete_entries([entry.object_id])
+    reader._storage.delete_entries([entry.resource_id])
     assert get_entry_ids() == []
 
     with pytest.raises(EntryNotFoundError) as excinfo:
-        reader._storage.delete_entries([entry.object_id])
+        reader._storage.delete_entries([entry.resource_id])
 
     del parser.entries[1][1]
     reader.update_feeds()

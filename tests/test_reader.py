@@ -2996,7 +2996,7 @@ def test_pagination_basic(reader, pre_stuff, call_method, sort_kwargs, chunk_siz
     pre_stuff(reader)
 
     def get_ids(**kwargs):
-        return [o.object_id for o in call_method(reader, **sort_kwargs, **kwargs)]
+        return [o.resource_id for o in call_method(reader, **sort_kwargs, **kwargs)]
 
     ids = get_ids()
 
@@ -3030,9 +3030,9 @@ def test_pagination_random(reader, pre_stuff, call_method, chunk_size):
     pre_stuff(reader)
 
     def get_ids(**kwargs):
-        return [o.object_id for o in call_method(reader, sort='random', **kwargs)]
+        return [o.resource_id for o in call_method(reader, sort='random', **kwargs)]
 
-    ids = [o.object_id for o in call_method(reader)]
+    ids = [o.resource_id for o in call_method(reader)]
 
     assert len(get_ids(limit=1)) == min(1, chunk_size or 1, len(ids))
     assert len(get_ids(limit=2)) == min(2, chunk_size or 2, len(ids))
@@ -3052,7 +3052,7 @@ NOT_FOUND_ERROR_CLS = {
 }
 
 NOT_FOUND_STARTING_AFTER = {
-    get_feeds: '0',
+    get_feeds: ('0',),
     get_entries: ('1', '1, 0'),
     search_entries: ('1', '1, 0'),
 }
@@ -3067,7 +3067,7 @@ def test_starting_after_errors(reader, pre_stuff, call_method, sort_kwargs):
 
     with pytest.raises(error_cls) as excinfo:
         list(call_method(reader, **sort_kwargs, starting_after=starting_after))
-    assert excinfo.value.object_id == starting_after
+    assert excinfo.value.resource_id == starting_after
 
 
 @with_call_paginated_method
@@ -3075,7 +3075,7 @@ def test_limit_errors(reader, pre_stuff, call_method, sort_kwargs):
     pre_stuff(reader)
 
     def get_ids(**kwargs):
-        return [o.object_id for o in call_method(reader, **sort_kwargs, **kwargs)]
+        return [o.resource_id for o in call_method(reader, **sort_kwargs, **kwargs)]
 
     with pytest.raises(ValueError):
         get_ids(limit=object())
@@ -3299,7 +3299,7 @@ def test_add_entry(reader):
 
     with pytest.raises(FeedNotFoundError) as excinfo:
         reader.add_entry(dict(feed_url='1', id='1, 1'))
-    assert excinfo.value.object_id == '1'
+    assert excinfo.value.resource_id == ('1',)
 
     # add it by user (from dict)
 
@@ -3322,7 +3322,7 @@ def test_add_entry(reader):
 
     with pytest.raises(EntryExistsError) as excinfo:
         reader.add_entry(expected_entry)
-    assert excinfo.value.object_id == ('1', '1, 1')
+    assert excinfo.value.resource_id == ('1', '1, 1')
 
     # add it by user (from object)
 
@@ -3358,7 +3358,7 @@ def test_delete_entry(reader):
 
     with pytest.raises(EntryNotFoundError) as excinfo:
         reader.delete_entry(('1', '1, 1'))
-    assert excinfo.value.object_id == ('1', '1, 1')
+    assert excinfo.value.resource_id == ('1', '1, 1')
 
     # no exception
     reader.delete_entry(('1', '1, 1'), True)
@@ -3379,7 +3379,7 @@ def test_delete_entry(reader):
 
     with pytest.raises(EntryError) as excinfo:
         reader.delete_entry(('1', '1, 2'))
-    assert excinfo.value.object_id == ('1', '1, 2')
+    assert excinfo.value.resource_id == ('1', '1, 2')
     assert excinfo.value.message == "entry must be added by 'user', got 'feed'"
 
     assert {(e.id, e.added_by) for e in reader.get_entries()} == {

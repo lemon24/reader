@@ -363,7 +363,7 @@ class Reader:
         #:
         #:  The only `entry` attributes guaranteed to be present are
         #:  :attr:`~Entry.feed_url`, :attr:`~Entry.id`,
-        #:  and :attr:`~Entry.object_id`;
+        #:  and :attr:`~Entry.resource_id`;
         #:  all other attributes may be missing
         #:  (accessing them may raise :exc:`AttributeError`).
         #:
@@ -2054,10 +2054,9 @@ class Reader:
 
         """
         resource_id = _resource_argument(resource)
-        object_id: Any = resource_id if len(resource_id) != 1 else resource_id[0]  # type: ignore
         return zero_or_one(
             (v for _, v in self._storage.get_tags(resource_id, key)),
-            lambda: TagNotFoundError(key, object_id),
+            lambda: TagNotFoundError(key, resource_id),
             default,
         )
 
@@ -2131,12 +2130,10 @@ class Reader:
 
         """
         resource_id = _resource_argument(resource)
-        object_id: Any = resource_id if len(resource_id) != 1 else resource_id[0]  # type: ignore
         try:
             self._storage.delete_tag(resource_id, key)
-        except TagNotFoundError as e:
+        except TagNotFoundError:
             if not missing_ok:
-                e.object_id = object_id
                 raise
 
     def make_reader_reserved_name(self, key: str) -> str:

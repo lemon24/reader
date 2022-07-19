@@ -105,14 +105,14 @@ def test__resource_argument_valueerror(resource):
         _resource_argument(resource)
 
 
-def test_object_id():
-    assert Feed('url').object_id == 'url'
-    assert Entry('entry', 'updated', feed=Feed('url')).object_id == ('url', 'entry')
-    assert EntrySearchResult('url', 'entry').object_id == ('url', 'entry')
-    assert FeedData('url').object_id == 'url'
-    assert EntryData('url', 'entry', 'updated').object_id == ('url', 'entry')
-    assert FeedError('url').object_id == 'url'
-    assert EntryError('url', 'entry').object_id == ('url', 'entry')
+def test_resource_id():
+    assert Feed('url').resource_id == ('url',)
+    assert Entry('entry', 'updated', feed=Feed('url')).resource_id == ('url', 'entry')
+    assert EntrySearchResult('url', 'entry').resource_id == ('url', 'entry')
+    assert FeedData('url').resource_id == ('url',)
+    assert EntryData('url', 'entry', 'updated').resource_id == ('url', 'entry')
+    assert FeedError('url').resource_id == ('url',)
+    assert EntryError('url', 'entry').resource_id == ('url', 'entry')
 
 
 @pytest.mark.parametrize(

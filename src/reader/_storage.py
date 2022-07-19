@@ -5,7 +5,6 @@ from datetime import datetime
 from datetime import timedelta
 from functools import partial
 from typing import Any
-from typing import cast
 from typing import Dict
 from typing import Iterable
 from typing import Mapping
@@ -984,7 +983,7 @@ class Storage:
 
             except sqlite3.IntegrityError as e:
                 e_msg = str(e).lower()
-                feed_url, entry_id = intent.entry.object_id
+                feed_url, entry_id = intent.entry.resource_id
 
                 log.debug(
                     "add_entry %r of feed %r: got IntegrityError",
@@ -1269,7 +1268,7 @@ class Storage:
 
         with self.get_db() as db:
             cursor = db.execute(query, params)
-        rowcount_exactly_one(cursor, lambda: TagNotFoundError(key, cast(str, None)))
+        rowcount_exactly_one(cursor, lambda: TagNotFoundError(key, object_id))
 
 
 def make_get_feeds_query(

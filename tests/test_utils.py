@@ -27,6 +27,35 @@ def test_deprecated():
     _check_deprecated(old)
 
 
+def test_deprecated_property():
+    class Class:
+        @property
+        @deprecated('new', '1.0', '2.0', property=True)
+        def old(self):
+            "docstring"
+            raise ValueError()
+
+    with pytest.raises(ValueError), pytest.deprecated_call() as warnings:
+        Class().old
+
+    assert Class.old.fget.__name__ == 'old'
+    assert Class.old.fget.__doc__ == (
+        'Deprecated variant of :attr:`new`.\n\n'
+        'docstring\n'
+        '\n'
+        '.. deprecated:: 1.0\n'
+        '    This property will be removed in *reader* 2.0.\n'
+        '    Use :attr:`new` instead.\n\n'
+    )
+
+    warning = warnings.pop()
+
+    assert (
+        str(warning.message)
+        == 'old is deprecated and will be removed in reader 2.0. Use new instead.'
+    )
+
+
 def _check_deprecated(old):
     with pytest.raises(ValueError) as excinfo, pytest.deprecated_call() as warnings:
         old('whatever')

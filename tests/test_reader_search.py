@@ -1091,11 +1091,11 @@ def test_add_entry_basic(reader):
     reader.update_search()
 
     (result,) = reader.search_entries('entry')
-    assert result.object_id == ('1', '1')
+    assert result.resource_id == ('1', '1')
     assert result.metadata['.title'].apply('*', '*') == 'my *entry*'
     assert result.content['.summary'].apply('*', '*') == 'I am a summary'
 
     (result,) = reader.search_entries('summary')
-    assert result.object_id == ('1', '1')
+    assert result.resource_id == ('1', '1')
     assert result.metadata['.title'].apply('*', '*') == 'my entry'
     assert result.content['.summary'].apply('*', '*') == 'I am a *summary*'

@@ -270,7 +270,7 @@ def _get_same_group_entries(reader, entry):
     # https://github.com/lemon24/reader/issues/202
 
     for other in reader.get_entries(feed=entry.feed_url, read=None):
-        if entry.object_id == other.object_id:
+        if entry.resource_id == other.resource_id:
             continue
         if _normalize(entry.title) != _normalize(other.title):
             continue
@@ -320,7 +320,7 @@ def _get_entry_groups(reader, feed, is_duplicate):
         return _normalize(e.title)
 
     # this reads all the feed's entries in memory;
-    # better would be to get all the (e.title, e.object_id),
+    # better would be to get all the (e.title, e.resource_id),
     # sort them, and then get_entry() each entry in order;
     # even better would be to have get_entries(sort='title');
     # https://github.com/lemon24/reader/issues/202
@@ -455,7 +455,7 @@ def _get_tags(reader, entry, duplicates):
             else:  # pragma: no cover
                 # TODO: custom exception
                 raise RuntimeError(
-                    f"could not find key for entry {entry.object_id} and tag {key}"
+                    f"could not find key for entry {entry.resource_id} and tag {key}"
                 )
 
 
@@ -471,14 +471,14 @@ def _make_actions(reader, entry, duplicates):
     for key, value in _get_tags(reader, entry, duplicates):
         yield partial(reader.set_tag, entry, key, value)
 
-    duplicate_ids = [d.object_id for d in duplicates]
+    duplicate_ids = [d.resource_id for d in duplicates]
     yield partial(reader._storage.delete_entries, duplicate_ids)
 
 
 def _dedupe_entries(reader, entry, duplicates, *, dry_run):
     log.info(
         "entry_dedupe: %r (title: %r) duplicates: %r",
-        entry.object_id,
+        entry.resource_id,
         entry.title,
         [e.id for e in duplicates],
     )
