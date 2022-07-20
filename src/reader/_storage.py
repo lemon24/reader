@@ -1141,18 +1141,18 @@ class Storage:
 
     def get_tags(
         self,
-        object_id: AnyResourceId,
+        resource_id: AnyResourceId,
         key: Optional[str] = None,
     ) -> Iterable[Tuple[str, JSONType]]:
         yield from join_paginated_iter(
-            partial(self.get_tags_page, object_id, key),
+            partial(self.get_tags_page, resource_id, key),
             self.chunk_size,
         )
 
     @wrap_exceptions_iter(StorageError)
     def get_tags_page(
         self,
-        object_id: AnyResourceId,
+        resource_id: AnyResourceId,
         key: Optional[str] = None,
         chunk_size: Optional[int] = None,
         last: Optional[_T] = None,
@@ -1160,15 +1160,15 @@ class Storage:
         query = Query().SELECT("key")
         context: Dict[str, Any] = dict()
 
-        if object_id is not None:
-            info = SCHEMA_INFO[len(object_id)]
+        if resource_id is not None:
+            info = SCHEMA_INFO[len(resource_id)]
             query.FROM(f"{info.table_prefix}tags")
 
-            if not any(p is None for p in object_id):
+            if not any(p is None for p in resource_id):
                 query.SELECT("value")
                 for column in info.id_columns:
                     query.WHERE(f"{column} = :{column}")
-                context.update(zip(info.id_columns, object_id))
+                context.update(zip(info.id_columns, resource_id))
             else:
                 query.SELECT_DISTINCT("'null'")
 
@@ -1195,25 +1195,25 @@ class Storage:
         )
 
     @overload
-    def set_tag(self, object_id: ResourceId, key: str) -> None:  # pragma: no cover
+    def set_tag(self, resource_id: ResourceId, key: str) -> None:  # pragma: no cover
         ...
 
     @overload
     def set_tag(
-        self, object_id: ResourceId, key: str, value: JSONType
+        self, resource_id: ResourceId, key: str, value: JSONType
     ) -> None:  # pragma: no cover
         ...
 
     @wrap_exceptions(StorageError)
     def set_tag(
         self,
-        object_id: ResourceId,
+        resource_id: ResourceId,
         key: str,
         value: Union[MissingType, JSONType] = MISSING,
     ) -> None:
-        info = SCHEMA_INFO[len(object_id)]
+        info = SCHEMA_INFO[len(resource_id)]
 
-        params = dict(zip(info.id_columns, object_id), key=key)
+        params = dict(zip(info.id_columns, resource_id), key=key)
 
         id_columns = info.id_columns + ('key',)
         id_columns_str = ', '.join(id_columns)
@@ -1249,11 +1249,11 @@ class Storage:
                 foreign_key_error = "foreign key constraint failed" in str(e).lower()
                 if not foreign_key_error:  # pragma: no cover
                     raise
-                raise info.not_found_exc(*object_id) from None
+                raise info.not_found_exc(*resource_id) from None
 
     @wrap_exceptions(StorageError)
-    def delete_tag(self, object_id: ResourceId, key: str) -> None:
-        info = SCHEMA_INFO[len(object_id)]
+    def delete_tag(self, resource_id: ResourceId, key: str) -> None:
+        info = SCHEMA_INFO[len(resource_id)]
 
         columns = info.id_columns + ('key',)
         query = f"""
@@ -1264,11 +1264,11 @@ class Storage:
                 {', '.join(('?' for _ in columns))}
             )
         """
-        params = object_id + (key,)
+        params = resource_id + (key,)
 
         with self.get_db() as db:
             cursor = db.execute(query, params)
-        rowcount_exactly_one(cursor, lambda: TagNotFoundError(key, object_id))
+        rowcount_exactly_one(cursor, lambda: TagNotFoundError(key, resource_id))
 
 
 def make_get_feeds_query(

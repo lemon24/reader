@@ -575,10 +575,8 @@ def readererror_to_apierror(*args):
         yield
     except ReaderError as e:
         category = None
-        if hasattr(e, 'object_id'):
-            category = e.object_id
-            if not isinstance(category, tuple):
-                category = (category,)
+        if hasattr(e, 'resource_id'):
+            category = e.resource_id
         raise APIError(str(e), category) from e
 
 

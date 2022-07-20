@@ -311,8 +311,8 @@ class BetterStrPartial(Partial[_T]):
 
     def __str__(self) -> str:
         name = _name(self.func)
-        parts = [repr(getattr(v, 'object_id', v)) for v in self.args]
+        parts = [repr(getattr(v, 'resource_id', v)) for v in self.args]
         parts.extend(
-            f"{k}={getattr(v, 'object_id', v)!r}" for k, v in self.keywords.items()
+            f"{k}={getattr(v, 'resource_id', v)!r}" for k, v in self.keywords.items()
         )
         return f"{name}({', '.join(parts)})"
