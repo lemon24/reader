@@ -11,6 +11,14 @@ Version 2.17
 
 Unreleased
 
+* Deprecate the :attr:`~Entry.object_id` property of data objects
+  in favor of new property :attr:`~Entry.resource_id`.
+  :attr:`~Entry.resource_id` is the same as :attr:`~Entry.object_id`,
+  except for feeds and feed-related exceptions it is
+  of type ``tuple[str]`` instead of ``str``.
+  :attr:`~Entry.object_id` **will be removed in version 3.0**.
+  (:issue:`266`, :issue:`268`)
+
 
 Version 2.16
 ------------

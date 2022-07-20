@@ -675,8 +675,8 @@ Likewise, wherever an entry argument is expected,
 you can either pass a *(feed URL, entry id)* tuple
 or an :class:`Entry` (or :class:`EntrySearchResult`) object.
 
-You can get this unique identifier in a uniform way by using the ``object_id``
-property.
+You can get this unique identifier in a uniform way by using
+the :attr:`~Entry.resource_id` property.
 This is useful when you need to refer to a *reader* object in a generic way
 from outside Python (e.g. to make a link to the next :ref:`page <pagination>`
 of feeds/entries in a web application).
