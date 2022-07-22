@@ -8,10 +8,10 @@ but until we have a different implementation it's simpler this way
 """
 import asyncio
 import functools
-import gc
 import sqlite3
 import sys
 import threading
+import time
 
 import pytest
 from fakeparser import Parser
@@ -39,8 +39,9 @@ class MyConnection(sqlite3.Connection):
         self.closed = True
 
     def execute(self, sql, *args, **kwargs):
+        rv = super().execute(sql, *args, **kwargs)
         self.statements.append(sql)
-        return super().execute(sql, *args, **kwargs)
+        return rv
 
 
 @pytest.fixture
@@ -257,11 +258,11 @@ def count_optimize_calls(statements):
 @pytest.mark.slow
 @rename_argument('reader', 'reader_shared')
 def test_optimize_direct_usage(reader):
-    statements = reader._storage.get_db().statements
+    reader._storage.get_db().statements = statements = []
 
     for _ in range(1000):
         reader.set_tag((), 'tag')
-    assert 4 < count_optimize_calls(statements) < 10
+    assert 2 < count_optimize_calls(statements) < 8
 
     statements.clear()
 
@@ -272,8 +273,7 @@ def test_optimize_direct_usage(reader):
 
 @rename_argument('reader', 'reader_shared')
 def test_optimize_close(reader):
-    statements = reader._storage.get_db().statements
-    statements.clear()
+    reader._storage.get_db().statements = statements = []
 
     reader.close()
 
@@ -282,8 +282,7 @@ def test_optimize_close(reader):
 
 @rename_argument('reader', 'reader_shared')
 def test_optimize_with(reader):
-    statements = reader._storage.get_db().statements
-    statements.clear()
+    reader._storage.get_db().statements = statements = []
 
     with reader:
         pass
@@ -292,19 +291,18 @@ def test_optimize_with(reader):
 
 
 @pytest.mark.skipif("sys.implementation.name != 'cpython'")
+@pytest.mark.slow
 @rename_argument('reader', 'reader_shared')
 def test_optimize_thread_end(reader):
-    statements = None
+    statements = []
 
     def target():
-        nonlocal statements
-        statements = reader._storage.get_db().statements
-        statements.clear()
+        reader._storage.get_db().statements = statements
 
-    thread = threading.Thread(target=target)
-    thread.start()
-    thread.join()
-    del thread
-    gc.collect()
+    threading.Thread(target=target).start()
+    time.sleep(0.1)
+
+    # must sleep; if we assign the thread to a variable to join() it,
+    # the finalizer is called atexit instead, and this test fails ...
 
     assert count_optimize_calls(statements) == 1
