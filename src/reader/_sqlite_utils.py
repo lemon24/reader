@@ -4,12 +4,14 @@ sqlite3 utilities. Contains no business logic.
 """
 import functools
 import sqlite3
+import sys
 import threading
 import time
 import traceback
 import weakref
 from contextlib import closing
 from contextlib import contextmanager
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -527,18 +529,22 @@ class LocalConnectionFactory:
 
     @staticmethod
     def _optimize(db: sqlite3.Connection, timeout: float = 0) -> None:
-        # TODO: Once SQLite 3.32 becomes widespread, use "PRAGMA analysis_limit"
-        # to prevent "PRAGMA optimize" from taking too long.
-        # https://github.com/lemon24/reader/issues/143#issuecomment-663433197
-
         # Don't wait too much for a lock, it means the database is busy,
         # and now is likely not a good time to run optimize.
         # Also prevents rare "database is locked" errors in certain conditions
         # (e.g. test_asyncio_shared on Linux, on Python 3.8 but not later).
         # https://www2.fossil-scm.org/fossil/artifact/b47bdc17?ln=2556-2559
 
+        # TODO: Once SQLite 3.32 becomes widespread, use "PRAGMA analysis_limit"
+        # to prevent "PRAGMA optimize" from taking too long.
+        # https://github.com/lemon24/reader/issues/143#issuecomment-663433197
+
+        # busy_timeout causes PyPy 7.3.9 to segfault during tests
+        on_pypy = sys.implementation.name == 'pypy'
+        ctx = busy_timeout(db, timeout) if not on_pypy else nullcontext(db)
+
         try:
-            with busy_timeout(db, timeout):
+            with ctx:
                 db.execute("PRAGMA optimize;")
         except sqlite3.OperationalError as e:
             message = str(e).lower()
@@ -587,8 +593,8 @@ def busy_timeout(
 ) -> Iterator[sqlite3.Connection]:
     new = int(seconds * 1000)
     (old,) = db.execute("PRAGMA busy_timeout;").fetchone()
+    db.execute(f"PRAGMA busy_timeout = {new};")
     try:
-        db.execute(f"PRAGMA busy_timeout = {new};")
         yield db
     finally:
         db.execute(f"PRAGMA busy_timeout = {old};")
