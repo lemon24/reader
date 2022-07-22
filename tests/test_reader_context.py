@@ -7,6 +7,7 @@ but until we have a different implementation it's simpler this way
 
 """
 import asyncio
+import concurrent.futures
 import functools
 import sqlite3
 import sys
@@ -230,13 +231,6 @@ def test_asyncio_shared(reader):
     asyncio.run(main())
 
 
-@pytest.mark.xfail(
-    # https://github.com/lemon24/reader/runs/7379033828?check_suite_focus=true
-    sys.version_info[:2] == (3, 8),
-    # sqlite3.OperationalError: database is locked
-    raises=sqlite3.OperationalError,
-    reason="weird problem that only happens on 3.8 on Ubuntu",
-)
 @rename_argument('reader', 'reader_private')
 def test_asyncio_private(reader):
     async def main():
@@ -253,6 +247,14 @@ def test_asyncio_private(reader):
 def count_optimize_calls(statements):
     statements = (s.lower().strip() for s in statements)
     return sum(1 for s in statements if s == 'pragma optimize;')
+
+
+@rename_argument('reader', 'reader_shared')
+def test_thread_pool_executor_shared(reader):
+    executor = concurrent.futures.ThreadPoolExecutor(2)
+    future = executor.submit(check_usage, reader)
+    future.result()
+    executor.shutdown()
 
 
 @pytest.mark.slow
@@ -305,4 +307,5 @@ def test_optimize_thread_end(reader):
     # must sleep; if we assign the thread to a variable to join() it,
     # the finalizer is called atexit instead, and this test fails ...
 
+    print('after collect')
     assert count_optimize_calls(statements) == 1

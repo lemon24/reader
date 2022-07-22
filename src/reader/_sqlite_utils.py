@@ -160,12 +160,8 @@ def foreign_keys_off(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
     [2]: https://sqlite.org/foreignkeys.html#fk_enable
 
     """
-    # TODO: this assert should fail with DBError
     assert not db.in_transaction, "foreign_keys_off must be used outside transactions"
-
-    # TODO: this assignment should fail with DBError
     (foreign_keys,) = db.execute("PRAGMA foreign_keys;").fetchone()
-
     try:
         db.execute("PRAGMA foreign_keys = OFF;")
         yield db
@@ -336,7 +332,6 @@ def table_count(db: sqlite3.Connection) -> int:
 
 def require_version(db: sqlite3.Connection, version_info: Tuple[int, ...]) -> None:
     with closing(db.cursor()) as cursor:
-        # TODO: this assignment should fail with DBError
         ((version,),) = cursor.execute("SELECT sqlite_version();")
 
     version_ints = tuple(int(i) for i in version.split('.'))
@@ -452,6 +447,8 @@ class LocalConnectionFactory:
 
     """
 
+    INLINE_OPTIMIZE_TIMEOUT = 0.1
+
     def __init__(self, path: str, **kwargs: Any):
         self.path = path
         self.kwargs = kwargs
@@ -467,7 +464,7 @@ class LocalConnectionFactory:
         if db:
             if not self._local.context_stack:
                 if self._should_optimize(self._local.call_count):
-                    self._optimize(db)
+                    self._optimize(db, self.INLINE_OPTIMIZE_TIMEOUT)
                 self._local.call_count += 1
             return db
 
@@ -529,13 +526,24 @@ class LocalConnectionFactory:
             raise
 
     @staticmethod
-    def _optimize(db: sqlite3.Connection) -> None:
-        # If "PRAGMA optimize" on every close becomes too expensive, we can
-        # add an option to disable it, or call db.interrupt() after some time.
+    def _optimize(db: sqlite3.Connection, timeout: float = 0) -> None:
         # TODO: Once SQLite 3.32 becomes widespread, use "PRAGMA analysis_limit"
-        # for the same purpose. Details:
+        # to prevent "PRAGMA optimize" from taking too long.
         # https://github.com/lemon24/reader/issues/143#issuecomment-663433197
-        db.execute("PRAGMA optimize;")
+
+        # Don't wait too much for a lock, it means the database is busy,
+        # and now is likely not a good time to run optimize.
+        # Also prevents rare "database is locked" errors in certain conditions
+        # (e.g. test_asyncio_shared on Linux, on Python 3.8 but not later).
+        # https://www2.fossil-scm.org/fossil/artifact/b47bdc17?ln=2556-2559
+
+        try:
+            with busy_timeout(db, timeout):
+                db.execute("PRAGMA optimize;")
+        except sqlite3.OperationalError as e:
+            message = str(e).lower()
+            if "database is locked" not in message:  # pragma: no cover
+                raise
 
     @staticmethod
     def _should_optimize(count: int) -> bool:
@@ -571,6 +579,19 @@ class _LocalConnectionFactoryState(threading.local):
         self.context_stack: List[None] = []
         self.call_count: int = 0
         self.closed: bool = False
+
+
+@contextmanager
+def busy_timeout(
+    db: sqlite3.Connection, seconds: float
+) -> Iterator[sqlite3.Connection]:
+    new = int(seconds * 1000)
+    (old,) = db.execute("PRAGMA busy_timeout;").fetchone()
+    try:
+        db.execute(f"PRAGMA busy_timeout = {new};")
+        yield db
+    finally:
+        db.execute(f"PRAGMA busy_timeout = {old};")
 
 
 # BEGIN DebugConnection

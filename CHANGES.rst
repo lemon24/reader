@@ -18,6 +18,10 @@ Unreleased
   of type ``tuple[str]`` instead of ``str``.
   :attr:`~Entry.object_id` **will be removed in version 3.0**.
   (:issue:`266`, :issue:`268`)
+* Do not attempt too hard to run ``PRAGMA optimize`` if the database is busy.
+  Prevents rare "database is locked" errors when multiple threads
+  using the same reader terminate at the same time.
+  (:issue:`206`)
 
 
 Version 2.16
