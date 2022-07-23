@@ -4,7 +4,6 @@ import pytest
 
 from reader import EntryError
 from reader import FeedError
-from reader import MetadataError
 from reader import TagError
 from reader.exceptions import _FancyExceptionBase
 
@@ -43,44 +42,26 @@ def test_fancy_exception_base():
     assert str(exc) == 'another message: URL: builtins.Exception: cause'
 
 
-def _all_classes(cls, exclude=None):
-    if exclude:
-        if issubclass(cls, exclude):
-            return
+def _all_classes(cls):
     yield cls
     for subclass in cls.__subclasses__():
-        yield from _all_classes(subclass, exclude)
+        yield from _all_classes(subclass)
 
 
 def all_classes(*args, **kwargs):
     return list(_all_classes(*args, **kwargs))
 
 
-@pytest.mark.parametrize('exc_type', all_classes(FeedError, exclude=MetadataError))
+@pytest.mark.parametrize('exc_type', all_classes(FeedError))
 def test_feed_error_str(exc_type):
     exc = exc_type('url')
     assert repr('url') in str(exc)
 
 
-@pytest.mark.parametrize('exc_type', all_classes(EntryError, exclude=MetadataError))
+@pytest.mark.parametrize('exc_type', all_classes(EntryError))
 def test_entry_error_str(exc_type):
     exc = exc_type('url', 'id')
     assert repr(('url', 'id')) in str(exc)
-
-
-@pytest.mark.parametrize('exc_type', all_classes(MetadataError))
-def test_metadata_error_str(exc_type):
-    if issubclass(exc_type, FeedError):
-        args = ('url',)
-        args_prefix = repr('url') + ': '
-    elif issubclass(exc_type, EntryError):
-        args = ('url', 'id')
-        args_prefix = repr(args) + ': '
-    else:
-        args = ()
-        args_prefix = ''
-    exc = exc_type(*args, key='key')
-    assert (args_prefix + repr('key')) in str(exc)
 
 
 @pytest.mark.parametrize('exc_type', all_classes(TagError))

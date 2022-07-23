@@ -13,7 +13,6 @@ import reader._sqlite_utils
 from reader import EntryNotFoundError
 from reader import FeedNotFoundError
 from reader import InvalidSearchQueryError
-from reader import MetadataNotFoundError
 from reader import StorageError
 from reader._sqlite_utils import DBError
 from reader._sqlite_utils import HeavyMigration

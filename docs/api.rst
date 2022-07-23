@@ -110,21 +110,6 @@ Exceptions
 
     Subclass of :exc:`EntryError` and :exc:`ResourceNotFoundError`.
 
-.. autoexception:: MetadataError
-    :members:
-
-    Subclass of :exc:`ReaderError`.
-
-.. autoexception:: MetadataNotFoundError
-    :members:
-
-    Subclass of :exc:`MetadataError`.
-
-.. autoexception:: FeedMetadataNotFoundError
-    :members:
-
-    Subclass of :exc:`MetadataNotFoundError` and :exc:`FeedError`.
-
 .. autoexception:: StorageError
     :members:
 

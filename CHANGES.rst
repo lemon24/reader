@@ -6,10 +6,24 @@ Changelog
   :noindex:
 
 
-Version 2.18
-------------
+Version 3.0
+-----------
 
 Unreleased
+
+* Remove code that issued deprecation warnings in versions 2.* (:issue:`268`):
+
+  * :meth:`~Reader.get_feed_metadata`
+  * :meth:`~Reader.get_feed_metadata_item`
+  * :meth:`~Reader.set_feed_metadata_item`
+  * :meth:`~Reader.delete_feed_metadata_item`
+  * :meth:`~Reader.get_feed_tags`
+  * :meth:`~Reader.add_feed_tag`
+  * :meth:`~Reader.remove_feed_tag`
+  * :exc:`MetadataError`
+  * :exc:`MetadataNotFoundError`
+  * :exc:`FeedMetadataNotFoundError`
+  * :exc:`EntryMetadataNotFoundError`
 
 
 Version 2.17

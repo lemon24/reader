@@ -735,7 +735,7 @@ otherwise the *reader* core and various plugins may interfere each other.
 (For example, if both prefixes are set to ``.``,
 *reader*-reserved key ``user_title``
 and a plugin named ``user_title`` that uses just the plugin name (with no key)
-will both end up using the ``.user_title`` metadata.)
+will both end up using the ``.user_title`` tag.)
 
 That said, *reader* will ensure
 names reserved by the core

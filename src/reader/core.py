@@ -33,12 +33,10 @@ from ._types import FeedFilterOptions
 from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
 from ._update import Pipeline
-from ._utils import deprecated
 from ._utils import make_pool_map
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
-from .exceptions import FeedMetadataNotFoundError
 from .exceptions import FeedNotFoundError
 from .exceptions import ParseError
 from .exceptions import SearchNotEnabledError
@@ -509,7 +507,7 @@ class Reader:
                 raise
 
     def delete_feed(self, feed: FeedInput, missing_ok: bool = False) -> None:
-        """Delete a feed and all of its entries, metadata, and tags.
+        """Delete a feed and all of its entries and tags.
 
         Args:
             feed (str or tuple(str) or Feed): The feed URL.
@@ -550,7 +548,7 @@ class Reader:
         which get set to None).
         All other feed attributes are set to their default values.
 
-        The entries, tags and metadata are preserved.
+        The entries and tags are preserved.
 
         Args:
             old (str or tuple(str) or Feed): The old feed; must exist.
@@ -1500,128 +1498,6 @@ class Reader:
             if not missing_ok:
                 raise
 
-    @deprecated('get_tags', '2.8', '3.0')
-    def get_feed_metadata(
-        self,
-        feed: FeedInput,
-        key: Optional[str] = None,
-    ) -> Iterable[Tuple[str, JSONType]]:  # pragma: no cover
-        """Get all or some of the metadata for a feed as ``(key, value)`` pairs.
-
-        Args:
-            feed (str or tuple(str) or Feed): The feed URL.
-            key (str or None): Only return the metadata for this key.
-
-        Yields:
-            tuple(str, JSONType): ``(key, value)`` pairs, in undefined order.
-            JSONType is whatever :py:func:`json.dumps` accepts.
-
-        Raises:
-            StorageError
-
-        .. versionchanged:: 1.18
-            :meth:`get_feed_metadata` was renamed to :meth:`get_feed_metadata_item`,
-            :meth:`iter_feed_metadata` was renamed to :meth:`get_feed_metadata`.
-
-        .. versionchanged:: 2.0
-            The ``get_feed_metadata(feed, key, default=no value, /)``
-            (positional arguments only)
-            :meth:`get_feed_metadata_item` alias was removed.
-
-        """
-        return self.get_tags(feed, key=key)
-
-    @overload
-    def get_feed_metadata_item(
-        self, feed: FeedInput, key: str
-    ) -> JSONType:  # pragma: no cover
-        ...
-
-    @overload
-    def get_feed_metadata_item(
-        self, feed: FeedInput, key: str, default: _T
-    ) -> Union[JSONType, _T]:  # pragma: no cover
-        ...
-
-    @deprecated('get_tag', '2.8', '3.0')
-    def get_feed_metadata_item(
-        self, feed: FeedInput, key: str, default: Union[MissingType, _T] = MISSING
-    ) -> Union[JSONType, _T]:  # pragma: no cover
-        """Get metadata for a feed.
-
-        Like ``next(iter(reader.get_feed_metadata(feed, key=key)), (None, default))[1]``,
-        but raises a custom exception instead of :exc:`StopIteration`.
-
-        Args:
-            feed (str or tuple(str) or Feed): The feed URL.
-            key (str): The key of the metadata to retrieve.
-            default: Returned if given and no metadata exists for `key`.
-
-        Returns:
-            JSONType: The metadata value.
-            JSONType is whatever :py:func:`json.dumps` accepts.
-
-        Raises:
-            FeedMetadataNotFoundError
-            StorageError
-
-        .. versionadded:: 1.18
-            Renamed from :meth:`get_feed_metadata`.
-
-        """
-        try:
-            if isinstance(default, MissingType):
-                return self.get_tag(feed, key)
-            else:
-                return self.get_tag(feed, key, default)
-        except TagNotFoundError as e:
-            raise FeedMetadataNotFoundError(_feed_argument(feed), e.key) from None
-
-    @deprecated('set_tag', '2.8', '3.0')
-    def set_feed_metadata_item(
-        self, feed: FeedInput, key: str, value: JSONType
-    ) -> None:  # pragma: no cover
-        """Set metadata for a feed.
-
-        Args:
-            feed (str or tuple(str) or Feed): The feed URL.
-            key (str): The key of the metadata item to set.
-            value (JSONType): The value of the metadata item to set.
-                JSONType is whatever :py:func:`json.dumps` accepts.
-
-        Raises:
-            FeedNotFoundError
-            StorageError
-
-        .. versionadded:: 1.18
-            Renamed from :meth:`set_feed_metadata`.
-
-        """
-        self.set_tag(feed, key, value)
-
-    @deprecated('delete_tag', '2.8', '3.0')
-    def delete_feed_metadata_item(
-        self, feed: FeedInput, key: str
-    ) -> None:  # pragma: no cover
-        """Delete metadata for a feed.
-
-        Args:
-            feed (str or tuple(str) or Feed): The feed URL.
-            key (str): The key of the metadata item to delete.
-
-        Raises:
-            FeedMetadataNotFoundError
-            StorageError
-
-        .. versionadded:: 1.18
-            Renamed from :meth:`delete_feed_metadata`.
-
-        """
-        try:
-            self.delete_tag(feed, key)
-        except TagNotFoundError as e:
-            raise FeedMetadataNotFoundError(_feed_argument(feed), e.key) from None
-
     def enable_search(self) -> None:
         """Enable full-text search.
 
@@ -1854,65 +1730,6 @@ class Reader:
         now = self._now()
         return self._search.search_entry_counts(query, now, filter_options)
 
-    @deprecated('set_tag', '2.8', '3.0')
-    def add_feed_tag(self, feed: FeedInput, tag: str) -> None:  # pragma: no cover
-        """Add a tag to a feed.
-
-        Adding a tag that the feed already has is a no-op.
-
-        Args:
-            feed (str or tuple(str) or Feed): The feed URL.
-            tag (str): The tag to add.
-
-        Raises:
-            FeedNotFoundError
-            StorageError
-
-        .. versionadded:: 1.7
-
-        """
-        self.set_tag(feed, tag)
-
-    @deprecated('delete_tag', '2.8', '3.0')
-    def remove_feed_tag(self, feed: FeedInput, tag: str) -> None:  # pragma: no cover
-        """Remove a tag from a feed.
-
-        Removing a tag that the feed does not have is a no-op.
-
-        Args:
-            feed (str or tuple(str) or Feed): The feed URL.
-            tag (str): The tag to remove.
-
-        Raises:
-            StorageError
-
-        .. versionadded:: 1.7
-
-        """
-        self.delete_tag(feed, tag, True)
-
-    @deprecated('get_tag_keys', '2.8', '3.0')
-    def get_feed_tags(
-        self, feed: Optional[FeedInput] = None
-    ) -> Iterable[str]:  # pragma: no cover
-        """Get all or some of the feed tags.
-
-        Args:
-            feed (str or tuple(str) or Feed or None): Only return the tags for this feed.
-
-        Yields:
-            str: The tags, in alphabetical order.
-
-        Raises:
-            StorageError
-
-        .. versionadded:: 1.7
-
-        """
-        return self.get_tag_keys(feed)
-
-    # FIXME: no wildcards allowed in get_tags, update docstring/changelog
-
     def get_tags(
         self,
         resource: ResourceInput,
@@ -1937,7 +1754,7 @@ class Reader:
 
         Args:
             resource: The resource to get tags for.
-            key (str or None): Only return the metadata for this key.
+            key (str or None): Only return the value for this key.
 
         Yields:
             tuple(str, JSONType): ``(key, value)`` pairs, in undefined order.
@@ -2137,7 +1954,7 @@ class Reader:
                 raise
 
     def make_reader_reserved_name(self, key: str) -> str:
-        """Create a *reader*-reserved tag or metadata name.
+        """Create a *reader*-reserved tag name.
         See :ref:`reserved names` for details.
 
         Uses :attr:`~Reader.reserved_name_scheme` to build names of the format::
@@ -2163,11 +1980,10 @@ class Reader:
     def make_plugin_reserved_name(
         self, plugin_name: str, key: Optional[str] = None
     ) -> str:
-        """Create a plugin-reserved tag or metadata name.
+        """Create a plugin-reserved tag name.
         See :ref:`reserved names` for details.
 
-        Plugins should use this to generate names
-        for plugin-specific tags and metadata.
+        Plugins should use this to generate names for plugin-specific tags.
 
         Uses :attr:`~Reader.reserved_name_scheme` to build names of the format::
 

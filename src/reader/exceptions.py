@@ -1,5 +1,4 @@
 from functools import cached_property
-from typing import Any
 from typing import Tuple
 from typing import Union
 
@@ -197,74 +196,6 @@ class EntryNotFoundError(EntryError, ResourceNotFoundError):
     """Entry not found."""
 
     message = "no such entry"
-
-
-class MetadataError(ReaderError):
-    """A metadata error occurred.
-
-    .. versionchanged:: 1.18
-
-        Signature changed from ``MetadataError(message='')``
-        to ``MetadataError(key, message='')``.
-
-    .. deprecated:: 2.8
-        Will be removed in *reader* 3.0.
-
-    """
-
-    def __init__(self, *args: Any, key: str, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-
-        #: The metadata key.
-        self.key = key
-
-    @property
-    def _str(self) -> str:
-        return f"{super()._str}: {self.key!r}"
-
-
-class MetadataNotFoundError(MetadataError):
-    """Metadata not found.
-
-    .. versionchanged:: 1.18
-
-        Signature changed from ``MetadataNotFoundError(url, key, message='')``
-        to ``MetadataNotFoundError(key, message='')``.
-
-    .. deprecated:: 2.8
-        Will be removed in *reader* 3.0.
-
-    """
-
-    message = "no such metadata"
-
-
-class FeedMetadataNotFoundError(MetadataNotFoundError, FeedError):
-    """Feed metadata not found.
-
-    .. versionadded:: 1.18
-
-    .. deprecated:: 2.8
-        Will be removed in *reader* 3.0.
-
-    """
-
-    def __init__(self, url: str, key: str, message: str = '') -> None:
-        super().__init__(url, key=key, message=message)
-
-
-class EntryMetadataNotFoundError(MetadataNotFoundError, EntryError):
-    """Entry metadata not found.
-
-    .. versionadded:: 1.18
-
-    .. deprecated:: 2.8
-        Will be removed in *reader* 3.0.
-
-    """
-
-    def __init__(self, feed_url: str, id: str, key: str, message: str = '') -> None:
-        super().__init__(feed_url, id, key=key, message=message)
 
 
 class StorageError(ReaderError):
