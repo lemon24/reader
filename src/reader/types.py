@@ -24,7 +24,6 @@ from typing import Type
 from typing import TypeVar
 from typing import Union
 
-from reader._utils import deprecated
 from reader.exceptions import ReaderError
 
 # noreorder
@@ -157,16 +156,6 @@ class Feed(_namedtuple_compat):
 
         """
         return (self.url,)
-
-    @property  # type: ignore
-    @deprecated('resource_id', '2.17', '3.0', property=True)
-    def object_id(self) -> str:  # pragma: no cover
-        """Alias for :attr:`~Feed.url`.
-
-        .. versionadded:: 1.12
-
-        """
-        return self.url
 
 
 _EI = TypeVar('_EI', bound='ExceptionInfo')
@@ -328,16 +317,6 @@ class Entry(_namedtuple_compat):
         """Alias for (:attr:`~feed_url`, :attr:`~id`).
 
         .. versionadded:: 2.17
-
-        """
-        return self.feed_url, self.id
-
-    @property  # type: ignore
-    @deprecated('resource_id', '2.17', '3.0', property=True)
-    def object_id(self) -> Tuple[str, str]:  # pragma: no cover
-        """Alias for (:attr:`~Entry.feed_url`, :attr:`~Entry.id`).
-
-        .. versionadded:: 1.12
 
         """
         return self.feed_url, self.id
@@ -641,16 +620,6 @@ class EntrySearchResult(_namedtuple_compat):
         """Alias for (:attr:`~feed_url`, :attr:`~id`).
 
         .. versionadded:: 2.17
-
-        """
-        return self.feed_url, self.id
-
-    @property  # type: ignore
-    @deprecated('resource_id', '2.17', '3.0', property=True)
-    def object_id(self) -> Tuple[str, str]:  # pragma: no cover
-        """Alias for (:attr:`~EntrySearchResult.feed_url`, :attr:`~EntrySearchResult.id`).
-
-        .. versionadded:: 1.12
 
         """
         return self.feed_url, self.id

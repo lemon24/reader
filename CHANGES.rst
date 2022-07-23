@@ -24,6 +24,7 @@ Unreleased
   * :exc:`MetadataNotFoundError`
   * :exc:`FeedMetadataNotFoundError`
   * :exc:`EntryMetadataNotFoundError`
+  * the :attr:`~Entry.object_id` property of data objects and related exceptions
 
 
 Version 2.17

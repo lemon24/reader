@@ -246,7 +246,7 @@ def add_entry(storage, feed, entry):
 
 
 def delete_entries(storage, feed, entry):
-    storage.delete_entries([entry.object_id])
+    storage.delete_entries([entry.resource_id])
 
 
 def get_entries_chunk_size_0(storage, _, __):

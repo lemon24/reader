@@ -1,8 +1,5 @@
 from functools import cached_property
 from typing import Tuple
-from typing import Union
-
-from ._utils import deprecated
 
 
 class _FancyExceptionBase(Exception):
@@ -101,16 +98,6 @@ class FeedError(ReaderError):
         """
         return (self.url,)
 
-    @property  # type: ignore
-    @deprecated('resource_id', '2.17', '3.0', property=True)
-    def object_id(self) -> str:  # pragma: no cover
-        """Alias for :attr:`~FeedError.url`.
-
-        .. versionadded:: 1.12
-
-        """
-        return self.url
-
 
 class FeedExistsError(FeedError):
     """Feed already exists."""
@@ -167,16 +154,6 @@ class EntryError(ReaderError):
         """Alias for (:attr:`~feed_url`, :attr:`~id`).
 
         .. versionadded:: 2.17
-
-        """
-        return self.feed_url, self.id
-
-    @property  # type: ignore
-    @deprecated('resource_id', '2.17', '3.0', property=True)
-    def object_id(self) -> Tuple[str, str]:  # pragma: no cover
-        """Alias for (:attr:`~EntryError.feed_url`, :attr:`~EntryError.id`).
-
-        .. versionadded:: 1.12
 
         """
         return self.feed_url, self.id
@@ -263,18 +240,6 @@ class TagError(ReaderError):
     def _str(self) -> str:
         parts = self.resource_id + (self.key,)
         return ': '.join(repr(part) for part in parts)
-
-    @property  # type: ignore
-    @deprecated('resource_id', '2.17', '3.0', property=True)
-    def object_id(self) -> Union[Tuple[()], str, Tuple[str, str]]:  # pragma: no cover
-        """The `object_id` of the resource."""
-        if len(self.resource_id) == 0:
-            return ()
-        if len(self.resource_id) == 1:
-            return self.resource_id[0]
-        if len(self.resource_id) == 2:
-            return self.resource_id[0], self.resource_id[1]
-        assert False, "shouldn't happen"  # noqa: B011
 
 
 class TagNotFoundError(TagError):

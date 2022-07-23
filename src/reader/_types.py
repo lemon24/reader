@@ -16,7 +16,6 @@ from typing import TypeVar
 from typing import Union
 
 from ._hash_utils import get_hash
-from ._utils import deprecated
 from .types import _entry_argument
 from .types import _feed_argument
 from .types import _namedtuple_compat
@@ -67,11 +66,6 @@ class FeedData(_namedtuple_compat):
     @property
     def resource_id(self) -> Tuple[str]:
         return (self.url,)
-
-    @property  # type: ignore
-    @deprecated('resource_id', '2.17', '3.0', property=True)
-    def object_id(self) -> str:  # pragma: no cover
-        return self.url
 
     _hash_exclude_ = frozenset({'url', 'updated'})
 
@@ -128,11 +122,6 @@ class EntryData(_namedtuple_compat):
 
     @property
     def resource_id(self) -> Tuple[str, str]:
-        return self.feed_url, self.id
-
-    @property  # type: ignore
-    @deprecated('resource_id', '2.17', '3.0', property=True)
-    def object_id(self) -> Tuple[str, str]:  # pragma: no cover
         return self.feed_url, self.id
 
     _hash_exclude_ = frozenset({'feed_url', 'id', 'updated'})
