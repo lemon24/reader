@@ -241,129 +241,6 @@ def create_indexes(db: sqlite3.Connection) -> None:
     db.execute("CREATE INDEX entries_by_feed ON entries (feed);")
 
 
-def update_from_29_to_30(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/251
-    db.execute("CREATE INDEX entries_by_feed ON entries (feed);")
-
-
-def recreate_search_triggers(db: sqlite3.Connection) -> None:  # pragma: no cover
-    from ._search import Search
-
-    if Search._is_enabled(db):
-        Search._drop_triggers(db)
-        Search._create_triggers(db)
-
-
-def update_from_31_to_32(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/254
-    db.execute("ALTER TABLE entries ADD COLUMN read_modified TIMESTAMP;")
-    db.execute("ALTER TABLE entries ADD COLUMN important_modified TIMESTAMP;")
-
-
-def update_from_32_to_33(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # https://github.com/lemon24/reader/issues/223
-    db.execute("ALTER TABLE feeds ADD COLUMN subtitle TEXT;")
-    db.execute("ALTER TABLE feeds ADD COLUMN version TEXT;")
-    # force all feeds to update regardless of their caching headers
-    db.execute("UPDATE feeds SET stale = 1;")
-
-
-def update_from_33_to_34(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/239
-
-    # Assumes foreign key checks have already been disabled.
-    # https://sqlite.org/lang_altertable.html#otheralter
-
-    # This migration takes care of:
-    #
-    # * first_updated being added not null
-    # * updated becoming null
-    # * re-creating the entries_by_kinda_* indexes to use first_updated
-    # * added_by being added not null
-
-    create_entries(db, 'new_entries')
-    db.execute(
-        """
-        INSERT INTO new_entries (
-            id,
-            feed,
-            title,
-            link,
-            updated,
-            author,
-            published,
-            summary,
-            content,
-            enclosures,
-            original_feed,
-            data_hash,
-            data_hash_changed,
-            read,
-            read_modified,
-            important,
-            important_modified,
-            added_by,
-            last_updated,
-            first_updated,
-            first_updated_epoch,
-            feed_order
-        )
-        SELECT
-            id,
-            feed,
-            title,
-            link,
-            updated,
-            author,
-            published,
-            summary,
-            content,
-            enclosures,
-            original_feed,
-            data_hash,
-            data_hash_changed,
-            read,
-            read_modified,
-            important,
-            important_modified,
-            'feed',
-            last_updated,
-            first_updated_epoch,
-            first_updated_epoch,
-            feed_order
-        FROM entries;
-        """
-    )
-    # IMPORTANT: this drops ALL indexes and triggers ON entries
-    db.execute("DROP TABLE entries;")
-    db.execute("ALTER TABLE new_entries RENAME TO entries;")
-
-    create_indexes(db)
-    recreate_search_triggers(db)
-
-
-def update_from_34_to_35(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/266
-    db.execute(
-        """
-        INSERT OR REPLACE INTO feed_metadata (feed, key, value)
-        SELECT feed, tag, coalesce((
-            SELECT value FROM feed_metadata AS fm
-            WHERE (fm.feed, fm.key) == (feed, tag)
-        ), 'null')
-        FROM feed_tags;
-        """
-    )
-    db.execute("DROP TABLE feed_tags;")
-    db.execute("ALTER TABLE feed_metadata RENAME TO feed_tags;")
-
-
-def update_from_35_to_36(db: sqlite3.Connection) -> None:  # pragma: no cover
-    # for https://github.com/lemon24/reader/issues/272
-    create_global_tags(db)
-    create_entry_tags(db)
-
-
 # Row value support was added in 3.15.
 # TODO: Remove the Search.update() check once this gets bumped to >=3.18.
 MINIMUM_SQLITE_VERSION = (3, 15)
@@ -380,13 +257,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
             # 17-28 removed before 2.0 (last in be9c89581ea491d0c9cc95c9d39f073168a2fd02)
-            29: update_from_29_to_30,
-            30: recreate_search_triggers,
-            31: update_from_31_to_32,
-            32: update_from_32_to_33,
-            33: update_from_33_to_34,
-            34: update_from_34_to_35,
-            35: update_from_35_to_36,
+            # 29-35 removed before 3.0 (last in d02b23cad4ad41297f572763d4a75afb157e019e)
         },
         id=APPLICATION_ID,
         minimum_sqlite_version=MINIMUM_SQLITE_VERSION,

@@ -11,6 +11,33 @@ Version 3.0
 
 Unreleased
 
+.. attention::
+
+    This release contains backwards incompatible changes.
+
+
+* Remove old database migrations.
+
+  If you are upgrading from *reader* 2.10 or newer, no action is required.
+
+  .. _removed migrations 3.0:
+
+  .. attention::
+
+    If you are upgrading to *reader* 3.0 from a version **older than 2.10**,
+    you must open your database with *reader* 2.10 or newer once,
+    to run the removed migrations:
+
+    .. code-block:: sh
+
+        pip install 'reader>=2.10,<3' && \
+        python - db.sqlite << EOF
+        import sys
+        from reader import make_reader
+        make_reader(sys.argv[1])
+        print("OK")
+        EOF
+
 * Remove code that issued deprecation warnings in versions 2.* (:issue:`268`):
 
   * :meth:`~Reader.get_feed_metadata`
