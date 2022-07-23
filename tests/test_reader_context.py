@@ -1,7 +1,7 @@
 """
 Test reader lifecycle – creation, usage, closing.
 
-TODO: Should arguably be done against Storage instead,
+TODO: Should arguably be done against Storage/LocalConnectionFactory instead,
 but until we have a different implementation it's simpler this way
 (and most of the tests should apply to all Storages anyway).
 
@@ -302,7 +302,10 @@ def test_optimize_thread_end(reader):
         reader._storage.get_db().statements = statements
 
     threading.Thread(target=target).start()
-    time.sleep(0.1)
+    for _ in range(10):
+        time.sleep(0.05)
+        if statements:
+            break
 
     # must sleep; if we assign the thread to a variable to join() it,
     # the finalizer is called atexit instead, and this test fails ...
