@@ -9,7 +9,7 @@ Changelog
 Version 2.17
 ------------
 
-Unreleased
+Released 2022-07-23
 
 * Deprecate the :attr:`~Entry.object_id` property of data objects
   in favor of new property :attr:`~Entry.resource_id`.
