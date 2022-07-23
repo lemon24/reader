@@ -80,24 +80,5 @@ def _mark_as_read(reader, entry, status):
             return
 
 
-_OLD_CONFIG_TAG = 'mark_as_read'
-
-
-def _migrate_pre_2_7_metadata(reader, feed):
-    old_key = reader.make_reader_reserved_name(_OLD_CONFIG_TAG)
-    old_value = reader.get_tag(feed, old_key, None)
-    if not old_value:
-        return
-
-    key = reader.make_reader_reserved_name(_CONFIG_TAG)
-    value = reader.get_tag(feed, key, None)
-    if value:  # pragma: no cover
-        return
-
-    reader.set_tag(feed, key, old_value)
-    reader.delete_tag(feed, old_key)
-
-
 def init_reader(reader):
-    reader.before_feed_update_hooks.append(_migrate_pre_2_7_metadata)
     reader.after_entry_update_hooks.append(_mark_as_read)

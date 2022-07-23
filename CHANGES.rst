@@ -18,6 +18,8 @@ Unreleased
 
 * Remove old database migrations.
 
+  Remove :mod:`~reader.plugins.mark_as_read` config tag name migration.
+
   If you are upgrading from *reader* 2.10 or newer, no action is required.
 
   .. _removed migrations 3.0:
@@ -34,8 +36,15 @@ Unreleased
         python - db.sqlite << EOF
         import sys
         from reader import make_reader
-        make_reader(sys.argv[1])
+        from reader.plugins.mark_as_read import _migrate_pre_2_7_metadata as migrate_mark_as_read
+
+        reader = make_reader(sys.argv[1])
+
+        for feed in reader.get_feeds():
+            migrate_mark_as_read(reader, feed)
+
         print("OK")
+
         EOF
 
 * Remove code that issued deprecation warnings in versions 2.* (:issue:`268`):
