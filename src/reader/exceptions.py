@@ -223,6 +223,16 @@ class InvalidPluginError(PluginError, ValueError):
     """
 
 
+class PluginInitError(PluginError):
+    """A plugin failed to initialize.
+
+    The original exception should be chained to this one (e.__cause__).
+
+    .. versionadded:: 3.0
+
+    """
+
+
 class TagError(ReaderError):
     """A tag error occurred.
 

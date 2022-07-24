@@ -79,6 +79,7 @@ from .exceptions import (
     ResourceNotFoundError as ResourceNotFoundError,
     PluginError as PluginError,
     InvalidPluginError as InvalidPluginError,
+    PluginInitError as PluginInitError,
     ReaderWarning as ReaderWarning,
 )
 

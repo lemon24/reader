@@ -94,10 +94,17 @@ Unreleased
   * :exc:`EntryError` (and subclasses): ``feed_url``, ``entry_id``
   * :exc:`TagError` (and subclasses): ``resource_id``, ``key``
 
+* In :func:`make_reader`,
+  wrap exceptions raised during plugin initialization
+  in new exception :exc:`PluginInitError`
+  instead of letting them bubble up.
+  (:issue:`268`)
+
 * Swap the order of the first two arguments of :exc:`TagError` (and subclasses);
   ``TagError(key, resource_id, ...)`` becomes
   ``TagError(resource_id, key, ...)``.
   (:issue:`268`)
+
 
 
 Version 2.17

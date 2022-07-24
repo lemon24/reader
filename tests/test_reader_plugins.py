@@ -1,6 +1,7 @@
 import pytest
 
 from reader import InvalidPluginError
+from reader import PluginInitError
 
 
 @pytest.fixture(autouse=True)
@@ -38,6 +39,26 @@ def test_good_full_path(monkeypatch, make_reader, plugin_name):
     reader = make_reader(':memory:', plugins=[plugin_name])
 
     assert one.reader is reader
+
+
+def test_init_error_built_in(make_reader):
+    with pytest.raises(PluginInitError) as exc_info:
+        reader = make_reader(':memory:', plugins=['reader.init_error'])
+
+    message = str(exc_info.value)
+    assert 'reader_test_plugins.init_error:init_reader' in message
+    assert 'someerror' in message
+
+
+def test_init_error_callable(make_reader):
+    from reader_test_plugins.init_error import init_reader as plugin
+
+    with pytest.raises(PluginInitError) as exc_info:
+        reader = make_reader(':memory:', plugins=[plugin])
+
+    message = str(exc_info.value)
+    assert 'reader_test_plugins.init_error:init_reader' in message
+    assert 'someerror' in message
 
 
 def test_non_built_in(monkeypatch, make_reader):

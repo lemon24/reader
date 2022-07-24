@@ -150,6 +150,10 @@ Exceptions
 
     Subclass of :exc:`PluginError` and :exc:`ValueError`.
 
+.. autoexception:: PluginInitError
+
+    Subclass of :exc:`PluginError`.
+
 
 .. autoexception:: ReaderWarning
 

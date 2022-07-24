@@ -39,6 +39,7 @@ from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
 from .exceptions import ParseError
+from .exceptions import PluginInitError
 from .exceptions import SearchNotEnabledError
 from .exceptions import TagNotFoundError
 from .plugins import _load_plugins
@@ -187,6 +188,8 @@ def make_reader(
         StorageError: An error occurred while connecting to storage.
         SearchError: An error occurred while enabling/disabling search.
         InvalidPluginError: An invalid plugin name was passed to ``plugins``.
+        PluginInitError: A plugin failed to initialize.
+        PluginError: An ambiguous plugin-related error occurred.
         ReaderError: An ambiguous exception occurred while creating the reader.
 
     .. versionadded:: 1.6
@@ -215,6 +218,10 @@ def make_reader(
         Enable search on the first :meth:`~Reader.update_search` call.
         To get the previous behavior (leave search as-is),
         use ``search_enabled=None``.
+
+    .. versionchanged:: 3.0
+        Wrap exceptions raised during plugin initialization
+        in :exc:`PluginInitError` instead of letting them bubble up.
 
     """
 
@@ -260,9 +267,16 @@ def make_reader(
             _called_directly=False,
         )
 
-        # TODO: (maybe) wrap exceptions raised here in a custom exception
+        # TODO: move this logic to reader.plugins
+        # TODO: show the name the user passed, not that of plugin_func
         for plugin_func in plugin_funcs:
-            plugin_func(reader)
+            try:
+                plugin_func(reader)
+            except Exception as e:
+                raise PluginInitError(
+                    "plugin failed to initialze: "
+                    f"{plugin_func.__module__}:{plugin_func.__qualname__}"
+                ) from e
 
     except BaseException:
         storage.close()
