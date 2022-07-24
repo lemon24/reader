@@ -1139,7 +1139,7 @@ class Storage:
 
         with self.get_db() as db:
             cursor = db.execute(query, params)
-        rowcount_exactly_one(cursor, lambda: TagNotFoundError(key, resource_id))
+        rowcount_exactly_one(cursor, lambda: TagNotFoundError(resource_id, key))
 
 
 def make_get_feeds_query(

@@ -1958,7 +1958,7 @@ class Reader:
         resource_id = _resource_argument(resource)
         return zero_or_one(
             (v for _, v in self._storage.get_tags(resource_id, key)),
-            lambda: TagNotFoundError(key, resource_id),
+            lambda: TagNotFoundError(resource_id, key),
             default,
         )
 

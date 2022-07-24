@@ -62,7 +62,7 @@ Unreleased
   * :exc:`EntryMetadataNotFoundError`
   * the :attr:`~Entry.object_id` property of data objects and related exceptions
 
-* Make some of the parameters of the following positional-only:
+* Make some of the parameters of the following positional-only (:issue:`268`):
 
   * :meth:`Reader.add_feed`: ``feed``
   * :meth:`Reader.delete_feed`: ``feed``
@@ -93,6 +93,11 @@ Unreleased
   * :exc:`FeedError` (and subclasses): ``url``
   * :exc:`EntryError` (and subclasses): ``feed_url``, ``entry_id``
   * :exc:`TagError` (and subclasses): ``resource_id``, ``key``
+
+* Swap the order of the first two arguments of :exc:`TagError` (and subclasses);
+  ``TagError(key, resource_id, ...)`` becomes
+  ``TagError(resource_id, key, ...)``.
+  (:issue:`268`)
 
 
 Version 2.17

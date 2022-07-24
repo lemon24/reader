@@ -66,5 +66,5 @@ def test_entry_error_str(exc_type):
 
 @pytest.mark.parametrize('exc_type', all_classes(TagError))
 def test_tag_error_str(exc_type):
-    exc = exc_type('key', ('object',))
+    exc = exc_type(('object',), 'key')
     assert "'object': 'key'" in str(exc)

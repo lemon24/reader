@@ -229,24 +229,28 @@ class TagError(ReaderError):
     .. versionadded:: 2.8
 
     .. versionchanged:: 2.17
-        Signature changed from ``TagError(key, object_id, message='')``
-        to ``TagError(key, resource_id, message='')``.
+        Signature changed from ``TagError(key, object_id, ...)``
+        to ``TagError(key, resource_id, ...)``.
 
     .. versionchanged:: 3.0
-        The ``key`` and ``resource_id`` arguments are now positional-only.
+        Signature changed from ``TagError(key, resource_id, ...)``
+        to ``TagError(resource_id, key, ...)``.
+
+    .. versionchanged:: 3.0
+        The ``resource_id`` and ``key`` arguments are now positional-only.
 
     """
 
     def __init__(
-        self, key: str, resource_id: Tuple[str, ...], /, message: str = ''
+        self, resource_id: Tuple[str, ...], key: str, /, message: str = ''
     ) -> None:
         super().__init__(message)
 
-        #: The tag key.
-        self.key = key
-
         #: The `resource_id` of the resource.
         self.resource_id = resource_id
+
+        #: The tag key.
+        self.key = key
 
     @property
     def _str(self) -> str:
