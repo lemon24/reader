@@ -461,6 +461,7 @@ class Reader:
     def add_feed(
         self,
         feed: FeedInput,
+        /,
         exist_ok: bool = False,
         *,
         allow_invalid_url: bool = False,
@@ -495,6 +496,9 @@ class Reader:
         .. versionadded:: 2.8
             The ``exist_ok`` argument.
 
+        .. versionchanged:: 3.0
+            The ``feed`` argument is now positional-only.
+
         """
         url = _feed_argument(feed)
         if not allow_invalid_url:
@@ -506,7 +510,7 @@ class Reader:
             if not exist_ok:
                 raise
 
-    def delete_feed(self, feed: FeedInput, missing_ok: bool = False) -> None:
+    def delete_feed(self, feed: FeedInput, /, missing_ok: bool = False) -> None:
         """Delete a feed and all of its entries and tags.
 
         Args:
@@ -525,6 +529,9 @@ class Reader:
         .. versionadded:: 2.8
             The ``missing_ok`` argument.
 
+        .. versionchanged:: 3.0
+            The ``feed`` argument is now positional-only.
+
         """
         url = _feed_argument(feed)
         try:
@@ -534,7 +541,7 @@ class Reader:
                 raise
 
     def change_feed_url(
-        self, old: FeedInput, new: FeedInput, *, allow_invalid_url: bool = False
+        self, old: FeedInput, new: FeedInput, /, *, allow_invalid_url: bool = False
     ) -> None:
         """Change the URL of a feed.
 
@@ -573,6 +580,9 @@ class Reader:
             Validate the new feed URL.
             To get the previous behavior (no validation),
             use ``allow_invalid_url=True``.
+
+        .. versionchanged:: 3.0
+            The ``old`` and ``new`` arguments are now positional-only.
 
         """
         old_str = _feed_argument(old)
@@ -706,17 +716,23 @@ class Reader:
             yield fix_datetime_tzinfo(rv_feed, 'updated', 'added', 'last_updated')
 
     @overload
-    def get_feed(self, feed: FeedInput) -> Feed:  # pragma: no cover
+    def get_feed(self, feed: FeedInput, /) -> Feed:  # pragma: no cover
         ...
 
     @overload
     def get_feed(
-        self, feed: FeedInput, default: _T
+        self,
+        feed: FeedInput,
+        default: _T,
+        /,
     ) -> Union[Feed, _T]:  # pragma: no cover
         ...
 
     def get_feed(
-        self, feed: FeedInput, default: Union[MissingType, _T] = MISSING
+        self,
+        feed: FeedInput,
+        default: Union[MissingType, _T] = MISSING,
+        /,
     ) -> Union[Feed, _T]:
         """Get a feed.
 
@@ -733,6 +749,9 @@ class Reader:
         Raises:
             FeedNotFoundError
             StorageError
+
+        .. versionchanged:: 3.0
+            The ``feed`` and ``default`` arguments are now positional-only.
 
         """
         return zero_or_one(
@@ -782,7 +801,7 @@ class Reader:
         )
         return self._storage.get_feed_counts(filter_options)
 
-    def set_feed_user_title(self, feed: FeedInput, title: Optional[str]) -> None:
+    def set_feed_user_title(self, feed: FeedInput, title: Optional[str], /) -> None:
         """Set a user-defined title for a feed.
 
         Args:
@@ -793,11 +812,14 @@ class Reader:
             FeedNotFoundError
             StorageError
 
+        .. versionchanged:: 3.0
+            The ``feed`` and ``title`` arguments are now positional-only.
+
         """
         url = _feed_argument(feed)
         return self._storage.set_feed_user_title(url, title)
 
-    def enable_feed_updates(self, feed: FeedInput) -> None:
+    def enable_feed_updates(self, feed: FeedInput, /) -> None:
         """Enable updates for a feed.
 
         See :meth:`~Reader.update_feeds` for details.
@@ -811,11 +833,14 @@ class Reader:
 
         .. versionadded:: 1.11
 
+        .. versionchanged:: 3.0
+            The ``feed`` argument is now positional-only.
+
         """
         url = _feed_argument(feed)
         self._storage.set_feed_updates_enabled(url, True)
 
-    def disable_feed_updates(self, feed: FeedInput) -> None:
+    def disable_feed_updates(self, feed: FeedInput, /) -> None:
         """Disable updates for a feed.
 
         See :meth:`~Reader.update_feeds` for details.
@@ -828,6 +853,9 @@ class Reader:
             StorageError
 
         .. versionadded:: 1.11
+
+        .. versionchanged:: 3.0
+            The ``feed`` argument is now positional-only.
 
         """
         url = _feed_argument(feed)
@@ -998,7 +1026,7 @@ class Reader:
             for hook in self.after_feeds_update_hooks:
                 hook(self)
 
-    def update_feed(self, feed: FeedInput) -> Optional[UpdatedFeed]:
+    def update_feed(self, feed: FeedInput, /) -> Optional[UpdatedFeed]:
         """Update a single feed.
 
         The feed will be updated even if updates are disabled for it.
@@ -1026,6 +1054,9 @@ class Reader:
         .. versionchanged:: 1.15
             Update entries whenever their content changes.
             See :meth:`~Reader.update_feeds` for details.
+
+        .. versionchanged:: 3.0
+            The ``feed`` argument is now positional-only.
 
         """
         _, rv = zero_or_one(
@@ -1159,17 +1190,23 @@ class Reader:
             )
 
     @overload
-    def get_entry(self, entry: EntryInput) -> Entry:  # pragma: no cover
+    def get_entry(self, entry: EntryInput, /) -> Entry:  # pragma: no cover
         ...
 
     @overload
     def get_entry(
-        self, entry: EntryInput, default: _T
+        self,
+        entry: EntryInput,
+        default: _T,
+        /,
     ) -> Union[Entry, _T]:  # pragma: no cover
         ...
 
     def get_entry(
-        self, entry: EntryInput, default: Union[MissingType, _T] = MISSING
+        self,
+        entry: EntryInput,
+        default: Union[MissingType, _T] = MISSING,
+        /,
     ) -> Union[Entry, _T]:
         """Get an entry.
 
@@ -1186,6 +1223,9 @@ class Reader:
         Raises:
             EntryNotFoundError
             StorageError
+
+        .. versionchanged:: 3.0
+            The ``entry`` and ``default`` arguments are now positional-only.
 
         """
         return zero_or_one(
@@ -1239,6 +1279,7 @@ class Reader:
         self,
         entry: EntryInput,
         read: bool,
+        /,
         modified: Union[MissingType, None, datetime] = MISSING,
     ) -> None:
         """Mark an entry as read or unread,
@@ -1260,6 +1301,9 @@ class Reader:
 
         .. versionadded:: 2.2
 
+        .. versionchanged:: 3.0
+            The ``entry`` and ``read`` arguments are now positional-only.
+
         """
         modified_naive: Optional[datetime]
         if isinstance(modified, MissingType):
@@ -1272,7 +1316,7 @@ class Reader:
         feed_url, entry_id = _entry_argument(entry)
         self._storage.mark_as_read(feed_url, entry_id, bool(read), modified_naive)
 
-    def mark_entry_as_read(self, entry: EntryInput) -> None:
+    def mark_entry_as_read(self, entry: EntryInput, /) -> None:
         """Mark an entry as read.
 
         Alias for ``set_entry_read(entry, True)``.
@@ -1287,10 +1331,13 @@ class Reader:
         .. versionadded:: 1.18
             Renamed from :meth:`mark_as_read`.
 
+        .. versionchanged:: 3.0
+            The ``entry`` argument is now positional-only.
+
         """
         self.set_entry_read(entry, True)
 
-    def mark_entry_as_unread(self, entry: EntryInput) -> None:
+    def mark_entry_as_unread(self, entry: EntryInput, /) -> None:
         """Mark an entry as unread.
 
         Alias for ``set_entry_read(entry, False)``.
@@ -1305,6 +1352,9 @@ class Reader:
         .. versionadded:: 1.18
             Renamed from :meth:`mark_as_unread`.
 
+        .. versionchanged:: 3.0
+            The ``entry`` argument is now positional-only.
+
         """
         return self.set_entry_read(entry, False)
 
@@ -1312,6 +1362,7 @@ class Reader:
         self,
         entry: EntryInput,
         important: bool,
+        /,
         modified: Union[MissingType, None, datetime] = MISSING,
     ) -> None:
         """Mark an entry as important or unimportant,
@@ -1333,6 +1384,9 @@ class Reader:
 
         .. versionadded:: 2.2
 
+        .. versionchanged:: 3.0
+            The ``entry`` and ``important`` arguments are now positional-only.
+
         """
         modified_naive: Optional[datetime]
         if isinstance(modified, MissingType):
@@ -1347,7 +1401,7 @@ class Reader:
             feed_url, entry_id, bool(important), modified_naive
         )
 
-    def mark_entry_as_important(self, entry: EntryInput) -> None:
+    def mark_entry_as_important(self, entry: EntryInput, /) -> None:
         """Mark an entry as important.
 
         Alias for ``set_entry_important(entry, True)``.
@@ -1362,10 +1416,13 @@ class Reader:
         .. versionadded:: 1.18
             Renamed from :meth:`mark_as_important`.
 
+        .. versionchanged:: 3.0
+            The ``entry`` argument is now positional-only.
+
         """
         self.set_entry_important(entry, True)
 
-    def mark_entry_as_unimportant(self, entry: EntryInput) -> None:
+    def mark_entry_as_unimportant(self, entry: EntryInput, /) -> None:
         """Mark an entry as unimportant.
 
         Alias for ``set_entry_important(entry, False)``.
@@ -1380,10 +1437,13 @@ class Reader:
         .. versionadded:: 1.18
             Renamed from :meth:`mark_as_unimportant`.
 
+        .. versionchanged:: 3.0
+            The ``entry`` argument is now positional-only.
+
         """
         return self.set_entry_important(entry, False)
 
-    def _mark_entry_as_dont_care(self, entry: EntryInput) -> None:
+    def _mark_entry_as_dont_care(self, entry: EntryInput, /) -> None:
         """Mark an entry as read and unimportant at the same time,
         resulting in the same read_modified and important_modified.
 
@@ -1399,7 +1459,7 @@ class Reader:
         self._storage.mark_as_read(feed_url, entry_id, True, modified_naive)
         self._storage.mark_as_important(feed_url, entry_id, False, modified_naive)
 
-    def add_entry(self, entry: Any) -> None:
+    def add_entry(self, entry: Any, /) -> None:
         """Add a new entry to an existing feed.
 
         ``entry`` can be any :class:`Entry`-like object,
@@ -1448,6 +1508,9 @@ class Reader:
 
         .. versionadded:: 2.5
 
+        .. versionchanged:: 3.0
+            The ``entry`` argument is now positional-only.
+
         """
 
         # `entry` is of type Union[EntryDataLikeProtocol, EntryDataTypedDict],
@@ -1469,7 +1532,7 @@ class Reader:
         for entry_hook in self.after_entry_update_hooks:
             entry_hook(self, intent.entry, EntryUpdateStatus.NEW)
 
-    def delete_entry(self, entry: EntryInput, missing_ok: bool = False) -> None:
+    def delete_entry(self, entry: EntryInput, /, missing_ok: bool = False) -> None:
         """Delete an entry.
 
         Currently, only entries added by :meth:`~Reader.add_entry`
@@ -1490,6 +1553,9 @@ class Reader:
 
         .. versionadded:: 2.8
             The ``missing_ok`` argument.
+
+        .. versionchanged:: 3.0
+            The ``entry`` argument is now positional-only.
 
         """
         try:
@@ -1558,6 +1624,7 @@ class Reader:
     def search_entries(
         self,
         query: str,
+        /,
         *,
         feed: Optional[FeedInput] = None,
         entry: Optional[EntryInput] = None,
@@ -1656,6 +1723,9 @@ class Reader:
         .. versionadded:: 1.12
             The ``limit`` and ``starting_after`` keyword arguments.
 
+        .. versionchanged:: 3.0
+            The ``query`` argument is now positional-only.
+
         """
         filter_options = EntryFilterOptions.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
@@ -1684,6 +1754,7 @@ class Reader:
     def search_entry_counts(
         self,
         query: str,
+        /,
         *,
         feed: Optional[FeedInput] = None,
         entry: Optional[EntryInput] = None,
@@ -1722,6 +1793,9 @@ class Reader:
 
         .. versionadded:: 1.11
 
+        .. versionchanged:: 3.0
+            The ``query`` argument is now positional-only.
+
         """
 
         filter_options = EntryFilterOptions.from_args(
@@ -1731,10 +1805,7 @@ class Reader:
         return self._search.search_entry_counts(query, now, filter_options)
 
     def get_tags(
-        self,
-        resource: ResourceInput,
-        *,
-        key: Optional[str] = None,
+        self, resource: ResourceInput, /, *, key: Optional[str] = None
     ) -> Iterable[Tuple[str, JSONType]]:
         """Get all or some tags of a resource as ``(key, value)`` pairs.
 
@@ -1772,14 +1843,14 @@ class Reader:
             Removed support for the ``(None,)`` (any feed) and
             :const:`None` (any resource) wildcard resource values.
 
+        .. versionchanged:: 3.0
+            The ``resource`` argument is now positional-only.
+
         """
         resource_id = _resource_argument(resource)
         return self._storage.get_tags(resource_id, key)
 
-    def get_tag_keys(
-        self,
-        resource: AnyResourceInput = None,
-    ) -> Iterable[str]:
+    def get_tag_keys(self, resource: AnyResourceInput = None, /) -> Iterable[str]:
         """Get the keys of all or some resource tags.
 
         Equivalent to ``sorted(k for k, _ in reader.get_tags(resource))``.
@@ -1813,6 +1884,9 @@ class Reader:
         .. versionchanged:: 2.10
             Support entry and global tags.
 
+        .. versionchanged:: 3.0
+            The ``resource`` argument is now positional-only.
+
         """
         # TODO: efficient implementation
         resource_id: AnyResourceId
@@ -1828,13 +1902,20 @@ class Reader:
 
     @overload
     def get_tag(
-        self, resource: ResourceInput, key: str
+        self,
+        resource: ResourceInput,
+        key: str,
+        /,
     ) -> JSONType:  # pragma: no cover
         ...
 
     @overload
     def get_tag(
-        self, resource: ResourceInput, key: str, default: _T
+        self,
+        resource: ResourceInput,
+        key: str,
+        default: _T,
+        /,
     ) -> Union[JSONType, _T]:  # pragma: no cover
         ...
 
@@ -1843,6 +1924,7 @@ class Reader:
         resource: ResourceInput,
         key: str,
         default: Union[MissingType, _T] = MISSING,
+        /,
     ) -> Union[JSONType, _T]:
         """Get the value of this resource tag.
 
@@ -1869,6 +1951,9 @@ class Reader:
         .. versionchanged:: 2.10
             Support entry and global tags.
 
+        .. versionchanged:: 3.0
+            The ``resource``, ``key``, and ``default`` arguments are now positional-only.
+
         """
         resource_id = _resource_argument(resource)
         return zero_or_one(
@@ -1878,12 +1963,16 @@ class Reader:
         )
 
     @overload
-    def set_tag(self, resource: ResourceInput, key: str) -> None:  # pragma: no cover
+    def set_tag(self, resource: ResourceInput, key: str, /) -> None:  # pragma: no cover
         ...
 
     @overload
     def set_tag(
-        self, resource: ResourceInput, key: str, value: JSONType
+        self,
+        resource: ResourceInput,
+        key: str,
+        value: JSONType,
+        /,
     ) -> None:  # pragma: no cover
         ...
 
@@ -1892,6 +1981,7 @@ class Reader:
         resource: ResourceInput,
         key: str,
         value: Union[JSONType, MissingType] = MISSING,
+        /,
     ) -> None:
         """Set the value of this resource tag.
 
@@ -1915,6 +2005,9 @@ class Reader:
         .. versionchanged:: 2.10
             Support entry and global tags.
 
+        .. versionchanged:: 3.0
+            The ``resource``, ``key``, and ``value`` arguments are now positional-only.
+
         """
         resource_id = _resource_argument(resource)
         if not isinstance(value, MissingType):
@@ -1923,7 +2016,7 @@ class Reader:
             self._storage.set_tag(resource_id, key)
 
     def delete_tag(
-        self, resource: ResourceInput, key: str, missing_ok: bool = False
+        self, resource: ResourceInput, key: str, /, missing_ok: bool = False
     ) -> None:
         """Delete this resource tag.
 
@@ -1945,6 +2038,9 @@ class Reader:
         .. versionchanged:: 2.10
             Support entry and global tags.
 
+        .. versionchanged:: 3.0
+            The ``resource`` and ``key`` arguments are now positional-only.
+
         """
         resource_id = _resource_argument(resource)
         try:
@@ -1953,7 +2049,7 @@ class Reader:
             if not missing_ok:
                 raise
 
-    def make_reader_reserved_name(self, key: str) -> str:
+    def make_reader_reserved_name(self, key: str, /) -> str:
         """Create a *reader*-reserved tag name.
         See :ref:`reserved names` for details.
 
@@ -1974,11 +2070,17 @@ class Reader:
 
         .. versionadded:: 1.17
 
+        .. versionchanged:: 3.0
+            The ``key`` argument is now positional-only.
+
         """
         return self._reserved_name_scheme.make_reader_name(key)
 
     def make_plugin_reserved_name(
-        self, plugin_name: str, key: Optional[str] = None
+        self,
+        plugin_name: str,
+        key: Optional[str] = None,
+        /,
     ) -> str:
         """Create a plugin-reserved tag name.
         See :ref:`reserved names` for details.
@@ -2005,6 +2107,9 @@ class Reader:
             str: The name.
 
         .. versionadded:: 1.17
+
+        .. versionchanged:: 3.0
+            The ``plugin_name`` and ``key`` arguments are now positional-only.
 
         """
         return self._reserved_name_scheme.make_plugin_name(plugin_name, key)

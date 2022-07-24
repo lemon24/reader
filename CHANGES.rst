@@ -49,18 +49,47 @@ Unreleased
 
 * Remove code that issued deprecation warnings in versions 2.* (:issue:`268`):
 
-  * :meth:`~Reader.get_feed_metadata`
-  * :meth:`~Reader.get_feed_metadata_item`
-  * :meth:`~Reader.set_feed_metadata_item`
-  * :meth:`~Reader.delete_feed_metadata_item`
-  * :meth:`~Reader.get_feed_tags`
-  * :meth:`~Reader.add_feed_tag`
-  * :meth:`~Reader.remove_feed_tag`
+  * :meth:`Reader.get_feed_metadata`
+  * :meth:`Reader.get_feed_metadata_item`
+  * :meth:`Reader.set_feed_metadata_item`
+  * :meth:`Reader.delete_feed_metadata_item`
+  * :meth:`Reader.get_feed_tags`
+  * :meth:`Reader.add_feed_tag`
+  * :meth:`Reader.remove_feed_tag`
   * :exc:`MetadataError`
   * :exc:`MetadataNotFoundError`
   * :exc:`FeedMetadataNotFoundError`
   * :exc:`EntryMetadataNotFoundError`
   * the :attr:`~Entry.object_id` property of data objects and related exceptions
+
+* Make some of the parameters of the following positional-only:
+
+  * :meth:`Reader.add_feed`: ``feed``
+  * :meth:`Reader.delete_feed`: ``feed``
+  * :meth:`Reader.change_feed_url`: ``old``, ``new``
+  * :meth:`Reader.get_feed`: ``feed``, ``default``
+  * :meth:`Reader.set_feed_user_title`: ``feed``, ``title``
+  * :meth:`Reader.enable_feed_updates`: ``feed``
+  * :meth:`Reader.disable_feed_updates`: ``feed``
+  * :meth:`Reader.update_feed`: ``feed``
+  * :meth:`Reader.get_entry`: ``entry``, ``default``
+  * :meth:`Reader.set_entry_read`: ``entry``, ``read``
+  * :meth:`Reader.mark_entry_as_read`: ``entry``
+  * :meth:`Reader.mark_entry_as_unread`: ``entry``
+  * :meth:`Reader.set_entry_important`: ``entry``, ``important``
+  * :meth:`Reader.mark_entry_as_important`: ``entry``
+  * :meth:`Reader.mark_entry_as_unimportant`: ``entry``
+  * :meth:`Reader.add_entry`: ``entry``
+  * :meth:`Reader.delete_entry`: ``entry``
+  * :meth:`Reader.search_entries`: ``query``
+  * :meth:`Reader.search_entry_counts`: ``query``
+  * :meth:`Reader.get_tags`: ``resource``
+  * :meth:`Reader.get_tag_keys`: ``resource``
+  * :meth:`Reader.get_tag`: ``resource``, ``key``, ``default``
+  * :meth:`Reader.set_tag`: ``resource``, ``key``, ``value``
+  * :meth:`Reader.delete_tag`: ``resource``, ``key``
+  * :meth:`Reader.make_reader_reserved_name`: ``key``
+  * :meth:`Reader.make_plugin_reserved_name`: ``plugin_name``, ``key``
 
 
 Version 2.17
