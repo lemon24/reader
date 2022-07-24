@@ -90,6 +90,9 @@ Unreleased
   * :meth:`Reader.delete_tag`: ``resource``, ``key``
   * :meth:`Reader.make_reader_reserved_name`: ``key``
   * :meth:`Reader.make_plugin_reserved_name`: ``plugin_name``, ``key``
+  * :exc:`FeedError` (and subclasses): ``url``
+  * :exc:`EntryError` (and subclasses): ``feed_url``, ``entry_id``
+  * :exc:`TagError` (and subclasses): ``resource_id``, ``key``
 
 
 Version 2.17

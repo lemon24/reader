@@ -77,9 +77,14 @@ class ResourceNotFoundError(ReaderError):
 
 
 class FeedError(ReaderError):
-    """A feed error occurred."""
+    """A feed error occurred.
 
-    def __init__(self, url: str, message: str = '') -> None:
+    .. versionchanged:: 3.0
+        The ``url`` argument is now positional-only.
+
+    """
+
+    def __init__(self, url: str, /, message: str = '') -> None:
         super().__init__(message)
 
         #: The feed URL.
@@ -134,9 +139,13 @@ class EntryError(ReaderError):
 
     .. versionchanged:: 1.18
         The ``url`` argument/attribute was renamed to ``feed_url``.
+
+    .. versionchanged:: 3.0
+        The ``feed_url`` and ``id`` arguments are now positional-only.
+
     """
 
-    def __init__(self, feed_url: str, id: str, message: str = '') -> None:
+    def __init__(self, feed_url: str, id: str, /, message: str = '') -> None:
         super().__init__(message)
 
         #: The feed URL.
@@ -223,10 +232,13 @@ class TagError(ReaderError):
         Signature changed from ``TagError(key, object_id, message='')``
         to ``TagError(key, resource_id, message='')``.
 
+    .. versionchanged:: 3.0
+        The ``key`` and ``resource_id`` arguments are now positional-only.
+
     """
 
     def __init__(
-        self, key: str, resource_id: Tuple[str, ...], message: str = ''
+        self, key: str, resource_id: Tuple[str, ...], /, message: str = ''
     ) -> None:
         super().__init__(message)
 
