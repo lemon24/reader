@@ -703,7 +703,6 @@ def update_metadata(data):
 @readererror_to_apierror()
 def delete_metadata(data):
     resource_id = _resource_id_from_data(data)
-    print(resource_id)
     key = data['key']
     get_reader().delete_tag(resource_id, key)
 

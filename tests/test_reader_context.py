@@ -302,13 +302,12 @@ def test_optimize_thread_end(reader):
         reader._storage.get_db().statements = statements
 
     threading.Thread(target=target).start()
-    for _ in range(10):
+    for _ in range(40):
         time.sleep(0.05)
-        if statements:
+        if count_optimize_calls(statements):
             break
 
     # must sleep; if we assign the thread to a variable to join() it,
     # the finalizer is called atexit instead, and this test fails ...
 
-    print('after collect')
     assert count_optimize_calls(statements) == 1
