@@ -74,7 +74,7 @@ Project information
 its documentation lives at `Read the Docs`_,
 the code on `GitHub`_,
 and the latest release on `PyPI`_.
-It is rigorously tested on Python 3.7+ and PyPy.
+It is rigorously tested on Python 3.8+ and PyPy.
 
 
 .. _Read the Docs: https://reader.readthedocs.io/
