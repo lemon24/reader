@@ -257,7 +257,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
             # 17-28 removed before 2.0 (last in be9c89581ea491d0c9cc95c9d39f073168a2fd02)
-            # 29-35 removed before 3.0 (last in d02b23cad4ad41297f572763d4a75afb157e019e)
+            # 29-35 removed before 3.0 (last in 69c75529a3f80107b68346d592d6450f9725187c)
         },
         id=APPLICATION_ID,
         minimum_sqlite_version=MINIMUM_SQLITE_VERSION,
