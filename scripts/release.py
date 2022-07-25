@@ -129,12 +129,17 @@ def add_and_push_tags(tags):
 @click.argument('new_version')
 @click.option('--date', type=click.DateTime(), default=str(datetime.date.today()))
 @click.option('--tox/--no-tox', default=True)
-def main(version, new_version, date, tox):
+@click.option('--changelog/--no-changelog', default=True)
+def main(version, new_version, date, tox, changelog):
+    assert 'dev' not in new_version, new_version
+    new_version_is_final = not re.search('[a-zA-Z]', new_version)
+
     check_uncommited()
     check_unpushed()
 
     update_init_version(version)
-    update_changelog_date(version, date)
+    if changelog:
+        update_changelog_date(version, date)
     commit("Release {}.".format(version))
 
     if tox:
@@ -149,16 +154,20 @@ def main(version, new_version, date, tox):
     build()
     upload_to_pypi()
 
+    tags = [version]
     version_x = version.partition('.')[0] + '.x'
-    tags = [version, version_x]
+    if new_version_is_final:
+        tags.append(version_x)
+
     confirm(f"Add and push tags ({', '.join(tags)})?")
     add_and_push_tags(tags)
 
-    confirm("Create release {} in GitHub.", version)
+    confirm("Create release {} in GitHub (doesn't happen automatically).", version)
 
     new_version_full = "{}.dev0".format(new_version)
     update_init_version(new_version_full)
-    add_changelog_section(version, new_version)
+    if changelog:
+        add_changelog_section(version, new_version)
     commit("Bump version to {}.".format(new_version_full))
 
     confirm("Push version {}?", new_version_full)
