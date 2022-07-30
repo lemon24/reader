@@ -9,7 +9,7 @@ Changelog
 Version 3.0
 -----------
 
-Unreleased
+Released 2022-07-30
 
 .. attention::
 
