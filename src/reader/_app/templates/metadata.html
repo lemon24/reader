@@ -43,15 +43,7 @@
 
 <ul class="controls">
 
-{% if feed %}
-    {% if entry %}
-        {% set resource_id = entry.object_id %}
-    {% else %}
-        {% set resource_id = (feed.url,) %}
-    {% endif %}
-{% else %}
-    {% set resource_id = () %}
-{% endif %}
+{% set resource_id = entry.resource_id or feed.resource_id or () %}
 
 {% for message in get_flashed_messages_by_prefix(
     ('add-metadata',) + resource_id,
