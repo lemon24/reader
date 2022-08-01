@@ -32,7 +32,7 @@ readonly SCRIPT="$PROJECT_ROOT/$( basename "$0" )"
 
 
 function install-dev {
-    pip install -e '.[readtime,cli,app,tests,docs,dev,unstable-plugins]'
+    pip install -e '.[dev]'
     pre-commit install
 }
 
@@ -158,9 +158,9 @@ function ci-install {
     if on-pypy && on-nt; then
         # readtime 2.0 requires pyquery requires lxml
         # (lxml wheel not available for PyPy+Windows)
-        pip install -e '.[cli,app,tests,docs,dev,unstable-plugins]'
+        pip install -e '.[cli,app,tests,docs,unstable-plugins]'
     else
-        pip install -e '.[readtime,cli,app,tests,docs,dev,unstable-plugins]'
+        pip install -e '.[readtime,cli,app,tests,docs,unstable-plugins]'
     fi
 }
 

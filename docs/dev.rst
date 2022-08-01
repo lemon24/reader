@@ -62,7 +62,7 @@ Testing
 First, install the testing dependencies::
 
     ./run.sh install-dev    # or
-    pip install '.[readtime,cli,app,tests,dev,unstable-plugins]'
+    pip install '.[dev]'
 
 Run tests using the current Python interpreter::
 
@@ -97,7 +97,7 @@ Start a local development server for the web application::
 Building the documentation
 --------------------------
 
-First, install the dependencie::
+First, install the dependencies::
 
     pip install '.[docs]'   # ./run.sh install-dev already does it for you
 
