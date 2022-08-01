@@ -95,7 +95,7 @@ def _readtime_of_html(html, features=None):
     delta = 12
     for _ in range(images):
         seconds += delta
-        if delta > 3:
+        if delta > 3:  # pragma: no cover
             delta -= 1
 
     return seconds
