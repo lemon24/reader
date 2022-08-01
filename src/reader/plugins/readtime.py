@@ -47,7 +47,11 @@ to install them:
     Implemented for https://github.com/lemon24/reader/issues/275
 
 """
-import readtime
+import math
+import re
+import warnings
+
+import bs4
 
 from reader.types import _get_entry_content
 
@@ -55,22 +59,74 @@ from reader.types import _get_entry_content
 _TAG = 'readtime'
 
 
-def _readtime(entry):
+# for details, see similar reader._search filterwarnings call
+warnings.filterwarnings(
+    'ignore',
+    message='No parser was explicitly specified',
+    module='reader.plugins.readtime',
+)
+
+
+def _readtime_of_entry(entry):
     content = _get_entry_content(entry)
     if not content:
         return {'seconds': 0}
 
     if content.is_html:
-        result = readtime.of_html(content.value)
+        result = _readtime_of_html(content.value)
     else:
-        result = readtime.of_text(content.value)
+        result = _readtime_of_strings([content.value])
 
-    return {'seconds': result.seconds}
+    return {'seconds': result}
+
+
+# roughly following https://github.com/alanhamlett/readtime/blob/2.0.0/readtime/utils.py#L63
+
+
+def _readtime_of_html(html, features=None):
+    # TODO: move this line to _html_utils
+    soup = bs4.BeautifulSoup(html, features=features)
+    _remove_nontext_elements(soup)
+
+    seconds = _readtime_of_strings(soup.stripped_strings)
+
+    # add extra seconds for inline images
+    images = len(soup.select('img'))
+    delta = 12
+    for _ in range(images):
+        seconds += delta
+        if delta > 3:
+            delta -= 1
+
+    return seconds
+
+
+# TODO: move to _html_utils
+def _remove_nontext_elements(soup):
+    # <script>, <noscript> and <style> don't contain things relevant to search.
+    # <title> probably does, but its content should already be in the entry title.
+    #
+    # Although <head> is supposed to contain machine-readable content, Firefox
+    # shows any free-floating text it contains, so we should keep it around.
+    #
+    for e in soup.select('script, noscript, style, title'):
+        e.replace_with('\n')
+
+
+_WPM = 265
+_WORD_DELIMITER = re.compile(r'\W+')
+
+
+def _readtime_of_strings(strings):
+    strings = map(str.strip, strings)
+    strings = filter(None, strings)
+    num_words = sum(len(re.split(_WORD_DELIMITER, s)) for s in strings)
+    return int(math.ceil(num_words / _WPM * 60))
 
 
 def _after_entry_update(reader, entry, status):
     key = reader.make_reader_reserved_name(_TAG)
-    reader.set_tag(entry, key, _readtime(entry))
+    reader.set_tag(entry, key, _readtime_of_entry(entry))
 
 
 def _before_feeds_update(reader):
@@ -106,7 +162,7 @@ def _backfill_feed(reader, feed, key):
     for entry in reader.get_entries(feed=feed):
         if reader.get_tag(entry, key, None):
             continue
-        reader.set_tag(entry, key, _readtime(entry))
+        reader.set_tag(entry, key, _readtime_of_entry(entry))
     reader.delete_tag(feed, key)
 
 

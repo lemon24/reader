@@ -4,10 +4,7 @@ from utils import rename_argument
 from utils import utc_datetime as datetime
 
 from reader import Content
-
-
-# readtime 2.0 requires pyquery requires lxml
-pytestmark = pytest.mark.requires_lxml
+from reader import Entry
 
 
 def get_readtimes(reader):
@@ -42,7 +39,7 @@ def test_normal_workflow(make_reader, db_path, monkeypatch):
         return {'seconds': len(entry.summary.split())}
 
     fake_readtime.call_count = 0
-    monkeypatch.setattr('reader.plugins.readtime._readtime', fake_readtime)
+    monkeypatch.setattr('reader.plugins.readtime._readtime_of_entry', fake_readtime)
 
     parser = Parser()
 
@@ -83,15 +80,14 @@ def test_normal_workflow(make_reader, db_path, monkeypatch):
 
 @pytest.fixture
 def backfill_reader(make_reader, db_path, monkeypatch):
-    monkeypatch.setattr('reader.plugins.readtime._readtime', lambda _: {'seconds': 1})
+    monkeypatch.setattr(
+        'reader.plugins.readtime._readtime_of_entry', lambda _: {'seconds': 1}
+    )
 
     reader = make_reader(db_path)
     reader._parser = parser = Parser()
 
-    for i in (
-        1,
-        2,
-    ):
+    for i in (1, 2):
         feed = parser.feed(i)
         parser.entry(i, 1, datetime(2010, 1, 1), summary='summary')
         reader.add_feed(feed)
@@ -160,3 +156,31 @@ def test_schedule_backfill(reader):
     reader.set_tag(one, '.reader.readtime', {'backfill': 'pending'})
     reader.update_feeds()
     assert get_readtimes(reader) == {'1, 1': 1, '2, 1': None}
+
+
+@pytest.mark.parametrize(
+    'text, is_html, expected_seconds',
+    [
+        ('', False, 0),
+        ('', True, 0),
+        ('\n\n', False, 0),
+        ('\n\n', True, 0),
+        ('content', False, 1),
+        ('content', True, 1),
+        ('<tag></tag>', True, 0),
+        ('<tag>content</tag>', True, 1),
+        ('<script>content</script>', True, 0),
+        ('content ' * 40, True, 10),
+        ('<tag>content</tag>' * 40, True, 10),
+        ('<tag>content</tag>' * 40 + '<img src=""/>', True, 22),
+        ('<tag>content</tag>' * 40 + '<img src=""/>' * 2, True, 33),
+    ],
+)
+def test_readtime(text, is_html, expected_seconds):
+    from reader.plugins.readtime import _readtime_of_entry as readtime
+
+    entry = Entry(
+        'id', content=[Content(text, 'text/html' if is_html else 'text/plain')]
+    )
+
+    assert readtime(entry) == {'seconds': expected_seconds}
