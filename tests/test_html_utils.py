@@ -45,7 +45,6 @@ STRIP_HTML_DATA = [
 ]
 
 
-@pytest.mark.parametrize('input, expected_output', STRIP_HTML_DATA)
 # We test all bs4 parsers, since we don't know/care what the user has installed.
 @pytest.mark.parametrize(
     'features',
@@ -56,21 +55,19 @@ STRIP_HTML_DATA = [
         'html5lib',
     ],
 )
+@pytest.mark.parametrize('input, expected_output', STRIP_HTML_DATA)
 def test_strip_html(input, expected_output, features):
     output = strip_html(input, features)
     if isinstance(output, str):
         output = '\n'.join(output.split())
 
-    # Special-case different <noscript> handling by html5lib.
+    # Special-case different <noscript> handling by html.parser/html5lib.
     # https://www.crummy.com/software/BeautifulSoup/bs4/doc/#differences-between-parsers
-    is_html5lib = any(
-        [
-            features == 'html5lib',
-            features is None
-            and 'html5lib' in type(bs4.BeautifulSoup('').builder).__module__,
-        ]
+    default_builder_is_lxml = 'lxml' in type(bs4.BeautifulSoup('').builder).__module__
+    bad_at_noscript = features in {'html.parser', 'html5lib'} or (
+        features is None and not default_builder_is_lxml
     )
-    if is_html5lib and isinstance(input, str) and '<noscript>' in input:
+    if bad_at_noscript and '<noscript>' in input:
         assert '<noscript>' not in output
         return
 
