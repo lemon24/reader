@@ -4,7 +4,6 @@ import logging
 import random
 import sqlite3
 import string
-import warnings
 from collections import OrderedDict
 from contextlib import contextmanager
 from datetime import datetime
@@ -22,8 +21,7 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
-import bs4  # type: ignore
-
+from ._html_utils import strip_html as strip_html_str
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
@@ -57,54 +55,14 @@ if TYPE_CHECKING:  # pragma: no cover
 
 log = logging.getLogger('reader')
 
-
 _T = TypeVar('_T')
 
 
-# BeautifulSoup warns if not giving it a parser explicitly; full text:
-#
-#   No parser was explicitly specified, so I'm using the best available
-#   HTML parser for this system ("..."). This usually isn't a problem,
-#   but if you run this code on another system, or in a different virtual
-#   environment, it may use a different parser and behave differently.
-#
-# We are ok with any parser, and with how BeautifulSoup picks the best one if
-# available. Explicitly using generic features (e.g. `('html', 'fast')`,
-# the default) instead of a specific parser still warns.
-#
-# Currently there's no way to allow users to pick a parser, and we don't want
-# to force a specific parser, so there's no point in warning.
-#
-# When changing this, also change the equivalent pytest.filterwarnings config.
-#
-# TODO: Expose BeautifulSoup(features=...) when we have a config system.
-#
-warnings.filterwarnings(
-    'ignore', message='No parser was explicitly specified', module='reader._search'
-)
-
-
 @functools.lru_cache()
-def strip_html(text: SQLiteType, features: Optional[str] = None) -> SQLiteType:
+def strip_html(text: SQLiteType) -> SQLiteType:
     if not isinstance(text, str):
         return text
-
-    soup = bs4.BeautifulSoup(text, features=features)
-
-    # <script>, <noscript> and <style> don't contain things relevant to search.
-    # <title> probably does, but its content should already be in the entry title.
-    #
-    # Although <head> is supposed to contain machine-readable content, Firefox
-    # shows any free-floating text it contains, so we should keep it around.
-    #
-    for e in soup.select('script, noscript, style, title'):
-        e.replace_with('\n')
-
-    rv = soup.get_text(separator=' ')
-    # TODO: Remove this assert once bs4 gets type annotations.
-    assert isinstance(rv, str)
-
-    return rv
+    return strip_html_str(text)
 
 
 _QUERY_ERROR_MESSAGE_FRAGMENTS = [

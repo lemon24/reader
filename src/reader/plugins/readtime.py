@@ -49,22 +49,13 @@ to install them:
 """
 import math
 import re
-import warnings
 
-import bs4
-
+from reader._html_utils import get_soup
+from reader._html_utils import remove_nontext_elements
 from reader.types import _get_entry_content
 
 
 _TAG = 'readtime'
-
-
-# for details, see similar reader._search filterwarnings call
-warnings.filterwarnings(
-    'ignore',
-    message='No parser was explicitly specified',
-    module='reader.plugins.readtime',
-)
 
 
 def _readtime_of_entry(entry):
@@ -83,10 +74,9 @@ def _readtime_of_entry(entry):
 # roughly following https://github.com/alanhamlett/readtime/blob/2.0.0/readtime/utils.py#L63
 
 
-def _readtime_of_html(html, features=None):
-    # TODO: move this line to _html_utils
-    soup = bs4.BeautifulSoup(html, features=features)
-    _remove_nontext_elements(soup)
+def _readtime_of_html(html):
+    soup = get_soup(html)
+    remove_nontext_elements(soup)
 
     seconds = _readtime_of_strings(soup.stripped_strings)
 
@@ -99,18 +89,6 @@ def _readtime_of_html(html, features=None):
             delta -= 1
 
     return seconds
-
-
-# TODO: move to _html_utils
-def _remove_nontext_elements(soup):
-    # <script>, <noscript> and <style> don't contain things relevant to search.
-    # <title> probably does, but its content should already be in the entry title.
-    #
-    # Although <head> is supposed to contain machine-readable content, Firefox
-    # shows any free-floating text it contains, so we should keep it around.
-    #
-    for e in soup.select('script, noscript, style, title'):
-        e.replace_with('\n')
 
 
 _WPM = 265
