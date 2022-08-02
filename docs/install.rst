@@ -47,8 +47,6 @@ As such, most dependencies are optional, and can be installed as `extras`_.
 
 As of version |version|, *reader* has the following extras:
 
-* ``readtime`` installs the dependencies needed for the
-  :mod:`~reader.plugins.readtime` plugin.
 * ``cli`` installs the dependencies needed for the
   :doc:`command-line interface <cli>`.
 * ``app`` installs the dependencies needed for the

@@ -11,6 +11,14 @@ Version 3.1
 
 Unreleased
 
+* Drop :mod:`~reader.plugins.readtime` plugin dependency
+  on `readtime <https://github.com/alanhamlett/readtime_>`_
+  (which has a transitive dependency on lxml,
+  which does not always have PyPy Windows wheels on PyPI).
+  The ``readtime`` extra is deprecated,
+  but remains available to avoid breaking dependent packages.
+  (:issue:`286`)
+
 
 Version 3.0
 -----------

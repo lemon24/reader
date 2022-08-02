@@ -32,15 +32,12 @@ The read time for existing entries is backfilled as follows:
   set the ``.reader.readtime`` feed tag to ``{'backfill': 'pending'}``.
 
 
-This plugin needs additional dependencies, use the ``readtime`` extra
-to install them:
-
-.. code-block:: bash
-
-    pip install reader[readtime]
-
-
 .. versionadded:: 2.12
+
+.. versionchanged:: 3.1
+
+    Do not require additional dependencies.
+    Deprecate the ``readtime`` extra.
 
 
 ..
@@ -71,7 +68,11 @@ def _readtime_of_entry(entry):
     return {'seconds': result}
 
 
-# roughly following https://github.com/alanhamlett/readtime/blob/2.0.0/readtime/utils.py#L63
+# roughly following https://github.com/alanhamlett/readtime 2.0
+
+
+_WPM = 265
+_WORD_DELIMITER = re.compile(r'\W+')
 
 
 def _readtime_of_html(html):
@@ -89,10 +90,6 @@ def _readtime_of_html(html):
             delta -= 1
 
     return seconds
-
-
-_WPM = 265
-_WORD_DELIMITER = re.compile(r'\W+')
 
 
 def _readtime_of_strings(strings):
