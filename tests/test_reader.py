@@ -1173,6 +1173,21 @@ with_call_entries_recent_method = pytest.mark.parametrize(
     ],
 )
 
+with_chunk_size_for_recent_test = pytest.mark.parametrize(
+    'chunk_size',
+    [
+        # the default
+        Storage.chunk_size,
+        # rough result size for this test
+        1,
+        2,
+        3,
+        8,
+        # unchunked query
+        0,
+    ],
+)
+
 
 # use the pre-#141 threshold to avoid updating GET_ENTRIES_ORDER_DATA
 GET_ENTRIES_ORDER_RECENT_THRESHOLD = timedelta(3)
@@ -1225,20 +1240,7 @@ GET_ENTRIES_ORDER_DATA = {
 
 
 @pytest.mark.parametrize('order_data_key', GET_ENTRIES_ORDER_DATA)
-@pytest.mark.parametrize(
-    'chunk_size',
-    [
-        # the default
-        Storage.chunk_size,
-        # rough result size for this test
-        1,
-        2,
-        3,
-        8,
-        # unchunked query
-        0,
-    ],
-)
+@with_chunk_size_for_recent_test
 @with_call_entries_recent_method
 def test_get_entries_recent_order(
     reader, chunk_size, order_data_key, pre_stuff, call_method
@@ -1310,110 +1312,6 @@ def test_get_entries_recent_order(
     pre_stuff(reader)
 
     assert [eval(e.id) for e in call_method(reader)] == [t[:2] for t in expected]
-
-
-@pytest.mark.parametrize(
-    'chunk_size',
-    [
-        # the default
-        Storage.chunk_size,
-        # rough result size for this test
-        1,
-        2,
-        3,
-        8,
-        # unchunked query
-        0,
-    ],
-)
-@with_call_entries_recent_method
-def test_get_entries_recent_first_updated_order(
-    reader, chunk_size, pre_stuff, call_method
-):
-    """For entries with no published/updated,
-    entries should be sorted by added.
-
-    """
-    reader._storage.chunk_size = chunk_size
-
-    parser = Parser()
-    reader._parser = parser
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    reader.add_feed(feed.url)
-
-    reader._now = lambda: naive_datetime(2010, 1, 2)
-    three = parser.entry(1, 3)
-    reader.update_feeds()
-
-    reader._now = lambda: naive_datetime(2010, 1, 4)
-    two = parser.entry(1, 2)
-    reader.update_feeds()
-
-    reader._now = lambda: naive_datetime(2010, 1, 1)
-    four = parser.entry(1, 4, datetime(2010, 1, 1))
-    reader.update_feeds()
-
-    reader._now = lambda: naive_datetime(2010, 1, 3)
-    one = parser.entry(1, 1, datetime(2010, 1, 1))
-    reader.update_feeds()
-
-    pre_stuff(reader)
-
-    assert [eval(e.id)[1] for e in call_method(reader)] == [2, 1, 3, 4]
-
-
-@pytest.mark.parametrize(
-    'chunk_size',
-    [
-        # the default
-        Storage.chunk_size,
-        # rough result size for this test
-        1,
-        2,
-        3,
-        8,
-        # unchunked query
-        0,
-    ],
-)
-@with_call_entries_recent_method
-def test_get_entries_recent_feed_order(reader, chunk_size, pre_stuff, call_method):
-    """All other things being equal, get_entries() should yield entries
-    in the order they appear in the feed.
-
-    https://github.com/lemon24/reader/issues/87
-
-    """
-    reader._storage.chunk_size = chunk_size
-
-    parser = Parser()
-    reader._parser = parser
-    reader._now = lambda: naive_datetime(2010, 1, 1)
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    three = parser.entry(1, 3, datetime(2010, 1, 1))
-    two = parser.entry(1, 2, datetime(2010, 1, 1))
-    four = parser.entry(1, 4, datetime(2010, 1, 1))
-    one = parser.entry(1, 1, datetime(2010, 1, 1))
-
-    reader.add_feed(feed.url)
-    reader.update_feeds()
-    pre_stuff(reader)
-
-    assert [eval(e.id)[1] for e in call_method(reader)] == [3, 2, 4, 1]
-
-    parser.feed(1, datetime(2010, 1, 2))
-    del parser.entries[1][1]
-    one = parser.entry(1, 1, datetime(2010, 1, 2))
-    del parser.entries[1][4]
-    four = parser.entry(1, 4, datetime(2010, 1, 2))
-    del parser.entries[1][2]
-    two = parser.entry(1, 2, datetime(2010, 1, 2))
-
-    reader.update_feeds()
-    pre_stuff(reader)
-
-    assert [eval(e.id)[1] for e in call_method(reader)] == [1, 4, 2, 3]
 
 
 # sqlite3 on PyPy can be brittle

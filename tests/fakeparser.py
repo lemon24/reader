@@ -25,10 +25,14 @@ def _make_feed(number, updated=None, **kwargs):
 
 
 def _make_entry(feed_number, number, updated=None, **kwargs):
+    if isinstance(number, str):
+        entry_number = number
+    else:
+        # evals to tuple
+        entry_number = f'{feed_number}, {number}'
     return EntryData(
         f'{feed_number}',
-        # evals to tuple
-        f'{feed_number}, {number}',
+        entry_number,
         updated,
         kwargs.pop('title', f'Entry #{number}'),
         kwargs.pop('link', f'http://www.example.com/entries/{number}'),
