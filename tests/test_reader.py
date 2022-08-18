@@ -1263,6 +1263,7 @@ def test_get_entries_recent_order(
     """
 
     # TODO: Break this into smaller tests; working with it for #113 was a pain.
+    # FIXME: DELETEME after #279 is done
 
     reader._storage.chunk_size = chunk_size
     reader._storage.recent_threshold = GET_ENTRIES_ORDER_RECENT_THRESHOLD
