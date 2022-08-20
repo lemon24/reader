@@ -4,11 +4,9 @@ from functools import partial
 import pytest
 from fakeparser import Parser
 from test_reader import with_call_entries_recent_method
-from test_reader import with_chunk_size_for_recent_test
 from utils import naive_datetime
 from utils import utc_datetime as datetime
 
-# FIXME: mark most of the parameters as slow
 
 with_maybe_published_or_updated = pytest.mark.parametrize(
     'entry_kwargs',
@@ -20,7 +18,6 @@ with_maybe_published_or_updated = pytest.mark.parametrize(
 )
 
 
-@with_chunk_size_for_recent_test
 @with_call_entries_recent_method
 @with_maybe_published_or_updated
 def test_entries_recent_first_updated(
@@ -41,7 +38,6 @@ def test_entries_recent_first_updated(
     assert [eval(e.id)[1] for e in call_method(reader)] == [2, 1, 3, 4]
 
 
-@with_chunk_size_for_recent_test
 @with_call_entries_recent_method
 @with_maybe_published_or_updated
 def test_entries_recent_feed_order(
@@ -74,7 +70,6 @@ def test_entries_recent_feed_order(
 # backdated
 
 
-@with_chunk_size_for_recent_test
 @with_call_entries_recent_method
 @pytest.mark.parametrize('recent_threshold', [timedelta(0), timedelta(31)])
 @pytest.mark.parametrize('reverse', [False, True])

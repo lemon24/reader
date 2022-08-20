@@ -1173,21 +1173,6 @@ with_call_entries_recent_method = pytest.mark.parametrize(
     ],
 )
 
-with_chunk_size_for_recent_test = pytest.mark.parametrize(
-    'chunk_size',
-    [
-        # the default
-        Storage.chunk_size,
-        # rough result size for this test
-        1,
-        2,
-        3,
-        8,
-        # unchunked query
-        0,
-    ],
-)
-
 
 # use the pre-#141 threshold to avoid updating GET_ENTRIES_ORDER_DATA
 GET_ENTRIES_ORDER_RECENT_THRESHOLD = timedelta(3)
@@ -1240,7 +1225,6 @@ GET_ENTRIES_ORDER_DATA = {
 
 
 @pytest.mark.parametrize('order_data_key', GET_ENTRIES_ORDER_DATA)
-@with_chunk_size_for_recent_test
 @with_call_entries_recent_method
 def test_get_entries_recent_order(
     reader, chunk_size, order_data_key, pre_stuff, call_method
@@ -1469,7 +1453,6 @@ def test_get_feeds_sort_error(reader):
         set(reader.get_feeds(sort='bad sort'))
 
 
-@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1, 2, 0])
 def test_get_feeds_order_title(reader, chunk_size):
     """When sort='title', feeds should be sorted by (with decreasing
     priority):
@@ -2886,7 +2869,6 @@ def reader_with_three_feeds(reader):
 
 
 @with_call_paginated_method
-@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 0, 1, 2])
 @rename_argument('reader', 'reader_with_three_feeds')
 def test_pagination_basic(reader, pre_stuff, call_method, sort_kwargs, chunk_size):
     reader._storage.chunk_size = chunk_size
@@ -2920,7 +2902,6 @@ def test_pagination_basic(reader, pre_stuff, call_method, sort_kwargs, chunk_siz
         (enable_and_update_search, search_entries),
     ],
 )
-@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 0, 1, 2])
 @rename_argument('reader', 'reader_with_three_feeds')
 def test_pagination_random(reader, pre_stuff, call_method, chunk_size):
     reader._storage.chunk_size = chunk_size

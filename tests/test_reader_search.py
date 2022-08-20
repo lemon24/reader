@@ -160,7 +160,6 @@ def test_search_enabled_value_error(make_reader, search_enabled):
 
 @rename_argument('reader', 'reader_without_and_with_entries')
 @with_sort
-@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 2, 0])
 def test_update_search_feeds_change_after_enable(reader, sort, chunk_size):
     reader._search.storage.chunk_size = chunk_size
     reader.enable_search()
@@ -705,20 +704,6 @@ def test_search_entries_order_title_content_beats_title(reader):
     ]
 
 
-@pytest.mark.parametrize(
-    'chunk_size',
-    [
-        # the default
-        Storage.chunk_size,
-        # rough result size for this test
-        1,
-        2,
-        3,
-        8,
-        # unchunked query
-        0,
-    ],
-)
 def test_search_entries_order_weights(reader, chunk_size):
     """Entry title beats feed title beats entry content/summary."""
 

@@ -131,7 +131,6 @@ def test_as_metadata(reader, subtests, resource):
         'entry': (('1', '1, 1'), ('2', '2, 1'), (None, None)),
     },
 )
-@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1])
 def test_as_tags(reader, subtests, chunk_size, one, two, wildcard):
     reader._storage.chunk_size = chunk_size
     reader._parser = parser = Parser()
@@ -222,7 +221,6 @@ def test_as_tags(reader, subtests, chunk_size, one, two, wildcard):
         assert list(reader.get_tag_keys()) == ['tag-1', 'tag-common']
 
 
-@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1])
 def test_as_tags_global(reader, subtests, chunk_size):
     """Subset of test_as_tags() that works for global tags."""
 
@@ -263,7 +261,6 @@ def test_as_tags_global(reader, subtests, chunk_size):
         assert list(reader.get_tag_keys()) == ['tag-0', 'tag-1', 'tag-3']
 
 
-@pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1])
 def test_wildcard_interaction(reader, chunk_size):
     reader._storage.chunk_size = chunk_size
     reader._parser = parser = Parser()

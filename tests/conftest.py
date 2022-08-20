@@ -150,3 +150,18 @@ def db_path(tmpdir):
 @pytest.fixture
 def data_dir():
     return py.path.local(__file__).dirpath().join('data')
+
+
+@pytest.fixture(
+    params=[
+        # the default
+        Storage.chunk_size,
+        # rough result size (order of magnitude)
+        1,
+        pytest.param(2, marks=pytest.mark.slow),
+        # unchunked query, likely to be ok
+        pytest.param(0, marks=pytest.mark.slow),
+    ]
+)
+def chunk_size(request):
+    return request.param
