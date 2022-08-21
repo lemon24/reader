@@ -230,20 +230,6 @@ class Decider:
                         )
                     else:
                         recent_sort = self.global_now
-
-                    # FIXME: optimization: include (published or updated) in recent_sort
-                    """
-                    recent_sort = (
-                        recent_sort.isoformat(timespec='microseconds')
-                        + ' '
-                        + (
-                            processed_new.published
-                            or processed_new.updated
-                            or self.global_now
-                        ).isoformat(timespec='microseconds')
-                    )
-                    """
-
                 else:
                     recent_sort = None
 
