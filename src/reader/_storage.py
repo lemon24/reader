@@ -284,10 +284,9 @@ MISSING_MIGRATION_DETAIL = (
 
 class Storage:
 
-    # recent_threshold, chunk_size, and entry_counts_average_periods
+    # chunk_size and entry_counts_average_periods
     # are not part of the Storage interface,
     # but are part of the private API of this implementation.
-    recent_threshold = timedelta(7)
     chunk_size = 2 ** 8
     # 1, 3, 12 months rounded down to days,
     # assuming an average of 30.436875 days/month
@@ -959,12 +958,7 @@ class Storage:
         else:
             assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
-        context = dict(
-            feed=feed_url,
-            id=entry_id,
-            # TODO: duplicated from get_entries_page()
-            recent_threshold=now - self.recent_threshold,
-        )
+        context = dict(feed=feed_url, id=entry_id)
 
         return zero_or_one(
             self.get_db().execute(str(query), context),
@@ -981,7 +975,6 @@ class Storage:
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[Entry, Optional[_T]]]:
         query, context = make_get_entries_query(filter_options, sort)
-        # context.update(recent_threshold=now - self.recent_threshold) FIXME
         yield from paginated_query(
             self.get_db(), query, context, chunk_size, last, entry_factory
         )

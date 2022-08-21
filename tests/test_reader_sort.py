@@ -69,20 +69,14 @@ def test_entries_recent_feed_order(
 # * entry id
 # backdated
 
-# FIXME: remove recent_threshold
-
 
 @with_call_entries_recent_method
-@pytest.mark.parametrize(
-    'recent_threshold', [timedelta(0), timedelta(31)], ids=['0days', '31days']
-)
 @pytest.mark.parametrize('reverse', [False, True], ids=['forward', 'reverse'])
 def test_entries_recent_all(
     reader,
     chunk_size,
     pre_stuff,
     call_method,
-    recent_threshold,
     reverse,
 ):
     """Entries should be sorted descending by (with decreasing priority):
@@ -208,23 +202,19 @@ def test_entries_recent_all(
 
     pre_stuff(reader)
 
-    reader._storage.recent_threshold = recent_threshold
     reader._now = lambda: naive_datetime(2010, 1, 31)
 
-    if True:
-        expected = [
-            (1, 21),
-            (1, 23),
-            (1, 22),
-            (3, 1),
-            (2, 1),
-            (1, 1),
-            (1, 11),
-            (1, 12),
-            (1, 3),
-            (1, 7),
-            (1, 6),
-            (1, 2),
-        ]
-
-    assert [eval(e.id) for e in call_method(reader)] == expected
+    assert [eval(e.id) for e in call_method(reader)] == [
+        (1, 21),
+        (1, 23),
+        (1, 22),
+        (3, 1),
+        (2, 1),
+        (1, 1),
+        (1, 11),
+        (1, 12),
+        (1, 3),
+        (1, 7),
+        (1, 6),
+        (1, 2),
+    ]

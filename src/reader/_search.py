@@ -838,7 +838,6 @@ class Search:
             after_mark=after_mark,
             # 255 letters / 4.7 letters per word (average in English)
             snippet_tokens=54,
-            recent_threshold=now - self.storage.recent_threshold,
         )
 
         row_factory = partial(
