@@ -295,6 +295,12 @@ class EntryUpdateIntent(NamedTuple):
     #: None if the entry already exists.
     first_updated_epoch: Optional[datetime]
 
+    #: Sort key for get_entries(sort='recent').
+    #: Currently, first_updated_epoch if the feed is not new,
+    #: published or updated or first_updated_epoch otherwise.
+    #: None if the entry already exists.
+    recent_sort: Optional[datetime]
+
     #: The index of the entry in the feed (zero-based).
     feed_order: int = 0
 

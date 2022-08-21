@@ -219,7 +219,11 @@ def update_feed_last_updated(storage, feed, entry):
 def add_or_update_entry(storage, feed, entry):
     storage.add_or_update_entry(
         EntryUpdateIntent(
-            entry, entry.updated, datetime(2010, 1, 1), datetime(2010, 1, 1)
+            entry,
+            entry.updated,
+            datetime(2010, 1, 1),
+            datetime(2010, 1, 1),
+            datetime(2010, 1, 1),
         )
     )
 
@@ -232,6 +236,7 @@ def add_or_update_entries(storage, feed, entry):
                 entry.updated,
                 datetime(2010, 1, 1),
                 datetime(2010, 1, 1),
+                datetime(2010, 1, 1),
             )
         ]
     )
@@ -240,7 +245,11 @@ def add_or_update_entries(storage, feed, entry):
 def add_entry(storage, feed, entry):
     storage.add_entry(
         EntryUpdateIntent(
-            entry, entry.updated, datetime(2010, 1, 1), datetime(2010, 1, 1)
+            entry,
+            entry.updated,
+            datetime(2010, 1, 1),
+            datetime(2010, 1, 1),
+            datetime(2010, 1, 1),
         )
     )
 
@@ -335,7 +344,13 @@ def check_errors_locked(db_path, pre_stuff, do_stuff, exc_type):
     storage.add_feed(feed.url, datetime(2010, 1, 1))
     storage.add_or_update_entry(
         EntryUpdateIntent(
-            entry, entry.updated, datetime(2010, 1, 1), datetime(2010, 1, 1), 0, 0
+            entry,
+            entry.updated,
+            datetime(2010, 1, 1),
+            datetime(2010, 1, 1),
+            datetime(2010, 1, 1),
+            0,
+            0,
         )
     )
 
@@ -429,7 +444,13 @@ def check_iter_locked(db_path, pre_stuff, iter_stuff):
     storage.add_feed(feed.url, datetime(2010, 1, 2))
     storage.add_or_update_entry(
         EntryUpdateIntent(
-            entry, entry.updated, datetime(2010, 1, 1), datetime(2010, 1, 1), 0, 0
+            entry,
+            entry.updated,
+            datetime(2010, 1, 1),
+            datetime(2010, 1, 1),
+            datetime(2010, 1, 1),
+            0,
+            0,
         )
     )
     storage.add_feed('two', datetime(2010, 1, 1))
@@ -437,6 +458,7 @@ def check_iter_locked(db_path, pre_stuff, iter_stuff):
         EntryUpdateIntent(
             entry._replace(feed_url='two'),
             entry.updated,
+            datetime(2010, 1, 1),
             datetime(2010, 1, 1),
             datetime(2010, 1, 1),
             0,
@@ -479,6 +501,7 @@ def storage_with_two_entries(storage):
             datetime(2010, 1, 2),
             datetime(2010, 1, 2),
             datetime(2010, 1, 2),
+            datetime(2010, 1, 2),
             0,
             0,
         )
@@ -486,6 +509,7 @@ def storage_with_two_entries(storage):
     storage.add_or_update_entry(
         EntryUpdateIntent(
             EntryData('feed', 'two', datetime(2010, 1, 1)),
+            datetime(2010, 1, 2),
             datetime(2010, 1, 2),
             datetime(2010, 1, 2),
             datetime(2010, 1, 2),

@@ -1533,12 +1533,13 @@ class Reader:
         # https://gist.github.com/lemon24/047f71abe76c47661634459eada7b50a#file-01-typing-py
 
         now = self._now()
-
+        entry_data = entry_data_from_obj(entry)
         intent = EntryUpdateIntent(
-            entry=entry_data_from_obj(entry),
+            entry=entry_data,
             last_updated=now,
             first_updated=now,
             first_updated_epoch=now,
+            recent_sort=entry_data.published or entry_data.updated or now,
             added_by='user',
         )
 

@@ -69,10 +69,14 @@ def test_entries_recent_feed_order(
 # * entry id
 # backdated
 
+# FIXME: remove recent_threshold
+
 
 @with_call_entries_recent_method
-@pytest.mark.parametrize('recent_threshold', [timedelta(0), timedelta(31)])
-@pytest.mark.parametrize('reverse', [False, True])
+@pytest.mark.parametrize(
+    'recent_threshold', [timedelta(0), timedelta(31)], ids=['0days', '31days']
+)
+@pytest.mark.parametrize('reverse', [False, True], ids=['forward', 'reverse'])
 def test_entries_recent_all(
     reader,
     chunk_size,
@@ -83,12 +87,19 @@ def test_entries_recent_all(
 ):
     """Entries should be sorted descending by (with decreasing priority):
 
-    * entry first updated epoch (*)
-    * entry published or updated (*)
+    * entry first updated epoch
+      if the feed is not new
+      else entry published or updated or first updated epoch
+    * entry published or updated or first updated epoch
     * feed URL
     * entry last updated
     * order of entry in feed
     * entry id
+
+    https://github.com/lemon24/reader/issues/97
+    https://github.com/lemon24/reader/issues/106
+    https://github.com/lemon24/reader/issues/113
+    https://github.com/lemon24/reader/issues/279
 
     """
 
@@ -200,43 +211,20 @@ def test_entries_recent_all(
     reader._storage.recent_threshold = recent_threshold
     reader._now = lambda: naive_datetime(2010, 1, 31)
 
-    if recent_threshold == timedelta(0):
-        expected = [
-            # after #279, should be here
-            # (1, 21),
-            # (1, 23),
-            # (1, 22),
-            (3, 1),
-            (2, 1),
-            (1, 21),
-            (1, 1),
-            (1, 11),
-            (1, 12),
-            (1, 23),
-            (1, 3),
-            (1, 7),
-            (1, 6),
-            (1, 22),
-            (1, 2),
-        ]
-    elif recent_threshold == timedelta(31):
-        # remove after #279 is done
+    if True:
         expected = [
             (1, 21),
             (1, 23),
             (1, 22),
             (3, 1),
             (2, 1),
+            (1, 1),
             (1, 11),
             (1, 12),
+            (1, 3),
             (1, 7),
             (1, 6),
-            # at the end because first updated
-            (1, 1),
-            (1, 3),
             (1, 2),
         ]
-    else:
-        assert False, recent_threshold
 
     assert [eval(e.id) for e in call_method(reader)] == expected

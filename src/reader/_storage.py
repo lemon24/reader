@@ -141,6 +141,7 @@ def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
             first_updated TIMESTAMP NOT NULL,
             first_updated_epoch TIMESTAMP NOT NULL,
             feed_order INTEGER NOT NULL,
+            recent_sort TIMESTAMP NOT NULL,
 
             PRIMARY KEY (id, feed),
             FOREIGN KEY (feed) REFERENCES feeds(url)
@@ -215,25 +216,13 @@ def create_indexes(db: sqlite3.Connection) -> None:
     # Speed up get_entries() queries that use apply_recent().
     db.execute(
         """
-        CREATE INDEX entries_by_kinda_first_updated ON entries(
-            first_updated_epoch,
-            coalesce(published, updated, first_updated),
-            feed,
-            last_updated,
-            - feed_order,
-            id
-        );
-        """
-    )
-    db.execute(
-        """
-        CREATE INDEX entries_by_kinda_published ON entries (
-            coalesce(published, updated, first_updated),
-            coalesce(published, updated, first_updated),
-            feed,
-            last_updated,
-            - feed_order,
-            id
+        CREATE INDEX entries_by_recent ON entries(
+            recent_sort DESC,
+            coalesce(published, updated, first_updated) DESC,
+            feed DESC,
+            last_updated DESC,
+            - feed_order DESC,
+            id DESC
         );
         """
     )
@@ -252,7 +241,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=36,
+        version=37,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
@@ -792,6 +781,7 @@ class Storage:
                 first_updated,
                 first_updated_epoch,
                 feed_order,
+                recent_sort,
                 original_feed,
                 data_hash,
                 data_hash_changed,
@@ -839,6 +829,11 @@ class Storage:
                     WHERE id = :id AND feed = :feed_url
                 )),
                 :feed_order,
+                coalesce(:recent_sort, (
+                    SELECT recent_sort
+                    FROM entries
+                    WHERE id = :id AND feed = :feed_url
+                )),
                 NULL, -- original_feed
                 :data_hash,
                 :data_hash_changed,
@@ -986,7 +981,7 @@ class Storage:
         last: Optional[_T] = None,
     ) -> Iterable[Tuple[Entry, Optional[_T]]]:
         query, context = make_get_entries_query(filter_options, sort)
-        context.update(recent_threshold=now - self.recent_threshold)
+        # context.update(recent_threshold=now - self.recent_threshold) FIXME
         yield from paginated_query(
             self.get_db(), query, context, chunk_size, last, entry_factory
         )
@@ -1382,20 +1377,7 @@ def apply_feed_tags_filter_options(
 
 def make_recent_last_select(id_prefix: str = 'entries.') -> Sequence[Any]:
     return [
-        (
-            'kinda_first_updated',
-            """
-            coalesce (
-                CASE
-                WHEN
-                    coalesce(entries.published, entries.updated, entries.first_updated)
-                        >= :recent_threshold
-                    THEN entries.first_updated_epoch
-                END,
-                entries.published, entries.updated, entries.first_updated
-            )
-            """,
-        ),
+        'recent_sort',
         ('kinda_published', 'coalesce(published, updated, first_updated)'),
         f'{id_prefix}feed',
         'last_updated',
@@ -1409,48 +1391,28 @@ def apply_recent(
 ) -> None:
     """Change query to sort entries by "recent"."""
 
-    # Version of apply_recent() that takes advantage of indexes, implemented in
-    # <https://github.com/lemon24/reader/issues/134#issuecomment-722454963>.
-    # An older version that does not can be found in reader 1.9.
-    #
-    # WARNING: Always keep the entries_by_kinda_* indexes in sync with the ORDER BY of the by_kinda_* CTEs below.
+    # WARNING: Always keep the entries_by_recent index in sync
+    # with the ORDER BY of the CTE below.
 
-    def make_by_kinda_cte(recent: bool) -> str:
-        if recent:
-            kinda_first_updated = 'first_updated_epoch'
-            sign = '>='
-        else:
-            kinda_first_updated = 'coalesce(published, updated, first_updated)'
-            sign = '<'
-
-        return f"""
+    query.WITH(
+        (
+            'ids',
+            """
             SELECT
                 feed,
                 id,
                 last_updated,
-                {kinda_first_updated} as kinda_first_updated,
+                recent_sort,
                 coalesce(published, updated, first_updated) as kinda_published,
                 - feed_order as negative_feed_order
             FROM entries
-            WHERE kinda_published {sign} :recent_threshold
             ORDER BY
-                kinda_first_updated DESC,
+                recent_sort DESC,
                 kinda_published DESC,
                 feed DESC,
                 last_updated DESC,
                 negative_feed_order DESC,
                 id DESC
-        """
-
-    query.WITH(
-        ('by_kinda_first_updated', make_by_kinda_cte(recent=True)),
-        ('by_kinda_published', make_by_kinda_cte(recent=False)),
-        (
-            'ids',
-            """
-            SELECT * FROM by_kinda_first_updated
-            UNION ALL
-            SELECT * FROM by_kinda_published
             """,
         ),
     )
@@ -1458,7 +1420,7 @@ def apply_recent(
 
     query.SELECT(
         "ids.last_updated",
-        "kinda_first_updated",
+        "ids.recent_sort",
         "kinda_published",
         "negative_feed_order",
     )
@@ -1466,7 +1428,7 @@ def apply_recent(
     # NOTE: when changing, ensure none of the values can be null
     # to prevent https://github.com/lemon24/reader/issues/203
     query.scrolling_window_order_by(
-        'kinda_first_updated',
+        'ids.recent_sort',
         'kinda_published',
         f'{id_prefix}feed',
         'ids.last_updated',

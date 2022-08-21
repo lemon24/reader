@@ -1124,9 +1124,6 @@ class FakeNow:
         return self.now
 
 
-# TODO: we could just parametrize sort as well here (see test_pagination_basic for details)
-
-
 def get_feeds(reader, **kwargs):
     return reader.get_feeds(**kwargs)
 
@@ -1137,6 +1134,20 @@ def get_entries(reader, **kwargs):
 
 def get_entries_recent(reader, **kwargs):
     return reader.get_entries(sort='recent', **kwargs)
+
+
+def get_entries_recent_paginated(reader, **kwargs):
+    starting_after = None
+    while True:
+        entries = list(
+            reader.get_entries(
+                sort='recent', limit=1, starting_after=starting_after, **kwargs
+            )
+        )
+        if not entries:
+            break
+        yield from entries
+        starting_after = entries[-1]
 
 
 def get_entries_random(reader, **kwargs):
@@ -1160,6 +1171,20 @@ def search_entries_recent(reader, **kwargs):
     return reader.search_entries('entry', sort='recent', **kwargs)
 
 
+def search_entries_recent_paginated(reader, **kwargs):
+    starting_after = None
+    while True:
+        entries = list(
+            reader.search_entries(
+                'entry', sort='recent', limit=1, starting_after=starting_after, **kwargs
+            )
+        )
+        if not entries:
+            break
+        yield from entries
+        starting_after = entries[-1]
+
+
 def search_entries_random(reader, **kwargs):
     return reader.search_entries('entry', sort='random', **kwargs)
 
@@ -1169,134 +1194,11 @@ with_call_entries_recent_method = pytest.mark.parametrize(
     [
         (lambda _: None, get_entries),
         (lambda _: None, get_entries_recent),
+        (lambda _: None, get_entries_recent_paginated),
         (enable_and_update_search, search_entries_recent),
+        (enable_and_update_search, search_entries_recent_paginated),
     ],
 )
-
-
-# use the pre-#141 threshold to avoid updating GET_ENTRIES_ORDER_DATA
-GET_ENTRIES_ORDER_RECENT_THRESHOLD = timedelta(3)
-
-GET_ENTRIES_ORDER_DATA = {
-    'all_newer_than_threshold': (
-        timedelta(100),
-        [
-            (1, 3, '2010-01-04'),
-            (1, 4, '2010-01-03'),
-            (2, 3, '2010-01-02'),
-            (1, 2, '2010-01-02'),
-            (2, 5, '2009-12-20'),
-            (2, 2, '2010-01-02'),
-            (1, 1, '2010-01-02'),
-            (2, 1, '2010-01-05'),
-            (2, 4, '2010-01-04'),
-        ],
-    ),
-    'all_older_than_threshold': (
-        timedelta(0),
-        [
-            (2, 1, '2010-01-05'),
-            (2, 4, '2010-01-04'),
-            (1, 3, '2010-01-04'),
-            (1, 4, '2010-01-03'),
-            (2, 3, '2010-01-02'),
-            (2, 2, '2010-01-02'),
-            (1, 2, '2010-01-02'),
-            (1, 1, '2010-01-02'),
-            (2, 5, '2009-12-20'),
-        ],
-    ),
-    'some_older_than_threshold': (
-        GET_ENTRIES_ORDER_RECENT_THRESHOLD,
-        [
-            (1, 3, '2010-01-04'),
-            (1, 4, '2010-01-03'),
-            (2, 1, '2010-01-05'),
-            (2, 4, '2010-01-04'),
-            # published or updated >= timedelta(3)
-            (2, 3, '2010-01-02'),
-            (2, 2, '2010-01-02'),
-            (1, 2, '2010-01-02'),
-            (1, 1, '2010-01-02'),
-            (2, 5, '2009-12-20'),
-        ],
-    ),
-}
-
-
-@pytest.mark.parametrize('order_data_key', GET_ENTRIES_ORDER_DATA)
-@with_call_entries_recent_method
-def test_get_entries_recent_order(
-    reader, chunk_size, order_data_key, pre_stuff, call_method
-):
-    """Entries should be sorted descending by (with decreasing priority):
-
-    * entry first updated (only if newer than _storage.recent_threshold)
-      * as of 2021-10 / #239, this test isn't covering this;
-        test_get_entries_recent_first_updated_order (below) is
-    * entry published (or entry updated if published is none)
-    * feed URL
-    * entry last updated
-    * order of entry in feed
-    * entry id
-
-    https://github.com/lemon24/reader/issues/97
-    https://github.com/lemon24/reader/issues/106
-    https://github.com/lemon24/reader/issues/113
-
-    """
-
-    # TODO: Break this into smaller tests; working with it for #113 was a pain.
-    # FIXME: DELETEME after #279 is done
-
-    reader._storage.chunk_size = chunk_size
-    reader._storage.recent_threshold = GET_ENTRIES_ORDER_RECENT_THRESHOLD
-
-    parser = Parser()
-    reader._parser = parser
-    reader._now = FakeNow(datetime(2010, 1, 1), timedelta(microseconds=1))
-
-    one = parser.feed(1)
-    two = parser.feed(2)
-    reader.add_feed(two.url)
-
-    parser.entry(2, 1, datetime(2010, 1, 1), published=datetime(2010, 1, 1))
-    parser.entry(2, 4, datetime(2010, 1, 4))
-    two = parser.feed(2, datetime(2010, 1, 4))
-    reader._now.now = datetime(2010, 1, 2)
-    reader.update_feeds()
-
-    reader.add_feed(one.url)
-
-    parser.entry(1, 1, datetime(2010, 1, 2))
-    one = parser.feed(1, datetime(2010, 1, 2))
-    reader._now.now = datetime(2010, 1, 3)
-    reader.update_feeds()
-
-    parser.entry(2, 1, datetime(2010, 1, 5))
-    parser.entry(2, 2, datetime(2010, 1, 2))
-    two = parser.feed(2, datetime(2010, 1, 5))
-    reader._now.now = datetime(2010, 1, 4)
-    reader.update_feeds()
-
-    parser.entry(1, 2, datetime(2010, 1, 2))
-    parser.entry(1, 4, datetime(2010, 1, 3))
-    parser.entry(1, 3, datetime(2010, 1, 4))
-    one = parser.feed(1, datetime(2010, 1, 6))
-    parser.entry(2, 3, datetime(2010, 1, 2))
-    parser.entry(2, 5, datetime(2010, 1, 3), published=datetime(2009, 12, 20))
-    two = parser.feed(2, datetime(2010, 1, 6))
-    reader._now.now = datetime(2010, 1, 5)
-    reader.update_feeds()
-
-    recent_threshold, expected = GET_ENTRIES_ORDER_DATA[order_data_key]
-
-    reader._storage.recent_threshold = recent_threshold
-    reader._now.now = datetime(2010, 1, 6)
-
-    pre_stuff(reader)
-
-    assert [eval(e.id) for e in call_method(reader)] == [t[:2] for t in expected]
 
 
 # sqlite3 on PyPy can be brittle

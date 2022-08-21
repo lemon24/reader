@@ -220,11 +220,39 @@ class Decider:
                 else:
                     hash_changed = 0
 
+                recent_sort: Optional[datetime]
+                if is_new:
+                    if not self.old_feed.last_updated:
+                        recent_sort = (
+                            processed_new.published
+                            or processed_new.updated
+                            or self.global_now
+                        )
+                    else:
+                        recent_sort = self.global_now
+
+                    # FIXME: optimization: include (published or updated) in recent_sort
+                    """
+                    recent_sort = (
+                        recent_sort.isoformat(timespec='microseconds')
+                        + ' '
+                        + (
+                            processed_new.published
+                            or processed_new.updated
+                            or self.global_now
+                        ).isoformat(timespec='microseconds')
+                    )
+                    """
+
+                else:
+                    recent_sort = None
+
                 yield EntryUpdateIntent(
                     processed_new,
                     self.now,
                     self.now if is_new else None,
                     self.global_now if is_new else None,
+                    recent_sort,
                     feed_order,
                     hash_changed,
                 )
