@@ -1435,21 +1435,23 @@ def apply_recent(
     query.JOIN(f"ids ON (ids.id, ids.feed) = ({id_prefix}id, {id_prefix}feed)")
 
     query.SELECT(
-        "ids.last_updated",
-        "ids.recent_sort",
-        "kinda_published",
-        "negative_feed_order",
+        'ids.recent_sort',
+        'ids.kinda_published',
+        'ids.feed',
+        'ids.last_updated',
+        'ids.negative_feed_order',
+        'ids.id',
     )
 
     # NOTE: when changing, ensure none of the values can be null
     # to prevent https://github.com/lemon24/reader/issues/203
     query.scrolling_window_order_by(
         'ids.recent_sort',
-        'kinda_published',
-        f'{id_prefix}feed',
+        'ids.kinda_published',
+        'ids.feed',
         'ids.last_updated',
-        'negative_feed_order',
-        f'{id_prefix}id',
+        'ids.negative_feed_order',
+        'ids.id',
         desc=True,
         keyword=keyword,
     )
