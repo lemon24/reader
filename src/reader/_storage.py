@@ -213,6 +213,11 @@ SCHEMA_INFO = {
 
 
 def create_indexes(db: sqlite3.Connection) -> None:
+    create_entries_by_recent_index(db)
+    create_entries_by_feed_index(db)
+
+
+def create_entries_by_recent_index(db: sqlite3.Connection) -> None:
     # Speed up get_entries() queries that use apply_recent().
     db.execute(
         """
@@ -226,8 +231,25 @@ def create_indexes(db: sqlite3.Connection) -> None:
         );
         """
     )
+
+
+def create_entries_by_feed_index(db: sqlite3.Connection) -> None:
     # Speed up get_entry_counts(feed=...).
     db.execute("CREATE INDEX entries_by_feed ON entries (feed);")
+
+
+def update_from_36_to_37(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # for https://github.com/lemon24/reader/issues/279
+    db.execute("ALTER TABLE entries ADD COLUMN recent_sort TIMESTAMP;")
+    db.execute(
+        """
+        UPDATE entries
+        SET recent_sort = coalesce(published, updated, first_updated_epoch);
+        """
+    )
+    db.execute("DROP INDEX entries_by_kinda_first_updated;")
+    db.execute("DROP INDEX entries_by_kinda_published;")
+    create_entries_by_recent_index(db)
 
 
 # Row value support was added in 3.15.
@@ -247,6 +269,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
             # 17-28 removed before 2.0 (last in be9c89581ea491d0c9cc95c9d39f073168a2fd02)
             # 29-35 removed before 3.0 (last in 69c75529a3f80107b68346d592d6450f9725187c)
+            36: update_from_36_to_37,
         },
         id=APPLICATION_ID,
         minimum_sqlite_version=MINIMUM_SQLITE_VERSION,
