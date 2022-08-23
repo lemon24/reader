@@ -3,6 +3,7 @@ import enum
 import re
 import traceback
 from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
 from types import MappingProxyType
 from typing import Any
@@ -607,11 +608,15 @@ class EntrySearchResult(_namedtuple_compat):
 
     #: Matching entry metadata, in arbitrary order.
     #: Currently entry.title and entry.feed.user_title/.title.
-    metadata: Mapping[str, HighlightedString] = MappingProxyType({})
+    metadata: Mapping[str, HighlightedString] = field(
+        default_factory=lambda: MappingProxyType({}),
+    )
 
     #: Matching entry content, sorted by relevance.
     #: Any of entry.summary and entry.content[].value.
-    content: Mapping[str, HighlightedString] = MappingProxyType({})
+    content: Mapping[str, HighlightedString] = field(
+        default_factory=lambda: MappingProxyType({}),
+    )
 
     # TODO: entry: Optional[Entry]; model it through typing if possible
 
