@@ -6,6 +6,7 @@ from functools import wraps
 
 import py.path
 import pytest
+import reader_methods
 from utils import monkeypatch_tz
 from utils import reload_module
 
@@ -81,6 +82,8 @@ def storage():
         yield storage
 
 
+# TODO: move to reader_methods
+# TODO: s/call_update_method/update_feed/
 def call_update_feeds(reader, _):
     reader.update_feeds()
 
@@ -165,3 +168,34 @@ def data_dir():
 )
 def chunk_size(request):
     return request.param
+
+
+@pytest.fixture(
+    params=[
+        # defaults not included
+        reader_methods.get_entries_recent,
+        reader_methods.get_entries_random,
+        reader_methods.search_entries_relevant,
+        reader_methods.search_entries_recent,
+        reader_methods.search_entries_random,
+    ],
+)
+def get_entries(request):
+    yield request.param
+
+
+@pytest.fixture(
+    params=[
+        pytest.param(reader_methods.get_entries, marks=pytest.mark.slow),
+        reader_methods.get_entries_recent,
+        pytest.param(
+            reader_methods.get_entries_recent_paginated, marks=pytest.mark.slow
+        ),
+        reader_methods.search_entries_recent,
+        pytest.param(
+            reader_methods.search_entries_recent_paginated, marks=pytest.mark.slow
+        ),
+    ],
+)
+def get_entries_recent(request):
+    yield request.param

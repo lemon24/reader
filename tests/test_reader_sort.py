@@ -3,8 +3,8 @@ from functools import partial
 
 import pytest
 from fakeparser import Parser
-from test_reader import with_call_entries_recent_method
 from utils import naive_datetime
+from utils import rename_argument
 from utils import utc_datetime as datetime
 
 
@@ -18,11 +18,18 @@ with_maybe_published_or_updated = pytest.mark.parametrize(
 )
 
 
-@with_call_entries_recent_method
+# TODO: more recent tests
+#
+# * entry published or updated
+# * feed URL
+# * entry last updated
+# * entry id
+# * after change_feed_url()
+
+
+@rename_argument('get_entries', 'get_entries_recent')
 @with_maybe_published_or_updated
-def test_entries_recent_first_updated(
-    reader, chunk_size, pre_stuff, call_method, entry_kwargs
-):
+def test_entries_recent_first_updated(reader, chunk_size, get_entries, entry_kwargs):
     """All other things being equal, entries should be sorted by first updated."""
     reader._storage.chunk_size = chunk_size
     reader._parser = parser = Parser()
@@ -33,16 +40,14 @@ def test_entries_recent_first_updated(
         parser.entry(1, id, **entry_kwargs)
         reader.update_feeds()
 
-    pre_stuff(reader)
+    get_entries.after_update(reader)
 
-    assert [eval(e.id)[1] for e in call_method(reader)] == [2, 1, 3, 4]
+    assert [eval(e.id)[1] for e in get_entries(reader)] == [2, 1, 3, 4]
 
 
-@with_call_entries_recent_method
+@rename_argument('get_entries', 'get_entries_recent')
 @with_maybe_published_or_updated
-def test_entries_recent_feed_order(
-    reader, chunk_size, pre_stuff, call_method, entry_kwargs
-):
+def test_entries_recent_feed_order(reader, chunk_size, get_entries, entry_kwargs):
     """All other things being equal, entries should be sorted by feed order.
 
     https://github.com/lemon24/reader/issues/87
@@ -57,28 +62,14 @@ def test_entries_recent_feed_order(
 
     reader._now = lambda: naive_datetime(2010, 1, 1)
     reader.update_feeds()
-    pre_stuff(reader)
+    get_entries.after_update(reader)
 
-    assert [eval(e.id)[1] for e in call_method(reader)] == [3, 2, 4, 1]
-
-
-# FIXME:
-# * entry published (or entry updated if published is none)
-# * feed URL
-# * entry last updated
-# * entry id
-# backdated
+    assert [eval(e.id)[1] for e in get_entries(reader)] == [3, 2, 4, 1]
 
 
-@with_call_entries_recent_method
+@rename_argument('get_entries', 'get_entries_recent')
 @pytest.mark.parametrize('reverse', [False, True], ids=['forward', 'reverse'])
-def test_entries_recent_all(
-    reader,
-    chunk_size,
-    pre_stuff,
-    call_method,
-    reverse,
-):
+def test_entries_recent_all(reader, chunk_size, get_entries, reverse):
     """Entries should be sorted descending by (with decreasing priority):
 
     * entry first updated epoch
@@ -200,11 +191,11 @@ def test_entries_recent_all(
     for update in updates:
         update()
 
-    pre_stuff(reader)
+    get_entries.after_update(reader)
 
     reader._now = lambda: naive_datetime(2010, 1, 31)
 
-    assert [eval(e.id) for e in call_method(reader)] == [
+    assert [eval(e.id) for e in get_entries(reader)] == [
         (1, 21),
         (1, 23),
         (1, 22),

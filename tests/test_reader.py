@@ -14,6 +14,14 @@ from fakeparser import BlockingParser
 from fakeparser import FailingParser
 from fakeparser import NotModifiedParser
 from fakeparser import Parser
+from reader_methods import enable_and_update_search
+from reader_methods import get_entries
+from reader_methods import get_entries_random
+from reader_methods import get_entries_recent
+from reader_methods import search_entries
+from reader_methods import search_entries_random
+from reader_methods import search_entries_recent
+from reader_methods import search_entries_relevant
 from utils import make_url_base
 from utils import naive_datetime
 from utils import rename_argument
@@ -1128,79 +1136,6 @@ def get_feeds(reader, **kwargs):
     return reader.get_feeds(**kwargs)
 
 
-def get_entries(reader, **kwargs):
-    return reader.get_entries(**kwargs)
-
-
-def get_entries_recent(reader, **kwargs):
-    return reader.get_entries(sort='recent', **kwargs)
-
-
-def get_entries_recent_paginated(reader, **kwargs):
-    starting_after = None
-    while True:
-        entries = list(
-            reader.get_entries(
-                sort='recent', limit=1, starting_after=starting_after, **kwargs
-            )
-        )
-        if not entries:
-            break
-        yield from entries
-        starting_after = entries[-1]
-
-
-def get_entries_random(reader, **kwargs):
-    return reader.get_entries(sort='random', **kwargs)
-
-
-def enable_and_update_search(reader):
-    reader.enable_search()
-    reader.update_search()
-
-
-def search_entries(reader, **kwargs):
-    return reader.search_entries('entry', **kwargs)
-
-
-def search_entries_relevant(reader, **kwargs):
-    return reader.search_entries('entry', sort='relevant', **kwargs)
-
-
-def search_entries_recent(reader, **kwargs):
-    return reader.search_entries('entry', sort='recent', **kwargs)
-
-
-def search_entries_recent_paginated(reader, **kwargs):
-    starting_after = None
-    while True:
-        entries = list(
-            reader.search_entries(
-                'entry', sort='recent', limit=1, starting_after=starting_after, **kwargs
-            )
-        )
-        if not entries:
-            break
-        yield from entries
-        starting_after = entries[-1]
-
-
-def search_entries_random(reader, **kwargs):
-    return reader.search_entries('entry', sort='random', **kwargs)
-
-
-with_call_entries_recent_method = pytest.mark.parametrize(
-    'pre_stuff, call_method',
-    [
-        (lambda _: None, get_entries),
-        (lambda _: None, get_entries_recent),
-        (lambda _: None, get_entries_recent_paginated),
-        (enable_and_update_search, search_entries_recent),
-        (enable_and_update_search, search_entries_recent_paginated),
-    ],
-)
-
-
 # sqlite3 on PyPy can be brittle
 # (spurious "InterfaceError: Error binding parameter X")
 # and we're doing lots of tiny queries here which may trigger it,
@@ -1208,14 +1143,8 @@ with_call_entries_recent_method = pytest.mark.parametrize(
 @pytest.mark.skipif("sys.implementation.name == 'pypy'")
 @pytest.mark.slow
 @pytest.mark.parametrize('chunk_size', [1, 2, 3, 4])
-@pytest.mark.parametrize(
-    'pre_stuff, call_method',
-    [
-        (lambda _: None, get_entries),
-        (enable_and_update_search, search_entries),
-    ],
-)
-def test_get_entries_random(reader, chunk_size, pre_stuff, call_method):
+@pytest.mark.parametrize('get_entries', [get_entries, search_entries])
+def test_get_entries_random(reader, get_entries, chunk_size):
     """Black box get_entries(sort='random') good enough™ test.
 
     To have a more open-box test we'd need to:
@@ -1244,8 +1173,7 @@ def test_get_entries_random(reader, chunk_size, pre_stuff, call_method):
 
     reader.add_feed(feed.url)
     reader.update_feeds()
-
-    pre_stuff(reader)
+    get_entries.after_update(reader)
 
     # all possible get_entries(sort='random') results
     all_tuples = set(permutations({e.id for e in reader.get_entries()}, chunk_size))
@@ -1253,7 +1181,7 @@ def test_get_entries_random(reader, chunk_size, pre_stuff, call_method):
     # some get_entries(sort='random') results
     # (we call it enough times so it's likely we get all the results)
     random_tuples = Counter(
-        tuple(e.id for e in call_method(reader, sort='random'))
+        tuple(e.id for e in get_entries(reader, sort='random'))
         for _ in range(20 * len(all_tuples))
     )
 
@@ -1555,7 +1483,7 @@ def test_data_hashes_remain_stable():
     )
 
 
-@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
+@pytest.mark.parametrize('feed_type', ['rss', 'atom', 'json'])
 def test_integration(reader, feed_type, data_dir, monkeypatch):
     feed_filename = 'full.{}'.format(feed_type)
     feed_url = str(data_dir.join(feed_filename))
@@ -1729,18 +1657,6 @@ def test_direct_instantiation():
 # since filtering works the same for them.
 
 
-with_call_entries_method = pytest.mark.parametrize(
-    'pre_stuff, call_method',
-    [
-        (lambda _: None, get_entries_recent),
-        (lambda _: None, get_entries_random),
-        (enable_and_update_search, search_entries_relevant),
-        (enable_and_update_search, search_entries_recent),
-        (enable_and_update_search, search_entries_random),
-    ],
-)
-
-
 # TODO: there should probably be a way to get this from the fakeparser
 ALL_IDS = {
     (1, 1),
@@ -1751,7 +1667,6 @@ ALL_IDS = {
 }
 
 
-@with_call_entries_method
 @pytest.mark.parametrize(
     'kwargs, expected',
     [
@@ -1786,7 +1701,7 @@ ALL_IDS = {
         (dict(entry=('inexistent', 'also-inexistent')), set()),
     ],
 )
-def test_entries_filtering(reader, pre_stuff, call_method, kwargs, expected):
+def test_entries_filtering(reader, get_entries, kwargs, expected):
     parser = Parser()
     reader._parser = parser
 
@@ -1803,18 +1718,16 @@ def test_entries_filtering(reader, pre_stuff, call_method, kwargs, expected):
     reader.add_feed(one.url)
     reader.add_feed(two.url)
     reader.update_feeds()
+    get_entries.after_update(reader)
 
     reader.mark_entry_as_read((one.url, one_two.id))
     reader.mark_entry_as_important((one.url, one_three.id))
 
-    pre_stuff(reader)
-
-    assert {eval(e.id) for e in call_method(reader, **kwargs)} == expected
+    assert {eval(e.id) for e in get_entries(reader, **kwargs)} == expected
 
     # TODO: how do we test the combinations between arguments?
 
 
-@with_call_entries_method
 @pytest.mark.parametrize(
     'kwargs',
     [
@@ -1825,7 +1738,7 @@ def test_entries_filtering(reader, pre_stuff, call_method, kwargs, expected):
         dict(entry=object()),
     ],
 )
-def test_entries_filtering_error(reader, pre_stuff, call_method, kwargs):
+def test_entries_filtering_error(reader, get_entries, kwargs):
     parser = Parser()
     reader._parser = parser
 
@@ -1834,11 +1747,10 @@ def test_entries_filtering_error(reader, pre_stuff, call_method, kwargs):
 
     reader.add_feed(one.url)
     reader.update_feeds()
-
-    pre_stuff(reader)
+    get_entries.after_update(reader)
 
     with pytest.raises(ValueError):
-        list(call_method(reader, **kwargs))
+        list(get_entries(reader, **kwargs))
 
 
 # END entry filtering tests
@@ -1885,6 +1797,7 @@ def get_feed_url(feed):
     return eval(feed.url)
 
 
+# TODO: make this a fixture (?)
 # like with_call_entries_method, but include get_feeds()
 with_call_feed_tags_method = pytest.mark.parametrize(
     'pre_stuff, call_method, tags_arg_name, id_from_object, id_from_expected',
