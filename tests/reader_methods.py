@@ -63,8 +63,12 @@ def search_entries_random(reader, **kwargs):
     return reader.search_entries('entry', sort='random', **kwargs)
 
 
+def get_feeds(reader, **kwargs):
+    return reader.get_feeds(**kwargs)
+
+
 for name, obj in dict(globals()).items():
-    if name.startswith('get_entries'):
+    if name.startswith('get_'):
         obj.after_update = do_nothing
 
 for name, obj in dict(globals()).items():

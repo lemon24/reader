@@ -18,6 +18,7 @@ from reader_methods import enable_and_update_search
 from reader_methods import get_entries
 from reader_methods import get_entries_random
 from reader_methods import get_entries_recent
+from reader_methods import get_feeds
 from reader_methods import search_entries
 from reader_methods import search_entries_random
 from reader_methods import search_entries_recent
@@ -1132,10 +1133,6 @@ class FakeNow:
         return self.now
 
 
-def get_feeds(reader, **kwargs):
-    return reader.get_feeds(**kwargs)
-
-
 # sqlite3 on PyPy can be brittle
 # (spurious "InterfaceError: Error binding parameter X")
 # and we're doing lots of tiny queries here which may trigger it,
@@ -1781,62 +1778,22 @@ def test_make_reader_feed_root(monkeypatch, make_reader, kwargs, feed_root):
     assert default_parser.feed_root == feed_root
 
 
-def get_entry_id(entry):
-    return eval(entry.id)
-
-
-def noop(thing):
-    return thing
-
-
-def get_feeds(reader, **kwargs):
-    return reader.get_feeds(**kwargs)
-
-
-def get_feed_url(feed):
-    return eval(feed.url)
-
-
-# TODO: make this a fixture (?)
-# like with_call_entries_method, but include get_feeds()
 with_call_feed_tags_method = pytest.mark.parametrize(
-    'pre_stuff, call_method, tags_arg_name, id_from_object, id_from_expected',
+    # tags_arg_name is exposed so we can later test get_entries(tags=...)
+    'call_method, tags_arg_name',
     [
-        (lambda _: None, get_entries_recent, 'feed_tags', get_entry_id, noop),
-        (lambda _: None, get_entries_random, 'feed_tags', get_entry_id, noop),
-        (
-            enable_and_update_search,
-            search_entries_relevant,
-            'feed_tags',
-            get_entry_id,
-            noop,
-        ),
-        (
-            enable_and_update_search,
-            search_entries_recent,
-            'feed_tags',
-            get_entry_id,
-            noop,
-        ),
-        (
-            enable_and_update_search,
-            search_entries_random,
-            'feed_tags',
-            get_entry_id,
-            noop,
-        ),
+        (get_entries_recent, 'feed_tags'),
+        pytest.param(get_entries_random, 'feed_tags', marks=pytest.mark.slow),
+        (search_entries_relevant, 'feed_tags'),
+        pytest.param(search_entries_recent, 'feed_tags', marks=pytest.mark.slow),
+        pytest.param(search_entries_random, 'feed_tags', marks=pytest.mark.slow),
         # TODO: maybe test all the get_feeds sort orders
-        (lambda _: None, get_feeds, 'tags', get_feed_url, lambda t: t[0]),
+        (get_feeds, 'tags'),
     ],
 )
 
 
-ALL_IDS = {
-    (1, 1),
-    (1, 2),
-    (2, 1),
-    (3, 1),
-}
+ALL_IDS = {(1, 1), (1, 2), (2, 1), (3, 1)}
 
 
 @with_call_feed_tags_method
@@ -1877,45 +1834,44 @@ ALL_IDS = {
         (([True, '-first'],), {(2, 1)}),
     ],
 )
-def test_filtering_tags(
-    reader,
-    pre_stuff,
-    call_method,
-    tags_arg_name,
-    id_from_object,
-    id_from_expected,
-    args,
-    expected,
-):
+def test_filtering_tags(reader, call_method, tags_arg_name, args, expected):
     reader._parser = parser = Parser()
 
     one = parser.feed(1, datetime(2010, 1, 1))  # tag, first
-    one_one = parser.entry(1, 1, datetime(2010, 1, 1))
-    one_two = parser.entry(1, 2, datetime(2010, 2, 1))
+    one_one = parser.entry(1, '1', datetime(2010, 1, 1))
+    one_two = parser.entry(1, '2', datetime(2010, 2, 1))
 
     two = parser.feed(2, datetime(2010, 1, 1))  # tag, second
-    two_one = parser.entry(2, 1, datetime(2010, 1, 1))
+    two_one = parser.entry(2, '1', datetime(2010, 1, 1))
 
     three = parser.feed(3, datetime(2010, 1, 1))  # <no tags>
-    three_one = parser.entry(3, 1, datetime(2010, 1, 1))
+    three_one = parser.entry(3, '1', datetime(2010, 1, 1))
 
     for feed in one, two, three:
         reader.add_feed(feed)
 
     reader.update_feeds()
+    call_method.after_update(reader)
 
     reader.set_tag(one, 'tag')
     reader.set_tag(one, 'first')
     reader.set_tag(two, 'tag')
     reader.set_tag(two, 'second')
 
-    pre_stuff(reader)
+    if '_entries' in call_method.__name__:
+        resource_id_length = 2
+    elif '_feeds' in call_method.__name__:
+        resource_id_length = 1
+    else:
+        assert False, call_method
 
     assert len(args) <= 1
     kwargs = {tags_arg_name: a for a in args}
 
-    actual_set = set(map(id_from_object, call_method(reader, **kwargs)))
-    expected_set = set(map(id_from_expected, expected))
+    actual_set = {
+        tuple(map(eval, o.resource_id)) for o in call_method(reader, **kwargs)
+    }
+    expected_set = {t[:resource_id_length] for t in expected}
     assert actual_set == expected_set, kwargs
 
 
