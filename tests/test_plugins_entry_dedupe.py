@@ -669,3 +669,33 @@ def test_entry_tags_copying(make_reader, db_path, tags):
     assert not list(reader.get_tag_keys(one))
     assert not list(reader.get_tag_keys(two))
     assert dict(reader.get_tags(three)) == expected_tags
+
+
+# TODO: with_maybe_published_or_updated
+def test_recent_sort_copying(make_reader, db_path):
+    reader = make_reader(db_path)
+    reader._parser = parser = Parser()
+    reader.add_feed(parser.feed(1))
+
+    parser.entry(1, 1, title='title', summary='summary')
+    reader._now = lambda: naive_datetime(2010, 1, 10)
+    reader.update_feeds()
+
+    parser.entry(1, 2, title='title', summary='summary')
+    parser.entry(1, 3, title='other')
+    reader._now = lambda: naive_datetime(2010, 1, 20)
+    reader.update_feeds()
+
+    reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
+    reader._parser = parser
+
+    del parser.entries[1][1]
+    del parser.entries[1][2]
+    four = parser.entry(1, 4, title='title', summary='summary')
+    reader._now = lambda: naive_datetime(2010, 2, 1)
+    reader.update_feeds()
+
+    assert [eval(e.id)[1] for e in reader.get_entries(sort='recent')] == [3, 4]
+
+    actual_recent_sort = reader._storage.get_entry_recent_sort(four.resource_id)
+    assert actual_recent_sort == naive_datetime(2010, 1, 10)

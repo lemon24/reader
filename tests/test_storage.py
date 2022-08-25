@@ -208,6 +208,14 @@ def mark_as_important(storage, feed, entry):
     storage.mark_as_important(feed.url, entry.id, 1, None)
 
 
+def get_entry_recent_sort(storage, feed, entry):
+    storage.get_entry_recent_sort(entry.resource_id)
+
+
+def set_entry_recent_sort(storage, feed, entry):
+    storage.set_entry_recent_sort(entry.resource_id, datetime(2010, 1, 1))
+
+
 def update_feed(storage, feed, entry):
     storage.update_feed(FeedUpdateIntent(feed.url, entry.updated, feed=feed))
 
@@ -309,6 +317,8 @@ def get_entry_last(storage, feed, entry):
         mark_as_stale,
         mark_as_read,
         mark_as_important,
+        get_entry_recent_sort,
+        set_entry_recent_sort,
         update_feed,
         update_feed_last_updated,
         add_or_update_entry,
@@ -614,3 +624,19 @@ def test_migration_minimum_version(db_path, request):
 
     assert 'no migration' in str(excinfo.value)
     assert '://reader.readthedocs.io/en/latest/changelog.html' in str(excinfo.value)
+
+
+@rename_argument('storage', 'storage_with_two_entries')
+def test_get_set_recent_sort(storage):
+    assert storage.get_entry_recent_sort(('feed', 'one')) == datetime(2010, 1, 2)
+
+    storage.set_entry_recent_sort(('feed', 'one'), datetime(2010, 1, 3))
+    assert storage.get_entry_recent_sort(('feed', 'one')) == datetime(2010, 1, 3)
+
+    with pytest.raises(EntryNotFoundError) as excinfo:
+        storage.get_entry_recent_sort(('feed', 'xxx'))
+    assert excinfo.value.resource_id == ('feed', 'xxx')
+
+    with pytest.raises(EntryNotFoundError) as excinfo:
+        storage.set_entry_recent_sort(('feed', 'xxx'), datetime(2010, 1, 1))
+    assert excinfo.value.resource_id == ('feed', 'xxx')

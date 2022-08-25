@@ -675,6 +675,40 @@ class Storage:
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
+    # TODO: (maybe) unified pair of methods to get/set "hidden" entry attributes
+
+    @wrap_exceptions(StorageError)
+    def get_entry_recent_sort(self, entry: Tuple[str, str]) -> datetime:
+        feed_url, entry_id = entry
+        rows = self.get_db().execute(
+            """
+            SELECT recent_sort
+            FROM entries
+            WHERE feed = :feed_url AND id = :entry_id;
+            """,
+            dict(feed_url=feed_url, entry_id=entry_id),
+        )
+        return zero_or_one(
+            (r[0] for r in rows), lambda: EntryNotFoundError(feed_url, entry_id)
+        )
+
+    @wrap_exceptions(StorageError)
+    def set_entry_recent_sort(
+        self, entry: Tuple[str, str], recent_sort: datetime
+    ) -> None:
+        feed_url, entry_id = entry
+        with self.get_db() as db:
+            cursor = db.execute(
+                """
+                UPDATE entries
+                SET
+                    recent_sort = :recent_sort
+                WHERE feed = :feed_url AND id = :entry_id;
+                """,
+                dict(feed_url=feed_url, entry_id=entry_id, recent_sort=recent_sort),
+            )
+        rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
+
     @wrap_exceptions(StorageError)
     def update_feed(self, intent: FeedUpdateIntent) -> None:
         url, last_updated, feed, http_etag, http_last_modified, last_exception = intent

@@ -472,6 +472,13 @@ def _make_actions(reader, entry, duplicates):
         yield partial(reader.set_tag, entry, key, value)
 
     duplicate_ids = [d.resource_id for d in duplicates]
+
+    yield partial(
+        reader._storage.set_entry_recent_sort,
+        entry.resource_id,
+        min(map(reader._storage.get_entry_recent_sort, duplicate_ids)),
+    )
+
     yield partial(reader._storage.delete_entries, duplicate_ids)
 
 
