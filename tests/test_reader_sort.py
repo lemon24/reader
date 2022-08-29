@@ -24,7 +24,6 @@ with_maybe_published_or_updated = pytest.mark.parametrize(
 # * feed URL
 # * entry last updated
 # * entry id
-# * after change_feed_url()
 
 
 @rename_argument('get_entries', 'get_entries_recent')
@@ -208,4 +207,39 @@ def test_entries_recent_all(reader, chunk_size, get_entries, reverse):
         (1, 7),
         (1, 6),
         (1, 2),
+    ]
+
+
+@rename_argument('get_entries', 'get_entries_recent')
+def test_entries_recent_new_feed(reader, get_entries):
+    """Entries from the first update should be sorted by published/updated."""
+
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1)
+    reader.add_feed(one)
+    parser.entry(1, 1, published=datetime(2010, 1, 30))
+    parser.entry(1, 2, published=datetime(2010, 1, 10))
+    parser.entry(1, 3, published=datetime(2010, 1, 20))
+    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    # update after change_feed_url() also counts as first update
+    two = parser.feed(2)
+    parser.entry(2, 4, published=datetime(2010, 1, 15))
+    parser.entry(2, 5, published=datetime(2010, 1, 5))
+    parser.entry(2, 6, published=datetime(2010, 1, 25))
+    reader.change_feed_url(one, two)
+    reader._now = lambda: naive_datetime(2010, 3, 1)
+    reader.update_feeds()
+
+    get_entries.after_update(reader)
+
+    assert [eval(e.id) for e in get_entries(reader)] == [
+        (1, 1),
+        (2, 6),
+        (1, 3),
+        (2, 4),
+        (1, 2),
+        (2, 5),
     ]
