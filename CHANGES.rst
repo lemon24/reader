@@ -9,7 +9,7 @@ Changelog
 Version 3.1
 -----------
 
-Unreleased
+Released 2022-08-29
 
 * Drop :mod:`~reader.plugins.readtime` plugin dependency
   on `readtime <https://github.com/alanhamlett/readtime_>`_
