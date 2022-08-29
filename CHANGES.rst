@@ -18,6 +18,13 @@ Unreleased
   The ``readtime`` extra is deprecated,
   but remains available to avoid breaking dependent packages.
   (:issue:`286`)
+* Sort entries by added date most of the time,
+  with the exception of those imported on the first update.
+  Previously, entries would be sorted by added
+  only if they were published less than 7 days ago,
+  causing entries that appear in the feed months after their published
+  to never appear at the top (so the user would never see them).
+  (:issue:`279`)
 
 
 Version 3.0

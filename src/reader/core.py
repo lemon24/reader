@@ -1106,19 +1106,26 @@ class Reader:
 
         ``'recent'``
 
-            Most recent first. Currently, that means:
+            Most recent first. That is:
 
-            * by import date for entries published less than 7 days ago
-            * by published date otherwise (if an entry does not have
-              :attr:`~Entry.published`, :attr:`~Entry.updated` is used)
+            * by published date for entries imported on the first update
+              (if an entry does not have :attr:`~Entry.published`,
+              :attr:`~Entry.updated` is used)
+            * by added date for entries imported after that
 
             This is to make sure newly imported entries appear at the top
-            regardless of when the feed says they were published
-            (sometimes, it lies by a day or two).
+            regardless of when the feed says they were published,
+            while not having all the old entries at the top for new feeds.
 
             .. note::
 
                 The algorithm for "recent" is a heuristic and may change over time.
+
+            .. versionchanged:: 3.1
+                Sort entries by added date most of the time,
+                with the exception of those imported on the first update.
+                Previously, entries would be sorted by added
+                only if they were published less than 7 days ago.
 
         ``'random'``
 
@@ -1665,6 +1672,12 @@ class Reader:
             for details on what *recent* means.
 
             .. versionadded:: 1.4
+
+            .. versionchanged:: 3.1
+                Sort entries by added date most of the time,
+                with the exception of those imported on the first update.
+                Previously, entries would be sorted by added
+                only if they were published less than 7 days ago.
 
         ``'random'``
 
