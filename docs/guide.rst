@@ -320,8 +320,8 @@ To change the URL of a feed in-place, use :meth:`~Reader.change_feed_url`::
 
 
 Sometimes, the id of the entries changes as well;
-you can handle duplicate entries by using a :doc:`plugin <plugins>`
-like ``feed_entry_dedupe``.
+you can handle duplicates by using
+the :mod:`~reader.plugins.entry_dedupe` plugin.
 
 
 

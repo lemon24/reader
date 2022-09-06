@@ -301,7 +301,7 @@ def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
 
 MISSING_MIGRATION_DETAIL = (
     "; you may have skipped some required migrations, see "
-    "https://reader.readthedocs.io/en/latest/changelog.html#removed-migrations-2-0"
+    "https://reader.readthedocs.io/en/latest/changelog.html#removed-migrations-3-0"
 )
 
 
