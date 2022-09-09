@@ -409,7 +409,7 @@ class Enclosure(_namedtuple_compat):
 
     """Data type representing an external file."""
 
-    # WARNING: When changing attributes, keep content_from_obj in sync.
+    # WARNING: When changing attributes, keep enclosure_from_obj in sync.
 
     #: The file URL.
     href: str
@@ -873,12 +873,34 @@ class UpdatedFeed:
 
     #: The number of new entries
     #: (entries that did not previously exist in storage).
-    new: int
+    #:
+    #: .. versionchanged:: 3.2
+    #:  This field is now optional, and defaults to 0.
+    new: int = 0
 
     #: The number of modified entries
     #: (entries that existed in storage,
     #: but had different data than the corresponding feed file entry.)
-    modified: int
+    #:
+    #: .. versionchanged:: 3.2
+    #:  This field is now optional, and defaults to 0.
+    modified: int = 0
+
+    #: The number of unmodified entries
+    #: (entries that existed in storage,
+    #: but had the same data in the corresponding feed file entry.)
+    #:
+    #: .. versionadded:: 3.2
+    unmodified: int = 0
+
+    @property
+    def total(self) -> int:
+        """The total number of entries in the retrieved feed.
+
+        .. versionadded:: 3.2
+
+        """
+        return self.new + self.modified + self.unmodified
 
 
 class UpdateResult(NamedTuple):

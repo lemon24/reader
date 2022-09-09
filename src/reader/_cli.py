@@ -298,10 +298,16 @@ def iter_update_status(it, length):
 
         if result.not_modified:
             status = 'not modified'
+            if result.updated_feed:
+                status += f", {result.value.total} total"
         elif result.error:
             status = red(result.error)
         else:
-            status = green(f"{result.value.new} new, {result.value.modified} modified")
+            status = green(
+                f"{result.value.new} new, "
+                f"{result.value.modified} modified, "
+                f"{result.value.total} total"
+            )
 
         click.echo(f"{elapsed}\t{pos}\t{result.url}\t{status}")
 

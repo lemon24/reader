@@ -1016,7 +1016,7 @@ def test_update_feeds_iter(reader, call_update_iter_method):
     }
 
     assert next(call_update_iter_method(reader)) == UpdateResult(
-        '1', UpdatedFeed(url='1', new=0, modified=0)
+        '1', UpdatedFeed(url='1', new=0, modified=0, unmodified=2)
     )
 
     one_two = parser.entry(1, 2, datetime(2010, 2, 2), title='new title')
@@ -1029,8 +1029,8 @@ def test_update_feeds_iter(reader, call_update_iter_method):
     rv = dict(call_update_iter_method(reader))
     assert set(rv) == set('123')
 
-    assert rv['1'] == UpdatedFeed(url='1', new=2, modified=1)
-    assert rv['2'] == UpdatedFeed(url='2', new=0, modified=0)
+    assert rv['1'] == UpdatedFeed(url='1', new=2, modified=1, unmodified=1)
+    assert rv['2'] == UpdatedFeed(url='2', new=0, modified=0, unmodified=1)
 
     assert isinstance(rv['3'], ParseError)
     assert rv['3'].url == '3'

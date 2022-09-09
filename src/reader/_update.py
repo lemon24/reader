@@ -22,6 +22,7 @@ from ._types import FeedData
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import ParsedFeed
+from ._utils import count_consumed
 from ._utils import PrefixLogger
 from .exceptions import FeedNotFoundError
 from .exceptions import ParseError
@@ -411,12 +412,18 @@ class Pipeline:
         try:
             # assemble pipeline
             entry_pairs = self.get_entry_pairs(result)
+
             if result and not isinstance(result, Exception):
                 entry_pairs = self.parser.process_entry_pairs(
                     feed.url, result.mime_type, entry_pairs
                 )
+                entry_pairs, get_total_count = count_consumed(entry_pairs)
+            else:
+                get_total_count = lambda: 0  # noqa: E731
+
             intents = make_intents(entry_pairs)
             counts = self.update_feed(feed.url, *intents)
+            total = get_total_count()
 
         except Exception as e:
             return feed.url, e
@@ -424,7 +431,7 @@ class Pipeline:
         if not result or isinstance(result, Exception):
             return feed.url, result
 
-        return feed.url, UpdatedFeed(feed.url, *counts)
+        return feed.url, UpdatedFeed(feed.url, *counts, total - sum(counts))
 
     def get_entry_pairs(
         self, result: Union[Optional[ParsedFeed], ParseError]

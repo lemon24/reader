@@ -324,6 +324,11 @@ def test_content_is_html(content, expected):
     assert content.is_html == expected
 
 
+def test_updated_feed_properties():
+    feed = UpdatedFeed('url', new=1, modified=2, unmodified=3)
+    assert feed.total == 6
+
+
 def test_update_result_properties():
     feed = UpdatedFeed('url', 0, 1)
     result = UpdateResult('url', feed)

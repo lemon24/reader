@@ -11,6 +11,13 @@ Version 3.2
 
 Unreleased
 
+* :class:`UpdatedFeed` changes:
+  added field :attr:`~UpdatedFeed.unmodified`
+  and property :attr:`~UpdatedFeed.total`;
+  fields :attr:`~UpdatedFeed.new` and :attr:`~UpdatedFeed.modified`
+  became optional.
+  (:issue:`96`)
+
 
 Version 3.1
 -----------

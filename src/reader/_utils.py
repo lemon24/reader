@@ -134,6 +134,21 @@ def chunks(n: int, iterable: Iterable[_T]) -> Iterable[Iterable[_T]]:
         yield itertools.chain([first], chunk)
 
 
+def count_consumed(it: Iterable[_T]) -> Tuple[Iterable[_T], Callable[[], int]]:
+    consumed = 0
+
+    def wrapper() -> Iterable[_T]:
+        nonlocal consumed
+        for e in it:
+            yield e
+            consumed += 1
+
+    def get_count() -> int:
+        return consumed
+
+    return wrapper(), get_count
+
+
 @contextmanager
 def make_pool_map(workers: int) -> Iterator[F]:
     pool = multiprocessing.dummy.Pool(workers)
