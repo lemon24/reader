@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import pytest
 from fakeparser import FailingParser
 from fakeparser import NotModifiedParser
 from fakeparser import Parser
@@ -44,8 +45,6 @@ def test_after_entry_update_hooks(reader):
         (second_plugin, one, EntryUpdateStatus.MODIFIED),
     ]
     assert set(e.id for e in reader.get_entries()) == {'1, 1', '1, 2'}
-
-    # TODO: What is the expected behavior if a plugin raises an exception?
 
 
 def test_after_entry_update_hooks_add_entry(reader):
@@ -157,8 +156,6 @@ def test_feed_update_hooks(reader):
         (second_plugin, one.url),
     ]
 
-    # TODO: What is the expected behavior if a plugin raises an exception?
-
 
 def test_feeds_update_hooks(reader):
     reader._parser = parser = Parser()
@@ -235,3 +232,41 @@ def test_feeds_update_hooks(reader):
 
 
 # TODO: test relative order of different hooks
+
+
+HOOK_NAMES = """
+after_entry_update_hooks
+before_feed_update_hooks
+after_feed_update_hooks
+before_feeds_update_hooks
+after_feeds_update_hooks
+""".split()
+
+
+@pytest.mark.parametrize('hook_name', HOOK_NAMES)
+def test_update_hook_unepected_exception(reader, call_update_method, hook_name):
+    if call_update_method.__name__ == 'call_update_feed' and '_feeds_' in hook_name:
+        pytest.skip("does not apply")
+
+    reader._parser = parser = Parser()
+    for feed_id in 1, 2, 3:
+        reader.add_feed(parser.feed(feed_id))
+    parser.entry(2, 1)
+
+    def hook(reader, obj=None, *_):
+        if '_entry_' in hook_name:
+            feed_url = obj.feed_url
+        elif '_feed_' in hook_name:
+            feed_url = obj
+        elif '_feeds_' in hook_name:
+            feed_url = None
+        else:
+            assert False, hook_name
+        if not feed_url or feed_url == '2':
+            raise Exception('error')
+
+    getattr(reader, hook_name).append(hook)
+
+    with pytest.raises(Exception) as excinfo:
+        call_update_method(reader, '2')
+    assert excinfo.value.args[0] == 'error'
