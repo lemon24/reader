@@ -17,6 +17,8 @@ Unreleased
   fields :attr:`~UpdatedFeed.new` and :attr:`~UpdatedFeed.modified`
   became optional.
   (:issue:`96`)
+* Fix CLI bug suppressing the traceback of :exc:`ReaderError`s,
+  even if they were due to a bug.
 
 
 Version 3.1

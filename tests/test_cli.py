@@ -9,6 +9,7 @@ from click.testing import CliRunner
 from utils import make_url_base
 
 from reader import Reader
+from reader import ReaderError
 from reader._cli import cli
 from reader._cli import config_option
 from reader.types import MISSING
@@ -157,6 +158,44 @@ def test_cli_plugin(db_path, monkeypatch):
 
     assert result.exit_code != 0
     assert "plug-in error" in result.output
+
+
+def raise_reader_exception_on_update_plugin(reader):
+    def hook(*args):
+        raise ReaderError("plug-in error")
+
+    reader.after_entry_update_hooks.append(hook)
+
+
+@pytest.mark.slow
+def test_cli_plugin_update_exception(db_path, data_dir, monkeypatch):
+    monkeypatch.syspath_prepend(str(py.path.local(__file__).dirpath()))
+
+    runner = CliRunner()
+
+    def invoke(*args):
+        return runner.invoke(
+            cli,
+            (
+                '--db',
+                db_path,
+                '--feed-root',
+                '',
+                '--plugin',
+                'test_cli:raise_reader_exception_on_update_plugin',
+            )
+            + args,
+        )
+
+    result = invoke('add', str(data_dir.join('full.atom')))
+    assert result.exit_code == 0
+    result = invoke('add', str(data_dir.join('full.rss')))
+    assert result.exit_code == 0
+
+    result = invoke('update', '-v')
+    assert result.exit_code != 0
+    assert isinstance(result.exception, ReaderError)
+    assert result.exception.message == "plug-in error"
 
 
 store_reader_plugin = None

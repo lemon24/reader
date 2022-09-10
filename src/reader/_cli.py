@@ -11,7 +11,6 @@ import click
 import yaml
 
 import reader
-from . import ReaderError
 from . import StorageError
 from ._config import make_reader_config
 from ._config import make_reader_from_config
@@ -132,9 +131,8 @@ def log_command(fn):
                 e,
                 exc_info=True,
             )
-            if not isinstance(e, ReaderError):
-                raise
-            click.get_current_context().exit(1)
+            # always raise, even if it's ReaderError (it could be due to a bug)
+            raise
 
     return wrapper
 
