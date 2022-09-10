@@ -2,6 +2,7 @@ import functools
 import json
 import logging
 import os.path
+import shutil
 import sys
 import traceback
 from contextlib import nullcontext
@@ -354,7 +355,7 @@ def update(reader, url, new_only, workers, verbose):
 
     def feed_stats(width=None):
         if not width:
-            width, _ = click.get_terminal_size()
+            width, _ = shutil.get_terminal_size()
         if width < 80:
             return ''
         if width < 105:

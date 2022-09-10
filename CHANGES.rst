@@ -17,8 +17,9 @@ Unreleased
   fields :attr:`~UpdatedFeed.new` and :attr:`~UpdatedFeed.modified`
   became optional.
   (:issue:`96`)
-* Fix CLI bug suppressing the traceback of :exc:`ReaderError`s,
-  even if they were due to a bug.
+* In the CLI, don't suppress the traceback of :exc:`ReaderError`,
+  since it would also suppress it for bugs.
+* In the CLI, stop using deprecated :func:`click.get_terminal_size`.
 
 
 Version 3.1
