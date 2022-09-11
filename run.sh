@@ -159,7 +159,7 @@ function ci-install {
 }
 
 function ci-run {
-    coverage-run && coverage-report && typing
+    coverage-run -v && coverage-report && typing
 }
 
 
