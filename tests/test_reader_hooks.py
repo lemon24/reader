@@ -243,6 +243,10 @@ after_feeds_update_hooks
 """.split()
 
 
+@pytest.mark.skipif(
+    "sys.implementation.name == 'pypy'",
+    reason="https://github.com/lemon24/reader/issues/293",
+)
 @pytest.mark.parametrize('hook_name', HOOK_NAMES)
 def test_update_hook_unexpected_exception(reader, call_update_method, hook_name):
     if call_update_method.__name__ == 'call_update_feed' and '_feeds_' in hook_name:
