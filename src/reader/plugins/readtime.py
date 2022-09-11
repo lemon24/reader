@@ -44,12 +44,15 @@ The read time for existing entries is backfilled as follows:
     Implemented for https://github.com/lemon24/reader/issues/275
 
 """
+import logging
 import math
 import re
 
 from reader._html_utils import get_soup
 from reader._html_utils import remove_nontext_elements
 from reader.types import _get_entry_content
+
+log = logging.getLogger('reader.plugins.readtime')
 
 
 _TAG = 'readtime'
@@ -101,6 +104,7 @@ def _readtime_of_strings(strings):
 
 def _after_entry_update(reader, entry, status):
     key = reader.make_reader_reserved_name(_TAG)
+    log.info("readtime: setting %s for %s (entry update hook)", key, entry.resource_id)
     reader.set_tag(entry, key, _readtime_of_entry(entry))
 
 
@@ -110,6 +114,9 @@ def _before_feeds_update(reader):
     if reader.get_tag((), key, None):
         return
 
+    log.info(
+        "readtime: global %s not found, setting all feeds to backfill:pending", key
+    )
     for feed in reader.get_feeds():
         reader.set_tag(feed, key, {'backfill': 'pending'})
 
@@ -126,18 +133,23 @@ def _after_feeds_update(reader):
         return
 
     for feed in reader.get_feeds(updates_enabled=False):
-        _backfill_feed(reader, feed, key)
+        _backfill_feed(reader, feed.url, key)
 
+    log.info("readtime: setting global %s to backfill:done", key)
     reader.set_tag((), key, {'backfill': 'done'})
 
 
 def _backfill_feed(reader, feed, key):
     if not reader.get_tag(feed, key, None):
         return
+
     for entry in reader.get_entries(feed=feed):
         if reader.get_tag(entry, key, None):
             continue
+        log.info("readtime: setting %s for %s (backfill)", key, entry.resource_id)
         reader.set_tag(entry, key, _readtime_of_entry(entry))
+
+    log.info("readtime: clearing  %s for %s", key, feed)
     reader.delete_tag(feed, key)
 
 
