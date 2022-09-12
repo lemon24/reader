@@ -116,6 +116,7 @@ from itertools import groupby
 from typing import NamedTuple
 
 from reader._utils import BetterStrPartial as partial
+from reader.exceptions import EntryNotFoundError
 from reader.exceptions import TagNotFoundError
 from reader.types import EntryUpdateStatus
 from reader.types import Feed
@@ -479,6 +480,7 @@ def _make_actions(reader, entry, duplicates):
         min(map(reader._storage.get_entry_recent_sort, duplicate_ids)),
     )
 
+    # WARNING: any changes to the duplicates must happen at the end
     yield partial(reader._storage.delete_entries, duplicate_ids)
 
 
@@ -496,10 +498,18 @@ def _dedupe_entries(reader, entry, duplicates, *, dry_run):
 
     # don't do anything until we know all actions were generated successfully
     actions = list(_make_actions(reader, entry, duplicates))
+    # FIXME: what if this fails with EntryNotFoundError?
+    # either the entry was deleted (abort),
+    # or a duplicate was deleted (start over with the other duplicates, if any)
 
-    for action in actions:
-        action()
-        log.info("entry_dedupe: %s", action)
+    try:
+        for action in actions:
+            action()
+            log.info("entry_dedupe: %s", action)
+    except EntryNotFoundError as e:
+        if entry.resource_id != e.resource_id:  # pragma: no cover
+            raise
+        log.info("entry_dedupe: entry %r was deleted, aborting", entry.resource_id)
 
 
 def init_reader(reader):

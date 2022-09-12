@@ -699,3 +699,27 @@ def test_recent_sort_copying(make_reader, db_path):
 
     actual_recent_sort = reader._storage.get_entry_recent_sort(four.resource_id)
     assert actual_recent_sort == naive_datetime(2010, 1, 10)
+
+
+@pytest.mark.parametrize('update_after_one', [False, True])
+def test_duplicates_in_new_feed(make_reader, update_after_one):
+    reader = make_reader(':memory:', plugins=['reader.entry_dedupe'])
+    reader._parser = parser = Parser()
+
+    reader.add_feed(parser.feed(1))
+    one = parser.entry(1, 1, title='title', summary='summary')
+
+    if update_after_one:
+        reader.update_feeds()
+        parser.entries[1].clear()
+        reader.mark_entry_as_read(one)
+        reader.mark_entry_as_important(one)
+        reader.set_tag(one, 'key', 'value')
+
+    parser.entry(1, 2, title='title', summary='summary')
+    parser.entry(1, 3, title='title', summary='summary')
+
+    # shouldn't fail
+    reader.update_feeds()
+
+    assert [eval(e.id)[1] for e in reader.get_entries()] == [3]
