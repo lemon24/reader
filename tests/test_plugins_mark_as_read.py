@@ -74,3 +74,44 @@ def test_regex_mark_as_read_bad_metadata(make_reader, value):
     reader.update_feeds()
 
     assert [e.read for e in reader.get_entries()] == [False]
+
+
+def test_entry_deleted(make_reader):
+    def delete_entry_plugin(reader):
+        def hook(reader, entry, _):
+            if entry.resource_id == ('1', '1, 1'):
+                reader._storage.delete_entries([entry.resource_id])
+
+        reader.after_entry_update_hooks.append(hook)
+
+    reader = make_reader(
+        ':memory:', plugins=[delete_entry_plugin, 'reader.mark_as_read']
+    )
+    reader._parser = parser = Parser()
+    one = parser.feed(1)
+    reader.add_feed(one)
+    reader.set_tag(one, '.reader.mark-as-read', {'title': ['one']})
+    parser.entry(1, 1, title='one')
+    parser.entry(1, 2, title='two')
+
+    # shouldn't fail
+    reader.update_feeds()
+
+    assert {eval(e.id)[1] for e in reader.get_entries()} == {2}
+
+
+def test_missing_title(make_reader):
+    reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
+    reader._parser = parser = Parser()
+    one = parser.feed(1)
+    reader.add_feed(one)
+    parser.entry(1, 1, title=None)
+    parser.entry(1, 2, title='')
+    parser.entry(1, 3, title='three')
+
+    reader.set_tag(one, '.reader.mark-as-read', {'title': ['^$']})
+
+    # shouldn't fail
+    reader.update_feeds()
+
+    assert {eval(e.id)[1] for e in reader.get_entries(read=True)} == {1, 2}

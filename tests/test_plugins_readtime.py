@@ -184,3 +184,23 @@ def test_readtime(text, is_html, expected_seconds):
     )
 
     assert readtime(entry) == {'seconds': expected_seconds}
+
+
+def test_entry_deleted(make_reader):
+    def delete_entry_plugin(reader):
+        def hook(reader, entry, _):
+            if entry.resource_id == ('1', '1, 1'):
+                reader._storage.delete_entries([entry.resource_id])
+
+        reader.after_entry_update_hooks.append(hook)
+
+    reader = make_reader(':memory:', plugins=[delete_entry_plugin, 'reader.readtime'])
+    reader._parser = parser = Parser()
+    reader.add_feed(parser.feed(1))
+    parser.entry(1, 1)
+    parser.entry(1, 2)
+
+    # shouldn't fail
+    reader.update_feeds()
+
+    assert {eval(e.id)[1] for e in reader.get_entries()} == {2}

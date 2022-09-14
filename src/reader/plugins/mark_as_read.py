@@ -41,6 +41,7 @@ tag to something like::
 import logging
 import re
 
+from reader.exceptions import EntryNotFoundError
 from reader.types import EntryUpdateStatus
 
 # avoid circular imports
@@ -74,10 +75,15 @@ def _mark_as_read(reader, entry, status):
     key = reader.make_reader_reserved_name(_CONFIG_TAG)
     patterns = _get_config(reader, entry.feed_url, key, 'title')
 
-    for pattern in patterns or ():
-        if re.search(pattern, entry.title):
-            reader._mark_entry_as_dont_care(entry)
-            return
+    try:
+        for pattern in patterns or ():
+            if re.search(pattern, entry.title or ''):
+                reader._mark_entry_as_dont_care(entry)
+                return
+    except EntryNotFoundError as e:
+        if entry.resource_id != e.resource_id:  # pragma: no cover
+            raise
+        log.info("entry %r was deleted, skipping", entry.resource_id)
 
 
 def init_reader(reader):

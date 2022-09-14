@@ -50,6 +50,7 @@ import re
 
 from reader._html_utils import get_soup
 from reader._html_utils import remove_nontext_elements
+from reader.exceptions import EntryNotFoundError
 from reader.types import _get_entry_content
 
 log = logging.getLogger('reader.plugins.readtime')
@@ -105,7 +106,7 @@ def _readtime_of_strings(strings):
 def _after_entry_update(reader, entry, status):
     key = reader.make_reader_reserved_name(_TAG)
     log.info("readtime: setting %s for %s (entry update hook)", key, entry.resource_id)
-    reader.set_tag(entry, key, _readtime_of_entry(entry))
+    _set_entry_readtime(reader, entry, key)
 
 
 def _before_feeds_update(reader):
@@ -147,10 +148,19 @@ def _backfill_feed(reader, feed, key):
         if reader.get_tag(entry, key, None):
             continue
         log.info("readtime: setting %s for %s (backfill)", key, entry.resource_id)
-        reader.set_tag(entry, key, _readtime_of_entry(entry))
+        _set_entry_readtime(reader, entry, key)
 
     log.info("readtime: clearing  %s for %s", key, feed)
     reader.delete_tag(feed, key)
+
+
+def _set_entry_readtime(reader, entry, key):
+    try:
+        reader.set_tag(entry, key, _readtime_of_entry(entry))
+    except EntryNotFoundError as e:
+        if entry.resource_id != e.resource_id:  # pragma: no cover
+            raise
+        log.info("readtime: entry %r was deleted, skipping", entry.resource_id)
 
 
 def init_reader(reader):
