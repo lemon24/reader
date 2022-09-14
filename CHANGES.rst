@@ -9,7 +9,7 @@ Changelog
 Version 3.2
 -----------
 
-Unreleased
+Released 2022-09-14
 
 * :class:`UpdatedFeed` changes:
   added field :attr:`~UpdatedFeed.unmodified`
