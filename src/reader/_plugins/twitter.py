@@ -55,6 +55,7 @@ Screenshots:
 
 To do (roughly in order of importance):
 
+* stale feeds fail update
 * retrieve media/polls in quoted/retweeted tweet
 * media URL might be None
 * retrieve retweets/quotes of retweets/quotes
