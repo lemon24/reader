@@ -64,10 +64,12 @@ To do (roughly in order of importance):
 * lower the initial tweet limit, but allow increasing it
 * automatically re-render entry HTML on plugin update
 * show images / expanded URLs only in the original tweet, not in retweets
+* poll counts are not updated after the first update
 * mark updated entries as unread
 * better URL/entity expansion (feed subtitle, entry hashtags and usernames)
 * better media rendering
 * better poll rendering
+* pull a single thread (a la threader app)
 * retrieve and render tweet replies (``https://twitter.com/user?replies=yes``)
 * support previewing Twitter feeds in the web app
 
