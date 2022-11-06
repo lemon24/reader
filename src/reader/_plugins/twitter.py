@@ -71,6 +71,7 @@ To do (roughly in order of importance):
 * better poll rendering
 * pull a single thread (a la threader app)
 * retrieve and render tweet replies (``https://twitter.com/user?replies=yes``)
+* handle edit_history_tweet_ids somehow
 * support previewing Twitter feeds in the web app
 
 
@@ -186,6 +187,21 @@ class UserFile(NamedTuple):
     conversations: list[Conversation]
 
 
+def make_tweet(data):
+    """Make a tweepy.Tweet from pre-4.11 data.
+
+    Starting with tweepy 4.11, data must contain edit_history_tweet_ids.
+    tweepy >4.12 allows it to be missing, but warns, which we want to avoid.
+
+    https://docs.tweepy.org/en/stable/v2_models.html#tweepy.Tweet.edit_history_tweet_ids
+
+    """
+    data = dict(data)
+    if 'edit_history_tweet_ids' not in data:
+        data['edit_history_tweet_ids'] = [data["id"]]
+    return tweepy.Tweet(data)
+
+
 @dataclass
 class Conversation:
     """Collection of resources belonging to a conversation."""
@@ -197,7 +213,7 @@ class Conversation:
     polls: dict[str, tweepy.Poll] = field(default_factory=dict)
 
     _factories = dict(
-        tweets=(int, tweepy.Tweet),
+        tweets=(int, make_tweet),
         users=(int, tweepy.User),
         media=(lambda k: k, tweepy.Media),
         polls=(lambda k: k, tweepy.Poll),

@@ -11,14 +11,18 @@ from utils import naive_datetime
 from utils import utc_datetime
 from utils import utc_datetime as datetime
 
+from reader import Content
 from reader import Entry
 from reader import Feed
 from reader import UpdatedFeed
 from reader._plugins import twitter
 from reader._plugins.twitter import Conversation
 from reader._plugins.twitter import Etag
+from reader._plugins.twitter import make_tweet
 from reader._plugins.twitter import UserFile
 from reader._plugins.twitter import UserURL
+from reader._types import EntryData
+from reader._types import EntryUpdateIntent
 
 
 """
@@ -71,12 +75,12 @@ def make_response(data=(), users=None, *, media=None, polls=None, tweets=None):
     if media:
         includes['media'] = list(map(Media, media))
     if tweets:
-        includes['tweets'] = list(map(Tweet, tweets))
+        includes['tweets'] = list(map(make_tweet, tweets))
     if polls:
         includes['polls'] = list(map(Poll, polls))
 
     return Response(
-        data=list(map(Tweet, data)),
+        data=list(map(make_tweet, data)),
         includes=includes,
         errors=[],
         meta={},
@@ -121,6 +125,7 @@ TWEET_0 = {
     'created_at': '2100-01-01T00:00:00.000Z',
     'text': "one",
     'id': '2100',
+    'edit_history_tweet_ids': ['2100'],
     'author_id': '1000',
 }
 TWEET_1 = {
@@ -129,6 +134,7 @@ TWEET_1 = {
     'created_at': '2101-01-01T00:00:00.000Z',
     'text': "two",
     'id': '2101',
+    'edit_history_tweet_ids': ['2101'],
     'author_id': '1000',
 }
 TWEET_2 = {
@@ -137,6 +143,7 @@ TWEET_2 = {
     'created_at': '2102-01-01T00:00:00.000Z',
     'text': "three",
     'id': '2102',
+    'edit_history_tweet_ids': ['2102'],
     'author_id': '1000',
 }
 USER = {'username': 'user', 'id': '1000', 'name': 'name'}
@@ -331,6 +338,7 @@ def update_data_quote(tweet, page, expected_json):
         'created_at': '2000-01-01T00:00:00.000Z',
         'text': "quote",
         'id': '2000',
+        'edit_history_tweet_ids': ['2000'],
         'author_id': '1100',
     }
     user_quoted = {'id': '1100', 'username': 'quoteduser', 'name': 'quoted'}
@@ -349,6 +357,7 @@ def update_data_retweet(tweet, page, expected_json):
         'created_at': '2000-01-01T00:00:00.000Z',
         'text': "retweet",
         'id': '2000',
+        'edit_history_tweet_ids': ['2000'],
         'author_id': '1100',
     }
     user_retweeted = {'id': '1100', 'username': 'retweeteduser', 'name': 'retweeted'}
@@ -451,6 +460,54 @@ def test_update_end_to_end(reader, update_with):
         'polls': {},
     }
     assert clean_html(get_entry_html(entry)) == clean_html(TWEET_0_HTML + TWEET_1_HTML)
+
+
+def test_update_missing_edit_history_tweet_ids(reader, update_with):
+    tweets = [deepcopy(TWEET_0), deepcopy(TWEET_1)]
+    for tweet in tweets:
+        del tweet['edit_history_tweet_ids']
+
+    # first update; the old tweet JSON doesn't have edit_history_tweet_ids
+    now = reader._now()
+    first_update_json = {
+        'id': 2100,
+        'tweets': {'2100': tweets[0]},
+        'users': {'1000': USER},
+        'media': {},
+        'polls': {},
+    }
+    reader._storage.add_or_update_entry(
+        EntryUpdateIntent(
+            entry=EntryData(
+                feed_url='https://twitter.com/user',
+                id='2100',
+                content=[
+                    Content(
+                        value=json.dumps(first_update_json),
+                        type='application/x.twitter+json',
+                        language=None,
+                    ),
+                ],
+            ),
+            last_updated=now,
+            first_updated=now,
+            first_updated_epoch=now,
+            recent_sort=now,
+        )
+    )
+
+    # second update
+    update_with(tweets, [USER])
+
+    (entry,) = reader.get_entries()
+    assert get_entry_json(entry) == {
+        'id': 2100,
+        # that is, the tweets with edit_history_tweet_ids
+        'tweets': {'2100': TWEET_0, '2101': TWEET_1},
+        'users': {'1000': USER},
+        'media': {},
+        'polls': {},
+    }
 
 
 @with_update_data
