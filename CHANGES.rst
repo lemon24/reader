@@ -11,6 +11,7 @@ Version 3.3
 
 Unreleased
 
+* Support Python 3.11. (:issue:`289`)
 * :mod:`~reader._plugins.twitter` plugin:
   don't fail when deserializing tweets with missing ``edit_history_tweet_ids``
   (fails in tweepy 4.11, warns in tweepy >4.12).
