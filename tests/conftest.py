@@ -54,7 +54,10 @@ def pytest_runtest_setup(item):
     # lxml fails to build in various places,
     # see the comments in setup.cfg for details.
     for mark in item.iter_markers(name="requires_lxml"):
-        no_lxml = [sys.implementation.name == 'pypy' and os.name == 'nt']
+        no_lxml = [
+            sys.implementation.name == 'pypy' and os.name == 'nt',
+            '.'.join(map(str, sys.version_info[:2])) >= '3.11' and os.name == 'nt',
+        ]
         if any(no_lxml):
             pytest.skip("test requires lxml")
 
