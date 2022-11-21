@@ -15,7 +15,7 @@ from reader._parser import default_parser
 from reader._parser import FeedArgumentTuple
 from reader._parser import Parser
 from reader._parser import RetrieveResult
-from reader._parser import SessionWrapper
+from reader._requests_utils import SessionWrapper
 from reader._retrievers import FileRetriever
 from reader._types import FeedData
 from reader._vendor import feedparser
@@ -410,9 +410,9 @@ def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
         return request
 
     parse = default_parser()
-    parse.session_hooks.request.append(req_plugin)
-    parse.session_hooks.response.append(do_nothing_plugin)
-    parse.session_hooks.response.append(rewrite_to_empty_plugin)
+    parse.session_factory.request_hooks.append(req_plugin)
+    parse.session_factory.response_hooks.append(do_nothing_plugin)
+    parse.session_factory.response_hooks.append(rewrite_to_empty_plugin)
 
     feed, _, _, _, _ = parse(feed_url)
     assert req_plugin.called
@@ -429,7 +429,9 @@ def test_parse_requests_exception(monkeypatch, exc_cls):
         def get(self, *args, **kwargs):
             raise exc
 
-    monkeypatch.setattr('reader._parser.Parser.make_session', BadWrapper)
+    monkeypatch.setattr(
+        'reader._requests_utils.SessionFactory.make_session', BadWrapper
+    )
 
     with pytest.raises(ParseError) as excinfo:
         default_parser('')('http://example.com')
@@ -449,7 +451,7 @@ def test_user_agent(parse, make_http_get_headers_url, data_dir):
 
 def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
     feed_url = make_http_get_headers_url(data_dir.join('full.atom'))
-    parse.user_agent = None
+    parse.session_factory.user_agent = None
     parse(feed_url)
 
     headers = make_http_get_headers_url.request_headers
@@ -462,7 +464,7 @@ def test_parallel_persistent_session(parse, make_http_url, data_dir):
     def req_plugin(session, request, **kwargs):
         sessions.append(session)
 
-    parse.session_hooks.request.append(req_plugin)
+    parse.session_factory.request_hooks.append(req_plugin)
 
     feeds = [
         FeedArgumentTuple(make_http_url(data_dir.join(name)))

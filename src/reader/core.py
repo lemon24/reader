@@ -20,7 +20,7 @@ from typing import Union
 
 from ._parser import default_parser
 from ._parser import Parser
-from ._parser import SESSION_TIMEOUT
+from ._requests_utils import DEFAULT_TIMEOUT
 from ._requests_utils import TimeoutType
 from ._search import Search
 from ._storage import Storage
@@ -89,7 +89,7 @@ def make_reader(
     *,
     feed_root: Optional[str] = None,
     plugins: Iterable[PluginInput] = DEFAULT_PLUGINS,
-    session_timeout: TimeoutType = SESSION_TIMEOUT,
+    session_timeout: TimeoutType = DEFAULT_TIMEOUT,
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
     search_enabled: Union[bool, None, Literal['auto']] = 'auto',
     _storage: Optional[Storage] = None,

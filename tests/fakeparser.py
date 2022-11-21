@@ -68,7 +68,9 @@ class Parser:
         raise NotImplementedError
 
     parallel = reader._parser.Parser.parallel
-    persistent_session = staticmethod(nullcontext)
+
+    class session_factory:
+        persistent = staticmethod(nullcontext)
 
     def retrieve(self, url, http_etag, http_last_modified, is_parallel):
         return nullcontext(RetrieveResult(BytesIO(b'opaque')))

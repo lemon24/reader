@@ -12,6 +12,21 @@ Version 3.3
 Unreleased
 
 * Support Python 3.11. (:issue:`289`)
+
+* Refactor parser internals. (:issue:`297`)
+
+  .. note::
+
+    Plugins using the (unstable) session hooks should replace::
+
+        reader._parser.session_hooks.request.append(...)
+        reader._parser.session_hooks.response.append(...)
+
+    with::
+
+        reader._parser.session_factory.request_hooks.append(...)
+        reader._parser.session_factory.response_hooks.append(...)
+
 * :mod:`~reader._plugins.twitter` plugin:
   don't fail when deserializing tweets with missing ``edit_history_tweet_ids``
   (fails in tweepy 4.11, warns in tweepy >4.12).

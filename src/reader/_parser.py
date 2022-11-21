@@ -26,9 +26,8 @@ from typing import Union
 import reader
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
-from ._requests_utils import SessionHooks
-from ._requests_utils import SessionWrapper
-from ._requests_utils import TimeoutHTTPAdapter
+from ._requests_utils import DEFAULT_TIMEOUT
+from ._requests_utils import SessionFactory
 from ._requests_utils import TimeoutType
 from ._types import EntryData
 from ._types import EntryForUpdate
@@ -141,20 +140,17 @@ class FeedArgumentTuple(NamedTuple):
 FA = TypeVar('FA', bound=FeedArgument)
 
 
-SESSION_TIMEOUT = (3.05, 60)
-
-
 def default_parser(
-    feed_root: Optional[str] = None, session_timeout: TimeoutType = SESSION_TIMEOUT
+    feed_root: Optional[str] = None, session_timeout: TimeoutType = DEFAULT_TIMEOUT
 ) -> 'Parser':
     parser = Parser()
-    parser.session_timeout = session_timeout
+    parser.session_factory.timeout = session_timeout
 
     from ._retrievers import HTTPRetriever, FileRetriever
     from ._feedparser import FeedparserParser
     from ._jsonfeed import JSONFeedParser
 
-    http_retriever = HTTPRetriever(parser.get_session)
+    http_retriever = HTTPRetriever(parser.session_factory.transient)
     parser.mount_retriever('https://', http_retriever)
     parser.mount_retriever('http://', http_retriever)
     if feed_root is not None:
@@ -171,13 +167,12 @@ def default_parser(
     return parser
 
 
+USER_AGENT = f'python-reader/{reader.__version__} (+https://github.com/lemon24/reader)'
+
+
 class Parser:
 
     """Meta-parser: retrieve and parse a feed by delegation."""
-
-    user_agent = (
-        f'python-reader/{reader.__version__} (+https://github.com/lemon24/reader)'
-    )
 
     def __init__(self) -> None:
         # Typing the link between parser and retriever would be nice,
@@ -190,9 +185,7 @@ class Parser:
         self.retrievers: 'OrderedDict[str, RetrieverType[Any]]' = OrderedDict()
         self.parsers_by_mime_type: Dict[str, List[Tuple[float, ParserType[Any]]]] = {}
         self.parsers_by_url: Dict[str, ParserType[Any]] = {}
-        self.session_hooks = SessionHooks()
-        self.session_timeout: TimeoutType = None
-        self.session: Optional[SessionWrapper] = None
+        self.session_factory = SessionFactory(USER_AGENT)
 
     def parallel(
         self, feeds: Iterable[FA], map: MapType = map, is_parallel: bool = True
@@ -211,7 +204,7 @@ class Parser:
                 log.debug("retrieve() exception, traceback follows", exc_info=True)
                 return feed, e
 
-        with self.persistent_session():
+        with self.session_factory.persistent():
 
             # if stuff hangs weirdly during debugging, change this to builtins.map
             retrieve_results = map(retrieve, feeds)
@@ -410,37 +403,6 @@ class Parser:
         # we might change this to have some smarter matching, but YAGNI
         url = normalize_url(url)
         return self.parsers_by_url.get(url)
-
-    def make_session(self) -> SessionWrapper:
-        session = SessionWrapper(hooks=self.session_hooks.copy())
-
-        session.session.mount('https://', TimeoutHTTPAdapter(self.session_timeout))
-        session.session.mount('http://', TimeoutHTTPAdapter(self.session_timeout))
-
-        if self.user_agent:
-            session.session.headers['User-Agent'] = self.user_agent
-
-        return session
-
-    def get_session(self) -> ContextManager[SessionWrapper]:
-        if self.session:
-            return nullcontext(self.session)
-        return self.make_session()
-
-    @contextmanager
-    def persistent_session(self) -> Iterator[SessionWrapper]:
-        # note: this is NOT threadsafe, but is reentrant
-
-        if self.session:  # pragma: no cover
-            yield self.session
-            return
-
-        with self.make_session() as session:
-            self.session = session
-            try:
-                yield session
-            finally:
-                self.session = None
 
     def process_feed_for_update(self, feed: FeedForUpdate) -> FeedForUpdate:
         retriever = self.get_retriever(feed.url)
