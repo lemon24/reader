@@ -50,21 +50,21 @@ class FeedparserParser:
             sanitize_html=True,
             response_headers=headers,
         )
-        return _process_feedparser_dict(url, result)
+        return _process_feed(url, result)
 
 
 # https://feedparser.readthedocs.io/en/latest/character-encoding.html#handling-incorrectly-declared-encodings
-_survivable_feedparser_exceptions = (
+_SURVIVABLE_EXCEPTION_TYPES = (
     feedparser.CharacterEncodingOverride,
     feedparser.NonXMLContentType,
 )
 
 
-def _process_feedparser_dict(url: str, d: Any) -> FeedAndEntries:
+def _process_feed(url: str, d: Any) -> FeedAndEntries:
 
     if d.get('bozo'):
         exception = d.get('bozo_exception')
-        if isinstance(exception, _survivable_feedparser_exceptions):
+        if isinstance(exception, _SURVIVABLE_EXCEPTION_TYPES):
             log.warning("parse %s: got %r", url, exception)
         else:
             raise ParseError(url, message="error while parsing feed") from exception
@@ -76,11 +76,11 @@ def _process_feedparser_dict(url: str, d: Any) -> FeedAndEntries:
 
     feed = FeedData(
         url,
-        _get_datetime_fp_attr(d.feed, 'updated_parsed'),
+        _get_datetime_attr(d.feed, 'updated_parsed'),
         d.feed.get('title'),
         d.feed.get('link'),
         d.feed.get('author'),
-        d.feed.get('subtitle') or None,
+        d.feed.get('subtitle'),
         d.version,
     )
 
@@ -92,7 +92,7 @@ def _process_feedparser_dict(url: str, d: Any) -> FeedAndEntries:
 
     for e in d.entries:
         try:
-            entry = _feedparser_entry(url, e, is_rss)
+            entry = _process_entry(url, e, is_rss)
         except ParseError as e:
             # Skip entries that raise ParseError with a warning.
             # https://github.com/lemon24/reader/issues/281
@@ -109,7 +109,7 @@ def _process_feedparser_dict(url: str, d: Any) -> FeedAndEntries:
     return feed, entries
 
 
-def _get_datetime_fp_attr(thing: Any, key: str) -> Optional[datetime]:
+def _get_datetime_attr(thing: Any, key: str) -> Optional[datetime]:
     # feedparser.FeedParserDict.get('updated') defaults to published
     # for historical reasons; "key in thing" bypasses that
     value = thing[key] if key in thing else None
@@ -120,7 +120,7 @@ def _datetime_from_timetuple(tt: time.struct_time) -> datetime:
     return datetime.utcfromtimestamp(calendar.timegm(tt))
 
 
-def _feedparser_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
+def _process_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
     id = entry.get('id')
 
     # <guid> (entry.id) is not actually required for RSS;
@@ -157,11 +157,11 @@ def _feedparser_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
     return EntryData(
         feed_url,
         id,
-        _get_datetime_fp_attr(entry, 'updated_parsed'),
+        _get_datetime_attr(entry, 'updated_parsed'),
         entry.get('title'),
         entry.get('link'),
         entry.get('author'),
-        _get_datetime_fp_attr(entry, 'published_parsed'),
+        _get_datetime_attr(entry, 'published_parsed'),
         entry.get('summary'),
         tuple(content),
         tuple(enclosures),

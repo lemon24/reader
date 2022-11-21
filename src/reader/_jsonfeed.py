@@ -38,37 +38,38 @@ class JSONFeedParser:
             result = json.load(file)
         except json.JSONDecodeError as e:
             raise ParseError(url, "invalid JSON") from e
-        return _process_jsonfeed_dict(url, result)
+        return _process_feed(url, result)
 
 
-_JSONFEED_VERSIONS = {
-    "https://jsonfeed.org/version/1.1": 'json11',
-    "https://jsonfeed.org/version/1": 'json10',
+_VERSION_URL_PREFIX = "https://jsonfeed.org/version/"
+_VERSIONS = {
+    f"{_VERSION_URL_PREFIX}1.1": 'json11',
+    f"{_VERSION_URL_PREFIX}1": 'json10',
 }
-_JSONFEED_VERSION_URL_PREFIX = "https://jsonfeed.org/version/"
-_JSONFEED_VERSION_UNKNOWN = 'json'
+_VERSION_UNKNOWN = 'json'
 
 
-def _process_jsonfeed_dict(url: str, d: Any) -> FeedAndEntries:
-    version = _dict_get(d, 'version', str) or ''
+def _process_feed(url: str, d: Any) -> FeedAndEntries:
+    version = _get(d, 'version', str) or ''
     version_lower = version.lower()
-    if not version_lower.startswith(_JSONFEED_VERSION_URL_PREFIX):
+    if not version_lower.startswith(_VERSION_URL_PREFIX):
         raise ParseError(url, f"missing or bad JSON Feed version: {version!r}")
-    version_code = _JSONFEED_VERSIONS.get(version_lower, _JSONFEED_VERSION_UNKNOWN)
+    version_code = _VERSIONS.get(version_lower, _VERSION_UNKNOWN)
 
     feed = FeedData(
         url=url,
         updated=None,
-        title=_dict_get(d, 'title', str),
-        link=_dict_get(d, 'home_page_url', str),
-        author=_jsonfeed_author(d),
-        subtitle=_dict_get(d, 'description', str),
+        title=_get(d, 'title', str),
+        link=_get(d, 'home_page_url', str),
+        author=_get_author(d),
+        subtitle=_get(d, 'description', str),
         version=version_code,
     )
-    lang = _dict_get(d, 'language', str)
+    lang = _get(d, 'language', str)
 
-    entry_dicts = _dict_get(d, 'items', list) or ()
-    entries = [_jsonfeed_entry(url, e, lang) for e in entry_dicts]
+    # TODO: skip entries that raise ParseError with a warning
+    entry_dicts = _get(d, 'items', list) or ()
+    entries = [_process_entry(url, e, lang) for e in entry_dicts]
 
     return feed, entries
 
@@ -78,7 +79,7 @@ _U = TypeVar('_U')
 _V = TypeVar('_V')
 
 
-def _dict_get(
+def _get(
     d: Any,
     key: str,
     value_type: Union[
@@ -92,7 +93,7 @@ def _dict_get(
     return cast(Union[_T, _U, _V], value)
 
 
-def _jsonfeed_author(d: Any) -> Optional[str]:
+def _get_author(d: Any) -> Optional[str]:
     # from the spec:
     #
     # > JSON Feed version 1 specified a singular author field
@@ -103,29 +104,29 @@ def _jsonfeed_author(d: Any) -> Optional[str]:
     # > Feed readers should always prefer authors if present.
 
     author: Optional[Dict[Any, Any]]
-    for maybe_author in _dict_get(d, 'authors', list) or ():
+    for maybe_author in _get(d, 'authors', list) or ():
         if isinstance(maybe_author, dict):
             author = maybe_author
             break
     else:
-        author = _dict_get(d, 'author', dict)
+        author = _get(d, 'author', dict)
 
     if not author:
         return None
 
     # we only have one for now, it'll be the first one
     return (
-        _dict_get(author, 'name', str)
+        _get(author, 'name', str)
         # fall back to the URL, at least until we have Feed.authors
-        or _dict_get(author, 'url', str)
+        or _get(author, 'url', str)
     )
 
 
-def _jsonfeed_entry(feed_url: str, d: Any, feed_lang: Optional[str]) -> EntryData:
-    updated_str = _dict_get(d, 'date_modified', str)
-    updated = _parse_jsonfeed_date(updated_str) if updated_str else None
-    published_str = _dict_get(d, 'date_published', str)
-    published = _parse_jsonfeed_date(published_str) if published_str else None
+def _process_entry(feed_url: str, d: Any, feed_lang: Optional[str]) -> EntryData:
+    updated_str = _get(d, 'date_modified', str)
+    updated = _parse_date(updated_str) if updated_str else None
+    published_str = _get(d, 'date_published', str)
+    published = _parse_date(published_str) if published_str else None
 
     # from the spec:
     #
@@ -137,7 +138,7 @@ def _jsonfeed_entry(feed_url: str, d: Any, feed_lang: Optional[str]) -> EntryDat
     # > If an id is blank or can’t be coerced to a valid string,
     # > the item must be discarded.
 
-    id = _dict_get(d, 'id', (str, int, float))
+    id = _get(d, 'id', (str, int, float))
     if id is not None:
         id = str(id).strip()
     if not id:
@@ -145,45 +146,43 @@ def _jsonfeed_entry(feed_url: str, d: Any, feed_lang: Optional[str]) -> EntryDat
         # if we decide to skip, we should do it for *all of them* later
         raise ParseError(feed_url, message="entry with no id")
 
-    lang = _dict_get(d, 'language', str) or feed_lang
+    lang = _get(d, 'language', str) or feed_lang
     content = []
 
-    content_html = _dict_get(d, 'content_html', str)
+    content_html = _get(d, 'content_html', str)
     if content_html:
         content.append(Content(content_html, 'text/html', lang))
-    content_text = _dict_get(d, 'content_text', str)
+    content_text = _get(d, 'content_text', str)
     if content_text:
         content.append(Content(content_text, 'text/plain', lang))
 
     enclosures = []
-    for attd in _dict_get(d, 'attachments', list) or ():
+    for attd in _get(d, 'attachments', list) or ():
         if not isinstance(attd, dict):
             continue
-        url = _dict_get(attd, 'url', str)
+        url = _get(attd, 'url', str)
         if not url:
             continue
-        size_in_bytes = _dict_get(attd, 'size_in_bytes', (int, float))
+        size_in_bytes = _get(attd, 'size_in_bytes', (int, float))
         if size_in_bytes is not None:
             size_in_bytes = int(size_in_bytes)
-        enclosures.append(
-            Enclosure(url, _dict_get(attd, 'mime_type', str), size_in_bytes)
-        )
+        enclosures.append(Enclosure(url, _get(attd, 'mime_type', str), size_in_bytes))
 
     return EntryData(
         feed_url=feed_url,
         id=id,
         updated=updated,
-        title=_dict_get(d, 'title', str),
-        link=_dict_get(d, 'url', str),
-        author=_jsonfeed_author(d),
+        title=_get(d, 'title', str),
+        link=_get(d, 'url', str),
+        author=_get_author(d),
         published=published,
-        summary=_dict_get(d, 'summary', str),
+        summary=_get(d, 'summary', str),
         content=tuple(content),
         enclosures=tuple(enclosures),
     )
 
 
-def _parse_jsonfeed_date(s: str) -> Optional[datetime]:
+def _parse_date(s: str) -> Optional[datetime]:
     try:
         dt = iso8601.parse_date(s)
     except iso8601.ParseError:
