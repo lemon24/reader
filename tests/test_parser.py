@@ -9,14 +9,14 @@ import requests
 from utils import make_url_base
 
 from reader import Feed
+from reader._feedparser import FeedparserParser
+from reader._jsonfeed import JSONFeedParser
 from reader._parser import default_parser
 from reader._parser import FeedArgumentTuple
-from reader._parser import FeedparserParser
-from reader._parser import FileRetriever
-from reader._parser import JSONFeedParser
 from reader._parser import Parser
 from reader._parser import RetrieveResult
 from reader._parser import SessionWrapper
+from reader._retrievers import FileRetriever
 from reader._types import FeedData
 from reader._vendor import feedparser
 from reader.exceptions import ParseError

@@ -1,26 +1,16 @@
-import calendar
-import json
 import logging
 import mimetypes
-import pathlib
 import shutil
 import tempfile
-import time
-import warnings
 from collections import OrderedDict
 from contextlib import contextmanager
 from contextlib import nullcontext
 from dataclasses import dataclass
-from datetime import datetime
-from datetime import timezone
 from typing import Any
-from typing import Callable
-from typing import cast
 from typing import Collection
 from typing import ContextManager
 from typing import Dict
 from typing import Generic
-from typing import IO
 from typing import Iterable
 from typing import Iterator
 from typing import List
@@ -30,16 +20,11 @@ from typing import Optional
 from typing import Protocol
 from typing import runtime_checkable
 from typing import Tuple
-from typing import Type
 from typing import TypeVar
 from typing import Union
 
-import iso8601
-import requests
-
 import reader
 from ._http_utils import parse_accept_header
-from ._http_utils import parse_options_header
 from ._http_utils import unparse_accept_header
 from ._requests_utils import SessionHooks
 from ._requests_utils import SessionWrapper
@@ -50,16 +35,11 @@ from ._types import EntryForUpdate
 from ._types import FeedData
 from ._types import FeedForUpdate
 from ._types import ParsedFeed
-from ._url_utils import extract_path
 from ._url_utils import normalize_url
-from ._url_utils import resolve_root
 from ._utils import MapType
-from ._vendor import feedparser
 from .exceptions import InvalidFeedURLError
 from .exceptions import ParseError
 from .types import _namedtuple_compat
-from .types import Content
-from .types import Enclosure
 
 
 log = logging.getLogger('reader')
@@ -169,6 +149,10 @@ def default_parser(
 ) -> 'Parser':
     parser = Parser()
     parser.session_timeout = session_timeout
+
+    from ._retrievers import HTTPRetriever, FileRetriever
+    from ._feedparser import FeedparserParser
+    from ._jsonfeed import JSONFeedParser
 
     http_retriever = HTTPRetriever(parser.get_session)
     parser.mount_retriever('https://', http_retriever)
@@ -485,477 +469,3 @@ def wrap_exceptions(url: str, when: str) -> Iterator[None]:
         raise ParseError(url, message=f"error {when}") from e
     except Exception as e:
         raise ParseError(url, message=f"unexpected error {when}") from e
-
-
-@dataclass
-class FileRetriever:
-
-    """Bare path and file:// URI parser, with support for feed roots,
-    per https://github.com/lemon24/reader/issues/155
-
-    """
-
-    feed_root: str
-
-    slow_to_read = False
-
-    def __post_init__(self) -> None:
-        # give feed_root checks a chance to fail early
-        self._normalize_url('known-good-feed-url')
-
-    @contextmanager
-    def __call__(
-        self, url: str, *args: Any, **kwargs: Any
-    ) -> Iterator[RetrieveResult[IO[bytes]]]:
-        try:
-            normalized_url = self._normalize_url(url)
-        except ValueError as e:
-            raise ParseError(url, message=str(e)) from None
-
-        with wrap_exceptions(url, "while reading feed"):
-            with open(normalized_url, 'rb') as file:
-                yield RetrieveResult(file)
-
-    def validate_url(self, url: str) -> None:
-        self._normalize_url(url)
-
-    def _normalize_url(self, url: str) -> str:
-        path = extract_path(url)
-        if self.feed_root:
-            path = resolve_root(self.feed_root, path)
-            if pathlib.PurePath(path).is_reserved():
-                raise ValueError("path must not be reserved")
-        return path
-
-
-@dataclass
-class HTTPRetriever:
-
-    """http(s):// retriever that uses Requests.
-
-    Following the implementation in:
-    https://github.com/kurtmckee/feedparser/blob/develop/feedparser/http.py
-
-    "Porting" notes:
-
-    No need to add Accept-encoding (requests seems to do this already).
-
-    No need to add Referer / User-Agent / Authorization / custom request
-    headers, as they are not exposed in the Parser.__call__() interface
-    (not yet, at least).
-
-    We should add:
-
-    * If-None-Match (http_etag)
-    * If-Modified-Since (http_last_modified)
-    * Accept (feedparser.(html.)ACCEPT_HEADER)
-    * A-IM ("feed")
-
-    NOTE: This is a very old docstring, header setting is spread in multiple places
-
-    """
-
-    get_session: Callable[[], ContextManager[SessionWrapper]]
-
-    slow_to_read = True
-
-    @contextmanager
-    def __call__(
-        self,
-        url: str,
-        http_etag: Optional[str] = None,
-        http_last_modified: Optional[str] = None,
-        http_accept: Optional[str] = None,
-    ) -> Iterator[Optional[RetrieveResult[IO[bytes]]]]:
-        request_headers = {}
-        if http_accept:
-            request_headers['Accept'] = http_accept
-
-        with self.get_session() as session:
-            with wrap_exceptions(url, "while getting feed"):
-                response, http_etag, http_last_modified = _caching_get(
-                    session,
-                    url,
-                    http_etag,
-                    http_last_modified,
-                    headers=request_headers,
-                    stream=True,
-                )
-
-            if response.status_code == 304:
-                response.close()
-                yield None
-                return
-
-            response_headers = response.headers.copy()
-            response_headers.setdefault('content-location', response.url)
-
-            # The content is already decoded by requests/urllib3.
-            response_headers.pop('content-encoding', None)
-            response.raw.decode_content = True
-
-            content_type = response_headers.get('content-type')
-            mime_type: Optional[str]
-            if content_type:
-                mime_type, _ = parse_options_header(content_type)
-            else:
-                mime_type = None
-
-            with wrap_exceptions(url, "while reading feed"), response:
-                yield RetrieveResult(
-                    response.raw,
-                    mime_type,
-                    http_etag,
-                    http_last_modified,
-                    response_headers,
-                )
-
-    def validate_url(self, url: str) -> None:
-        with self.get_session() as session_wrapper:
-            session = session_wrapper.session
-            session.get_adapter(url)
-            session.prepare_request(requests.Request('GET', url))
-
-
-def _caching_get(
-    session: SessionWrapper,
-    url: str,
-    http_etag: Optional[str] = None,
-    http_last_modified: Optional[str] = None,
-    **kwargs: Any,
-) -> Tuple[requests.Response, Optional[str], Optional[str]]:
-    headers = dict(kwargs.pop('headers', {}))
-    if http_etag:
-        headers.setdefault('If-None-Match', http_etag)
-        # https://tools.ietf.org/html/rfc3229#section-10.5.3
-        headers.setdefault('A-IM', 'feed')
-    if http_last_modified:
-        headers.setdefault('If-Modified-Since', http_last_modified)
-
-    response = session.get(url, headers=headers, **kwargs)
-
-    try:
-        response.raise_for_status()
-    except Exception as e:
-        raise ParseError(url, message="bad HTTP status code") from e
-
-    http_etag = response.headers.get('ETag', http_etag)
-    http_last_modified = response.headers.get('Last-Modified', http_last_modified)
-
-    return response, http_etag, http_last_modified
-
-
-class FeedparserParser:
-
-    # Everything *except* the wildcard, which gets added back explicitly later on.
-    http_accept = unparse_accept_header(
-        t for t in parse_accept_header(feedparser.http.ACCEPT_HEADER) if '*' not in t[0]
-    )
-
-    def __call__(
-        self,
-        url: str,
-        file: IO[bytes],
-        headers: Optional[Headers] = None,
-    ) -> FeedAndEntries:
-        """Like feedparser.parse(), but return a feed and entries,
-        and re-raise bozo_exception as ParseError.
-
-        url is NOT passed to feedparser; file and headers are.
-
-        """
-        # feedparser content sanitization and relative link resolution should be ON.
-        # https://github.com/lemon24/reader/issues/125
-        # https://github.com/lemon24/reader/issues/157
-        result = feedparser.parse(  # type: ignore[attr-defined]
-            file,
-            resolve_relative_uris=True,
-            sanitize_html=True,
-            response_headers=headers,
-        )
-        return _process_feedparser_dict(url, result)
-
-
-# https://feedparser.readthedocs.io/en/latest/character-encoding.html#handling-incorrectly-declared-encodings
-_survivable_feedparser_exceptions = (
-    feedparser.CharacterEncodingOverride,
-    feedparser.NonXMLContentType,
-)
-
-
-def _process_feedparser_dict(url: str, d: Any) -> FeedAndEntries:
-
-    if d.get('bozo'):
-        exception = d.get('bozo_exception')
-        if isinstance(exception, _survivable_feedparser_exceptions):
-            log.warning("parse %s: got %r", url, exception)
-        else:
-            raise ParseError(url, message="error while parsing feed") from exception
-
-    if not d.version:
-        raise ParseError(url, message="unknown feed type")
-
-    is_rss = d.version.startswith('rss')
-
-    feed = FeedData(
-        url,
-        _get_datetime_fp_attr(d.feed, 'updated_parsed'),
-        d.feed.get('title'),
-        d.feed.get('link'),
-        d.feed.get('author'),
-        d.feed.get('subtitle') or None,
-        d.version,
-    )
-
-    # entries must be a list, not a generator expression,
-    # otherwise the user may get a ParseError when calling
-    # next(parse_result.entries), i.e. after parse() returned.
-    entries = []
-    first_parse_error = None
-
-    for e in d.entries:
-        try:
-            entry = _feedparser_entry(url, e, is_rss)
-        except ParseError as e:
-            # Skip entries that raise ParseError with a warning.
-            # https://github.com/lemon24/reader/issues/281
-            warnings.warn(e)
-            if not first_parse_error:
-                first_parse_error = e
-        else:
-            entries.append(entry)
-
-    # If all entries failed, raise the first exception.
-    if first_parse_error and not entries:
-        raise first_parse_error
-
-    return feed, entries
-
-
-def _get_datetime_fp_attr(thing: Any, key: str) -> Optional[datetime]:
-    # feedparser.FeedParserDict.get('updated') defaults to published
-    # for historical reasons; "key in thing" bypasses that
-    value = thing[key] if key in thing else None
-    return _datetime_from_timetuple(value) if value else None
-
-
-def _datetime_from_timetuple(tt: time.struct_time) -> datetime:
-    return datetime.utcfromtimestamp(calendar.timegm(tt))
-
-
-def _feedparser_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
-    id = entry.get('id')
-
-    # <guid> (entry.id) is not actually required for RSS;
-    # <link> is, so we fall back to it.
-    # https://github.com/lemon24/reader/issues/170
-    # http://www.詹姆斯.com/blog/2006/08/rss-dup-detection
-    if not id and is_rss:
-        id = entry.get('link')
-        log.debug(
-            "parse %s: RSS entry does not have (gu)id, falling back to link", feed_url
-        )
-
-    if not id:
-        raise ParseError(feed_url, message="entry with no id or fallback")
-
-    content = []
-    for data in entry.get('content', ()):
-        data = {k: v for k, v in data.items() if k in ('value', 'type', 'language')}
-        content.append(Content(**data))
-
-    enclosures = []
-    for data in entry.get('enclosures', ()):
-        data = {k: v for k, v in data.items() if k in ('href', 'type', 'length')}
-        href = data.get('href')
-        if not href:
-            continue
-        if 'length' in data:
-            try:
-                data['length'] = int(data['length'])
-            except (TypeError, ValueError):
-                del data['length']
-        enclosures.append(Enclosure(**data))
-
-    return EntryData(
-        feed_url,
-        id,
-        _get_datetime_fp_attr(entry, 'updated_parsed'),
-        entry.get('title'),
-        entry.get('link'),
-        entry.get('author'),
-        _get_datetime_fp_attr(entry, 'published_parsed'),
-        entry.get('summary'),
-        tuple(content),
-        tuple(enclosures),
-    )
-
-
-class JSONFeedParser:
-
-    """https://jsonfeed.org/version/1.1"""
-
-    http_accept = 'application/feed+json,application/json;q=0.9'
-
-    def __call__(
-        self,
-        url: str,
-        file: IO[bytes],
-        headers: Optional[Headers] = None,
-    ) -> FeedAndEntries:
-        try:
-            result = json.load(file)
-        except json.JSONDecodeError as e:
-            raise ParseError(url, "invalid JSON") from e
-        return _process_jsonfeed_dict(url, result)
-
-
-_JSONFEED_VERSIONS = {
-    "https://jsonfeed.org/version/1.1": 'json11',
-    "https://jsonfeed.org/version/1": 'json10',
-}
-_JSONFEED_VERSION_URL_PREFIX = "https://jsonfeed.org/version/"
-_JSONFEED_VERSION_UNKNOWN = 'json'
-
-
-def _process_jsonfeed_dict(url: str, d: Any) -> FeedAndEntries:
-    version = _dict_get(d, 'version', str) or ''
-    version_lower = version.lower()
-    if not version_lower.startswith(_JSONFEED_VERSION_URL_PREFIX):
-        raise ParseError(url, f"missing or bad JSON Feed version: {version!r}")
-    version_code = _JSONFEED_VERSIONS.get(version_lower, _JSONFEED_VERSION_UNKNOWN)
-
-    feed = FeedData(
-        url=url,
-        updated=None,
-        title=_dict_get(d, 'title', str),
-        link=_dict_get(d, 'home_page_url', str),
-        author=_jsonfeed_author(d),
-        subtitle=_dict_get(d, 'description', str),
-        version=version_code,
-    )
-    lang = _dict_get(d, 'language', str)
-
-    entry_dicts = _dict_get(d, 'items', list) or ()
-    entries = [_jsonfeed_entry(url, e, lang) for e in entry_dicts]
-
-    return feed, entries
-
-
-_T = TypeVar('_T')
-_U = TypeVar('_U')
-_V = TypeVar('_V')
-
-
-def _dict_get(
-    d: Any,
-    key: str,
-    value_type: Union[
-        Type[_T], Tuple[Type[_T], Type[_U]], Tuple[Type[_T], Type[_U], Type[_V]]
-    ],
-) -> Optional[Union[_T, _U, _V]]:
-    value = d.get(key)
-    if value is not None:
-        if not isinstance(value, value_type):
-            return None
-    return cast(Union[_T, _U, _V], value)
-
-
-def _jsonfeed_author(d: Any) -> Optional[str]:
-    # from the spec:
-    #
-    # > JSON Feed version 1 specified a singular author field
-    # > instead of the authors array used in version 1.1.
-    # > New feeds should use authors, even if only 1 author is needed.
-    # > Existing feeds can include both author and authors
-    # > for compatibility with existing feed readers.
-    # > Feed readers should always prefer authors if present.
-
-    author: Optional[Dict[Any, Any]]
-    for maybe_author in _dict_get(d, 'authors', list) or ():
-        if isinstance(maybe_author, dict):
-            author = maybe_author
-            break
-    else:
-        author = _dict_get(d, 'author', dict)
-
-    if not author:
-        return None
-
-    # we only have one for now, it'll be the first one
-    return (
-        _dict_get(author, 'name', str)
-        # fall back to the URL, at least until we have Feed.authors
-        or _dict_get(author, 'url', str)
-    )
-
-
-def _jsonfeed_entry(feed_url: str, d: Any, feed_lang: Optional[str]) -> EntryData:
-    updated_str = _dict_get(d, 'date_modified', str)
-    updated = _parse_jsonfeed_date(updated_str) if updated_str else None
-    published_str = _dict_get(d, 'date_published', str)
-    published = _parse_jsonfeed_date(published_str) if published_str else None
-
-    # from the spec:
-    #
-    # > That said, there is one thing we insist on:
-    # > any item without an id must be discarded.
-    #
-    # > If an id is presented as a number, a JSON Feed reader
-    # > should coerce it to a string.
-    # > If an id is blank or can’t be coerced to a valid string,
-    # > the item must be discarded.
-
-    id = _dict_get(d, 'id', (str, int, float))
-    if id is not None:
-        id = str(id).strip()
-    if not id:
-        # for now, we'll error out, like we do for feedparser;
-        # if we decide to skip, we should do it for *all of them* later
-        raise ParseError(feed_url, message="entry with no id")
-
-    lang = _dict_get(d, 'language', str) or feed_lang
-    content = []
-
-    content_html = _dict_get(d, 'content_html', str)
-    if content_html:
-        content.append(Content(content_html, 'text/html', lang))
-    content_text = _dict_get(d, 'content_text', str)
-    if content_text:
-        content.append(Content(content_text, 'text/plain', lang))
-
-    enclosures = []
-    for attd in _dict_get(d, 'attachments', list) or ():
-        if not isinstance(attd, dict):
-            continue
-        url = _dict_get(attd, 'url', str)
-        if not url:
-            continue
-        size_in_bytes = _dict_get(attd, 'size_in_bytes', (int, float))
-        if size_in_bytes is not None:
-            size_in_bytes = int(size_in_bytes)
-        enclosures.append(
-            Enclosure(url, _dict_get(attd, 'mime_type', str), size_in_bytes)
-        )
-
-    return EntryData(
-        feed_url=feed_url,
-        id=id,
-        updated=updated,
-        title=_dict_get(d, 'title', str),
-        link=_dict_get(d, 'url', str),
-        author=_jsonfeed_author(d),
-        published=published,
-        summary=_dict_get(d, 'summary', str),
-        content=tuple(content),
-        enclosures=tuple(enclosures),
-    )
-
-
-def _parse_jsonfeed_date(s: str) -> Optional[datetime]:
-    try:
-        dt = iso8601.parse_date(s)
-    except iso8601.ParseError:
-        return None
-    assert isinstance(dt, datetime)
-    return dt.astimezone(timezone.utc).replace(tzinfo=None)

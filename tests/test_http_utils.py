@@ -2,9 +2,9 @@ import pytest
 import werkzeug.datastructures
 import werkzeug.http
 
-from reader._parser import parse_accept_header
-from reader._parser import parse_options_header
-from reader._parser import unparse_accept_header
+from reader._http_utils import parse_accept_header
+from reader._http_utils import parse_options_header
+from reader._http_utils import unparse_accept_header
 
 
 @pytest.mark.parametrize(
