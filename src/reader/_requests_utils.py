@@ -2,6 +2,8 @@
 Requests utilities. Contains no business logic.
 
 """
+from __future__ import annotations
+
 from contextlib import contextmanager
 from contextlib import nullcontext
 from dataclasses import dataclass
@@ -14,10 +16,12 @@ from typing import Optional
 from typing import Protocol
 from typing import Sequence
 from typing import Tuple
+from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
-import requests.adapters
+if TYPE_CHECKING:  # pragma: no cover
+    import requests
 
 
 _T = TypeVar('_T')
@@ -44,6 +48,13 @@ class _ResponsePlugin(Protocol):
         ...
 
 
+def _make_session() -> requests.Session:
+    # lazy import (https://github.com/lemon24/reader/issues/297)
+    import requests
+
+    return requests.Session()
+
+
 @dataclass
 class SessionWrapper:
 
@@ -62,9 +73,14 @@ class SessionWrapper:
 
     """
 
-    session: requests.Session = field(default_factory=requests.Session)
+    session: requests.Session = field(default_factory=_make_session)
     request_hooks: Sequence[_RequestPlugin] = field(default_factory=list)
     response_hooks: Sequence[_ResponsePlugin] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        # lazy import (https://github.com/lemon24/reader/issues/297)
+        global requests
+        import requests
 
     def get(
         self,
@@ -112,24 +128,36 @@ TimeoutType = Union[None, float, Tuple[float, float], Tuple[float, None]]
 DEFAULT_TIMEOUT = (3.05, 60)
 
 
-class TimeoutHTTPAdapter(requests.adapters.HTTPAdapter):
+def TimeoutHTTPAdapter(timeout: TimeoutType) -> requests.adapters.HTTPAdapter:
+    # lazy import (https://github.com/lemon24/reader/issues/297)
 
-    """Add a default timeout to requests.
+    global TimeoutHTTPAdapter
 
-    https://requests.readthedocs.io/en/master/user/advanced/#timeouts
-    https://github.com/psf/requests/issues/3070#issuecomment-205070203
+    if isinstance(TimeoutHTTPAdapter, type):  # pragma: no cover
+        return TimeoutHTTPAdapter(timeout)
 
-    TODO: Remove when psf/requests#3070 gets fixed.
+    import requests
 
-    """
+    class TimeoutHTTPAdapter(requests.adapters.HTTPAdapter):
 
-    def __init__(self, timeout: TimeoutType, *args: Any, **kwargs: Any):
-        self.__timeout = timeout
-        super().__init__(*args, **kwargs)
+        """Add a default timeout to requests.
 
-    def send(self, *args: Any, **kwargs: Any) -> Any:
-        kwargs.setdefault('timeout', self.__timeout)
-        return super().send(*args, **kwargs)
+        https://requests.readthedocs.io/en/master/user/advanced/#timeouts
+        https://github.com/psf/requests/issues/3070#issuecomment-205070203
+
+        TODO: Remove when psf/requests#3070 gets fixed.
+
+        """
+
+        def __init__(self, timeout: TimeoutType, *args: Any, **kwargs: Any):
+            self.__timeout = timeout
+            super().__init__(*args, **kwargs)
+
+        def send(self, *args: Any, **kwargs: Any) -> Any:
+            kwargs.setdefault('timeout', self.__timeout)
+            return super().send(*args, **kwargs)
+
+    return TimeoutHTTPAdapter(timeout)
 
 
 @dataclass

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pathlib
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -8,8 +10,7 @@ from typing import IO
 from typing import Iterator
 from typing import Optional
 from typing import Tuple
-
-import requests
+from typing import TYPE_CHECKING
 
 from ._http_utils import parse_options_header
 from ._parser import RetrieveResult
@@ -18,6 +19,9 @@ from ._requests_utils import SessionWrapper
 from ._url_utils import extract_path
 from ._url_utils import resolve_root
 from .exceptions import ParseError
+
+if TYPE_CHECKING:  # pragma: no cover
+    import requests
 
 
 @dataclass
@@ -144,6 +148,9 @@ class HTTPRetriever:
                 )
 
     def validate_url(self, url: str) -> None:
+        # lazy import (https://github.com/lemon24/reader/issues/297)
+        import requests
+
         with self.get_session() as session_wrapper:
             session = session_wrapper.session
             session.get_adapter(url)
