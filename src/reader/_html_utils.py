@@ -2,10 +2,16 @@
 HTML utilities. Contains no business logic.
 
 """
+from __future__ import annotations
+
 import warnings
 from typing import Optional
+from typing import TYPE_CHECKING
 
-import bs4  # type: ignore
+if TYPE_CHECKING:  # pragma: no cover
+    import bs4  # type: ignore
+else:
+    bs4 = None
 
 
 # BeautifulSoup warns if not giving it a parser explicitly; full text:
@@ -43,6 +49,10 @@ def strip_html(html: str, features: Optional[str] = None) -> str:
 
 
 def get_soup(html: str, features: Optional[str] = None) -> bs4.BeautifulSoup:
+    # lazy import (https://github.com/lemon24/reader/issues/297)
+    global bs4
+    if not bs4:
+        import bs4
     return bs4.BeautifulSoup(html, features=features)
 
 
