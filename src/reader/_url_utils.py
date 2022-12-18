@@ -5,11 +5,18 @@ In this context, bare paths are considered equivalent to file:// URIs.
 
 """
 import os.path
+from urllib.parse import unquote
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
-# for url2pathname, but we want to allow it to be monkeypatched during testing
-import urllib.request  # noreorder
+# lazy import (https://github.com/lemon24/reader/issues/297)
+# this is what urllib.request does (but it pulls http.client)
+if os.name == 'nt':
+    from nturl2path import url2pathname
+else:
+
+    def url2pathname(url: str) -> str:
+        return unquote(url)
 
 
 def normalize_url(url: str) -> str:
@@ -41,7 +48,7 @@ def extract_path(url: str) -> str:
             raise ValueError("unknown authority for file URI")
         # TODO: maybe disallow query, params, fragment too, to reserve for future uses
 
-        return urllib.request.url2pathname(url_parsed.path)
+        return url2pathname(url_parsed.path)
 
     if url_parsed.scheme:
         # on Windows, drive is the drive letter or UNC \\host\share;

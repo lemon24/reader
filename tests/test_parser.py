@@ -870,18 +870,25 @@ BAD_PATHS_WITH_OS = [
 
 @pytest.mark.parametrize('os_name, url, reason', BAD_PATHS_WITH_OS)
 def test_normalize_url_errors(monkeypatch, reload_module, os_name, url, reason):
-    import ntpath, posixpath, urllib.request
+    import ntpath, posixpath
 
     data_dir = {'nt': 'C:\\feeds', 'posix': '/feeds'}[os_name]
 
     monkeypatch.setattr('os.name', os_name)
     monkeypatch.setattr('os.path', {'nt': ntpath, 'posix': posixpath}[os_name])
-    # urllib.request.url2pathname differs based on os.name
-    reload_module(urllib.request)
+
+    import reader._url_utils
+    import reader._retrievers
+
+    # reader._url_utils.url2pathname differs based on os.name
+    reload_module(reader._url_utils)
+    reload_module(reader._retrievers)
+
+    import reader._retrievers
 
     with pytest.raises(ValueError) as excinfo:
         try:
-            FileRetriever(data_dir)._normalize_url(url)
+            reader._retrievers.FileRetriever(data_dir)._normalize_url(url)
         finally:
             # pytest.raises() doesn't interact well with our monkeypatching
             reload_module.undo()
