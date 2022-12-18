@@ -23,10 +23,7 @@ Servers/CDNs known to not accept the *reader* UA: Cloudflare, WP Engine.
 """
 import logging
 
-from .._vendor import feedparser
-
 _LOG_HEADERS = ['Server', 'X-Powered-By']
-_FEEDPARSER_UA_PREFIX = feedparser.USER_AGENT.partition(" ")[0]
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +36,11 @@ def _ua_fallback_response_hook(session, response, request, **kwargs):
     if not ua:  # pragma: no cover
         return None
 
-    request.headers['User-Agent'] = f'{_FEEDPARSER_UA_PREFIX} {ua}'
+    # lazy import (https://github.com/lemon24/reader/issues/297)
+    from .._feedparser_lazy import feedparser
+
+    ua_prefix = feedparser.USER_AGENT.partition(" ")[0]
+    request.headers['User-Agent'] = f'{ua_prefix} {ua}'
 
     log_headers = {
         h: response.headers[h] for h in _LOG_HEADERS if h in response.headers
