@@ -2,7 +2,6 @@ import functools
 import inspect
 import itertools
 import logging
-import multiprocessing.dummy
 import warnings
 from contextlib import contextmanager
 from functools import wraps
@@ -151,6 +150,9 @@ def count_consumed(it: Iterable[_T]) -> Tuple[Iterable[_T], Callable[[], int]]:
 
 @contextmanager
 def make_pool_map(workers: int) -> Iterator[F]:
+    # lazy import (https://github.com/lemon24/reader/issues/297)
+    import multiprocessing.dummy
+
     pool = multiprocessing.dummy.Pool(workers)
     try:
         yield wrap_map(pool.imap_unordered, workers)
