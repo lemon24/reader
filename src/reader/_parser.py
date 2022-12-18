@@ -146,7 +146,7 @@ def default_parser(
     parser = Parser()
     parser.session_factory.timeout = session_timeout
 
-    from ._retrievers import HTTPRetriever, FileRetriever
+    from ._retrievers import HTTPRetriever
     from ._feedparser import FeedparserParser
     from ._jsonfeed import JSONFeedParser
 
@@ -154,6 +154,8 @@ def default_parser(
     parser.mount_retriever('https://', http_retriever)
     parser.mount_retriever('http://', http_retriever)
     if feed_root is not None:
+        from ._retrievers import FileRetriever
+
         # empty string means catch-all
         parser.mount_retriever('', FileRetriever(feed_root))
 
