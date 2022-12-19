@@ -6,6 +6,12 @@ Changelog
   :noindex:
 
 
+Version 3.4
+-----------
+
+Unreleased
+
+
 Version 3.3
 -----------
 
