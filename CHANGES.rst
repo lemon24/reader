@@ -9,7 +9,7 @@ Changelog
 Version 3.3
 -----------
 
-Unreleased
+Released 2022-12-19
 
 This release marks *reader*'s `5th anniversary`_ and its 2000th commit.
 
