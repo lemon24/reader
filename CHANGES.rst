@@ -11,7 +11,18 @@ Version 3.3
 
 Unreleased
 
+This release marks *reader*'s `5th anniversary`_ and its 2000th commit.
+
+.. attention::
+
+    This is the last release to support Python 3.8;
+    see :issue:`298` for details.
+
 * Support Python 3.11. (:issue:`289`)
+
+* Postpone update-related imports until needed.
+  Shortens time from process start to usable Reader instance by 3x
+  (imports are 72% faster). (:issue:`297`)
 
 * Refactor parser internals. (:issue:`297`)
 
@@ -30,6 +41,8 @@ Unreleased
 * :mod:`~reader._plugins.twitter` plugin:
   don't fail when deserializing tweets with missing ``edit_history_tweet_ids``
   (fails in tweepy 4.11, warns in tweepy >4.12).
+
+.. _5th anniversary: https://github.com/lemon24/reader/commit/73ac0bd3b8d0e5429e0bd7caf5281e4c9c74f16d
 
 
 Version 3.2
