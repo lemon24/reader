@@ -1,6 +1,9 @@
 import pytest
+from test_app import make_app
+from test_app import make_browser
 
 from reader._plugins.preview_feed_list import get_alternates
+
 
 pytestmark = pytest.mark.filterwarnings("ignore:No parser was explicitly specified")
 
@@ -69,3 +72,47 @@ def test_get_alternates_relative():
     assert get_alternates("<link rel=alternate type=rss href=1 />", "url/") == [
         {'type': 'rss', 'href': 'url/1'}
     ]
+
+
+@pytest.mark.slow
+@pytest.mark.requires_lxml
+def test_plugin(db_path, requests_mock):
+    app = make_app(
+        {
+            'reader': {'url': db_path},
+            'app': {'plugins': {'reader._plugins.preview_feed_list:init': None}},
+        }
+    )
+    browser = make_browser(app)
+
+    feed_url = 'http://example.com/'
+
+    requests_mock.real_http = True
+    requests_mock.get(
+        feed_url,
+        content=b"""
+        <link
+            rel="alternate"
+            type="application/atom+xml"
+            title="example.com news"
+            href="http://example.com/feed.xml"
+        />
+        """,
+    )
+
+    browser.open('http://app/')
+    form = browser.select_form('#top-bar form')
+    form.input({'url': feed_url})
+    response = browser.submit_selected(form.form.find('button', text='add feed'))
+    assert response.status_code == 200
+
+    page = browser.get_current_page()
+    assert page.select('title')[0].text == 'Feeds for ' + feed_url
+
+    items = page.select('.preview-feed-list li')
+    assert len(items) == 1, items
+    item = items[0]
+    assert item.get_text(' ', strip=True) == "example.com news application/atom+xml"
+    item.select_one('a').attrs[
+        'href'
+    ] == '/preview?url=http%3A%2F%2Fexample.com%2Ffeed.xml'

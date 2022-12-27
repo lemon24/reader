@@ -11,6 +11,10 @@ Version 3.4
 
 Unreleased
 
+* Fix ``preview_feed_list`` plugin,
+  broken by `3.3 <Version 3.3_>`_ parser refactoring.
+  (:issue:`299`)
+
 
 Version 3.3
 -----------

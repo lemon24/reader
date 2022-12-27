@@ -20,17 +20,25 @@ except ImportError:
 pytestmark = pytest.mark.requires_lxml
 
 
-@pytest.fixture
-def app(db_path):
-    return create_app(make_reader_config({'reader': {'url': db_path}}))
+def make_app(config):
+    return create_app(make_reader_config(config))
 
 
-@pytest.fixture
-def browser(app):
+def make_browser(app):
     session = requests.Session()
     session.mount('http://app/', wsgiadapter.WSGIAdapter(app))
     browser = mechanicalsoup.StatefulBrowser(session)
     return browser
+
+
+@pytest.fixture
+def app(db_path):
+    return make_app({'reader': {'url': db_path}})
+
+
+@pytest.fixture
+def browser(app):
+    return make_browser(app)
 
 
 @pytest.mark.slow

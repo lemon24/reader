@@ -104,7 +104,7 @@ def _get_alternates(soup, url, selector):
 def feed_list():
     url = request.args['url']
 
-    session = get_reader()._parser.make_session()
+    session = get_reader()._parser.session_factory.make_session()
 
     # TODO: url may not actually be an http URL; now we get "error: Invalid URL 'file.xml': No schema supplied. ..."
     # if https://github.com/lemon24/reader/issues/155#issuecomment-647048623 gets implemented,
