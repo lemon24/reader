@@ -15,7 +15,6 @@ from typing import no_type_check
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
-from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
@@ -308,22 +307,7 @@ def _name(thing: object) -> str:
     return '<noname>'
 
 
-# avoid "TypeError: 'type' object is not subscriptable" on Python <= 3.8
-# https://stackoverflow.com/a/48554601
-
-if TYPE_CHECKING:  # pragma: no cover
-    Partial = functools.partial
-else:
-
-    class FakeGenericMeta(type):
-        def __getitem__(self, item):  # noqa: B902
-            return self
-
-    class Partial(functools.partial, metaclass=FakeGenericMeta):
-        pass
-
-
-class BetterStrPartial(Partial[_T]):
+class BetterStrPartial(functools.partial[_T]):
     __slots__ = ()
 
     def __str__(self) -> str:

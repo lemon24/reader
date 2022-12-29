@@ -46,8 +46,7 @@ class _FancyExceptionBase(Exception):
 
     def __str__(self) -> str:
         parts = [self.message, self._str, self._cause_name, self._cause_str]
-        # map is here to only to please mypy on python <3.8
-        return ': '.join(map(str, filter(None, parts)))
+        return ': '.join(filter(None, parts))
 
 
 class ReaderError(_FancyExceptionBase):
