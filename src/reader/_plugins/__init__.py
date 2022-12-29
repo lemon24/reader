@@ -9,8 +9,7 @@ the contents of the actual plugins is not.
 """
 import functools
 from contextlib import contextmanager
-
-from reader._vendor.pkgutil import resolve_name
+from pkgutil import resolve_name
 
 
 class LoaderError(Exception):

@@ -2,12 +2,12 @@
 Built-in plug-ins.
 
 """
+from pkgutil import resolve_name
 from typing import Callable
 from typing import Iterable
 from typing import TYPE_CHECKING
 from typing import Union
 
-from .._vendor.pkgutil import resolve_name
 from ..exceptions import InvalidPluginError
 
 if TYPE_CHECKING:  # pragma: no cover
