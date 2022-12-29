@@ -316,7 +316,7 @@ TIMINGS = OrderedDict(
     for tn, t in sorted(globals().items())
     if tn.startswith('time_')
 )
-TIMINGS_PARAMS_LIST = [(2 ** i,) for i in range(5, 12)]
+TIMINGS_PARAMS_LIST = [(2**i,) for i in range(5, 12)]
 TIMINGS_NUMBER = 4
 PROFILE_PARAMS = TIMINGS_PARAMS_LIST[-1]
 PARAM_IDS = ('num_entries',)

@@ -35,8 +35,8 @@ value_funcs = {
     'duration': lambda d: d['duration'],
     'read_count': lambda d: d['io_counters']['read_count'],
     'write_count': lambda d: d['io_counters']['write_count'],
-    'read_mib': lambda d: d['io_counters']['read_bytes'] / 2 ** 20,
-    'write_mib': lambda d: d['io_counters']['write_bytes'] / 2 ** 20,
+    'read_mib': lambda d: d['io_counters']['read_bytes'] / 2**20,
+    'write_mib': lambda d: d['io_counters']['write_bytes'] / 2**20,
 }
 
 # TODO: move into value_funcs

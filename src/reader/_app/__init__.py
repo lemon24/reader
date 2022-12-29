@@ -75,7 +75,7 @@ def log_scale(n, p=2):
     # https://math.stackexchange.com/a/970251
     # https://math.stackexchange.com/a/3428961
     n = float(n)
-    c = 10 ** p
+    c = 10**p
     return math.log10(n * c + 1) / math.log10(c + 1)
 
 
@@ -614,8 +614,8 @@ def mark_as_dont_care(data):
 @readererror_to_apierror()
 def mark_all_as_read(data):
     feed_url = data['feed-url']
-    entry_id = json.loads(data['entry-id'])
-    for entry_id in entry_id:
+    entry_ids = json.loads(data['entry-id'])
+    for entry_id in entry_ids:
         get_reader().mark_entry_as_read((feed_url, entry_id))
 
 
@@ -623,8 +623,8 @@ def mark_all_as_read(data):
 @readererror_to_apierror()
 def mark_all_as_unread(data):
     feed_url = data['feed-url']
-    entry_id = json.loads(data['entry-id'])
-    for entry_id in entry_id:
+    entry_ids = json.loads(data['entry-id'])
+    for entry_id in entry_ids:
         get_reader().mark_entry_as_unread((feed_url, entry_id))
 
 

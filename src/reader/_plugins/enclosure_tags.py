@@ -70,7 +70,7 @@ def enclosure_tags(filename):
         yield ''
 
         tmp = tempfile.TemporaryFile()
-        for chunk in req.iter_content(chunk_size=2 ** 20):
+        for chunk in req.iter_content(chunk_size=2**20):
             tmp.write(chunk)
         tmp.seek(0)
 
@@ -78,7 +78,7 @@ def enclosure_tags(filename):
 
         try:
             while True:
-                data = tmp.read(2 ** 20)
+                data = tmp.read(2**20)
                 if not data:
                     break
                 yield data

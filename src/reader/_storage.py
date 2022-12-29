@@ -310,7 +310,7 @@ class Storage:
     # chunk_size and entry_counts_average_periods
     # are not part of the Storage interface,
     # but are part of the private API of this implementation.
-    chunk_size = 2 ** 8
+    chunk_size = 2**8
     # 1, 3, 12 months rounded down to days,
     # assuming an average of 30.436875 days/month
     entry_counts_average_periods = (30, 91, 365)
@@ -962,7 +962,7 @@ class Storage:
 
                 cursor.execute(delete_query, context)
                 rowcount_exactly_one(
-                    cursor, lambda: EntryNotFoundError(feed_url, entry_id)
+                    cursor, lambda: EntryNotFoundError(feed_url, entry_id)  # noqa: B023
                 )
 
     def get_entries(
