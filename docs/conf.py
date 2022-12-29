@@ -1,8 +1,10 @@
 import os
+import re
 import sys
 import unittest.mock
 
 import packaging.version
+from setuptools.config.setupcfg import read_configuration
 
 sys.path.insert(0, os.path.abspath('../src'))
 
@@ -67,7 +69,17 @@ autodoc_member_order = 'bysource'
 autodoc_typehints = 'none'
 
 
-rst_prolog = ""
+setup_cfg = read_configuration('../setup.cfg')
+python_requires = str(setup_cfg['options']['python_requires'])
+min_python = re.match("^>=(\d+\.\d+)$", python_requires).group(1)
+
+
+rst_prolog = f"""
+
+.. |min_python| replace:: {min_python}
+
+
+"""
 
 
 GOOGLE_SITE_VERIFICATION = os.environ.get('GOOGLE_SITE_VERIFICATION')

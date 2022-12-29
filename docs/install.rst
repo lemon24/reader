@@ -5,7 +5,7 @@ Installation
 Python versions
 ---------------
 
-*reader* supports Python 3.8 and newer, and PyPy.
+*reader* supports Python |min_python| and newer, and PyPy.
 
 
 Dependencies
@@ -26,15 +26,6 @@ These packages will be installed automatically when installing *reader*:
 (at least SQLite 3.15), and on the `JSON1`_ SQLite extension.
 To use the :ref:`full-text search <fts>` functionality,
 at least SQLite 3.18 with the `FTS5`_ extension is required.
-
-.. note::
-
-    **reader works out of the box on Windows only starting with Python 3.9**,
-    because the SQLite bundled with the official Python distribution
-    does **not** include the JSON1 extension in earlier versions.
-    That said, it should be possible to build ``sqlite3``
-    with a newer version of SQLite;
-    see :issue:`163` for details.
 
 
 .. _optional dependencies:

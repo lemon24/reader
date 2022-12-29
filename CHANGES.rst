@@ -11,6 +11,8 @@ Version 3.4
 
 Unreleased
 
+* Drop Python 3.8 support. (:issue:`298`)
+
 * Fix ``preview_feed_list`` plugin,
   broken by `3.3 <Version 3.3_>`_ parser refactoring.
   (:issue:`299`)
