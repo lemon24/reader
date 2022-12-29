@@ -55,8 +55,8 @@ def pytest_runtest_setup(item):
     # see the comments in setup.cfg for details.
     for mark in item.iter_markers(name="requires_lxml"):
         no_lxml = [
-            sys.implementation.name == 'pypy' and os.name == 'nt',
-            '.'.join(map(str, sys.version_info[:2])) >= '3.11' and os.name == 'nt',
+            # currently, we have lxml wheels on all supported platforms;
+            # last in bbe1deee5eee800291b5a0e83fc4ab1cb949445c
         ]
         if any(no_lxml):
             pytest.skip("test requires lxml")
