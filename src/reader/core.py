@@ -4,21 +4,18 @@ import builtins
 import logging
 import numbers
 import warnings
+from collections.abc import Iterable
+from collections.abc import Mapping
+from collections.abc import MutableSequence
 from contextlib import nullcontext
 from datetime import datetime
 from datetime import timezone
 from types import MappingProxyType
 from typing import Any
 from typing import Callable
-from typing import Iterable
 from typing import Literal
-from typing import Mapping
-from typing import MutableSequence
-from typing import Optional
 from typing import overload
-from typing import Tuple
 from typing import TypeVar
-from typing import Union
 
 from ._parser import default_parser
 from ._parser import Parser
@@ -89,14 +86,14 @@ FeedsUpdateHook = Callable[['Reader'], None]
 def make_reader(
     url: str,
     *,
-    feed_root: Optional[str] = None,
+    feed_root: str | None = None,
     plugins: Iterable[PluginInput] = DEFAULT_PLUGINS,
     session_timeout: TimeoutType = DEFAULT_TIMEOUT,
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
-    search_enabled: Union[bool, None, Literal['auto']] = 'auto',
-    _storage: Optional[Storage] = None,
+    search_enabled: bool | None | Literal['auto'] = 'auto',
+    _storage: Storage | None = None,
     _storage_factory: Any = None,
-) -> 'Reader':
+) -> Reader:
     """Create a new :class:`Reader`.
 
     *reader* can optionally parse local files, with the feed URL either
@@ -610,14 +607,14 @@ class Reader:
     def get_feeds(
         self,
         *,
-        feed: Optional[FeedInput] = None,
+        feed: FeedInput | None = None,
         tags: TagFilterInput = None,
-        broken: Optional[bool] = None,
-        updates_enabled: Optional[bool] = None,
-        new: Optional[bool] = None,
+        broken: bool | None = None,
+        updates_enabled: bool | None = None,
+        new: bool | None = None,
         sort: FeedSortOrder = 'title',
-        limit: Optional[int] = None,
-        starting_after: Optional[FeedInput] = None,
+        limit: int | None = None,
+        starting_after: FeedInput | None = None,
     ) -> Iterable[Feed]:
         """Get all or some of the feeds.
 
@@ -741,15 +738,15 @@ class Reader:
         feed: FeedInput,
         default: _T,
         /,
-    ) -> Union[Feed, _T]:  # pragma: no cover
+    ) -> Feed | _T:  # pragma: no cover
         ...
 
     def get_feed(
         self,
         feed: FeedInput,
-        default: Union[MissingType, _T] = MISSING,
+        default: MissingType | _T = MISSING,
         /,
-    ) -> Union[Feed, _T]:
+    ) -> Feed | _T:
         """Get a feed.
 
         Like ``next(iter(reader.get_feeds(feed=feed)))``,
@@ -779,11 +776,11 @@ class Reader:
     def get_feed_counts(
         self,
         *,
-        feed: Optional[FeedInput] = None,
+        feed: FeedInput | None = None,
         tags: TagFilterInput = None,
-        broken: Optional[bool] = None,
-        updates_enabled: Optional[bool] = None,
-        new: Optional[bool] = None,
+        broken: bool | None = None,
+        updates_enabled: bool | None = None,
+        new: bool | None = None,
     ) -> FeedCounts:
         """Count all or some of the feeds.
 
@@ -817,7 +814,7 @@ class Reader:
         )
         return self._storage.get_feed_counts(filter_options)
 
-    def set_feed_user_title(self, feed: FeedInput, title: Optional[str], /) -> None:
+    def set_feed_user_title(self, feed: FeedInput, title: str | None, /) -> None:
         """Set a user-defined title for a feed.
 
         Args:
@@ -880,11 +877,11 @@ class Reader:
     def update_feeds(
         self,
         *,
-        feed: Optional[FeedInput] = None,
+        feed: FeedInput | None = None,
         tags: TagFilterInput = None,
-        broken: Optional[bool] = None,
-        updates_enabled: Optional[bool] = True,
-        new: Optional[bool] = None,
+        broken: bool | None = None,
+        updates_enabled: bool | None = True,
+        new: bool | None = None,
         workers: int = 1,
     ) -> None:
         """Update all or some of the feeds.
@@ -962,11 +959,11 @@ class Reader:
     def update_feeds_iter(
         self,
         *,
-        feed: Optional[FeedInput] = None,
+        feed: FeedInput | None = None,
         tags: TagFilterInput = None,
-        broken: Optional[bool] = None,
-        updates_enabled: Optional[bool] = True,
-        new: Optional[bool] = None,
+        broken: bool | None = None,
+        updates_enabled: bool | None = True,
+        new: bool | None = None,
         workers: int = 1,
         _call_feeds_update_hooks: bool = True,
     ) -> Iterable[UpdateResult]:
@@ -1042,7 +1039,7 @@ class Reader:
             for hook in self.after_feeds_update_hooks:
                 hook(self)
 
-    def update_feed(self, feed: FeedInput, /) -> Optional[UpdatedFeed]:
+    def update_feed(self, feed: FeedInput, /) -> UpdatedFeed | None:
         """Update a single feed.
 
         The feed will be updated even if updates are disabled for it.
@@ -1092,15 +1089,15 @@ class Reader:
     def get_entries(
         self,
         *,
-        feed: Optional[FeedInput] = None,
-        entry: Optional[EntryInput] = None,
-        read: Optional[bool] = None,
-        important: Optional[bool] = None,
-        has_enclosures: Optional[bool] = None,
+        feed: FeedInput | None = None,
+        entry: EntryInput | None = None,
+        read: bool | None = None,
+        important: bool | None = None,
+        has_enclosures: bool | None = None,
         feed_tags: TagFilterInput = None,
         sort: EntrySortOrder = 'recent',
-        limit: Optional[int] = None,
-        starting_after: Optional[EntryInput] = None,
+        limit: int | None = None,
+        starting_after: EntryInput | None = None,
     ) -> Iterable[Entry]:
         """Get all or some of the entries.
 
@@ -1222,15 +1219,15 @@ class Reader:
         entry: EntryInput,
         default: _T,
         /,
-    ) -> Union[Entry, _T]:  # pragma: no cover
+    ) -> Entry | _T:  # pragma: no cover
         ...
 
     def get_entry(
         self,
         entry: EntryInput,
-        default: Union[MissingType, _T] = MISSING,
+        default: MissingType | _T = MISSING,
         /,
-    ) -> Union[Entry, _T]:
+    ) -> Entry | _T:
         """Get an entry.
 
         Like ``next(iter(reader.get_entries(entry=entry)))``,
@@ -1260,11 +1257,11 @@ class Reader:
     def get_entry_counts(
         self,
         *,
-        feed: Optional[FeedInput] = None,
-        entry: Optional[EntryInput] = None,
-        read: Optional[bool] = None,
-        important: Optional[bool] = None,
-        has_enclosures: Optional[bool] = None,
+        feed: FeedInput | None = None,
+        entry: EntryInput | None = None,
+        read: bool | None = None,
+        important: bool | None = None,
+        has_enclosures: bool | None = None,
         feed_tags: TagFilterInput = None,
     ) -> EntryCounts:
         """Count all or some of the entries.
@@ -1303,7 +1300,7 @@ class Reader:
         entry: EntryInput,
         read: bool,
         /,
-        modified: Union[MissingType, None, datetime] = MISSING,
+        modified: MissingType | None | datetime = MISSING,
     ) -> None:
         """Mark an entry as read or unread,
         possibly with a custom timestamp.
@@ -1328,7 +1325,7 @@ class Reader:
             The ``entry`` and ``read`` arguments are now positional-only.
 
         """
-        modified_naive: Optional[datetime]
+        modified_naive: datetime | None
         if isinstance(modified, MissingType):
             modified_naive = self._now()
         elif modified is None:
@@ -1386,7 +1383,7 @@ class Reader:
         entry: EntryInput,
         important: bool,
         /,
-        modified: Union[MissingType, None, datetime] = MISSING,
+        modified: MissingType | None | datetime = MISSING,
     ) -> None:
         """Mark an entry as important or unimportant,
         possibly with a custom timestamp.
@@ -1411,7 +1408,7 @@ class Reader:
             The ``entry`` and ``important`` arguments are now positional-only.
 
         """
-        modified_naive: Optional[datetime]
+        modified_naive: datetime | None
         if isinstance(modified, MissingType):
             modified_naive = self._now()
         elif modified is None:
@@ -1650,15 +1647,15 @@ class Reader:
         query: str,
         /,
         *,
-        feed: Optional[FeedInput] = None,
-        entry: Optional[EntryInput] = None,
-        read: Optional[bool] = None,
-        important: Optional[bool] = None,
-        has_enclosures: Optional[bool] = None,
+        feed: FeedInput | None = None,
+        entry: EntryInput | None = None,
+        read: bool | None = None,
+        important: bool | None = None,
+        has_enclosures: bool | None = None,
         feed_tags: TagFilterInput = None,
         sort: SearchSortOrder = 'relevant',
-        limit: Optional[int] = None,
-        starting_after: Optional[EntryInput] = None,
+        limit: int | None = None,
+        starting_after: EntryInput | None = None,
     ) -> Iterable[EntrySearchResult]:
         """Get entries matching a full-text search query.
 
@@ -1786,11 +1783,11 @@ class Reader:
         query: str,
         /,
         *,
-        feed: Optional[FeedInput] = None,
-        entry: Optional[EntryInput] = None,
-        read: Optional[bool] = None,
-        important: Optional[bool] = None,
-        has_enclosures: Optional[bool] = None,
+        feed: FeedInput | None = None,
+        entry: EntryInput | None = None,
+        read: bool | None = None,
+        important: bool | None = None,
+        has_enclosures: bool | None = None,
         feed_tags: TagFilterInput = None,
     ) -> EntrySearchCounts:
         """Count entries matching a full-text search query.
@@ -1835,8 +1832,8 @@ class Reader:
         return self._search.search_entry_counts(query, now, filter_options)
 
     def get_tags(
-        self, resource: ResourceInput, /, *, key: Optional[str] = None
-    ) -> Iterable[Tuple[str, JSONType]]:
+        self, resource: ResourceInput, /, *, key: str | None = None
+    ) -> Iterable[tuple[str, JSONType]]:
         """Get all or some tags of a resource as ``(key, value)`` pairs.
 
         `resource` can have one of the following types:
@@ -1946,16 +1943,16 @@ class Reader:
         key: str,
         default: _T,
         /,
-    ) -> Union[JSONType, _T]:  # pragma: no cover
+    ) -> JSONType | _T:  # pragma: no cover
         ...
 
     def get_tag(
         self,
         resource: ResourceInput,
         key: str,
-        default: Union[MissingType, _T] = MISSING,
+        default: MissingType | _T = MISSING,
         /,
-    ) -> Union[JSONType, _T]:
+    ) -> JSONType | _T:
         """Get the value of this resource tag.
 
         Like ``next(iter(reader.get_tags(resource, key=key)))[1]``,
@@ -2010,7 +2007,7 @@ class Reader:
         self,
         resource: ResourceInput,
         key: str,
-        value: Union[JSONType, MissingType] = MISSING,
+        value: JSONType | MissingType = MISSING,
         /,
     ) -> None:
         """Set the value of this resource tag.
@@ -2109,7 +2106,7 @@ class Reader:
     def make_plugin_reserved_name(
         self,
         plugin_name: str,
-        key: Optional[str] = None,
+        key: str | None = None,
         /,
     ) -> str:
         """Create a plugin-reserved tag name.

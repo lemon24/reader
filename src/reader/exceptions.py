@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import Tuple
 
 
 class _FancyExceptionBase(Exception):
@@ -72,7 +71,7 @@ class ResourceNotFoundError(ReaderError):
     """
 
     @property
-    def resource_id(self) -> Tuple[str, ...]:  # pragma: no cover
+    def resource_id(self) -> tuple[str, ...]:  # pragma: no cover
         """The `resource_id` of the resource."""
         raise NotImplementedError
 
@@ -96,7 +95,7 @@ class FeedError(ReaderError):
         return repr(self.url)
 
     @property
-    def resource_id(self) -> Tuple[str]:
+    def resource_id(self) -> tuple[str]:
         """Alias for (:attr:`~url`,).
 
         .. versionadded:: 2.17
@@ -160,7 +159,7 @@ class EntryError(ReaderError):
         return repr((self.feed_url, self.id))
 
     @property
-    def resource_id(self) -> Tuple[str, str]:
+    def resource_id(self) -> tuple[str, str]:
         """Alias for (:attr:`~feed_url`, :attr:`~id`).
 
         .. versionadded:: 2.17
@@ -253,7 +252,7 @@ class TagError(ReaderError):
     """
 
     def __init__(
-        self, resource_id: Tuple[str, ...], key: str, /, message: str = ''
+        self, resource_id: tuple[str, ...], key: str, /, message: str = ''
     ) -> None:
         super().__init__(message)
 

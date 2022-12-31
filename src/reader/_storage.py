@@ -3,21 +3,16 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+from collections.abc import Iterable
+from collections.abc import Mapping
+from collections.abc import Sequence
 from datetime import datetime
 from datetime import timedelta
 from functools import partial
 from typing import Any
-from typing import Dict
-from typing import Iterable
-from typing import Mapping
 from typing import NamedTuple
-from typing import Optional
 from typing import overload
-from typing import Sequence
-from typing import Tuple
-from typing import Type
 from typing import TypeVar
-from typing import Union
 
 from ._sql_utils import BaseQuery
 from ._sql_utils import paginated_query
@@ -203,8 +198,8 @@ def create_entry_tags(db: sqlite3.Connection) -> None:
 
 class SchemaInfo(NamedTuple):
     table_prefix: str
-    id_columns: Tuple[str, ...]
-    not_found_exc: Type[ReaderError]
+    id_columns: tuple[str, ...]
+    not_found_exc: type[ReaderError]
 
 
 SCHEMA_INFO = {
@@ -261,7 +256,7 @@ MINIMUM_SQLITE_VERSION = (3, 15)
 REQUIRED_SQLITE_FUNCTIONS = ['json_array_length']
 
 
-def setup_db(db: sqlite3.Connection, wal_enabled: Optional[bool]) -> None:
+def setup_db(db: sqlite3.Connection, wal_enabled: bool | None) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
@@ -321,11 +316,11 @@ class Storage:
     def __init__(
         self,
         path: str,
-        timeout: Optional[float] = None,
-        wal_enabled: Optional[bool] = True,
-        factory: Optional[Type[sqlite3.Connection]] = None,
+        timeout: float | None = None,
+        wal_enabled: bool | None = True,
+        factory: type[sqlite3.Connection] | None = None,
     ):
-        kwargs: Dict[str, Any] = {}
+        kwargs: dict[str, Any] = {}
         if timeout is not None:
             kwargs['timeout'] = timeout
         if factory:  # pragma: no cover
@@ -451,8 +446,8 @@ class Storage:
         self,
         filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
         sort: FeedSortOrder = 'title',
-        limit: Optional[int] = None,
-        starting_after: Optional[str] = None,
+        limit: int | None = None,
+        starting_after: str | None = None,
     ) -> Iterable[Feed]:
         rv = join_paginated_iter(
             partial(self.get_feeds_page, filter_options, sort),  # type: ignore[arg-type]
@@ -463,7 +458,7 @@ class Storage:
         yield from rv
 
     @wrap_exceptions(StorageError)
-    def get_feed_last(self, sort: str, url: str) -> Tuple[Any, ...]:
+    def get_feed_last(self, sort: str, url: str) -> tuple[Any, ...]:
         # TODO: make this method private?
 
         query = Query().FROM("feeds").WHERE("url = :url")
@@ -486,9 +481,9 @@ class Storage:
         self,
         filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
         sort: FeedSortOrder = 'title',
-        chunk_size: Optional[int] = None,
-        last: Optional[_T] = None,
-    ) -> Iterable[Tuple[Feed, Optional[_T]]]:
+        chunk_size: int | None = None,
+        last: _T | None = None,
+    ) -> Iterable[tuple[Feed, _T | None]]:
         query, context = make_get_feeds_query(filter_options, sort)
         yield from paginated_query(
             self.get_db(), query, context, chunk_size, last, feed_factory
@@ -524,8 +519,8 @@ class Storage:
         # so we don't expose any pagination stuff.
 
         def inner(
-            chunk_size: Optional[int], last: Optional[_T]
-        ) -> Iterable[Tuple[FeedForUpdate, Optional[_T]]]:
+            chunk_size: int | None, last: _T | None
+        ) -> Iterable[tuple[FeedForUpdate, _T | None]]:
             query = (
                 Query()
                 .SELECT(
@@ -554,8 +549,8 @@ class Storage:
         yield from join_paginated_iter(inner, self.chunk_size)
 
     def _get_entries_for_update(
-        self, entries: Iterable[Tuple[str, str]]
-    ) -> Iterable[Optional[EntryForUpdate]]:
+        self, entries: Iterable[tuple[str, str]]
+    ) -> Iterable[EntryForUpdate | None]:
         # We could fetch everything in a single query,
         # but there are limits to the number of variables used in a query,
         # and we'd have to fall back to this anyway.
@@ -594,8 +589,8 @@ class Storage:
 
     @wrap_exceptions_iter(StorageError)
     def get_entries_for_update(
-        self, entries: Iterable[Tuple[str, str]]
-    ) -> Iterable[Optional[EntryForUpdate]]:
+        self, entries: Iterable[tuple[str, str]]
+    ) -> Iterable[EntryForUpdate | None]:
         # It's acceptable for this method to not be atomic. TODO: Why?
 
         iterables = chunks(self.chunk_size, entries) if self.chunk_size else (entries,)
@@ -607,7 +602,7 @@ class Storage:
             yield from rv
 
     @wrap_exceptions(StorageError)
-    def set_feed_user_title(self, url: str, title: Optional[str]) -> None:
+    def set_feed_user_title(self, url: str, title: str | None) -> None:
         with self.get_db() as db:
             cursor = db.execute(
                 "UPDATE feeds SET user_title = :title WHERE url = :url;",
@@ -634,7 +629,7 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def mark_as_read(
-        self, feed_url: str, entry_id: str, read: bool, modified: Optional[datetime]
+        self, feed_url: str, entry_id: str, read: bool, modified: datetime | None
     ) -> None:
         with self.get_db() as db:
             cursor = db.execute(
@@ -657,7 +652,7 @@ class Storage:
         feed_url: str,
         entry_id: str,
         important: bool,
-        modified: Optional[datetime],
+        modified: datetime | None,
     ) -> None:
         with self.get_db() as db:
             cursor = db.execute(
@@ -680,7 +675,7 @@ class Storage:
     # TODO: (maybe) unified pair of methods to get/set "hidden" entry attributes
 
     @wrap_exceptions(StorageError)
-    def get_entry_recent_sort(self, entry: Tuple[str, str]) -> datetime:
+    def get_entry_recent_sort(self, entry: tuple[str, str]) -> datetime:
         feed_url, entry_id = entry
         rows = self.get_db().execute(
             """
@@ -696,7 +691,7 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def set_entry_recent_sort(
-        self, entry: Tuple[str, str], recent_sort: datetime
+        self, entry: tuple[str, str], recent_sort: datetime
     ) -> None:
         feed_url, entry_id = entry
         with self.get_db() as db:
@@ -936,7 +931,7 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def delete_entries(
-        self, entries: Iterable[Tuple[str, str]], *, added_by: Optional[str] = None
+        self, entries: Iterable[tuple[str, str]], *, added_by: str | None = None
     ) -> None:
         # This must be atomic (unlike add_or_update_entries()); hence, no paging.
         # We'll deal with locking issues only if they start appearing
@@ -972,8 +967,8 @@ class Storage:
         now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: EntrySortOrder = 'recent',
-        limit: Optional[int] = None,
-        starting_after: Optional[Tuple[str, str]] = None,
+        limit: int | None = None,
+        starting_after: tuple[str, str] | None = None,
     ) -> Iterable[Entry]:
         # TODO: deduplicate
         if sort == 'recent':
@@ -1001,8 +996,8 @@ class Storage:
 
     @wrap_exceptions(StorageError)
     def get_entry_last(
-        self, now: datetime, sort: str, entry: Tuple[str, str]
-    ) -> Tuple[Any, ...]:
+        self, now: datetime, sort: str, entry: tuple[str, str]
+    ) -> tuple[Any, ...]:
         # TODO: make this method private?
 
         feed_url, entry_id = entry
@@ -1030,9 +1025,9 @@ class Storage:
         now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: EntrySortOrder = 'recent',
-        chunk_size: Optional[int] = None,
-        last: Optional[_T] = None,
-    ) -> Iterable[Tuple[Entry, Optional[_T]]]:
+        chunk_size: int | None = None,
+        last: _T | None = None,
+    ) -> Iterable[tuple[Entry, _T | None]]:
         query, context = make_get_entries_query(filter_options, sort)
         yield from paginated_query(
             self.get_db(), query, context, chunk_size, last, entry_factory
@@ -1060,8 +1055,8 @@ class Storage:
     def get_tags(
         self,
         resource_id: AnyResourceId,
-        key: Optional[str] = None,
-    ) -> Iterable[Tuple[str, JSONType]]:
+        key: str | None = None,
+    ) -> Iterable[tuple[str, JSONType]]:
         yield from join_paginated_iter(
             partial(self.get_tags_page, resource_id, key),
             self.chunk_size,
@@ -1071,12 +1066,12 @@ class Storage:
     def get_tags_page(
         self,
         resource_id: AnyResourceId,
-        key: Optional[str] = None,
-        chunk_size: Optional[int] = None,
-        last: Optional[_T] = None,
-    ) -> Iterable[Tuple[Tuple[str, JSONType], Optional[_T]]]:
+        key: str | None = None,
+        chunk_size: int | None = None,
+        last: _T | None = None,
+    ) -> Iterable[tuple[tuple[str, JSONType], _T | None]]:
         query = Query().SELECT("key")
-        context: Dict[str, Any] = dict()
+        context: dict[str, Any] = dict()
 
         if resource_id is not None:
             info = SCHEMA_INFO[len(resource_id)]
@@ -1104,7 +1099,7 @@ class Storage:
 
         query.scrolling_window_order_by("key")
 
-        def row_factory(t: Tuple[Any, ...]) -> Tuple[str, JSONType]:
+        def row_factory(t: tuple[Any, ...]) -> tuple[str, JSONType]:
             key, value, *_ = t
             return key, json.loads(value)
 
@@ -1127,7 +1122,7 @@ class Storage:
         self,
         resource_id: ResourceId,
         key: str,
-        value: Union[MissingType, JSONType] = MISSING,
+        value: MissingType | JSONType = MISSING,
     ) -> None:
         info = SCHEMA_INFO[len(resource_id)]
 
@@ -1191,7 +1186,7 @@ class Storage:
 
 def make_get_feeds_query(
     filter_options: FeedFilterOptions, sort: FeedSortOrder
-) -> Tuple[Query, Dict[str, Any]]:
+) -> tuple[Query, dict[str, Any]]:
     query = (
         Query()
         .SELECT(
@@ -1229,7 +1224,7 @@ def make_get_feeds_query(
     return query, context
 
 
-def feed_factory(t: Tuple[Any, ...]) -> Feed:
+def feed_factory(t: tuple[Any, ...]) -> Feed:
     return Feed._make(
         t[:10]
         + (
@@ -1242,10 +1237,10 @@ def feed_factory(t: Tuple[Any, ...]) -> Feed:
 def apply_feed_filter_options(
     query: Query,
     filter_options: FeedFilterOptions,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     url, tags, broken, updates_enabled, new = filter_options
 
-    context: Dict[str, object] = {}
+    context: dict[str, object] = {}
 
     if url:
         query.WHERE("url = :url")
@@ -1266,7 +1261,7 @@ def apply_feed_filter_options(
 def make_get_entries_query(
     filter_options: EntryFilterOptions,
     sort: EntrySortOrder,
-) -> Tuple[Query, Dict[str, Any]]:
+) -> tuple[Query, dict[str, Any]]:
     query = (
         Query()
         .SELECT(
@@ -1322,7 +1317,7 @@ def make_get_entries_query(
     return query, filter_context
 
 
-def entry_factory(t: Tuple[Any, ...]) -> Entry:
+def entry_factory(t: tuple[Any, ...]) -> Entry:
     feed = feed_factory(t[0:12])
     entry = t[12:19] + (
         tuple(Content(**d) for d in json.loads(t[19])) if t[19] else (),
@@ -1342,7 +1337,7 @@ def entry_factory(t: Tuple[Any, ...]) -> Entry:
 
 def apply_entry_filter_options(
     query: Query, filter_options: EntryFilterOptions, keyword: str = 'WHERE'
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     add = getattr(query, keyword)
     feed_url, entry_id, read, important, has_enclosures, feed_tags = filter_options
 
@@ -1384,7 +1379,7 @@ def apply_feed_tags_filter_options(
     tags: TagFilter,
     url_column: str,
     keyword: str = 'WHERE',
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     add = getattr(query, keyword)
 
     context = {}
@@ -1506,9 +1501,9 @@ def apply_random(query: Query) -> None:
 
 def make_entry_counts_query(
     now: datetime,
-    average_periods: Tuple[float, ...],
+    average_periods: tuple[float, ...],
     entries_query: Query,
-) -> Tuple[Query, Dict[str, Any]]:
+) -> tuple[Query, dict[str, Any]]:
     query = (
         Query()
         .WITH(('entries_filtered', str(entries_query)))
@@ -1533,7 +1528,7 @@ def make_entry_counts_query(
     # one CTE / period + HAVING in the CTE is a tiny bit faster than
     # one CTE + WHERE in the SELECT
 
-    context: Dict[str, Any] = dict(now=now)
+    context: dict[str, Any] = dict(now=now)
 
     for period_i, period_days in enumerate(average_periods):
         # TODO: when we get first_updated, use it instead of first_updated_epoch

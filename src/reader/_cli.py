@@ -421,7 +421,7 @@ def entries(reader):
 
     """
     for entry in reader.get_entries():
-        click.echo("{} {}".format(entry.feed.url, entry.link or entry.id))
+        click.echo(f"{entry.feed.url} {entry.link or entry.id}")
 
 
 @cli.group()
@@ -472,7 +472,7 @@ def search_entries(reader, query):
     """
     for rv in reader.search_entries(query):
         entry = reader.get_entry(rv)
-        click.echo("{} {}".format(entry.feed.url, entry.link or entry.id))
+        click.echo(f"{entry.feed.url} {entry.link or entry.id}")
 
 
 @cli.group()

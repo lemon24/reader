@@ -71,7 +71,7 @@ autodoc_typehints = 'none'
 
 setup_cfg = read_configuration('../setup.cfg')
 python_requires = str(setup_cfg['options']['python_requires'])
-min_python = re.match("^>=(\d+\.\d+)$", python_requires).group(1)
+min_python = re.match(r"^>=(\d+\.\d+)$", python_requires).group(1)
 
 
 rst_prolog = f"""

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from functools import partial
@@ -9,11 +10,8 @@ from itertools import starmap
 from itertools import tee
 from typing import Any
 from typing import Callable
-from typing import Iterable
 from typing import Optional
-from typing import Tuple
 from typing import TYPE_CHECKING
-from typing import Union
 
 from ._types import EntryData
 from ._types import EntryForUpdate
@@ -46,7 +44,7 @@ log = logging.getLogger("reader")
 HASH_CHANGED_LIMIT = 24
 
 
-EntryPairs = Iterable[Tuple[EntryData, Optional[EntryForUpdate]]]
+EntryPairs = Iterable[tuple[EntryData, Optional[EntryForUpdate]]]
 
 
 @dataclass(frozen=True)
@@ -89,9 +87,9 @@ class Decider:
         old_feed: FeedForUpdate,
         now: datetime,
         global_now: datetime,
-        parsed_feed: Union[ParsedFeed, None, ParseError],
+        parsed_feed: ParsedFeed | None | ParseError,
         entry_pairs: EntryPairs,
-    ) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
+    ) -> tuple[FeedUpdateIntent | None, Iterable[EntryUpdateIntent]]:
         decider = cls(
             old_feed,
             now,
@@ -154,8 +152,8 @@ class Decider:
         return False
 
     def should_update_entry(
-        self, new: EntryData, old: Optional[EntryForUpdate]
-    ) -> Tuple[Optional[EntryData], bool]:
+        self, new: EntryData, old: EntryForUpdate | None
+    ) -> tuple[EntryData | None, bool]:
         def debug(msg: str, *args: Any) -> None:
             self.log.debug("entry %r: " + msg, new.id, *args)
 
@@ -221,7 +219,7 @@ class Decider:
                 else:
                     hash_changed = 0
 
-                recent_sort: Optional[datetime]
+                recent_sort: datetime | None
                 if is_new:
                     if not self.old_feed.last_updated:
                         recent_sort = (
@@ -248,7 +246,7 @@ class Decider:
         self,
         parsed_feed: ParsedFeed,
         entries_to_update: bool,
-    ) -> Optional[FeedUpdateIntent]:
+    ) -> FeedUpdateIntent | None:
         if self.should_update_feed(parsed_feed.feed, entries_to_update):
             return FeedUpdateIntent(
                 self.url,
@@ -263,9 +261,9 @@ class Decider:
 
     def update(
         self,
-        parsed_feed: Union[ParsedFeed, None, ParseError],
+        parsed_feed: ParsedFeed | None | ParseError,
         entry_pairs: EntryPairs,
-    ) -> Tuple[Optional[FeedUpdateIntent], Iterable[EntryUpdateIntent]]:
+    ) -> tuple[FeedUpdateIntent | None, Iterable[EntryUpdateIntent]]:
 
         # Not modified.
         if not parsed_feed:
@@ -331,7 +329,7 @@ class Pipeline:
     decider = Decider
 
     @classmethod
-    def from_reader(cls, reader: Reader, map: MapType) -> 'Pipeline':
+    def from_reader(cls, reader: Reader, map: MapType) -> Pipeline:
         return cls(
             storage=reader._storage,
             parser=reader._parser,
@@ -402,8 +400,8 @@ class Pipeline:
         self,
         global_now: datetime,
         feed: FeedForUpdate,
-        result: Union[Optional[ParsedFeed], ParseError],
-    ) -> Tuple[str, Union[UpdatedFeed, None, Exception]]:
+        result: ParsedFeed | None | ParseError,
+    ) -> tuple[str, UpdatedFeed | None | Exception]:
 
         make_intents = partial(
             self.decider.make_intents, feed, self.now(), global_now, result
@@ -433,9 +431,7 @@ class Pipeline:
 
         return feed.url, UpdatedFeed(feed.url, *counts, total - sum(counts))
 
-    def get_entry_pairs(
-        self, result: Union[Optional[ParsedFeed], ParseError]
-    ) -> EntryPairs:
+    def get_entry_pairs(self, result: ParsedFeed | None | ParseError) -> EntryPairs:
         if not result or isinstance(result, Exception):
             return ()
 
@@ -449,9 +445,9 @@ class Pipeline:
     def update_feed(
         self,
         url: str,
-        feed: Optional[FeedUpdateIntent],
+        feed: FeedUpdateIntent | None,
         entries: Iterable[EntryUpdateIntent],
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
 
         for feed_hook in self.reader.before_feed_update_hooks:
             feed_hook(self.reader, url)

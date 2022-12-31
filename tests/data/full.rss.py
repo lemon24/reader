@@ -7,7 +7,7 @@ from reader._types import FeedData
 
 
 feed = FeedData(
-    url='{}full.rss'.format(url_base),
+    url=f'{url_base}full.rss',
     updated=datetime.datetime(2010, 9, 6, 0, 1),
     title='RSS Title',
     link='http://www.example.com/main.html',

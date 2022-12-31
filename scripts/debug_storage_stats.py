@@ -70,11 +70,11 @@ class Result(NamedTuple):
 
 
 def clean_up_stmt(stmt):
-    stmt = re.sub('\s+', ' ', stmt).strip()
+    stmt = re.sub(r'\s+', ' ', stmt).strip()
 
     values = re.escape('(?, ?)')
     stmt = re.sub(
-        f'AS \( VALUES {values}(, {values})*', 'AS ( VALUES (?, ?), ...', stmt
+        fr'AS \( VALUES {values}(, {values})*', 'AS ( VALUES (?, ?), ...', stmt
     )
 
     if stmt.startswith('SELECT') and ' FROM ' in stmt:

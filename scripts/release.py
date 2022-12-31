@@ -66,7 +66,7 @@ def update_init_version(version):
 
 
 def update_changelog_date(version, date):
-    title = 'Version {}'.format(version)
+    title = f'Version {version}'
     path_sub(
         r'(\n{}\n{}\n\n)(Unreleased)(\n)'.format(re.escape(title), '-' * len(title)),
         'Released ' + str(date.date()),
@@ -75,8 +75,8 @@ def update_changelog_date(version, date):
 
 
 def add_changelog_section(version, new_version):
-    title = 'Version {}'.format(version)
-    new_title = 'Version {}'.format(new_version)
+    title = f'Version {version}'
+    new_title = f'Version {new_version}'
     path_sub(
         r'()()(\n{}\n{}\n\n)'.format(re.escape(title), '-' * len(title)),
         '\n{}\n{}\n\nUnreleased\n\n'.format(new_title, '-' * len(new_title)),
@@ -140,7 +140,7 @@ def main(version, new_version, date, tox, changelog):
     update_init_version(version)
     if changelog:
         update_changelog_date(version, date)
-    commit("Release {}.".format(version))
+    commit(f"Release {version}.")
 
     if tox:
         run_tox()
@@ -164,11 +164,11 @@ def main(version, new_version, date, tox, changelog):
 
     confirm("Create release {} in GitHub (doesn't happen automatically).", version)
 
-    new_version_full = "{}.dev0".format(new_version)
+    new_version_full = f"{new_version}.dev0"
     update_init_version(new_version_full)
     if changelog:
         add_changelog_section(version, new_version)
-    commit("Bump version to {}.".format(new_version_full))
+    commit(f"Bump version to {new_version_full}.")
 
     confirm("Push version {}?", new_version_full)
     push()

@@ -26,7 +26,7 @@ def test_plugin(make_reader):
     reader.add_feed(feed.url)
     reader.update_feeds()
 
-    assert set((e.id, e.enclosures) for e in reader.get_entries()) == {
+    assert {(e.id, e.enclosures) for e in reader.get_entries()} == {
         (one.id, one.enclosures),
         (two.id, two.enclosures),
         (three.id, (Enclosure('href', 'text', 1),)),

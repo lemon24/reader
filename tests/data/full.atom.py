@@ -7,7 +7,7 @@ from reader._types import FeedData
 
 
 feed = FeedData(
-    url='{}full.atom'.format(url_base),
+    url=f'{url_base}full.atom',
     updated=datetime.datetime(2003, 12, 13, 18, 30, 2),
     title='Example Feed',
     link='http://example.org/',

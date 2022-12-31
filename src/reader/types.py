@@ -4,6 +4,9 @@ import dataclasses
 import enum
 import re
 import traceback
+from collections.abc import Iterable
+from collections.abc import Mapping
+from collections.abc import Sequence
 from dataclasses import dataclass
 from dataclasses import field
 from datetime import datetime
@@ -11,19 +14,11 @@ from types import MappingProxyType
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import Dict
-from typing import Iterable
-from typing import List
 from typing import Literal
-from typing import Mapping
 from typing import NamedTuple
-from typing import Optional
 from typing import overload
 from typing import Protocol
 from typing import runtime_checkable
-from typing import Sequence
-from typing import Tuple
-from typing import Type
 from typing import TypeVar
 from typing import Union
 
@@ -45,7 +40,7 @@ class _namedtuple_compat:
     # TODO: can we get rid of _namedtuple_compat?
 
     @classmethod
-    def _make(cls: Type[_T], iterable: Iterable[Any]) -> _T:
+    def _make(cls: type[_T], iterable: Iterable[Any]) -> _T:
         iterable = tuple(iterable)
         attrs_len = len(dataclasses.fields(cls))
         if len(iterable) != attrs_len:
@@ -56,7 +51,7 @@ class _namedtuple_compat:
 
     _replace = dataclasses.replace
 
-    def _asdict(self) -> Dict[str, Any]:
+    def _asdict(self) -> dict[str, Any]:
         return dict(self.__dict__)
 
 
@@ -89,21 +84,21 @@ class Feed(_namedtuple_compat):
     url: str
 
     #: The date the feed was last updated, according to the feed.
-    updated: Optional[datetime] = None
+    updated: datetime | None = None
 
     #: The title of the feed.
-    title: Optional[str] = None
+    title: str | None = None
 
     #: The URL of a page associated with the feed.
-    link: Optional[str] = None
+    link: str | None = None
 
     #: The author of the feed.
-    author: Optional[str] = None
+    author: str | None = None
 
     #: A description or subtitle for the feed.
     #:
     #: .. versionadded:: 2.4
-    subtitle: Optional[str] = None
+    subtitle: str | None = None
 
     #: The feed type and version.
     #:
@@ -124,10 +119,10 @@ class Feed(_namedtuple_compat):
     #: Plugins may add other versions.
     #:
     #: .. versionadded:: 2.4
-    version: Optional[str] = None
+    version: str | None = None
 
     #: User-defined feed title.
-    user_title: Optional[str] = None
+    user_title: str | None = None
 
     # added is required, but we want it after feed data; the cast is for mypy.
 
@@ -139,12 +134,12 @@ class Feed(_namedtuple_compat):
     #: The date when the feed was last retrieved by reader.
     #:
     #: .. versionadded:: 1.3
-    last_updated: Optional[datetime] = None
+    last_updated: datetime | None = None
 
     #: If a :exc:`ParseError` happend during the last update, its cause.
     #:
     #: .. versionadded:: 1.3
-    last_exception: Optional['ExceptionInfo'] = None
+    last_exception: ExceptionInfo | None = None
 
     #: Whether updates are enabled for this feed.
     #:
@@ -152,7 +147,7 @@ class Feed(_namedtuple_compat):
     updates_enabled: bool = True
 
     @property
-    def resource_id(self) -> Tuple[str]:
+    def resource_id(self) -> tuple[str]:
         """Alias for (:attr:`~url`,).
 
         .. versionadded:: 2.17
@@ -186,7 +181,7 @@ class ExceptionInfo(_namedtuple_compat):
     traceback_str: str
 
     @classmethod
-    def from_exception(cls: Type[_EI], exc: BaseException) -> _EI:
+    def from_exception(cls: type[_EI], exc: BaseException) -> _EI:
         return cls(
             f'{type(exc).__module__}.{type(exc).__qualname__}',
             str(exc),
@@ -234,30 +229,30 @@ class Entry(_namedtuple_compat):
     #:  Is now :const:`None` if missing in the feed;
     #:  use :attr:`updated_not_none` for the pre-2.5 behavior.
     #:
-    updated: Optional[datetime] = None
+    updated: datetime | None = None
 
     #: The title of the entry.
-    title: Optional[str] = None
+    title: str | None = None
 
     #: The URL of a page associated with the entry.
-    link: Optional[str] = None
+    link: str | None = None
 
     #: The author of the feed.
-    author: Optional[str] = None
+    author: str | None = None
 
     #: The date the entry was published, according to the feed.
-    published: Optional[datetime] = None
+    published: datetime | None = None
 
     #: A summary of the entry.
-    summary: Optional[str] = None
+    summary: str | None = None
 
     #: Full content of the entry.
     #: A sequence of :class:`Content` objects.
-    content: Sequence['Content'] = ()
+    content: Sequence[Content] = ()
 
     #: External files associated with the entry.
     #: A sequence of :class:`Enclosure` objects.
-    enclosures: Sequence['Enclosure'] = ()
+    enclosures: Sequence[Enclosure] = ()
 
     #: Whether the entry was read or not.
     read: bool = False
@@ -267,7 +262,7 @@ class Entry(_namedtuple_compat):
     #: or the entry predates the date being recorded.
     #:
     #: .. versionadded:: 2.2
-    read_modified: Optional[datetime] = None
+    read_modified: datetime | None = None
 
     #: Whether the entry is important or not.
     important: bool = False
@@ -277,7 +272,7 @@ class Entry(_namedtuple_compat):
     #: or the entry predates the date being recorded.
     #:
     #: .. versionadded:: 2.2
-    important_modified: Optional[datetime] = None
+    important_modified: datetime | None = None
 
     #: The date when the entry was added (first updated) to reader.
     #:
@@ -316,7 +311,7 @@ class Entry(_namedtuple_compat):
     feed: Feed = cast(Feed, None)
 
     @property
-    def resource_id(self) -> Tuple[str, str]:
+    def resource_id(self) -> tuple[str, str]:
         """Alias for (:attr:`~feed_url`, :attr:`~id`).
 
         .. versionadded:: 2.17
@@ -337,7 +332,7 @@ class Entry(_namedtuple_compat):
         """
         return self.updated or self.added
 
-    def get_content(self, *, prefer_summary: bool = False) -> Optional['Content']:
+    def get_content(self, *, prefer_summary: bool = False) -> Content | None:
         """Return a text content OR the summary.
 
         Prefer HTML content, when available.
@@ -365,10 +360,10 @@ class Content(_namedtuple_compat):
     value: str
 
     #: The content type.
-    type: Optional[str] = None
+    type: str | None = None
 
     #: The content language.
-    language: Optional[str] = None
+    language: str | None = None
 
     @property
     def is_html(self) -> bool:
@@ -388,7 +383,7 @@ _HTML_CONTENT_TYPES = {'text/html', 'text/xhtml'}
 _HTML_CONTENT_TYPE = 'text/html'
 
 
-def _get_entry_content(entry: Entry, prefer_summary: bool = False) -> Optional[Content]:
+def _get_entry_content(entry: Entry, prefer_summary: bool = False) -> Content | None:
     # TODO: Make this public; Entry should be a protocol, Content should be generic.
     # TODO: Use the type from .summary_detail (when we get it).
 
@@ -417,10 +412,10 @@ class Enclosure(_namedtuple_compat):
     href: str
 
     #: The file content type.
-    type: Optional[str] = None
+    type: str | None = None
 
     #: The file length.
-    length: Optional[int] = None
+    length: int | None = None
 
 
 _HS = TypeVar('_HS', bound='HighlightedString')
@@ -479,7 +474,7 @@ class HighlightedString:
         return self.value
 
     @classmethod
-    def extract(cls: Type[_HS], text: str, before: str, after: str) -> _HS:
+    def extract(cls: type[_HS], text: str, before: str, after: str) -> _HS:
         """Extract highlights with before/after markers from text.
 
         >>> HighlightedString.extract( '>one< two', '>', '<')
@@ -549,7 +544,7 @@ class HighlightedString:
         self,
         before: str,
         after: str,
-        func: Optional[Callable[[str], str]] = None,
+        func: Callable[[str], str] | None = None,
     ) -> str:
         """Apply before/end markers on the highlighted string.
 
@@ -623,7 +618,7 @@ class EntrySearchResult(_namedtuple_compat):
     # TODO: entry: Optional[Entry]; model it through typing if possible
 
     @property
-    def resource_id(self) -> Tuple[str, str]:
+    def resource_id(self) -> tuple[str, str]:
         """Alias for (:attr:`~feed_url`, :attr:`~id`).
 
         .. versionadded:: 2.17
@@ -672,8 +667,8 @@ SearchSortOrder = Literal['relevant', 'recent', 'random']
 
 # https://github.com/python/typing/issues/182
 # TODO: allow JSONType to be str, int, ...
-JSONValue = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
-JSONType = Union[Dict[str, JSONValue], List[JSONValue]]
+JSONValue = Union[str, int, float, bool, None, dict[str, Any], list[Any]]
+JSONType = Union[dict[str, JSONValue], list[JSONValue]]
 
 
 # Using protocols here so we have both duck typing and type checking.
@@ -703,13 +698,13 @@ class EntryLike(Protocol):
 
 
 # https://github.com/lemon24/reader/issues/266#issuecomment-1013739526
-GlobalInput = Tuple[()]
+GlobalInput = tuple[()]
 FeedInput = Union[str, FeedLike]
-EntryInput = Union[Tuple[str, str], EntryLike]
+EntryInput = Union[tuple[str, str], EntryLike]
 ResourceInput = Union[GlobalInput, FeedInput, EntryInput]
-AnyResourceInput = Union[ResourceInput, None, Tuple[None], Tuple[None, None]]
-ResourceId = Union[Tuple[()], Tuple[str], Tuple[str, str]]
-AnyResourceId = Union[ResourceId, None, Tuple[None], Tuple[None, None]]
+AnyResourceInput = Union[ResourceInput, None, tuple[None], tuple[None, None]]
+ResourceId = Union[tuple[()], tuple[str], tuple[str, str]]
+AnyResourceId = Union[ResourceId, None, tuple[None], tuple[None, None]]
 
 
 def _feed_argument(feed: FeedInput) -> str:
@@ -724,7 +719,7 @@ def _feed_argument(feed: FeedInput) -> str:
     raise ValueError(f'invalid feed argument: {feed!r}')
 
 
-def _entry_argument(entry: EntryInput) -> Tuple[str, str]:
+def _entry_argument(entry: EntryInput) -> tuple[str, str]:
     if isinstance(entry, EntryLike):
         rv = _feed_argument(entry.feed_url), entry.id
     elif isinstance(entry, tuple) and len(entry) == 2:
@@ -739,17 +734,17 @@ def _entry_argument(entry: EntryInput) -> Tuple[str, str]:
 
 
 @overload
-def _resource_argument(resource: GlobalInput) -> Tuple[()]:
+def _resource_argument(resource: GlobalInput) -> tuple[()]:
     ...  # pragma: no cover
 
 
 @overload
-def _resource_argument(resource: FeedInput) -> Tuple[str]:
+def _resource_argument(resource: FeedInput) -> tuple[str]:
     ...  # pragma: no cover
 
 
 @overload
-def _resource_argument(resource: EntryInput) -> Tuple[str, str]:
+def _resource_argument(resource: EntryInput) -> tuple[str, str]:
     ...  # pragma: no cover
 
 
@@ -784,13 +779,13 @@ class FeedCounts(_namedtuple_compat):
     """
 
     #: Total number of feeds.
-    total: Optional[int] = None
+    total: int | None = None
 
     #: Number of broken feeds.
-    broken: Optional[int] = None
+    broken: int | None = None
 
     #: Number of feeds that have updates enabled.
-    updates_enabled: Optional[int] = None
+    updates_enabled: int | None = None
 
 
 @dataclass(frozen=True)
@@ -803,16 +798,16 @@ class EntryCounts(_namedtuple_compat):
     """
 
     #: Total number of entries.
-    total: Optional[int] = None
+    total: int | None = None
 
     #: Number of read entries.
-    read: Optional[int] = None
+    read: int | None = None
 
     #: Number of important entries.
-    important: Optional[int] = None
+    important: int | None = None
 
     #: Number of entries that have enclosures.
-    has_enclosures: Optional[int] = None
+    has_enclosures: int | None = None
 
     # TODO: make averages a rich tuple
     # https://github.com/lemon24/reader/issues/249#issuecomment-894624989
@@ -821,7 +816,7 @@ class EntryCounts(_namedtuple_compat):
     #:
     #: .. versionadded:: 2.1
     #:
-    averages: Optional[Tuple[float, float, float]] = None
+    averages: tuple[float, float, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -841,22 +836,22 @@ class EntrySearchCounts(_namedtuple_compat):
     # related to search stuff (what matched etc.)
 
     #: Total number of entries.
-    total: Optional[int] = None
+    total: int | None = None
 
     #: Number of read entries.
-    read: Optional[int] = None
+    read: int | None = None
 
     #: Number of important entries.
-    important: Optional[int] = None
+    important: int | None = None
 
     #: Number of entries that have enclosures.
-    has_enclosures: Optional[int] = None
+    has_enclosures: int | None = None
 
     #: Average entries per day during the last 1, 3, 12 months, as a 3-tuple.
     #:
     #: .. versionadded:: 2.1
     #:
-    averages: Optional[Tuple[float, float, float]] = None
+    averages: tuple[float, float, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -930,7 +925,7 @@ class UpdateResult(NamedTuple):
     #:
     #:  If there was an error while updating the feed.
     #:
-    value: Union[UpdatedFeed, None, ReaderError]
+    value: UpdatedFeed | None | ReaderError
 
     # The exception type is ReaderError and not ParseError
     # to allow suppressing new errors without breaking the API:
@@ -941,7 +936,7 @@ class UpdateResult(NamedTuple):
     # but that's not necessarily by design.
 
     @property
-    def updated_feed(self) -> Optional[UpdatedFeed]:
+    def updated_feed(self) -> UpdatedFeed | None:
         """The updated feed, if the update was successful, :const:`None` otherwise.
 
         .. versionadded:: 2.1
@@ -950,7 +945,7 @@ class UpdateResult(NamedTuple):
         return self.value if not isinstance(self.value, Exception) else None
 
     @property
-    def error(self) -> Optional[ReaderError]:
+    def error(self) -> ReaderError | None:
         """The exception, if there was an error, :const:`None` otherwise.
 
         .. versionadded:: 2.1

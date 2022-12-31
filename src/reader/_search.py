@@ -7,21 +7,16 @@ import random
 import sqlite3
 import string
 from collections import OrderedDict
+from collections.abc import Iterable
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from functools import partial
 from itertools import groupby
 from types import MappingProxyType
 from typing import Any
-from typing import Dict
-from typing import Iterable
-from typing import Iterator
-from typing import List
-from typing import Optional
-from typing import Tuple
 from typing import TYPE_CHECKING
 from typing import TypeVar
-from typing import Union
 
 from ._html_utils import strip_html as strip_html_str
 from ._sql_utils import paginated_query
@@ -60,7 +55,7 @@ log = logging.getLogger('reader')
 _T = TypeVar('_T')
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def strip_html(text: SQLiteType) -> SQLiteType:
     if not isinstance(text, str):
         return text
@@ -597,7 +592,7 @@ class Search:
             # nothing to update
             return False
 
-        stripped: List[Dict[str, Any]] = []
+        stripped: list[dict[str, Any]] = []
         for (
             id,
             feed_url,
@@ -609,7 +604,7 @@ class Search:
             summary,
             content_json,
         ) in rows:
-            final: List[Union[Tuple[str, str], Tuple[None, None]]] = []
+            final: list[tuple[str, str] | tuple[None, None]] = []
 
             content = json.loads(content_json) if content_json else []
             if content and isinstance(content, list):
@@ -759,8 +754,8 @@ class Search:
         now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: SearchSortOrder = 'relevant',
-        limit: Optional[int] = None,
-        starting_after: Optional[Tuple[str, str]] = None,
+        limit: int | None = None,
+        starting_after: tuple[str, str] | None = None,
     ) -> Iterable[EntrySearchResult]:
         # TODO: dupe of at least Storage.get_entries(), maybe deduplicate
         if sort in ('relevant', 'recent'):
@@ -797,7 +792,7 @@ class Search:
 
     @wrap_exceptions(SearchError)
     @wrap_search_exceptions()
-    def search_entry_last(self, query: str, entry: Tuple[str, str]) -> Tuple[Any, ...]:
+    def search_entry_last(self, query: str, entry: tuple[str, str]) -> tuple[Any, ...]:
         feed_url, entry_id = entry
 
         sql_query = (
@@ -823,9 +818,9 @@ class Search:
         now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: SearchSortOrder = 'relevant',
-        chunk_size: Optional[int] = None,
-        last: Optional[_T] = None,
-    ) -> Iterable[Tuple[EntrySearchResult, Optional[_T]]]:
+        chunk_size: int | None = None,
+        last: _T | None = None,
+    ) -> Iterable[tuple[EntrySearchResult, _T | None]]:
         sql_query, context = make_search_entries_query(filter_options, sort)
 
         random_mark = ''.join(
@@ -892,7 +887,7 @@ class Search:
 
 def make_search_entries_query(
     filter_options: EntryFilterOptions, sort: SearchSortOrder
-) -> Tuple[Query, Dict[str, Any]]:
+) -> tuple[Query, dict[str, Any]]:
     search = (
         Query()
         .SELECT(
@@ -963,7 +958,7 @@ def make_search_entries_query(
 
 
 def entry_search_result_factory(
-    t: Tuple[Any, ...], before_mark: str, after_mark: str
+    t: tuple[Any, ...], before_mark: str, after_mark: str
 ) -> EntrySearchResult:
     (
         entry_id,
@@ -985,7 +980,7 @@ def entry_search_result_factory(
             '.feed.title' if not is_feed_user_title else '.feed.user_title'
         ] = HighlightedString.extract(feed_title, before_mark, after_mark)
 
-    rv_content: Dict[str, HighlightedString] = OrderedDict(
+    rv_content: dict[str, HighlightedString] = OrderedDict(
         (
             c['path'],
             HighlightedString.extract(c['value'], before_mark, after_mark),

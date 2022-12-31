@@ -347,7 +347,7 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
             parser.entries[1][1] = new_entry
             call_update_method(reader, feed.url)
 
-    assert set(e.title for e in reader.get_entries()) == {"Even Newer: change #3"}
+    assert {e.title for e in reader.get_entries()} == {"Even Newer: change #3"}
     assert caplog.text.count("entry hash changed, updating") == 3
     assert caplog.text.count("entry hash changed, but exceeds the update limit") == 2
     caplog.clear()
@@ -1482,7 +1482,7 @@ def test_data_hashes_remain_stable():
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom', 'json'])
 def test_integration(reader, feed_type, data_dir, monkeypatch):
-    feed_filename = 'full.{}'.format(feed_type)
+    feed_filename = f'full.{feed_type}'
     feed_url = str(data_dir.join(feed_filename))
 
     # TODO: maybe don't mock, and just check datetimes are in the correct order

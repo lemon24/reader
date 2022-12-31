@@ -338,8 +338,8 @@ def make_header(extra, names):
 
 
 def make_row_fmt(extra, names, num_fmt='.3f'):
-    extra_fmt = ['{{:>{}}}'.format(len(e)) for e in extra]
-    names_fmt = ['{{:>{}{}}}'.format(len(n), num_fmt) for n in names]
+    extra_fmt = [f'{{:>{len(e)}}}' for e in extra]
+    names_fmt = [f'{{:>{len(n)}{num_fmt}}}' for n in names]
     return ' '.join(extra_fmt + names_fmt)
 
 
@@ -475,7 +475,7 @@ def profile(which):
     params = PROFILE_PARAMS
 
     for name in names:
-        print(name, ' '.join('{}={}'.format(i, p) for i, p in zip(PARAM_IDS, params)))
+        print(name, ' '.join(f'{i}={p}' for i, p in zip(PARAM_IDS, params)))
         print()
 
         cm = TIMINGS[name](**dict(zip(PARAM_IDS, params)))

@@ -7,10 +7,7 @@ This mainly exists because we didn't want to depend on werkzeug.
 from __future__ import annotations
 
 import re
-from typing import Dict
-from typing import Iterable
-from typing import List
-from typing import Tuple
+from collections.abc import Iterable
 
 
 # copied from werkzeug.http
@@ -35,7 +32,7 @@ _accept_re = re.compile(
 )
 
 
-def parse_accept_header(value: str) -> List[Tuple[str, float]]:
+def parse_accept_header(value: str) -> list[tuple[str, float]]:
     """Like werkzeug.http.parse_accept_header(), but returns a plain list."""
     # copied from werkzeug.http, with some modifications
 
@@ -56,7 +53,7 @@ def parse_accept_header(value: str) -> List[Tuple[str, float]]:
     return result
 
 
-def unparse_accept_header(values: Iterable[Tuple[str, float]]) -> str:
+def unparse_accept_header(values: Iterable[tuple[str, float]]) -> str:
     """Like werkzeug.datastructures.MIMEAccept(values).to_header()."""
     parts = []
     for value, quality in sorted(values, key=lambda t: t[1], reverse=True):
@@ -66,6 +63,6 @@ def unparse_accept_header(values: Iterable[Tuple[str, float]]) -> str:
     return ','.join(parts)
 
 
-def parse_options_header(value: str) -> Tuple[str, Dict[str, str]]:
+def parse_options_header(value: str) -> tuple[str, dict[str, str]]:
     """Like werkzeug.http.parse_options_header(), but ignores the options."""
     return value.partition(';')[0].strip(), {}

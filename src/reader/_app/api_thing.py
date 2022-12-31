@@ -88,7 +88,7 @@ class APIThing:
                 category = (action,)
                 if target is not None:
                     category += (target,)
-                flash("{}: really not checked".format(action), category)
+                flash(f"{action}: really not checked", category)
                 return redirect_to_referrer()
         try:
             rv = func(request.form)
@@ -97,7 +97,7 @@ class APIThing:
             category = (action,)
             if e.category:
                 category += e.category
-            flash("{}: {}".format(action, e), category)
+            flash(f"{action}: {e}", category)
             return redirect_to_referrer()
         return redirect(next)
 

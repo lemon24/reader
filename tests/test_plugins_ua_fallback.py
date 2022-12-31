@@ -17,7 +17,7 @@ def test_fallback(requests_mock, make_reader):
     assert '403' in str(exc_info.value)
 
     assert len(matcher.request_history) == 2
-    first_ua, second_ua = [r.headers['User-Agent'] for r in matcher.request_history]
+    first_ua, second_ua = (r.headers['User-Agent'] for r in matcher.request_history)
 
     assert first_ua.startswith('python-reader/')
     assert second_ua.startswith('feedparser/')

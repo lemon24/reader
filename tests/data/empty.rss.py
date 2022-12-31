@@ -6,7 +6,7 @@ from reader._types import EntryData
 from reader._types import FeedData
 
 
-feed = FeedData(url='{}empty.rss'.format(url_base), version='rss20')
+feed = FeedData(url=f'{url_base}empty.rss', version='rss20')
 
 entries = [
     EntryData(

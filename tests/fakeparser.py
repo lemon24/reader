@@ -82,7 +82,7 @@ class Parser:
             if feed.url == url:
                 break
         else:
-            raise RuntimeError("unkown feed: {}".format(url))
+            raise RuntimeError(f"unkown feed: {url}")
 
         feed = fix_datetime_tzinfo(feed, 'updated', _old=self.tzinfo, _new=None)
 

@@ -5,11 +5,7 @@ from datetime import datetime
 from datetime import timezone
 from typing import Any
 from typing import cast
-from typing import Dict
 from typing import IO
-from typing import Optional
-from typing import Tuple
-from typing import Type
 from typing import TypeVar
 from typing import Union
 
@@ -34,7 +30,7 @@ class JSONFeedParser:
         self,
         url: str,
         file: IO[bytes],
-        headers: Optional[Headers] = None,
+        headers: Headers | None = None,
     ) -> FeedAndEntries:
         try:
             result = json.load(file)
@@ -84,10 +80,10 @@ _V = TypeVar('_V')
 def _get(
     d: Any,
     key: str,
-    value_type: Union[
-        Type[_T], Tuple[Type[_T], Type[_U]], Tuple[Type[_T], Type[_U], Type[_V]]
-    ],
-) -> Optional[Union[_T, _U, _V]]:
+    value_type: (
+        type[_T] | tuple[type[_T], type[_U]] | tuple[type[_T], type[_U], type[_V]]
+    ),
+) -> _T | _U | _V | None:
     value = d.get(key)
     if value is not None:
         if not isinstance(value, value_type):
@@ -95,7 +91,7 @@ def _get(
     return cast(Union[_T, _U, _V], value)
 
 
-def _get_author(d: Any) -> Optional[str]:
+def _get_author(d: Any) -> str | None:
     # from the spec:
     #
     # > JSON Feed version 1 specified a singular author field
@@ -105,7 +101,7 @@ def _get_author(d: Any) -> Optional[str]:
     # > for compatibility with existing feed readers.
     # > Feed readers should always prefer authors if present.
 
-    author: Optional[Dict[Any, Any]]
+    author: dict[Any, Any] | None
     for maybe_author in _get(d, 'authors', list) or ():
         if isinstance(maybe_author, dict):
             author = maybe_author
@@ -124,7 +120,7 @@ def _get_author(d: Any) -> Optional[str]:
     )
 
 
-def _process_entry(feed_url: str, d: Any, feed_lang: Optional[str]) -> EntryData:
+def _process_entry(feed_url: str, d: Any, feed_lang: str | None) -> EntryData:
     updated_str = _get(d, 'date_modified', str)
     updated = _parse_date(updated_str) if updated_str else None
     published_str = _get(d, 'date_published', str)
@@ -184,7 +180,7 @@ def _process_entry(feed_url: str, d: Any, feed_lang: Optional[str]) -> EntryData
     )
 
 
-def _parse_date(s: str) -> Optional[datetime]:
+def _parse_date(s: str) -> datetime | None:
     try:
         dt = iso8601.parse_date(s)
     except iso8601.ParseError:

@@ -29,7 +29,7 @@ def test_after_entry_update_hooks(reader):
     reader.after_entry_update_hooks.append(first_plugin)
     reader.update_feeds()
     assert plugin_calls == [(first_plugin, one, EntryUpdateStatus.NEW)]
-    assert set(e.id for e in reader.get_entries()) == {'1, 1'}
+    assert {e.id for e in reader.get_entries()} == {'1, 1'}
 
     plugin_calls[:] = []
 
@@ -44,7 +44,7 @@ def test_after_entry_update_hooks(reader):
         (first_plugin, one, EntryUpdateStatus.MODIFIED),
         (second_plugin, one, EntryUpdateStatus.MODIFIED),
     ]
-    assert set(e.id for e in reader.get_entries()) == {'1, 1', '1, 2'}
+    assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 2'}
 
 
 def test_after_entry_update_hooks_add_entry(reader):

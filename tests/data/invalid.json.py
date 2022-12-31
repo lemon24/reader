@@ -7,7 +7,7 @@ from reader._types import FeedData
 
 
 feed = FeedData(
-    url='{}invalid.json'.format(url_base),
+    url=f'{url_base}invalid.json',
     version='json11',
 )
 

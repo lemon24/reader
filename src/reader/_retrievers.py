@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import pathlib
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
 from typing import Callable
 from typing import ContextManager
 from typing import IO
-from typing import Iterator
-from typing import Optional
-from typing import Tuple
 from typing import TYPE_CHECKING
 
 from ._http_utils import parse_options_header
@@ -100,10 +98,10 @@ class HTTPRetriever:
     def __call__(
         self,
         url: str,
-        http_etag: Optional[str] = None,
-        http_last_modified: Optional[str] = None,
-        http_accept: Optional[str] = None,
-    ) -> Iterator[Optional[RetrieveResult[IO[bytes]]]]:
+        http_etag: str | None = None,
+        http_last_modified: str | None = None,
+        http_accept: str | None = None,
+    ) -> Iterator[RetrieveResult[IO[bytes]] | None]:
         request_headers = {}
         if http_accept:
             request_headers['Accept'] = http_accept
@@ -132,7 +130,7 @@ class HTTPRetriever:
             response.raw.decode_content = True
 
             content_type = response_headers.get('content-type')
-            mime_type: Optional[str]
+            mime_type: str | None
             if content_type:
                 mime_type, _ = parse_options_header(content_type)
             else:
@@ -160,10 +158,10 @@ class HTTPRetriever:
 def _caching_get(
     session: SessionWrapper,
     url: str,
-    http_etag: Optional[str] = None,
-    http_last_modified: Optional[str] = None,
+    http_etag: str | None = None,
+    http_last_modified: str | None = None,
     **kwargs: Any,
-) -> Tuple[requests.Response, Optional[str], Optional[str]]:
+) -> tuple[requests.Response, str | None, str | None]:
     headers = dict(kwargs.pop('headers', {}))
     if http_etag:
         headers.setdefault('If-None-Match', http_etag)

@@ -11,6 +11,8 @@ import threading
 import time
 import traceback
 import weakref
+from collections.abc import Iterator
+from collections.abc import Sequence
 from contextlib import closing
 from contextlib import contextmanager
 from contextlib import nullcontext
@@ -19,13 +21,7 @@ from datetime import datetime
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import Dict
-from typing import Iterator
-from typing import List
 from typing import no_type_check
-from typing import Optional
-from typing import Sequence
-from typing import Tuple
 from typing import TypeVar
 
 
@@ -192,7 +188,7 @@ class DBError(Exception):
     display_name = "database error"
 
     def __str__(self) -> str:
-        return "{}: {}".format(self.display_name, super().__str__())
+        return f"{self.display_name}: {super().__str__()}"
 
 
 class SchemaVersionError(DBError):
@@ -222,7 +218,7 @@ class HeavyMigration:
 
     create: _DBFunction
     version: int  # must be positive
-    migrations: Dict[int, _DBFunction]
+    migrations: dict[int, _DBFunction]
     id: int = 0
 
     def migrate(self, db: sqlite3.Connection) -> None:
@@ -334,7 +330,7 @@ def table_count(db: sqlite3.Connection) -> int:
     return value
 
 
-def require_version(db: sqlite3.Connection, version_info: Tuple[int, ...]) -> None:
+def require_version(db: sqlite3.Connection, version_info: tuple[int, ...]) -> None:
     with closing(db.cursor()) as cursor:
         ((version,),) = cursor.execute("SELECT sqlite_version();")
 
@@ -385,11 +381,11 @@ def setup_db(
     *,
     create: _DBFunction,
     version: int,
-    migrations: Dict[int, _DBFunction],
+    migrations: dict[int, _DBFunction],
     id: int,
-    minimum_sqlite_version: Tuple[int, ...],
+    minimum_sqlite_version: tuple[int, ...],
     required_sqlite_functions: Sequence[str] = (),
-    wal_enabled: Optional[bool] = None,
+    wal_enabled: bool | None = None,
 ) -> None:
     require_version(db, minimum_sqlite_version)
     require_functions(db, required_sqlite_functions)
@@ -581,10 +577,10 @@ class LocalConnectionFactory:
 
 class _LocalConnectionFactoryState(threading.local):
     def __init__(self) -> None:
-        self.db: Optional[sqlite3.Connection] = None
-        self.finalizer: Optional[weakref.finalize] = None
+        self.db: sqlite3.Connection | None = None
+        self.finalizer: weakref.finalize | None = None
         self.is_creating_thread: bool = False
-        self.context_stack: List[None] = []
+        self.context_stack: list[None] = []
         self.call_count: int = 0
         self.closed: bool = False
 

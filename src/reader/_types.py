@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
+from collections.abc import Mapping
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
@@ -7,13 +10,7 @@ from functools import cached_property
 from types import MappingProxyType
 from types import SimpleNamespace
 from typing import Any
-from typing import Iterable
-from typing import Mapping
 from typing import NamedTuple
-from typing import Optional
-from typing import Sequence
-from typing import Tuple
-from typing import Type
 from typing import TypeVar
 from typing import Union
 
@@ -51,12 +48,12 @@ class FeedData(_namedtuple_compat):
     """
 
     url: str
-    updated: Optional[datetime] = None
-    title: Optional[str] = None
-    link: Optional[str] = None
-    author: Optional[str] = None
-    subtitle: Optional[str] = None
-    version: Optional[str] = None
+    updated: datetime | None = None
+    title: str | None = None
+    link: str | None = None
+    author: str | None = None
+    subtitle: str | None = None
+    version: str | None = None
 
     def as_feed(self, **kwargs: object) -> Feed:
         """For testing."""
@@ -66,7 +63,7 @@ class FeedData(_namedtuple_compat):
         return Feed(**attrs)
 
     @property
-    def resource_id(self) -> Tuple[str]:
+    def resource_id(self) -> tuple[str]:
         return (self.url,)
 
     _hash_exclude_ = frozenset({'url', 'updated'})
@@ -103,12 +100,12 @@ class EntryData(_namedtuple_compat):
     # WARNING: When changing attributes, keep Entry, EntryData, and entry_data_from_obj in sync.
 
     id: str
-    updated: Optional[datetime] = None
-    title: Optional[str] = None
-    link: Optional[str] = None
-    author: Optional[str] = None
-    published: Optional[datetime] = None
-    summary: Optional[str] = None
+    updated: datetime | None = None
+    title: str | None = None
+    link: str | None = None
+    author: str | None = None
+    published: datetime | None = None
+    summary: str | None = None
     content: Sequence[Content] = ()
     enclosures: Sequence[Enclosure] = ()
 
@@ -123,7 +120,7 @@ class EntryData(_namedtuple_compat):
         return Entry(**attrs)
 
     @property
-    def resource_id(self) -> Tuple[str, str]:
+    def resource_id(self) -> tuple[str, str]:
         return self.feed_url, self.id
 
     _hash_exclude_ = frozenset({'feed_url', 'id', 'updated'})
@@ -176,7 +173,7 @@ def enclosure_from_obj(obj: object) -> Enclosure:
     )
 
 
-def _getattr(obj: object, name: str, type: Type[_T]) -> _T:
+def _getattr(obj: object, name: str, type: type[_T]) -> _T:
     # will raise AttributeError implicitly
     value = getattr(obj, name)
     if not isinstance(value, type):
@@ -186,7 +183,7 @@ def _getattr(obj: object, name: str, type: Type[_T]) -> _T:
     return value
 
 
-def _getattr_optional(obj: object, name: str, type: Type[_T]) -> Optional[_T]:
+def _getattr_optional(obj: object, name: str, type: type[_T]) -> _T | None:
     value = getattr(obj, name, None)
     if value is None:
         return value
@@ -197,7 +194,7 @@ def _getattr_optional(obj: object, name: str, type: Type[_T]) -> Optional[_T]:
     return value
 
 
-def _getattr_optional_datetime(obj: object, name: str) -> Optional[datetime]:
+def _getattr_optional_datetime(obj: object, name: str) -> datetime | None:
     value = _getattr_optional(obj, name, datetime)
     if value is None:
         return value
@@ -209,9 +206,9 @@ class ParsedFeed(NamedTuple):
     feed: FeedData
     # TODO: wrap entries in iter(entries) to ensure stuff doesn't rely on it being a list
     entries: Iterable[EntryData]
-    http_etag: Optional[str] = None
-    http_last_modified: Optional[str] = None
-    mime_type: Optional[str] = None
+    http_etag: str | None = None
+    http_last_modified: str | None = None
+    mime_type: str | None = None
 
 
 class FeedForUpdate(NamedTuple):
@@ -221,23 +218,23 @@ class FeedForUpdate(NamedTuple):
     url: str
 
     #: The date the feed was last updated, according to the feed.
-    updated: Optional[datetime]
+    updated: datetime | None
 
-    http_etag: Optional[str]
-    http_last_modified: Optional[str]
+    http_etag: str | None
+    http_last_modified: str | None
 
     #: Whether the next update should update *all* entries,
     #: regardless of their .updated.
     stale: bool
 
     #: The date the feed was last updated, according to reader; none if never.
-    last_updated: Optional[datetime]
+    last_updated: datetime | None
 
     #: Whether the feed had an exception at the last update.
     last_exception: bool
 
     #: The hash of the corresponding FeedData.
-    hash: Optional[bytes]
+    hash: bytes | None
 
 
 class EntryForUpdate(NamedTuple):
@@ -245,17 +242,17 @@ class EntryForUpdate(NamedTuple):
     """Update-relevant information about an existing entry, from Storage."""
 
     #: The date the entry was last updated, according to the entry.
-    updated: Optional[datetime]
+    updated: datetime | None
 
     #: The date the entry was published, according to the entry.
-    published: Optional[datetime]
+    published: datetime | None
 
     #: The hash of the corresponding EntryData.
-    hash: Optional[bytes]
+    hash: bytes | None
 
     #: The number of updates due to a different ``hash``
     #: since the last time ``updated`` changed.
-    hash_changed: Optional[int]
+    hash_changed: int | None
 
 
 class FeedUpdateIntent(NamedTuple):
@@ -265,16 +262,16 @@ class FeedUpdateIntent(NamedTuple):
     url: str
 
     #: The time at the start of updating this feed.
-    last_updated: Optional[datetime]
+    last_updated: datetime | None
 
-    feed: Optional[FeedData] = None
-    http_etag: Optional[str] = None
-    http_last_modified: Optional[str] = None
+    feed: FeedData | None = None
+    http_etag: str | None = None
+    http_last_modified: str | None = None
 
     # TODO: Is there a better way of modeling/enforcing these? A sort of tagged union, maybe? (last_updated should be non-optional then)
 
     #: Cause of ParseError, if any; if set, everything else except url should be None.
-    last_exception: Optional[ExceptionInfo] = None
+    last_exception: ExceptionInfo | None = None
 
 
 class EntryUpdateIntent(NamedTuple):
@@ -290,24 +287,24 @@ class EntryUpdateIntent(NamedTuple):
 
     #: First last_updated (sets Entry.added).
     #: None if the entry already exists.
-    first_updated: Optional[datetime]
+    first_updated: datetime | None
 
     #: The time at the start of updating this batch of feeds (start of
     #: update_feed in update_feed, start of update_feeds in update_feeds);
     #: None if the entry already exists.
-    first_updated_epoch: Optional[datetime]
+    first_updated_epoch: datetime | None
 
     #: Sort key for get_entries(sort='recent').
     #: Currently, first_updated_epoch if the feed is not new,
     #: published or updated or first_updated_epoch otherwise.
     #: None if the entry already exists.
-    recent_sort: Optional[datetime]
+    recent_sort: datetime | None
 
     #: The index of the entry in the feed (zero-based).
     feed_order: int = 0
 
     #: Same as EntryForUpdate.hash_changed.
-    hash_changed: Optional[int] = 0
+    hash_changed: int | None = 0
 
     #: Same as Entry.source.
     added_by: EntryAddedBy = 'feed'
@@ -321,7 +318,7 @@ class EntryUpdateIntent(NamedTuple):
 # TODO: these should probably be in storage.py (along with some of the above)
 
 
-TagFilter = Sequence[Sequence[Union[bool, Tuple[bool, str]]]]
+TagFilter = Sequence[Sequence[Union[bool, tuple[bool, str]]]]
 
 
 def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
@@ -332,7 +329,7 @@ def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
     if not isinstance(tags, Sequence) or isinstance(tags, str):
         raise ValueError(f"{name} must be none, bool, or a non-string sequence")
 
-    def normalize_tag(tag: Union[str, bool]) -> Union[bool, Tuple[bool, str]]:
+    def normalize_tag(tag: str | bool) -> bool | tuple[bool, str]:
         if isinstance(tag, bool):
             return tag
 
@@ -377,21 +374,21 @@ class EntryFilterOptions(NamedTuple):
 
     """Options for filtering the results of the "get entry" storage methods."""
 
-    feed_url: Optional[str] = None
-    entry_id: Optional[str] = None
-    read: Optional[bool] = None
-    important: Optional[bool] = None
-    has_enclosures: Optional[bool] = None
+    feed_url: str | None = None
+    entry_id: str | None = None
+    read: bool | None = None
+    important: bool | None = None
+    has_enclosures: bool | None = None
     feed_tags: TagFilter = ()
 
     @classmethod
     def from_args(
-        cls: Type[_EFO],
-        feed: Optional[FeedInput] = None,
-        entry: Optional[EntryInput] = None,
-        read: Optional[bool] = None,
-        important: Optional[bool] = None,
-        has_enclosures: Optional[bool] = None,
+        cls: type[_EFO],
+        feed: FeedInput | None = None,
+        entry: EntryInput | None = None,
+        read: bool | None = None,
+        important: bool | None = None,
+        has_enclosures: bool | None = None,
         feed_tags: TagFilterInput = None,
     ) -> _EFO:
         feed_url = _feed_argument(feed) if feed is not None else None
@@ -421,20 +418,20 @@ class FeedFilterOptions(NamedTuple):
 
     """Options for filtering the results of the "get feed" storage methods."""
 
-    feed_url: Optional[str] = None
+    feed_url: str | None = None
     tags: TagFilter = ()
-    broken: Optional[bool] = None
-    updates_enabled: Optional[bool] = None
-    new: Optional[bool] = None
+    broken: bool | None = None
+    updates_enabled: bool | None = None
+    new: bool | None = None
 
     @classmethod
     def from_args(
-        cls: Type[_FFO],
-        feed: Optional[FeedInput] = None,
+        cls: type[_FFO],
+        feed: FeedInput | None = None,
         tags: TagFilterInput = None,
-        broken: Optional[bool] = None,
-        updates_enabled: Optional[bool] = None,
-        new: Optional[bool] = None,
+        broken: bool | None = None,
+        updates_enabled: bool | None = None,
+        new: bool | None = None,
     ) -> _FFO:
         feed_url = _feed_argument(feed) if feed is not None else None
         tag_filter = tag_filter_argument(tags)
@@ -456,7 +453,7 @@ class NameScheme(_namedtuple_compat):
     separator: str
 
     @classmethod
-    def from_value(cls, value: Mapping[str, str]) -> 'NameScheme':
+    def from_value(cls, value: Mapping[str, str]) -> NameScheme:
         # Use is validation.
         self = cls(**value)
         self.make_reader_name('key')
@@ -466,7 +463,7 @@ class NameScheme(_namedtuple_compat):
     def make_reader_name(self, key: str) -> str:
         return self.reader_prefix + key
 
-    def make_plugin_name(self, plugin_name: str, key: Optional[str] = None) -> str:
+    def make_plugin_name(self, plugin_name: str, key: str | None = None) -> str:
         rv = self.plugin_prefix + plugin_name
         if key is not None:
             rv += self.separator + key
@@ -488,8 +485,8 @@ _NT = TypeVar('_NT', bound=_namedtuple_compat)
 def fix_datetime_tzinfo(
     obj: _NT,
     *names: str,
-    _old: Union[None, timezone, bool] = None,
-    _new: Union[None, timezone] = timezone.utc,
+    _old: None | timezone | bool = None,
+    _new: None | timezone = timezone.utc,
     **kwargs: Any,
 ) -> _NT:
     """For specific optional datetime attributes of an object,

@@ -5,7 +5,6 @@ HTML utilities. Contains no business logic.
 from __future__ import annotations
 
 import warnings
-from typing import Optional
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -37,7 +36,7 @@ warnings.filterwarnings(
 )
 
 
-def strip_html(html: str, features: Optional[str] = None) -> str:
+def strip_html(html: str, features: str | None = None) -> str:
     soup = get_soup(html)
     remove_nontext_elements(soup)
 
@@ -48,7 +47,7 @@ def strip_html(html: str, features: Optional[str] = None) -> str:
     return rv
 
 
-def get_soup(html: str, features: Optional[str] = None) -> bs4.BeautifulSoup:
+def get_soup(html: str, features: str | None = None) -> bs4.BeautifulSoup:
     # lazy import (https://github.com/lemon24/reader/issues/297)
     global bs4
     if not bs4:

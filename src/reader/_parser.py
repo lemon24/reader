@@ -5,25 +5,21 @@ import mimetypes
 import shutil
 import tempfile
 from collections import OrderedDict
+from collections.abc import Collection
+from collections.abc import Iterable
+from collections.abc import Iterator
+from collections.abc import Mapping
 from contextlib import contextmanager
 from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import Any
-from typing import Collection
 from typing import ContextManager
-from typing import Dict
 from typing import Generic
-from typing import Iterable
-from typing import Iterator
-from typing import List
-from typing import Mapping
 from typing import NamedTuple
 from typing import Optional
 from typing import Protocol
 from typing import runtime_checkable
-from typing import Tuple
 from typing import TypeVar
-from typing import Union
 
 import reader
 from ._http_utils import parse_accept_header
@@ -59,10 +55,10 @@ T_cv = TypeVar('T_cv', contravariant=True)
 @dataclass(frozen=True)
 class RetrieveResult(_namedtuple_compat, Generic[T_co]):
     file: T_co
-    mime_type: Optional[str] = None
-    http_etag: Optional[str] = None
-    http_last_modified: Optional[str] = None
-    headers: Optional[Headers] = None
+    mime_type: str | None = None
+    http_etag: str | None = None
+    http_last_modified: str | None = None
+    headers: Headers | None = None
 
 
 class RetrieverType(Protocol[T_co]):  # pragma: no cover
@@ -72,10 +68,10 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
     def __call__(
         self,
         url: str,
-        http_etag: Optional[str],
-        http_last_modified: Optional[str],
-        http_accept: Optional[str],
-    ) -> ContextManager[Optional[RetrieveResult[T_co]]]:
+        http_etag: str | None,
+        http_last_modified: str | None,
+        http_accept: str | None,
+    ) -> ContextManager[RetrieveResult[T_co] | None]:
         ...
 
     def validate_url(self, url: str) -> None:
@@ -93,14 +89,12 @@ class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no c
         ...
 
 
-FeedAndEntries = Tuple[FeedData, Collection[EntryData]]
-EntryPair = Tuple[EntryData, Optional[EntryForUpdate]]
+FeedAndEntries = tuple[FeedData, Collection[EntryData]]
+EntryPair = tuple[EntryData, Optional[EntryForUpdate]]
 
 
 class ParserType(Protocol[T_cv]):  # pragma: no cover
-    def __call__(
-        self, url: str, file: T_cv, headers: Optional[Headers]
-    ) -> FeedAndEntries:
+    def __call__(self, url: str, file: T_cv, headers: Headers | None) -> FeedAndEntries:
         ...
 
 
@@ -125,26 +119,26 @@ class FeedArgument(Protocol):  # pragma: no cover
         ...
 
     @property
-    def http_etag(self) -> Optional[str]:
+    def http_etag(self) -> str | None:
         ...
 
     @property
-    def http_last_modified(self) -> Optional[str]:
+    def http_last_modified(self) -> str | None:
         ...
 
 
 class FeedArgumentTuple(NamedTuple):
     url: str
-    http_etag: Optional[str] = None
-    http_last_modified: Optional[str] = None
+    http_etag: str | None = None
+    http_last_modified: str | None = None
 
 
 FA = TypeVar('FA', bound=FeedArgument)
 
 
 def default_parser(
-    feed_root: Optional[str] = None, session_timeout: TimeoutType = DEFAULT_TIMEOUT
-) -> 'Parser':
+    feed_root: str | None = None, session_timeout: TimeoutType = DEFAULT_TIMEOUT
+) -> Parser:
     parser = Parser()
     parser.session_factory.timeout = session_timeout
 
@@ -186,17 +180,17 @@ class Parser:
         # Higher Kinded Types might be a way of doing it,
         # https://returns.readthedocs.io/en/latest/pages/hkt.html
 
-        self.retrievers: 'OrderedDict[str, RetrieverType[Any]]' = OrderedDict()
-        self.parsers_by_mime_type: Dict[str, List[Tuple[float, ParserType[Any]]]] = {}
-        self.parsers_by_url: Dict[str, ParserType[Any]] = {}
+        self.retrievers: OrderedDict[str, RetrieverType[Any]] = OrderedDict()
+        self.parsers_by_mime_type: dict[str, list[tuple[float, ParserType[Any]]]] = {}
+        self.parsers_by_url: dict[str, ParserType[Any]] = {}
         self.session_factory = SessionFactory(USER_AGENT)
 
     def parallel(
         self, feeds: Iterable[FA], map: MapType = map, is_parallel: bool = True
-    ) -> Iterable[Tuple[FA, Union[Optional[ParsedFeed], ParseError]]]:
+    ) -> Iterable[tuple[FA, ParsedFeed | None | ParseError]]:
         def retrieve(
             feed: FA,
-        ) -> Tuple[FA, Union[ContextManager[Optional[RetrieveResult[Any]]], Exception]]:
+        ) -> tuple[FA, ContextManager[RetrieveResult[Any] | None] | Exception]:
             try:
                 context = self.retrieve(
                     feed.url, feed.http_etag, feed.http_last_modified, is_parallel
@@ -242,9 +236,9 @@ class Parser:
     def __call__(
         self,
         url: str,
-        http_etag: Optional[str] = None,
-        http_last_modified: Optional[str] = None,
-    ) -> Optional[ParsedFeed]:
+        http_etag: str | None = None,
+        http_last_modified: str | None = None,
+    ) -> ParsedFeed | None:
         """Thin wrapper for parallel(), to be used by parser tests."""
 
         feed = FeedArgumentTuple(url, http_etag, http_last_modified)
@@ -259,14 +253,14 @@ class Parser:
     def retrieve(
         self,
         url: str,
-        http_etag: Optional[str] = None,
-        http_last_modified: Optional[str] = None,
+        http_etag: str | None = None,
+        http_last_modified: str | None = None,
         is_parallel: bool = False,
-    ) -> ContextManager[Optional[RetrieveResult[Any]]]:
+    ) -> ContextManager[RetrieveResult[Any] | None]:
 
         parser = self.get_parser_by_url(url)
 
-        http_accept: Optional[str]
+        http_accept: str | None
         if not parser:
             http_accept = unparse_accept_header(
                 (mime_type, quality)
@@ -321,8 +315,8 @@ class Parser:
         )
 
     def get_parser(
-        self, url: str, mime_type: Optional[str]
-    ) -> Tuple[ParserType[Any], Optional[str]]:
+        self, url: str, mime_type: str | None
+    ) -> tuple[ParserType[Any], str | None]:
         parser = self.get_parser_by_url(url)
         if not parser:
             if not mime_type:
@@ -372,7 +366,7 @@ class Parser:
         raise ParseError(url, message="no retriever for URL")
 
     def mount_parser_by_mime_type(
-        self, parser: ParserType[Any], http_accept: Optional[str] = None
+        self, parser: ParserType[Any], http_accept: str | None = None
     ) -> None:
         if not http_accept:
             if not isinstance(parser, HTTPAcceptParserType):
@@ -391,7 +385,7 @@ class Parser:
             index = existing_qualities[0][1] if existing_qualities else 0
             parsers.insert(index, (quality, parser))
 
-    def get_parser_by_mime_type(self, mime_type: str) -> Optional[ParserType[Any]]:
+    def get_parser_by_mime_type(self, mime_type: str) -> ParserType[Any] | None:
         parsers = self.parsers_by_mime_type.get(mime_type, ())
         if not parsers:
             parsers = self.parsers_by_mime_type.get('*/*', ())
@@ -403,7 +397,7 @@ class Parser:
         url = normalize_url(url)
         self.parsers_by_url[url] = parser
 
-    def get_parser_by_url(self, url: str) -> Optional[ParserType[Any]]:
+    def get_parser_by_url(self, url: str) -> ParserType[Any] | None:
         # we might change this to have some smarter matching, but YAGNI
         url = normalize_url(url)
         return self.parsers_by_url.get(url)
@@ -415,7 +409,7 @@ class Parser:
         return retriever.process_feed_for_update(feed)
 
     def process_entry_pairs(
-        self, url: str, mime_type: Optional[str], pairs: Iterable[EntryPair]
+        self, url: str, mime_type: str | None, pairs: Iterable[EntryPair]
     ) -> Iterable[EntryPair]:
         parser, _ = self.get_parser(url, mime_type)
         if not isinstance(parser, EntryPairsParserType):

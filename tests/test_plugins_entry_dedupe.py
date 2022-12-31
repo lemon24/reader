@@ -164,7 +164,7 @@ def test_plugin(make_reader):
 
     reader.update_feeds()
 
-    assert set((e.id, e.read, e.important) for e in reader.get_entries()) == {
+    assert {(e.id, e.read, e.important) for e in reader.get_entries()} == {
         t + (False,)
         for t in {
             # remain untouched
@@ -263,7 +263,7 @@ def test_plugin_once(make_reader, db_path, monkeypatch, tags):
     reader.update_feeds()
 
     # nothing changes without tag
-    assert set((e.id, e.read, e.important) for e in reader.get_entries()) == {
+    assert {(e.id, e.read, e.important) for e in reader.get_entries()} == {
         (different_title.id, False, False),
         (no_content_match.id, False, False),
         (read_one.id, True, False),
@@ -304,7 +304,7 @@ def test_plugin_once(make_reader, db_path, monkeypatch, tags):
             (unread_three.id, True, True),
         }
 
-    assert set((e.id, e.read, e.important) for e in reader.get_entries()) == expected
+    assert {(e.id, e.read, e.important) for e in reader.get_entries()} == expected
 
 
 READ_MODIFIED_COPYING_DATA = [

@@ -4,18 +4,16 @@ Requests utilities. Contains no business logic.
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
+from collections.abc import Mapping
+from collections.abc import Sequence
 from contextlib import contextmanager
 from contextlib import nullcontext
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
 from typing import ContextManager
-from typing import Iterator
-from typing import Mapping
-from typing import Optional
 from typing import Protocol
-from typing import Sequence
-from typing import Tuple
 from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
@@ -33,7 +31,7 @@ class _RequestPlugin(Protocol):
         session: requests.Session,
         request: requests.Request,
         **kwargs: Any,
-    ) -> Optional[requests.Request]:  # pragma: no cover
+    ) -> requests.Request | None:  # pragma: no cover
         ...
 
 
@@ -44,7 +42,7 @@ class _ResponsePlugin(Protocol):
         response: requests.Response,
         request: requests.Request,
         **kwargs: Any,
-    ) -> Optional[requests.Request]:  # pragma: no cover
+    ) -> requests.Request | None:  # pragma: no cover
         ...
 
 
@@ -84,8 +82,8 @@ class SessionWrapper:
 
     def get(
         self,
-        url: Union[str, bytes],
-        headers: Optional[Mapping[str, str]] = None,
+        url: str | bytes,
+        headers: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> requests.Response:
         # kwargs get passed to requests.BaseAdapter.send();
@@ -123,7 +121,7 @@ class SessionWrapper:
         self.session.close()
 
 
-TimeoutType = Union[None, float, Tuple[float, float], Tuple[float, None]]
+TimeoutType = Union[None, float, tuple[float, float], tuple[float, None]]
 
 DEFAULT_TIMEOUT = (3.05, 60)
 
@@ -165,11 +163,11 @@ class SessionFactory:
 
     """Manage the lifetime of a session."""
 
-    user_agent: Optional[str] = None
+    user_agent: str | None = None
     timeout: TimeoutType = DEFAULT_TIMEOUT
     request_hooks: Sequence[_RequestPlugin] = field(default_factory=list)
     response_hooks: Sequence[_ResponsePlugin] = field(default_factory=list)
-    session: Optional[SessionWrapper] = None
+    session: SessionWrapper | None = None
 
     def make_session(self) -> SessionWrapper:
         session = SessionWrapper(

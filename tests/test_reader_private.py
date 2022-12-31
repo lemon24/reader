@@ -43,10 +43,10 @@ def test_update_stale(reader, call_update_method, entry_updated):
     reader._now = lambda: naive_datetime(2010, 1, 1)
     call_update_method(reader, feed.url)
 
-    assert set((f.url, f.title, f.last_updated) for f in reader.get_feeds()) == {
+    assert {(f.url, f.title, f.last_updated) for f in reader.get_feeds()} == {
         (feed.url, feed.title, datetime(2010, 1, 1))
     }
-    assert set((e.id, e.title, e.last_updated) for e in reader.get_entries()) == {
+    assert {(e.id, e.title, e.last_updated) for e in reader.get_entries()} == {
         (entry.id, entry.title, datetime(2010, 1, 1))
     }
 
@@ -63,10 +63,10 @@ def test_update_stale(reader, call_update_method, entry_updated):
         # nothing changes after update
         reader._now = lambda: naive_datetime(2010, 1, 2)
         call_update_method(reader, feed.url)
-        assert set((f.url, f.title, f.last_updated) for f in reader.get_feeds()) == {
+        assert {(f.url, f.title, f.last_updated) for f in reader.get_feeds()} == {
             (feed.url, feed.title, datetime(2010, 1, 1))
         }
-        assert set((e.id, e.title, e.last_updated) for e in reader.get_entries()) == {
+        assert {(e.id, e.title, e.last_updated) for e in reader.get_entries()} == {
             (entry.id, entry.title, datetime(2010, 1, 1))
         }
 
@@ -76,10 +76,10 @@ def test_update_stale(reader, call_update_method, entry_updated):
     reader._now = lambda: naive_datetime(2010, 1, 3)
     call_update_method(reader, feed.url)
     assert parser.calls == [(feed.url, None, None)]
-    assert set((f.url, f.title, f.last_updated) for f in reader.get_feeds()) == {
+    assert {(f.url, f.title, f.last_updated) for f in reader.get_feeds()} == {
         (feed.url, feed.title, datetime(2010, 1, 3))
     }
-    assert set((e.id, e.title, e.last_updated) for e in reader.get_entries()) == {
+    assert {(e.id, e.title, e.last_updated) for e in reader.get_entries()} == {
         (entry.id, entry.title, datetime(2010, 1, 3))
     }
 

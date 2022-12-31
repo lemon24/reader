@@ -86,18 +86,14 @@ from __future__ import annotations
 import functools
 import textwrap
 from collections import defaultdict
+from collections.abc import Iterable
+from collections.abc import Iterator
+from collections.abc import Mapping
+from collections.abc import Sequence
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import Dict
-from typing import Iterable
-from typing import Iterator
-from typing import List
-from typing import Mapping
 from typing import NamedTuple
-from typing import Optional
-from typing import Sequence
-from typing import Tuple
 from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
@@ -107,7 +103,7 @@ _U = TypeVar('_U')
 
 
 _Q = TypeVar('_Q', bound='BaseQuery')
-_QArg = Union[str, Tuple[str, ...]]
+_QArg = Union[str, tuple[str, ...]]
 
 
 class _Thing(NamedTuple):
@@ -117,7 +113,7 @@ class _Thing(NamedTuple):
     is_subquery: bool = False
 
     @classmethod
-    def from_arg(cls, arg: _QArg, **kwargs: Any) -> '_Thing':
+    def from_arg(cls, arg: _QArg, **kwargs: Any) -> _Thing:
         if isinstance(arg, str):
             alias, value = '', arg
         elif len(arg) == 2:
@@ -127,7 +123,7 @@ class _Thing(NamedTuple):
         return cls(_clean_up(value), _clean_up(alias), **kwargs)
 
 
-class _FlagList(List[_T]):
+class _FlagList(list[_T]):
     flag: str = ''
 
 
@@ -151,7 +147,7 @@ class BaseQuery:
     separators: Mapping[str, str] = dict(WHERE='AND', HAVING='AND')
     default_separator = ','
 
-    formats: Tuple[Mapping[str, str], ...] = (
+    formats: tuple[Mapping[str, str], ...] = (
         defaultdict(lambda: '{value}'),
         defaultdict(lambda: '{value} AS {alias}', WITH='{alias} AS {value}'),
     )
@@ -162,8 +158,8 @@ class BaseQuery:
 
     def __init__(
         self,
-        data: Optional[Mapping[str, Iterable[_QArg]]] = None,
-        separators: Optional[Mapping[str, str]] = None,
+        data: Mapping[str, Iterable[_QArg]] | None = None,
+        separators: Mapping[str, str] | None = None,
     ) -> None:
         self.data: Mapping[str, _FlagList[_Thing]] = {}
         if data is None:
@@ -185,7 +181,7 @@ class BaseQuery:
                 raise ValueError(f"{keyword} already has flag: {flag!r}")
             target.flag = flag
 
-        kwargs: Dict[str, Any] = {}
+        kwargs: dict[str, Any] = {}
         if fake_keyword:
             kwargs.update(keyword=fake_keyword)
         if keyword in self.subquery_keywords:
@@ -196,13 +192,13 @@ class BaseQuery:
 
         return self
 
-    def _resolve_fakes(self, keyword: str) -> Tuple[str, str]:
+    def _resolve_fakes(self, keyword: str) -> tuple[str, str]:
         for part, real in self.fake_keywords.items():
             if part in keyword:
                 return real, keyword
         return keyword, ''
 
-    def _resolve_flags(self, keyword: str) -> Tuple[str, str]:
+    def _resolve_flags(self, keyword: str) -> tuple[str, str]:
         prefix, _, flag = keyword.partition(' ')
         if prefix in self.flag_keywords:
             if flag and flag not in self.flag_keywords[prefix]:
@@ -229,7 +225,7 @@ class BaseQuery:
             else:
                 yield f'{keyword}\n'
 
-            grouped: Tuple[List[_Thing], ...] = ([], [])
+            grouped: tuple[list[_Thing], ...] = ([], [])
             for thing in things:
                 grouped[bool(thing.keyword)].append(thing)
             for group in grouped:
@@ -282,11 +278,11 @@ class ScrollingWindowMixin(_SWMBase):
         order = 'DESC' if desc else 'ASC'
         return self.ORDER_BY(*(f'{thing} {order}' for thing in things))
 
-    def extract_last(self, result: Tuple[_T, ...]) -> Optional[Tuple[_T, ...]]:
+    def extract_last(self, result: tuple[_T, ...]) -> tuple[_T, ...] | None:
         names = [t.alias or t.value for t in self.data['SELECT']]
         return tuple(result[names.index(t)] for t in self.__things) or None
 
-    def add_last(self, last: Optional[Tuple[_T, ...]]) -> Sequence[Tuple[str, _T]]:
+    def add_last(self, last: tuple[_T, ...] | None) -> Sequence[tuple[str, _T]]:
         self.__add_last()
         return self.__last_params(last)
 
@@ -298,7 +294,7 @@ class ScrollingWindowMixin(_SWMBase):
         comparison = BaseQuery({'(': self.__things, f') {op} (': labels, ')': ['']})
         self.add(self.__keyword, str(comparison).rstrip())
 
-    def __last_params(self, last: Optional[Tuple[_T, ...]]) -> Sequence[Tuple[str, _T]]:
+    def __last_params(self, last: tuple[_T, ...] | None) -> Sequence[tuple[str, _T]]:
         return [(self.__make_label(i), t) for i, t in enumerate(last or ())]
 
 
@@ -311,13 +307,13 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 def paginated_query(
-    db: 'sqlite3.Connection',
+    db: sqlite3.Connection,
     query: Query,
-    params: Dict[str, Any] = {},  # noqa: B006
-    chunk_size: Optional[int] = 0,
-    last: Optional[_U] = None,
-    row_factory: Optional[Callable[[Tuple[Any, ...]], _T]] = None,
-) -> Iterator[Tuple[_T, _U]]:
+    params: dict[str, Any] = {},  # noqa: B006
+    chunk_size: int | None = 0,
+    last: _U | None = None,
+    row_factory: Callable[[tuple[Any, ...]], _T] | None = None,
+) -> Iterator[tuple[_T, _U]]:
 
     params = dict(params)
 

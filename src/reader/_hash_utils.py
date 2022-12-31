@@ -25,7 +25,6 @@ import hashlib
 import json
 from collections.abc import Collection
 from typing import Any
-from typing import Dict
 
 
 # The first byte of the hash contains its version,
@@ -69,7 +68,7 @@ def _json_default(thing: object) -> Any:
     raise TypeError(f"Object of type {type(thing).__name__} is not JSON serializable")
 
 
-def _dataclass_dict(thing: object) -> Dict[str, Any]:
+def _dataclass_dict(thing: object) -> dict[str, Any]:
     # we could have used dataclasses.asdict()
     # with a dict_factory that drops empty values,
     # but asdict() is recursive and we need to intercept and check

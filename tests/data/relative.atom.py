@@ -7,8 +7,8 @@ from reader._types import FeedData
 
 
 feed = FeedData(
-    url='{}relative.atom'.format(url_base),
-    link='{}file.html'.format(rel_base),
+    url=f'{url_base}relative.atom',
+    link=f'{rel_base}file.html',
     version='atom10',
 )
 
@@ -17,8 +17,8 @@ entries = [
         feed_url=feed.url,
         id='urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a',
         updated=None,
-        link='{}entries/entry.html'.format(rel_base),
-        summary='one <a href="{}target">two</a> three'.format(rel_base),
+        link=f'{rel_base}entries/entry.html',
+        summary=f'one <a href="{rel_base}target">two</a> three',
         content=(
             Content(
                 value='<script>evil</script> content', type='text/plain', language=None
@@ -27,9 +27,7 @@ entries = [
         ),
         enclosures=(
             # the text/html type comes from feedparser
-            Enclosure(
-                href='{}enclosure?q=a#fragment'.format(rel_base), type='text/html'
-            ),
+            Enclosure(href=f'{rel_base}enclosure?q=a#fragment', type='text/html'),
         ),
     )
 ]

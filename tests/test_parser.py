@@ -159,7 +159,7 @@ def make_url(request, requests_mock):
 def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     monkeypatch.chdir(data_dir.dirname)
 
-    feed_filename = '{}.{}'.format(data_file, feed_type)
+    feed_filename = f'{data_file}.{feed_type}'
     # make_url receives an absolute path,
     # and returns a relative-to-cwd or absolute path or a URL.
     feed_url = make_url(data_dir.join(feed_filename))

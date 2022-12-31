@@ -694,7 +694,7 @@ def update_metadata(data):
     try:
         value = yaml.safe_load(data['value'])
     except yaml.YAMLError as e:
-        raise APIError("invalid JSON: {}".format(e), resource_id + (key,)) from e
+        raise APIError(f"invalid JSON: {e}", resource_id + (key,)) from e
     get_reader().set_tag(resource_id, key, value)
 
 
