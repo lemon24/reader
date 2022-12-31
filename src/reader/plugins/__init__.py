@@ -2,6 +2,8 @@
 Built-in plug-ins.
 
 """
+from __future__ import annotations
+
 from pkgutil import resolve_name
 from typing import Callable
 from typing import Iterable

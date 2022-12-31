@@ -2,6 +2,8 @@
 sqlite3 utilities. Contains no business logic.
 
 """
+from __future__ import annotations
+
 import functools
 import sqlite3
 import sys

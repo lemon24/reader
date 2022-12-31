@@ -81,6 +81,8 @@ allow _Thing.value to be a Query (and support it in);
 then, in _lines_keyword(), convert queries to str and override is_subquery.
 
 """
+from __future__ import annotations
+
 import functools
 import textwrap
 from collections import defaultdict

@@ -4,6 +4,8 @@ HTTP utilities. Contains no business logic.
 This mainly exists because we didn't want to depend on werkzeug.
 
 """
+from __future__ import annotations
+
 import re
 from typing import Dict
 from typing import Iterable
