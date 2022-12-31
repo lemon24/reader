@@ -19,66 +19,7 @@ https://death.andgravity.com/own-query-builder
 https://death.andgravity.com/query-builder-how
     Code walk-through / tutorial.
     Low-level design decisions.
-    Better thought-out versions of the unimplemented features below.
-
----
-
-For a version of this that supports UNIONs see the second prototype in
-https://github.com/lemon24/reader/issues/123#issuecomment-624045621
-
-Here's a version based on the same idea that works with the 2021 refactor:
-https://gist.github.com/lemon24/3777dd39c96bf30014a331943ed789fa
-
----
-
-For a version of this that supports INSERT/UPDATE/DELETE, see
-https://github.com/lemon24/reader/commit/7c97fccf61d16946176c2455be3634c5a8343e1b
-
-The way things work now has changed slightly;
-we'd probably make them flag keywords now.
-
-To make VALUES bake in the parentheses, we just need to set:
-
-    query.formats[0]['VALUES'] = '({value})'
-
-That's to add one values tuple at a time. To add one column, we could do this:
-
-* output keyword even if called with no args
-* add(..., flag=...), and allow arbitrary flags;
-  INSERT_INTO('x', 'y', flag='table') -> flag is "INTO table"
-* parens_keywords = {'INSERT', 'VALUES'};
-  different than subquery_keywords because it applies once to the whole set
-
----
-
-To support marking arbitrary things as subqueries,
-add a signalling tuple and a helper function:
-
-    class _Subquery(tuple): pass
-
-    def Subquery(*args) -> _Subquery:
-        return _Subquery(args)  # from_arg() has to support 1-tuples
-
-Then, in from_arg(), if arg is a _Subquery, set is_subquery.
-
-Usage looks like this:
-
-    Query().FROM(
-        Subquery('alias', 'subquery'),
-        ('alias', 'not subquery'),
-    )
-
-Alternatively, add an is_subquery kwarg to add():
-
-    query = Query().FROM(('alias', 'subquery'), is_subquery=True)
-    query.FROM(('alias', 'not subquery'))
-
----
-
-To support using Queries as arguments directly,
-without having to convert them to strings first,
-allow _Thing.value to be a Query (and support it in);
-then, in _lines_keyword(), convert queries to str and override is_subquery.
+    How to implement: INSERT/UPDATE/DELETE, subqueries, UNION/...
 
 """
 from __future__ import annotations
@@ -87,9 +28,6 @@ import functools
 import textwrap
 from collections import defaultdict
 from collections.abc import Iterable
-from collections.abc import Iterator
-from collections.abc import Mapping
-from collections.abc import Sequence
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -144,10 +82,10 @@ class BaseQuery:
         'LIMIT',
     ]
 
-    separators: Mapping[str, str] = dict(WHERE='AND', HAVING='AND')
+    separators: dict[str, str] = dict(WHERE='AND', HAVING='AND')
     default_separator = ','
 
-    formats: tuple[Mapping[str, str], ...] = (
+    formats: tuple[dict[str, str], ...] = (
         defaultdict(lambda: '{value}'),
         defaultdict(lambda: '{value} AS {alias}', WITH='{alias} AS {value}'),
     )
@@ -158,10 +96,10 @@ class BaseQuery:
 
     def __init__(
         self,
-        data: Mapping[str, Iterable[_QArg]] | None = None,
-        separators: Mapping[str, str] | None = None,
+        data: dict[str, Iterable[_QArg]] | None = None,
+        separators: dict[str, str] | None = None,
     ) -> None:
-        self.data: Mapping[str, _FlagList[_Thing]] = {}
+        self.data: dict[str, _FlagList[_Thing]] = {}
         if data is None:
             data = dict.fromkeys(self.keywords, ())
         for keyword, args in data.items():
@@ -231,7 +169,7 @@ class BaseQuery:
             for group in grouped:
                 yield from self._lines_keyword(keyword, group)
 
-    def _lines_keyword(self, keyword: str, things: Sequence[_Thing]) -> Iterable[str]:
+    def _lines_keyword(self, keyword: str, things: list[_Thing]) -> Iterable[str]:
         for i, thing in enumerate(things):
             last = i + 1 == len(things)
 
@@ -282,7 +220,7 @@ class ScrollingWindowMixin(_SWMBase):
         names = [t.alias or t.value for t in self.data['SELECT']]
         return tuple(result[names.index(t)] for t in self.__things) or None
 
-    def add_last(self, last: tuple[_T, ...] | None) -> Sequence[tuple[str, _T]]:
+    def add_last(self, last: tuple[_T, ...] | None) -> list[tuple[str, _T]]:
         self.__add_last()
         return self.__last_params(last)
 
@@ -294,7 +232,7 @@ class ScrollingWindowMixin(_SWMBase):
         comparison = BaseQuery({'(': self.__things, f') {op} (': labels, ')': ['']})
         self.add(self.__keyword, str(comparison).rstrip())
 
-    def __last_params(self, last: tuple[_T, ...] | None) -> Sequence[tuple[str, _T]]:
+    def __last_params(self, last: tuple[_T, ...] | None) -> list[tuple[str, _T]]:
         return [(self.__make_label(i), t) for i, t in enumerate(last or ())]
 
 
@@ -313,7 +251,7 @@ def paginated_query(
     chunk_size: int | None = 0,
     last: _U | None = None,
     row_factory: Callable[[tuple[Any, ...]], _T] | None = None,
-) -> Iterator[tuple[_T, _U]]:
+) -> Iterable[tuple[_T, _U]]:
 
     params = dict(params)
 
