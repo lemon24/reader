@@ -52,12 +52,21 @@ DEFAULT_TIMEOUT = (3.05, 60)
 @dataclass
 class SessionFactory:
 
-    """Manage the lifetime of a session."""
+    """Manage the lifetime of a session.
+
+    TODO: callable
+
+    """
 
     user_agent: str | None = None
     timeout: TimeoutType = DEFAULT_TIMEOUT
+
+    #: TODO
     request_hooks: Sequence[RequestPlugin] = field(default_factory=list)
+
+    #: TODO
     response_hooks: Sequence[ResponsePlugin] = field(default_factory=list)
+
     session: SessionWrapper | None = None
 
     def __call__(self) -> SessionWrapper:
@@ -122,13 +131,17 @@ class SessionWrapper:
     * modify the Request (not PreparedRequest) before it is sent
     * repeat the Request depending on the Response
 
+    TODO: contextmanager, use factory for hooks
+
     Details on why the extension methods built into Requests
     (adapters, hooks['response']) were not enough:
     https://github.com/lemon24/reader/issues/155#issuecomment-668716387
 
     """
 
+    #: TODO
     session: requests.Session = field(default_factory=_make_session)
+
     request_hooks: Sequence[RequestPlugin] = field(default_factory=list)
     response_hooks: Sequence[ResponsePlugin] = field(default_factory=list)
 
@@ -140,6 +153,7 @@ class SessionWrapper:
     def get(
         self, url: str | bytes, headers: Headers | None = None, **kwargs: Any
     ) -> requests.Response:
+        """TODO"""
         # kwargs get passed to requests.BaseAdapter.send();
         # can be any of: stream, timeout, verify, cert, proxies
 

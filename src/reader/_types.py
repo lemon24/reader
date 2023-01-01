@@ -47,6 +47,7 @@ class FeedData(_namedtuple_compat):
 
     """
 
+    #: The feed URL.
     url: str
     updated: datetime | None = None
     title: str | None = None
@@ -203,6 +204,7 @@ def _getattr_optional_datetime(obj: object, name: str) -> datetime | None:
 
 class ParsedFeed(NamedTuple):
 
+    #: The feed.
     feed: FeedData
     # TODO: wrap entries in iter(entries) to ensure stuff doesn't rely on it being a list
     entries: Iterable[EntryData]
@@ -213,14 +215,18 @@ class ParsedFeed(NamedTuple):
 
 class FeedForUpdate(NamedTuple):
 
-    """Update-relevant information about an exiting feed, from Storage."""
+    """Update-relevant information about an existing feed, from Storage."""
 
+    #: The feed URL.
     url: str
 
     #: The date the feed was last updated, according to the feed.
     updated: datetime | None
 
+    #: The HTTP ``ETag`` header from the last update.
     http_etag: str | None
+
+    #: The HTTP ``Last-Modified`` header from the last update.
     http_last_modified: str | None
 
     #: Whether the next update should update *all* entries,

@@ -4,7 +4,7 @@ API reference
 
 .. module:: reader
 
-This part of the documentation covers all the interfaces of *reader*.
+This part of the documentation covers all the public interfaces of *reader*.
 
 
 Reader object

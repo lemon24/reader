@@ -46,6 +46,18 @@ USER_AGENT = f'python-reader/{reader.__version__} (+https://github.com/lemon24/r
 def default_parser(
     feed_root: str | None = None, session_timeout: TimeoutType = DEFAULT_TIMEOUT
 ) -> Parser:
+    """Create a pre-configured :class:`Parser`.
+
+    Args:
+        feed_root (str or None):
+            See :func:`~reader.make_reader` for details.
+        session_timeout (float or tuple(float, float) or None):
+            See :func:`~reader.make_reader` for details.
+
+    Returns:
+        Parser: The parser.
+
+    """
     parser = Parser()
     parser.session_factory.timeout = session_timeout
 
@@ -74,7 +86,28 @@ def default_parser(
 
 class Parser:
 
-    """Meta-parser: retrieve and parse a feed by delegation."""
+    """Retrieve and parse feeds by delegating to
+    :class:`retrievers <RetrieverType>` and :class:`parsers <ParserType>`.
+
+    To retrieve and parse a single feed,
+    you can :meth:`__call__` the parser object directly.
+
+    :class:`~reader.Reader` only uses the following methods:
+
+    * :meth:`parallel`
+    * :meth:`validate_url`
+    * :meth:`process_feed_for_update`
+    * :meth:`process_entry_pairs`
+
+    To add retrievers and parsers:
+
+    * :meth:`mount_retriever`
+    * :meth:`mount_parser_by_mime_type`
+    * :meth:`mount_parser_by_url`
+
+    The rest of the methods are low-level methods.
+
+    """
 
     def __init__(self) -> None:
         # Typing the link between parser and retriever would be nice,
@@ -87,6 +120,12 @@ class Parser:
         self.retrievers: dict[str, RetrieverType[Any]] = {}
         self.parsers_by_mime_type: dict[str, list[tuple[float, ParserType[Any]]]] = {}
         self.parsers_by_url: dict[str, ParserType[Any]] = {}
+
+        #: :class:`~reader._requests_utils.SessionFactory`
+        #: used to create Requests sessions for retrieving feeds.
+        #:
+        #: Plugins may add request or response hooks to this.
+        #:
         self.session_factory = SessionFactory(USER_AGENT)
 
     def parallel(
@@ -95,6 +134,28 @@ class Parser:
         map: MapType = map,
         is_parallel: bool = True,
     ) -> Iterable[tuple[FeedArgument, ParsedFeed | None | ParseError]]:
+        """Retrieve and parse many feeds, possibly in parallel.
+
+        Yields the parsed feeds, as soon as they are ready.
+
+        Args:
+            feeds (iterable(FeedArgument)): An iterable of feeds.
+            map (function):
+                A :func:`map`-like function;
+                the results can be in any order.
+            is_parallel (bool): Whether ``map`` runs the tasks in parallel.
+
+        Yields:
+            tuple(:class:`FeedArgument`, :class:`~reader._types.ParsedFeed` or :const:`None` or :class:`~reader.ParseError`):
+
+                A (feed, result) pair, where result is either:
+
+                * the parsed feed
+                * :const:`None`, if the feed didn't change
+                * an exception instance
+
+        """
+
         def retrieve(
             feed: FeedArgument,
         ) -> tuple[
@@ -148,8 +209,25 @@ class Parser:
         http_etag: str | None = None,
         http_last_modified: str | None = None,
     ) -> ParsedFeed | None:
-        """Thin wrapper for parallel(), to be used by parser tests."""
+        """Retrieve and parse one feed.
 
+        This is a convenience wrapper over :meth:`parallel`.
+
+        Args:
+            feed (str): The feed URL.
+            http_etag (str or None):
+                The HTTP ``ETag`` header from the last update.
+            http_last_modified (str or None):
+                The the HTTP ``Last-Modified`` header from the last update.
+
+        Returns:
+            ParsedFeed or None:
+            The parsed feed or :const:`None`, if the feed didn't change.
+
+        Raises:
+            ParseError
+
+        """
         feed = FeedArgumentTuple(url, http_etag, http_last_modified)
 
         # is_parallel=True ensures the parser tests cover more code
@@ -166,7 +244,27 @@ class Parser:
         http_last_modified: str | None = None,
         is_parallel: bool = False,
     ) -> ContextManager[RetrieveResult[Any] | None]:
+        """Retrieve a feed.
 
+        Args:
+            url (str): The feed URL.
+            http_etag (str or None):
+                The HTTP ``ETag`` header from the last update.
+            http_last_modified (str or None):
+                The the HTTP ``Last-Modified`` header from the last update.
+            is_parallel (bool):
+                Whether this was called from :meth:`parallel`
+                (writes the contents to a temporary file, if possible).
+
+        Returns:
+            contextmanager(RetrieveResult or None):
+            A context manager that has as target either the result
+            or :const:`None`, if the feed didn't change.
+
+        Raises:
+            ParseError
+
+        """
         parser = self.get_parser_by_url(url)
 
         http_accept: str | None
@@ -217,6 +315,19 @@ class Parser:
         return make_context()
 
     def parse(self, url: str, result: RetrieveResult[Any]) -> ParsedFeed:
+        """Parse a retrieved feed.
+
+        Args:
+            url (str): The feed URL.
+            result (RetrieveResult): A retrieve result.
+
+        Returns:
+            ParsedFeed: The feed and entry data.
+
+        Raises:
+            ParseError
+
+        """
         parser, mime_type = self.get_parser(url, result.mime_type)
         feed, entries = parser(url, result.file, result.headers)
         return ParsedFeed(
@@ -226,6 +337,20 @@ class Parser:
     def get_parser(
         self, url: str, mime_type: str | None
     ) -> tuple[ParserType[Any], str | None]:
+        """Select an appropriate parser for a feed.
+
+        Args:
+            url (str): The feed URL.
+            mime_type (str or None): The MIME type of the file.
+
+        Returns:
+            tuple(ParserType, str):
+            The parser, and the (possibly guessed) MIME type.
+
+        Raises:
+            ParseError
+
+        """
         parser = self.get_parser_by_url(url)
         if not parser:
             if not mime_type:
@@ -263,12 +388,14 @@ class Parser:
             raise InvalidFeedURLError(url) from e
 
     def mount_retriever(self, prefix: str, retriever: RetrieverType[Any]) -> None:
+        """TODO"""
         self.retrievers[prefix] = retriever
         keys_to_move = [k for k in self.retrievers if len(k) < len(prefix)]
         for key in keys_to_move:
             self.retrievers[key] = self.retrievers.pop(key)
 
     def get_retriever(self, url: str) -> RetrieverType[Any]:
+        """TODO"""
         for prefix, retriever in self.retrievers.items():
             if url.lower().startswith(prefix.lower()):
                 return retriever
@@ -277,6 +404,7 @@ class Parser:
     def mount_parser_by_mime_type(
         self, parser: ParserType[Any], http_accept: str | None = None
     ) -> None:
+        """TODO"""
         if not http_accept:
             if not isinstance(parser, HTTPAcceptParserType):
                 raise TypeError("unaware parser type with no http_accept given")
@@ -295,6 +423,7 @@ class Parser:
             parsers.insert(index, (quality, parser))
 
     def get_parser_by_mime_type(self, mime_type: str) -> ParserType[Any] | None:
+        """TODO"""
         parsers = self.parsers_by_mime_type.get(mime_type, ())
         if not parsers:
             parsers = self.parsers_by_mime_type.get('*/*', ())
@@ -303,15 +432,18 @@ class Parser:
         return None
 
     def mount_parser_by_url(self, url: str, parser: ParserType[Any]) -> None:
+        """TODO"""
         url = normalize_url(url)
         self.parsers_by_url[url] = parser
 
     def get_parser_by_url(self, url: str) -> ParserType[Any] | None:
+        """TODO"""
         # we might change this to have some smarter matching, but YAGNI
         url = normalize_url(url)
         return self.parsers_by_url.get(url)
 
     def process_feed_for_update(self, feed: FeedForUpdate) -> FeedForUpdate:
+        """TODO"""
         retriever = self.get_retriever(feed.url)
         if not isinstance(retriever, FeedForUpdateRetrieverType):
             return feed
@@ -320,6 +452,22 @@ class Parser:
     def process_entry_pairs(
         self, url: str, mime_type: str | None, pairs: Iterable[EntryPair]
     ) -> Iterable[EntryPair]:
+        """Process entry data before being stored.
+
+        Delegates to :meth:`~EntryPairsParserType.process_entry_pairs`
+        of the appropriate parser.
+
+        Args:
+            url (str): The feed URL.
+            mime_type (str or None): The MIME type of the feed.
+            pairs (iterable(tuple(EntryData, EntryForUpdate or None))):
+                (entry data, entry for update) pairs.
+
+        Returns:
+            iterable(tuple(EntryData, EntryForUpdate or None)):
+            (entry data, entry for update) pairs, possibly modified.
+
+        """
         parser, _ = self.get_parser(url, mime_type)
         if not isinstance(parser, EntryPairsParserType):
             return pairs
@@ -332,18 +480,35 @@ T_cv = TypeVar('T_cv', contravariant=True)
 
 @dataclass(frozen=True)
 class RetrieveResult(_namedtuple_compat, Generic[T_co]):
+    """The result of retrieving a feed, plus metadata."""
+
     # should be a NamedTuple, but the typing one became generic only in 3.11,
     # and we don't want to depend on typing_extensions at runtime
 
+    # TODO: rename file to resource?
+    # TODO: coalesce http_etag and http_last_modified into a single thing?
+
+    #: The result of retrieving a feed.
+    #: Usually, a readable binary file.
+    #: Passed to the parser.
     file: T_co
+    #: The MIME type of the file.
+    #: Used to select an appropriate parser.
     mime_type: str | None = None
+    #: The HTTP ``ETag`` header associated with the file.
+    #: Passed back to the retriever on the next update.
     http_etag: str | None = None
+    #: The HTTP ``Last-Modified`` header associated with the file.
+    #: Passed back to the retriever on the next update.
     http_last_modified: str | None = None
+    #: The HTTP response headers associated with the file.
+    #: Passed to the parser.
     headers: Headers | None = None
 
 
 class RetrieverType(Protocol[T_co]):  # pragma: no cover
 
+    #: TODO
     slow_to_read: bool
 
     def __call__(
@@ -353,7 +518,7 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
         http_last_modified: str | None,
         http_accept: str | None,
     ) -> ContextManager[RetrieveResult[T_co] | None]:
-        ...
+        """TODO"""
 
     def validate_url(self, url: str) -> None:
         """Check if ``url`` is valid for this retriever.
@@ -367,7 +532,7 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
 @runtime_checkable
 class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no cover
     def process_feed_for_update(self, feed: FeedForUpdate) -> FeedForUpdate:
-        ...
+        """TODO"""
 
 
 FeedAndEntries = tuple[FeedData, Collection[EntryData]]
@@ -375,37 +540,76 @@ EntryPair = tuple[EntryData, Optional[EntryForUpdate]]
 
 
 class ParserType(Protocol[T_cv]):  # pragma: no cover
+
+    """A callable that knows how to parse a retrieved feed."""
+
     def __call__(self, url: str, file: T_cv, headers: Headers | None) -> FeedAndEntries:
-        ...
+        """Parse a feed.
+
+        Args:
+            file: The feed resource. Usually, a readable binary file.
+            headers (dict(str, str) or None):
+                The HTTP response headers associated with the file.
+
+        Returns:
+            tuple(FeedData, EntryData): The feed and entry data.
+
+        Raises:
+            ParseError
+
+        """
 
 
 @runtime_checkable
 class HTTPAcceptParserType(ParserType[T_cv], Protocol):  # pragma: no cover
+
+    """A :class:`ParserType` that knows what content it can handle."""
+
     @property
     def http_accept(self) -> str:
-        ...
+        """The content types this parser supports,
+        as an ``Accept`` HTTP header value.
+
+        """
 
 
 @runtime_checkable
 class EntryPairsParserType(ParserType[T_cv], Protocol):  # pragma: no cover
+
+    """A :class:`ParserType` that can modify entry data before being stored."""
+
     def process_entry_pairs(
         self, url: str, pairs: Iterable[EntryPair]
     ) -> Iterable[EntryPair]:
-        ...
+        """Process entry data before being stored.
+
+        Args:
+            url (str): The feed URL.
+            pairs (iterable(tuple(EntryData, EntryForUpdate or None))):
+                (entry data, entry for update) pairs.
+
+        Returns:
+            iterable(tuple(EntryData, EntryForUpdate or None)):
+            (entry data, entry for update) pairs, possibly modified.
+
+        """
 
 
 class FeedArgument(Protocol):  # pragma: no cover
+
+    """Any :class:`~reader._types.FeedForUpdate`-like object."""
+
     @property
     def url(self) -> str:
-        ...
+        """The feed URL."""
 
     @property
     def http_etag(self) -> str | None:
-        ...
+        """The HTTP ``ETag`` header from the last update."""
 
     @property
     def http_last_modified(self) -> str | None:
-        ...
+        """The the HTTP ``Last-Modified`` header from the last update."""
 
 
 class FeedArgumentTuple(NamedTuple):
