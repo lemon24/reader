@@ -4,7 +4,6 @@ import logging
 import mimetypes
 import shutil
 import tempfile
-from collections import OrderedDict
 from collections.abc import Collection
 from collections.abc import Iterable
 from collections.abc import Iterator
@@ -38,100 +37,10 @@ from .exceptions import InvalidFeedURLError
 from .exceptions import ParseError
 from .types import _namedtuple_compat
 
-
 log = logging.getLogger('reader')
 
 
-T_co = TypeVar('T_co', covariant=True)
-T_cv = TypeVar('T_cv', contravariant=True)
-
-
-# RetrieveResult was a NamedTuple, but generic ones aren't supported yet:
-# https://github.com/python/mypy/issues/685
-
-
-@dataclass(frozen=True)
-class RetrieveResult(_namedtuple_compat, Generic[T_co]):
-    file: T_co
-    mime_type: str | None = None
-    http_etag: str | None = None
-    http_last_modified: str | None = None
-    headers: Headers | None = None
-
-
-class RetrieverType(Protocol[T_co]):  # pragma: no cover
-
-    slow_to_read: bool
-
-    def __call__(
-        self,
-        url: str,
-        http_etag: str | None,
-        http_last_modified: str | None,
-        http_accept: str | None,
-    ) -> ContextManager[RetrieveResult[T_co] | None]:
-        ...
-
-    def validate_url(self, url: str) -> None:
-        """Check if ``url`` is valid for this retriever.
-
-        Raises:
-            InvalidFeedURLError: If ``url`` is not valid.
-
-        """
-
-
-@runtime_checkable
-class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no cover
-    def process_feed_for_update(self, feed: FeedForUpdate) -> FeedForUpdate:
-        ...
-
-
-FeedAndEntries = tuple[FeedData, Collection[EntryData]]
-EntryPair = tuple[EntryData, Optional[EntryForUpdate]]
-
-
-class ParserType(Protocol[T_cv]):  # pragma: no cover
-    def __call__(self, url: str, file: T_cv, headers: Headers | None) -> FeedAndEntries:
-        ...
-
-
-@runtime_checkable
-class HTTPAcceptParserType(ParserType[T_cv], Protocol):  # pragma: no cover
-    @property
-    def http_accept(self) -> str:
-        ...
-
-
-@runtime_checkable
-class EntryPairsParserType(ParserType[T_cv], Protocol):  # pragma: no cover
-    def process_entry_pairs(
-        self, url: str, pairs: Iterable[EntryPair]
-    ) -> Iterable[EntryPair]:
-        ...
-
-
-class FeedArgument(Protocol):  # pragma: no cover
-    @property
-    def url(self) -> str:
-        ...
-
-    @property
-    def http_etag(self) -> str | None:
-        ...
-
-    @property
-    def http_last_modified(self) -> str | None:
-        ...
-
-
-class FeedArgumentTuple(NamedTuple):
-    url: str
-    http_etag: str | None = None
-    http_last_modified: str | None = None
-
-
-FA = TypeVar('FA', bound=FeedArgument)
+USER_AGENT = f'python-reader/{reader.__version__} (+https://github.com/lemon24/reader)'
 
 
 def default_parser(
@@ -163,9 +72,6 @@ def default_parser(
     return parser
 
 
-USER_AGENT = f'python-reader/{reader.__version__} (+https://github.com/lemon24/reader)'
-
-
 class Parser:
 
     """Meta-parser: retrieve and parse a feed by delegation."""
@@ -178,17 +84,22 @@ class Parser:
         # Higher Kinded Types might be a way of doing it,
         # https://returns.readthedocs.io/en/latest/pages/hkt.html
 
-        self.retrievers: OrderedDict[str, RetrieverType[Any]] = OrderedDict()
+        self.retrievers: dict[str, RetrieverType[Any]] = {}
         self.parsers_by_mime_type: dict[str, list[tuple[float, ParserType[Any]]]] = {}
         self.parsers_by_url: dict[str, ParserType[Any]] = {}
         self.session_factory = SessionFactory(USER_AGENT)
 
     def parallel(
-        self, feeds: Iterable[FA], map: MapType = map, is_parallel: bool = True
-    ) -> Iterable[tuple[FA, ParsedFeed | None | ParseError]]:
+        self,
+        feeds: Iterable[FeedArgument],
+        map: MapType = map,
+        is_parallel: bool = True,
+    ) -> Iterable[tuple[FeedArgument, ParsedFeed | None | ParseError]]:
         def retrieve(
-            feed: FA,
-        ) -> tuple[FA, ContextManager[RetrieveResult[Any] | None] | Exception]:
+            feed: FeedArgument,
+        ) -> tuple[
+            FeedArgument, ContextManager[RetrieveResult[Any] | None] | Exception
+        ]:
             try:
                 context = self.retrieve(
                     feed.url, feed.http_etag, feed.http_last_modified, is_parallel
@@ -413,6 +324,94 @@ class Parser:
         if not isinstance(parser, EntryPairsParserType):
             return pairs
         return parser.process_entry_pairs(url, pairs)
+
+
+T_co = TypeVar('T_co', covariant=True)
+T_cv = TypeVar('T_cv', contravariant=True)
+
+
+@dataclass(frozen=True)
+class RetrieveResult(_namedtuple_compat, Generic[T_co]):
+    # should be a NamedTuple, but the typing one became generic only in 3.11,
+    # and we don't want to depend on typing_extensions at runtime
+
+    file: T_co
+    mime_type: str | None = None
+    http_etag: str | None = None
+    http_last_modified: str | None = None
+    headers: Headers | None = None
+
+
+class RetrieverType(Protocol[T_co]):  # pragma: no cover
+
+    slow_to_read: bool
+
+    def __call__(
+        self,
+        url: str,
+        http_etag: str | None,
+        http_last_modified: str | None,
+        http_accept: str | None,
+    ) -> ContextManager[RetrieveResult[T_co] | None]:
+        ...
+
+    def validate_url(self, url: str) -> None:
+        """Check if ``url`` is valid for this retriever.
+
+        Raises:
+            InvalidFeedURLError: If ``url`` is not valid.
+
+        """
+
+
+@runtime_checkable
+class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no cover
+    def process_feed_for_update(self, feed: FeedForUpdate) -> FeedForUpdate:
+        ...
+
+
+FeedAndEntries = tuple[FeedData, Collection[EntryData]]
+EntryPair = tuple[EntryData, Optional[EntryForUpdate]]
+
+
+class ParserType(Protocol[T_cv]):  # pragma: no cover
+    def __call__(self, url: str, file: T_cv, headers: Headers | None) -> FeedAndEntries:
+        ...
+
+
+@runtime_checkable
+class HTTPAcceptParserType(ParserType[T_cv], Protocol):  # pragma: no cover
+    @property
+    def http_accept(self) -> str:
+        ...
+
+
+@runtime_checkable
+class EntryPairsParserType(ParserType[T_cv], Protocol):  # pragma: no cover
+    def process_entry_pairs(
+        self, url: str, pairs: Iterable[EntryPair]
+    ) -> Iterable[EntryPair]:
+        ...
+
+
+class FeedArgument(Protocol):  # pragma: no cover
+    @property
+    def url(self) -> str:
+        ...
+
+    @property
+    def http_etag(self) -> str | None:
+        ...
+
+    @property
+    def http_last_modified(self) -> str | None:
+        ...
+
+
+class FeedArgumentTuple(NamedTuple):
+    url: str
+    http_etag: str | None = None
+    http_last_modified: str | None = None
 
 
 @contextmanager
