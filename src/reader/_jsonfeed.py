@@ -6,18 +6,21 @@ from datetime import timezone
 from typing import Any
 from typing import cast
 from typing import IO
+from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
 import iso8601
 
-from ._parser import FeedAndEntries
-from ._parser import Headers
 from ._types import EntryData
 from ._types import FeedData
 from .exceptions import ParseError
 from .types import Content
 from .types import Enclosure
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ._parser import FeedAndEntries
+    from ._requests_utils import Headers
 
 
 class JSONFeedParser:

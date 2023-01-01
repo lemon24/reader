@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
     from ._parser import FeedAndEntries
-    from ._parser import Headers
+    from ._requests_utils import Headers
 
 
 class FeedparserParser:

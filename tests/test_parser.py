@@ -429,9 +429,7 @@ def test_parse_requests_exception(monkeypatch, exc_cls):
         def get(self, *args, **kwargs):
             raise exc
 
-    monkeypatch.setattr(
-        'reader._requests_utils.SessionFactory.make_session', BadWrapper
-    )
+    monkeypatch.setattr('reader._requests_utils.SessionFactory.__call__', BadWrapper)
 
     with pytest.raises(ParseError) as excinfo:
         default_parser('')('http://example.com')

@@ -8,7 +8,6 @@ from collections import OrderedDict
 from collections.abc import Collection
 from collections.abc import Iterable
 from collections.abc import Iterator
-from collections.abc import Mapping
 from contextlib import contextmanager
 from contextlib import nullcontext
 from dataclasses import dataclass
@@ -25,6 +24,7 @@ import reader
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
 from ._requests_utils import DEFAULT_TIMEOUT
+from ._requests_utils import Headers
 from ._requests_utils import SessionFactory
 from ._requests_utils import TimeoutType
 from ._types import EntryData
@@ -41,8 +41,6 @@ from .types import _namedtuple_compat
 
 log = logging.getLogger('reader')
 
-
-Headers = Mapping[str, str]
 
 T_co = TypeVar('T_co', covariant=True)
 T_cv = TypeVar('T_cv', contravariant=True)

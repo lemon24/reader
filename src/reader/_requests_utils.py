@@ -22,10 +22,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import requests
 
 
-_T = TypeVar('_T')
-
-
-class _RequestPlugin(Protocol):
+class RequestPlugin(Protocol):
     def __call__(
         self,
         session: requests.Session,
@@ -35,7 +32,7 @@ class _RequestPlugin(Protocol):
         ...
 
 
-class _ResponsePlugin(Protocol):
+class ResponsePlugin(Protocol):
     def __call__(
         self,
         session: requests.Session,
@@ -46,8 +43,68 @@ class _ResponsePlugin(Protocol):
         ...
 
 
+Headers = Mapping[str, str]
+TimeoutType = Union[None, float, tuple[float, float], tuple[float, None]]
+
+DEFAULT_TIMEOUT = (3.05, 60)
+
+
+@dataclass
+class SessionFactory:
+
+    """Manage the lifetime of a session."""
+
+    user_agent: str | None = None
+    timeout: TimeoutType = DEFAULT_TIMEOUT
+    request_hooks: Sequence[RequestPlugin] = field(default_factory=list)
+    response_hooks: Sequence[ResponsePlugin] = field(default_factory=list)
+    session: SessionWrapper | None = None
+
+    def __call__(self) -> SessionWrapper:
+        session = SessionWrapper(
+            request_hooks=list(self.request_hooks),
+            response_hooks=list(self.response_hooks),
+        )
+
+        # lazy import (https://github.com/lemon24/reader/issues/297)
+        from ._requests_utils_lazy import TimeoutHTTPAdapter
+
+        timeout_adapter = TimeoutHTTPAdapter(self.timeout)
+        session.session.mount('https://', timeout_adapter)
+        session.session.mount('http://', timeout_adapter)
+
+        if self.user_agent:
+            session.session.headers['User-Agent'] = self.user_agent
+
+        return session
+
+    def transient(self) -> ContextManager[SessionWrapper]:
+        if self.session:
+            return nullcontext(self.session)
+        return self()
+
+    @contextmanager
+    def persistent(self) -> Iterator[SessionWrapper]:
+        # note: this is NOT threadsafe, but is reentrant
+
+        if self.session:  # pragma: no cover
+            yield self.session
+            return
+
+        with self() as session:
+            self.session = session
+            try:
+                yield session
+            finally:
+                self.session = None
+
+
+_T = TypeVar('_T')
+
+
 def _make_session() -> requests.Session:
     # lazy import (https://github.com/lemon24/reader/issues/297)
+    global requests
     import requests
 
     return requests.Session()
@@ -72,8 +129,8 @@ class SessionWrapper:
     """
 
     session: requests.Session = field(default_factory=_make_session)
-    request_hooks: Sequence[_RequestPlugin] = field(default_factory=list)
-    response_hooks: Sequence[_ResponsePlugin] = field(default_factory=list)
+    request_hooks: Sequence[RequestPlugin] = field(default_factory=list)
+    response_hooks: Sequence[ResponsePlugin] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         # lazy import (https://github.com/lemon24/reader/issues/297)
@@ -81,10 +138,7 @@ class SessionWrapper:
         import requests
 
     def get(
-        self,
-        url: str | bytes,
-        headers: Mapping[str, str] | None = None,
-        **kwargs: Any,
+        self, url: str | bytes, headers: Headers | None = None, **kwargs: Any
     ) -> requests.Response:
         # kwargs get passed to requests.BaseAdapter.send();
         # can be any of: stream, timeout, verify, cert, proxies
@@ -115,91 +169,8 @@ class SessionWrapper:
         return response
 
     def __enter__(self: _T) -> _T:
+        # TODO: use typing.Self instead of _T
         return self
 
     def __exit__(self, *args: Any) -> None:
         self.session.close()
-
-
-TimeoutType = Union[None, float, tuple[float, float], tuple[float, None]]
-
-DEFAULT_TIMEOUT = (3.05, 60)
-
-
-def TimeoutHTTPAdapter(timeout: TimeoutType) -> requests.adapters.HTTPAdapter:
-    # lazy import (https://github.com/lemon24/reader/issues/297)
-
-    global TimeoutHTTPAdapter
-
-    if isinstance(TimeoutHTTPAdapter, type):  # pragma: no cover
-        return TimeoutHTTPAdapter(timeout)
-
-    import requests
-
-    class TimeoutHTTPAdapter(requests.adapters.HTTPAdapter):
-
-        """Add a default timeout to requests.
-
-        https://requests.readthedocs.io/en/master/user/advanced/#timeouts
-        https://github.com/psf/requests/issues/3070#issuecomment-205070203
-
-        TODO: Remove when psf/requests#3070 gets fixed.
-
-        """
-
-        def __init__(self, timeout: TimeoutType, *args: Any, **kwargs: Any):
-            self.__timeout = timeout
-            super().__init__(*args, **kwargs)
-
-        def send(self, *args: Any, **kwargs: Any) -> Any:
-            kwargs.setdefault('timeout', self.__timeout)
-            return super().send(*args, **kwargs)
-
-    return TimeoutHTTPAdapter(timeout)
-
-
-@dataclass
-class SessionFactory:
-
-    """Manage the lifetime of a session."""
-
-    user_agent: str | None = None
-    timeout: TimeoutType = DEFAULT_TIMEOUT
-    request_hooks: Sequence[_RequestPlugin] = field(default_factory=list)
-    response_hooks: Sequence[_ResponsePlugin] = field(default_factory=list)
-    session: SessionWrapper | None = None
-
-    def make_session(self) -> SessionWrapper:
-        session = SessionWrapper(
-            request_hooks=list(self.request_hooks),
-            response_hooks=list(self.response_hooks),
-        )
-
-        timeout_adapter = TimeoutHTTPAdapter(self.timeout)
-        session.session.mount('https://', timeout_adapter)
-        session.session.mount('http://', timeout_adapter)
-
-        if self.user_agent:
-            session.session.headers['User-Agent'] = self.user_agent
-
-        return session
-
-    def transient(self) -> ContextManager[SessionWrapper]:
-        if self.session:
-            return nullcontext(self.session)
-        return self.make_session()
-
-    @contextmanager
-    def persistent(self) -> Iterator[SessionWrapper]:
-        # note: this is NOT threadsafe, but is reentrant
-
-        if self.session:  # pragma: no cover
-            yield self.session
-            return
-
-        with self.make_session() as session:
-            self.session = session
-            try:
-                yield session
-            finally:
-                self.session = None
