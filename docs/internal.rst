@@ -3,7 +3,7 @@ Internal API
 ============
 
 This part of the documentation covers the internal interfaces of *reader*,
-which is useful for plugins,
+which are useful for plugins,
 or if you want to use low-level functionality
 without using :class:`~reader.Reader` itself.
 
@@ -94,9 +94,11 @@ Data objects
 
 .. autoclass:: FeedData
     :members:
+    :undoc-members:
 
 .. autoclass:: EntryData
     :members:
+    :undoc-members:
 
 .. todo:: the following should be in the storage section, when we get one
 

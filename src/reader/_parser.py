@@ -443,7 +443,20 @@ class Parser:
         return self.parsers_by_url.get(url)
 
     def process_feed_for_update(self, feed: FeedForUpdate) -> FeedForUpdate:
-        """TODO"""
+        """Change update-relevant information about a feed
+        before it is passed to the retriever.
+
+        Delegates to :meth:`~FeedForUpdateRetrieverType.process_feed_for_update`
+        of the appropriate retriever.
+
+        Args:
+            feed (FeedForUpdate): Feed information.
+
+        Returns:
+            FeedForUpdate:
+            The passed-in feed information, possibly modified.
+
+        """
         retriever = self.get_retriever(feed.url)
         if not isinstance(retriever, FeedForUpdateRetrieverType):
             return feed
@@ -508,7 +521,12 @@ class RetrieveResult(_namedtuple_compat, Generic[T_co]):
 
 class RetrieverType(Protocol[T_co]):  # pragma: no cover
 
-    #: TODO
+    """A callable that knows how to retrieve a feed."""
+
+    #: Allow :class:`Parser` to :meth:`~io.BufferedIOBase.read`
+    #: the result file into a temporary file,
+    #: and pass that to the parser (as an optimization).
+    #: Implies the result file is a readable binary file.
     slow_to_read: bool
 
     def __call__(
@@ -518,7 +536,26 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
         http_last_modified: str | None,
         http_accept: str | None,
     ) -> ContextManager[RetrieveResult[T_co] | None]:
-        """TODO"""
+        """Retrieve a feed.
+
+        Args:
+            feed (str): The feed URL.
+            http_etag (str or None):
+                The HTTP ``ETag`` header from the last update.
+            http_last_modified (str or None):
+                The the HTTP ``Last-Modified`` header from the last update.
+            http_accept (str or None):
+                Content types to be retrieved, as an HTTP ``Accept`` header.
+
+        Returns:
+            contextmanager(RetrieveResult or None):
+            A context manager that has as target either the result
+            or :const:`None`, if the feed didn't change.
+
+        Raises:
+            ParseError
+
+        """
 
     def validate_url(self, url: str) -> None:
         """Check if ``url`` is valid for this retriever.
@@ -531,8 +568,21 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
 
 @runtime_checkable
 class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no cover
+
+    """A :class:`RetrieverType` that can change update-relevant information."""
+
     def process_feed_for_update(self, feed: FeedForUpdate) -> FeedForUpdate:
-        """TODO"""
+        """Change update-relevant information about a feed
+        before it is passed to the retriever (:meth:`RetrieverType.__call__`).
+
+        Args:
+            feed (FeedForUpdate): Feed information.
+
+        Returns:
+            FeedForUpdate:
+            The passed-in feed information, possibly modified.
+
+        """
 
 
 FeedAndEntries = tuple[FeedData, Collection[EntryData]]

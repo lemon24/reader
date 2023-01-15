@@ -43,11 +43,10 @@ class FeedData(_namedtuple_compat):
 
     """Feed data that comes from the feed.
 
-    Attributes are a subset of those of Feed.
+    Attributes are a subset of those of :class:`~reader.Feed`.
 
     """
 
-    #: The feed URL.
     url: str
     updated: datetime | None = None
     title: str | None = None
@@ -57,7 +56,12 @@ class FeedData(_namedtuple_compat):
     version: str | None = None
 
     def as_feed(self, **kwargs: object) -> Feed:
-        """For testing."""
+        """Convert this to a feed; kwargs override attributes.
+
+        Returns:
+            :class:`~reader.Feed`.
+
+        """
         attrs = dict(self.__dict__)
         attrs.pop('hash', None)
         attrs.update(kwargs)
@@ -79,23 +83,20 @@ class EntryData(_namedtuple_compat):
 
     """Entry data that comes from the feed.
 
-    Attributes are a subset of those of Entry.
-
-    ---
-
-    This is not generic anymore, as of 2.5, and will likely never be.
-
-    TODO: Make Entry a subclass of EntryData, make Feed a subclass of FeedData.
-
-    It may still not be possible to use it as a subclass, though, because:
-
-    * help(Entry) may not work
-    * Sphinx/autodoc may not work: https://github.com/sphinx-doc/sphinx/issues/741 (closed)
-    * as_entry(), hash() must not be inherited
+    Attributes are a subset of those of :class:`~reader.Entry`.
 
     """
 
-    #: The feed URL.
+    # This is not generic anymore, as of 2.5, and will likely never be.
+    #
+    # TODO: Make Entry a subclass of EntryData, make Feed a subclass of FeedData.
+    #
+    # It may still not be possible to use it as a subclass, though, because:
+    #
+    # * help(Entry) may not work
+    # * Sphinx/autodoc may not work: https://github.com/sphinx-doc/sphinx/issues/741 (closed)
+    # * as_entry(), hash() must not be inherited
+
     feed_url: str
 
     # WARNING: When changing attributes, keep Entry, EntryData, and entry_data_from_obj in sync.
@@ -111,7 +112,12 @@ class EntryData(_namedtuple_compat):
     enclosures: Sequence[Enclosure] = ()
 
     def as_entry(self, **kwargs: object) -> Entry:
-        """For testing."""
+        """Convert this to an entry; kwargs override attributes.
+
+        Returns:
+            :class:`~reader.Entry`.
+
+        """
         attrs = dict(self.__dict__)
         feed_url = attrs.pop('feed_url')
         attrs.pop('hash', None)
@@ -203,13 +209,22 @@ def _getattr_optional_datetime(obj: object, name: str) -> datetime | None:
 
 
 class ParsedFeed(NamedTuple):
+    """A parsed feed."""
 
     #: The feed.
     feed: FeedData
     # TODO: wrap entries in iter(entries) to ensure stuff doesn't rely on it being a list
+    #: Iterable of entries.
     entries: Iterable[EntryData]
+    #: The HTTP ``ETag`` header associated with the feed resource.
+    #: Passed back to the retriever on the next update.
     http_etag: str | None = None
+    #: The HTTP ``Last-Modified`` header associated with the feed resource.
+    #: Passed back to the retriever on the next update.
     http_last_modified: str | None = None
+    #: The MIME type of the feed resource.
+    #: Used by :meth:`~reader._parser.Parser.process_entry_pairs`
+    #: to select an appropriate parser.
     mime_type: str | None = None
 
 
