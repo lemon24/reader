@@ -23,16 +23,35 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class RequestPlugin(Protocol):
+
+    """Hook to modify a :class:`~requests.Request` before it is sent."""
+
     def __call__(
         self,
         session: requests.Session,
         request: requests.Request,
         **kwargs: Any,
     ) -> requests.Request | None:  # pragma: no cover
-        ...
+        """Modify a request before it is sent.
+
+        Args:
+            session (requests.Session): The session that will send the request.
+            request (requests.Request): The request to be sent.
+
+        Keyword Args:
+            **kwargs: Will be passed to :meth:`~requests.adapters.BaseAdapter.send`.
+
+        Returns:
+            requests.Request or None:
+            A (possibly modified) request to be sent.
+            If none, send the initial request.
+
+        """
 
 
 class ResponsePlugin(Protocol):
+    """Hook to repeat a request depending on the :class:`~requests.Response`."""
+
     def __call__(
         self,
         session: requests.Session,
@@ -40,7 +59,22 @@ class ResponsePlugin(Protocol):
         request: requests.Request,
         **kwargs: Any,
     ) -> requests.Request | None:  # pragma: no cover
-        ...
+        """Repeat a request  depending on the response.
+
+        Args:
+            session (requests.Session): The session that sent the request.
+            request (requests.Request): The sent request.
+            response (requests.Response): The received response.
+
+        Keyword Args:
+            **kwargs: Were passed to :meth:`~requests.adapters.BaseAdapter.send`.
+
+        Returns:
+            requests.Request or None:
+            A (possibly new) request to be sent,
+            or None, to return the current response.
+
+        """
 
 
 Headers = Mapping[str, str]
@@ -54,22 +88,28 @@ class SessionFactory:
 
     """Manage the lifetime of a session.
 
-    TODO: callable
+    To get new session, :meth:`call<__call__>` the factory directly.
 
     """
 
     user_agent: str | None = None
     timeout: TimeoutType = DEFAULT_TIMEOUT
 
-    #: TODO
+    #: Sequence of :class:`request hooks<RequestPlugin>` to be associated with new sessions.
     request_hooks: Sequence[RequestPlugin] = field(default_factory=list)
 
-    #: TODO
+    #: Sequence of :class:`response hooks<ResponsePlugin>` to be associated with new sessions.
     response_hooks: Sequence[ResponsePlugin] = field(default_factory=list)
 
     session: SessionWrapper | None = None
 
     def __call__(self) -> SessionWrapper:
+        """Create a new session.
+
+        Returns:
+            SessionWrapper
+
+        """
         session = SessionWrapper(
             request_hooks=list(self.request_hooks),
             response_hooks=list(self.response_hooks),
@@ -88,14 +128,37 @@ class SessionFactory:
         return session
 
     def transient(self) -> ContextManager[SessionWrapper]:
+        """Return the current :meth:`persistent` session, or a new one.
+
+        If a new session was created,
+        it is closed once the context manager is exited.
+
+        Returns:
+            contextmanager(SessionWrapper)
+
+        """
         if self.session:
             return nullcontext(self.session)
         return self()
 
     @contextmanager
     def persistent(self) -> Iterator[SessionWrapper]:
-        # note: this is NOT threadsafe, but is reentrant
+        """Register a persistent session with this factory.
 
+        While the context manager returned by this method is entered,
+        all :meth:`persistent` and :meth:`transient` calls
+        will return the same session.
+        The session is closed once the outermost :meth:`persistent`
+        context manager is exited.
+
+        Plugins should use :meth:`transient`.
+
+        Reentrant, but NOT threadsafe.
+
+        Returns:
+            contextmanager(SessionWrapper)
+
+        """
         if self.session:  # pragma: no cover
             yield self.session
             return
@@ -122,27 +185,26 @@ def _make_session() -> requests.Session:
 @dataclass
 class SessionWrapper:
 
-    """Minimal wrapper over requests.Sessions.
+    """Minimal wrapper over a :class`requests.Session`.
 
-    Only provides a limited get() method.
+    Only provides a limited :meth:`get` method.
 
-    Provides hooks to:
-
-    * modify the Request (not PreparedRequest) before it is sent
-    * repeat the Request depending on the Response
-
-    TODO: contextmanager, use factory for hooks
-
-    Details on why the extension methods built into Requests
-    (adapters, hooks['response']) were not enough:
-    https://github.com/lemon24/reader/issues/155#issuecomment-668716387
+    Can be used as a context manager (closes the session on exit).
 
     """
 
-    #: TODO
+    # TODO: contextmanager, use factory for hooks
+
+    # Details on why the extension methods built into Requests
+    # (adapters, hooks['response']) were not enough:
+    # https://github.com/lemon24/reader/issues/155#issuecomment-668716387
+
+    #: The underlying Requests :class:`~requests.Session`.
     session: requests.Session = field(default_factory=_make_session)
 
+    #: Sequence of :class:`request hooks<RequestPlugin>`.
     request_hooks: Sequence[RequestPlugin] = field(default_factory=list)
+    #: Sequence of :class:`response hooks<ResponsePlugin>`.
     response_hooks: Sequence[ResponsePlugin] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -153,7 +215,20 @@ class SessionWrapper:
     def get(
         self, url: str | bytes, headers: Headers | None = None, **kwargs: Any
     ) -> requests.Response:
-        """TODO"""
+        """Like Requests :meth:`~requests.Session.get`,
+        but apply :attr:`request_hooks` and :attr:`response_hooks`.
+
+        Args:
+            url (str): Passed to :class:`~requests.Request`.
+            headers (dict(str, str)): Passed to :class:`~requests.Request`.
+
+        Keyword Args:
+            **kwargs: Passed to :meth:`~requests.adapters.BaseAdapter.send`.
+
+        Returns:
+            requests.Response
+
+        """
         # kwargs get passed to requests.BaseAdapter.send();
         # can be any of: stream, timeout, verify, cert, proxies
 

@@ -13,6 +13,9 @@ Unreleased
 
 * Drop Python 3.8 support. (:issue:`298`)
 
+* Document the parser :doc:`internal`.
+  (:issue:`235`, :issue:`255`)
+
 * Fix ``preview_feed_list`` plugin,
   broken by `3.3 <Version 3.3_>`_ parser refactoring.
   (:issue:`299`)

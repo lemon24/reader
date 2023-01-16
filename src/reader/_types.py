@@ -254,7 +254,7 @@ class FeedForUpdate(NamedTuple):
     #: Whether the feed had an exception at the last update.
     last_exception: bool
 
-    #: The hash of the corresponding FeedData.
+    #: The :attr:`~FeedData.hash` of the corresponding FeedData.
     hash: bytes | None
 
 
@@ -268,7 +268,7 @@ class EntryForUpdate(NamedTuple):
     #: The date the entry was published, according to the entry.
     published: datetime | None
 
-    #: The hash of the corresponding EntryData.
+    #: The :attr:`~EntryData.hash` of the corresponding EntryData.
     hash: bytes | None
 
     #: The number of updates due to a different ``hash``

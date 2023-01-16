@@ -90,7 +90,7 @@ class Parser:
     :class:`retrievers <RetrieverType>` and :class:`parsers <ParserType>`.
 
     To retrieve and parse a single feed,
-    you can :meth:`__call__` the parser object directly.
+    you can :meth:`call<__call__>` the parser object directly.
 
     :class:`~reader.Reader` only uses the following methods:
 
@@ -339,6 +339,15 @@ class Parser:
     ) -> tuple[ParserType[Any], str | None]:
         """Select an appropriate parser for a feed.
 
+        Parsers :meth:`registered by URL <mount_parser_by_url>`
+        take precedence over those
+        :meth:`registered by MIME type <mount_parser_by_mime_type>`.
+
+        If no MIME type is given, guess it from the URL
+        using :func:`mimetypes.guess_type`.
+        If the MIME type can't be guessed,
+        default to ``application/octet-stream``.
+
         Args:
             url (str): The feed URL.
             mime_type (str or None): The MIME type of the file.
@@ -348,7 +357,7 @@ class Parser:
             The parser, and the (possibly guessed) MIME type.
 
         Raises:
-            ParseError
+            ParseError: No parser matches.
 
         """
         parser = self.get_parser_by_url(url)
@@ -388,14 +397,33 @@ class Parser:
             raise InvalidFeedURLError(url) from e
 
     def mount_retriever(self, prefix: str, retriever: RetrieverType[Any]) -> None:
-        """TODO"""
+        """Register a retriever to a URL prefix.
+
+        Retrievers are sorted in descending order by prefix length.
+
+        Args:
+            prefix (str): A URL prefix.
+            retriever (RetrieverType): The retriever.
+
+        """
         self.retrievers[prefix] = retriever
         keys_to_move = [k for k in self.retrievers if len(k) < len(prefix)]
         for key in keys_to_move:
             self.retrievers[key] = self.retrievers.pop(key)
 
     def get_retriever(self, url: str) -> RetrieverType[Any]:
-        """TODO"""
+        """Get the retriever for a URL.
+
+        Args:
+            url (str): The URL.
+
+        Returns:
+            RetrieverType: The matching retriever.
+
+        Raises:
+            ParseError: No retriever matches the URL.
+
+        """
         for prefix, retriever in self.retrievers.items():
             if url.lower().startswith(prefix.lower()):
                 return retriever
@@ -404,7 +432,23 @@ class Parser:
     def mount_parser_by_mime_type(
         self, parser: ParserType[Any], http_accept: str | None = None
     ) -> None:
-        """TODO"""
+        """Register a parser to one or more MIME types.
+
+        Args:
+            parser (ParserType): The parser.
+            http_accept (str or None):
+                The content types the parser supports,
+                as an ``Accept`` HTTP header value.
+                If not given, use the parser's
+                :attr:`~HTTPAcceptParserType.http_accept` attribute,
+                if it has one.
+
+        Raises:
+            TypeError: The parser does not have an
+                :attr:`~HTTPAcceptParserType.http_accept` attribute,
+                and no ``http_accept`` was given.
+
+        """
         if not http_accept:
             if not isinstance(parser, HTTPAcceptParserType):
                 raise TypeError("unaware parser type with no http_accept given")
@@ -423,7 +467,18 @@ class Parser:
             parsers.insert(index, (quality, parser))
 
     def get_parser_by_mime_type(self, mime_type: str) -> ParserType[Any] | None:
-        """TODO"""
+        """Get a parser for a MIME type.
+
+        Args:
+            mime_type (str): The MIME type of the feed file.
+
+        Returns:
+            ParserType: The parser.
+
+        Raises:
+            ParseError: No parser matches the MIME type.
+
+        """
         parsers = self.parsers_by_mime_type.get(mime_type, ())
         if not parsers:
             parsers = self.parsers_by_mime_type.get('*/*', ())
@@ -432,12 +487,29 @@ class Parser:
         return None
 
     def mount_parser_by_url(self, url: str, parser: ParserType[Any]) -> None:
-        """TODO"""
+        """Register a parser to an exact URL.
+
+        Args:
+            prefix (str): A URL.
+            parser (ParserType): The parser.
+
+        """
         url = normalize_url(url)
         self.parsers_by_url[url] = parser
 
     def get_parser_by_url(self, url: str) -> ParserType[Any] | None:
-        """TODO"""
+        """Get a parser that was registered by URL.
+
+        Args:
+            url (str): The URL.
+
+        Returns:
+            ParserType: The parser.
+
+        Raises:
+            ParseError: No parser was registered for the URL.
+
+        """
         # we might change this to have some smarter matching, but YAGNI
         url = normalize_url(url)
         return self.parsers_by_url.get(url)
@@ -602,7 +674,7 @@ class ParserType(Protocol[T_cv]):  # pragma: no cover
                 The HTTP response headers associated with the file.
 
         Returns:
-            tuple(FeedData, EntryData): The feed and entry data.
+            tuple(FeedData, collection(EntryData)): The feed and entry data.
 
         Raises:
             ParseError

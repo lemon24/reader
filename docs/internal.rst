@@ -107,3 +107,14 @@ Data objects
 
 .. autoclass:: EntryForUpdate
     :members:
+
+
+Recipes
+-------
+
+.. include:: ../examples/parser_only.py
+    :start-after: """
+    :end-before: """  # docstring-end
+
+.. literalinclude:: ../examples/parser_only.py
+    :start-after: """  # docstring-end
