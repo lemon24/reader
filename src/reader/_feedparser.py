@@ -23,13 +23,13 @@ class FeedparserParser:
     def __call__(
         self,
         url: str,
-        file: IO[bytes],
+        resource: IO[bytes],
         headers: Headers | None = None,
     ) -> FeedAndEntries:
         """Like feedparser.parse(), but return a feed and entries,
         and re-raise bozo_exception as ParseError.
 
-        url is NOT passed to feedparser; file and headers are.
+        url is NOT passed to feedparser; resource and headers are.
 
         """
 
@@ -40,7 +40,7 @@ class FeedparserParser:
         # https://github.com/lemon24/reader/issues/125
         # https://github.com/lemon24/reader/issues/157
         result = feedparser.parse(  # type: ignore[attr-defined]
-            file,
+            resource,
             resolve_relative_uris=True,
             sanitize_html=True,
             response_headers=headers,

@@ -76,7 +76,7 @@ class Parser:
         return nullcontext(RetrieveResult(BytesIO(b'opaque')))
 
     def parse(self, url, result):
-        assert result.file.read() == b'opaque', result
+        assert result.resource.read() == b'opaque', result
 
         for feed_number, feed in self.feeds.items():
             if feed.url == url:

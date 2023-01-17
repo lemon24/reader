@@ -301,10 +301,10 @@ class Parser:
                 return nullcontext()
 
             temp = tempfile.TemporaryFile()
-            shutil.copyfileobj(result.file, temp)
+            shutil.copyfileobj(result.resource, temp)
             temp.seek(0)
 
-            result = result._replace(file=temp)
+            result = result._replace(resource=temp)
 
         @contextmanager
         def make_context() -> Iterator[RetrieveResult[Any]]:
@@ -329,7 +329,7 @@ class Parser:
 
         """
         parser, mime_type = self.get_parser(url, result.mime_type)
-        feed, entries = parser(url, result.file, result.headers)
+        feed, entries = parser(url, result.resource, result.headers)
         return ParsedFeed(
             feed, entries, result.http_etag, result.http_last_modified, mime_type
         )
@@ -350,7 +350,7 @@ class Parser:
 
         Args:
             url (str): The feed URL.
-            mime_type (str or None): The MIME type of the file.
+            mime_type (str or None): The MIME type of the retrieved resource.
 
         Returns:
             tuple(ParserType, str):
@@ -470,7 +470,7 @@ class Parser:
         """Get a parser for a MIME type.
 
         Args:
-            mime_type (str): The MIME type of the feed file.
+            mime_type (str): The MIME type of the feed resource.
 
         Returns:
             ParserType: The parser.
@@ -570,23 +570,22 @@ class RetrieveResult(_namedtuple_compat, Generic[T_co]):
     # should be a NamedTuple, but the typing one became generic only in 3.11,
     # and we don't want to depend on typing_extensions at runtime
 
-    # TODO: rename file to resource?
     # TODO: coalesce http_etag and http_last_modified into a single thing?
 
     #: The result of retrieving a feed.
     #: Usually, a readable binary file.
     #: Passed to the parser.
-    file: T_co
-    #: The MIME type of the file.
+    resource: T_co
+    #: The MIME type of the resource.
     #: Used to select an appropriate parser.
     mime_type: str | None = None
-    #: The HTTP ``ETag`` header associated with the file.
+    #: The HTTP ``ETag`` header associated with the resource.
     #: Passed back to the retriever on the next update.
     http_etag: str | None = None
-    #: The HTTP ``Last-Modified`` header associated with the file.
+    #: The HTTP ``Last-Modified`` header associated with the resource.
     #: Passed back to the retriever on the next update.
     http_last_modified: str | None = None
-    #: The HTTP response headers associated with the file.
+    #: The HTTP response headers associated with the resource.
     #: Passed to the parser.
     headers: Headers | None = None
 
@@ -596,9 +595,9 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
     """A callable that knows how to retrieve a feed."""
 
     #: Allow :class:`Parser` to :meth:`~io.BufferedIOBase.read`
-    #: the result file into a temporary file,
+    #: the result :attr:`~RetrieveResult.resource` into a temporary file,
     #: and pass that to the parser (as an optimization).
-    #: Implies the result file is a readable binary file.
+    #: Implies the :attr:`~RetrieveResult.resource` is a readable binary file.
     slow_to_read: bool
 
     def __call__(
@@ -665,13 +664,15 @@ class ParserType(Protocol[T_cv]):  # pragma: no cover
 
     """A callable that knows how to parse a retrieved feed."""
 
-    def __call__(self, url: str, file: T_cv, headers: Headers | None) -> FeedAndEntries:
+    def __call__(
+        self, url: str, resource: T_cv, headers: Headers | None
+    ) -> FeedAndEntries:
         """Parse a feed.
 
         Args:
-            file: The feed resource. Usually, a readable binary file.
+            resource: The feed resource. Usually, a readable binary file.
             headers (dict(str, str) or None):
-                The HTTP response headers associated with the file.
+                The HTTP response headers associated with the resource.
 
         Returns:
             tuple(FeedData, collection(EntryData)): The feed and entry data.

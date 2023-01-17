@@ -32,11 +32,11 @@ class JSONFeedParser:
     def __call__(
         self,
         url: str,
-        file: IO[bytes],
+        resource: IO[bytes],
         headers: Headers | None = None,
     ) -> FeedAndEntries:
         try:
-            result = json.load(file)
+            result = json.load(resource)
         except json.JSONDecodeError as e:
             raise ParseError(url, "invalid JSON") from e
         return _process_feed(url, result)

@@ -499,8 +499,8 @@ class Parser:
     reader: Reader
     http_accept = MIME_TYPE
 
-    def __call__(self, url, file, headers):
-        user, conversations = file
+    def __call__(self, url, resource, headers):
+        user, conversations = resource
         feed = render_user_feed(url, user)
         entries = (
             EntryData(
