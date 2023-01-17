@@ -184,6 +184,8 @@ Multiple storage implementations
 
 Detailed requirements and API discussion: :issue:`168#issuecomment-642002049`.
 
+Minimal work needed to support alternate storages: :issue:`168#issuecomment-1383127564`.
+
 
 Parser
 ~~~~~~

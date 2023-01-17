@@ -95,10 +95,10 @@ class SessionFactory:
     user_agent: str | None = None
     timeout: TimeoutType = DEFAULT_TIMEOUT
 
-    #: Sequence of :class:`request hooks<RequestPlugin>` to be associated with new sessions.
+    #: Sequence of :class:`RequestPlugin`\s to be associated with new sessions.
     request_hooks: Sequence[RequestPlugin] = field(default_factory=list)
 
-    #: Sequence of :class:`response hooks<ResponsePlugin>` to be associated with new sessions.
+    #: Sequence of :class:`ResponsePlugin`\s to be associated with new sessions.
     response_hooks: Sequence[ResponsePlugin] = field(default_factory=list)
 
     session: SessionWrapper | None = None
@@ -107,7 +107,7 @@ class SessionFactory:
         """Create a new session.
 
         Returns:
-            SessionWrapper
+            SessionWrapper:
 
         """
         session = SessionWrapper(
@@ -134,7 +134,7 @@ class SessionFactory:
         it is closed once the context manager is exited.
 
         Returns:
-            contextmanager(SessionWrapper)
+            contextmanager(SessionWrapper):
 
         """
         if self.session:
@@ -156,7 +156,7 @@ class SessionFactory:
         Reentrant, but NOT threadsafe.
 
         Returns:
-            contextmanager(SessionWrapper)
+            contextmanager(SessionWrapper):
 
         """
         if self.session:  # pragma: no cover
@@ -185,7 +185,7 @@ def _make_session() -> requests.Session:
 @dataclass
 class SessionWrapper:
 
-    """Minimal wrapper over a :class`requests.Session`.
+    """Minimal wrapper over a :class:`requests.Session`.
 
     Only provides a limited :meth:`get` method.
 
@@ -199,12 +199,12 @@ class SessionWrapper:
     # (adapters, hooks['response']) were not enough:
     # https://github.com/lemon24/reader/issues/155#issuecomment-668716387
 
-    #: The underlying Requests :class:`~requests.Session`.
+    #: The underlying :class:`requests.Session`.
     session: requests.Session = field(default_factory=_make_session)
 
-    #: Sequence of :class:`request hooks<RequestPlugin>`.
+    #: Sequence of :class:`RequestPlugin`\s.
     request_hooks: Sequence[RequestPlugin] = field(default_factory=list)
-    #: Sequence of :class:`response hooks<ResponsePlugin>`.
+    #: Sequence of :class:`ResponsePlugin`\s.
     response_hooks: Sequence[ResponsePlugin] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -226,7 +226,7 @@ class SessionWrapper:
             **kwargs: Passed to :meth:`~requests.adapters.BaseAdapter.send`.
 
         Returns:
-            requests.Response
+            requests.Response:
 
         """
         # kwargs get passed to requests.BaseAdapter.send();
