@@ -69,11 +69,11 @@ Protocols
 .. module:: reader._requests_utils
     :noindex:
 
-.. autoclass:: RequestPlugin
+.. autoclass:: RequestHook
     :members:
     :special-members: __call__
 
-.. autoclass:: ResponsePlugin
+.. autoclass:: ResponseHook
     :members:
     :special-members: __call__
 

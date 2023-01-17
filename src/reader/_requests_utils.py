@@ -22,7 +22,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import requests
 
 
-class RequestPlugin(Protocol):
+class RequestHook(Protocol):
 
     """Hook to modify a :class:`~requests.Request` before it is sent."""
 
@@ -49,7 +49,7 @@ class RequestPlugin(Protocol):
         """
 
 
-class ResponsePlugin(Protocol):
+class ResponseHook(Protocol):
     """Hook to repeat a request depending on the :class:`~requests.Response`."""
 
     def __call__(
@@ -95,11 +95,11 @@ class SessionFactory:
     user_agent: str | None = None
     timeout: TimeoutType = DEFAULT_TIMEOUT
 
-    #: Sequence of :class:`RequestPlugin`\s to be associated with new sessions.
-    request_hooks: Sequence[RequestPlugin] = field(default_factory=list)
+    #: Sequence of :class:`RequestHook`\s to be associated with new sessions.
+    request_hooks: Sequence[RequestHook] = field(default_factory=list)
 
-    #: Sequence of :class:`ResponsePlugin`\s to be associated with new sessions.
-    response_hooks: Sequence[ResponsePlugin] = field(default_factory=list)
+    #: Sequence of :class:`ResponseHook`\s to be associated with new sessions.
+    response_hooks: Sequence[ResponseHook] = field(default_factory=list)
 
     session: SessionWrapper | None = None
 
@@ -202,10 +202,10 @@ class SessionWrapper:
     #: The underlying :class:`requests.Session`.
     session: requests.Session = field(default_factory=_make_session)
 
-    #: Sequence of :class:`RequestPlugin`\s.
-    request_hooks: Sequence[RequestPlugin] = field(default_factory=list)
-    #: Sequence of :class:`ResponsePlugin`\s.
-    response_hooks: Sequence[ResponsePlugin] = field(default_factory=list)
+    #: Sequence of :class:`RequestHook`\s.
+    request_hooks: Sequence[RequestHook] = field(default_factory=list)
+    #: Sequence of :class:`ResponseHook`\s.
+    response_hooks: Sequence[ResponseHook] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         # lazy import (https://github.com/lemon24/reader/issues/297)
