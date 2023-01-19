@@ -2,6 +2,10 @@ import socketserver
 import threading
 
 import pytest
+from utils import make_url_base
+from utils import utc_datetime
+
+from reader._types import fix_datetime_tzinfo
 
 
 class Server(socketserver.TCPServer):
@@ -81,6 +85,68 @@ def parse_request(request):
     lines = header.split(b'\r\n')
     headers = dict(l.partition(b': ')[::2] for l in lines[1:])
     return lines[0], headers, body
+
+
+@pytest.mark.parametrize('feed_type', ['rss', 'atom', 'json'])
+def test_local(reader, feed_type, data_dir, monkeypatch):
+    feed_filename = f'full.{feed_type}'
+    feed_url = str(data_dir.join(feed_filename))
+
+    # TODO: maybe don't mock, and just check datetimes are in the correct order
+
+    # On CPython, we can't mock datetime.datetime.utcnow because
+    # datetime.datetime is a built-in/extension type; we can mock the class.
+    # On PyPy, we can mock the class, but it results in weird type errors
+    # when the mock/subclass and original datetime class interact.
+
+    from datetime import datetime
+
+    try:
+        # if we can set attributes on the class, we just patch utcnow() directly
+        # (we don't use monkeypatch because it breaks cleanup if it doesn't work)
+        datetime.utcnow = datetime.utcnow
+        datetime_mock = datetime
+    except TypeError:
+        # otherwise, we monkeypatch the datetime class on the module
+        class datetime_mock(datetime):
+            pass
+
+        # reader.core must "from datetime import datetime" !
+        monkeypatch.setattr('reader.core.datetime', datetime_mock)
+
+    monkeypatch.setattr(datetime_mock, 'utcnow', lambda: datetime(2010, 1, 1))
+    reader.add_feed(feed_url)
+    monkeypatch.setattr(datetime_mock, 'utcnow', lambda: datetime(2010, 1, 2))
+    reader.update_feeds()
+    monkeypatch.undo()
+
+    (feed,) = reader.get_feeds()
+    entries = set(reader.get_entries())
+
+    url_base, rel_base = make_url_base(feed_url)
+    expected = {'url_base': url_base, 'rel_base': rel_base}
+    exec(data_dir.join(feed_filename + '.py').read(), expected)
+
+    expected_feed = expected['feed'].as_feed(
+        added=utc_datetime(2010, 1, 1), last_updated=utc_datetime(2010, 1, 2)
+    )
+    expected_feed = fix_datetime_tzinfo(expected_feed, 'updated')
+
+    assert feed == expected_feed
+    assert entries == {
+        fix_datetime_tzinfo(
+            e.as_entry(
+                feed=feed,
+                added=utc_datetime(2010, 1, 2),
+                last_updated=utc_datetime(2010, 1, 2),
+            ),
+            'updated',
+            'published',
+        )
+        for e in expected['entries']
+    }
+
+    # TODO: same tests, but with http server
 
 
 @pytest.mark.slow
