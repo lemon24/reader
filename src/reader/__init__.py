@@ -93,6 +93,11 @@ _APP_PLUGIN_ENVVAR = 'READER_APP_PLUGIN'
 _CLI_PLUGIN_ENVVAR = 'READER_CLI_PLUGIN'
 
 
+# Constants.
+
+USER_AGENT = f'python-reader/{__version__} (+https://github.com/lemon24/reader)'
+
+
 # Prevent any logging output by default. If no handler is set,
 # the messages bubble up to the root logger and get printed on stderr.
 # https://docs.python.org/3/howto/logging.html#library-config

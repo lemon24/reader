@@ -230,6 +230,10 @@ def make_reader(
         raise ValueError("search_enabled should be one of ('auto', True, False, None)")
 
     parser = default_parser(feed_root, session_timeout=session_timeout)
+    # circular import
+    from . import USER_AGENT
+
+    parser.session_factory.user_agent = USER_AGENT
 
     try:
         name_scheme = NameScheme.from_value(reserved_name_scheme)

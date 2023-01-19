@@ -5,6 +5,7 @@ import pytest
 from utils import make_url_base
 from utils import utc_datetime
 
+from reader import USER_AGENT
 from reader._types import fix_datetime_tzinfo
 
 
@@ -153,7 +154,7 @@ def test_local(reader, feed_type, data_dir, monkeypatch):
 def test_etag_last_modified(reader, data_dir, server):
     """Check ETag / Last-Modified are sent back, at the wire level.
 
-    Because of https://rachelbythebay.com/w/2023/01/18/http/
+    Ensures https://rachelbythebay.com/w/2023/01/18/http/ cannot happen.
 
     """
     etag = b'"12345-67890abcdef12"'
@@ -179,4 +180,9 @@ def test_etag_last_modified(reader, data_dir, server):
     assert headers[b'If-None-Match'] == etag
     assert headers[b'If-Modified-Since'] == last_modified
 
-    # TODO: since we're here, assert user agent, accept, and a-im too
+    ua = headers[b'User-Agent']
+    assert ua == USER_AGENT.encode()
+    assert ua.startswith(b'python-reader/')
+    assert ua.endswith(b' (+https://github.com/lemon24/reader)')
+
+    # TODO: since we're here, assert accept, and a-im too; subtests, ideally

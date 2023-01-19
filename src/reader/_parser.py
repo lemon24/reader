@@ -19,7 +19,6 @@ from typing import Protocol
 from typing import runtime_checkable
 from typing import TypeVar
 
-import reader
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
 from ._requests_utils import DEFAULT_TIMEOUT
@@ -38,9 +37,6 @@ from .exceptions import ParseError
 from .types import _namedtuple_compat
 
 log = logging.getLogger('reader')
-
-
-USER_AGENT = f'python-reader/{reader.__version__} (+https://github.com/lemon24/reader)'
 
 
 def default_parser(
@@ -126,7 +122,7 @@ class Parser:
         #:
         #: Plugins may add request or response hooks to this.
         #:
-        self.session_factory = SessionFactory(USER_AGENT)
+        self.session_factory = SessionFactory()
 
     def parallel(
         self,

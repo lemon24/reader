@@ -439,12 +439,12 @@ def test_parse_requests_exception(monkeypatch, exc_cls):
     assert 'while getting feed' in excinfo.value.message
 
 
-def test_user_agent(parse, make_http_get_headers_url, data_dir):
+def test_user_agent_default(parse, make_http_get_headers_url, data_dir):
     feed_url = make_http_get_headers_url(data_dir.join('full.atom'))
     parse(feed_url)
 
     headers = make_http_get_headers_url.request_headers
-    assert headers['User-Agent'].startswith('python-reader/')
+    assert headers['User-Agent'].startswith('python-requests/')
 
 
 def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
@@ -453,7 +453,7 @@ def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
     parse(feed_url)
 
     headers = make_http_get_headers_url.request_headers
-    assert 'reader' not in headers['User-Agent']
+    assert headers['User-Agent'].startswith('python-requests/')
 
 
 def test_parallel_persistent_session(parse, make_http_url, data_dir):
