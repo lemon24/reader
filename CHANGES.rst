@@ -9,7 +9,7 @@ Changelog
 Version 3.4
 -----------
 
-Unreleased
+Released 2023-01-22
 
 * Drop Python 3.8 support. (:issue:`298`)
 
