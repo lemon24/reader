@@ -14,6 +14,8 @@ def make_url_base(feed_url):
     # FIXME: this is very brittle (broken query string and fragment support),
     # and also very far away from test_parse where it's used.
 
+    feed_url = str(feed_url)
+
     if any(feed_url.startswith(p) for p in ['http:', 'https:', 'file:']):
         sep = '/'
         # ... but not really, we also support file:path\to\thing, I think

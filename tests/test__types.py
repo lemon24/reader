@@ -54,7 +54,7 @@ def test_tag_filter_argument_error(input, error):
 @pytest.mark.parametrize('data_file', ['full', 'empty'])
 def test_entry_data_from_obj(data_dir, data_file):
     expected = {'url_base': '', 'rel_base': ''}
-    exec(data_dir.join(f'{data_file}.rss.py').read(), expected)
+    exec(data_dir.joinpath(f'{data_file}.rss.py').read_bytes(), expected)
 
     for i, entry in enumerate(expected['entries']):
         entry_utc = fix_datetime_tzinfo(entry, 'updated', 'published')

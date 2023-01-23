@@ -45,7 +45,7 @@ jsonfeed_parse = str_bytes_parser(JSONFeedParser())
 
 def _make_relative_path_url(**_):
     def make_url(feed_path):
-        return feed_path.relto(feed_path.join('../..'))
+        return str(feed_path.relative_to(feed_path.parent.parent))
 
     return make_url
 
@@ -62,13 +62,13 @@ def _make_absolute_path_url(**_):
 
 def _make_http_url(requests_mock, **_):
     def make_url(feed_path):
-        url = 'http://example.com/' + feed_path.basename
+        url = 'http://example.com/' + feed_path.name
         headers = {}
-        if feed_path.ext == '.rss':
+        if feed_path.suffix == '.rss':
             headers['Content-Type'] = 'application/rss+xml'
-        elif feed_path.ext == '.atom':
+        elif feed_path.suffix == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
-        elif feed_path.ext == '.json':
+        elif feed_path.suffix == '.json':
             headers['Content-Type'] = 'application/feed+json'
         with open(str(feed_path), 'rb') as f:
             body = f.read()
@@ -83,13 +83,13 @@ make_http_url = pytest.fixture(_make_http_url)
 
 def _make_https_url(requests_mock, **_):
     def make_url(feed_path):
-        url = 'https://example.com/' + feed_path.basename
+        url = 'https://example.com/' + feed_path.name
         headers = {}
-        if feed_path.ext == '.rss':
+        if feed_path.suffix == '.rss':
             headers['Content-Type'] = 'application/rss+xml'
-        elif feed_path.ext == '.atom':
+        elif feed_path.suffix == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
-        elif feed_path.ext == '.json':
+        elif feed_path.suffix == '.json':
             headers['Content-Type'] = 'application/feed+json'
         with open(str(feed_path), 'rb') as f:
             body = f.read()
@@ -101,13 +101,13 @@ def _make_https_url(requests_mock, **_):
 
 def _make_http_gzip_url(requests_mock, **_):
     def make_url(feed_path):
-        url = 'http://example.com/' + feed_path.basename
+        url = 'http://example.com/' + feed_path.name
         headers = {}
-        if feed_path.ext == '.rss':
+        if feed_path.suffix == '.rss':
             headers['Content-Type'] = 'application/rss+xml'
-        elif feed_path.ext == '.atom':
+        elif feed_path.suffix == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
-        elif feed_path.ext == '.json':
+        elif feed_path.suffix == '.json':
             headers['Content-Type'] = 'application/feed+json'
         headers['Content-Encoding'] = 'gzip'
         with open(str(feed_path), 'rb') as f:
@@ -128,7 +128,7 @@ def _make_http_gzip_url(requests_mock, **_):
 
 def _make_http_url_missing_content_type(requests_mock, **_):
     def make_url(feed_path):
-        url = 'http://example.com/' + feed_path.basename
+        url = 'http://example.com/' + feed_path.name
         with open(str(feed_path), 'rb') as f:
             body = f.read()
         requests_mock.get(url, content=body)
@@ -157,12 +157,12 @@ def make_url(request, requests_mock):
     + [('json', df) for df in ['full', 'empty', 'invalid', '10', 'unknown']],
 )
 def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
-    monkeypatch.chdir(data_dir.dirname)
+    monkeypatch.chdir(data_dir.parent)
 
     feed_filename = f'{data_file}.{feed_type}'
     # make_url receives an absolute path,
     # and returns a relative-to-cwd or absolute path or a URL.
-    feed_url = make_url(data_dir.join(feed_filename))
+    feed_url = make_url(data_dir.joinpath(feed_filename))
 
     # the base of the feed URL, as the parser will set it;
     # the base of files relative to this feed.
@@ -170,7 +170,7 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     # TODO: this is too magic / circular; it should be easier to understand/explain.
     url_base, rel_base = make_url_base(feed_url)
     expected = {'url_base': url_base, 'rel_base': rel_base}
-    exec(data_dir.join(feed_filename + '.py').read(), expected)
+    exec(data_dir.joinpath(feed_filename + '.py').read_text(), expected)
 
     feed, entries, _, _, mime_type = parse(feed_url)
     entries = list(entries)
@@ -183,8 +183,8 @@ def test_no_mime_type(monkeypatch, parse, make_url, data_dir):
     """Like test_parse with _make_http_url_missing_content_type,
     but with an URL parser.
     """
-    monkeypatch.chdir(data_dir.dirname)
-    feed_path = data_dir.join('custom')
+    monkeypatch.chdir(data_dir.parent)
+    feed_path = data_dir.joinpath('custom')
     feed_url = make_url(feed_path)
 
     def custom_parser(url, file, headers=None):
@@ -215,7 +215,7 @@ def test_feedparser_exceptions(monkeypatch, parse, data_dir):
 
     monkeypatch.setattr(feedparser, 'parse', feedparser_parse)
 
-    url = str(data_dir.join('full.atom'))
+    url = str(data_dir.joinpath('full.atom'))
     with pytest.raises(ParseError) as excinfo:
         parse(url)
 
@@ -244,7 +244,7 @@ def test_parse_survivable_feedparser_exceptions(
 
     with caplog.at_level(logging.WARNING, logger="reader"):
         # shouldn't raise an exception
-        parse(str(data_dir.join('full.atom')))
+        parse(str(data_dir.joinpath('full.atom')))
 
     warnings = [
         message
@@ -257,7 +257,7 @@ def test_parse_survivable_feedparser_exceptions(
 @pytest.fixture
 def make_http_url_bad_status(requests_mock):
     def make_url(feed_path, status):
-        url = 'http://example.com/' + feed_path.basename
+        url = 'http://example.com/' + feed_path.name
         requests_mock.get(url, status_code=status)
         return url
 
@@ -266,7 +266,7 @@ def make_http_url_bad_status(requests_mock):
 
 def test_parse_not_modified(monkeypatch, parse, make_http_url_bad_status, data_dir):
     """parse() should return None for unchanged feeds."""
-    feed_url = make_http_url_bad_status(data_dir.join('full.atom'), 304)
+    feed_url = make_http_url_bad_status(data_dir.joinpath('full.atom'), 304)
     assert parse(feed_url) is None
 
 
@@ -278,7 +278,7 @@ def test_parse_bad_status(
     https://github.com/lemon24/reader/issues/182
 
     """
-    feed_url = make_http_url_bad_status(data_dir.join('full.atom'), status)
+    feed_url = make_http_url_bad_status(data_dir.joinpath('full.atom'), status)
     with pytest.raises(ParseError) as excinfo:
         parse(feed_url)
 
@@ -290,16 +290,16 @@ def test_parse_bad_status(
 @pytest.fixture
 def make_http_get_headers_url(requests_mock):
     def make_url(feed_path):
-        url = 'http://example.com/' + feed_path.basename
+        url = 'http://example.com/' + feed_path.name
         headers = {}
-        if feed_path.ext == '.rss':
+        if feed_path.suffix == '.rss':
             headers['Content-Type'] = 'application/rss+xml'
-        elif feed_path.ext == '.atom':
+        elif feed_path.suffix == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
 
         def callback(request, context):
             make_url.request_headers = request.headers
-            return feed_path.read()
+            return feed_path.read_text()
 
         requests_mock.get(url, text=callback, headers=headers)
         return url
@@ -314,7 +314,7 @@ def test_parse_sends_etag_last_modified(
     data_dir,
     feed_type,
 ):
-    feed_url = make_http_get_headers_url(data_dir.join('full.' + feed_type))
+    feed_url = make_http_get_headers_url(data_dir.joinpath('full.' + feed_type))
     parse(feed_url, 'etag', 'last_modified')
 
     headers = make_http_get_headers_url.request_headers
@@ -326,13 +326,13 @@ def test_parse_sends_etag_last_modified(
 @pytest.fixture
 def make_http_etag_last_modified_url(requests_mock):
     def make_url(feed_path):
-        url = 'http://example.com/' + feed_path.basename
+        url = 'http://example.com/' + feed_path.name
         headers = {'ETag': make_url.etag, 'Last-Modified': make_url.last_modified}
-        if feed_path.ext == '.rss':
+        if feed_path.suffix == '.rss':
             headers['Content-Type'] = 'application/rss+xml'
-        elif feed_path.ext == '.atom':
+        elif feed_path.suffix == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
-        requests_mock.get(url, text=feed_path.read(), headers=headers)
+        requests_mock.get(url, text=feed_path.read_text(), headers=headers)
         return url
 
     yield make_url
@@ -348,23 +348,23 @@ def test_parse_returns_etag_last_modified(
     data_dir,
     feed_type,
 ):
-    monkeypatch.chdir(data_dir.dirname)
+    monkeypatch.chdir(data_dir.parent)
 
     make_http_etag_last_modified_url.etag = 'etag'
     make_http_etag_last_modified_url.last_modified = 'last_modified'
 
-    feed_url = make_http_etag_last_modified_url(data_dir.join('full.' + feed_type))
+    feed_url = make_http_etag_last_modified_url(data_dir.joinpath('full.' + feed_type))
     _, _, etag, last_modified, _ = parse(feed_url)
 
     assert etag == 'etag'
     assert last_modified == 'last_modified'
 
-    feed_url = make_http_url(data_dir.join('full.atom'))
+    feed_url = make_http_url(data_dir.joinpath('full.atom'))
     _, _, etag, last_modified, _ = parse(feed_url)
 
     assert etag == last_modified == None
 
-    feed_url = make_relative_path_url(data_dir.join('full.' + feed_type))
+    feed_url = make_relative_path_url(data_dir.joinpath('full.' + feed_type))
     _, _, etag, last_modified, _ = parse(feed_url)
 
     assert etag == last_modified == None
@@ -376,20 +376,20 @@ def test_parse_returns_etag_last_modified(
 def test_parse_local_timezone(monkeypatch_tz, request, parse, tz, data_dir):
     """parse() return the correct dates regardless of the local timezone."""
 
-    feed_path = data_dir.join('full.atom')
+    feed_path = data_dir.joinpath('full.atom')
 
     url_base, rel_base = make_url_base(str(feed_path))
     expected = {'url_base': url_base, 'rel_base': rel_base}
-    exec(feed_path.new(ext='.atom.py').read(), expected)
+    exec(feed_path.with_suffix('.atom.py').read_text(), expected)
 
     monkeypatch_tz(tz)
     feed, _, _, _, _ = parse(str(feed_path))
     assert feed.updated == expected['feed'].updated
 
 
-def test_parse_response_plugins(monkeypatch, tmpdir, make_http_url, data_dir):
-    feed_url = make_http_url(data_dir.join('empty.atom'))
-    make_http_url(data_dir.join('full.atom'))
+def test_parse_response_plugins(monkeypatch, make_http_url, data_dir):
+    feed_url = make_http_url(data_dir.joinpath('empty.atom'))
+    make_http_url(data_dir.joinpath('full.atom'))
 
     import requests
 
@@ -440,7 +440,7 @@ def test_parse_requests_exception(monkeypatch, exc_cls):
 
 
 def test_user_agent_default(parse, make_http_get_headers_url, data_dir):
-    feed_url = make_http_get_headers_url(data_dir.join('full.atom'))
+    feed_url = make_http_get_headers_url(data_dir.joinpath('full.atom'))
     parse(feed_url)
 
     headers = make_http_get_headers_url.request_headers
@@ -448,7 +448,7 @@ def test_user_agent_default(parse, make_http_get_headers_url, data_dir):
 
 
 def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
-    feed_url = make_http_get_headers_url(data_dir.join('full.atom'))
+    feed_url = make_http_get_headers_url(data_dir.joinpath('full.atom'))
     parse.session_factory.user_agent = None
     parse(feed_url)
 
@@ -465,7 +465,7 @@ def test_parallel_persistent_session(parse, make_http_url, data_dir):
     parse.session_factory.request_hooks.append(req_plugin)
 
     feeds = [
-        FeedArgumentTuple(make_http_url(data_dir.join(name)))
+        FeedArgumentTuple(make_http_url(data_dir.joinpath(name)))
         for name in ('empty.atom', 'empty.rss')
     ]
     list(parse.parallel(feeds))
@@ -490,8 +490,8 @@ def test_feedparser_parse_call(monkeypatch, parse, make_url, data_dir, exc_cls):
 
     monkeypatch.setattr(feedparser, 'parse', feedparser_parse)
 
-    monkeypatch.chdir(data_dir.dirname)
-    feed_url = make_url(data_dir.join('full.atom'))
+    monkeypatch.chdir(data_dir.parent)
+    feed_url = make_url(data_dir.joinpath('full.atom'))
 
     with pytest.raises(ParseError) as excinfo:
         parse(feed_url)
@@ -670,8 +670,8 @@ def test_jsonfeed_invalid_json():
 @pytest.fixture
 def make_http_set_headers_url(requests_mock):
     def make_url(feed_path, headers=None):
-        url = 'http://example.com/' + feed_path.basename
-        requests_mock.get(url, text=feed_path.read(), headers=headers or {})
+        url = 'http://example.com/' + feed_path.name
+        requests_mock.get(url, text=feed_path.read_text(), headers=headers or {})
         return url
 
     yield make_url
@@ -686,7 +686,7 @@ def test_response_headers(monkeypatch, make_http_set_headers_url, parse, data_di
     monkeypatch.setattr(feedparser, 'parse', mock)
 
     feed_url = make_http_set_headers_url(
-        data_dir.join('empty.atom'), {'whatever': 'boo'}
+        data_dir.joinpath('empty.atom'), {'whatever': 'boo'}
     )
     parse(feed_url)
 
@@ -703,7 +703,7 @@ def test_default_response_headers(
     mock = MagicMock(wraps=feedparser.parse)
     monkeypatch.setattr(feedparser, 'parse', mock)
 
-    feed_url = make_http_set_headers_url(data_dir.join('empty.atom'))
+    feed_url = make_http_set_headers_url(data_dir.joinpath('empty.atom'))
     parse(feed_url)
 
     assert mock.call_args[1]['response_headers']['Content-Location'] == feed_url
@@ -720,13 +720,13 @@ def test_feed_root_empty(data_dir, scheme, relative):
     parse = default_parser('')
 
     # we know this returns the right thing based on all of the tests above
-    good_path = data_dir.join('full.rss')
+    good_path = data_dir.joinpath('full.rss')
     good_url = str(good_path)
     good_result = parse(good_url)
 
-    test_path = data_dir.join('full.rss')
+    test_path = data_dir.joinpath('full.rss')
     if relative:
-        test_path = test_path.relto(type(data_dir)())
+        test_path = test_path.relative_to(type(data_dir)().absolute())
     test_url = scheme + str(test_path)
     test_result = parse(test_url)
 
@@ -750,7 +750,7 @@ def test_feed_root_empty(data_dir, scheme, relative):
 @pytest.mark.parametrize('scheme', ['', 'file:'])
 def test_feed_root_none(data_dir, scheme):
     parse = default_parser(None)
-    url = scheme + str(data_dir.join('full.atom'))
+    url = scheme + str(data_dir.joinpath('full.atom'))
     with pytest.raises(ParseError) as excinfo:
         parse(url)
     assert excinfo.value.url == url
@@ -760,7 +760,7 @@ def test_feed_root_none(data_dir, scheme):
 @pytest.mark.parametrize('scheme', ['', 'file:'])
 def test_feed_root_nonempty(data_dir, scheme):
     # we know this returns the right thing based on all of the tests above
-    good_url = str(data_dir.join('full.rss'))
+    good_url = str(data_dir.joinpath('full.rss'))
     good_result = default_parser('')(good_url)
 
     test_url = scheme + 'full.rss'

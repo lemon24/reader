@@ -1,10 +1,10 @@
 import os
+import pathlib
 import sqlite3
 import sys
 from contextlib import closing
 from functools import wraps
 
-import py.path
 import pytest
 import reader_methods
 from utils import monkeypatch_tz
@@ -149,13 +149,23 @@ def entry_arg(request):
 
 
 @pytest.fixture
-def db_path(tmpdir):
-    return str(tmpdir.join('db.sqlite'))
+def db_path(tmp_path):
+    return str(tmp_path.joinpath('db.sqlite'))
 
 
 @pytest.fixture
-def data_dir():
-    return py.path.local(__file__).dirpath().join('data')
+def root_dir(tests_dir):
+    return tests_dir.parent
+
+
+@pytest.fixture
+def tests_dir():
+    return pathlib.Path(__file__).parent
+
+
+@pytest.fixture
+def data_dir(tests_dir):
+    return tests_dir.joinpath('data')
 
 
 @pytest.fixture(

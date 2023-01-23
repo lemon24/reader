@@ -91,7 +91,7 @@ def parse_request(request):
 @pytest.mark.parametrize('feed_type', ['rss', 'atom', 'json'])
 def test_local(reader, feed_type, data_dir, monkeypatch):
     feed_filename = f'full.{feed_type}'
-    feed_url = str(data_dir.join(feed_filename))
+    feed_url = str(data_dir.joinpath(feed_filename))
 
     # TODO: maybe don't mock, and just check datetimes are in the correct order
 
@@ -126,7 +126,7 @@ def test_local(reader, feed_type, data_dir, monkeypatch):
 
     url_base, rel_base = make_url_base(feed_url)
     expected = {'url_base': url_base, 'rel_base': rel_base}
-    exec(data_dir.join(feed_filename + '.py').read(), expected)
+    exec(data_dir.joinpath(feed_filename + '.py').read_text(), expected)
 
     expected_feed = expected['feed'].as_feed(
         added=utc_datetime(2010, 1, 1), last_updated=utc_datetime(2010, 1, 2)
@@ -160,7 +160,7 @@ def test_etag_last_modified(reader, data_dir, server):
     etag = b'"12345-67890abcdef12"'
     last_modified = b'Thu, 1 Jan 2020 00:00:00 GMT'
 
-    server.set_response(data_dir.join('full.atom').read(), etag, last_modified)
+    server.set_response(data_dir.joinpath('full.atom').read_text(), etag, last_modified)
     url = server.url
 
     reader.add_feed(url)

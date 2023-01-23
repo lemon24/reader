@@ -26,10 +26,10 @@ from reader._types import FeedData
 from reader._types import FeedUpdateIntent
 
 
-def test_storage_errors_connect(tmpdir):
+def test_storage_errors_connect(tmp_path):
     # try to open a directory
     with pytest.raises(StorageError) as excinfo:
-        Storage(str(tmpdir))
+        Storage(str(tmp_path))
     assert isinstance(excinfo.value.__cause__, sqlite3.OperationalError)
     assert 'while opening' in excinfo.value.message
 

@@ -11,7 +11,7 @@ def test_sqlite_releases(reader, requests_mock, data_dir):
     init(reader)
 
     # we're not using .read_binary() because it messes with line endings on windows
-    with open(str(data_dir.join('sqlite_releases.html')), 'rb') as f:
+    with open(str(data_dir.joinpath('sqlite_releases.html')), 'rb') as f:
         content = f.read()
 
     requests_mock.get(

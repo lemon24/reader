@@ -1,8 +1,8 @@
 import logging
 import os
+import pathlib
 
 import click
-import py.path
 import pytest
 import yaml
 from click.testing import CliRunner
@@ -44,11 +44,11 @@ def reset_logging(pytestconfig):
 @pytest.mark.slow
 def test_cli(db_path, data_dir):
     feed_filename = 'full.atom'
-    feed_path = str(data_dir.join(feed_filename))
+    feed_path = str(data_dir.joinpath(feed_filename))
 
     url_base, rel_base = make_url_base(feed_path)
     expected = {'url_base': url_base, 'rel_base': rel_base}
-    exec(data_dir.join(feed_filename + '.py').read(), expected)
+    exec(data_dir.joinpath(feed_filename + '.py').read_text(), expected)
 
     runner = CliRunner()
 
@@ -139,8 +139,8 @@ def raise_exception_plugin(thing):
 
 
 @pytest.mark.slow
-def test_cli_plugin(db_path, monkeypatch):
-    monkeypatch.syspath_prepend(str(py.path.local(__file__).dirpath()))
+def test_cli_plugin(db_path, monkeypatch, tests_dir):
+    monkeypatch.syspath_prepend(tests_dir)
 
     runner = CliRunner()
     result = runner.invoke(
@@ -168,8 +168,8 @@ def raise_reader_exception_on_update_plugin(reader):
 
 
 @pytest.mark.slow
-def test_cli_plugin_update_exception(db_path, data_dir, monkeypatch):
-    monkeypatch.syspath_prepend(str(py.path.local(__file__).dirpath()))
+def test_cli_plugin_update_exception(db_path, data_dir, tests_dir, monkeypatch):
+    monkeypatch.syspath_prepend(tests_dir)
 
     runner = CliRunner()
 
@@ -187,9 +187,9 @@ def test_cli_plugin_update_exception(db_path, data_dir, monkeypatch):
             + args,
         )
 
-    result = invoke('add', str(data_dir.join('full.atom')))
+    result = invoke('add', str(data_dir.joinpath('full.atom')))
     assert result.exit_code == 0
-    result = invoke('add', str(data_dir.join('full.rss')))
+    result = invoke('add', str(data_dir.joinpath('full.rss')))
     assert result.exit_code == 0
 
     result = invoke('update', '-v')
@@ -202,8 +202,8 @@ store_reader_plugin = None
 
 
 @pytest.mark.slow
-def test_cli_plugin_builtin_and_import_path(db_path, monkeypatch):
-    monkeypatch.syspath_prepend(str(py.path.local(__file__).dirpath()))
+def test_cli_plugin_builtin_and_import_path(db_path, tests_dir, monkeypatch):
+    monkeypatch.syspath_prepend(tests_dir)
 
     def store_reader_plugin(reader):
         print('\n\nhello\n\n')
@@ -241,12 +241,8 @@ def raise_exception_app_plugin(thing):
 
 
 @pytest.mark.slow
-def test_cli_app_plugin(db_path, monkeypatch):
-    import sys
-
-    monkeypatch.setattr(
-        sys, 'path', [str(py.path.local(__file__).dirpath())] + sys.path
-    )
+def test_cli_app_plugin(db_path, tests_dir, monkeypatch):
+    monkeypatch.syspath_prepend(tests_dir)
 
     def run_simple(*_):
         run_simple.called = True
@@ -302,7 +298,7 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
     }
 
 
-def test_config_option(tmpdir):
+def test_config_option(tmp_path):
     final_config = None
 
     @click.group()
@@ -332,8 +328,8 @@ def test_config_option(tmpdir):
         nonlocal final_config
         final_config = config.merged('app')
 
-    config_path = tmpdir.join('config.yaml')
-    config_path.write(
+    config_path = tmp_path.joinpath('config.yaml')
+    config_path.write_text(
         yaml.safe_dump(
             {
                 'reader': {
@@ -398,14 +394,12 @@ def test_config_option(tmpdir):
     }
 
 
-def test_config_example(db_path, monkeypatch, tmp_path):
+def test_config_example(db_path, monkeypatch, tmp_path, root_dir):
     runner = CliRunner()
 
     config_path = tmp_path.joinpath('config.yaml')
+    config_path.write_text(root_dir.joinpath('examples/config.yaml').read_text())
 
-    py.path.local(__file__).dirpath().join('../examples/config.yaml').copy(
-        py.path.local(str(config_path))
-    )
     if os.name == 'nt':
         with config_path.open() as f:
             config = yaml.safe_load(f)
