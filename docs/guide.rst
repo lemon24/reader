@@ -119,6 +119,17 @@ since each connection would be to a *different* database::
     reader.exceptions.StorageError: usage error: cannot use a private database from threads other than the creating thread
 
 
+Back-ups
+~~~~~~~~
+
+Making back-ups depends on the storage used.
+
+For the SQLite storage, you should use
+the `sqlite3 .backup command <https://sqlite.org/cli.html>`_
+or `VACUUM INTO <https://www.sqlite.org/lang_vacuum.html>`_
+(see :gh:`backup.sh <scripts/backup.sh>` for an example).
+
+
 
 Adding feeds
 ------------
