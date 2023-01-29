@@ -574,7 +574,7 @@ def test_important_entry_important(storage):
 
     assert {e.id: e.important for e in storage.get_entries(datetime(2010, 1, 1))} == {
         'one': True,
-        'two': False,
+        'two': None,
     }
 
 

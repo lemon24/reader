@@ -78,7 +78,8 @@ def _mark_as_read(reader, entry, status):
     try:
         for pattern in patterns or ():
             if re.search(pattern, entry.title or ''):
-                reader._mark_entry_as_dont_care(entry)
+                reader.set_entry_read(entry, True, None)
+                reader.set_entry_important(entry, False, None)
                 return
     except EntryNotFoundError as e:
         if entry.resource_id != e.resource_id:  # pragma: no cover

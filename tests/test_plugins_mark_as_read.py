@@ -45,7 +45,7 @@ def test_regex_mark_as_read(make_reader):
 
     assert len(list(reader.get_entries())) == 4
     assert get_entry_data(read=True) == {
-        (match_new.id, True, datetime(2010, 2, 1), False, datetime(2010, 2, 1)),
+        (match_new.id, True, None, False, None),
     }
 
     parser.entry(1, 3, datetime(2010, 1, 2), title='no match once again')
@@ -54,7 +54,7 @@ def test_regex_mark_as_read(make_reader):
     reader.update_feeds()
 
     assert get_entry_data(read=True) == {
-        (match_new.id, True, datetime(2010, 2, 1), False, datetime(2010, 2, 1)),
+        (match_new.id, True, None, False, None),
     }
 
 

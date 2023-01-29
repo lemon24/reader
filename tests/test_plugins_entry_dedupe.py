@@ -165,7 +165,7 @@ def test_plugin(make_reader):
     reader.update_feeds()
 
     assert {(e.id, e.read, e.important) for e in reader.get_entries()} == {
-        t + (False,)
+        t + (None,)
         for t in {
             # remain untouched
             (old.id, False),
@@ -264,17 +264,17 @@ def test_plugin_once(make_reader, db_path, monkeypatch, tags):
 
     # nothing changes without tag
     assert {(e.id, e.read, e.important) for e in reader.get_entries()} == {
-        (different_title.id, False, False),
-        (no_content_match.id, False, False),
-        (read_one.id, True, False),
-        (read_two.id, False, False),
-        (read_three.id, False, False),
-        (important_one.id, False, False),
+        (different_title.id, False, None),
+        (no_content_match.id, False, None),
+        (read_one.id, True, None),
+        (read_two.id, False, None),
+        (read_three.id, False, None),
+        (important_one.id, False, None),
         (important_two.id, False, True),
-        (important_three.id, False, False),
-        (unread_one.id, False, False),
-        (unread_two.id, False, False),
-        (unread_three.id, False, False),
+        (important_three.id, False, None),
+        (unread_one.id, False, None),
+        (unread_two.id, False, None),
+        (unread_three.id, False, None),
     }
 
     for tag in tags:
@@ -288,18 +288,18 @@ def test_plugin_once(make_reader, db_path, monkeypatch, tags):
     # 'once' (the strictest) has priority
     if '.reader.dedupe.once' in tags:
         expected = {
-            (different_title.id, False, False),
-            (no_content_match.id, False, False),
+            (different_title.id, False, None),
+            (no_content_match.id, False, None),
             # delete read_one, read_two (older last_updated)
-            (read_three.id, True, False),
+            (read_three.id, True, None),
             # delete important_one, important_two have (older last_updated)
             (important_three.id, False, True),
             # delete unread_one, unread_two (older last_updated)
-            (unread_three.id, False, False),
+            (unread_three.id, False, None),
         }
     else:
         expected = {
-            (different_title.id, False, False),
+            (different_title.id, False, None),
             # delete all others (older last_updated)
             (unread_three.id, True, True),
         }
@@ -483,6 +483,60 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
     (
         [
             (1, False, datetime(2010, 1, 1)),
+            (9, True, None),
+        ],
+        [
+            (9, True, None),
+        ],
+    ),
+    # None vs False combos (subset of the above)
+    # TODO: find a better way?
+    # none set, modified (last has modified)
+    (
+        [
+            (1, None, datetime(2010, 1, 1)),
+            (9, None, datetime(2010, 1, 9)),
+        ],
+        [
+            (9, None, datetime(2010, 1, 1)),
+        ],
+    ),
+    # old unimportant, modified; new unset
+    (
+        [
+            (1, False, datetime(2010, 1, 1)),
+            (9, None, None),
+        ],
+        [
+            (9, False, datetime(2010, 1, 1)),
+        ],
+    ),
+    # new unimportant, old modified
+    (
+        [
+            (1, None, datetime(2010, 1, 1)),
+            (9, False, None),
+        ],
+        [
+            (9, False, None),
+        ],
+    ),
+    # None vs True combos (subset of the above)
+    # TODO: find a better way?
+    # old important, modified; new unset
+    (
+        [
+            (1, True, datetime(2010, 1, 1)),
+            (9, None, None),
+        ],
+        [
+            (9, True, datetime(2010, 1, 1)),
+        ],
+    ),
+    # new important, old modified
+    (
+        [
+            (1, None, datetime(2010, 1, 1)),
             (9, True, None),
         ],
         [

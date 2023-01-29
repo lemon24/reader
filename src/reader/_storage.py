@@ -731,7 +731,7 @@ class Storage:
         self,
         feed_url: str,
         entry_id: str,
-        important: bool,
+        important: bool | None,
         modified: datetime | None,
     ) -> None:
         with self.get_db() as db:
@@ -940,11 +940,11 @@ class Storage:
                     FROM entries
                     WHERE id = :id AND feed = :feed_url
                 ),
-                coalesce((
+                (
                     SELECT important
                     FROM entries
                     WHERE id = :id AND feed = :feed_url
-                ), 0),
+                ),
                 (
                     SELECT important_modified
                     FROM entries
@@ -1404,7 +1404,7 @@ def entry_factory(t: tuple[Any, ...]) -> Entry:
         tuple(Enclosure(**d) for d in json.loads(t[20])) if t[20] else (),
         t[21] == 1,
         t[22],
-        t[23] == 1,
+        t[23] == 1 if t[23] is not None else None,
         t[24],
         t[25],
         t[26],
@@ -1434,7 +1434,9 @@ def apply_entry_filter_options(
         add(f"{'' if read else 'NOT'} entries.read")
 
     if important is not None:
-        add(f"{'' if important else 'NOT'} entries.important")
+        add(
+            f"{'' if important else 'NOT'} (entries.important IS NOT NULL AND entries.important)"
+        )
 
     if has_enclosures is not None:
         add(

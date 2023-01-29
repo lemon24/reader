@@ -1569,6 +1569,30 @@ def test_mark_as_unimportant(reader, entry_arg):
     ]
 
 
+def test_set_entry_important_none(reader, entry_arg):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    entry = parser.entry(1, 1, datetime(2010, 1, 1))
+    reader.add_feed(feed)
+    reader.update_feeds()
+
+    entry = reader.get_entry(entry)
+    assert entry.important is None
+    assert entry.important_modified is None
+
+    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader.mark_entry_as_important(entry_arg(entry))
+    entry = reader.get_entry(entry)
+    assert entry.important is True
+
+    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader.set_entry_important(entry, None)
+
+    entry = reader.get_entry(entry)
+    assert entry.important is None
+    assert entry.important_modified == datetime(2010, 1, 2)
+
+
 @pytest.mark.parametrize(
     'exc', [EntryNotFoundError('feed', 'entry'), StorageError('whatever')]
 )
@@ -2820,6 +2844,24 @@ def test_entry_read_important_modified_remains_set_after_update(reader, flag):
     assert getattr(entry, f'{flag}_modified') == datetime(2010, 1, 1)
 
 
+@pytest.mark.parametrize('value', [None, 2, 'true'])
+@rename_argument('reader', 'reader_with_one_feed')
+def test_set_entry_read_value_error(reader, value):
+    reader.update_feeds()
+    entry = next(reader.get_entries())
+    with pytest.raises(ValueError):
+        reader.set_entry_read(entry, value)
+
+
+@pytest.mark.parametrize('value', [2, 'true'])
+@rename_argument('reader', 'reader_with_one_feed')
+def test_set_entry_important_value_error(reader, value):
+    reader.update_feeds()
+    entry = next(reader.get_entries())
+    with pytest.raises(ValueError):
+        reader.set_entry_important(entry, value)
+
+
 @rename_argument('reader', 'reader_with_one_feed')
 def test_mark_as_dont_care(reader):
     reader.update_feeds()
@@ -2832,9 +2874,9 @@ def test_mark_as_dont_care(reader):
     reader._mark_entry_as_dont_care(entry)
     entry = next(reader.get_entries())
 
-    assert entry.read
-    assert entry.read_modified == datetime(2010, 1, 2)
-    assert not entry.important
+    assert not entry.read
+    assert entry.read_modified is None
+    assert entry.important is False
     assert entry.important_modified == datetime(2010, 1, 2)
 
 

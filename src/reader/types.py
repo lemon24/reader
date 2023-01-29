@@ -265,7 +265,8 @@ class Entry(_namedtuple_compat):
     read_modified: datetime | None = None
 
     #: Whether the entry is important or not.
-    important: bool = False
+    #: :const:`None` means not set.
+    important: bool | None = None
 
     #: The date when :attr:`important` was last set by the user;
     #: :const:`None` if that never happened,

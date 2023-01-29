@@ -1311,7 +1311,7 @@ class Reader:
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
-            read (bool): Mark the entry as read if true (default),
+            read (bool): Mark the entry as read if true,
                 and as unread otherwise.
             modified (datetime or None):
                 Set :attr:`~Entry.read_modified` to this.
@@ -1329,6 +1329,9 @@ class Reader:
             The ``entry`` and ``read`` arguments are now positional-only.
 
         """
+        if read not in (True, False):
+            raise ValueError("read should be one of (True, False)")
+
         modified_naive: datetime | None
         if isinstance(modified, MissingType):
             modified_naive = self._now()
@@ -1338,7 +1341,7 @@ class Reader:
             modified_naive = modified.astimezone(timezone.utc).replace(tzinfo=None)
 
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_read(feed_url, entry_id, bool(read), modified_naive)
+        self._storage.mark_as_read(feed_url, entry_id, read, modified_naive)
 
     def mark_entry_as_read(self, entry: EntryInput, /) -> None:
         """Mark an entry as read.
@@ -1385,7 +1388,7 @@ class Reader:
     def set_entry_important(
         self,
         entry: EntryInput,
-        important: bool,
+        important: bool | None,
         /,
         modified: MissingType | None | datetime = MISSING,
     ) -> None:
@@ -1394,8 +1397,8 @@ class Reader:
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
-            important (bool): Mark the entry as important if true (default),
-                and as unimportant otherwise.
+            important (bool or None): Mark the entry as important if true,
+                as unimportant if false, or as not set if none.
             modified (datetime or None):
                 Set :attr:`~Entry.important_modified` to this.
                 Naive datetimes are normalized by passing them to
@@ -1412,6 +1415,9 @@ class Reader:
             The ``entry`` and ``important`` arguments are now positional-only.
 
         """
+        if important not in (True, False, None):
+            raise ValueError("important should be one of (True, False, None)")
+
         modified_naive: datetime | None
         if isinstance(modified, MissingType):
             modified_naive = self._now()
@@ -1421,9 +1427,7 @@ class Reader:
             modified_naive = modified.astimezone(timezone.utc).replace(tzinfo=None)
 
         feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_important(
-            feed_url, entry_id, bool(important), modified_naive
-        )
+        self._storage.mark_as_important(feed_url, entry_id, important, modified_naive)
 
     def mark_entry_as_important(self, entry: EntryInput, /) -> None:
         """Mark an entry as important.
@@ -1471,17 +1475,12 @@ class Reader:
         """Mark an entry as read and unimportant at the same time,
         resulting in the same read_modified and important_modified.
 
-        This method becoming public is pending on #254.
+        ~This method becoming public is pending on #254.~
 
-        Presumably, we could just use mark_entry_as_{read,important} instead
-        and get the slightly different timestamps,
-        but it's likely better to collect more accurate data.
+        FIXME: As of Jan 2023, this should be replaced by mark_entry_as_unimportant().
 
         """
-        modified_naive = self._now()
-        feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_read(feed_url, entry_id, True, modified_naive)
-        self._storage.mark_as_important(feed_url, entry_id, False, modified_naive)
+        self.mark_entry_as_unimportant(entry)
 
     def add_entry(self, entry: Any, /) -> None:
         """Add a new entry to an existing feed.
