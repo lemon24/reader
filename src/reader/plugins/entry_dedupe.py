@@ -360,7 +360,11 @@ def _get_entry_groups(reader, feed, is_duplicate):
 
 def _get_flag_args(entry, duplicates, name):
     entries = duplicates + [entry]
-    flag = any(getattr(d, name) for d in entries)
+
+    flags = {getattr(d, name) for d in entries}
+    for flag in (True, False, None):  # pragma: no cover
+        if flag in flags:
+            break
 
     modified_name = f'{name}_modified'
     modifieds = (
