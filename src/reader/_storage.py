@@ -129,9 +129,9 @@ def create_entries(db: sqlite3.Connection, name: str = 'entries') -> None:
             data_hash_changed INTEGER,  -- metadata about data_hash
 
             -- reader data
-            read INTEGER NOT NULL DEFAULT 0,
+            read INTEGER,
             read_modified TIMESTAMP,
-            important INTEGER NOT NULL DEFAULT 0,
+            important INTEGER,
             important_modified TIMESTAMP,
             added_by TEXT NOT NULL,
             last_updated TIMESTAMP NOT NULL,
@@ -249,6 +249,85 @@ def update_from_36_to_37(db: sqlite3.Connection) -> None:  # pragma: no cover
     create_entries_by_recent_index(db)
 
 
+def recreate_search_triggers(db: sqlite3.Connection) -> None:  # pragma: no cover
+    from ._search import Search
+
+    if Search._is_enabled(db):
+        Search._drop_triggers(db)
+        Search._create_triggers(db)
+
+
+def update_from_37_to_38(db: sqlite3.Connection) -> None:  # pragma: no cover
+    # https://github.com/lemon24/reader/issues/254#issuecomment-1404215814
+
+    create_entries(db, 'new_entries')
+    db.execute(
+        """
+        INSERT INTO new_entries (
+            id,
+            feed,
+            title,
+            link,
+            updated,
+            author,
+            published,
+            summary,
+            content,
+            enclosures,
+            original_feed,
+            data_hash,
+            data_hash_changed,
+            read,
+            read_modified,
+            important,
+            important_modified,
+            added_by,
+            last_updated,
+            first_updated,
+            first_updated_epoch,
+            feed_order,
+            recent_sort
+        )
+        SELECT
+            id,
+            feed,
+            title,
+            link,
+            updated,
+            author,
+            published,
+            summary,
+            content,
+            enclosures,
+            original_feed,
+            data_hash,
+            data_hash_changed,
+            read,
+            read_modified,
+            CASE
+                WHEN read AND NOT important AND important_modified is not NULL
+                    THEN NULL
+                ELSE important
+            END,
+            important_modified,
+            added_by,
+            last_updated,
+            first_updated,
+            first_updated_epoch,
+            feed_order,
+            recent_sort
+        FROM entries;
+        """
+    )
+
+    # IMPORTANT: this drops ALL indexes and triggers ON entries
+    db.execute("DROP TABLE entries;")
+    db.execute("ALTER TABLE new_entries RENAME TO entries;")
+
+    create_indexes(db)
+    recreate_search_triggers(db)
+
+
 # Row value support was added in 3.15.
 # TODO: Remove the Search.update() check once this gets bumped to >=3.18.
 MINIMUM_SQLITE_VERSION = (3, 15)
@@ -260,13 +339,14 @@ def setup_db(db: sqlite3.Connection, wal_enabled: bool | None) -> None:
     return setup_sqlite_db(
         db,
         create=create_db,
-        version=37,
+        version=38,
         migrations={
             # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
             # 10-16 removed before 1.0 (last in 618f158ebc0034eefb724a55a84937d21c93c1a7)
             # 17-28 removed before 2.0 (last in be9c89581ea491d0c9cc95c9d39f073168a2fd02)
             # 29-35 removed before 3.0 (last in 69c75529a3f80107b68346d592d6450f9725187c)
             36: update_from_36_to_37,
+            37: update_from_37_to_38,
         },
         id=APPLICATION_ID,
         minimum_sqlite_version=MINIMUM_SQLITE_VERSION,
