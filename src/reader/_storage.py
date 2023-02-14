@@ -306,6 +306,8 @@ def update_from_37_to_38(db: sqlite3.Connection) -> None:  # pragma: no cover
             read_modified,
             CASE
                 WHEN read AND NOT important AND important_modified is not NULL
+                    THEN 0
+                WHEN NOT important
                     THEN NULL
                 ELSE important
             END,
