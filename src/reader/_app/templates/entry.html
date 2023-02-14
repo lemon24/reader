@@ -33,14 +33,14 @@
     {{ macros.simple_button('.form_api', 'mark-as-read', 'read', leave_disabled=true, next=next, context=context, title=entry.read_modified or "not modified") }}
 {% endif %}
 
-{% if entry.important %}
-    {{ macros.simple_button('.form_api', 'mark-as-unimportant', 'unimportant', leave_disabled=true, next=next, context=context, title=entry.important_modified or "not modified") }}
-{% else %}
+{% if not entry.important %}
     {{ macros.simple_button('.form_api', 'mark-as-important', 'important', leave_disabled=true, next=next, context=context, title=entry.important_modified or "not modified") }}
 {% endif %}
-
-{% if not (entry.read and not entry.important and entry.important_modified) %}
-    {{ macros.simple_button('.form_api', 'mark-as-dont-care', "don't care", leave_disabled=true, next=next, context=context) }}
+{% if entry.important is not none %}
+    {{ macros.simple_button('.form_api', 'clear-important', "clear " + ("important" if entry.important else "don't care"), leave_disabled=true, next=next, context=context) }}
+{% endif %}
+{% if entry.important is not false %}
+    {{ macros.simple_button('.form_api', 'mark-as-unimportant', "don't care", leave_disabled=true, next=next, context=context, title=entry.important_modified or "not modified") }}
 {% endif %}
 
 {% if entry.added_by == 'user' %}
@@ -57,8 +57,8 @@
     ('mark-as-read', feed.url, entry.id),
     ('mark-as-unread', feed.url, entry.id),
     ('mark-as-important', feed.url, entry.id),
+    ('clear-important', feed.url, entry.id),
     ('mark-as-unimportant', feed.url, entry.id),
-    ('mark-as-dont-care', feed.url, entry.id),
     ('delete-entry', feed.url, entry.id),
 ) %}
 <li class="error">{{ message }}

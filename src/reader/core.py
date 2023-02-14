@@ -1471,17 +1471,6 @@ class Reader:
         """
         return self.set_entry_important(entry, False)
 
-    def _mark_entry_as_dont_care(self, entry: EntryInput, /) -> None:
-        """Mark an entry as read and unimportant at the same time,
-        resulting in the same read_modified and important_modified.
-
-        ~This method becoming public is pending on #254.~
-
-        FIXME: As of Jan 2023, this should be replaced by mark_entry_as_unimportant().
-
-        """
-        self.mark_entry_as_unimportant(entry)
-
     def add_entry(self, entry: Any, /) -> None:
         """Add a new entry to an existing feed.
 

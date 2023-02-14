@@ -2862,24 +2862,6 @@ def test_set_entry_important_value_error(reader, value):
         reader.set_entry_important(entry, value)
 
 
-@rename_argument('reader', 'reader_with_one_feed')
-def test_mark_as_dont_care(reader):
-    reader.update_feeds()
-
-    entry = next(reader.get_entries())
-    reader._now = lambda: naive_datetime(2010, 1, 1)
-    reader.mark_entry_as_important(entry)
-
-    reader._now = lambda: naive_datetime(2010, 1, 2)
-    reader._mark_entry_as_dont_care(entry)
-    entry = next(reader.get_entries())
-
-    assert not entry.read
-    assert entry.read_modified is None
-    assert entry.important is False
-    assert entry.important_modified == datetime(2010, 1, 2)
-
-
 allow_invalid_url_feed_root = 'C:\\tmp' if os.name == 'nt' else '/tmp'
 
 
