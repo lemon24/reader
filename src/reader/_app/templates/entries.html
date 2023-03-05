@@ -48,14 +48,15 @@
     {{ macros.radio_links('has-enclosures', [
         ('yes', none),
         ('no', none),
-        (none, "don't care"),
+        (none, 'all'),
     ], none, '.entries', 'has enclosures') }}
 
     {{ macros.radio_links('important', [
-        ('yes', none),
-        ('no', none),
-        (none, "don't care"),
-    ], none, '.entries', 'important') }}
+        ('notfalse', 'yes or not set'),
+        ('istrue', 'yes'),
+        ('nottrue', 'no'),
+        ('any', 'all'),
+    ], 'notfalse', '.entries', 'important') }}
 
 
     {% if not request.args.q %}

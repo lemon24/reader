@@ -204,7 +204,7 @@ data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
 {%- set _ = args.poplist(arg) -%}
 {%- endfor -%}
 
-{%- if option is none -%}
+{%- if option == default -%}
     {%- set _ = args.poplist(name) -%}
 {%- else -%}
     {%- set _ = args.setlist(name, [option]) -%}

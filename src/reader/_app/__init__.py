@@ -3,6 +3,7 @@ import itertools
 import json
 import math
 import time
+import typing
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
@@ -36,6 +37,7 @@ from reader import ParseError
 from reader import ReaderError
 from reader._plugins import Loader
 from reader.types import _get_entry_content
+from reader.types import TristateFilterInput
 
 
 blueprint = Blueprint('reader', __name__)
@@ -204,8 +206,9 @@ def entries():
     has_enclosures = request.args.get('has-enclosures')
     has_enclosures = {None: None, 'no': False, 'yes': True}[has_enclosures]
 
-    important = request.args.get('important')
-    important = {None: None, 'no': False, 'yes': True}[important]
+    important = request.args.get('important', 'notfalse')
+    if important not in typing.get_args(TristateFilterInput):
+        abort(400, f"invalid important: {important}")
 
     if not request.args.get('q'):
         sort = request.args.get('sort', 'recent')
