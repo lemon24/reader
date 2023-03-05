@@ -535,7 +535,7 @@ def test_important_unimportant_by_default(storage):
     assert {
         e.id
         for e in storage.get_entries(
-            datetime(2010, 1, 1), EntryFilterOptions(important=False)
+            datetime(2010, 1, 1), EntryFilterOptions(important='nottrue')
         )
     } == {'one', 'two'}
 
@@ -551,19 +551,19 @@ def test_important_get_entries(storage):
     assert {
         e.id
         for e in storage.get_entries(
-            datetime(2010, 1, 1), EntryFilterOptions(important=None)
+            datetime(2010, 1, 1), EntryFilterOptions(important='any')
         )
     } == {'one', 'two'}
     assert {
         e.id
         for e in storage.get_entries(
-            datetime(2010, 1, 1), EntryFilterOptions(important=True)
+            datetime(2010, 1, 1), EntryFilterOptions(important='istrue')
         )
     } == {'one'}
     assert {
         e.id
         for e in storage.get_entries(
-            datetime(2010, 1, 1), EntryFilterOptions(important=False)
+            datetime(2010, 1, 1), EntryFilterOptions(important='nottrue')
         )
     } == {'two'}
 
@@ -586,7 +586,7 @@ def test_important_mark_as_unimportant(storage):
     assert {
         e.id
         for e in storage.get_entries(
-            datetime(2010, 1, 1), EntryFilterOptions(important=True)
+            datetime(2010, 1, 1), EntryFilterOptions(important='istrue')
         )
     } == set()
 

@@ -66,6 +66,7 @@ from .types import MissingType
 from .types import ResourceInput
 from .types import SearchSortOrder
 from .types import TagFilterInput
+from .types import TristateFilterInput
 from .types import UpdatedFeed
 from .types import UpdateResult
 
@@ -1096,7 +1097,7 @@ class Reader:
         feed: FeedInput | None = None,
         entry: EntryInput | None = None,
         read: bool | None = None,
-        important: bool | None = None,
+        important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
         feed_tags: TagFilterInput = None,
         sort: EntrySortOrder = 'recent',
@@ -1264,7 +1265,7 @@ class Reader:
         feed: FeedInput | None = None,
         entry: EntryInput | None = None,
         read: bool | None = None,
-        important: bool | None = None,
+        important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
         feed_tags: TagFilterInput = None,
     ) -> EntryCounts:
@@ -1642,7 +1643,7 @@ class Reader:
         feed: FeedInput | None = None,
         entry: EntryInput | None = None,
         read: bool | None = None,
-        important: bool | None = None,
+        important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
         feed_tags: TagFilterInput = None,
         sort: SearchSortOrder = 'relevant',
@@ -1778,7 +1779,7 @@ class Reader:
         feed: FeedInput | None = None,
         entry: EntryInput | None = None,
         read: bool | None = None,
-        important: bool | None = None,
+        important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
         feed_tags: TagFilterInput = None,
     ) -> EntrySearchCounts:

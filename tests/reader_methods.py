@@ -70,7 +70,30 @@ def get_feeds(reader, **kwargs):
 for name, obj in dict(globals()).items():
     if name.startswith('get_'):
         obj.after_update = do_nothing
-
-for name, obj in dict(globals()).items():
     if name.startswith('search_entries'):
         obj.after_update = enable_and_update_search
+
+
+def get_entry_counts(reader, **kwargs):
+    return reader.get_entry_counts(**kwargs)
+
+
+def search_entry_counts(reader, **kwargs):
+    return reader.search_entry_counts('entry', **kwargs)
+
+
+for name, obj in dict(globals()).items():
+    if name.startswith('get_entries'):
+        obj.counts = get_entry_counts
+    if name.startswith('search_entries'):
+        obj.counts = search_entry_counts
+
+
+get_entries_methods = [
+    # defaults not included
+    get_entries_recent,
+    get_entries_random,
+    search_entries_relevant,
+    search_entries_recent,
+    search_entries_random,
+]

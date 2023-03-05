@@ -770,6 +770,20 @@ TagFilterInput = Union[
 ]
 
 
+TristateFilterInput = Literal[
+    None,
+    True,
+    False,
+    'istrue',
+    'isfalse',
+    'notset',
+    'nottrue',
+    'notfalse',
+    'isset',
+    'any',
+]
+
+
 @dataclass(frozen=True)
 class FeedCounts(_namedtuple_compat):
 

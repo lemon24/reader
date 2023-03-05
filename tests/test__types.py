@@ -7,6 +7,7 @@ from reader._types import EntryData
 from reader._types import FeedData
 from reader._types import fix_datetime_tzinfo
 from reader._types import tag_filter_argument
+from reader._types import tristate_filter_argument
 
 
 TAG_DATA = [
@@ -49,6 +50,30 @@ def test_tag_filter_argument_error(input, error):
     with pytest.raises(ValueError) as excinfo:
         tag_filter_argument(input, 'argument')
     assert error in str(excinfo.value)
+
+
+TRISTATE_FILTER_DATA = [
+    (v, v)
+    for v in ['istrue', 'isfalse', 'notset', 'nottrue', 'notfalse', 'isset', 'any']
+] + [
+    (None, 'any'),
+    (True, 'istrue'),
+    (False, 'nottrue'),
+    (1, 'istrue'),
+    (0, 'nottrue'),
+]
+
+
+@pytest.mark.parametrize('input, expected', TRISTATE_FILTER_DATA)
+def test_tristate_filter_argument(input, expected):
+    tristate_filter_argument(input, 'name')
+
+
+@pytest.mark.parametrize('input', ['all', 2, -1, ()])
+def test_tristate_filter_argument_error(input):
+    with pytest.raises(ValueError) as excinfo:
+        tristate_filter_argument(input, 'name')
+    assert 'name' in str(excinfo.value)
 
 
 @pytest.mark.parametrize('data_file', ['full', 'empty'])

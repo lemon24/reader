@@ -10,6 +10,8 @@ from functools import cached_property
 from types import MappingProxyType
 from types import SimpleNamespace
 from typing import Any
+from typing import get_args
+from typing import Literal
 from typing import NamedTuple
 from typing import TypeVar
 from typing import Union
@@ -27,6 +29,7 @@ from .types import ExceptionInfo
 from .types import Feed
 from .types import FeedInput
 from .types import TagFilterInput
+from .types import TristateFilterInput
 
 # Private API
 # https://github.com/lemon24/reader/issues/111
@@ -388,6 +391,31 @@ def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
     return rv
 
 
+TristateFilter = Literal[
+    'istrue',
+    'isfalse',
+    'notset',
+    'nottrue',
+    'notfalse',
+    'isset',
+    'any',
+]
+
+
+def tristate_filter_argument(value: TristateFilterInput, name: str) -> TristateFilter:
+    # https://github.com/lemon24/reader/issues/254#issuecomment-1435648359
+    if value is None:
+        return 'any'
+    if value == True:  # noqa: E712
+        return 'istrue'
+    if value == False:  # noqa: E712
+        return 'nottrue'
+    args = get_args(TristateFilter)
+    if value in args:
+        return value
+    raise ValueError(f"{name} must be none, bool, or one of {args}")
+
+
 _EFO = TypeVar('_EFO', bound='EntryFilterOptions')
 
 
@@ -398,7 +426,7 @@ class EntryFilterOptions(NamedTuple):
     feed_url: str | None = None
     entry_id: str | None = None
     read: bool | None = None
-    important: bool | None = None
+    important: TristateFilter = 'any'
     has_enclosures: bool | None = None
     feed_tags: TagFilter = ()
 
@@ -408,7 +436,7 @@ class EntryFilterOptions(NamedTuple):
         feed: FeedInput | None = None,
         entry: EntryInput | None = None,
         read: bool | None = None,
-        important: bool | None = None,
+        important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
         feed_tags: TagFilterInput = None,
     ) -> _EFO:
@@ -422,14 +450,16 @@ class EntryFilterOptions(NamedTuple):
 
         if read not in (None, False, True):
             raise ValueError("read should be one of (None, False, True)")
-        if important not in (None, False, True):
-            raise ValueError("important should be one of (None, False, True)")
+
+        important_filter = tristate_filter_argument(important, 'important')
         if has_enclosures not in (None, False, True):
             raise ValueError("has_enclosures should be one of (None, False, True)")
 
         feed_tag_filter = tag_filter_argument(feed_tags, 'feed_tags')
 
-        return cls(feed_url, entry_id, read, important, has_enclosures, feed_tag_filter)
+        return cls(
+            feed_url, entry_id, read, important_filter, has_enclosures, feed_tag_filter
+        )
 
 
 _FFO = TypeVar('_FFO', bound='FeedFilterOptions')

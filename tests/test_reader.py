@@ -1713,6 +1713,47 @@ def test_entries_filtering_error(reader, get_entries, kwargs):
         list(get_entries(reader, **kwargs))
 
 
+@pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1)])
+def test_entries_filtering_important(reader, subtests, get_entries, modified):
+    reader._parser = parser = Parser()
+
+    reader.add_feed(parser.feed(1))
+    one = parser.entry(1, 1)
+    two = parser.entry(1, 2)
+    reader.add_feed(parser.feed(2))
+    three = parser.entry(2, 3)
+
+    reader.update_feeds()
+    reader.update_search()
+
+    reader.set_entry_important(one, None, modified)
+    reader.set_entry_important(two, True, modified)
+    reader.set_entry_important(three, False, modified)
+
+    data = {
+        'istrue':   {'1, 2'},
+        True:       {'1, 2'},
+        'isfalse':  {'2, 3'},
+        'notset':   {'1, 1'},
+        'nottrue':  {'1, 1', '2, 3'},
+        False:      {'1, 1', '2, 3'},
+        'notfalse': {'1, 1', '1, 2'},
+        'isset':    {'1, 2', '2, 3'},
+        'any':      {'1, 1', '1, 2', '2, 3'},
+        None:       {'1, 1', '1, 2', '2, 3'},
+    }  # fmt: skip
+
+    for important, expected in data.items():
+        with subtests.test(important=important):
+            actual = {e.id for e in get_entries(reader, important=important)}
+            assert actual == expected
+            assert get_entries.counts(reader, important=important).total == len(
+                expected
+            )
+
+
+# TODO: ideally, systematize all filtering tests?
+
 # END entry filtering tests
 
 

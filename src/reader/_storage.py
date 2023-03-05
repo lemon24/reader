@@ -1417,6 +1417,16 @@ def entry_factory(t: tuple[Any, ...]) -> Entry:
     return Entry._make(entry)
 
 
+TRISTATE_FILTER_TO_SQL = dict(
+    istrue="({expr} IS NOT NULL AND {expr})",
+    isfalse="({expr} IS NOT NULL AND NOT {expr})",
+    notset="{expr} IS NULL",
+    nottrue="({expr} IS NULL OR NOT {expr})",
+    notfalse="({expr} IS NULL OR {expr})",
+    isset="{expr} IS NOT NULL",
+)
+
+
 def apply_entry_filter_options(
     query: Query, filter_options: EntryFilterOptions, keyword: str = 'WHERE'
 ) -> dict[str, Any]:
@@ -1435,10 +1445,8 @@ def apply_entry_filter_options(
     if read is not None:
         add(f"{'' if read else 'NOT'} entries.read")
 
-    if important is not None:
-        add(
-            f"{'' if important else 'NOT'} (entries.important IS NOT NULL AND entries.important)"
-        )
+    if important != 'any':
+        add(TRISTATE_FILTER_TO_SQL[important].format(expr='entries.important'))
 
     if has_enclosures is not None:
         add(
