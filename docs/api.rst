@@ -160,6 +160,13 @@ Exceptions
     Subclass of :exc:`UserWarning`.
 
 
+Type aliases
+------------
+
+.. autodata:: reader.types.TristateFilterInput
+
+
+
 Constants
 ---------
 

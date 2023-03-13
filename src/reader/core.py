@@ -1142,7 +1142,10 @@ class Reader:
             entry (tuple(str, str) or Entry or None):
                 Only return the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only return (un)read entries.
-            important (bool or None): Only return (un)important entries.
+            important (bool or None or str):
+                Only return (un)important entries.
+                For more precise filtering, use one of the
+                :data:`~reader.types.TristateFilterInput` string filters.
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
             feed_tags (None or bool or list(str or bool or list(str or bool))):
@@ -1171,6 +1174,9 @@ class Reader:
 
         .. versionadded:: 1.12
             The ``limit`` and ``starting_after`` keyword arguments.
+
+        .. versionchanged:: 3.5
+            The ``important`` argument also accepts string values.
 
         """
 
@@ -1278,7 +1284,10 @@ class Reader:
             entry (tuple(str, str) or Entry or None):
                 Only count the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only count (un)read entries.
-            important (bool or None): Only count (un)important entries.
+            important (bool or None or str):
+                Only count (un)important entries.
+                For more precise filtering, use one of the
+                :data:`~reader.types.TristateFilterInput` string filters.
             has_enclosures (bool or None): Only count entries that (don't)
                 have enclosures.
             feed_tags (None or bool or list(str or bool or list(str or bool))):
@@ -1291,6 +1300,9 @@ class Reader:
             StorageError
 
         .. versionadded:: 1.11
+
+        .. versionchanged:: 3.5
+            The ``important`` argument also accepts string values.
 
         """
 
@@ -1328,6 +1340,10 @@ class Reader:
 
         .. versionchanged:: 3.0
             The ``entry`` and ``read`` arguments are now positional-only.
+
+        .. versionchanged:: 3.5
+            Do not coerce ``read`` to :class:`bool` anymore,
+            require it to be :const:`True` or :const:`False`.
 
         """
         if read not in (True, False):
@@ -1414,6 +1430,13 @@ class Reader:
 
         .. versionchanged:: 3.0
             The ``entry`` and ``important`` arguments are now positional-only.
+
+        .. versionchanged:: 3.5
+            ``important`` can now be :const:`None`.
+
+        .. versionchanged:: 3.5
+            Do not coerce ``important`` to :class:`bool` anymore,
+            require it to be :const:`True` or :const:`False` or :const:`None`.
 
         """
         if important not in (True, False, None):
@@ -1710,7 +1733,10 @@ class Reader:
             entry (tuple(str, str) or Entry or None):
                 Only search for the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only search (un)read entries.
-            important (bool or None): Only search (un)important entries.
+            important (bool or None or str):
+                Only search (un)important entries.
+                For more precise filtering, use one of the
+                :data:`~reader.types.TristateFilterInput` string filters.
             has_enclosures (bool or None): Only search entries that (don't)
                 have enclosures.
             feed_tags (None or bool or list(str or bool or list(str or bool))):
@@ -1745,6 +1771,9 @@ class Reader:
 
         .. versionchanged:: 3.0
             The ``query`` argument is now positional-only.
+
+        .. versionchanged:: 3.5
+            The ``important`` argument also accepts string values.
 
         """
         filter_options = EntryFilterOptions.from_args(
@@ -1795,7 +1824,10 @@ class Reader:
             feed (str or tuple(str) or Feed or None): Only count the entries for this feed.
             entry (tuple(str, str) or Entry or None):
                 Only count the entry with this (feed URL, entry id) tuple.
-            read (bool or None): Only count (un)read entries.
+            read (bool or None or str):
+                Only count (un)read entries.
+                For more precise filtering, use one of the
+                :data:`~reader.types.TristateFilterInput` string filters.
             important (bool or None): Only count (un)important entries.
             has_enclosures (bool or None): Only count entries that (don't)
                 have enclosures.
@@ -1815,6 +1847,9 @@ class Reader:
 
         .. versionchanged:: 3.0
             The ``query`` argument is now positional-only.
+
+        .. versionchanged:: 3.5
+            The ``important`` argument also accepts string values.
 
         """
 

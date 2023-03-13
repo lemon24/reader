@@ -266,6 +266,10 @@ class Entry(_namedtuple_compat):
 
     #: Whether the entry is important or not.
     #: :const:`None` means not set.
+    #:
+    #: .. versionchanged:: 3.5
+    #:  :attr:`important` is now an optional :class:`bool`,
+    #:  and defaults to :const:`None`.
     important: bool | None = None
 
     #: The date when :attr:`important` was last set by the user;
@@ -769,7 +773,29 @@ TagFilterInput = Union[
     None, bool, Sequence[Union[str, bool, Sequence[Union[str, bool]]]]
 ]
 
-
+#: Possible values for options that filter items by an optional boolean
+#: attribute (one that can be either true, false, or not set).
+#:
+#: :const:`None` selects all items.
+#: :const:`True` and :const:`False` select items based of the attribute's
+#: truth value (a :const:`None` attribute is treated as false).
+#:
+#: For more precise filtering, use one of the following string filters:
+#:
+#: ==================== =============== =======================
+#: attribute values     string filter   optional bool filter
+#: ==================== =============== =======================
+#: True                 istrue          True
+#: False                isfalse
+#: None                 notset
+#: False, None          nottrue         False
+#: True, None           notfalse
+#: True, False          isset
+#: True, False, None    any             None
+#: ==================== =============== =======================
+#:
+#: .. versionadded:: 3.5
+#:
 TristateFilterInput = Literal[
     None,
     True,
