@@ -42,14 +42,15 @@ class _namedtuple_compat:
     @classmethod
     def _make(cls: type[_T], iterable: Iterable[Any]) -> _T:
         iterable = tuple(iterable)
-        attrs_len = len(dataclasses.fields(cls))
+        attrs_len = len(dataclasses.fields(cls))  # type: ignore[arg-type]
         if len(iterable) != attrs_len:
             raise TypeError(
                 'Expected %d arguments, got %d' % (attrs_len, len(iterable))
             )
         return cls(*iterable)
 
-    _replace = dataclasses.replace
+    def _replace(self: _T, **kargs: Any) -> _T:
+        return dataclasses.replace(self, **kargs)  # type: ignore[type-var]
 
     def _asdict(self) -> dict[str, Any]:
         return dict(self.__dict__)

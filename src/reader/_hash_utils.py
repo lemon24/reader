@@ -76,7 +76,7 @@ def _dataclass_dict(thing: object) -> dict[str, Any]:
     # this way, json.dumps() does the recursion instead of asdict()
 
     # raises TypeError for non-dataclasses
-    fields = dataclasses.fields(thing)
+    fields = dataclasses.fields(thing)  # type: ignore[arg-type]
     # ... but doesn't for dataclass *types*
     if isinstance(thing, type):
         raise TypeError("got type, expected instance")
