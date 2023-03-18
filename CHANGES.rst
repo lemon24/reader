@@ -9,7 +9,7 @@ Changelog
 Version 3.5
 -----------
 
-Unreleased
+Released 2023-03-19
 
 * Make :attr:`Entry.important` an *optional* boolean
   defaulting to :const:`None`,
