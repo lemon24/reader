@@ -267,6 +267,7 @@ class Entry(_namedtuple_compat):
 
     #: Whether the entry is important or not.
     #: :const:`None` means not set.
+    #: :const:`False` means "explicitly unimportant".
     #:
     #: .. versionchanged:: 3.5
     #:  :attr:`important` is now an optional :class:`bool`,

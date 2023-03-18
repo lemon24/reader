@@ -370,21 +370,19 @@ Here is an example of getting entries for a single feed::
 Entry flags
 -----------
 
-Entries can be marked as :meth:`read <Reader.mark_entry_as_read>`
-or as :meth:`important <Reader.mark_entry_as_important>`.
-
-The flags can be used for filtering::
+Entries can be marked as :attr:`~Entry.read` or :attr:`~Entry.important`.
+These flags can be used for filtering::
 
     >>> reader.mark_entry_as_read(entries[0])
     >>> entries = list(reader.get_entries(feed=feed, read=False))
     >>> for entry in entries[:2]:
-    ...     printentry.title)
+    ...     print(entry.title)
     ...
     H.I. #135: Place Your Bets
     # H.I. 134: Boxing Day
 
 
-The time when a flag was last modified is recorded, and is available via
+The time when a flag was changed is available via
 :attr:`~Entry.read_modified` and :attr:`~Entry.important_modified`::
 
     >>> for entry in reader.get_entries(feed=feed, limit=2):

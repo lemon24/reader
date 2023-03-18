@@ -11,6 +11,47 @@ Version 3.5
 
 Unreleased
 
+* Make :attr:`Entry.important` an *optional* boolean
+  defaulting to :const:`None`,
+  so one can express "explicitly unimportant" (*don't care*)
+  by setting it to :const:`False`.
+  This replaces the semantics for *don't care* introduced
+  in `version 2.2 <Version 2.2_>`_.
+  (:issue:`254`)
+
+  .. warning::
+
+    **This is a minor compatibility break**,
+    and should mostly affect code that checks identity
+    (``if entry.important is True: ...``);
+    code that uses :attr:`~Entry.important` in a boolean context
+    (``if entry.important: ...``)
+    should not be affected.
+
+  * :attr:`Entry.important` values will be migrated as follows::
+
+      if read and not important and important_modified:
+          important = False
+      elif not important:
+          important = None
+      else:
+          important = important
+
+  * The ``important`` argument of
+    :meth:`~Reader.get_entries`, :meth:`~Reader.search_entries`, etc.
+    can also take string literals for more precise filtering,
+    see :attr:`~reader.types.TristateFilterInput`.
+
+  * The :mod:`~reader.plugins.mark_as_read` plugin
+    does not set :attr:`~reader.Entry.read_modified` and
+    :attr:`~reader.Entry.important_modified` anymore.
+
+  * The web app uses the new *don't care* semantics.
+
+* :meth:`~Reader.set_entry_read` and :meth:`~Reader.set_entry_important`
+  do not coerce the flag value to :class:`bool` anymore,
+  and require it to be :const:`True` or :const:`False` (or :const:`None`).
+
 
 Version 3.4
 -----------

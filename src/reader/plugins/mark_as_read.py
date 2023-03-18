@@ -26,7 +26,7 @@ tag to something like::
     will be migrated automatically on update until `reader` 3.0.
 
 .. versionchanged:: 3.5
-    Don't set  :attr:`~reader.Entry.read_modified` and
+    Don't set :attr:`~reader.Entry.read_modified` and
     :attr:`~reader.Entry.important_modified` anymore;
     because :attr:`~reader.Entry.important` is now optional,
     ``important = False`` is enough to mark an entry as unimportant.
