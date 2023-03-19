@@ -11,6 +11,11 @@ Version 3.6
 
 Unreleased
 
+* Document the low-level
+  :meth:`~reader._storage.Storage.delete_entries`
+  storage method.
+  (:issue:`301`, :issue:`96`)
+
 
 Version 3.5
 -----------

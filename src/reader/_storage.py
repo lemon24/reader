@@ -385,6 +385,7 @@ MISSING_MIGRATION_DETAIL = (
 
 
 class Storage:
+    """Data access object used for all storage except search."""
 
     # chunk_size and entry_counts_average_periods
     # are not part of the Storage interface,
@@ -1015,6 +1016,20 @@ class Storage:
     def delete_entries(
         self, entries: Iterable[tuple[str, str]], *, added_by: str | None = None
     ) -> None:
+        r"""Delete a list of entries.
+
+        Args:
+            entries (list(tuple(str, str))):
+                A list of :attr:`~reader.Entry.resource_id`\s.
+            added_by (str or None):
+                If given, only delete the entries if their
+                :attr:`~reader.Entry.added_by` is equal to this.
+
+        Raises:
+            EntryNotFoundError: An entry does not exist.
+            EntryError: An entry has a different ``added_by`` from the given one.
+
+        """
         # This must be atomic (unlike add_or_update_entries()); hence, no paging.
         # We'll deal with locking issues only if they start appearing
         # (hopefully, there are both fewer entries to be deleted and

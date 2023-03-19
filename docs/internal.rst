@@ -17,6 +17,9 @@ without using :class:`~reader.Reader` itself.
 Parser
 ------
 
+.. autoattribute:: reader.Reader._parser
+
+
 .. module:: reader._parser
 
 .. autofunction:: default_parser
@@ -106,6 +109,18 @@ Data objects
     :members:
 
 .. autoclass:: EntryForUpdate
+    :members:
+
+
+Storage
+-------
+
+.. autoattribute:: reader.Reader._storage
+
+
+.. module:: reader._storage
+
+.. autoclass:: Storage()
     :members:
 
 

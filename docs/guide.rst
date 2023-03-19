@@ -527,6 +527,7 @@ although UIs might want to restrict this to a smaller set of characters.
     Support entry and global tags.
 
 
+
 Counting things
 ---------------
 
@@ -582,6 +583,26 @@ This example shows how to convert them to monthly statistics::
     1.0 entries/month (past month)
     2.0 entries/month (past 3 months)
     1.3 entries/month (past year)
+
+
+
+Deleting entries
+----------------
+
+As of version |version|, entries are **not** deleted automatically,
+and there is no high-level way of deleting entries;
+see :issue:`96` for details and updates.
+
+Deleting entries properly is non-trivial for two reasons:
+
+* Deleted entries should stay deleted;
+  right now, if you delete an entry that still appears in the feed,
+  it will be added again on the next update.
+* The :mod:`~reader.plugins.entry_dedupe` plugin needs the old entry in order to work.
+
+If you do not care about these issues,
+you can delete entries using the low-level
+:meth:`~reader._storage.Storage.delete_entries` storage method.
 
 
 
