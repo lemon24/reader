@@ -14,6 +14,15 @@ It should be possible to build a decent web interface (at least for reader)
 using only HTML forms with a few JavaScript enhancements added on top.
 
 
+2023 update: `Hypermedia Systems`_ and `htmx`_ seem to embody these ideas
+in a much better way than I could;
+a potential web app re-design will likely use them.
+
+
+.. _Hypermedia Systems: https://hypermedia.systems/
+.. _htmx: https://htmx.org/
+
+
 User interactions
 ~~~~~~~~~~~~~~~~~
 
