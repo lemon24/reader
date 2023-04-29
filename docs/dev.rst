@@ -3,6 +3,32 @@ Development
 ===========
 
 
+Philosophy
+----------
+
+* First and foremost, *reader* is a library (not an app).
+* *reader* is for the long term.
+* *reader* is a framework / *reader* is extensible.
+
+  * e.g. hooks, pluggable storage
+  * not all the way on the framework spectrum, only a tiny bit
+
+* *reader* is stable (within reason).
+* *reader* is simple to use.
+
+  * API matters.
+
+* *reader* exposes powerful primitives that work well together.
+
+  * e.g. tags/metadata, filtering
+
+* *reader* is tested.
+* *reader* is documented.
+* *reader* has few dependencies (that matter).
+
+TODO: clean this up; original title: *the philosophy behind reader*
+
+
 Goals
 -----
 
