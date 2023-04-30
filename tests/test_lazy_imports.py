@@ -75,7 +75,7 @@ LAZY_MODULES = frozenset(
 
 # all in a single script to save time
 
-NO_IMPORTS = """\
+S_NO_IMPORTS = """\
 reader.add_feed('file:feed.rss')  # but not http://
 list(reader.get_entries())
 list(reader.search_entries('entry'))
