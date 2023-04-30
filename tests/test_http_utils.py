@@ -24,7 +24,7 @@ from reader._http_utils import unparse_accept_header
     ],
 )
 def test_parse_accept_header(value):
-    assert parse_accept_header(value) == werkzeug.http.parse_accept_header(value)
+    assert parse_accept_header(value) == list(werkzeug.http.parse_accept_header(value))
 
 
 @pytest.mark.parametrize(
@@ -47,6 +47,6 @@ def test_unparse_accept_header(values):
     ],
 )
 def test_parse_options_header(value):
-    content_type, options = parse_options_header(value)
-    assert content_type == werkzeug.http.parse_options_header(value)[0]
-    assert options == {}
+    actual = parse_options_header(value)
+    expected = werkzeug.http.parse_options_header(value)
+    assert actual == expected
