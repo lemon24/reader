@@ -16,8 +16,8 @@ and without depending on a particular framework.
   :target: https://github.com/lemon24/reader/actions?query=workflow%3Abuild
   :alt: build status (GitHub Actions)
 
-.. |code-coverage| image:: https://codecov.io/github/lemon24/reader/coverage.svg?branch=master
-  :target: https://codecov.io/github/lemon24/reader?branch=master
+.. |code-coverage| image:: https://codecov.io/gh/lemon24/reader/branch/master/graph/badge.svg?token=lcLZaSFysf
+  :target: https://codecov.io/gh/lemon24/reader
   :alt: code coverage
 
 .. |documentation-status| image:: https://readthedocs.org/projects/reader/badge/?version=latest&style=flat
