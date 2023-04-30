@@ -28,13 +28,13 @@ jobs:
 
     steps:
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
       - run: ./run.sh ci-install
       - run: ./run.sh ci-run
 
-      - uses: codecov/codecov-action@v1.5.0
+      - uses: codecov/codecov-action@v3
