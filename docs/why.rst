@@ -33,6 +33,22 @@ If you answered yes to any of the above, *reader* can help.
 .. _JSON Feed: https://jsonfeed.org/
 
 
+
+The *reader* philosophy
+-----------------------
+
+* *reader* is a library
+* *reader* is for the long term
+* *reader* is extensible
+* *reader* is stable (within reason)
+* *reader* is simple to use; API matters
+* *reader* features work well together
+* *reader* is tested
+* *reader* is documented
+* *reader* has minimal dependencies
+
+
+
 Why make your own feed reader?
 ------------------------------
 
