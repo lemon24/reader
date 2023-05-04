@@ -32,8 +32,8 @@ readonly SCRIPT="$PROJECT_ROOT/$( basename "$0" )"
 
 
 function install-dev {
-    pip install -e '.[dev]'
-    pre-commit install
+    pip install -e '.[dev]' --upgrade --upgrade-strategy=eager
+    pre-commit install --install-hooks
 }
 
 
@@ -44,11 +44,13 @@ function test {
 
 function coverage-all {
     clean-pyc
+    # TODO: do we need to --cov-context=test all the time?
     coverage-run --cov-context=test "$@"
     coverage-report --show-contexts
 }
 
 function coverage-run {
+    # TODO: is pytest-cov needed?
     pytest --runslow --cov "$@"
 }
 
