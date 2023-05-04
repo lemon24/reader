@@ -669,7 +669,7 @@ Released 2021-08-18
   `details <https://github.com/lemon24/reader/issues/163#issuecomment-895041943>`_).
 
   Note these globals are private, and thus *not* covered by the
-  :doc:`backwards compatibility policy <compat>`.
+  :ref:`backwards compatibility policy <compat>`.
 
 
 Version 2.0

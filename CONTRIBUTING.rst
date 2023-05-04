@@ -264,4 +264,4 @@ If you have `entr <http://eradman.com/entrproject/>`_ installed,
 will run the corresponding commands when the files in the repo change.
 
 Likewise, ``serve-dev`` will run the web app with the Flask
-`development server <https://flask.palletsprojects.com/en/2.3.x/server/>`_.
+`development server <https://flask.palletsprojects.com/en/latest/server/>`_.

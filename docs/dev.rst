@@ -30,8 +30,63 @@ In no particular order:
 Also see open issues: https://github.com/lemon24/reader/issues
 
 
+.. _compat:
+
+Backwards compatibility
+-----------------------
+
+*reader* uses `semantic versioning`_.
+
+Breaking compatibility is done by incrementing the major version,
+announcing it in the :doc:`changelog`,
+and raising deprecation warnings for at least one minor version
+before the new major version is released (if possible).
+
+There may be minor exceptions to this,
+e.g. bug fixes and gross violation of specifications;
+they will be announced in the :doc:`changelog`
+with a **This is a minor compatibility break** warning.
+
+Schema migrations for the default storage must happen automatically.
+Migrations can be removed in new major versions,
+with at least 3 months provided since the last migration.
+
+.. _semantic versioning: https://semver.org/
+
+
+What is the public API
+~~~~~~~~~~~~~~~~~~~~~~
+
+*reader* follows the `PEP 8 definition`_ of public interface.
+
+The following are part of the public API:
+
+* Every interface documented in the :doc:`API reference <api>`.
+* Any (documented) module, function, object, method, and attribute,
+  defined in the *reader* package,
+  that is accessible without passing through a name
+  that starts with underscore.
+* The number and position of positional arguments.
+* The names of keyword arguments.
+* Argument types (argument types cannot become more strict).
+* Attribute types (attribute types cannot become less strict).
+
+Undocumented type aliases (even if not private)
+are **not** part of the public API.
+
+Other exceptions are possible; they will be marked aggresively as such.
+
+.. _PEP 8 definition: https://www.python.org/dev/peps/pep-0008/#public-and-internal-interfaces
+
+
+.. seealso::
+
+  The `Twisted Compatibility Policy <https://github.com/twisted/twisted/blob/twisted-16.2.0/docs/core/development/policy/compatibility-policy.rst>`_,
+  which served as inspiration for this.
+
+
 Supported Python versions
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The oldest Python version reader should support is:
 
@@ -40,15 +95,27 @@ The oldest Python version reader should support is:
 
 This usually ends up being the last 3 stable CPython versions.
 
+Dropping support for a Python version should be announced
+at least 1 release prior.
+
+
+
+Releases
+--------
+
+For convenience, *reader* only releases major and minor versions
+(bugfixes go in minor versions).
+Changes go only to the next release (no backports).
+
 
 Making a release
-----------------
-
-Making a release (from ``x`` to ``y`` == ``x + 1``):
+~~~~~~~~~~~~~~~~
 
 .. note::
 
     :gh:`scripts/release.py <scripts/release.py>` already does most of these.
+
+Making a release (from ``x`` to ``y`` == ``x + 1``):
 
 * (release.py) bump version in ``src/reader/__init__.py`` to ``y``
 * (release.py) update changelog with release version and date

@@ -87,7 +87,6 @@ It is rigorously tested on Python |min_python|\+ and PyPy.
     :maxdepth: 2
 
     contributing
-    compat
     dev
     changelog
 
