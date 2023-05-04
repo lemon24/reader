@@ -41,74 +41,6 @@ The oldest Python version reader should support is:
 This usually ends up being the last 3 stable CPython versions.
 
 
-Style guide
------------
-
-*reader* uses the `Black <https://black.readthedocs.io/en/stable/>`_ style.
-
-You should enforce it by using `pre-commit <https://pre-commit.com/>`_.
-To install it into your git hooks, run::
-
-    pip install pre-commit  # ./run.sh install-dev already does both
-    pre-commit install
-
-Every time you clone the repo, running ``pre-commit install`` should always be
-the first thing you do.
-
-
-Testing
--------
-
-First, install the testing dependencies::
-
-    ./run.sh install-dev    # or
-    pip install '.[dev]'
-
-Run tests using the current Python interpreter::
-
-    pytest --runslow
-
-Run tests using the current Python interpreter, but skip slow tests::
-
-    pytest
-
-Run tests for all supported Python versions::
-
-    tox
-
-Run tests with coverage and generate an HTML report (in ``./htmlcov``)::
-
-    ./run.sh coverage-all
-
-Run the type checker::
-
-    ./run.sh typing         # or
-    mypy --strict src
-
-Start a local development server for the web application::
-
-    ./run.sh serve-dev      # or
-
-    FLASK_DEBUG=1 FLASK_TRAP_BAD_REQUEST_ERRORS=1 \
-    FLASK_APP=src/reader/_app/wsgi.py \
-    READER_DB=db.sqlite flask run -h 0.0.0.0 -p 8000
-
-
-Building the documentation
---------------------------
-
-First, install the dependencies::
-
-    pip install '.[docs]'   # ./run.sh install-dev already does it for you
-
-The documentation is built with Sphinx::
-
-    ./run.sh docs           # or
-    make -C docs html       # using Sphinx's Makefile directly
-
-The built HTML docs should be in ``./docs/_build/html/``.
-
-
 Making a release
 ----------------
 
@@ -134,6 +66,8 @@ Making a release (from ``x`` to ``y`` == ``x + 1``):
 * (release.py) bump versions from ``y`` to ``(y + 1).dev0``, add ``(y + 1)`` changelog section
 * (release.py prompts) trigger Read the Docs build for `<major>.x` (doesn't happen automatically)
 
+
+.. _design notes:
 
 Design notes
 ------------
