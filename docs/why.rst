@@ -34,6 +34,8 @@ If you answered yes to any of the above, *reader* can help.
 
 
 
+.. _philosophy:
+
 The *reader* philosophy
 -----------------------
 

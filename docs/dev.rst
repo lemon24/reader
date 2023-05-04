@@ -3,18 +3,12 @@ Development
 ===========
 
 
-Goals
------
-
-Goals:
-
-* clearly documented API
-* minimal web interface
-* minimal CLI
-
 Development should follow a problem-solution_ approach.
 
+.. seealso::  :ref:`philosophy`
+
 .. _problem-solution: https://hintjens.gitbooks.io/scalable-c/content/chapter1.html#problem-what-do-we-do-next
+
 
 
 Roadmap
