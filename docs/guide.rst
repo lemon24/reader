@@ -18,8 +18,11 @@ and a few examples of how to use them.
 The Reader object
 -----------------
 
-The :class:`Reader` object persists feed and entry state
-and provides operations on them.
+Most *reader* functionality is available through a :class:`Reader` instance,
+which persists feed and entry state
+and provides operations on them;
+in :abbr:`MVC (model–view–controller)` parlance,
+you would probably call it a fat model.
 
 
 To create a new Reader,
@@ -88,7 +91,7 @@ when garbage-collected).
 Temporary databases
 ~~~~~~~~~~~~~~~~~~~
 
-In order to maximize the usefulness temporary databases,
+To maximize the usefulness of temporary databases,
 the database connection is closed (and the data discarded)
 only when calling :meth:`~Reader.close`,
 not when using the reader as a context manager.
