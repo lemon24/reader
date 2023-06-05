@@ -2,6 +2,9 @@
 Development
 ===========
 
+.. module:: reader
+  :noindex:
+
 
 Development should follow a problem-solution_ approach.
 
@@ -17,17 +20,58 @@ Roadmap
 The plan is to continue evolving the library
 to support as many "feed reader application" use cases as possible,
 while still following the :ref:`philosophy`.
-
 Even if a specific feature is not a good fit for the library itself,
-I am interested in finding a generic solution
+it should be possible to find a more generic solution
 that makes it possible to build the feature on top.
 
+Following is an unsorted, non-exhausive list of known areas for improvement.
 I am working on *reader* based on my current interests,
-but I will prioritize supporting :doc:`contributors <contributing>`.
+but I will prioritize supporting :doc:`contributors <contributing>`
+(discussions, reviews and so on).
 
-Following is an unsorted, non-exhausive list of areas for improvement:
+* OPML support, :issue:`165`
+* :ref:`deleting entries <deleting entries>`
+* more feed interaction statistics, :issue:`254`
 
+* security
+
+  * XML safety, :issue:`212`
+  * sanitization unification, likely as a plugin, :issue:`125` and :issue:`227`
+  * relative link resolution unification, :issue:`125`
+
+* sorting
+
+  * reverse order, :issue:`201`
+  * sort by unread entries, :issue:`245`
+  * sort by "recently interacted with", :issue:`294`
+  * better feed title sort, :issue:`250`
+  * sort feeds by entry counts, including :attr:`~EntryCounts.averages`
+
+* resource tags
+
+  * :ref:`searchable tag values <searchable tags>`, e.g. for comments
+  * :ref:`unification with entry.read/important <entry flag unification>`
+  * filter entries by entry tags
+  * optimistic locking, :issue:`308`
+  * filter tags by prefix, :issue:`309`
+
+
+* HTTP compliance, likely as plugins
+
+  * 301 Moved Permanently, :issue:`246`
+  * 410 Gone, :issue:`246`
+  * 429 Too Many Requests, :issue:`307`
+
+* add more fields to data objects
+
+  * entry source, :issue:`276`
+  * extra data, as an escape hatch, :issue:`277`
+
+* :ref:`multiple storage implementations <multiple storage implementations>`
+* :ref:`batch get methods <batch get methods>`
 * :doc:`internal` stabilization
+* arbitrary website scraping, :issue:`222`
+* :ref:`feed categories <categories>`, likely as a plugin
 
 
 Also see `open issues`_ and :ref:`Design notes`.
@@ -204,6 +248,8 @@ and I think testing it with multiple databases would take quite some time.
 .. _I had in mind: https://github.com/lemon24/reader/issues/168#issuecomment-642002049
 
 
+.. _multiple storage implementations:
+
 Multiple storage implementations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -303,6 +349,8 @@ Resource tags / metadata
 Feed tags
 ^^^^^^^^^
 
+.. _categories:
+
 Detailed requirements and API discussion,
 and a case study of how to implement categories on top of tags:
 :issue:`184#issuecomment-689587006`.
@@ -312,6 +360,8 @@ generic (global, feed, entry) tag API: :issue:`266#issuecomment-1013739526`.
 
 Entry tags
 ^^^^^^^^^^
+
+.. _searchable tags:
 
 :issue:`228#issuecomment-810098748` discusses
 three different kinds of entry user data,
@@ -324,6 +374,8 @@ and why I want more use-cases before implementing them (basically, YAGNI):
 
   * also discusses how to build an enclosure cache/preloader
     (doesn't need special *reader* features besides what's available in 1.16)
+
+.. _entry flag unification:
 
 :issue:`253` discusses using entry tags to implement the current entry flags
 (read, important); tl;dr: it's not worth adding entry tags just for this.
@@ -376,6 +428,8 @@ Updating entries based on a hash of their content (regardless of ``updated``):
 Decision to ignore feed.updated when updating feeds: :issue:`231`.
 
 
+.. _deleting entries:
+
 Deleting entries
 ~~~~~~~~~~~~~~~~
 
@@ -398,6 +452,8 @@ This comment: :issue:`177#issuecomment-674786498`.
 
 Batch methods
 ~~~~~~~~~~~~~
+
+.. _batch get methods:
 
 Some initial thoughts on batch get methods (including API/typing)
 in :issue:`191` (closed with `wontfix`, for now).
