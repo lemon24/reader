@@ -14,14 +14,44 @@ Development should follow a problem-solution_ approach.
 Roadmap
 -------
 
-In no particular order:
+The plan is to continue evolving the library
+to support as many "feed reader application" use cases as possible,
+while still following the :ref:`philosophy`.
 
-* Internal API stabilization.
+Even if a specific feature is not a good fit for the library itself,
+I am interested in finding a generic solution
+that makes it possible to build the feature on top.
+
+I am working on *reader* based on my current interests,
+but I will prioritize supporting :doc:`contributors <contributing>`.
+
+Following is an unsorted, non-exhausive list of areas for improvement:
+
+* :doc:`internal` stabilization
+
+
+Also see `open issues`_ and :ref:`Design notes`.
+
+.. _open issues: https://github.com/lemon24/reader/issues
+
+
+Command-line interface
+~~~~~~~~~~~~~~~~~~~~~~
+
 * CLI stabilization.
+
+
+Web application
+~~~~~~~~~~~~~~~
+
+.. The current web app is unsupported in that I don't have time to do any major changes/improvements to it. But, I am and will be using it until a better one exists.
+
+.. I would like to have a more feature-complete web app at some point, one that actually looks nice and is pleasant to use by others. This seems like a bigger undertaking than I have time for (I do have ideas, though).
+
+.. by necessity, opinionated, so ideally it should be spun off in a separate project
+
 * Web application re-design.
 * Web application stabilization.
-
-Also see open issues: https://github.com/lemon24/reader/issues
 
 
 .. _compat:
@@ -267,19 +297,24 @@ From the initial issue:
 * initial requirements: :issue:`149#issuecomment-700532183`
 
 
-Feed tags
-~~~~~~~~~
+Resource tags / metadata
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-Detailed requirements and API discussion: :issue:`184#issuecomment-689587006`.
+Feed tags
+^^^^^^^^^
+
+Detailed requirements and API discussion,
+and a case study of how to implement categories on top of tags:
+:issue:`184#issuecomment-689587006`.
 
 Merging tags and metadata, and the addition of a new,
 generic (global, feed, entry) tag API: :issue:`266#issuecomment-1013739526`.
 
+Entry tags
+^^^^^^^^^^
 
-Entry user data
-~~~~~~~~~~~~~~~
-
-:issue:`228#issuecomment-810098748` discusses three different kinds,
+:issue:`228#issuecomment-810098748` discusses
+three different kinds of entry user data,
 how they would be implemented,
 and why I want more use-cases before implementing them (basically, YAGNI):
 
@@ -297,6 +332,13 @@ After closing :issue:`228` with `wontfix` in late 2021,
 in early 2022 (following the :issue:`266` tag/metadata unification)
 I implemented entry and global tags in :issue:`272`;
 there's a list of known use cases in the issue description.
+
+Resource tags
+^^^^^^^^^^^^^
+
+Optimistic locking for tags: :issue:`308`.
+
+Filter tags by prefix: :issue:`309`.
 
 
 User-added entries
@@ -332,6 +374,14 @@ Updating entries based on a hash of their content (regardless of ``updated``):
 * ideas for how to deal with spurious hash changes: :issue:`225`
 
 Decision to ignore feed.updated when updating feeds: :issue:`231`.
+
+
+Deleting entries
+~~~~~~~~~~~~~~~~
+
+Requirements, open questions, and how it interacts with :mod:`~reader.plugins.entry_dedupe`: :issue:`96`.
+
+A summary of why it isn't easy to do: :issue:`301#issuecomment-1442423151`.
 
 
 Counts API
