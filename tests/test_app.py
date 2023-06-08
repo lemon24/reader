@@ -26,9 +26,24 @@ def make_app(config):
 
 def make_browser(app):
     session = requests.Session()
-    session.mount('http://app/', wsgiadapter.WSGIAdapter(app))
+    session.mount('http://app/', WSGIAdapter(app))
     browser = mechanicalsoup.StatefulBrowser(session)
     return browser
+
+
+class WSGIAdapter(wsgiadapter.WSGIAdapter):
+    """Workaround for https://github.com/seanbrant/requests-wsgi-adapter/issues/23."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        original_app = self.app
+
+        def new_app(environ, start_response):
+            environ['CONTENT_LENGTH'] = str(environ['CONTENT_LENGTH'])
+            return original_app(environ, start_response)
+
+        self.app = new_app
 
 
 @pytest.fixture
@@ -60,6 +75,7 @@ def test_mark_as_read_unread(db_path, make_reader, browser):
 
     form = browser.select_form('.entry form.action-mark-as-read')
     response = browser.submit_selected(form.form.find('button', text='mark as read'))
+
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.entry')) == 0
 
