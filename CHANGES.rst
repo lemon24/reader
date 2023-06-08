@@ -11,6 +11,8 @@ Version 3.6
 
 Unreleased
 
+* Add documentation on :doc:`contributing`. (:issue:`60`)
+* Add a detailed :ref:`roadmap`. (:issue:`60`)
 * Document the low-level
   :meth:`~reader._storage.Storage.delete_entries`
   storage method.
