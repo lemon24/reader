@@ -39,18 +39,19 @@ Please use `Github Discussions`_ for support or general questions.
 Submitting patches
 ------------------
 
-If there is not an open issue for what you want to submit,
-prefer opening one for discussion before working on a PR.
+If there is no open issue for what you want to submit,
+prefer opening one for discussion before working on a pull request.
 
 You can work on any `help wanted`_ issue
 that does not have an open PR or an assigned maintainer
 (no need to ask).
 
-For other open issues, please ask first,
+For other `open issues`_, please ask first,
 there may be background that didn't end up in the issue yet;
-also see :ref:`design notes`.
+also see :ref:`roadmap` and :ref:`design notes`.
 
 .. _help wanted: https://github.com/lemon24/reader/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22
+.. _open issues: https://github.com/lemon24/reader/issues
 
 
 Include the following in your patch:
