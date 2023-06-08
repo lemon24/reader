@@ -17,7 +17,7 @@ Unreleased
   :meth:`~reader._storage.Storage.delete_entries`
   storage method.
   (:issue:`301`, :issue:`96`)
-* Update vendored ``reader._http_utils`` to werkzeug 2.3.2.
+* Update vendored ``reader._http_utils`` to werkzeug 2.3.5.
 
 
 Version 3.5

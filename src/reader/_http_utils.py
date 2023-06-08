@@ -16,7 +16,7 @@ from urllib.parse import unquote
 __all__ = ['parse_accept_header', 'parse_options_header', 'unparse_accept_header']
 
 
-def parse_accept_header(value: str) -> list[tuple[str, float]]:
+def parse_accept_header(value: str) -> list[tuple[str, float]]:  # pragma: no cover
     """werkzeug.http.parse_accept_header(), but returns a plain list."""
     if not value:
         return []
@@ -29,7 +29,7 @@ def parse_accept_header(value: str) -> list[tuple[str, float]]:
         if "q" in options:
             try:
                 # pop q, remaining options are reconstructed
-                q = float(options.pop("q"))
+                q = _plain_float(options.pop("q"))
             except ValueError:
                 # ignore an invalid q
                 continue
@@ -250,3 +250,14 @@ def unparse_accept_header(values: Iterable[tuple[str, float]]) -> str:
             value = f"{value};q={quality}"
         result.append(value)
     return ",".join(result)
+
+
+_plain_float_re = re.compile(r"-?\d+\.\d+", re.ASCII)
+
+
+def _plain_float(value: str) -> float:
+    """werkzeug._internal._plain_float"""
+    if _plain_float_re.fullmatch(value) is None:
+        raise ValueError
+
+    return float(value)
