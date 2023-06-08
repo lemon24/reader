@@ -8,7 +8,7 @@ Development
 
 Development should follow a problem-solution_ approach.
 
-.. seealso::  :ref:`philosophy`
+.. seealso:: :ref:`philosophy`
 
 .. _problem-solution: https://hintjens.gitbooks.io/scalable-c/content/chapter1.html#problem-what-do-we-do-next
 
@@ -26,6 +26,7 @@ that makes it possible to build the feature on top.
 
 Following is an unsorted, non-exhausive list of known areas for improvement.
 I am working on *reader* based on my current interests,
+in my spare time,
 but I will prioritize supporting :doc:`contributors <contributing>`
 (discussions, reviews and so on).
 
@@ -74,28 +75,48 @@ but I will prioritize supporting :doc:`contributors <contributing>`
 * :ref:`feed categories <categories>`, likely as a plugin
 
 
-Also see `open issues`_ and :ref:`Design notes`.
+.. seealso::
+
+    `Open issues`_ and :ref:`Design notes`.
 
 .. _open issues: https://github.com/lemon24/reader/issues
 
 
+.. _cli roadmap:
+
 Command-line interface
 ~~~~~~~~~~~~~~~~~~~~~~
 
-* CLI stabilization.
+The :doc:`cli` is more or less stable,\ [*]_
+although both the output and config loading need more polish
+and additional tests.
 
+A full-blown terminal feed reader is *not* in scope,
+since I don't need one,
+but I'm not opposed to the idea.
+
+.. [*] With the exception of ``serve``, which is provided by the web app.
+
+
+.. _app roadmap:
 
 Web application
 ~~~~~~~~~~~~~~~
 
-.. The current web app is unsupported in that I don't have time to do any major changes/improvements to it. But, I am and will be using it until a better one exists.
+The :doc:`app` is "unsupported",
+in that it's not all that polished,
+and I don't have time to do major improvments.
+But, I am using it daily,
+and it will keep working until a better one exists.
 
-.. I would like to have a more feature-complete web app at some point, one that actually looks nice and is pleasant to use by others. This seems like a bigger undertaking than I have time for (I do have ideas, though).
+Long term, I'd like to:
 
-.. by necessity, opinionated, so ideally it should be spun off in a separate project
+* re-design it from scratch to improve usability
+* switch to `htmx`_ instead of using a home-grown solution
+* spin it off into a separate package/project
 
-* Web application re-design.
-* Web application stabilization.
+.. _htmx: https://htmx.org/
+
 
 
 .. _compat:

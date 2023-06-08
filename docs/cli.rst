@@ -2,11 +2,14 @@
 Command-line interface
 ======================
 
-This part of the documentation covers the *reader* command-line interface.
+*reader* comes with a command-line interface
+that exposes basic management functionality.
+
 
 .. warning::
 
-    The CLI is not stable yet and might change without any notice.
+    The CLI is is not fully stable,
+    see the :ref:`roadmap <cli roadmap>` for details.
 
 .. note::
 

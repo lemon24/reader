@@ -8,7 +8,8 @@ all browsers, including light-weight / text-only ones.
 
 .. warning::
 
-    The web application is not stable yet and might change without any notice.
+    The web application is not fully supported,
+    see the :ref:`roadmap <app roadmap>` for details.
 
 .. note::
 
