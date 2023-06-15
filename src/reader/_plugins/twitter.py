@@ -2,6 +2,10 @@
 twitter
 ~~~~~~~
 
+.. attention::
+
+  This plugin is deprecated and will be removed in version 3.7.
+
 .. module:: reader
   :noindex:
 
@@ -98,6 +102,7 @@ import json
 import logging
 import posixpath
 import re
+import warnings
 from contextlib import contextmanager
 from dataclasses import dataclass
 from dataclasses import field
@@ -119,6 +124,11 @@ from reader._parser import RetrieveResult
 from reader._types import EntryData
 from reader._types import FeedData
 
+
+warnings.warn(
+    "The twitter plugin is deprecated and will be removed in reader version 3.7.",
+    DeprecationWarning,
+)
 
 log = logging.getLogger('reader._plugins.twitter')
 

@@ -19,6 +19,14 @@ Unreleased
   (:issue:`301`, :issue:`96`)
 * Update vendored ``reader._http_utils`` to werkzeug 2.3.5.
 
+* Deprecate the (experimental) :mod:`~reader._plugins.twitter` plugin,
+  since the Twitter API does not have a (useful) free tier anymore.
+  (:issue:`310`)
+
+  .. attention::
+
+    The :mod:`~reader._plugins.twitter` plugin will be removed in version 3.7.
+
 
 Version 3.5
 -----------
