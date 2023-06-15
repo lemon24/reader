@@ -9,7 +9,7 @@ Changelog
 Version 3.6
 -----------
 
-Unreleased
+Released 2023-06-16
 
 * Add documentation on :doc:`contributing`. (:issue:`60`)
 * Add a detailed :ref:`roadmap`. (:issue:`60`)
