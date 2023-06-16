@@ -11,6 +11,11 @@ Version 3.7
 
 Unreleased
 
+.. attention::
+
+    This is the last release to support Python 3.9;
+    see :issue:`302` for details.
+
 * Support PyPy 3.10. (:issue:`302`)
 
 
