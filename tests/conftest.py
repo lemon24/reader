@@ -55,11 +55,17 @@ def pytest_runtest_setup(item):
     # see the comments in setup.cfg for details.
     for mark in item.iter_markers(name="requires_lxml"):
         no_lxml = [
-            # currently, we have lxml wheels on all supported platforms;
-            # last in bbe1deee5eee800291b5a0e83fc4ab1cb949445c
+            sys.implementation.name == 'pypy' and sys.version_info[:2] > (3, 9),
         ]
         if any(no_lxml):
             pytest.skip("test requires lxml")
+
+    # getting intermittent Flask-context-related errors on pypy:
+    #   AssertionError: Popped wrong app context.
+    #   RuntimeError: Working outside of request context.
+    for mark in item.iter_markers(name="apptest"):
+        if sys.implementation.name == 'pypy':
+            pytest.skip("flask tests are flaky on pypy")
 
 
 @pytest.fixture

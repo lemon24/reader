@@ -11,6 +11,8 @@ Version 3.7
 
 Unreleased
 
+* Support PyPy 3.10. (:issue:`302`)
+
 
 Version 3.6
 -----------

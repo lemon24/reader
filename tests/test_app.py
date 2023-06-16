@@ -16,8 +16,7 @@ try:
 except ImportError:
     pass
 
-# Don't run these tests if we don't have lxml.
-pytestmark = pytest.mark.requires_lxml
+pytestmark = [pytest.mark.requires_lxml, pytest.mark.apptest]
 
 
 def make_app(config):

@@ -1,11 +1,15 @@
 import pytest
 from test_app import make_app
 from test_app import make_browser
+from test_app import pytestmark
 
 from reader._plugins.preview_feed_list import get_alternates
 
 
-pytestmark = pytest.mark.filterwarnings("ignore:No parser was explicitly specified")
+pytestmark = list(pytestmark)
+pytestmark.append(
+    pytest.mark.filterwarnings("ignore:No parser was explicitly specified")
+)
 
 
 MAIN_IN = """\
