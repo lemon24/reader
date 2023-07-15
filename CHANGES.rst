@@ -9,7 +9,7 @@ Changelog
 Version 3.7
 -----------
 
-Unreleased
+Released 2023-07-15
 
 .. attention::
 
