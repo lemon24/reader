@@ -305,6 +305,8 @@ Alternative feed parsers:
 * comparison between feedparser and Atoma: :issue:`264#issuecomment-981678120`, :issue:`263`
 
 
+.. _twitter-lessons:
+
 Lessons learned from the :ref:`Twitter` plugin:
 
 * It is useful for a retriever to pass an arbitrary resource to the parser.

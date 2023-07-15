@@ -59,7 +59,8 @@ Prior to version 3.7, *reader* had a Twitter plugin;
 it was removed because
 it's not possible to get tweets using the free API tier anymore.
 
-However, the plugin used the internal :ref:`parser` API in new and interesting ways
+However, the plugin used the internal :ref:`parser` API
+:ref:`in new and interesting ways <twitter-lessons>`
 – it mapped the multiple tweets in a thread to a single entry,
 and stored old tweets alongside the rendered HTML content
 to avoid retrieving them again when updating the thread/entry.
