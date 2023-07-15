@@ -305,6 +305,47 @@ Alternative feed parsers:
 * comparison between feedparser and Atoma: :issue:`264#issuecomment-981678120`, :issue:`263`
 
 
+Lessons learned from the :ref:`Twitter` plugin:
+
+* It is useful for a retriever to pass an arbitrary resource to the parser.
+
+  This is already codified in
+  :meth:`~reader._parser.RetrieverType` and
+  :meth:`~reader._parser.ParserType` being generic.
+
+* It is useful for a Retriever to store arbitrary caching data;
+  the plugin (mis)used
+  :attr:`~reader._parser.RetrieveResult.http_etag`
+  to store the (integer) id of the newest tweet in the thread.
+
+  It would be nice to formalize this into a single
+  "arbitrary caching data" attribute;
+  also see `this comment <https://github.com/lemon24/reader/blob/0ada24bf4e65c69c3028641bada8eaeabbe02754/src/reader/_parser.py#L569>`_.
+
+* It is useful for a Retriever to pass arbitrary data to itself;
+  the plugin (mis)used
+  :attr:`~reader._types.FeedForUpdate.http_etag` to pass from
+  :meth:`~reader._parser.FeedForUpdateRetrieverType.process_feed_for_update`
+  to :meth:`~reader._parser.RetrieverType.__call__`:
+
+  * the bearer token and the ids of recent entries (used to retrieve tweets)
+  * the ids of entries to re-render, triggered by a one-off tag (passed along to the parser)
+
+  This distinction was made so that ``process_feed_for_update()``
+  takes all the decisions upfront
+  (possibly taking advantage of ``Storage.get_feeds_for_update()``
+  future optimisations to e.g. also get tags),
+  and calling the retriever (in parallel) doesn't do any reader operations.
+
+  It would be nice to formalize this as well.
+
+* A plugin can coordinate between a custom retriever and custom parser
+  with an unregistered RetrieveResult MIME type
+  (e.g. ``application/x.twitter``).
+* A plugin can keep arbitrary data as a content with an unregistered type
+  (e.g. ``application/x.twitter+json``).
+
+
 Metrics
 ~~~~~~~
 
