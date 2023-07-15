@@ -37,7 +37,7 @@ default:
         # map; options are ignored at the moment.
         # Note that unlike other settings, plugins are merged, not replaced.
         plugins:
-            reader._plugins.tumblr_gdpr:tumblr_gdpr:
+            reader._plugins.sqlite_releases:init:
             reader.ua_fallback:
 
 

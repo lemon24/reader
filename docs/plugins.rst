@@ -42,8 +42,13 @@ use the entry point as a :ref:`custom plugin <custom plugins>`::
 .. automodule:: reader._plugins.preview_feed_list
 .. automodule:: reader._plugins.enclosure_tags
 .. automodule:: reader._plugins.sqlite_releases
-.. automodule:: reader._plugins.tumblr_gdpr
 
+
+
+Discontinued plugins
+--------------------
+
+Following are experimental plugins that are not very useful anymore.
 
 .. _twitter:
 
@@ -61,6 +66,23 @@ to avoid retrieving them again when updating the thread/entry.
 
 You can still find the code
 `on GitHub <https://github.com/lemon24/reader/blob/3.6/src/reader/_plugins/twitter.py>`_.
+
+
+.. _tumblr_gdpr:
+
+tumblr_gdpr
+~~~~~~~~~~~
+
+Prior to version 3.7, *reader* had a plugin to accept Tumblr GDPR terms
+(between 2018 and 2020, Tumblr would redirect all new sessions
+to an "accept the terms of service" page,
+including machine-readable RSS feeds).
+
+This plugin is a good example of how to set cookies
+on the Requests session used to retrieve feeds.
+
+You can still find the code
+`on GitHub <https://github.com/lemon24/reader/blob/3.6/src/reader/_plugins/tumblr_gdpr.py>`_.
 
 
 

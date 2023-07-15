@@ -18,8 +18,12 @@ Unreleased
 
 * Support PyPy 3.10. (:issue:`302`)
 
-* Remove the :ref:`twitter` plugin (deprecated in `3.6 <Version 3.6_>`_).
+* Remove the :ref:`twitter` experimental plugin
+  (deprecated in `3.6 <Version 3.6_>`_).
   (:issue:`310`)
+* Remove the :ref:`tumblr_gdpr` experimental plugin
+  (not needed since August 2020).
+  (:issue:`315`)
 
 
 Version 3.6
@@ -35,7 +39,7 @@ Released 2023-06-16
   (:issue:`301`, :issue:`96`)
 * Update vendored ``reader._http_utils`` to werkzeug 2.3.5.
 
-* Deprecate the experimental :ref:`twitter` plugin,
+* Deprecate the :ref:`twitter` experimental plugin,
   since the Twitter API does not have a (useful) free tier anymore.
   (:issue:`310`)
 
@@ -1669,4 +1673,4 @@ Version 0.1
 Released on 2018-09-15
 
 * Initial release; public API stable.
-* Support broken Tumblr feeds via the the ``tumblr_gdpr`` plugin. (:issue:`67`)
+* Support broken Tumblr feeds via the the :ref:`tumblr_gdpr` plugin. (:issue:`67`)
