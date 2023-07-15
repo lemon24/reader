@@ -14,6 +14,8 @@ without using :class:`~reader.Reader` itself.
     it is not stable yet and might change without any notice.
 
 
+.. _parser:
+
 Parser
 ------
 

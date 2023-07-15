@@ -42,9 +42,6 @@ and without depending on a particular framework.
 *reader* allows you to:
 
 * retrieve, store, and manage **Atom**, **RSS**, and **JSON** feeds
-
-  * and even follow **Twitter** accounts
-
 * mark articles as read or important
 * add arbitrary tags/metadata to feeds and articles
 * filter feeds and articles

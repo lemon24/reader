@@ -18,6 +18,9 @@ Unreleased
 
 * Support PyPy 3.10. (:issue:`302`)
 
+* Remove the :ref:`twitter` plugin (deprecated in `3.6 <Version 3.6_>`_).
+  (:issue:`310`)
+
 
 Version 3.6
 -----------
@@ -32,13 +35,13 @@ Released 2023-06-16
   (:issue:`301`, :issue:`96`)
 * Update vendored ``reader._http_utils`` to werkzeug 2.3.5.
 
-* Deprecate the (experimental) :mod:`~reader._plugins.twitter` plugin,
+* Deprecate the experimental :ref:`twitter` plugin,
   since the Twitter API does not have a (useful) free tier anymore.
   (:issue:`310`)
 
   .. attention::
 
-    The :mod:`~reader._plugins.twitter` plugin will be removed in version 3.7.
+    The :ref:`twitter` plugin will be removed in version 3.7.
 
 
 Version 3.5
@@ -135,7 +138,7 @@ This release marks *reader*'s `5th anniversary`_ and its 2000th commit.
         reader._parser.session_factory.request_hooks.append(...)
         reader._parser.session_factory.response_hooks.append(...)
 
-* :mod:`~reader._plugins.twitter` plugin:
+* :ref:`twitter` plugin:
   don't fail when deserializing tweets with missing ``edit_history_tweet_ids``
   (fails in tweepy 4.11, warns in tweepy >4.12).
 
@@ -352,7 +355,7 @@ Version 2.13
 
 Released 2022-06-28
 
-* Add the :mod:`~reader._plugins.twitter` experimental plugin,
+* Add the :ref:`twitter` experimental plugin,
   which allows using a Twitter account as a feed.
   (:issue:`271`)
 * Skip with a warning entries that have no <guid> or <link> in an RSS feed;

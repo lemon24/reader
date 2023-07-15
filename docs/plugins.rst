@@ -38,13 +38,29 @@ use the entry point as a :ref:`custom plugin <custom plugins>`::
     >>> reader = make_reader("db.sqlite", plugins=[sqlite_releases.init])
 
 
-.. _twitter:
-.. automodule:: reader._plugins.twitter
 .. automodule:: reader._plugins.cli_status
 .. automodule:: reader._plugins.preview_feed_list
 .. automodule:: reader._plugins.enclosure_tags
 .. automodule:: reader._plugins.sqlite_releases
 .. automodule:: reader._plugins.tumblr_gdpr
+
+
+.. _twitter:
+
+twitter
+~~~~~~~
+
+Prior to version 3.7, *reader* had a Twitter plugin;
+it was removed because
+it's not possible to get tweets using the free API tier anymore.
+
+However, the plugin used the internal :ref:`parser` API in new and interesting ways
+– it mapped the multiple tweets in a thread to a single entry,
+and stored old tweets alongside the rendered HTML content
+to avoid retrieving them again when updating the thread/entry.
+
+You can still find the code
+`on GitHub <https://github.com/lemon24/reader/blob/3.6/src/reader/_plugins/twitter.py>`_.
 
 
 
