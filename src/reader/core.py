@@ -33,6 +33,7 @@ from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
 from ._update import Pipeline
 from ._utils import make_pool_map
+from ._utils import MapContextManager
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
@@ -1034,7 +1035,9 @@ class Reader:
         if workers < 1:
             raise ValueError("workers must be a positive integer")
 
-        make_map = nullcontext(builtins.map) if workers == 1 else make_pool_map(workers)
+        make_map: MapContextManager[Any, Any] = (
+            nullcontext(builtins.map) if workers == 1 else make_pool_map(workers)
+        )
 
         if _call_feeds_update_hooks:
             for hook in self.before_feeds_update_hooks:

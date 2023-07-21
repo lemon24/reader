@@ -35,7 +35,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from ._types import EntryUpdateIntent
     from ._types import FeedFilterOptions
     from ._types import FeedUpdateIntent
-    from ._utils import MapType
+    from ._utils import MapFunction
     from .core import Reader
 
 
@@ -323,13 +323,13 @@ class Pipeline:
     storage: Storage
     parser: Parser
     now: Callable[[], datetime]
-    map: MapType
+    map: MapFunction[Any, Any]
     # for hooks' usage *only*
     reader: Reader
     decider = Decider
 
     @classmethod
-    def from_reader(cls, reader: Reader, map: MapType) -> Pipeline:
+    def from_reader(cls, reader: Reader, map: MapFunction[Any, Any]) -> Pipeline:
         return cls(
             storage=reader._storage,
             parser=reader._parser,

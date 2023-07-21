@@ -195,6 +195,8 @@ use :meth:`~Reader.delete_feed`::
 
 
 
+.. _update:
+
 Updating feeds
 --------------
 

@@ -31,7 +31,7 @@ from ._types import FeedData
 from ._types import FeedForUpdate
 from ._types import ParsedFeed
 from ._url_utils import normalize_url
-from ._utils import MapType
+from ._utils import MapFunction
 from .exceptions import InvalidFeedURLError
 from .exceptions import ParseError
 from .types import _namedtuple_compat
@@ -127,7 +127,7 @@ class Parser:
     def parallel(
         self,
         feeds: Iterable[FeedArgument],
-        map: MapType = map,
+        map: MapFunction[Any, Any] = map,
         is_parallel: bool = True,
     ) -> Iterable[tuple[FeedArgument, ParsedFeed | None | ParseError]]:
         """Retrieve and parse many feeds, possibly in parallel.

@@ -11,6 +11,11 @@ Version 3.8
 
 Unreleased
 
+* Use :mod:`concurrent.futures` instead of :mod:`multiprocessing.dummy`
+  when :ref:`updating feeds <update>` in parallel;
+  :mod:`multiprocessing.dummy` does not work on some environments
+  (e.g. AWS Lambda).
+
 
 Version 3.7
 -----------

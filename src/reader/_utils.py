@@ -8,13 +8,12 @@ import warnings
 from collections.abc import Iterable
 from collections.abc import Iterator
 from collections.abc import Sequence
+from contextlib import AbstractContextManager
 from contextlib import contextmanager
 from functools import wraps
-from queue import Queue
 from typing import Any
 from typing import Callable
 from typing import cast
-from typing import no_type_check
 from typing import TypeVar
 
 
@@ -146,60 +145,46 @@ def count_consumed(it: Iterable[_T]) -> tuple[Iterable[_T], Callable[[], int]]:
     return wrapper(), get_count
 
 
+MapFunction = Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
+MapContextManager = AbstractContextManager[MapFunction[_T, _U]]
+
+
 @contextmanager
-def make_pool_map(workers: int) -> Iterator[F]:
+def make_pool_map(workers: int) -> Iterator[MapFunction[_T, _U]]:
+    # We are using concurrent.futures instead of multiprocessing.dummy
+    # because the latter doesn't work on some environments (e.g. AWS Lambda).
+    # We are not using executor.map() because it consumes the entire iterable.
+
     # lazy import (https://github.com/lemon24/reader/issues/297)
-    import multiprocessing.dummy
+    import concurrent.futures
 
-    pool = multiprocessing.dummy.Pool(workers)
-    try:
-        yield wrap_map(pool.imap_unordered, workers)
-    finally:
-        pool.close()
-        pool.join()
+    executor = concurrent.futures.ThreadPoolExecutor(workers)
 
+    def imap_unordered(fn: Callable[[_T], _U], iterable: Iterable[_T]) -> Iterator[_U]:
+        iterable = iter(iterable)
+        iterable_ended = False
+        pending: set[concurrent.futures.Future[_U]] = set()
 
-def wrap_map(map: F, workers: int) -> F:
-    """Ensure map() calls next() on its iterable in the current thread.
+        while pending or not iterable_ended:
+            while len(pending) < workers and not iterable_ended:
+                try:
+                    arg = next(iterable)
+                except StopIteration:
+                    iterable_ended = True
+                else:
+                    pending.add(executor.submit(fn, arg))
 
-    multiprocessing.dummy.Pool.imap_unordered seems to pass
-    the iterable to the worker threads, which call next() on it.
+            if not pending:  # pragma: no cover
+                return
 
-    For generators, this means the generator code runs in the worker thread,
-    which is a problem if the generator calls stuff that shouldn't be called
-    across threads; e.g., calling a sqlite3.Connection method results in:
+            done, pending = concurrent.futures.wait(
+                pending, return_when=concurrent.futures.FIRST_COMPLETED
+            )
+            while done:
+                yield done.pop().result()
 
-        sqlite3.ProgrammingError: SQLite objects created in a thread
-        can only be used in that same thread. The object was created
-        in thread id 1234 and this is thread id 5678.
-
-    """
-
-    @no_type_check
-    def wrapper(func, iterable):
-        sentinel = object()
-        queue = Queue()
-
-        for _ in range(workers):
-            queue.put(next(iterable, sentinel))
-
-        for rv in map(func, iter(queue.get, sentinel)):
-            queue.put(next(iterable, sentinel))
-            yield rv
-
-    return cast(F, wrapper)
-
-
-# The type of map() should be
-#
-#   Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
-#
-# but mypy gets confused; known issue:
-#
-# https://github.com/python/mypy/issues/1317
-# https://github.com/python/mypy/issues/6697
-#
-MapType = Callable[[Callable[[Any], Any], Iterable[Any]], Iterator[Any]]
+    with executor:
+        yield imap_unordered
 
 
 class PrefixLogger(logging.LoggerAdapter):  # type: ignore
