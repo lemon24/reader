@@ -58,7 +58,7 @@ from reader._types import FeedUpdateIntent
 # TODO: testing added/last_updated everywhere is kinda ugly
 
 
-def test_update_feed_updated(reader, call_update_method, caplog):
+def test_update_feed_updated(reader, update_feed, caplog):
     """If a feed is not newer than the stored one,
     it should be updated only if its content (hash) changed.
 
@@ -79,7 +79,7 @@ def test_update_feed_updated(reader, call_update_method, caplog):
     reader._now = lambda: naive_datetime(2010, 1, 2)
 
     with caplog.at_level(logging.DEBUG, 'reader'):
-        call_update_method(reader, old_feed.url)
+        update_feed(reader, old_feed.url)
 
     feed = old_feed.as_feed(
         added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2)
@@ -99,7 +99,7 @@ def test_update_feed_updated(reader, call_update_method, caplog):
     reader._now = lambda: naive_datetime(2010, 1, 3)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
-        call_update_method(reader, old_feed.url)
+        update_feed(reader, old_feed.url)
 
     feed = old_feed.as_feed(
         added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 3)
@@ -124,7 +124,7 @@ def test_update_feed_updated(reader, call_update_method, caplog):
     reader._now = lambda: naive_datetime(2010, 1, 3, 12)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
-        call_update_method(reader, old_feed.url)
+        update_feed(reader, old_feed.url)
 
     feed = old_feed.as_feed(
         added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 3, 12)
@@ -140,7 +140,7 @@ def test_update_feed_updated(reader, call_update_method, caplog):
     reader._now = lambda: naive_datetime(2010, 1, 4)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
-        call_update_method(reader, old_feed.url)
+        update_feed(reader, old_feed.url)
 
     feed = old_feed.as_feed(
         added=datetime(2010, 1, 1),
@@ -174,7 +174,7 @@ def test_update_feed_updated(reader, call_update_method, caplog):
     reader._now = lambda: naive_datetime(2010, 1, 4, 12)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
-        call_update_method(reader, old_feed.url)
+        update_feed(reader, old_feed.url)
 
     feed = old_feed.as_feed(
         added=datetime(2010, 1, 1),
@@ -212,7 +212,7 @@ def test_update_feed_updated(reader, call_update_method, caplog):
     )
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
-        call_update_method(reader, old_feed.url)
+        update_feed(reader, old_feed.url)
 
     assert set(reader.get_entries()) == {
         entry_one.as_entry(
@@ -240,7 +240,7 @@ def test_update_feed_updated(reader, call_update_method, caplog):
     caplog.clear()
 
 
-def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
+def test_update_entry_updated(reader, update_feed, caplog, monkeypatch):
     """An entry should be updated only if
     it is newer than the stored one OR its content (hash) changed.
 
@@ -257,7 +257,7 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
     reader._now = lambda: naive_datetime(2010, 2, 2)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
-        call_update_method(reader, feed.url)
+        update_feed(reader, feed.url)
 
     feed = feed.as_feed(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 2))
 
@@ -276,7 +276,7 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
     reader._now = lambda: naive_datetime(2010, 2, 3)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
-        call_update_method(reader, feed.url)
+        update_feed(reader, feed.url)
 
     feed = feed.as_feed(
         added=datetime(2010, 2, 1),
@@ -301,7 +301,7 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
     reader._now = lambda: naive_datetime(2010, 2, 3, 12)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
-        call_update_method(reader, feed.url)
+        update_feed(reader, feed.url)
 
     feed = feed.as_feed(
         added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 3, 12)
@@ -323,7 +323,7 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
     reader._now = lambda: naive_datetime(2010, 2, 4)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
-        call_update_method(reader, feed.url)
+        update_feed(reader, feed.url)
 
     feed = feed.as_feed(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 4))
     assert set(reader.get_entries()) == {
@@ -344,7 +344,7 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
         for i in range(1, 6):
             new_entry = new_entry._replace(title=f"Even Newer: change #{i}")
             parser.entries[1][1] = new_entry
-            call_update_method(reader, feed.url)
+            update_feed(reader, feed.url)
 
     assert {e.title for e in reader.get_entries()} == {"Even Newer: change #3"}
     assert caplog.text.count("entry hash changed, updating") == 3
@@ -353,7 +353,7 @@ def test_update_entry_updated(reader, call_update_method, caplog, monkeypatch):
 
 
 @pytest.mark.parametrize('chunk_size', [Storage.chunk_size, 1])
-def test_update_no_updated(reader, chunk_size, call_update_method):
+def test_update_no_updated(reader, chunk_size, update_feed):
     """If a feed has updated == None, it should be treated as updated.
 
     If an entry has updated == None, it should be updated every time.
@@ -368,7 +368,7 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
     entry_one = parser.entry(1, 1, None, title='old')
     reader._now = lambda: naive_datetime(2010, 1, 1)
     reader.add_feed(feed.url)
-    call_update_method(reader, feed)
+    update_feed(reader, feed)
     feed = feed.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 1))
 
     assert set(reader.get_feeds()) == {feed}
@@ -385,7 +385,7 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
     entry_one = parser.entry(1, 1, None, title='new')
     entry_two = parser.entry(1, 2, None)
     reader._now = lambda: naive_datetime(2010, 1, 2)
-    call_update_method(reader, feed)
+    update_feed(reader, feed)
     feed = feed.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2))
 
     assert set(reader.get_feeds()) == {feed}
@@ -404,7 +404,7 @@ def test_update_no_updated(reader, chunk_size, call_update_method):
 
 
 @pytest.mark.slow
-def test_update_blocking(db_path, make_reader, call_update_method):
+def test_update_blocking(db_path, make_reader, update_feed):
     """Calls to reader._parser() shouldn't block the underlying storage."""
 
     parser = Parser()
@@ -428,7 +428,7 @@ def test_update_blocking(db_path, make_reader, call_update_method):
         reader = make_reader(db_path)
         reader._parser = blocking_parser
         try:
-            call_update_method(reader, feed.url)
+            update_feed(reader, feed.url)
         finally:
             reader.close()
 
@@ -445,7 +445,7 @@ def test_update_blocking(db_path, make_reader, call_update_method):
         t.join()
 
 
-def test_update_not_modified(reader, call_update_method):
+def test_update_not_modified(reader, update_feed):
     """A feed should not be updated if it was not modified."""
 
     parser = Parser()
@@ -453,7 +453,7 @@ def test_update_not_modified(reader, call_update_method):
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
-    call_update_method(reader, feed.url)
+    update_feed(reader, feed.url)
 
     parser.feed(1, datetime(2010, 1, 2))
     parser.entry(1, 1, datetime(2010, 1, 2))
@@ -462,7 +462,7 @@ def test_update_not_modified(reader, call_update_method):
     reader._parser = not_modified_parser
 
     # shouldn't raise an exception
-    call_update_method(reader, feed.url)
+    update_feed(reader, feed.url)
 
     assert set(reader.get_entries()) == set()
 
@@ -592,9 +592,7 @@ def test_update_workers(reader, workers):
         reader.update_feeds(workers=workers)
 
 
-def test_update_last_updated_entries_updated_feed_not_updated(
-    reader, call_update_method
-):
+def test_update_last_updated_entries_updated_feed_not_updated(reader, update_feed):
     """A feed's last_updated should be updated if any of its entries are,
     even if the feed itself isn't updated.
 
@@ -605,7 +603,7 @@ def test_update_last_updated_entries_updated_feed_not_updated(
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
     reader._now = lambda: naive_datetime(2010, 1, 1)
-    call_update_method(reader, feed.url)
+    update_feed(reader, feed.url)
 
     def get_feed_for_update(feed):
         options = FeedFilterOptions.from_args(feed)
@@ -617,7 +615,7 @@ def test_update_last_updated_entries_updated_feed_not_updated(
 
     parser.entry(1, 1, datetime(2010, 1, 1))
     reader._now = lambda: naive_datetime(2010, 1, 2)
-    call_update_method(reader, feed.url)
+    update_feed(reader, feed.url)
 
     feed_for_update = get_feed_for_update(feed)
     assert feed_for_update.last_updated == naive_datetime(2010, 1, 2)
@@ -703,20 +701,20 @@ def reader_with_one_feed(reader):
 
 
 @rename_argument('reader', 'reader_with_one_feed')
-def test_last_exception_not_updated(reader, call_update_method):
+def test_last_exception_not_updated(reader, update_feed):
     assert reader.get_feed('1').last_exception is None
 
 
 @rename_argument('reader', 'reader_with_one_feed')
-def test_last_exception_ok(reader, call_update_method):
-    call_update_method(reader, '1')
+def test_last_exception_ok(reader, update_feed):
+    update_feed(reader, '1')
     assert reader.get_feed('1').last_exception is None
     assert next(reader.get_entries()).feed.last_exception is None
 
 
 @rename_argument('reader', 'reader_with_one_feed')
-def test_last_exception_failed(reader, call_update_method):
-    call_update_method(reader, '1')
+def test_last_exception_failed(reader, update_feed):
+    update_feed(reader, '1')
     old_parser = reader._parser
 
     def get_feed_last_updated(feed):
@@ -729,7 +727,7 @@ def test_last_exception_failed(reader, call_update_method):
 
     reader._parser = FailingParser()
     try:
-        call_update_method(reader, '1')
+        update_feed(reader, '1')
     except ParseError:
         pass
 
@@ -742,7 +740,7 @@ def test_last_exception_failed(reader, call_update_method):
 
     reader._parser.exception = ValueError('another')
     try:
-        call_update_method(reader, '1')
+        update_feed(reader, '1')
     except ParseError:
         pass
 
@@ -791,18 +789,18 @@ def raises_not_modified_parser(_):
     ],
 )
 @rename_argument('reader', 'reader_with_one_feed')
-def test_last_exception_reset(reader, call_update_method, make_new_parser):
-    call_update_method(reader, '1')
+def test_last_exception_reset(reader, update_feed, make_new_parser):
+    update_feed(reader, '1')
     old_parser = reader._parser
 
     reader._parser = FailingParser()
     try:
-        call_update_method(reader, '1')
+        update_feed(reader, '1')
     except ParseError:
         pass
 
     reader._parser = make_new_parser(old_parser)
-    call_update_method(reader, '1')
+    update_feed(reader, '1')
     assert reader.get_feed('1').last_exception is None
 
 
@@ -852,7 +850,7 @@ class EntryAction(Enum):
     ],
 )
 def test_update_feed_deleted(
-    db_path, make_reader, call_update_method, feed_action, entry_action
+    db_path, make_reader, update_feed, feed_action, entry_action
 ):
     """reader.update_feed should raise FeedNotFoundError if the feed is
     deleted during parsing.
@@ -906,14 +904,14 @@ def test_update_feed_deleted(
 
     try:
         reader._parser = blocking_parser
-        if call_update_method.__name__ == 'call_update_feed':
+        if update_feed.__name__ == 'update_feed':
             with pytest.raises(FeedNotFoundError) as excinfo:
-                call_update_method(reader, feed.url)
+                update_feed(reader, feed.url)
             assert excinfo.value.url == feed.url
             assert 'no such feed' in excinfo.value.message
-        elif call_update_method.__name__.startswith('call_update_feeds'):
+        elif update_feed.__name__.startswith('update_feeds'):
             # shouldn't raise an exception
-            call_update_method(reader, feed.url)
+            update_feed(reader, feed.url)
         else:
             assert False, "shouldn't happen"
     finally:

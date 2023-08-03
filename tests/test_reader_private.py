@@ -20,7 +20,7 @@ from reader._types import FeedFilterOptions
 
 
 @pytest.mark.parametrize('entry_updated', [utc_datetime(2010, 1, 1), None])
-def test_update_stale(reader, call_update_method, entry_updated):
+def test_update_stale(reader, update_feed, entry_updated):
     """When a feed is marked as stale feeds/entries should be updated
     regardless of their .updated or caching headers.
 
@@ -41,7 +41,7 @@ def test_update_stale(reader, call_update_method, entry_updated):
     reader.add_feed(feed.url)
 
     reader._now = lambda: naive_datetime(2010, 1, 1)
-    call_update_method(reader, feed.url)
+    update_feed(reader, feed.url)
 
     assert {(f.url, f.title, f.last_updated) for f in reader.get_feeds()} == {
         (feed.url, feed.title, datetime(2010, 1, 1))
@@ -62,7 +62,7 @@ def test_update_stale(reader, call_update_method, entry_updated):
     if entry_updated:
         # nothing changes after update
         reader._now = lambda: naive_datetime(2010, 1, 2)
-        call_update_method(reader, feed.url)
+        update_feed(reader, feed.url)
         assert {(f.url, f.title, f.last_updated) for f in reader.get_feeds()} == {
             (feed.url, feed.title, datetime(2010, 1, 1))
         }
@@ -74,7 +74,7 @@ def test_update_stale(reader, call_update_method, entry_updated):
     parser.calls[:] = []
     reader._storage.mark_as_stale(feed.url)
     reader._now = lambda: naive_datetime(2010, 1, 3)
-    call_update_method(reader, feed.url)
+    update_feed(reader, feed.url)
     assert parser.calls == [(feed.url, None, None)]
     assert {(f.url, f.title, f.last_updated) for f in reader.get_feeds()} == {
         (feed.url, feed.title, datetime(2010, 1, 3))
@@ -84,7 +84,7 @@ def test_update_stale(reader, call_update_method, entry_updated):
     }
 
 
-def test_update_parse(reader, call_update_method):
+def test_update_parse(reader, update_feed):
     """Updated feeds should pass caching headers back to ._parser()."""
     from utils import utc_datetime as datetime
 
@@ -98,11 +98,11 @@ def test_update_parse(reader, call_update_method):
 
     reader.add_feed(feed.url)
 
-    call_update_method(reader, feed.url)
+    update_feed(reader, feed.url)
     assert parser.calls == [(feed.url, None, None)]
 
     parser.calls[:] = []
-    call_update_method(reader, feed.url)
+    update_feed(reader, feed.url)
     assert parser.calls == [(feed.url, 'etag', 'last-modified')]
 
 

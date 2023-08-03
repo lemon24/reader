@@ -91,40 +91,17 @@ def storage():
         yield storage
 
 
-# TODO: move to reader_methods
-# TODO: s/call_update_method/update_feed/
-def call_update_feeds(reader, _):
-    reader.update_feeds()
-
-
-def call_update_feeds_workers(reader, _):
-    reader.update_feeds(workers=2)
-
-
-def call_update_feeds_iter(reader, _):
-    for _ in reader.update_feeds_iter():
-        pass
-
-
-def call_update_feeds_iter_workers(reader, _):
-    for _ in reader.update_feeds_iter(workers=2):
-        pass
-
-
-def call_update_feed(reader, url):
-    reader.update_feed(url)
+def slow(*args, **kwargs):
+    return pytest.param(*args, **kwargs, marks=pytest.mark.slow)
 
 
 @pytest.fixture(
     params=[
-        call_update_feeds,
-        pytest.param(call_update_feeds_workers, marks=pytest.mark.slow),
-        call_update_feeds_iter,
-        pytest.param(call_update_feeds_iter_workers, marks=pytest.mark.slow),
-        call_update_feed,
+        m if 'workers' not in m.__name__ else slow(m)
+        for m in reader_methods.update_feed_methods
     ]
 )
-def call_update_method(request):
+def update_feed(request):
     return request.param
 
 
@@ -180,9 +157,9 @@ def data_dir(tests_dir):
         Storage.chunk_size,
         # rough result size (order of magnitude)
         1,
-        pytest.param(2, marks=pytest.mark.slow),
+        slow(2),
         # unchunked query, likely to be ok
-        pytest.param(0, marks=pytest.mark.slow),
+        slow(0),
     ]
 )
 def chunk_size(request):
@@ -196,15 +173,11 @@ def get_entries(request):
 
 @pytest.fixture(
     params=[
-        pytest.param(reader_methods.get_entries, marks=pytest.mark.slow),
+        slow(reader_methods.get_entries),
         reader_methods.get_entries_recent,
-        pytest.param(
-            reader_methods.get_entries_recent_paginated, marks=pytest.mark.slow
-        ),
+        slow(reader_methods.get_entries_recent_paginated),
         reader_methods.search_entries_recent,
-        pytest.param(
-            reader_methods.search_entries_recent_paginated, marks=pytest.mark.slow
-        ),
+        slow(reader_methods.search_entries_recent_paginated),
     ],
 )
 def get_entries_recent(request):

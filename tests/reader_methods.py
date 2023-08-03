@@ -97,3 +97,28 @@ get_entries_methods = [
     search_entries_recent,
     search_entries_random,
 ]
+
+
+class _update_feed_methods:
+    def update_feeds(reader, _):
+        reader.update_feeds()
+
+    def update_feeds_workers(reader, _):
+        reader.update_feeds(workers=2)
+
+    def update_feeds_iter(reader, _):
+        for _ in reader.update_feeds_iter():
+            pass
+
+    def update_feeds_iter_workers(reader, _):
+        for _ in reader.update_feeds_iter(workers=2):
+            pass
+
+    def update_feed(reader, url):
+        reader.update_feed(url)
+
+
+# update_feed(reader, feed) -> None
+update_feed_methods = [
+    v for k, v in _update_feed_methods.__dict__.items() if not k.startswith('_')
+]
