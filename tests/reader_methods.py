@@ -1,3 +1,7 @@
+from reader import ParseError
+from reader import UpdateResult
+
+
 def do_nothing(reader):
     pass
 
@@ -100,6 +104,8 @@ get_entries_methods = [
 
 
 class _update_feed_methods:
+    # TODO: we can remove the update_feeds() variant if we add a test to confirm update_feeds is a thin wrapper over update_feeds_iter
+
     def update_feeds(reader, _):
         reader.update_feeds()
 
@@ -121,4 +127,25 @@ class _update_feed_methods:
 # update_feed(reader, feed) -> None
 update_feed_methods = [
     v for k, v in _update_feed_methods.__dict__.items() if not k.startswith('_')
+]
+
+
+class _update_feeds_iter_methods:
+    def update_feeds_iter(reader):
+        return reader.update_feeds_iter()
+
+    def update_feeds_iter_workers(reader):
+        return reader.update_feeds_iter(workers=2)
+
+    def update_feeds_iter_simulated(reader):
+        for feed in reader.get_feeds(updates_enabled=True):
+            try:
+                yield UpdateResult(feed.url, reader.update_feed(feed))
+            except ParseError as e:
+                yield UpdateResult(feed.url, e)
+
+
+# update_feeds(reader) -> (url, result), ...
+update_feeds_iter_methods = [
+    v for k, v in _update_feeds_iter_methods.__dict__.items() if not k.startswith('_')
 ]

@@ -152,32 +152,45 @@ def test_delete_entries(reader):
     assert get_entry_ids() == ['1, 1']
 
 
+# TODO: move CustomRetriever and CustomParser to fakes.py
+
+
 class CustomRetriever:
     slow_to_read = False
 
     @contextmanager
     def __call__(self, url, http_etag, *_, **__):
+        self.raise_exc('__call__', url)
         yield RetrieveResult('file', 'x.test', http_etag=http_etag.upper())
 
     def validate_url(self, url):
         pass
 
     def process_feed_for_update(self, feed):
+        self.raise_exc('process_feed_for_update', feed.url)
         assert feed.http_etag is None
         return feed._replace(http_etag='etag')
+
+    def raise_exc(self, method_name, feed_url):
+        pass
 
 
 class CustomParser:
     http_accept = 'x.test'
 
     def __call__(self, url, file, headers):
+        self.raise_exc('__call__', url)
         feed = FeedData(url, title=file.upper())
         entries = [EntryData(url, 'id', title='entry')]
         return feed, entries
 
     def process_entry_pairs(self, url, pairs):
+        self.raise_exc('process_entry_pairs', url)
         for new, old in pairs:
             yield new._replace(title=new.title.upper()), old
+
+    def raise_exc(self, method_name, feed_url):
+        pass
 
 
 def test_retriever_parser_process_hooks(reader):

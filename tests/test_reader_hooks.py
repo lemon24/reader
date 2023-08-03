@@ -4,8 +4,11 @@ import pytest
 from fakeparser import FailingParser
 from fakeparser import NotModifiedParser
 from fakeparser import Parser
+from test_reader_private import CustomParser
+from test_reader_private import CustomRetriever
 
 from reader import EntryUpdateStatus
+from reader import ParseError
 from reader._types import EntryData
 
 
@@ -234,24 +237,27 @@ def test_feeds_update_hooks(reader):
 # TODO: test relative order of different hooks
 
 
-HOOK_NAMES = """
-after_entry_update_hooks
-before_feed_update_hooks
-after_feed_update_hooks
-before_feeds_update_hooks
-after_feeds_update_hooks
-""".split()
-
-
-@pytest.mark.parametrize('hook_name', HOOK_NAMES)
-def test_update_hook_unexpected_exception(reader, update_feed, hook_name):
-    if update_feed.__name__ == 'update_feed' and '_feeds_' in hook_name:
+@pytest.mark.parametrize(
+    'hook_name',
+    [
+        'after_entry_update_hooks',
+        'before_feed_update_hooks',
+        'after_feed_update_hooks',
+        'before_feeds_update_hooks',
+        'after_feeds_update_hooks',
+    ],
+)
+@pytest.mark.xfail(raises=RuntimeError, strict=True)
+def test_update_hook_unexpected_exception(reader, update_feeds_iter, hook_name):
+    if 'simulated' in update_feeds_iter.__name__ and '_feeds_' in hook_name:
         pytest.skip("does not apply")
 
     reader._parser = parser = Parser()
     for feed_id in 1, 2, 3:
         reader.add_feed(parser.feed(feed_id))
-    parser.entry(2, 1)
+    parser.entry(1, 1)
+
+    exc = RuntimeError('error')
 
     def hook(reader, obj=None, *_):
         if '_entry_' in hook_name:
@@ -262,11 +268,83 @@ def test_update_hook_unexpected_exception(reader, update_feed, hook_name):
             feed_url = None
         else:
             assert False, hook_name
-        if not feed_url or feed_url == '2':
-            raise Exception('error')
+        if not feed_url or feed_url == '1':
+            raise exc
 
     getattr(reader, hook_name).append(hook)
 
-    with pytest.raises(Exception) as excinfo:
-        update_feed(reader, '2')
-    assert excinfo.value.args[0] == 'error'
+    rv = {int(r.url): r for r in update_feeds_iter(reader)}
+
+    assert rv[1].error.__cause__ is exc
+    assert isinstance(rv[1].error, ParseError)
+    assert rv[1].error.__cause__ is exc
+    assert rv[2].updated_feed
+    assert rv[3].updated_feed
+
+
+@pytest.mark.parametrize(
+    'target_name, method_name',
+    [
+        ('retriever', '__call__'),
+        ('retriever', 'process_feed_for_update'),
+        ('parser', '__call__'),
+        ('parser', 'process_entry_pairs'),
+    ],
+)
+@pytest.mark.xfail(raises=RuntimeError, strict=True)
+def test_retriever_parser_unexpected_exception(
+    reader, update_feeds_iter, target_name, method_name
+):
+    retriever = CustomRetriever()
+    reader._parser.mount_retriever('test:', retriever)
+    parser = CustomParser()
+    reader._parser.mount_parser_by_mime_type(parser)
+
+    for feed_id in 1, 2, 3:
+        reader.add_feed(f'test:{feed_id}')
+
+    exc = RuntimeError('error')
+
+    def raise_exc(name, url):
+        if name == method_name and '1' in url:
+            raise exc
+
+    locals()[target_name].raise_exc = raise_exc
+
+    rv = {int(r.url.rpartition(':')[2]): r for r in update_feeds_iter(reader)}
+
+    assert rv[1].error.__cause__ is exc
+    assert isinstance(rv[1].error, ParseError)
+    assert rv[1].error.__cause__ is exc
+    assert rv[2].updated_feed
+    assert rv[3].updated_feed
+
+
+@pytest.mark.parametrize('hook_name', ['request_hooks', 'response_hooks'])
+def test_session_hook_unexpected_exception(
+    reader, data_dir, update_feeds_iter, requests_mock, hook_name
+):
+    for feed_id in 1, 2, 3:
+        url = f'http://example.com/{feed_id}'
+        requests_mock.get(
+            url,
+            text=data_dir.joinpath('full.atom').read_text(),
+            headers={'content-type': 'application/atom+xml'},
+        )
+        reader.add_feed(url)
+
+    exc = RuntimeError('error')
+
+    def hook(session, obj, *_, **__):
+        if '1' in obj.url:
+            raise exc
+
+    getattr(reader._parser.session_factory, hook_name).append(hook)
+
+    rv = {int(r.url.rpartition('/')[2]): r for r in update_feeds_iter(reader)}
+
+    assert rv[1].error.__cause__ is exc
+    assert isinstance(rv[1].error, ParseError)
+    assert rv[1].error.__cause__ is exc
+    assert rv[2].updated_feed
+    assert rv[3].updated_feed

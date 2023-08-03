@@ -105,6 +105,16 @@ def update_feed(request):
     return request.param
 
 
+@pytest.fixture(
+    params=[
+        m if 'workers' not in m.__name__ else slow(m)
+        for m in reader_methods.update_feeds_iter_methods
+    ]
+)
+def update_feeds_iter(request):
+    return request.param
+
+
 def feed_arg_as_str(feed):
     return feed.url
 
