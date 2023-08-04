@@ -160,6 +160,17 @@ Exceptions
     Subclass of :exc:`UserWarning`.
 
 
+.. _exctree:
+
+Exception hierarchy
+~~~~~~~~~~~~~~~~~~~
+
+The class hierarchy for :mod:`reader` exceptions is:
+
+.. classtree:: ReaderError
+
+
+
 Type aliases
 ------------
 
