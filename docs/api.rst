@@ -72,92 +72,73 @@ Exceptions
     :members:
 
 .. autoexception:: FeedError
+    :show-inheritance:
     :members:
-
-    Subclass of :exc:`ReaderError`.
 
 .. autoexception:: FeedExistsError
+    :show-inheritance:
     :members:
-
-    Subclass of :exc:`FeedError`.
 
 .. autoexception:: FeedNotFoundError
+    :show-inheritance:
     :members:
-
-    Subclass of :exc:`FeedError` and :exc:`ResourceNotFoundError`.
 
 .. autoexception:: ParseError
+    :show-inheritance:
     :members:
-
-    Subclass of :exc:`FeedError` and :exc:`ReaderWarning`.
 
 .. autoexception:: InvalidFeedURLError
-
-    Subclass of :exc:`FeedError` and :exc:`ValueError`.
+    :show-inheritance:
 
 .. autoexception:: EntryError
+    :show-inheritance:
     :members:
-
-    Subclass of :exc:`ReaderError`.
 
 .. autoexception:: EntryExistsError
+    :show-inheritance:
     :members:
-
-    Subclass of :exc:`EntryError`.
 
 .. autoexception:: EntryNotFoundError
+    :show-inheritance:
     :members:
-
-    Subclass of :exc:`EntryError` and :exc:`ResourceNotFoundError`.
 
 .. autoexception:: StorageError
+    :show-inheritance:
     :members:
-
-    Subclass of :exc:`ReaderError`.
 
 .. autoexception:: SearchError
-
-    Subclass of :exc:`ReaderError`.
+    :show-inheritance:
 
 .. autoexception:: SearchNotEnabledError
-
-    Subclass of :exc:`SearchError`.
+    :show-inheritance:
 
 .. autoexception:: InvalidSearchQueryError
-
-    Subclass of :exc:`SearchError` and :exc:`ValueError`.
+    :show-inheritance:
 
 .. autoexception:: TagError
+    :show-inheritance:
     :members:
-
-    Subclass of :exc:`ReaderError`.
 
 .. autoexception:: TagNotFoundError
+    :show-inheritance:
     :members:
-
-    Subclass of :exc:`TagError`.
 
 .. autoexception:: ResourceNotFoundError
+    :show-inheritance:
     :members:
 
-    Subclass of :exc:`ReaderError`.
-
 .. autoexception:: PluginError
-
-    Subclass of :exc:`ReaderError`.
+    :show-inheritance:
 
 .. autoexception:: InvalidPluginError
-
-    Subclass of :exc:`PluginError` and :exc:`ValueError`.
+    :show-inheritance:
 
 .. autoexception:: PluginInitError
-
-    Subclass of :exc:`PluginError`.
+    :show-inheritance:
 
 
 .. autoexception:: ReaderWarning
-
-    Subclass of :exc:`ReaderError` and :exc:`UserWarning`.
+    :show-inheritance:
 
 
 .. _exctree:
