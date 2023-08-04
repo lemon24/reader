@@ -157,7 +157,7 @@ Exceptions
 
 .. autoexception:: ReaderWarning
 
-    Subclass of :exc:`UserWarning`.
+    Subclass of :exc:`ReaderError` and :exc:`UserWarning`.
 
 
 .. _exctree:

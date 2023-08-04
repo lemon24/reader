@@ -54,11 +54,14 @@ class ReaderError(_FancyExceptionBase):
     """Base for all public exceptions."""
 
 
-class ReaderWarning(UserWarning):
-    """Base for all warnings emitted by *reader*.
+class ReaderWarning(ReaderError, UserWarning):
+    """Base for all warnings emitted by *reader*
     that are not :exc:`DeprecationWarning`.
 
     .. versionadded:: 2.13
+
+    .. versionchanged:: 3.8
+        Inherit from :exc:`ReaderError`.
 
     """
 

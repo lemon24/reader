@@ -15,6 +15,7 @@ Unreleased
   when :ref:`updating feeds <update>` in parallel;
   :mod:`multiprocessing.dummy` does not work on some environments
   (e.g. AWS Lambda).
+* Make :exc:`ReaderWarning` inherit from :exc:`ReaderError`.
 * Include a diagram of the :ref:`exctree` in the :doc:`api`.
 
 
