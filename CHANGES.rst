@@ -11,6 +11,7 @@ Version 3.8
 
 Unreleased
 
+* Drop Python 3.9 support. (:issue:`302`)
 * Use :mod:`concurrent.futures` instead of :mod:`multiprocessing.dummy`
   when :ref:`updating feeds <update>` in parallel;
   :mod:`multiprocessing.dummy` does not work on some environments
