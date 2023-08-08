@@ -83,7 +83,6 @@ def _merge_config(*configs, merge_keys=()):
 
 @dataclass
 class Config:
-
     data: dict = field(default_factory=dict)
     sections: set = field(default_factory=set)
     merge_keys: set = field(default_factory=set)
@@ -143,7 +142,6 @@ class Config:
 
 @dataclass
 class MultiMapping:
-
     mappings: list = field(default_factory=list)
     default_factory: callable = dict
 

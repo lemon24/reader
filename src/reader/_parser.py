@@ -169,7 +169,6 @@ class Parser:
                 return feed, e
 
         with self.session_factory.persistent():
-
             # if stuff hangs weirdly during debugging, change this to builtins.map
             retrieve_results = map(retrieve, feeds)
 
@@ -188,7 +187,6 @@ class Parser:
 
                 try:
                     with context as result:
-
                         if not result or isinstance(result, ParseError):
                             yield feed, result
                             continue

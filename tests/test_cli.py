@@ -275,7 +275,6 @@ def test_cli_app_plugin(db_path, tests_dir, monkeypatch):
 
 @pytest.mark.slow
 def test_cli_serve_calls_create_app(db_path, monkeypatch):
-
     exception = Exception("create_app error")
 
     def create_app(config):

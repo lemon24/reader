@@ -784,7 +784,10 @@ def test_feed_root_nonempty(data_dir, scheme):
 
 
 # os_name, root
-RELATIVE_ROOTS = [('nt', 'C:feeds'), ('nt', '\\feeds'),] + [
+RELATIVE_ROOTS = [
+    ('nt', 'C:feeds'),
+    ('nt', '\\feeds'),
+] + [
     (os_name, root)
     for os_name in ['nt', 'posix']
     for root in ['feeds', './feeds', '../feeds']

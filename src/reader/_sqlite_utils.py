@@ -110,7 +110,6 @@ def wrap_exceptions(
         raise
 
     except sqlite3.DatabaseError as e:
-
         # most sqlite3 exceptions are subclasses of DatabaseError
         if type(e) is sqlite3.DatabaseError:  # pragma: no cover
             # test_database_error_other should test both branches of this, but doesn't for some reason
@@ -184,7 +183,6 @@ def foreign_key_check(db: sqlite3.Connection) -> None:
 
 
 class DBError(Exception):
-
     display_name = "database error"
 
     def __str__(self) -> str:
@@ -215,7 +213,6 @@ _DBFunction = Callable[[sqlite3.Connection], None]
 
 @dataclass
 class HeavyMigration:
-
     create: _DBFunction
     version: int  # must be positive
     migrations: dict[int, _DBFunction]

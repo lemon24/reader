@@ -188,7 +188,6 @@ def make_pool_map(workers: int) -> Iterator[MapFunction[_T, _U]]:
 
 
 class PrefixLogger(logging.LoggerAdapter):  # type: ignore
-
     # if needed, add: with log.push('another prefix'): ...
 
     def __init__(self, logger: logging.Logger, prefixes: Sequence[str] = ()):
@@ -244,7 +243,11 @@ def _deprecated_wrapper(
 
     @wraps(func)
     def old_func(*args, **kwargs):  # type: ignore
-        warnings.warn(warning_template.format_map(format_kwargs), DeprecationWarning)
+        warnings.warn(
+            warning_template.format_map(format_kwargs),
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return func(*args, **kwargs)
 
     old_func.__name__ = old_name

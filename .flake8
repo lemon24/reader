@@ -19,12 +19,8 @@ ignore =
     E722
     # bin op line break, invalid
     W503
-    # mistakenly triggered for @overload;
-    # https://github.com/PyCQA/pyflakes/issues/320 says it should be fixed
-    # in 2.1.1, but it doesn't seem to be (it's fixed in master though)
-    F811
-    # require zip(..., strict=True), was added in Python 3.10
-    B905
+    # string formatting opinion
+    B907
 per-file-ignores =
     # __init__ modules export names
     **/__init__.py: F401

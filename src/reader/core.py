@@ -451,6 +451,7 @@ class Reader:
             warnings.warn(
                 "Reader objects should be created using make_reader(); the Reader "
                 "constructor is not stable yet and may change without any notice.",
+                stacklevel=2,
             )
 
     def __enter__(self: _TReader) -> _TReader:

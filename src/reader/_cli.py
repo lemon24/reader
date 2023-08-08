@@ -46,7 +46,6 @@ def abort(message, *args, **kwargs):
 
 
 def make_reader_with_plugins(*, debug_storage=False, **kwargs):
-
     if debug_storage:
         # TODO: the web app should be able to do this too
 

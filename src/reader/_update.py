@@ -32,9 +32,7 @@ from .types import UpdateResult
 if TYPE_CHECKING:  # pragma: no cover
     from ._parser import Parser
     from ._storage import Storage
-    from ._types import EntryUpdateIntent
     from ._types import FeedFilterOptions
-    from ._types import FeedUpdateIntent
     from ._utils import MapFunction
     from .core import Reader
 
@@ -205,7 +203,6 @@ class Decider:
 
     def get_entries_to_update(self, pairs: EntryPairs) -> Iterable[EntryUpdateIntent]:
         for feed_order, (new, old) in reversed(list(enumerate(pairs))):
-
             # This may fail if we ever implement changing the feed URL
             # in response to a permanent redirect.
             assert new.feed_url == self.url, f'{new.feed_url!r}, {self.url!r}'
@@ -264,10 +261,8 @@ class Decider:
         parsed_feed: ParsedFeed | None | ParseError,
         entry_pairs: EntryPairs,
     ) -> tuple[FeedUpdateIntent | None, Iterable[EntryUpdateIntent]]:
-
         # Not modified.
         if not parsed_feed:
-
             # New feed shouldn't be considered new anymore.
             if not self.old_feed.last_updated:
                 return FeedUpdateIntent(self.url, self.now), ()
@@ -339,7 +334,6 @@ class Pipeline:
         )
 
     def update(self, filter_options: FeedFilterOptions) -> Iterable[UpdateResult]:
-
         # global_now is used as first_updated_epoch for all new entries,
         # so that the subset of new entries from an update appears before
         # all others and the entries in it are sorted by published/updated;
@@ -402,7 +396,6 @@ class Pipeline:
         feed: FeedForUpdate,
         result: ParsedFeed | None | ParseError,
     ) -> tuple[str, UpdatedFeed | None | Exception]:
-
         make_intents = partial(
             self.decider.make_intents, feed, self.now(), global_now, result
         )
@@ -440,7 +433,7 @@ class Pipeline:
         entries_for_update = self.storage.get_entries_for_update(
             (e.feed_url, e.id) for e in entries1
         )
-        return zip(entries2, entries_for_update)
+        return zip(entries2, entries_for_update, strict=True)
 
     def update_feed(
         self,
@@ -448,7 +441,6 @@ class Pipeline:
         feed: FeedUpdateIntent | None,
         entries: Iterable[EntryUpdateIntent],
     ) -> tuple[int, int]:
-
         for feed_hook in self.reader.before_feed_update_hooks:
             feed_hook(self.reader, url)
 

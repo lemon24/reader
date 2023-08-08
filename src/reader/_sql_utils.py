@@ -70,7 +70,6 @@ def _clean_up(thing: str) -> str:
 
 
 class BaseQuery:
-
     keywords = [
         'WITH',
         'SELECT',
@@ -252,7 +251,6 @@ def paginated_query(
     last: _U | None = None,
     row_factory: Callable[[tuple[Any, ...]], _T] | None = None,
 ) -> Iterable[tuple[_T, _U]]:
-
     params = dict(params)
 
     if chunk_size:

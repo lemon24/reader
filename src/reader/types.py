@@ -685,7 +685,6 @@ JSONType = Union[dict[str, JSONValue], list[JSONValue]]
 
 @runtime_checkable
 class FeedLike(Protocol):
-
     # We don't use "url: str" because we don't care if url is writable.
 
     @property

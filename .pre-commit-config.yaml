@@ -3,7 +3,7 @@ exclude: ^src/reader/_vendor/.*$
 repos:
 
   - repo: https://github.com/asottile/reorder_python_imports
-    rev: v3.9.0
+    rev: v3.10.0
     hooks:
       - id: reorder-python-imports
         name: Reorder Python imports (src, tests)
@@ -11,19 +11,19 @@ repos:
         args: ["--application-directories", ".:src"]
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.1
+    rev: v3.10.1
     hooks:
       - id: pyupgrade
         args: ["--py39-plus"]
 
   - repo: https://github.com/python/black
-    rev: 22.12.0
+    rev: 23.7.0
     hooks:
       - id: black
         args: ["-S"]
 
   - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
+    rev: 6.1.0
     hooks:
       - id: flake8
         additional_dependencies: [flake8-bugbear]

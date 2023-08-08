@@ -25,7 +25,6 @@ _SURVIVABLE_EXCEPTION_TYPES = (
 
 
 def _process_feed(url: str, d: Any) -> tuple[FeedData, list[EntryData]]:
-
     if d.get('bozo'):
         exception = d.get('bozo_exception')
         if isinstance(exception, _SURVIVABLE_EXCEPTION_TYPES):
@@ -60,7 +59,7 @@ def _process_feed(url: str, d: Any) -> tuple[FeedData, list[EntryData]]:
         except ParseError as e:
             # Skip entries that raise ParseError with a warning.
             # https://github.com/lemon24/reader/issues/281
-            warnings.warn(e)
+            warnings.warn(e, stacklevel=1)
             if not first_parse_error:
                 first_parse_error = e
         else:

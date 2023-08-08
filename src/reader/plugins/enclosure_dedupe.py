@@ -22,7 +22,6 @@ def init_reader(reader):
     def wrapper(*args, **kwargs):
         for entry in get_entries(*args, **kwargs):
             if entry.enclosures:
-
                 enclosures_by_href = {}
                 for e in entry.enclosures:
                     enclosures_by_href.setdefault(e.href, e)

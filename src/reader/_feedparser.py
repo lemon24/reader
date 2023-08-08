@@ -9,7 +9,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class FeedparserParser:
-
     # Everything in feedparser.http.ACCEPT_HEADER *except* the wildcard,
     # which gets added back explicitly later on.
     #

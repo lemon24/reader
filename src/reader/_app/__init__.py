@@ -265,7 +265,6 @@ def entries():
         # if tags is '', it's not a tag filter
         return redirect(url_for('.entries', **args))
     else:
-
         try:
             tags = yaml.safe_load(tags)
         except yaml.YAMLError as e:
@@ -425,7 +424,6 @@ def feeds():
         # if tags is '', it's not a tag filter
         return redirect(url_for('.feeds', **args))
     else:
-
         try:
             tags = yaml.safe_load(tags)
         except yaml.YAMLError as e:

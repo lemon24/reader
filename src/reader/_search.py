@@ -15,7 +15,6 @@ from functools import partial
 from itertools import groupby
 from types import MappingProxyType
 from typing import Any
-from typing import TYPE_CHECKING
 from typing import TypeVar
 
 from ._html_utils import strip_html as strip_html_str
@@ -45,9 +44,6 @@ from .types import EntrySearchCounts
 from .types import EntrySearchResult
 from .types import HighlightedString
 from .types import SearchSortOrder
-
-if TYPE_CHECKING:  # pragma: no cover
-    from ._storage import Storage  # noqa: F401
 
 
 log = logging.getLogger('reader')
@@ -759,7 +755,6 @@ class Search:
     ) -> Iterable[EntrySearchResult]:
         # TODO: dupe of at least Storage.get_entries(), maybe deduplicate
         if sort in ('relevant', 'recent'):
-
             last = None
             if starting_after:
                 if sort == 'recent':

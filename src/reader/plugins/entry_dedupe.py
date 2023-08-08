@@ -264,7 +264,6 @@ def _after_entry_update(reader, entry, status, *, dry_run=False):
 
 
 def _get_same_group_entries(reader, entry):
-
     # to make this better, we could do something like
     # reader.search_entries(f'title: {fts5_escape(entry.title)}'),
     # assuming the search index is up to date enough;
@@ -328,8 +327,8 @@ def _get_entry_groups(reader, feed, is_duplicate):
 
     entries = sorted(reader.get_entries(feed=feed, read=None), key=by_title)
 
-    for _, group in groupby(entries, key=by_title):
-        group = list(group)
+    for _, group_it in groupby(entries, key=by_title):
+        group = list(group_it)
 
         # this gets extremely slow for different entries with the same title,
         # hence the limit
@@ -404,7 +403,6 @@ def _collect_tags_to_copy(reader, duplicates):
     rv = defaultdict(list)
     for duplicate in duplicates:
         for key, value in reader.get_tags(duplicate):
-
             # handle existing .reader.duplicate.N.of.KEY tags
             match = duplicate_key_re.search(key)
             if match:

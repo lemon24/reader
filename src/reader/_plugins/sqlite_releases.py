@@ -47,7 +47,7 @@ URLS = [FULL_URL, 'https://www.sqlite.org/chronology.html']
 def extract_text(soup):
     for h3 in soup.select('body h3'):
         a_name = None
-        for element, _ in zip(h3.previous_siblings, range(3)):
+        for element, _ in zip(h3.previous_siblings, range(3), strict=False):
             if element.name == 'h3':
                 break
             if element.name == 'a' and 'name' in element.attrs:

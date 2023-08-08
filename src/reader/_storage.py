@@ -1136,7 +1136,6 @@ class Storage:
         now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
     ) -> EntryCounts:
-
         entries_query = Query().SELECT('id', 'feed').FROM('entries')
         context = apply_entry_filter_options(entries_query, filter_options)
 
@@ -1178,7 +1177,7 @@ class Storage:
                 query.SELECT("value")
                 for column in info.id_columns:
                     query.WHERE(f"{column} = :{column}")
-                context.update(zip(info.id_columns, resource_id))
+                context.update(zip(info.id_columns, resource_id, strict=True))
             else:
                 query.SELECT_DISTINCT("'null'")
 
@@ -1223,7 +1222,7 @@ class Storage:
     ) -> None:
         info = SCHEMA_INFO[len(resource_id)]
 
-        params = dict(zip(info.id_columns, resource_id), key=key)
+        params = dict(zip(info.id_columns, resource_id, strict=True), key=key)
 
         id_columns = info.id_columns + ('key',)
         id_columns_str = ', '.join(id_columns)

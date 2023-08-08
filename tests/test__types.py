@@ -153,7 +153,6 @@ def test_entry_data_from_obj(data_dir, data_file):
     ],
 )
 def test_entry_data_from_obj_errors(exc, entry):
-
     with pytest.raises(exc):
         entry_data_from_obj(entry)
 
