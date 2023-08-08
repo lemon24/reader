@@ -4,7 +4,7 @@ import sys
 import unittest.mock
 
 import packaging.version
-from setuptools.config.setupcfg import read_configuration
+from setuptools.config.pyprojecttoml import read_configuration
 
 sys.path.insert(0, os.path.abspath('../src'))
 
@@ -69,8 +69,8 @@ autodoc_member_order = 'bysource'
 autodoc_typehints = 'none'
 
 
-setup_cfg = read_configuration('../setup.cfg')
-python_requires = str(setup_cfg['options']['python_requires'])
+pyproject_toml = read_configuration('../pyproject.toml')
+python_requires = str(pyproject_toml['project']['requires-python'])
 min_python = re.match(r"^>=(\d+\.\d+)$", python_requires).group(1)
 
 
