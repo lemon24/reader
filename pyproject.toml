@@ -10,7 +10,7 @@ readme = "README.rst"
 license = {file = "LICENSE"}
 keywords = [
     "atom", "cdf", "feed", "rdf", "rss", "json feed",
-    "web feed", "podcast", "feed reader", "feed aggregator", "twitter",
+    "web feed", "podcast", "feed reader", "feed aggregator",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -89,9 +89,6 @@ unstable-plugins = [
     "blinker>=1.4",
     # sqlite-releases
     "beautifulsoup4",
-    # twitter
-    "tweepy",
-    "Jinja2>=3",
 ]
 
 # DEVELOPMENT
