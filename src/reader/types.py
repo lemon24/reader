@@ -4,6 +4,7 @@ import dataclasses
 import enum
 import re
 import traceback
+from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Mapping
 from collections.abc import Sequence
@@ -12,7 +13,6 @@ from dataclasses import field
 from datetime import datetime
 from types import MappingProxyType
 from typing import Any
-from typing import Callable
 from typing import cast
 from typing import Literal
 from typing import NamedTuple

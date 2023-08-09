@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
@@ -9,7 +10,6 @@ from itertools import chain
 from itertools import starmap
 from itertools import tee
 from typing import Any
-from typing import Callable
 from typing import Optional
 from typing import TYPE_CHECKING
 

@@ -5,6 +5,7 @@ import inspect
 import itertools
 import logging
 import warnings
+from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
 from collections.abc import Sequence
@@ -12,7 +13,6 @@ from contextlib import AbstractContextManager
 from contextlib import contextmanager
 from functools import wraps
 from typing import Any
-from typing import Callable
 from typing import cast
 from typing import TypeVar
 

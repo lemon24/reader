@@ -14,7 +14,7 @@ repos:
     rev: v3.10.1
     hooks:
       - id: pyupgrade
-        args: ["--py39-plus"]
+        args: ["--py310-plus"]
 
   - repo: https://github.com/python/black
     rev: 23.7.0

@@ -4,6 +4,7 @@ import builtins
 import logging
 import numbers
 import warnings
+from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Mapping
 from collections.abc import MutableSequence
@@ -12,7 +13,6 @@ from datetime import datetime
 from datetime import timezone
 from types import MappingProxyType
 from typing import Any
-from typing import Callable
 from typing import Literal
 from typing import overload
 from typing import TypeVar

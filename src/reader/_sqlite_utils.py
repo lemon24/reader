@@ -11,6 +11,7 @@ import threading
 import time
 import traceback
 import weakref
+from collections.abc import Callable
 from collections.abc import Iterator
 from collections.abc import Sequence
 from contextlib import closing
@@ -19,7 +20,6 @@ from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
-from typing import Callable
 from typing import cast
 from typing import no_type_check
 from typing import TypeVar
