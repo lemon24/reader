@@ -126,7 +126,7 @@ class _ExceptionGroup(Exception):  # pragma: no cover
 
 
 try:
-    ExceptionGroup
+    ExceptionGroup  # type: ignore[used-before-def,unused-ignore]
 except NameError:  # pragma: no cover
     ExceptionGroup = _ExceptionGroup
 
