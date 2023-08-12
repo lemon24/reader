@@ -80,9 +80,17 @@ _U = TypeVar('_U')
 # mypy doesn't seem to support Self yet.
 _TReader = TypeVar('_TReader', bound='Reader')
 
+UpdateHook = Callable[..., None]
 AfterEntryUpdateHook = Callable[['Reader', EntryData, EntryUpdateStatus], None]
 FeedUpdateHook = Callable[['Reader', str], None]
 FeedsUpdateHook = Callable[['Reader'], None]
+UpdateHookType = Literal[
+    'before_feeds_update',
+    'before_feed_update',
+    'after_entry_update',
+    'after_feed_update',
+    'after_feeds_update',
+]
 
 
 def make_reader(

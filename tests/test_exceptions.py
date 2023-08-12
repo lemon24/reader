@@ -4,6 +4,7 @@ import pytest
 
 from reader import EntryError
 from reader import FeedError
+from reader import SingleUpdateHookError
 from reader import TagError
 from reader.exceptions import _FancyExceptionBase
 
@@ -68,3 +69,32 @@ def test_entry_error_str(exc_type):
 def test_tag_error_str(exc_type):
     exc = exc_type(('object',), 'key')
     assert "'object': 'key'" in str(exc)
+
+
+@pytest.mark.parametrize(
+    'args, expected',
+    [
+        (
+            ('before_feeds_update', 'myhook'),
+            "unexpected hook error: before_feeds_update: 'myhook'",
+        ),
+        (
+            ('before_feeds_update', 'myhook', ()),
+            "unexpected hook error: before_feeds_update: 'myhook': ()",
+        ),
+        (
+            ('before_feed_update', 'myhook', ('feed',)),
+            "unexpected hook error: before_feed_update: 'myhook': 'feed'",
+        ),
+        (
+            ('after_entry_update', 'myhook', ('feed', 'entry')),
+            "unexpected hook error: after_entry_update: 'myhook': ('feed', 'entry')",
+        ),
+    ],
+)
+def test_single_update_hook_error_str(args, expected):
+    exc = SingleUpdateHookError(*args)
+    assert str(exc) == expected
+    exc = SingleUpdateHookError(*args)
+    exc.__cause__ = Exception('cause')
+    assert str(exc) == expected + ": builtins.Exception: cause"

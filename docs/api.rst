@@ -83,10 +83,6 @@ Exceptions
     :show-inheritance:
     :members:
 
-.. autoexception:: ParseError
-    :show-inheritance:
-    :members:
-
 .. autoexception:: InvalidFeedURLError
     :show-inheritance:
 
@@ -99,6 +95,26 @@ Exceptions
     :members:
 
 .. autoexception:: EntryNotFoundError
+    :show-inheritance:
+    :members:
+
+.. autoexception:: UpdateError
+    :show-inheritance:
+    :members:
+
+.. autoexception:: ParseError
+    :show-inheritance:
+    :members:
+
+.. autoexception:: UpdateHookError
+    :show-inheritance:
+    :members:
+
+.. autoexception:: SingleUpdateHookError
+    :show-inheritance:
+    :members:
+
+.. autoexception:: UpdateHookErrorGroup
     :show-inheritance:
     :members:
 

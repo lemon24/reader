@@ -1,6 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
+from collections.abc import Sequence
 from functools import cached_property
+from traceback import format_exception
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .core import UpdateHook, UpdateHookType
 
 
 class _FancyExceptionBase(Exception):
@@ -48,6 +55,80 @@ class _FancyExceptionBase(Exception):
     def __str__(self) -> str:
         parts = [self.message, self._str, self._cause_name, self._cause_str]
         return ': '.join(filter(None, parts))
+
+
+class _ExceptionGroup(Exception):  # pragma: no cover
+    """ExceptionGroup shim for Python 3.10.
+
+    Always includes a traceback in str(exc),
+    so no traceback.* monkeypatching is needed,
+    at the expense of the traceback not being in the right place,
+    and a slightly non-standard traceback.
+
+    Avoids dependency on https://pypi.org/project/exceptiongroup/
+
+    >>> raise _ExceptionGroup('message', [
+    ...     NameError('one'),
+    ...     _ExceptionGroup('another', [
+    ...         AttributeError('two'),
+    ...     ]),
+    ... ])
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+    reader.exceptions._ExceptionGroup: message (2 sub-exceptions)
+    +---------------- 1 -----------------
+    | NameError: one
+    +---------------- 2 -----------------
+    | reader.exceptions._ExceptionGroup: another (1 sub-exception)
+    | +---------------- 1 -----------------
+    | | AttributeError: two
+    | +------------------------------------
+    +------------------------------------
+
+    TODO: Remove this once we drop Python 3.10.
+
+    """
+
+    def __init__(self, msg: str, excs: Sequence[Exception], /):
+        if not isinstance(msg, str):  # pragma: no cover
+            raise TypeError(f"first argument must be str, not {type(msg).__name__}")
+        excs = tuple(excs)
+        if not excs:  # pragma: no cover
+            raise ValueError("second argument must be a non-empty sequence")
+        for i, e in enumerate(excs):  # pragma: no cover
+            if not isinstance(e, Exception):
+                raise ValueError(f"item {i} of second argument is not an exception")
+        super().__init__(msg, tuple(excs))
+        self._message = msg
+        self._exceptions = excs
+
+    @property
+    def message(self) -> str:
+        return self._message
+
+    @property
+    def exceptions(self) -> tuple[Exception, ...]:
+        return self._exceptions
+
+    def _format_lines(self) -> Iterable[str]:
+        count = len(self.exceptions)
+        s = 's' if count != 1 else ''
+        yield f"{self.message} ({count} sub-exception{s})\n"
+        for i, exc in enumerate(self.exceptions, 1):
+            yield f"+{f' {i} '.center(36, '-')}\n"
+            for line in format_exception(exc):
+                for subline in line.rstrip().splitlines():
+                    yield f"| {subline}\n"
+        yield f"+{'-' * 36}\n"
+
+    def __str__(self) -> str:
+        return ''.join(self._format_lines()).rstrip()
+
+
+try:
+    ExceptionGroup
+except NameError:  # pragma: no cover
+    ExceptionGroup = _ExceptionGroup
 
 
 class ReaderError(_FancyExceptionBase):
@@ -129,14 +210,6 @@ class InvalidFeedURLError(FeedError, ValueError):
     message = "invalid feed URL"
 
 
-class ParseError(FeedError, ReaderWarning):
-    """An error occurred while getting/parsing feed.
-
-    The original exception should be chained to this one (e.__cause__).
-
-    """
-
-
 class EntryError(ReaderError):
     """An entry error occurred.
 
@@ -185,6 +258,112 @@ class EntryNotFoundError(EntryError, ResourceNotFoundError):
     """Entry not found."""
 
     message = "no such entry"
+
+
+class UpdateError(ReaderError):
+    """An error occurred while updating the feed.
+
+    Parent of all update-related exceptions.
+
+    .. versionadded:: 3.8
+
+    """
+
+
+class ParseError(UpdateError, FeedError, ReaderWarning):
+    """An error occurred while retrieving/parsing the feed.
+
+    The original exception should be chained to this one (e.__cause__).
+
+    .. versionchanged:: 3.8
+        Inherit from :exc:`UpdateError`.
+
+    """
+
+
+class UpdateHookError(UpdateError):
+    r"""One or more update hooks (unexpectedly) failed.
+
+    Not raised directly;
+    allows catching any hook errors with a single except clause.
+
+    To inspect individual hook failures,
+    use `except\* <exceptstar_>`_ with :exc:`SingleUpdateHookError`
+    (or, on Python earlier than 3.11,
+    check if the exception :func:`isinstance` :exc:`UpdateHookErrorGroup`
+    and examine its :attr:`~BaseExceptionGroup.exceptions`).
+
+    .. _exceptstar: https://docs.python.org/3/tutorial/errors.html#raising-and-handling-multiple-unrelated-exceptions
+
+    .. versionadded:: 3.8
+
+    """
+
+
+class SingleUpdateHookError(UpdateHookError):
+    """An update hook (unexpectedly) failed.
+
+    The original exception should be chained to this one (e.__cause__).
+
+    .. versionadded:: 3.8
+
+    """
+
+    message = "unexpected hook error"
+
+    def __init__(
+        self,
+        when: UpdateHookType,
+        hook: UpdateHook,
+        resource_id: tuple[str, ...] | None = None,
+    ) -> None:
+        super().__init__()
+
+        #: The update phase (the hook type). One of:
+        #:
+        #: * ``'before_feeds_update'``
+        #: * ``'before_feed_update'``
+        #: * ``'after_entry_update'``
+        #: * ``'after_feed_update'``
+        #: * ``'after_feeds_update'``
+        #:
+        self.when = when
+
+        #: The hook.
+        self.hook = hook
+
+        #: The `resource_id` of the resource, if any.
+        self.resource_id = resource_id
+
+    @property
+    def _str(self) -> str:
+        parts = [self.when, repr(self.hook)]
+        if self.resource_id is not None:
+            if len(self.resource_id) == 1:
+                parts.append(repr(self.resource_id[0]))
+            else:
+                parts.append(repr(self.resource_id))
+        return ': '.join(parts)
+
+
+class UpdateHookErrorGroup(ExceptionGroup, UpdateHookError):  # type: ignore[misc]
+    r"""A (possibly nested) :exc:`ExceptionGroup` of :exc:`SingleUpdateHookError`\s.
+
+    .. versionadded:: 3.8
+
+    """
+
+    # FIXME: the type: ignore[misc] cause by .message overlap
+    # FIXME: the pragma: no cover
+
+    def __init__(self, msg: str, excs: Sequence[Exception], /):  # pragma: no cover
+        super().__init__(msg, excs)
+        assert all(isinstance(e, UpdateHookError) for e in self.exceptions)
+
+    def derive(
+        self, excs: Sequence[Exception]
+    ) -> UpdateHookErrorGroup:  # pragma: no cover
+        return UpdateHookErrorGroup(self.message, excs)
 
 
 class StorageError(ReaderError):

@@ -16,7 +16,17 @@ Unreleased
   when :ref:`updating feeds <update>` in parallel;
   :mod:`multiprocessing.dummy` does not work on some environments
   (e.g. AWS Lambda).
+
+* Add :exc:`UpdateError` as parent of all update-related exceptions. (:issue:`218`)
+
+  * Make :exc:`ParseError` inherit from :exc:`UpdateError`.
+
 * Make :exc:`ReaderWarning` inherit from :exc:`ReaderError`.
+
+* Add :exc:`UpdateHookError` and subclasses
+  :exc:`SingleUpdateHookError` and :exc:`UpdateHookErrorGroup`.
+  (:issue:`218`)
+
 * Include a diagram of the :ref:`exctree` in the :doc:`api`.
 
 
