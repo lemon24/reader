@@ -50,7 +50,7 @@ class _namedtuple_compat:
         return cls(*iterable)
 
     def _replace(self: _T, **kargs: Any) -> _T:
-        return dataclasses.replace(self, **kargs)  # type: ignore[type-var]
+        return dataclasses.replace(self, **kargs)  # type: ignore[type-var,misc]
 
     def _asdict(self) -> dict[str, Any]:
         return dict(self.__dict__)
