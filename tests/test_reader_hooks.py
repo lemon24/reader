@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import partial
 
 import pytest
 from fakeparser import FailingParser
@@ -9,6 +10,8 @@ from test_reader_private import CustomRetriever
 
 from reader import EntryUpdateStatus
 from reader import ParseError
+from reader import SingleUpdateHookError
+from reader import UpdateHookErrorGroup
 from reader._types import EntryData
 
 
@@ -234,52 +237,169 @@ def test_feeds_update_hooks(reader):
     }
 
 
-# TODO: test relative order of different hooks
+HOOK_ORDER = [
+    'before_feeds_update_hooks',
+    'before_feed_update_hooks',
+    'after_entry_update_hooks',
+    'after_feed_update_hooks',
+    'after_feeds_update_hooks',
+]
 
 
-@pytest.mark.parametrize(
-    'hook_name',
-    [
-        'after_entry_update_hooks',
-        'before_feed_update_hooks',
-        'after_feed_update_hooks',
-        'before_feeds_update_hooks',
-        'after_feeds_update_hooks',
-    ],
-)
-@pytest.mark.xfail(raises=RuntimeError, strict=True)
-def test_update_hook_unexpected_exception(reader, update_feeds_iter, hook_name):
-    if 'simulated' in update_feeds_iter.__name__ and '_feeds_' in hook_name:
-        pytest.skip("does not apply")
-
+def setup_failing_hook(reader, hook_name):
     reader._parser = parser = Parser()
-    for feed_id in 1, 2, 3:
+    for feed_id in 1, 2:
         reader.add_feed(parser.feed(feed_id))
-    parser.entry(1, 1)
+        parser.entry(feed_id, 1)
+        if feed_id == 1:
+            parser.entry(feed_id, 2)
 
-    exc = RuntimeError('error')
-
-    def hook(reader, obj=None, *_):
-        if '_entry_' in hook_name:
-            feed_url = obj.feed_url
-        elif '_feed_' in hook_name:
-            feed_url = obj
-        elif '_feeds_' in hook_name:
-            feed_url = None
-        else:
-            assert False, hook_name
+    def update_hook(exc, r, obj=None, *_):
+        feed_url = getattr(obj, 'feed_url', obj)
         if not feed_url or feed_url == '1':
             raise exc
 
+    exc = RuntimeError('error')
+    hook = partial(update_hook, exc)
     getattr(reader, hook_name).append(hook)
+
+    other_calls = []
+
+    def other_hook(name, r, obj=None, *_):
+        resource_id = getattr(obj, 'resource_id', obj)
+        other_calls.append((name, resource_id))
+
+    for name in HOOK_ORDER:
+        getattr(reader, name).append(partial(other_hook, name))
+
+    return exc, hook, other_calls
+
+
+def test_before_feeds_update_error(reader, update_feeds_iter):
+    if 'simulated' in update_feeds_iter.__name__:
+        pytest.skip("does not apply")
+
+    exc, hook, other_calls = setup_failing_hook(reader, 'before_feeds_update_hooks')
+
+    with pytest.raises(SingleUpdateHookError) as exc_info:
+        rv = []
+        for result in update_feeds_iter(reader):
+            rv.append(result)
+
+    assert not rv
+
+    error = exc_info.value
+    assert type(error) is SingleUpdateHookError
+    assert error.when == 'before_feeds_update'
+    assert error.hook is hook
+    assert error.resource_id is None
+    assert error.__cause__ is exc
+
+    assert other_calls == []
+
+
+def test_before_feed_update_error(reader, update_feeds_iter):
+    exc, hook, other_calls = setup_failing_hook(reader, 'before_feed_update_hooks')
 
     rv = {int(r.url): r for r in update_feeds_iter(reader)}
 
-    assert rv[1].error.__cause__ is exc
-    assert isinstance(rv[1].error, ParseError)
-    assert rv[1].error.__cause__ is exc
-    assert rv[2].updated_feed
-    assert rv[3].updated_feed
+    one = rv.pop(1)
+    assert len(rv) == 1
+    assert all([r.updated_feed for r in rv.values()])
+
+    error = one.error
+    assert error
+    assert type(error) is SingleUpdateHookError
+    assert error.when == 'before_feed_update'
+    assert error.hook is hook
+    assert error.resource_id == ('1',)
+    assert error.__cause__ is exc
+
+    # FIXME: check other_calls once behavior stabilizes
+
+
+def test_after_entry_update_error(reader, update_feeds_iter):
+    exc, hook, other_calls = setup_failing_hook(reader, 'after_entry_update_hooks')
+
+    rv = {int(r.url): r for r in update_feeds_iter(reader)}
+
+    one = rv.pop(1)
+    assert len(rv) == 1
+    assert all([r.updated_feed for r in rv.values()])
+
+    errors = one.error
+    assert errors
+    assert type(errors) is UpdateHookErrorGroup
+    resource_ids = []
+    for error in errors.exceptions:
+        assert type(error) is SingleUpdateHookError
+        assert error.when == 'after_entry_update'
+        assert error.hook is hook
+        resource_ids.append(error.resource_id)
+        assert error.__cause__ is exc
+    assert resource_ids == [('1', '1, 2'), ('1', '1, 1')]
+
+    # FIXME: check other_calls once behavior stabilizes
+
+
+def test_after_feed_update_error(reader, update_feeds_iter):
+    exc, hook, other_calls = setup_failing_hook(reader, 'after_feed_update_hooks')
+
+    rv = {int(r.url): r for r in update_feeds_iter(reader)}
+
+    one = rv.pop(1)
+    assert len(rv) == 1
+    assert all([r.updated_feed for r in rv.values()])
+
+    errors = one.error
+    assert errors
+    assert type(errors) is UpdateHookErrorGroup
+    (error,) = errors.exceptions
+    assert type(error) is SingleUpdateHookError
+    assert error.when == 'after_feed_update'
+    assert error.hook is hook
+    assert error.resource_id == ('1',)
+    assert error.__cause__ is exc
+
+    # FIXME: check other_calls once behavior stabilizes
+
+
+def test_after_feeds_update_error(reader, update_feeds_iter):
+    if 'simulated' in update_feeds_iter.__name__:
+        pytest.skip("does not apply")
+
+    exc, hook, other_calls = setup_failing_hook(reader, 'after_feeds_update_hooks')
+
+    with pytest.raises(UpdateHookErrorGroup) as exc_info:
+        rv = []
+        for result in update_feeds_iter(reader):
+            rv.append(result)
+
+    assert len(rv) == 2
+    assert all([r.updated_feed for r in rv])
+
+    errors = exc_info.value
+    assert errors
+    assert type(errors) is UpdateHookErrorGroup
+    (error,) = errors.exceptions
+
+    assert type(error) is SingleUpdateHookError
+    assert error.when == 'after_feeds_update'
+    assert error.hook is hook
+    assert error.resource_id is None
+    assert error.__cause__ is exc
+
+    assert other_calls == [
+        ('before_feeds_update_hooks', None),
+        ('before_feed_update_hooks', '1'),
+        ('after_entry_update_hooks', ('1', '1, 2')),
+        ('after_entry_update_hooks', ('1', '1, 1')),
+        ('after_feed_update_hooks', '1'),
+        ('before_feed_update_hooks', '2'),
+        ('after_entry_update_hooks', ('2', '2, 1')),
+        ('after_feed_update_hooks', '2'),
+        ('after_feeds_update_hooks', None),
+    ]
 
 
 @pytest.mark.parametrize(

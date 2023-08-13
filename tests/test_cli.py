@@ -164,7 +164,7 @@ def raise_reader_exception_on_update_plugin(reader):
     def hook(*args):
         raise ReaderError("plug-in error")
 
-    reader.after_entry_update_hooks.append(hook)
+    reader.after_feeds_update_hooks.append(hook)
 
 
 @pytest.mark.slow
@@ -193,9 +193,11 @@ def test_cli_plugin_update_exception(db_path, data_dir, tests_dir, monkeypatch):
     assert result.exit_code == 0
 
     result = invoke('update', '-v')
-    assert result.exit_code != 0
+    assert result.exit_code != 0, result.output
     assert isinstance(result.exception, ReaderError)
-    assert result.exception.message == "plug-in error"
+    assert result.exception.message == "got unexpected after-update hook errors"
+
+    # FIXME: test hook failure handling (both per-feed, and feeds)
 
 
 store_reader_plugin = None

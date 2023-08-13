@@ -41,7 +41,9 @@ from .exceptions import FeedNotFoundError
 from .exceptions import ParseError
 from .exceptions import PluginInitError
 from .exceptions import SearchNotEnabledError
+from .exceptions import SingleUpdateHookError
 from .exceptions import TagNotFoundError
+from .exceptions import UpdateHookErrorGroup
 from .plugins import _load_plugins
 from .plugins import DEFAULT_PLUGINS
 from .plugins import PluginInput
@@ -395,7 +397,18 @@ class Reader:
         #:  all other attributes may be missing
         #:  (accessing them may raise :exc:`AttributeError`).
         #:
+        #: The hooks are run in order.
+        #: Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`,
+        #: collected, and re-raised as an :exc:`UpdateHookErrorGroup`
+        #: after all the hooks are run.
+        #: Currently, only the exceptions for the first 5 entries
+        #: with hook failures are collected.
+        #:
         #: .. versionadded:: 1.20
+        #:
+        #: .. versionchanged:: 3.8
+        #:  Wrap unexpected exceptions in :exc:`UpdateHookError`.
+        #:  Try to run all hooks, don't stop after one fails.
         #:
         self.after_entry_update_hooks: MutableSequence[AfterEntryUpdateHook] = []
 
@@ -409,7 +422,14 @@ class Reader:
         #:
         #: Each function should return :const:`None`.
         #:
+        #: The hooks are run in order.
+        #: Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`
+        #: and re-raised (hooks after the one that failed are not run).
+        #:
         #: .. versionadded:: 2.7
+        #:
+        #: .. versionchanged:: 3.8
+        #:  Wrap unexpected exceptions in :exc:`UpdateHookError`.
         #:
         self.before_feed_update_hooks: MutableSequence[FeedUpdateHook] = []
 
@@ -423,7 +443,16 @@ class Reader:
         #:
         #: Each function should return :const:`None`.
         #:
+        #: The hooks are run in order.
+        #: Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`,
+        #: collected, and re-raised as an :exc:`UpdateHookErrorGroup`
+        #: after all the hooks are run.
+        #:
         #: .. versionadded:: 2.2
+        #:
+        #: .. versionchanged:: 3.8
+        #:  Wrap unexpected exceptions in :exc:`UpdateHookError`.
+        #:  Try to run all hooks, don't stop after one fails.
         #:
         self.after_feed_update_hooks: MutableSequence[FeedUpdateHook] = []
 
@@ -437,7 +466,14 @@ class Reader:
         #:
         #: Each function should return :const:`None`.
         #:
+        #: The hooks are run in order.
+        #: Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`
+        #: and re-raised (hooks after the one that failed are not run).
+        #:
         #: .. versionadded:: 2.12
+        #:
+        #: .. versionchanged:: 3.8
+        #:  Wrap unexpected exceptions in :exc:`UpdateHookError`.
         #:
         self.before_feeds_update_hooks: MutableSequence[FeedsUpdateHook] = []
 
@@ -451,7 +487,16 @@ class Reader:
         #:
         #: Each function should return :const:`None`.
         #:
+        #: The hooks are run in order.
+        #: Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`,
+        #: collected, and re-raised as an :exc:`UpdateHookErrorGroup`
+        #: after all the hooks are run.
+        #:
         #: .. versionadded:: 2.12
+        #:
+        #: .. versionchanged:: 3.8
+        #:  Wrap unexpected exceptions in :exc:`UpdateHookError`.
+        #:  Try to run all hooks, don't stop after one fails.
         #:
         self.after_feeds_update_hooks: MutableSequence[FeedsUpdateHook] = []
 
@@ -972,6 +1017,8 @@ class Reader:
                 )
                 continue
 
+            # FIXME: handle hook errors
+
             assert not isinstance(value, Exception), value
 
     def update_feeds_iter(
@@ -985,11 +1032,13 @@ class Reader:
         workers: int = 1,
         _call_feeds_update_hooks: bool = True,
     ) -> Iterable[UpdateResult]:
-        """Update all or some of the feeds.
+        r"""Update all or some of the feeds.
 
         Yield information about each updated feed.
 
         By default, update all the feeds that have updates enabled.
+
+        Try to update all the feeds, don’t stop after a feed/entry update hook fails.
 
         Args:
             feed (str or tuple(str) or Feed or None): Only update the feed with this URL.
@@ -1013,11 +1062,22 @@ class Reader:
                   since the last update
                 * an exception instance
 
-                Currently, the exception is always a :exc:`ParseError`,
-                but other :exc:`ReaderError` subclasses may be yielded
+                Currently, the exception can be:
+
+                * :exc:`ParseError`, if retrieving/parsing the feed failed
+                * :exc:`UpdateHookError`, for unexpected hook exceptions
+                  raised in :attr:`before_feed_update_hooks`,
+                  :attr:`after_entry_update_hooks`, or
+                  :attr:`after_feed_update_hooks`
+
+                ...but other :exc:`UpdateError` subclasses may be yielded
                 in the future.
 
         Raises:
+            UpdateHookError: For unexpected hook exceptions raised in
+                :attr:`before_feeds_update_hooks` or
+                :attr:`after_feeds_update_hooks`.
+            UpdateError: For non-feed-related update exceptions.
             StorageError
 
         .. versionadded:: 1.14
@@ -1036,6 +1096,15 @@ class Reader:
             The ``feed``, ``tags``, ``broken``, and ``updates_enabled``
             keyword arguments.
 
+        .. versionchanged:: 3.8
+            Wrap unexpected hook exceptions in :exc:`UpdateHookError`.
+            Try to update all the feeds, don’t stop after a feed/entry
+            update hook fails.
+
+        .. versionchanged:: 3.8
+            Document this method can raise non-feed-related :exc:`UpdateError`\s
+            (other than :exc:`UpdateHookError`).
+
         """
         filter_options = FeedFilterOptions.from_args(
             feed, tags, broken, updates_enabled, new
@@ -1050,22 +1119,35 @@ class Reader:
 
         if _call_feeds_update_hooks:
             for hook in self.before_feeds_update_hooks:
-                hook(self)
+                try:
+                    hook(self)
+                except Exception as e:
+                    raise SingleUpdateHookError('before_feeds_update', hook) from e
 
         with make_map as map:
             yield from Pipeline.from_reader(self, map).update(filter_options)
 
         if _call_feeds_update_hooks:
+            hook_errors = []
             for hook in self.after_feeds_update_hooks:
-                hook(self)
+                try:
+                    hook(self)
+                except Exception as e:
+                    exc = SingleUpdateHookError('after_feeds_update', hook)
+                    exc.__cause__ = e
+                    hook_errors.append(exc)
+            if hook_errors:
+                raise UpdateHookErrorGroup(
+                    "got unexpected after-update hook errors", hook_errors
+                )
 
     def update_feed(self, feed: FeedInput, /) -> UpdatedFeed | None:
-        """Update a single feed.
+        r"""Update a single feed.
 
         The feed will be updated even if updates are disabled for it.
 
         Like ``next(iter(reader.update_feeds_iter(feed=feed, updates_enabled=None)))[1]``,
-        but raises the :exc:`ParseError`, if any.
+        but raises the :exc:`UpdateError`, if any.
 
         Args:
             feed (str or tuple(str) or Feed): The feed URL.
@@ -1079,6 +1161,8 @@ class Reader:
         Raises:
             FeedNotFoundError
             ParseError
+            UpdateHookError: For unexpected hook exceptions.
+            UpdateError
             StorageError
 
         .. versionchanged:: 1.14
@@ -1090,6 +1174,13 @@ class Reader:
 
         .. versionchanged:: 3.0
             The ``feed`` argument is now positional-only.
+
+        .. versionchanged:: 3.8
+            Wrap unexpected hook exceptions in :exc:`UpdateHookError`.
+
+        .. versionchanged:: 3.8
+            Document this method can raise :exc:`UpdateError`\s
+            (other than :exc:`ParseError` and :exc:`UpdateHookError`).
 
         """
         _, rv = zero_or_one(

@@ -1,4 +1,4 @@
-from reader import ParseError
+from reader import UpdateError
 from reader import UpdateResult
 
 
@@ -141,7 +141,7 @@ class _update_feeds_iter_methods:
         for feed in reader.get_feeds(updates_enabled=True):
             try:
                 yield UpdateResult(feed.url, reader.update_feed(feed))
-            except ParseError as e:
+            except UpdateError as e:
                 yield UpdateResult(feed.url, e)
 
 

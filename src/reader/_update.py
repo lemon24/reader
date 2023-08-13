@@ -24,6 +24,10 @@ from ._utils import count_consumed
 from ._utils import PrefixLogger
 from .exceptions import FeedNotFoundError
 from .exceptions import ParseError
+from .exceptions import SingleUpdateHookError
+from .exceptions import UpdateError
+from .exceptions import UpdateHookError
+from .exceptions import UpdateHookErrorGroup
 from .types import EntryUpdateStatus
 from .types import ExceptionInfo
 from .types import UpdatedFeed
@@ -385,7 +389,7 @@ class Pipeline:
                 continue
 
             if isinstance(value, Exception):
-                if not isinstance(value, ParseError):
+                if not isinstance(value, UpdateError):
                     raise value
 
             yield UpdateResult(url, value)
@@ -441,8 +445,15 @@ class Pipeline:
         feed: FeedUpdateIntent | None,
         entries: Iterable[EntryUpdateIntent],
     ) -> tuple[int, int]:
+        # FIXME: log hook errors; cannot warn, because they'd be raised
+
         for feed_hook in self.reader.before_feed_update_hooks:
-            feed_hook(self.reader, url)
+            try:
+                feed_hook(self.reader, url)
+            except Exception as e:
+                raise SingleUpdateHookError(
+                    'before_feed_update', feed_hook, (url,)
+                ) from e
 
         if feed:
             if entries:
@@ -454,6 +465,7 @@ class Pipeline:
 
         new_count = 0
         updated_count = 0
+        entry_hook_errors: dict[tuple[str, str], list[UpdateHookError]] = {}
         for entry in entries:
             if entry.new:
                 new_count += 1
@@ -462,9 +474,42 @@ class Pipeline:
                 updated_count += 1
                 entry_status = EntryUpdateStatus.MODIFIED
             for entry_hook in self.reader.after_entry_update_hooks:
-                entry_hook(self.reader, entry.entry, entry_status)
+                try:
+                    entry_hook(self.reader, entry.entry, entry_status)
+                except Exception as e:
+                    resource_id = entry.entry.resource_id
+                    if (
+                        resource_id not in entry_hook_errors
+                        and len(entry_hook_errors) >= 5
+                    ):  # pragma: no cover
+                        log.exception(
+                            "update feed %r: more than 5 entries had hook errors; "
+                            "discarding exception for hook %r and entry %r",
+                            url,
+                            entry_hook,
+                            resource_id,
+                        )
+                        continue
+                    # FIXME: remove the "pragma: no cover" above
+                    exc = SingleUpdateHookError(
+                        'after_entry_update', entry_hook, resource_id
+                    )
+                    exc.__cause__ = e
+                    entry_hook_errors.setdefault(resource_id, []).append(exc)
+
+        hook_errors = [e for es in entry_hook_errors.values() for e in es]
 
         for feed_hook in self.reader.after_feed_update_hooks:
-            feed_hook(self.reader, url)
+            try:
+                feed_hook(self.reader, url)
+            except Exception as e:
+                exc = SingleUpdateHookError('after_feed_update', feed_hook, (url,))
+                exc.__cause__ = e
+                hook_errors.append(exc)
+
+        if hook_errors:
+            raise UpdateHookErrorGroup(
+                "got unexpected after-update hook errors", hook_errors
+            )
 
         return new_count, updated_count

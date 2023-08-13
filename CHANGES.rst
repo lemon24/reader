@@ -21,11 +21,32 @@ Unreleased
 
   * Make :exc:`ParseError` inherit from :exc:`UpdateError`.
 
-* Make :exc:`ReaderWarning` inherit from :exc:`ReaderError`.
-
-* Add :exc:`UpdateHookError` and subclasses
-  :exc:`SingleUpdateHookError` and :exc:`UpdateHookErrorGroup`.
+* Wrap unexpected hook errors in :exc:`UpdateHookError`
+  instead of letting them bubble up,
+  so plugin-raised exceptions for one feed don't prevent updates for the others
+  during :meth:`~Reader.update_feeds_iter()` / :meth:`~Reader.update_feeds()`.
   (:issue:`218`)
+
+  .. warning::
+
+    **This is a minor compatibility break**;
+    it is considered acceptable, since it fixes a bug / unexpected behavior.
+
+  * Add new exception :exc:`UpdateHookError`, and subclasses
+    :exc:`SingleUpdateHookError` and :exc:`UpdateHookErrorGroup`.
+
+  * Try to run all
+    :attr:`~Reader.after_entry_update_hooks`,
+    :attr:`~Reader.after_feed_update_hooks`, and
+    :attr:`~Reader.after_feeds_update_hooks`,
+    don’t stop after one fails.
+
+  * Document :meth:`~Reader.update_feeds_iter()` can raise non-feed-related
+    :exc:`UpdateError`\s (other than :exc:`UpdateHookError`).
+  * Document :meth:`~Reader.update_feed()` can raise :exc:`UpdateError`\s
+    (other than :exc:`ParseError` and :exc:`UpdateHookError`).
+
+* Make :exc:`ReaderWarning` inherit from :exc:`ReaderError`.
 
 * Include a diagram of the :ref:`exctree` in the :doc:`api`.
 
