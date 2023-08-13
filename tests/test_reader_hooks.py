@@ -247,6 +247,8 @@ HOOK_ORDER = [
 
 
 def setup_failing_hook(reader, hook_name):
+    hook_names = [hook_name] if isinstance(hook_name, str) else hook_name
+
     reader._parser = parser = Parser()
     for feed_id in 1, 2:
         reader.add_feed(parser.feed(feed_id))
@@ -261,7 +263,8 @@ def setup_failing_hook(reader, hook_name):
 
     exc = RuntimeError('error')
     hook = partial(update_hook, exc)
-    getattr(reader, hook_name).append(hook)
+    for hook_name in hook_names:
+        getattr(reader, hook_name).append(hook)
 
     other_calls = []
 
@@ -273,6 +276,14 @@ def setup_failing_hook(reader, hook_name):
         getattr(reader, name).append(partial(other_hook, name))
 
     return exc, hook, other_calls
+
+
+def hook_error_as_tree(error):
+    if isinstance(error, SingleUpdateHookError):
+        return error.when, error.hook, error.resource_id, error.__cause__
+    if isinstance(error, UpdateHookErrorGroup):
+        return [hook_error_as_tree(e) for e in error.exceptions]
+    assert False, error
 
 
 def test_before_feeds_update_error(reader, update_feeds_iter):
@@ -289,11 +300,9 @@ def test_before_feeds_update_error(reader, update_feeds_iter):
     assert not rv
 
     error = exc_info.value
-    assert type(error) is SingleUpdateHookError
-    assert error.when == 'before_feeds_update'
-    assert error.hook is hook
-    assert error.resource_id is None
-    assert error.__cause__ is exc
+    assert hook_error_as_tree(error) == ('before_feeds_update', hook, None, exc)
+
+    assert {e.id for e in reader.get_entries()} == set()
 
     assert other_calls == []
 
@@ -308,14 +317,20 @@ def test_before_feed_update_error(reader, update_feeds_iter):
     assert all([r.updated_feed for r in rv.values()])
 
     error = one.error
-    assert error
-    assert type(error) is SingleUpdateHookError
-    assert error.when == 'before_feed_update'
-    assert error.hook is hook
-    assert error.resource_id == ('1',)
-    assert error.__cause__ is exc
+    assert hook_error_as_tree(error) == ('before_feed_update', hook, ('1',), exc)
 
-    # FIXME: check other_calls once behavior stabilizes
+    assert {e.id for e in reader.get_entries()} == {'2, 1'}
+
+    # these may change (e.g. if we don't run after_* hooks after ParseError)
+    if 'simulated' not in update_feeds_iter.__name__:
+        assert other_calls[0] == ('before_feeds_update_hooks', None)
+        assert other_calls[-1] == ('after_feeds_update_hooks', None)
+        other_calls = other_calls[1:-1]
+    assert other_calls == [
+        ('before_feed_update_hooks', '2'),
+        ('after_entry_update_hooks', ('2', '2, 1')),
+        ('after_feed_update_hooks', '2'),
+    ]
 
 
 def test_after_entry_update_error(reader, update_feeds_iter):
@@ -328,18 +343,27 @@ def test_after_entry_update_error(reader, update_feeds_iter):
     assert all([r.updated_feed for r in rv.values()])
 
     errors = one.error
-    assert errors
-    assert type(errors) is UpdateHookErrorGroup
-    resource_ids = []
-    for error in errors.exceptions:
-        assert type(error) is SingleUpdateHookError
-        assert error.when == 'after_entry_update'
-        assert error.hook is hook
-        resource_ids.append(error.resource_id)
-        assert error.__cause__ is exc
-    assert resource_ids == [('1', '1, 2'), ('1', '1, 1')]
+    assert hook_error_as_tree(errors) == [
+        ('after_entry_update', hook, ('1', '1, 2'), exc),
+        ('after_entry_update', hook, ('1', '1, 1'), exc),
+    ]
 
-    # FIXME: check other_calls once behavior stabilizes
+    assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 2', '2, 1'}
+
+    # these may change (e.g. if we don't run after_* hooks after ParseError)
+    if 'simulated' not in update_feeds_iter.__name__:
+        assert other_calls[0] == ('before_feeds_update_hooks', None)
+        assert other_calls[-1] == ('after_feeds_update_hooks', None)
+        other_calls = other_calls[1:-1]
+    assert other_calls == [
+        ('before_feed_update_hooks', '1'),
+        ('after_entry_update_hooks', ('1', '1, 2')),
+        ('after_entry_update_hooks', ('1', '1, 1')),
+        ('after_feed_update_hooks', '1'),
+        ('before_feed_update_hooks', '2'),
+        ('after_entry_update_hooks', ('2', '2, 1')),
+        ('after_feed_update_hooks', '2'),
+    ]
 
 
 def test_after_feed_update_error(reader, update_feeds_iter):
@@ -352,16 +376,24 @@ def test_after_feed_update_error(reader, update_feeds_iter):
     assert all([r.updated_feed for r in rv.values()])
 
     errors = one.error
-    assert errors
-    assert type(errors) is UpdateHookErrorGroup
-    (error,) = errors.exceptions
-    assert type(error) is SingleUpdateHookError
-    assert error.when == 'after_feed_update'
-    assert error.hook is hook
-    assert error.resource_id == ('1',)
-    assert error.__cause__ is exc
+    assert hook_error_as_tree(errors) == [('after_feed_update', hook, ('1',), exc)]
 
-    # FIXME: check other_calls once behavior stabilizes
+    assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 2', '2, 1'}
+
+    # these may change (e.g. if we don't run after_* hooks after ParseError)
+    if 'simulated' not in update_feeds_iter.__name__:
+        assert other_calls[0] == ('before_feeds_update_hooks', None)
+        assert other_calls[-1] == ('after_feeds_update_hooks', None)
+        other_calls = other_calls[1:-1]
+    assert other_calls == [
+        ('before_feed_update_hooks', '1'),
+        ('after_entry_update_hooks', ('1', '1, 2')),
+        ('after_entry_update_hooks', ('1', '1, 1')),
+        ('after_feed_update_hooks', '1'),
+        ('before_feed_update_hooks', '2'),
+        ('after_entry_update_hooks', ('2', '2, 1')),
+        ('after_feed_update_hooks', '2'),
+    ]
 
 
 def test_after_feeds_update_error(reader, update_feeds_iter):
@@ -379,15 +411,85 @@ def test_after_feeds_update_error(reader, update_feeds_iter):
     assert all([r.updated_feed for r in rv])
 
     errors = exc_info.value
-    assert errors
-    assert type(errors) is UpdateHookErrorGroup
-    (error,) = errors.exceptions
+    assert hook_error_as_tree(errors) == [
+        ('after_feeds_update', hook, None, exc),
+    ]
 
-    assert type(error) is SingleUpdateHookError
-    assert error.when == 'after_feeds_update'
-    assert error.hook is hook
-    assert error.resource_id is None
-    assert error.__cause__ is exc
+    assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 2', '2, 1'}
+
+    assert other_calls == [
+        ('before_feeds_update_hooks', None),
+        ('before_feed_update_hooks', '1'),
+        ('after_entry_update_hooks', ('1', '1, 2')),
+        ('after_entry_update_hooks', ('1', '1, 1')),
+        ('after_feed_update_hooks', '1'),
+        ('before_feed_update_hooks', '2'),
+        ('after_entry_update_hooks', ('2', '2, 1')),
+        ('after_feed_update_hooks', '2'),
+        ('after_feeds_update_hooks', None),
+    ]
+
+
+def test_update_feeds_before_feeds_update_error(reader):
+    exc, hook, other_calls = setup_failing_hook(reader, 'before_feeds_update_hooks')
+
+    with pytest.raises(SingleUpdateHookError) as exc_info:
+        reader.update_feeds()
+
+    error = exc_info.value
+    assert hook_error_as_tree(error) == ('before_feeds_update', hook, None, exc)
+
+    assert {e.id for e in reader.get_entries()} == set()
+
+    assert other_calls == []
+
+
+def test_update_feeds_before_feed_update_error(reader):
+    exc, hook, other_calls = setup_failing_hook(reader, 'before_feed_update_hooks')
+
+    with pytest.raises(UpdateHookErrorGroup) as exc_info:
+        reader.update_feeds()
+
+    error = exc_info.value
+    assert hook_error_as_tree(error) == [('before_feed_update', hook, ('1',), exc)]
+
+    assert {e.id for e in reader.get_entries()} == {'2, 1'}
+
+    assert other_calls == [
+        ('before_feeds_update_hooks', None),
+        ('before_feed_update_hooks', '2'),
+        ('after_entry_update_hooks', ('2', '2, 1')),
+        ('after_feed_update_hooks', '2'),
+        ('after_feeds_update_hooks', None),
+    ]
+
+
+def test_update_feeds_other_error(reader):
+    exc, hook, other_calls = setup_failing_hook(
+        reader,
+        [
+            'after_entry_update_hooks',
+            'after_feed_update_hooks',
+            'after_feeds_update_hooks',
+        ],
+    )
+
+    with pytest.raises(UpdateHookErrorGroup) as exc_info:
+        reader.update_feeds()
+
+    error = exc_info.value
+    assert hook_error_as_tree(error) == [
+        [
+            ('after_entry_update', hook, ('1', '1, 2'), exc),
+            ('after_entry_update', hook, ('1', '1, 1'), exc),
+            ('after_feed_update', hook, ('1',), exc),
+        ],
+        [
+            ('after_feeds_update', hook, None, exc),
+        ],
+    ]
+
+    assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 2', '2, 1'}
 
     assert other_calls == [
         ('before_feeds_update_hooks', None),

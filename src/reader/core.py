@@ -43,6 +43,7 @@ from .exceptions import PluginInitError
 from .exceptions import SearchNotEnabledError
 from .exceptions import SingleUpdateHookError
 from .exceptions import TagNotFoundError
+from .exceptions import UpdateHookError
 from .exceptions import UpdateHookErrorGroup
 from .plugins import _load_plugins
 from .plugins import DEFAULT_PLUGINS
@@ -400,8 +401,8 @@ class Reader:
         #: The hooks are run in order.
         #: Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`,
         #: collected, and re-raised as an :exc:`UpdateHookErrorGroup`
-        #: after all the hooks are run.
-        #: Currently, only the exceptions for the first 5 entries
+        #: after all the hooks are run;
+        #: currently, only the exceptions for the first 5 entries
         #: with hook failures are collected.
         #:
         #: .. versionadded:: 1.20
@@ -947,9 +948,15 @@ class Reader:
         new: bool | None = None,
         workers: int = 1,
     ) -> None:
-        """Update all or some of the feeds.
+        r"""Update all or some of the feeds.
 
         Silently skip feeds that raise :exc:`ParseError`.
+
+        Re-raise :attr:`before_feeds_update_hooks` failures immediately.
+        Collect all other update hook failures
+        and re-raise them as an :exc:`UpdateHookErrorGroup`;
+        currently, only the exceptions for the first 5 feeds
+        with hook failures are collected.
 
         By default, update all the feeds that have updates enabled.
 
@@ -969,6 +976,8 @@ class Reader:
             workers (int): Number of threads to use when getting the feeds.
 
         Raises:
+            UpdateHookError: For unexpected hook exceptions.
+            UpdateError
             StorageError
 
         .. versionchanged:: 1.11
@@ -996,30 +1005,63 @@ class Reader:
             The ``feed``, ``tags``, ``broken``, and ``updates_enabled``
             keyword arguments.
 
+        .. versionchanged:: 3.8
+            Wrap unexpected update hook exceptions in :exc:`UpdateHookError`.
+            Try to update all the feeds, don’t stop after a feed/entry hook fails.
+
+        .. versionchanged:: 3.8
+            Document this method can raise non-feed-related :exc:`UpdateError`\s
+            (other than :exc:`UpdateHookError`).
+
         """
-        results = self.update_feeds_iter(
-            feed=feed,
-            tags=tags,
-            broken=broken,
-            updates_enabled=updates_enabled,
-            new=new,
-            workers=workers,
-        )
+        hook_errors: list[UpdateHookError] = []
+        try:
+            results = self.update_feeds_iter(
+                feed=feed,
+                tags=tags,
+                broken=broken,
+                updates_enabled=updates_enabled,
+                new=new,
+                workers=workers,
+            )
 
-        for url, value in results:
-            if isinstance(value, ParseError):
-                log.exception(
-                    "update feed %r: error while getting/parsing feed, "
-                    "skipping; exception: %r",
-                    url,
-                    value.__cause__,
-                    exc_info=value,
-                )
-                continue
+            for url, value in results:
+                if isinstance(value, ParseError):
+                    log.exception(
+                        "update feed %r: error while getting/parsing feed, "
+                        "skipping; exception: %r",
+                        url,
+                        value.__cause__,
+                        exc_info=value,
+                    )
+                    continue
 
-            # FIXME: handle hook errors
+                if isinstance(value, UpdateHookError):
+                    if len(hook_errors) >= 5:  # pragma: no cover
+                        log.exception(
+                            "more than 5 feeds had hook errors; "
+                            "discarding exception for feed %r",
+                            url,
+                        )
+                    else:
+                        hook_errors.append(value)
+                    # FIXME: remove the "pragma: no cover" above
+                    continue
 
-            assert not isinstance(value, Exception), value
+                assert not isinstance(value, Exception), value
+
+        except SingleUpdateHookError as e:
+            assert e.when == 'before_feeds_update', e
+            raise
+
+        except UpdateHookErrorGroup as e:
+            for exc in e.exceptions:
+                assert isinstance(exc, SingleUpdateHookError), exc
+                assert exc.when == 'after_feeds_update', exc
+            hook_errors.append(e)
+
+        if hook_errors:
+            raise UpdateHookErrorGroup("some hooks failed", hook_errors)
 
     def update_feeds_iter(
         self,
@@ -1036,9 +1078,13 @@ class Reader:
 
         Yield information about each updated feed.
 
-        By default, update all the feeds that have updates enabled.
+        Re-raise :attr:`before_feeds_update_hooks` failures immediately.
+        Yield feed/entry update hook failures.
+        Collect :attr:`after_feeds_update_hooks` failures
+        and re-raise them as an :exc:`UpdateHookErrorGroup`
+        after updating all the feeds.
 
-        Try to update all the feeds, don’t stop after a feed/entry update hook fails.
+        By default, update all the feeds that have updates enabled.
 
         Args:
             feed (str or tuple(str) or Feed or None): Only update the feed with this URL.
@@ -1097,9 +1143,8 @@ class Reader:
             keyword arguments.
 
         .. versionchanged:: 3.8
-            Wrap unexpected hook exceptions in :exc:`UpdateHookError`.
-            Try to update all the feeds, don’t stop after a feed/entry
-            update hook fails.
+            Wrap unexpected update hook exceptions in :exc:`UpdateHookError`.
+            Try to update all the feeds, don’t stop after a feed/entry hook fails.
 
         .. versionchanged:: 3.8
             Document this method can raise non-feed-related :exc:`UpdateError`\s
@@ -1176,7 +1221,7 @@ class Reader:
             The ``feed`` argument is now positional-only.
 
         .. versionchanged:: 3.8
-            Wrap unexpected hook exceptions in :exc:`UpdateHookError`.
+            Wrap unexpected update hook exceptions in :exc:`UpdateHookError`.
 
         .. versionchanged:: 3.8
             Document this method can raise :exc:`UpdateError`\s

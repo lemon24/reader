@@ -28,8 +28,8 @@ Unreleased
     **This is a minor compatibility break**;
     it is considered acceptable, since it fixes a bug / unexpected behavior.
 
-  * Add new exception :exc:`UpdateHookError`, and subclasses
-    :exc:`SingleUpdateHookError` and :exc:`UpdateHookErrorGroup`.
+  * Add new exceptions :exc:`UpdateHookError`,
+    :exc:`SingleUpdateHookError`, and :exc:`UpdateHookErrorGroup`.
 
   * Try to run all
     :attr:`~Reader.after_entry_update_hooks`,
@@ -39,13 +39,12 @@ Unreleased
 
 * Add :exc:`UpdateError` as parent of all update-related exceptions. (:issue:`218`)
 
-  * Make :exc:`ParseError` inherit from :exc:`UpdateError`.
   * Narrow down the error type of :attr:`UpdateResult.value`
     from :exc:`ReaderError` to :exc:`UpdateError`.
-  * Document :meth:`~Reader.update_feeds_iter()` can raise non-feed-related
-    :exc:`UpdateError`\s (other than :exc:`UpdateHookError`).
-  * Document :meth:`~Reader.update_feed()` can raise :exc:`UpdateError`\s
-    (other than :exc:`ParseError` and :exc:`UpdateHookError`).
+  * Make :exc:`ParseError` inherit from :exc:`UpdateError`.
+  * Document :meth:`~Reader.update_feeds_iter()`, :meth:`~Reader.update_feeds()`,
+    and :meth:`~Reader.update_feed()` can raise :exc:`UpdateError`\s
+    (other than :exc:`UpdateHookError` and :exc:`ParseError`).
 
 * Make :exc:`ReaderWarning` inherit from :exc:`ReaderError`.
 
