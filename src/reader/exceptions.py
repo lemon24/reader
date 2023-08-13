@@ -98,7 +98,6 @@ class _ExceptionGroup(Exception):  # pragma: no cover
         for i, e in enumerate(excs):  # pragma: no cover
             if not isinstance(e, Exception):
                 raise ValueError(f"item {i} of second argument is not an exception")
-        super().__init__(msg, tuple(excs))
         self._message = msg
         self._exceptions = excs
 
