@@ -22,7 +22,7 @@ from typing import runtime_checkable
 from typing import TypeVar
 from typing import Union
 
-from reader.exceptions import ReaderError
+from reader.exceptions import UpdateError
 
 # noreorder
 # can't be defined here because of circular imports
@@ -963,19 +963,19 @@ class UpdateResult(NamedTuple):
     #:  If the server indicated the feed has not changed
     #:  since the last update without returning any data.
     #:
-    #: :exc:`ReaderError`
+    #: :exc:`UpdateError`
     #:
     #:  If there was an error while updating the feed.
     #:
-    value: UpdatedFeed | None | ReaderError
+    #: .. versionchanged:: 3.8
+    #:  Narrow down the error type from :exc:`ReaderError` to :exc:`UpdateError`.
+    #:
+    value: UpdatedFeed | None | UpdateError
 
-    # The exception type is ReaderError and not ParseError
+    # The exception type is UpdateError and not ParseError
     # to allow suppressing new errors without breaking the API:
     # adding a new type to the union breaks the API,
     # not raising an exception type anymore doesn't.
-    # Currently, storage or plugin-raised exceptions
-    # prevent updates for the following feeds (:issue:`218`),
-    # but that's not necessarily by design.
 
     @property
     def updated_feed(self) -> UpdatedFeed | None:
@@ -987,7 +987,7 @@ class UpdateResult(NamedTuple):
         return self.value if not isinstance(self.value, Exception) else None
 
     @property
-    def error(self) -> ReaderError | None:
+    def error(self) -> UpdateError | None:
         """The exception, if there was an error, :const:`None` otherwise.
 
         .. versionadded:: 2.1

@@ -17,10 +17,6 @@ Unreleased
   :mod:`multiprocessing.dummy` does not work on some environments
   (e.g. AWS Lambda).
 
-* Add :exc:`UpdateError` as parent of all update-related exceptions. (:issue:`218`)
-
-  * Make :exc:`ParseError` inherit from :exc:`UpdateError`.
-
 * Wrap unexpected hook errors in :exc:`UpdateHookError`
   instead of letting them bubble up,
   so plugin-raised exceptions for one feed don't prevent updates for the others
@@ -41,6 +37,11 @@ Unreleased
     :attr:`~Reader.after_feeds_update_hooks`,
     don’t stop after one fails.
 
+* Add :exc:`UpdateError` as parent of all update-related exceptions. (:issue:`218`)
+
+  * Make :exc:`ParseError` inherit from :exc:`UpdateError`.
+  * Narrow down the error type of :attr:`UpdateResult.value`
+    from :exc:`ReaderError` to :exc:`UpdateError`.
   * Document :meth:`~Reader.update_feeds_iter()` can raise non-feed-related
     :exc:`UpdateError`\s (other than :exc:`UpdateHookError`).
   * Document :meth:`~Reader.update_feed()` can raise :exc:`UpdateError`\s
