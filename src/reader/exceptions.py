@@ -7,7 +7,7 @@ from traceback import format_exception
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .core import UpdateHook, UpdateHookType
+    from ._types import UpdateHook, UpdateHookType
 
 
 class _FancyExceptionBase(Exception):

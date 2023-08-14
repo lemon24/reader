@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import logging
+from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Mapping
 from collections.abc import Sequence
 from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
 from datetime import timezone
 from functools import cached_property
 from types import MappingProxyType
 from types import SimpleNamespace
 from typing import Any
+from typing import Generic
 from typing import get_args
 from typing import Literal
 from typing import NamedTuple
@@ -17,6 +21,9 @@ from typing import TypeVar
 from typing import Union
 
 from ._hash_utils import get_hash
+from .exceptions import SingleUpdateHookError
+from .exceptions import UpdateHookError
+from .exceptions import UpdateHookErrorGroup
 from .types import _entry_argument
 from .types import _feed_argument
 from .types import _namedtuple_compat
@@ -25,11 +32,14 @@ from .types import Enclosure
 from .types import Entry
 from .types import EntryAddedBy
 from .types import EntryInput
+from .types import EntryUpdateStatus
 from .types import ExceptionInfo
 from .types import Feed
 from .types import FeedInput
 from .types import TagFilterInput
 from .types import TristateFilterInput
+
+log = logging.getLogger("reader")
 
 # Private API
 # https://github.com/lemon24/reader/issues/111
@@ -556,3 +566,73 @@ def fix_datetime_tzinfo(
             assert _old is False or value.tzinfo == _old, value
             kwargs[name] = value.replace(tzinfo=_new)
     return obj._replace(**kwargs)
+
+
+UpdateHook = Callable[..., None]
+AfterEntryUpdateHook = Callable[[_T, EntryData, EntryUpdateStatus], None]
+FeedUpdateHook = Callable[[_T, str], None]
+FeedsUpdateHook = Callable[[_T], None]
+UpdateHookType = Literal[
+    'before_feeds_update',
+    'before_feed_update',
+    'after_entry_update',
+    'after_feed_update',
+    'after_feeds_update',
+]
+
+
+@dataclass(frozen=True)
+class UpdateHooks(Generic[_T]):
+    target: _T
+    before_feeds_update: list[FeedsUpdateHook[_T]] = field(default_factory=list)
+    before_feed_update: list[FeedUpdateHook[_T]] = field(default_factory=list)
+    after_entry_update: list[AfterEntryUpdateHook[_T]] = field(default_factory=list)
+    after_feed_update: list[FeedUpdateHook[_T]] = field(default_factory=list)
+    after_feeds_update: list[FeedsUpdateHook[_T]] = field(default_factory=list)
+
+    def run(
+        self, when: UpdateHookType, resource_id: tuple[str, ...] | None, *args: Any
+    ) -> None:
+        for hook in getattr(self, when):
+            try:
+                hook(self.target, *args)
+            except Exception as e:
+                raise SingleUpdateHookError(when, hook, resource_id) from e
+
+    def group(self, message: str) -> _UpdateHookErrorGrouper:
+        return _UpdateHookErrorGrouper(self, message)
+
+
+@dataclass(frozen=True)
+class _UpdateHookErrorGrouper:
+    hooks: UpdateHooks[Any]
+    message: str
+    exceptions: list[UpdateHookError] = field(default_factory=list)
+    seen_dedupe_keys: set[Any] = field(default_factory=set)
+
+    def run(
+        self,
+        when: UpdateHookType,
+        resource_id: tuple[str, ...] | None,
+        *args: Any,
+        limit: int = 0,
+    ) -> None:
+        for hook in getattr(self.hooks, when):
+            try:
+                hook(self.hooks.target, *args)
+            except Exception as e:
+                exc = SingleUpdateHookError(when, hook, resource_id)
+                exc.__cause__ = e
+                self.add(exc, resource_id, limit)
+
+    def add(self, exc: UpdateHookError, dedupe_key: Any = None, limit: int = 0) -> None:
+        if limit and dedupe_key not in self.seen_dedupe_keys:  # pragma: no cover
+            if len(self.seen_dedupe_keys) >= limit:
+                log.error("too many hook errors; discarding exception", exc_info=exc)
+                return
+            self.seen_dedupe_keys.add(dedupe_key)
+        self.exceptions.append(exc)
+
+    def close(self) -> None:
+        if self.exceptions:
+            raise UpdateHookErrorGroup(self.message, self.exceptions)

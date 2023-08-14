@@ -20,14 +20,12 @@ from ._types import FeedData
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import ParsedFeed
+from ._types import UpdateHooks
 from ._utils import count_consumed
 from ._utils import PrefixLogger
 from .exceptions import FeedNotFoundError
 from .exceptions import ParseError
-from .exceptions import SingleUpdateHookError
 from .exceptions import UpdateError
-from .exceptions import UpdateHookError
-from .exceptions import UpdateHookErrorGroup
 from .types import EntryUpdateStatus
 from .types import ExceptionInfo
 from .types import UpdatedFeed
@@ -321,10 +319,9 @@ class Pipeline:
 
     storage: Storage
     parser: Parser
+    hooks: UpdateHooks[Any]
     now: Callable[[], datetime]
     map: MapFunction[Any, Any]
-    # for hooks' usage *only*
-    reader: Reader
     decider = Decider
 
     @classmethod
@@ -332,9 +329,9 @@ class Pipeline:
         return cls(
             storage=reader._storage,
             parser=reader._parser,
+            hooks=reader._update_hooks,
             now=reader._now,
             map=map,
-            reader=reader,
         )
 
     def update(self, filter_options: FeedFilterOptions) -> Iterable[UpdateResult]:
@@ -445,15 +442,7 @@ class Pipeline:
         feed: FeedUpdateIntent | None,
         entries: Iterable[EntryUpdateIntent],
     ) -> tuple[int, int]:
-        # FIXME: log hook errors; cannot warn, because they'd be raised
-
-        for feed_hook in self.reader.before_feed_update_hooks:
-            try:
-                feed_hook(self.reader, url)
-            except Exception as e:
-                raise SingleUpdateHookError(
-                    'before_feed_update', feed_hook, (url,)
-                ) from e
+        self.hooks.run('before_feed_update', (url,), url)
 
         if feed:
             if entries:
@@ -463,9 +452,10 @@ class Pipeline:
         # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
 
+        hook_errors = self.hooks.group("got unexpected after-update hook errors")
+
         new_count = 0
         updated_count = 0
-        entry_hook_errors: dict[tuple[str, str], list[UpdateHookError]] = {}
         for entry in entries:
             if entry.new:
                 new_count += 1
@@ -473,43 +463,16 @@ class Pipeline:
             else:
                 updated_count += 1
                 entry_status = EntryUpdateStatus.MODIFIED
-            for entry_hook in self.reader.after_entry_update_hooks:
-                try:
-                    entry_hook(self.reader, entry.entry, entry_status)
-                except Exception as e:
-                    resource_id = entry.entry.resource_id
-                    if (
-                        resource_id not in entry_hook_errors
-                        and len(entry_hook_errors) >= 5
-                    ):  # pragma: no cover
-                        log.exception(
-                            "update feed %r: more than 5 entries had hook errors; "
-                            "discarding exception for hook %r and entry %r",
-                            url,
-                            entry_hook,
-                            resource_id,
-                        )
-                        continue
-                    # FIXME: remove the "pragma: no cover" above
-                    exc = SingleUpdateHookError(
-                        'after_entry_update', entry_hook, resource_id
-                    )
-                    exc.__cause__ = e
-                    entry_hook_errors.setdefault(resource_id, []).append(exc)
 
-        hook_errors = [e for es in entry_hook_errors.values() for e in es]
-
-        for feed_hook in self.reader.after_feed_update_hooks:
-            try:
-                feed_hook(self.reader, url)
-            except Exception as e:
-                exc = SingleUpdateHookError('after_feed_update', feed_hook, (url,))
-                exc.__cause__ = e
-                hook_errors.append(exc)
-
-        if hook_errors:
-            raise UpdateHookErrorGroup(
-                "got unexpected after-update hook errors", hook_errors
+            hook_errors.run(
+                'after_entry_update',
+                entry.entry.resource_id,
+                entry.entry,
+                entry_status,
+                limit=5,
             )
+
+        hook_errors.run('after_feed_update', (url,), url)
+        hook_errors.close()
 
         return new_count, updated_count

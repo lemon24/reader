@@ -4,7 +4,6 @@ import builtins
 import logging
 import numbers
 import warnings
-from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Mapping
 from collections.abc import MutableSequence
@@ -23,14 +22,17 @@ from ._requests_utils import DEFAULT_TIMEOUT
 from ._requests_utils import TimeoutType
 from ._search import Search
 from ._storage import Storage
+from ._types import AfterEntryUpdateHook
 from ._types import DEFAULT_RESERVED_NAME_SCHEME
 from ._types import entry_data_from_obj
-from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import EntryUpdateIntent
 from ._types import FeedFilterOptions
+from ._types import FeedsUpdateHook
+from ._types import FeedUpdateHook
 from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
+from ._types import UpdateHooks
 from ._update import Pipeline
 from ._utils import make_pool_map
 from ._utils import MapContextManager
@@ -82,18 +84,6 @@ _T = TypeVar('_T')
 _U = TypeVar('_U')
 # mypy doesn't seem to support Self yet.
 _TReader = TypeVar('_TReader', bound='Reader')
-
-UpdateHook = Callable[..., None]
-AfterEntryUpdateHook = Callable[['Reader', EntryData, EntryUpdateStatus], None]
-FeedUpdateHook = Callable[['Reader', str], None]
-FeedsUpdateHook = Callable[['Reader'], None]
-UpdateHookType = Literal[
-    'before_feeds_update',
-    'before_feed_update',
-    'after_entry_update',
-    'after_feed_update',
-    'after_feeds_update',
-]
 
 
 def make_reader(
@@ -376,130 +366,8 @@ class Reader:
         self._parser = _parser
 
         self._reserved_name_scheme = _reserved_name_scheme
-
         self._enable_search = _enable_search
-
-        #: List of functions called for each updated entry
-        #: after the feed is updated.
-        #:
-        #: Each function is called with:
-        #:
-        #: * `reader` – the :class:`Reader` instance
-        #: * `entry` – an :class:`Entry`-like object
-        #: * `status` – an :class:`EntryUpdateStatus` value
-        #:
-        #: Each function should return :const:`None`.
-        #:
-        #: .. warning::
-        #:
-        #:  The only `entry` attributes guaranteed to be present are
-        #:  :attr:`~Entry.feed_url`, :attr:`~Entry.id`,
-        #:  and :attr:`~Entry.resource_id`;
-        #:  all other attributes may be missing
-        #:  (accessing them may raise :exc:`AttributeError`).
-        #:
-        #: The hooks are run in order.
-        #: Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`,
-        #: collected, and re-raised as an :exc:`UpdateHookErrorGroup`
-        #: after all the hooks are run;
-        #: currently, only the exceptions for the first 5 entries
-        #: with hook failures are collected.
-        #:
-        #: .. versionadded:: 1.20
-        #:
-        #: .. versionchanged:: 3.8
-        #:  Wrap unexpected exceptions in :exc:`UpdateHookError`.
-        #:  Try to run all hooks, don't stop after one fails.
-        #:
-        self.after_entry_update_hooks: MutableSequence[AfterEntryUpdateHook] = []
-
-        #: List of functions called for each updated feed
-        #: before the feed is updated.
-        #:
-        #: Each function is called with:
-        #:
-        #: * `reader` – the :class:`Reader` instance
-        #: * `feed` – the :class:`str` feed URL
-        #:
-        #: Each function should return :const:`None`.
-        #:
-        #: The hooks are run in order.
-        #: Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`
-        #: and re-raised (hooks after the one that failed are not run).
-        #:
-        #: .. versionadded:: 2.7
-        #:
-        #: .. versionchanged:: 3.8
-        #:  Wrap unexpected exceptions in :exc:`UpdateHookError`.
-        #:
-        self.before_feed_update_hooks: MutableSequence[FeedUpdateHook] = []
-
-        #: List of functions called for each updated feed
-        #: after the feed is updated.
-        #:
-        #: Each function is called with:
-        #:
-        #: * `reader` – the :class:`Reader` instance
-        #: * `feed` – the :class:`str` feed URL
-        #:
-        #: Each function should return :const:`None`.
-        #:
-        #: The hooks are run in order.
-        #: Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`,
-        #: collected, and re-raised as an :exc:`UpdateHookErrorGroup`
-        #: after all the hooks are run.
-        #:
-        #: .. versionadded:: 2.2
-        #:
-        #: .. versionchanged:: 3.8
-        #:  Wrap unexpected exceptions in :exc:`UpdateHookError`.
-        #:  Try to run all hooks, don't stop after one fails.
-        #:
-        self.after_feed_update_hooks: MutableSequence[FeedUpdateHook] = []
-
-        #: List of functions called *once* before updating any feeds,
-        #: at the beginning of :meth:`update_feeds` / :meth:`update_feeds_iter`,
-        #: but not :meth:`update_feed`.
-        #:
-        #: Each function is called with:
-        #:
-        #: * `reader` – the :class:`Reader` instance
-        #:
-        #: Each function should return :const:`None`.
-        #:
-        #: The hooks are run in order.
-        #: Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`
-        #: and re-raised (hooks after the one that failed are not run).
-        #:
-        #: .. versionadded:: 2.12
-        #:
-        #: .. versionchanged:: 3.8
-        #:  Wrap unexpected exceptions in :exc:`UpdateHookError`.
-        #:
-        self.before_feeds_update_hooks: MutableSequence[FeedsUpdateHook] = []
-
-        #: List of functions called *once* after updating all feeds,
-        #: at the end of :meth:`update_feeds` / :meth:`update_feeds_iter`,
-        #: but not :meth:`update_feed`.
-        #:
-        #: Each function is called with:
-        #:
-        #: * `reader` – the :class:`Reader` instance
-        #:
-        #: Each function should return :const:`None`.
-        #:
-        #: The hooks are run in order.
-        #: Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`,
-        #: collected, and re-raised as an :exc:`UpdateHookErrorGroup`
-        #: after all the hooks are run.
-        #:
-        #: .. versionadded:: 2.12
-        #:
-        #: .. versionchanged:: 3.8
-        #:  Wrap unexpected exceptions in :exc:`UpdateHookError`.
-        #:  Try to run all hooks, don't stop after one fails.
-        #:
-        self.after_feeds_update_hooks: MutableSequence[FeedsUpdateHook] = []
+        self._update_hooks = UpdateHooks(self)
 
         if _called_directly:
             warnings.warn(
@@ -1014,7 +882,7 @@ class Reader:
             (other than :exc:`UpdateHookError`).
 
         """
-        hook_errors: list[UpdateHookError] = []
+        hook_errors = self._update_hooks.group("some hooks failed")
         try:
             results = self.update_feeds_iter(
                 feed=feed,
@@ -1037,15 +905,7 @@ class Reader:
                     continue
 
                 if isinstance(value, UpdateHookError):
-                    if len(hook_errors) >= 5:  # pragma: no cover
-                        log.exception(
-                            "more than 5 feeds had hook errors; "
-                            "discarding exception for feed %r",
-                            url,
-                        )
-                    else:
-                        hook_errors.append(value)
-                    # FIXME: remove the "pragma: no cover" above
+                    hook_errors.add(value, url, limit=5)
                     continue
 
                 assert not isinstance(value, Exception), value
@@ -1058,10 +918,9 @@ class Reader:
             for exc in e.exceptions:
                 assert isinstance(exc, SingleUpdateHookError), exc
                 assert exc.when == 'after_feeds_update', exc
-            hook_errors.append(e)
+            hook_errors.add(e)
 
-        if hook_errors:
-            raise UpdateHookErrorGroup("some hooks failed", hook_errors)
+        hook_errors.close()
 
     def update_feeds_iter(
         self,
@@ -1163,28 +1022,17 @@ class Reader:
         )
 
         if _call_feeds_update_hooks:
-            for hook in self.before_feeds_update_hooks:
-                try:
-                    hook(self)
-                except Exception as e:
-                    raise SingleUpdateHookError('before_feeds_update', hook) from e
+            self._update_hooks.run('before_feeds_update', None)
 
         with make_map as map:
             yield from Pipeline.from_reader(self, map).update(filter_options)
 
         if _call_feeds_update_hooks:
-            hook_errors = []
-            for hook in self.after_feeds_update_hooks:
-                try:
-                    hook(self)
-                except Exception as e:
-                    exc = SingleUpdateHookError('after_feeds_update', hook)
-                    exc.__cause__ = e
-                    hook_errors.append(exc)
-            if hook_errors:
-                raise UpdateHookErrorGroup(
-                    "got unexpected after-update hook errors", hook_errors
-                )
+            hook_errors = self._update_hooks.group(
+                "got unexpected after-update hook errors"
+            )
+            hook_errors.run('after_feeds_update', None)
+            hook_errors.close()
 
     def update_feed(self, feed: FeedInput, /) -> UpdatedFeed | None:
         r"""Update a single feed.
@@ -2349,3 +2197,140 @@ class Reader:
             self._reserved_name_scheme = NameScheme.from_value(value)
         except Exception as e:
             raise AttributeError(f"invalid reserved name scheme: {value}") from e
+
+    @property
+    def before_feeds_update_hooks(self) -> MutableSequence[FeedsUpdateHook[Reader]]:
+        """List of functions called *once* before updating any feeds,
+        at the beginning of :meth:`update_feeds` / :meth:`update_feeds_iter`,
+        but not :meth:`update_feed`.
+
+        Each function is called with:
+
+        * `reader` – the :class:`Reader` instance
+
+        Each function should return :const:`None`.
+
+        The hooks are run in order.
+        Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`
+        and re-raised (hooks after the one that failed are not run).
+
+        .. versionadded:: 2.12
+
+        .. versionchanged:: 3.8
+            Wrap unexpected exceptions in :exc:`UpdateHookError`.
+
+        """
+        return self._update_hooks.before_feeds_update
+
+    @property
+    def before_feed_update_hooks(self) -> MutableSequence[FeedUpdateHook[Reader]]:
+        """List of functions called for each updated feed
+        before the feed is updated.
+
+        Each function is called with:
+
+        * `reader` – the :class:`Reader` instance
+        * `feed` – the :class:`str` feed URL
+
+        Each function should return :const:`None`.
+
+        The hooks are run in order.
+        Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`
+        and re-raised (hooks after the one that failed are not run).
+
+        .. versionadded:: 2.7
+
+        .. versionchanged:: 3.8
+            Wrap unexpected exceptions in :exc:`UpdateHookError`.
+
+        """
+        return self._update_hooks.before_feed_update
+
+    @property
+    def after_entry_update_hooks(self) -> MutableSequence[AfterEntryUpdateHook[Reader]]:
+        """List of functions called for each updated entry
+        after the feed is updated.
+
+        Each function is called with:
+
+        * `reader` – the :class:`Reader` instance
+        * `entry` – an :class:`Entry`-like object
+        * `status` – an :class:`EntryUpdateStatus` value
+
+        Each function should return :const:`None`.
+
+        .. warning::
+
+            The only `entry` attributes guaranteed to be present are
+            :attr:`~Entry.feed_url`, :attr:`~Entry.id`,
+            and :attr:`~Entry.resource_id`;
+            all other attributes may be missing
+            (accessing them may raise :exc:`AttributeError`).
+
+        The hooks are run in order.
+        Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`,
+        collected, and re-raised as an :exc:`UpdateHookErrorGroup`
+        after all the hooks are run;
+        currently, only the exceptions for the first 5 entries
+        with hook failures are collected.
+
+        .. versionadded:: 1.20
+
+        .. versionchanged:: 3.8
+            Wrap unexpected exceptions in :exc:`UpdateHookError`.
+            Try to run all hooks, don't stop after one fails.
+
+        """
+        return self._update_hooks.after_entry_update
+
+    @property
+    def after_feed_update_hooks(self) -> MutableSequence[FeedUpdateHook[Reader]]:
+        """List of functions called for each updated feed
+        after the feed is updated.
+
+        Each function is called with:
+
+        * `reader` – the :class:`Reader` instance
+        * `feed` – the :class:`str` feed URL
+
+        Each function should return :const:`None`.
+
+        The hooks are run in order.
+        Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`,
+        collected, and re-raised as an :exc:`UpdateHookErrorGroup`
+        after all the hooks are run.
+
+        .. versionadded:: 2.2
+
+        .. versionchanged:: 3.8
+            Wrap unexpected exceptions in :exc:`UpdateHookError`.
+            Try to run all hooks, don't stop after one fails.
+
+        """
+        return self._update_hooks.after_feed_update
+
+    @property
+    def after_feeds_update_hooks(self) -> MutableSequence[FeedsUpdateHook[Reader]]:
+        """List of functions called *once* after updating all feeds,
+        at the end of :meth:`update_feeds` / :meth:`update_feeds_iter`,
+        but not :meth:`update_feed`.
+
+        Each function is called with:
+
+        * `reader` – the :class:`Reader` instance
+
+        Each function should return :const:`None`.
+
+        The hooks are run in order.
+        Exceptions raised by hooks are wrapped in a :exc:`SingleUpdateHookError`,
+        collected, and re-raised as an :exc:`UpdateHookErrorGroup`
+        after all the hooks are run.
+
+        .. versionadded:: 2.12
+
+        .. versionchanged:: 3.8
+            Wrap unexpected exceptions in :exc:`UpdateHookError`.
+            Try to run all hooks, don't stop after one fails.
+
+        """
+        return self._update_hooks.after_feeds_update
