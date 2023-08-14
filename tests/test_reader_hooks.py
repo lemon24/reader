@@ -286,6 +286,54 @@ def hook_error_as_tree(error):
     assert False, error
 
 
+OTHER_CALLS_ONE = [
+    ('before_feed_update_hooks', '1'),
+    ('after_entry_update_hooks', ('1', '1, 2')),
+    ('after_entry_update_hooks', ('1', '1, 1')),
+    ('after_feed_update_hooks', '1'),
+]
+
+OTHER_CALLS_TWO = [
+    ('before_feed_update_hooks', '2'),
+    ('after_entry_update_hooks', ('2', '2, 1')),
+    ('after_feed_update_hooks', '2'),
+]
+
+OTHER_CALLS_ENDS = (
+    [('before_feeds_update_hooks', None)],
+    [('after_feeds_update_hooks', None)],
+)
+
+
+def check_sublists(actual, *sublists, ends=None):
+    """Check if all the sublists elements are present in actual.
+
+    The sublists elements may be interleaved in actual,
+    but they must be in actual order.
+
+    If ends is given, check actual starts with ends[0] and ends with ends[1].
+
+    sublists and ends must fully cover actual (no extra elements).
+
+    """
+    actual = list(actual)
+
+    if ends:
+        start, end = ends
+        assert actual[: len(start)] == start
+        assert actual[-len(end) :] == end
+        actual = actual[len(start) : -len(end)]
+
+    for sublist in sublists:
+        indexes = [actual.index(e) for e in sublist]
+        indexes.sort()
+        found = [actual[i] for i in indexes]
+        assert found == sublist
+        actual = [e for i, e in enumerate(actual) if i not in indexes]
+
+    assert not actual, "some elements left over"
+
+
 def test_before_feeds_update_error(reader, update_feeds_iter):
     if 'simulated' in update_feeds_iter.__name__:
         pytest.skip("does not apply")
@@ -322,15 +370,9 @@ def test_before_feed_update_error(reader, update_feeds_iter):
     assert {e.id for e in reader.get_entries()} == {'2, 1'}
 
     # these may change (e.g. if we don't run after_* hooks after ParseError)
-    if 'simulated' not in update_feeds_iter.__name__:
-        assert other_calls[0] == ('before_feeds_update_hooks', None)
-        assert other_calls[-1] == ('after_feeds_update_hooks', None)
-        other_calls = other_calls[1:-1]
-    assert other_calls == [
-        ('before_feed_update_hooks', '2'),
-        ('after_entry_update_hooks', ('2', '2, 1')),
-        ('after_feed_update_hooks', '2'),
-    ]
+    simulated = 'simulated' in update_feeds_iter.__name__
+    ends = OTHER_CALLS_ENDS if not simulated else None
+    check_sublists(other_calls, OTHER_CALLS_TWO, ends=ends)
 
 
 def test_after_entry_update_error(reader, update_feeds_iter):
@@ -351,19 +393,9 @@ def test_after_entry_update_error(reader, update_feeds_iter):
     assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 2', '2, 1'}
 
     # these may change (e.g. if we don't run after_* hooks after ParseError)
-    if 'simulated' not in update_feeds_iter.__name__:
-        assert other_calls[0] == ('before_feeds_update_hooks', None)
-        assert other_calls[-1] == ('after_feeds_update_hooks', None)
-        other_calls = other_calls[1:-1]
-    assert other_calls == [
-        ('before_feed_update_hooks', '1'),
-        ('after_entry_update_hooks', ('1', '1, 2')),
-        ('after_entry_update_hooks', ('1', '1, 1')),
-        ('after_feed_update_hooks', '1'),
-        ('before_feed_update_hooks', '2'),
-        ('after_entry_update_hooks', ('2', '2, 1')),
-        ('after_feed_update_hooks', '2'),
-    ]
+    simulated = 'simulated' in update_feeds_iter.__name__
+    ends = OTHER_CALLS_ENDS if not simulated else None
+    check_sublists(other_calls, OTHER_CALLS_ONE, OTHER_CALLS_TWO, ends=ends)
 
 
 def test_after_feed_update_error(reader, update_feeds_iter):
@@ -381,19 +413,9 @@ def test_after_feed_update_error(reader, update_feeds_iter):
     assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 2', '2, 1'}
 
     # these may change (e.g. if we don't run after_* hooks after ParseError)
-    if 'simulated' not in update_feeds_iter.__name__:
-        assert other_calls[0] == ('before_feeds_update_hooks', None)
-        assert other_calls[-1] == ('after_feeds_update_hooks', None)
-        other_calls = other_calls[1:-1]
-    assert other_calls == [
-        ('before_feed_update_hooks', '1'),
-        ('after_entry_update_hooks', ('1', '1, 2')),
-        ('after_entry_update_hooks', ('1', '1, 1')),
-        ('after_feed_update_hooks', '1'),
-        ('before_feed_update_hooks', '2'),
-        ('after_entry_update_hooks', ('2', '2, 1')),
-        ('after_feed_update_hooks', '2'),
-    ]
+    simulated = 'simulated' in update_feeds_iter.__name__
+    ends = OTHER_CALLS_ENDS if not simulated else None
+    check_sublists(other_calls, OTHER_CALLS_ONE, OTHER_CALLS_TWO, ends=ends)
 
 
 def test_after_feeds_update_error(reader, update_feeds_iter):
@@ -417,17 +439,7 @@ def test_after_feeds_update_error(reader, update_feeds_iter):
 
     assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 2', '2, 1'}
 
-    assert other_calls == [
-        ('before_feeds_update_hooks', None),
-        ('before_feed_update_hooks', '1'),
-        ('after_entry_update_hooks', ('1', '1, 2')),
-        ('after_entry_update_hooks', ('1', '1, 1')),
-        ('after_feed_update_hooks', '1'),
-        ('before_feed_update_hooks', '2'),
-        ('after_entry_update_hooks', ('2', '2, 1')),
-        ('after_feed_update_hooks', '2'),
-        ('after_feeds_update_hooks', None),
-    ]
+    check_sublists(other_calls, OTHER_CALLS_ONE, OTHER_CALLS_TWO, ends=OTHER_CALLS_ENDS)
 
 
 def test_update_feeds_before_feeds_update_error(reader):
@@ -455,13 +467,7 @@ def test_update_feeds_before_feed_update_error(reader):
 
     assert {e.id for e in reader.get_entries()} == {'2, 1'}
 
-    assert other_calls == [
-        ('before_feeds_update_hooks', None),
-        ('before_feed_update_hooks', '2'),
-        ('after_entry_update_hooks', ('2', '2, 1')),
-        ('after_feed_update_hooks', '2'),
-        ('after_feeds_update_hooks', None),
-    ]
+    check_sublists(other_calls, OTHER_CALLS_TWO, ends=OTHER_CALLS_ENDS)
 
 
 def test_update_feeds_other_error(reader):
@@ -491,17 +497,7 @@ def test_update_feeds_other_error(reader):
 
     assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 2', '2, 1'}
 
-    assert other_calls == [
-        ('before_feeds_update_hooks', None),
-        ('before_feed_update_hooks', '1'),
-        ('after_entry_update_hooks', ('1', '1, 2')),
-        ('after_entry_update_hooks', ('1', '1, 1')),
-        ('after_feed_update_hooks', '1'),
-        ('before_feed_update_hooks', '2'),
-        ('after_entry_update_hooks', ('2', '2, 1')),
-        ('after_feed_update_hooks', '2'),
-        ('after_feeds_update_hooks', None),
-    ]
+    check_sublists(other_calls, OTHER_CALLS_ONE, OTHER_CALLS_TWO, ends=OTHER_CALLS_ENDS)
 
 
 @pytest.mark.parametrize(
