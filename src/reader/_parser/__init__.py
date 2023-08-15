@@ -17,10 +17,6 @@ from typing import runtime_checkable
 from typing import TYPE_CHECKING
 from typing import TypeVar
 
-from .._requests_utils import DEFAULT_TIMEOUT
-from .._requests_utils import Headers
-from .._requests_utils import SessionFactory
-from .._requests_utils import TimeoutType
 from .._types import EntryData
 from .._types import EntryForUpdate
 from .._types import FeedData
@@ -28,14 +24,18 @@ from .._types import FeedForUpdate
 from .._types import ParsedFeed
 from ..exceptions import ParseError
 from ..types import _namedtuple_compat
+from .requests import DEFAULT_TIMEOUT
+from .requests import Headers
+from .requests import SessionFactory
+from .requests import TimeoutType
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .lazy import Parser as Parser
+    from ._lazy import Parser as Parser
 
 
 def __getattr__(name: str) -> Any:  # pragma: no cover
     if name == 'Parser':
-        from .lazy import Parser
+        from ._lazy import Parser
 
         return Parser
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
@@ -59,7 +59,7 @@ def default_parser(
 
     """
     if feed_root is not None:
-        from .._retrievers import FileRetriever
+        from .retrievers.file import FileRetriever
 
         # duplicated from post_init (fail early)
         FileRetriever(feed_root)
@@ -67,15 +67,15 @@ def default_parser(
     def post_init(parser: Parser) -> None:
         parser.session_factory.timeout = session_timeout
 
-        from .._retrievers import HTTPRetriever
-        from .._feedparser import FeedparserParser
-        from .._jsonfeed import JSONFeedParser
+        from .retrievers.http import HTTPRetriever
+        from .parsers.feedparser import FeedparserParser
+        from .parsers.jsonfeed import JSONFeedParser
 
         http_retriever = HTTPRetriever(parser.session_factory.transient)
         parser.mount_retriever('https://', http_retriever)
         parser.mount_retriever('http://', http_retriever)
         if feed_root is not None:
-            from .._retrievers import FileRetriever
+            from .retrievers.file import FileRetriever  # FIXME
 
             # empty string means catch-all
             parser.mount_retriever('', FileRetriever(feed_root))
@@ -88,7 +88,7 @@ def default_parser(
         parser.mount_parser_by_mime_type(feedparser_parser, '*/*;q=0.1')
 
     if not _lazy:
-        from .lazy import Parser
+        from ._lazy import Parser
 
         parser = Parser()
         post_init(parser)
@@ -122,7 +122,7 @@ class LazyParser:
     def _lazy_init(self) -> None:
         if self._parser:
             return
-        from .lazy import Parser
+        from ._lazy import Parser
 
         self._parser = parser = Parser()
         parser.session_factory = self._session_factory

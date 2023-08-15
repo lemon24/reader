@@ -21,15 +21,15 @@ from . import ParserType
 from . import RetrieveResult
 from . import RetrieverType
 from . import wrap_exceptions
-from .._http_utils import parse_accept_header
-from .._http_utils import unparse_accept_header
-from .._requests_utils import SessionFactory
 from .._types import FeedForUpdate
 from .._types import ParsedFeed
-from .._url_utils import normalize_url
 from .._utils import MapFunction
 from ..exceptions import InvalidFeedURLError
 from ..exceptions import ParseError
+from ._http_utils import parse_accept_header
+from ._http_utils import unparse_accept_header
+from ._url_utils import normalize_url
+from .requests import SessionFactory
 
 
 log = logging.getLogger('reader')

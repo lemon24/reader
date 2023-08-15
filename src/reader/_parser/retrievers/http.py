@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pathlib
 from collections.abc import Callable
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -8,58 +7,14 @@ from dataclasses import dataclass
 from typing import Any
 from typing import ContextManager
 from typing import IO
-from typing import TYPE_CHECKING
 
-from ._parser import RetrieveResult
-from ._parser import wrap_exceptions
-from ._requests_utils import SessionWrapper
-from ._url_utils import extract_path
-from ._url_utils import resolve_root
-from .exceptions import ParseError
+import requests
 
-if TYPE_CHECKING:  # pragma: no cover
-    import requests
-
-
-@dataclass
-class FileRetriever:
-
-    """Bare path and file:// URI parser, with support for feed roots,
-    per https://github.com/lemon24/reader/issues/155
-
-    """
-
-    feed_root: str
-
-    slow_to_read = False
-
-    def __post_init__(self) -> None:
-        # give feed_root checks a chance to fail early
-        self._normalize_url('known-good-feed-url')
-
-    @contextmanager
-    def __call__(
-        self, url: str, *args: Any, **kwargs: Any
-    ) -> Iterator[RetrieveResult[IO[bytes]]]:
-        try:
-            normalized_url = self._normalize_url(url)
-        except ValueError as e:
-            raise ParseError(url, message=str(e)) from None
-
-        with wrap_exceptions(url, "while reading feed"):
-            with open(normalized_url, 'rb') as file:
-                yield RetrieveResult(file)
-
-    def validate_url(self, url: str) -> None:
-        self._normalize_url(url)
-
-    def _normalize_url(self, url: str) -> str:
-        path = extract_path(url)
-        if self.feed_root:
-            path = resolve_root(self.feed_root, path)
-            if pathlib.PurePath(path).is_reserved():
-                raise ValueError("path must not be reserved")
-        return path
+from .. import RetrieveResult
+from .. import wrap_exceptions
+from ...exceptions import ParseError
+from .._http_utils import parse_options_header
+from ..requests import SessionWrapper
 
 
 @dataclass
@@ -101,8 +56,6 @@ class HTTPRetriever:
         http_last_modified: str | None = None,
         http_accept: str | None = None,
     ) -> Iterator[RetrieveResult[IO[bytes]] | None]:
-        from ._http_utils import parse_options_header
-
         request_headers = {}
         if http_accept:
             request_headers['Accept'] = http_accept
@@ -147,9 +100,6 @@ class HTTPRetriever:
                 )
 
     def validate_url(self, url: str) -> None:
-        # lazy import (https://github.com/lemon24/reader/issues/297)
-        import requests
-
         with self.get_session() as session_wrapper:
             session = session_wrapper.session
             session.get_adapter(url)

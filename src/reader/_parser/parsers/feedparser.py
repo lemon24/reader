@@ -9,19 +9,19 @@ from typing import Any
 from typing import IO
 from typing import TYPE_CHECKING
 
-from ._http_utils import parse_accept_header
-from ._http_utils import unparse_accept_header
-from ._types import EntryData
-from ._types import FeedData
-from ._vendor import feedparser
-from .exceptions import ParseError
-from .types import Content
-from .types import Enclosure
+from ..._types import EntryData
+from ..._types import FeedData
+from ..._vendor import feedparser
+from ...exceptions import ParseError
+from ...types import Content
+from ...types import Enclosure
+from .._http_utils import parse_accept_header
+from .._http_utils import unparse_accept_header
 
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ._parser import FeedAndEntries
-    from ._requests_utils import Headers
+    from .. import FeedAndEntries
+    from ..requests import Headers
 
 
 log = logging.getLogger('reader')

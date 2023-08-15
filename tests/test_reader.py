@@ -2750,7 +2750,7 @@ def test_logging_defaults():
 @pytest.mark.parametrize(
     'kwargs, expected_timeout',
     [
-        ({}, reader._requests_utils.DEFAULT_TIMEOUT),
+        ({}, reader._parser.requests.DEFAULT_TIMEOUT),
         ({'session_timeout': (1.234, 324.1)}, (1.234, 324.1)),
     ],
 )

@@ -31,7 +31,7 @@ Parser
     :special-members: __call__
 
 
-.. module:: reader._requests_utils
+.. module:: reader._parser.requests
 
 .. autoclass:: SessionFactory(...)
     :members:
@@ -71,7 +71,7 @@ Protocols
     :show-inheritance:
 
 
-.. module:: reader._requests_utils
+.. module:: reader._parser.requests
     :noindex:
 
 .. autoclass:: RequestHook

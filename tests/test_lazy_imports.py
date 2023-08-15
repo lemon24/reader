@@ -101,7 +101,7 @@ S_UPDATE_FEEDS_WORKERS = "reader.update_feeds(workers=2)", {
 S_UPDATE_SEARCH = """\
 from reader._types import EntryData, EntryUpdateIntent
 from datetime import datetime
-reader.add_feed('one', allow_invalid_url=False)
+reader.add_feed('one', allow_invalid_url=True)
 dt = datetime(2010, 1, 1)
 entry = EntryData('one', 'entry', summary='summary')
 reader._storage.add_or_update_entry(EntryUpdateIntent(entry, dt, dt, dt, dt))

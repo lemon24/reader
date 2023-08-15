@@ -20,6 +20,15 @@ from typing import Union
 
 if TYPE_CHECKING:  # pragma: no cover
     import requests
+    from ._lazy import SessionWrapper as SessionWrapper
+
+
+def __getattr__(name: str) -> Any:  # pragma: no cover
+    if name == 'SessionWrapper':
+        from ._lazy import SessionWrapper
+
+        return SessionWrapper
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class RequestHook(Protocol):
@@ -110,14 +119,12 @@ class SessionFactory:
             SessionWrapper:
 
         """
+        from ._lazy import SessionWrapper, TimeoutHTTPAdapter
+
         session = SessionWrapper(
             request_hooks=list(self.request_hooks),
             response_hooks=list(self.response_hooks),
         )
-
-        # lazy import (https://github.com/lemon24/reader/issues/297)
-        from ._requests_utils_lazy import TimeoutHTTPAdapter
-
         timeout_adapter = TimeoutHTTPAdapter(self.timeout)
         session.session.mount('https://', timeout_adapter)
         session.session.mount('http://', timeout_adapter)
@@ -169,97 +176,3 @@ class SessionFactory:
                 yield session
             finally:
                 self.session = None
-
-
-_T = TypeVar('_T')
-
-
-def _make_session() -> requests.Session:
-    # lazy import (https://github.com/lemon24/reader/issues/297)
-    global requests
-    import requests
-
-    return requests.Session()
-
-
-@dataclass
-class SessionWrapper:
-
-    """Minimal wrapper over a :class:`requests.Session`.
-
-    Only provides a limited :meth:`get` method.
-
-    Can be used as a context manager (closes the session on exit).
-
-    """
-
-    # TODO: contextmanager, use factory for hooks
-
-    # Details on why the extension methods built into Requests
-    # (adapters, hooks['response']) were not enough:
-    # https://github.com/lemon24/reader/issues/155#issuecomment-668716387
-
-    #: The underlying :class:`requests.Session`.
-    session: requests.Session = field(default_factory=_make_session)
-
-    #: Sequence of :class:`RequestHook`\s.
-    request_hooks: Sequence[RequestHook] = field(default_factory=list)
-    #: Sequence of :class:`ResponseHook`\s.
-    response_hooks: Sequence[ResponseHook] = field(default_factory=list)
-
-    def __post_init__(self) -> None:
-        # lazy import (https://github.com/lemon24/reader/issues/297)
-        global requests
-        import requests
-
-    def get(
-        self, url: str | bytes, headers: Headers | None = None, **kwargs: Any
-    ) -> requests.Response:
-        """Like Requests :meth:`~requests.Session.get`,
-        but apply :attr:`request_hooks` and :attr:`response_hooks`.
-
-        Args:
-            url (str): Passed to :class:`~requests.Request`.
-            headers (dict(str, str)): Passed to :class:`~requests.Request`.
-
-        Keyword Args:
-            **kwargs: Passed to :meth:`~requests.adapters.BaseAdapter.send`.
-
-        Returns:
-            requests.Response:
-
-        """
-        # kwargs get passed to requests.BaseAdapter.send();
-        # can be any of: stream, timeout, verify, cert, proxies
-
-        request = requests.Request('GET', url, headers=headers)
-
-        for request_hook in self.request_hooks:
-            request = request_hook(self.session, request, **kwargs) or request
-
-        response = self.session.send(self.session.prepare_request(request), **kwargs)
-
-        for response_hook in self.response_hooks:
-            new_request = response_hook(self.session, response, request, **kwargs)
-            if new_request is None:
-                continue
-
-            # TODO: will this fail if stream=False?
-            response.close()
-
-            # TODO: is this assert needed? yes, we should raise a custom exception though
-            assert isinstance(new_request, requests.Request)
-
-            request = new_request
-            response = self.session.send(
-                self.session.prepare_request(request), **kwargs
-            )
-
-        return response
-
-    def __enter__(self: _T) -> _T:
-        # TODO: use typing.Self instead of _T
-        return self
-
-    def __exit__(self, *args: Any) -> None:
-        self.session.close()

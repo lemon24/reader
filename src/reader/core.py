@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 
 from ._parser import default_parser
-from ._requests_utils import DEFAULT_TIMEOUT
-from ._requests_utils import TimeoutType
+from ._parser.requests import DEFAULT_TIMEOUT
+from ._parser.requests import TimeoutType
 from ._search import Search
 from ._storage import Storage
 from ._types import DEFAULT_RESERVED_NAME_SCHEME

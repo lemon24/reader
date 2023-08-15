@@ -9,14 +9,14 @@ import requests
 from utils import make_url_base
 
 from reader import Feed
-from reader._feedparser import FeedparserParser
-from reader._jsonfeed import JSONFeedParser
 from reader._parser import default_parser
 from reader._parser import FeedArgumentTuple
 from reader._parser import Parser
 from reader._parser import RetrieveResult
-from reader._requests_utils import SessionWrapper
-from reader._retrievers import FileRetriever
+from reader._parser.parsers.feedparser import FeedparserParser
+from reader._parser.parsers.jsonfeed import JSONFeedParser
+from reader._parser.requests import SessionWrapper
+from reader._parser.retrievers.file import FileRetriever
 from reader._types import FeedData
 from reader._vendor import feedparser
 from reader.exceptions import ParseError
@@ -429,7 +429,7 @@ def test_parse_requests_exception(monkeypatch, exc_cls):
         def get(self, *args, **kwargs):
             raise exc
 
-    monkeypatch.setattr('reader._requests_utils.SessionFactory.__call__', BadWrapper)
+    monkeypatch.setattr('reader._parser.requests.SessionFactory.__call__', BadWrapper)
 
     with pytest.raises(ParseError) as excinfo:
         default_parser('')('http://example.com')
@@ -878,18 +878,18 @@ def test_normalize_url_errors(monkeypatch, reload_module, os_name, url, reason):
     monkeypatch.setattr('os.name', os_name)
     monkeypatch.setattr('os.path', {'nt': ntpath, 'posix': posixpath}[os_name])
 
-    import reader._url_utils
-    import reader._retrievers
+    import reader._parser._url_utils
+    import reader._parser.retrievers.file
 
     # reader._url_utils.url2pathname differs based on os.name
-    reload_module(reader._url_utils)
-    reload_module(reader._retrievers)
+    reload_module(reader._parser._url_utils)
+    reload_module(reader._parser.retrievers.file)
 
-    import reader._retrievers
+    reader._parser.retrievers.file
 
     with pytest.raises(ValueError) as excinfo:
         try:
-            reader._retrievers.FileRetriever(data_dir)._normalize_url(url)
+            reader._parser.retrievers.file.FileRetriever(data_dir)._normalize_url(url)
         finally:
             # pytest.raises() doesn't interact well with our monkeypatching
             reload_module.undo()
