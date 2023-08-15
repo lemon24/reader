@@ -4,6 +4,7 @@ import builtins
 import logging
 import numbers
 import warnings
+from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Mapping
 from collections.abc import MutableSequence
@@ -22,14 +23,12 @@ from ._requests_utils import DEFAULT_TIMEOUT
 from ._requests_utils import TimeoutType
 from ._search import Search
 from ._storage import Storage
-from ._types import AfterEntryUpdateHook
 from ._types import DEFAULT_RESERVED_NAME_SCHEME
 from ._types import entry_data_from_obj
+from ._types import EntryData
 from ._types import EntryFilterOptions
 from ._types import EntryUpdateIntent
 from ._types import FeedFilterOptions
-from ._types import FeedsUpdateHook
-from ._types import FeedUpdateHook
 from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
 from ._types import UpdateHooks
@@ -84,6 +83,10 @@ _T = TypeVar('_T')
 _U = TypeVar('_U')
 # mypy doesn't seem to support Self yet.
 _TReader = TypeVar('_TReader', bound='Reader')
+
+AfterEntryUpdateHook = Callable[['Reader', EntryData, EntryUpdateStatus], None]
+FeedUpdateHook = Callable[['Reader', str], None]
+FeedsUpdateHook = Callable[['Reader'], None]
 
 
 def make_reader(
@@ -2199,7 +2202,7 @@ class Reader:
             raise AttributeError(f"invalid reserved name scheme: {value}") from e
 
     @property
-    def before_feeds_update_hooks(self) -> MutableSequence[FeedsUpdateHook[Reader]]:
+    def before_feeds_update_hooks(self) -> MutableSequence[FeedsUpdateHook]:
         """List of functions called *once* before updating any feeds,
         at the beginning of :meth:`update_feeds` / :meth:`update_feeds_iter`,
         but not :meth:`update_feed`.
@@ -2220,10 +2223,10 @@ class Reader:
             Wrap unexpected exceptions in :exc:`UpdateHookError`.
 
         """
-        return self._update_hooks.before_feeds_update
+        return self._update_hooks['before_feeds_update']
 
     @property
-    def before_feed_update_hooks(self) -> MutableSequence[FeedUpdateHook[Reader]]:
+    def before_feed_update_hooks(self) -> MutableSequence[FeedUpdateHook]:
         """List of functions called for each updated feed
         before the feed is updated.
 
@@ -2244,10 +2247,10 @@ class Reader:
             Wrap unexpected exceptions in :exc:`UpdateHookError`.
 
         """
-        return self._update_hooks.before_feed_update
+        return self._update_hooks['before_feed_update']
 
     @property
-    def after_entry_update_hooks(self) -> MutableSequence[AfterEntryUpdateHook[Reader]]:
+    def after_entry_update_hooks(self) -> MutableSequence[AfterEntryUpdateHook]:
         """List of functions called for each updated entry
         after the feed is updated.
 
@@ -2281,10 +2284,10 @@ class Reader:
             Try to run all hooks, don't stop after one fails.
 
         """
-        return self._update_hooks.after_entry_update
+        return self._update_hooks['after_entry_update']
 
     @property
-    def after_feed_update_hooks(self) -> MutableSequence[FeedUpdateHook[Reader]]:
+    def after_feed_update_hooks(self) -> MutableSequence[FeedUpdateHook]:
         """List of functions called for each updated feed
         after the feed is updated.
 
@@ -2307,10 +2310,10 @@ class Reader:
             Try to run all hooks, don't stop after one fails.
 
         """
-        return self._update_hooks.after_feed_update
+        return self._update_hooks['after_feed_update']
 
     @property
-    def after_feeds_update_hooks(self) -> MutableSequence[FeedsUpdateHook[Reader]]:
+    def after_feeds_update_hooks(self) -> MutableSequence[FeedsUpdateHook]:
         """List of functions called *once* after updating all feeds,
         at the end of :meth:`update_feeds` / :meth:`update_feeds_iter`,
         but not :meth:`update_feed`.
@@ -2333,4 +2336,4 @@ class Reader:
             Try to run all hooks, don't stop after one fails.
 
         """
-        return self._update_hooks.after_feeds_update
+        return self._update_hooks['after_feeds_update']

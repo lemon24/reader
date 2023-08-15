@@ -6,7 +6,6 @@ from collections.abc import Iterable
 from collections.abc import Mapping
 from collections.abc import Sequence
 from dataclasses import dataclass
-from dataclasses import field
 from datetime import datetime
 from datetime import timezone
 from functools import cached_property
@@ -32,7 +31,6 @@ from .types import Enclosure
 from .types import Entry
 from .types import EntryAddedBy
 from .types import EntryInput
-from .types import EntryUpdateStatus
 from .types import ExceptionInfo
 from .types import Feed
 from .types import FeedInput
@@ -569,9 +567,6 @@ def fix_datetime_tzinfo(
 
 
 UpdateHook = Callable[..., None]
-AfterEntryUpdateHook = Callable[[_T, EntryData, EntryUpdateStatus], None]
-FeedUpdateHook = Callable[[_T, str], None]
-FeedsUpdateHook = Callable[[_T], None]
 UpdateHookType = Literal[
     'before_feeds_update',
     'before_feed_update',
@@ -581,19 +576,18 @@ UpdateHookType = Literal[
 ]
 
 
-@dataclass(frozen=True)
-class UpdateHooks(Generic[_T]):
-    target: _T
-    before_feeds_update: list[FeedsUpdateHook[_T]] = field(default_factory=list)
-    before_feed_update: list[FeedUpdateHook[_T]] = field(default_factory=list)
-    after_entry_update: list[AfterEntryUpdateHook[_T]] = field(default_factory=list)
-    after_feed_update: list[FeedUpdateHook[_T]] = field(default_factory=list)
-    after_feeds_update: list[FeedsUpdateHook[_T]] = field(default_factory=list)
+class UpdateHooks(dict[UpdateHookType, list[UpdateHook]], Generic[_T]):
+    def __init__(self, target: _T):
+        super().__init__()
+        self.target = target
+
+    def __missing__(self, key: UpdateHookType) -> list[UpdateHook]:
+        return self.setdefault(key, [])
 
     def run(
         self, when: UpdateHookType, resource_id: tuple[str, ...] | None, *args: Any
     ) -> None:
-        for hook in getattr(self, when):
+        for hook in self[when]:
             try:
                 hook(self.target, *args)
             except Exception as e:
@@ -603,12 +597,12 @@ class UpdateHooks(Generic[_T]):
         return _UpdateHookErrorGrouper(self, message)
 
 
-@dataclass(frozen=True)
 class _UpdateHookErrorGrouper:
-    hooks: UpdateHooks[Any]
-    message: str
-    exceptions: list[UpdateHookError] = field(default_factory=list)
-    seen_dedupe_keys: set[Any] = field(default_factory=set)
+    def __init__(self, hooks: UpdateHooks[Any], message: str):
+        self.hooks = hooks
+        self.message = message
+        self.exceptions: list[UpdateHookError] = []
+        self.seen_dedupe_keys: set[Any] = set()
 
     def run(
         self,
@@ -617,7 +611,7 @@ class _UpdateHookErrorGrouper:
         *args: Any,
         limit: int = 0,
     ) -> None:
-        for hook in getattr(self.hooks, when):
+        for hook in self.hooks[when]:
             try:
                 hook(self.hooks.target, *args)
             except Exception as e:
