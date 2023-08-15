@@ -80,12 +80,11 @@ LAZY_MODULES = frozenset(
 
 # all in a single script to save time
 
-S_NO_IMPORTS = pytest.param("""\
-reader.add_feed('file:feed.rss')  # but not http://
+S_NO_IMPORTS = """\
 list(reader.get_entries())
 list(reader.search_entries('entry'))
 reader._parser.session_factory.response_hooks.append('unused')
-""", set(), marks=pytest.mark.xfail(reason='lemon24/reader#316'))  # fmt: skip
+""", set()  # fmt: skip
 
 
 # urllib.request being imported by requests/bs4 makes these kinda brittle, but eh...

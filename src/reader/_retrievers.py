@@ -10,7 +10,6 @@ from typing import ContextManager
 from typing import IO
 from typing import TYPE_CHECKING
 
-from ._http_utils import parse_options_header
 from ._parser import RetrieveResult
 from ._parser import wrap_exceptions
 from ._requests_utils import SessionWrapper
@@ -102,6 +101,8 @@ class HTTPRetriever:
         http_last_modified: str | None = None,
         http_accept: str | None = None,
     ) -> Iterator[RetrieveResult[IO[bytes]] | None]:
+        from ._http_utils import parse_options_header
+
         request_headers = {}
         if http_accept:
             request_headers['Accept'] = http_accept

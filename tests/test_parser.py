@@ -22,9 +22,9 @@ from reader._vendor import feedparser
 from reader.exceptions import ParseError
 
 
-@pytest.fixture
-def parse():
-    parse = default_parser('')
+@pytest.fixture(params=[True, False])
+def parse(request):
+    parse = default_parser('', _lazy=request.param)
     yield parse
 
 

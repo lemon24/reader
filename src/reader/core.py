@@ -15,10 +15,10 @@ from types import MappingProxyType
 from typing import Any
 from typing import Literal
 from typing import overload
+from typing import TYPE_CHECKING
 from typing import TypeVar
 
 from ._parser import default_parser
-from ._parser import Parser
 from ._requests_utils import DEFAULT_TIMEOUT
 from ._requests_utils import TimeoutType
 from ._search import Search
@@ -74,6 +74,9 @@ from .types import TagFilterInput
 from .types import TristateFilterInput
 from .types import UpdatedFeed
 from .types import UpdateResult
+
+if TYPE_CHECKING:  # pragma: no cover
+    from ._parser import Parser
 
 
 log = logging.getLogger('reader')
