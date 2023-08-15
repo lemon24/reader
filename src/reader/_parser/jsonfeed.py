@@ -12,15 +12,15 @@ from typing import Union
 
 import iso8601
 
-from ..._types import EntryData
-from ..._types import FeedData
-from ...exceptions import ParseError
-from ...types import Content
-from ...types import Enclosure
+from .._types import EntryData
+from .._types import FeedData
+from ..exceptions import ParseError
+from ..types import Content
+from ..types import Enclosure
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .. import FeedAndEntries
-    from ..requests import Headers
+    from . import FeedAndEntries
+    from .requests import Headers
 
 
 class JSONFeedParser:

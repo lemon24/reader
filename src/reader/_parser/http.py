@@ -10,11 +10,11 @@ from typing import IO
 
 import requests
 
-from .. import RetrieveResult
-from .. import wrap_exceptions
-from ...exceptions import ParseError
-from .._http_utils import parse_options_header
-from ..requests import SessionWrapper
+from . import RetrieveResult
+from . import wrap_exceptions
+from ..exceptions import ParseError
+from ._http_utils import parse_options_header
+from .requests import SessionWrapper
 
 
 @dataclass

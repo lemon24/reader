@@ -59,7 +59,7 @@ def default_parser(
 
     """
     if feed_root is not None:
-        from .retrievers.file import FileRetriever
+        from .file import FileRetriever
 
         # duplicated from post_init (fail early)
         FileRetriever(feed_root)
@@ -67,15 +67,15 @@ def default_parser(
     def post_init(parser: Parser) -> None:
         parser.session_factory.timeout = session_timeout
 
-        from .retrievers.http import HTTPRetriever
-        from .parsers.feedparser import FeedparserParser
-        from .parsers.jsonfeed import JSONFeedParser
+        from .http import HTTPRetriever
+        from .feedparser import FeedparserParser
+        from .jsonfeed import JSONFeedParser
 
         http_retriever = HTTPRetriever(parser.session_factory.transient)
         parser.mount_retriever('https://', http_retriever)
         parser.mount_retriever('http://', http_retriever)
         if feed_root is not None:
-            from .retrievers.file import FileRetriever  # FIXME
+            from .file import FileRetriever
 
             # empty string means catch-all
             parser.mount_retriever('', FileRetriever(feed_root))

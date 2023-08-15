@@ -13,10 +13,10 @@ from reader._parser import default_parser
 from reader._parser import FeedArgumentTuple
 from reader._parser import Parser
 from reader._parser import RetrieveResult
-from reader._parser.parsers.feedparser import FeedparserParser
-from reader._parser.parsers.jsonfeed import JSONFeedParser
+from reader._parser.feedparser import FeedparserParser
+from reader._parser.file import FileRetriever
+from reader._parser.jsonfeed import JSONFeedParser
 from reader._parser.requests import SessionWrapper
-from reader._parser.retrievers.file import FileRetriever
 from reader._types import FeedData
 from reader._vendor import feedparser
 from reader.exceptions import ParseError
@@ -879,17 +879,17 @@ def test_normalize_url_errors(monkeypatch, reload_module, os_name, url, reason):
     monkeypatch.setattr('os.path', {'nt': ntpath, 'posix': posixpath}[os_name])
 
     import reader._parser._url_utils
-    import reader._parser.retrievers.file
+    import reader._parser.file
 
     # reader._url_utils.url2pathname differs based on os.name
     reload_module(reader._parser._url_utils)
-    reload_module(reader._parser.retrievers.file)
+    reload_module(reader._parser.file)
 
-    reader._parser.retrievers.file
+    reader._parser.file
 
     with pytest.raises(ValueError) as excinfo:
         try:
-            reader._parser.retrievers.file.FileRetriever(data_dir)._normalize_url(url)
+            reader._parser.file.FileRetriever(data_dir)._normalize_url(url)
         finally:
             # pytest.raises() doesn't interact well with our monkeypatching
             reload_module.undo()

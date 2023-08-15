@@ -37,7 +37,7 @@ def _ua_fallback_response_hook(session, response, request, **kwargs):
         return None
 
     # lazy import (https://github.com/lemon24/reader/issues/297)
-    from .._parser.parsers.feedparser import feedparser
+    from .._parser.feedparser import feedparser
 
     ua_prefix = feedparser.USER_AGENT.partition(" ")[0]
     request.headers['User-Agent'] = f'{ua_prefix} {ua}'

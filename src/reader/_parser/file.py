@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from typing import Any
 from typing import IO
 
-from .. import RetrieveResult
-from .. import wrap_exceptions
-from ...exceptions import ParseError
-from .._url_utils import extract_path
-from .._url_utils import resolve_root
+from . import RetrieveResult
+from . import wrap_exceptions
+from ..exceptions import ParseError
+from ._url_utils import extract_path
+from ._url_utils import resolve_root
 
 
 @dataclass
