@@ -17,6 +17,7 @@ These packages will be installed automatically when installing *reader*:
 * `requests`_ retrieves feeds from the internet;
   it replaces feedparser's default use of :mod:`urllib`
   to make it easier to write plugins.
+* `werkzeug`_ provides HTTP utilities.
 * `iso8601`_  parses dates in ISO 8601 / RFC 3339; used for JSON Feed parsing.
 * `beautifulsoup4`_ is used to strip HTML tags before adding entries
   to the search index.
@@ -49,6 +50,7 @@ As of version |version|, *reader* has the following extras:
 .. _beautifulsoup4: https://www.crummy.com/software/BeautifulSoup/
 .. _feedparser: https://feedparser.readthedocs.io/en/latest/
 .. _requests: https://requests.readthedocs.io/
+.. _werkzeug: https://werkzeug.palletsprojects.com/
 .. _iso8601: http://pyiso8601.readthedocs.org/
 .. _typing-extensions: https://pypi.org/project/typing-extensions/
 .. _JSON1: https://www.sqlite.org/json1.html

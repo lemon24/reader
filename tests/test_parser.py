@@ -1022,7 +1022,7 @@ def test_parser_selection():
         None,
         'type/unknown',
     )
-    assert nomt_retriever.last_http_accept == 'type/http,type/file,*/*,text/plain;q=0.8'
+    assert nomt_retriever.last_http_accept == 'type/http,type/file,text/plain;q=0.8,*/*'
 
     assert parse('file:o') == ('urlp-file', 'file:o', None, None, 'type/file')
     assert file_retriever.last_http_accept is None

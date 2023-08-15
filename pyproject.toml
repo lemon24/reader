@@ -40,6 +40,8 @@ dependencies = [
     "typing-extensions>=4",
     "feedparser>=6",
     "requests>=2.18",
+    # for _http_utils
+    "werkzeug>2",
     # for JSON Feed date parsing
     "iso8601>=1",
     # search
@@ -108,8 +110,6 @@ tests = [
     # lxml does not have a PyPy 3.10+ wheel.
     'lxml; (implementation_name != "pypy" or python_version <= "3.9")',
     "html5lib",
-    # for _http_utils tests
-    "werkzeug",
     # mypy does not work on pypy (yet).
     'mypy; implementation_name != "pypy"',
     "types-requests",
