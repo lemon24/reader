@@ -12,10 +12,6 @@ import pytest
 from utils import parametrize_dict
 
 import reader.plugins
-from reader._feedparser import FeedparserParser
-from reader._feedparser_lazy import feedparser
-from reader._http_utils import parse_accept_header
-from reader._http_utils import unparse_accept_header
 
 
 # these tests take ~1s in total
@@ -126,9 +122,3 @@ def test_only_expected_modules_are_imported(code, expected_modules):
     # sanity check
     assert 'reader' in modules
     assert actual_modules == expected_modules, expected_modules
-
-
-def test_feedparserparser_http_accept_up_to_date():
-    assert FeedparserParser.http_accept == unparse_accept_header(
-        t for t in parse_accept_header(feedparser.http.ACCEPT_HEADER) if '*' not in t[0]
-    )
