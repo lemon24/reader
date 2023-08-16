@@ -78,9 +78,9 @@ class HTTPRetriever:
             response_headers.setdefault('content-location', response.url)
 
             # https://datatracker.ietf.org/doc/html/rfc9110#name-content-encoding
-            # Content-Encoding is the conterpart of Accept-Encoding;
+            # Content-Encoding is the counterpart of Accept-Encoding;
             # it is about binary transformations (mainly compression),
-            # not about text encoding (Content-Type charset does that).
+            # not text encoding (Content-Type charset does that).
             # We let Requests/urllib3 take care of it and remove the header,
             # so parsers (like feedparser) don't do it a second time.
             response_headers.pop('content-encoding', None)

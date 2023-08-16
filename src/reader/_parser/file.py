@@ -14,16 +14,17 @@ from ._url_utils import extract_path
 from ._url_utils import resolve_root
 
 
-@dataclass
+@dataclass(frozen=True)
 class FileRetriever:
 
-    """Bare path and file:// URI parser, with support for feed roots,
-    per https://github.com/lemon24/reader/issues/155
+    """Bare path and file:// URI parser.
+
+    Allows restricting file-system access to a single directory;
+    see :func:`~reader.make_reader` for details.
 
     """
 
     feed_root: str
-
     slow_to_read = False
 
     def __post_init__(self) -> None:
