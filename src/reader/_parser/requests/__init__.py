@@ -18,17 +18,13 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
+from ..._utils import lazy_import
+
 if TYPE_CHECKING:  # pragma: no cover
     import requests
     from ._lazy import SessionWrapper as SessionWrapper
 
-
-def __getattr__(name: str) -> Any:  # pragma: no cover
-    if name == 'SessionWrapper':
-        from ._lazy import SessionWrapper
-
-        return SessionWrapper
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+__getattr__ = lazy_import(__name__, ['SessionWrapper', 'TimeoutHTTPAdapter'])
 
 
 class RequestHook(Protocol):
@@ -119,7 +115,7 @@ class SessionFactory:
             SessionWrapper:
 
         """
-        from ._lazy import SessionWrapper, TimeoutHTTPAdapter
+        from . import SessionWrapper, TimeoutHTTPAdapter
 
         session = SessionWrapper(
             request_hooks=list(self.request_hooks),

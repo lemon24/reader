@@ -22,6 +22,7 @@ from .._types import EntryForUpdate
 from .._types import FeedData
 from .._types import FeedForUpdate
 from .._types import ParsedFeed
+from .._utils import lazy_import
 from ..exceptions import ParseError
 from ..types import _namedtuple_compat
 from .requests import DEFAULT_TIMEOUT
@@ -32,13 +33,7 @@ from .requests import TimeoutType
 if TYPE_CHECKING:  # pragma: no cover
     from ._lazy import Parser as Parser
 
-
-def __getattr__(name: str) -> Any:  # pragma: no cover
-    if name == 'Parser':
-        from ._lazy import Parser
-
-        return Parser
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+__getattr__ = lazy_import(__name__, ['Parser'])
 
 
 def default_parser(
@@ -88,7 +83,7 @@ def default_parser(
         parser.mount_parser_by_mime_type(feedparser_parser, '*/*;q=0.1')
 
     if not _lazy:
-        from ._lazy import Parser
+        from . import Parser
 
         parser = Parser()
         post_init(parser)

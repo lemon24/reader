@@ -4,6 +4,7 @@ import functools
 import inspect
 import itertools
 import logging
+import pkgutil
 import warnings
 from collections.abc import Callable
 from collections.abc import Iterable
@@ -304,3 +305,12 @@ class BetterStrPartial(functools.partial[_T]):
             f"{k}={getattr(v, 'resource_id', v)!r}" for k, v in self.keywords.items()
         )
         return f"{name}({', '.join(parts)})"
+
+
+def lazy_import(module: str, names: list[str]) -> Callable[[str], Any]:
+    def __getattr__(name: str) -> Any:
+        if name not in names:  # pragma: no cover
+            raise AttributeError(f"module {module!r} has no attribute {name!r}")
+        return pkgutil.resolve_name(f'{module}._lazy:{name}')
+
+    return __getattr__
