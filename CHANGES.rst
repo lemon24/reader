@@ -50,6 +50,13 @@ Unreleased
 
 * Include a diagram of the :ref:`exctree` in the :doc:`api`.
 
+* Add werkzeug dependency,
+  instead of vendoring selected :mod:`werkzeug.http` utilities.
+* Rework lazy imports introduced in `version 3.3 <Version 3.3_>`_.
+  (:issue:`316`)
+* Make :mod:`reader._parser` a package, and move parsing-related modules into it.
+  (:issue:`316`)
+
 
 Version 3.7
 -----------
