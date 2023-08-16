@@ -110,6 +110,32 @@ class SessionWrapper:
 
         return response
 
+    def caching_get(
+        self,
+        url: str,
+        etag: str | None = None,
+        last_modified: str | None = None,
+        headers: Headers | None = None,
+        **kwargs: Any,
+    ) -> tuple[requests.Response, str | None, str | None]:
+        """Like :meth:`get()`, but set and return caching headers.
+
+        caching_get(url, etag, last_modified) -> response, etag, last_modified
+
+        """
+        headers = dict(headers or ())
+        if etag:
+            headers.setdefault('If-None-Match', etag)
+        if last_modified:
+            headers.setdefault('If-Modified-Since', last_modified)
+
+        response = self.get(url, headers=headers, **kwargs)
+        if response.ok:
+            etag = response.headers.get('ETag', etag)
+            last_modified = response.headers.get('Last-Modified', last_modified)
+
+        return response, etag, last_modified
+
     def __enter__(self: _T) -> _T:
         # TODO: use typing.Self instead of _T
         return self
