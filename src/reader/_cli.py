@@ -300,6 +300,8 @@ def iter_update_status(it, length):
                 status += f", {result.value.total} total"
         elif result.error:
             status = red(result.error)
+            if isinstance(result.error, reader.UpdateHookError):
+                log.error("got hook error; traceback follows", exc_info=result.error)
         else:
             status = green(
                 f"{result.value.new} new, "

@@ -10,6 +10,7 @@ from utils import make_url_base
 
 from reader import Reader
 from reader import ReaderError
+from reader import UpdateHookError
 from reader._cli import cli
 from reader._cli import config_option
 from reader.types import MISSING
@@ -160,11 +161,20 @@ def test_cli_plugin(db_path, monkeypatch, tests_dir):
     assert "plug-in error" in result.output
 
 
-def raise_reader_exception_on_update_plugin(reader):
-    def hook(*args):
-        raise ReaderError("plug-in error")
+def raise_hook(*args):
+    raise RuntimeError("plug-in error")
 
-    reader.after_feeds_update_hooks.append(hook)
+
+def raise_before_feeds_update(reader):
+    reader.before_feeds_update_hooks.append(raise_hook)
+
+
+def raise_before_feed_update(reader):
+    reader.before_feed_update_hooks.append(raise_hook)
+
+
+def raise_after_feeds_update(reader):
+    reader.after_feeds_update_hooks.append(raise_hook)
 
 
 @pytest.mark.slow
@@ -174,30 +184,30 @@ def test_cli_plugin_update_exception(db_path, data_dir, tests_dir, monkeypatch):
     runner = CliRunner()
 
     def invoke(*args):
-        return runner.invoke(
-            cli,
-            (
-                '--db',
-                db_path,
-                '--feed-root',
-                '',
-                '--plugin',
-                'test_cli:raise_reader_exception_on_update_plugin',
-            )
-            + args,
-        )
+        return runner.invoke(cli, ('--db', db_path, '--feed-root', '') + args)
 
     result = invoke('add', str(data_dir.joinpath('full.atom')))
     assert result.exit_code == 0
     result = invoke('add', str(data_dir.joinpath('full.rss')))
     assert result.exit_code == 0
 
-    result = invoke('update', '-v')
+    result = invoke('--plugin', 'test_cli:raise_before_feeds_update', 'update', '-v')
     assert result.exit_code != 0, result.output
-    assert isinstance(result.exception, ReaderError)
-    assert result.exception.message == "got unexpected after-update hook errors"
+    assert "0 ok, 0 error, 0 not modified; entries: 0 new, 0 modified" in result.output
+    assert isinstance(result.exception, UpdateHookError)
 
-    # FIXME: test hook failure handling (both per-feed, and feeds)
+    result = invoke('--plugin', 'test_cli:raise_before_feed_update', 'update', '-vv')
+    assert result.exit_code == 0, result.output
+    assert "0 ok, 2 error, 0 not modified; entries: 0 new, 0 modified" in result.output
+    assert "unexpected hook error" in result.output
+    assert "plug-in error" in result.output
+    # TODO: the traceback only gets logged with -vv; we might want to fix this
+    assert "got hook error; traceback follows" in result.output
+
+    result = invoke('--plugin', 'test_cli:raise_after_feeds_update', 'update', '-v')
+    assert result.exit_code != 0, result.output
+    assert "2 ok, 0 error, 0 not modified; entries: 4 new, 0 modified" in result.output
+    assert isinstance(result.exception, UpdateHookError)
 
 
 store_reader_plugin = None
