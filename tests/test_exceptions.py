@@ -6,6 +6,7 @@ from reader import EntryError
 from reader import FeedError
 from reader import SingleUpdateHookError
 from reader import TagError
+from reader import UpdateHookErrorGroup
 from reader.exceptions import _FancyExceptionBase
 
 
@@ -98,3 +99,21 @@ def test_single_update_hook_error_str(args, expected):
     exc = SingleUpdateHookError(*args)
     exc.__cause__ = Exception('cause')
     assert str(exc) == expected + ": builtins.Exception: cause"
+
+
+def test_update_hook_error_group():
+    one = SingleUpdateHookError('before_feeds_update', 'one')
+    two = SingleUpdateHookError('before_feeds_update', 'two')
+
+    group = UpdateHookErrorGroup('message', [one])
+    assert group.message == 'message'
+    assert group.exceptions == (one,)
+
+    derived = group.derive([two])
+    assert derived.message == 'message'
+    assert derived.exceptions == (two,)
+
+    with pytest.raises(TypeError):
+        UpdateHookErrorGroup('message', [Exception()])
+    with pytest.raises(TypeError):
+        group.derive([Exception()])

@@ -355,21 +355,20 @@ class SingleUpdateHookError(UpdateHookError):
 
 
 class UpdateHookErrorGroup(ExceptionGroup, UpdateHookError):
-    r"""A (possibly nested) :exc:`ExceptionGroup` of :exc:`SingleUpdateHookError`\s.
+    r"""A (possibly nested) :exc:`ExceptionGroup` of :exc:`UpdateHookError`\s.
 
     .. versionadded:: 3.8
 
     """
 
-    # FIXME: the pragma: no cover
-
-    def __init__(self, msg: str, excs: Sequence[Exception], /):  # pragma: no cover
+    def __init__(self, msg: str, excs: Sequence[Exception], /):
         super().__init__(msg, excs)
-        assert all(isinstance(e, UpdateHookError) for e in self.exceptions)
+        for e in self.exceptions:
+            if not isinstance(e, UpdateHookError):
+                msg = f"cannot nest {type(e).__name__} in an UpdateHookErrorGroup"
+                raise TypeError(msg)
 
-    def derive(
-        self, excs: Sequence[Exception]
-    ) -> UpdateHookErrorGroup:  # pragma: no cover
+    def derive(self, excs: Sequence[Exception]) -> UpdateHookErrorGroup:
         return UpdateHookErrorGroup(self.message, excs)
 
 
