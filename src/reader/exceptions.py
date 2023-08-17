@@ -24,17 +24,26 @@ class _FancyExceptionBase(Exception):
 
     """
 
-    #: Message; overridable.
-    message: str = ''
+    #: Default message; overridable.
+    _default_message: str = ''
+
+    def __init__(self, message: str = ''):
+        self._message = message
 
     @property
     def _str(self) -> str:
         """The exception's unique attributes, as string; overridable."""
         return ''
 
-    def __init__(self, message: str = ''):
-        if message:
-            self.message = message
+    @property
+    def message(self) -> str:
+        """The message passed in the constructor, or a default message.
+
+        .. versionchanged:: 3.8
+            Became read-only.
+
+        """
+        return self._message or self._default_message
 
     @cached_property
     def _cause_name(self) -> str:
@@ -190,13 +199,13 @@ class FeedError(ReaderError):
 class FeedExistsError(FeedError):
     """Feed already exists."""
 
-    message = "feed exists"
+    _default_message = "feed exists"
 
 
 class FeedNotFoundError(FeedError, ResourceNotFoundError):
     """Feed not found."""
 
-    message = "no such feed"
+    _default_message = "no such feed"
 
 
 class InvalidFeedURLError(FeedError, ValueError):
@@ -206,7 +215,7 @@ class InvalidFeedURLError(FeedError, ValueError):
 
     """
 
-    message = "invalid feed URL"
+    _default_message = "invalid feed URL"
 
 
 class EntryError(ReaderError):
@@ -250,13 +259,13 @@ class EntryExistsError(EntryError):
 
     """
 
-    message = "entry exists"
+    _default_message = "entry exists"
 
 
 class EntryNotFoundError(EntryError, ResourceNotFoundError):
     """Entry not found."""
 
-    message = "no such entry"
+    _default_message = "no such entry"
 
 
 class UpdateError(ReaderError):
@@ -308,7 +317,7 @@ class SingleUpdateHookError(UpdateHookError):
 
     """
 
-    message = "unexpected hook error"
+    _default_message = "unexpected hook error"
 
     def __init__(
         self,
@@ -345,14 +354,13 @@ class SingleUpdateHookError(UpdateHookError):
         return ': '.join(parts)
 
 
-class UpdateHookErrorGroup(ExceptionGroup, UpdateHookError):  # type: ignore[misc]
+class UpdateHookErrorGroup(ExceptionGroup, UpdateHookError):
     r"""A (possibly nested) :exc:`ExceptionGroup` of :exc:`SingleUpdateHookError`\s.
 
     .. versionadded:: 3.8
 
     """
 
-    # FIXME: the type: ignore[misc] cause by .message overlap
     # FIXME: the pragma: no cover
 
     def __init__(self, msg: str, excs: Sequence[Exception], /):  # pragma: no cover
@@ -385,7 +393,7 @@ class SearchError(ReaderError):
 class SearchNotEnabledError(SearchError):
     """A search-related method was called when search was not enabled."""
 
-    message = "operation not supported with search disabled"
+    _default_message = "operation not supported with search disabled"
 
 
 class InvalidSearchQueryError(SearchError, ValueError):
@@ -456,4 +464,4 @@ class TagNotFoundError(TagError):
 
     """
 
-    message = "no such tag"
+    _default_message = "no such tag"

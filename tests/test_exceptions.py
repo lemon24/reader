@@ -25,7 +25,7 @@ def test_fancy_exception_base():
     assert str(exc) == str(pickle.loads(pickled_exc))
 
     class WithURL(_FancyExceptionBase):
-        message = 'default message'
+        _default_message = 'default message'
 
         def __init__(self, url, **kwargs):
             super().__init__(**kwargs)
