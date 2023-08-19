@@ -8,7 +8,7 @@ import warnings
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
-    import bs4  # type: ignore
+    import bs4
 
 
 # BeautifulSoup warns if not giving it a parser explicitly; full text:
@@ -37,12 +37,7 @@ warnings.filterwarnings(
 def strip_html(html: str, features: str | None = None) -> str:
     soup = get_soup(html)
     remove_nontext_elements(soup)
-
-    rv = soup.get_text(separator=' ')
-    # TODO: Remove this assert once bs4 gets type annotations.
-    assert isinstance(rv, str)
-
-    return rv
+    return soup.get_text(separator=' ')
 
 
 def get_soup(html: str, features: str | None = None) -> bs4.BeautifulSoup:
