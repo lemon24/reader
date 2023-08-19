@@ -7,18 +7,8 @@ In this context, bare paths are considered equivalent to file:// URIs.
 from __future__ import annotations
 
 import os.path
-from urllib.parse import unquote
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
-
-# lazy import (https://github.com/lemon24/reader/issues/297)
-# this is what urllib.request does (but it pulls http.client)
-if os.name == 'nt':
-    from nturl2path import url2pathname
-else:
-
-    def url2pathname(url: str) -> str:
-        return unquote(url)
 
 
 def normalize_url(url: str) -> str:
@@ -49,6 +39,9 @@ def extract_path(url: str) -> str:
         if url_parsed.netloc not in ('', 'localhost'):
             raise ValueError("unknown authority for file URI")
         # TODO: maybe disallow query, params, fragment too, to reserve for future uses
+
+        # lazy import, urllib.request pulls http.client
+        from urllib.request import url2pathname
 
         return url2pathname(url_parsed.path)
 
