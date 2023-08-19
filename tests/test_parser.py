@@ -878,18 +878,14 @@ def test_normalize_url_errors(monkeypatch, reload_module, os_name, url, reason):
     monkeypatch.setattr('os.name', os_name)
     monkeypatch.setattr('os.path', {'nt': ntpath, 'posix': posixpath}[os_name])
 
-    import reader._parser._url_utils
-    import reader._parser.file
+    import urllib.request
 
-    # reader._url_utils.url2pathname differs based on os.name
-    reload_module(reader._parser._url_utils)
-    reload_module(reader._parser.file)
-
-    reader._parser.file
+    # urllib.request differs based on os.name
+    reload_module(urllib.request)
 
     with pytest.raises(ValueError) as excinfo:
         try:
-            reader._parser.file.FileRetriever(data_dir)._normalize_url(url)
+            FileRetriever(data_dir)._normalize_url(url)
         finally:
             # pytest.raises() doesn't interact well with our monkeypatching
             reload_module.undo()
