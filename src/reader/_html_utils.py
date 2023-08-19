@@ -9,8 +9,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
     import bs4  # type: ignore
-else:
-    bs4 = None
 
 
 # BeautifulSoup warns if not giving it a parser explicitly; full text:
@@ -49,9 +47,8 @@ def strip_html(html: str, features: str | None = None) -> str:
 
 def get_soup(html: str, features: str | None = None) -> bs4.BeautifulSoup:
     # lazy import (https://github.com/lemon24/reader/issues/297)
-    global bs4
-    if not bs4:
-        import bs4
+    import bs4
+
     return bs4.BeautifulSoup(html, features=features)
 
 
