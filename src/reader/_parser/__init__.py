@@ -53,27 +53,26 @@ def default_parser(
         Parser: The parser.
 
     """
+    file_retriever = None
     if feed_root is not None:
         from .file import FileRetriever
 
-        # duplicated from post_init (fail early)
-        FileRetriever(feed_root)
+        # validate feed_root early
+        file_retriever = FileRetriever(feed_root)
 
     def post_init(parser: Parser) -> None:
-        parser.session_factory.timeout = session_timeout
-
         from .http import HTTPRetriever
         from .feedparser import FeedparserParser
         from .jsonfeed import JSONFeedParser
 
+        parser.session_factory.timeout = session_timeout
+
         http_retriever = HTTPRetriever(parser.session_factory.transient)
         parser.mount_retriever('https://', http_retriever)
         parser.mount_retriever('http://', http_retriever)
-        if feed_root is not None:
-            from .file import FileRetriever
-
+        if file_retriever is not None:
             # empty string means catch-all
-            parser.mount_retriever('', FileRetriever(feed_root))
+            parser.mount_retriever('', file_retriever)
 
         feedparser_parser = FeedparserParser()
         parser.mount_parser_by_mime_type(feedparser_parser)
