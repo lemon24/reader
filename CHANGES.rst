@@ -9,7 +9,7 @@ Changelog
 Version 3.8
 -----------
 
-Unreleased
+Released 2023-08-20
 
 * Drop Python 3.9 support. (:issue:`302`)
 * Use :mod:`concurrent.futures` instead of :mod:`multiprocessing.dummy`
