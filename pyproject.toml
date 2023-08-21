@@ -7,7 +7,7 @@ name = "reader"
 authors = [{name = "lemon24"}]
 description = "A Python feed reader library."
 readme = "README.rst"
-license = {file = "LICENSE"}
+license = {text = "BSD-3-Clause"}
 keywords = [
     "atom", "cdf", "feed", "rdf", "rss", "json feed",
     "web feed", "podcast", "feed reader", "feed aggregator",
