@@ -20,6 +20,7 @@ from . import HTTPAcceptParserType
 from . import ParserType
 from . import RetrieveResult
 from . import RetrieverType
+from . import wrap_cm_exceptions
 from . import wrap_exceptions
 from .._types import FeedForUpdate
 from .._types import ParsedFeed
@@ -229,7 +230,10 @@ class Parser:
             http_accept = None
 
         retriever = self.get_retriever(url)
-        context = retriever(url, http_etag, http_last_modified, http_accept)
+
+        with wrap_exceptions(url, 'during retriever'):
+            context = retriever(url, http_etag, http_last_modified, http_accept)
+        context = wrap_cm_exceptions(context, url, 'during retriever')
 
         if not (is_parallel and retriever.slow_to_read):
             return context
@@ -278,7 +282,9 @@ class Parser:
 
         """
         parser, mime_type = self.get_parser(url, result.mime_type)
-        feed, entries = parser(url, result.resource, result.headers)
+        with wrap_exceptions(url, 'during parser'):
+            feed, entries = parser(url, result.resource, result.headers)
+            entries = list(entries)
         return ParsedFeed(
             feed, entries, result.http_etag, result.http_last_modified, mime_type
         )
@@ -481,7 +487,8 @@ class Parser:
         retriever = self.get_retriever(feed.url)
         if not isinstance(retriever, FeedForUpdateRetrieverType):
             return feed
-        return retriever.process_feed_for_update(feed)
+        with wrap_exceptions(feed.url, "during retriever.process_feed_for_update()"):
+            return retriever.process_feed_for_update(feed)
 
     def process_entry_pairs(
         self, url: str, mime_type: str | None, pairs: Iterable[EntryPair]
@@ -505,4 +512,5 @@ class Parser:
         parser, _ = self.get_parser(url, mime_type)
         if not isinstance(parser, EntryPairsParserType):
             return pairs
-        return parser.process_entry_pairs(url, pairs)
+        with wrap_exceptions(url, "during parser.process_entry_pairs()"):
+            return list(parser.process_entry_pairs(url, pairs))

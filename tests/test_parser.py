@@ -497,7 +497,7 @@ def test_feedparser_parse_call(monkeypatch, parse, make_url, data_dir, exc_cls):
         parse(feed_url)
     assert excinfo.value.__cause__ is exc
     assert excinfo.value.url == feed_url
-    assert 'while reading feed' in excinfo.value.message
+    assert 'error during parser' in excinfo.value.message
 
     assert feedparser_parse.kwargs['resolve_relative_uris'] == True
     assert feedparser_parse.kwargs['sanitize_html'] == True
@@ -927,7 +927,7 @@ def make_dummy_retriever(name, mime_type='type/subtype', headers=None):
 def make_dummy_parser(prefix='', http_accept=None):
     def parser(url, file, headers):
         parser.last_headers = headers
-        return prefix + file, url
+        return prefix + file, [url]
 
     if http_accept:
         parser.http_accept = http_accept
@@ -950,7 +950,7 @@ def test_parser_selection():
     parse.mount_parser_by_mime_type(http_parser)
     assert parse('http:one', 'etag', None) == (
         'httpp-http',
-        'http:one',
+        ['http:one'],
         'etag',
         None,
         'type/http',
@@ -973,7 +973,7 @@ def test_parser_selection():
     parse.mount_parser_by_mime_type(file_parser, 'type/file, text/plain;q=0.8')
     assert parse('file:one', None, 'last-modified') == (
         'filep-file',
-        'file:one',
+        ['file:one'],
         None,
         'last-modified',
         'type/file',
@@ -1006,23 +1006,23 @@ def test_parser_selection():
     parse.mount_parser_by_mime_type(make_dummy_parser('fallbackp-'), '*/*')
     assert parse('nomt:one') == (
         'fallbackp-nomt',
-        'nomt:one',
+        ['nomt:one'],
         None,
         None,
         'application/octet-stream',
     )
     assert parse('unkn:one') == (
         'fallbackp-unkn',
-        'unkn:one',
+        ['unkn:one'],
         None,
         None,
         'type/unknown',
     )
     assert nomt_retriever.last_http_accept == 'type/http,type/file,text/plain;q=0.8,*/*'
 
-    assert parse('file:o') == ('urlp-file', 'file:o', None, None, 'type/file')
+    assert parse('file:o') == ('urlp-file', ['file:o'], None, None, 'type/file')
     assert file_retriever.last_http_accept is None
-    assert parse('file:///o') == ('urlp-file', 'file:///o', None, None, 'type/file')
+    assert parse('file:///o') == ('urlp-file', ['file:///o'], None, None, 'type/file')
 
 
 def test_retriever_selection():
@@ -1034,14 +1034,14 @@ def test_retriever_selection():
 
     assert parse('http://generic.com/', 'etag', None) == (
         'generic',
-        'http://generic.com/',
+        ['http://generic.com/'],
         'etag',
         None,
         'type/subtype',
     )
     assert parse('http://specific.com/', None, 'last-modified') == (
         'specific',
-        'http://specific.com/',
+        ['http://specific.com/'],
         None,
         'last-modified',
         'type/subtype',

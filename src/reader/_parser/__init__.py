@@ -36,6 +36,11 @@ if TYPE_CHECKING:  # pragma: no cover
 __getattr__ = lazy_import(__name__, ['Parser'])
 
 
+T = TypeVar('T')
+T_co = TypeVar('T_co', covariant=True)
+T_cv = TypeVar('T_cv', contravariant=True)
+
+
 def default_parser(
     feed_root: str | None = None,
     session_timeout: TimeoutType = DEFAULT_TIMEOUT,
@@ -150,10 +155,6 @@ class LazyParser:
 
     def mount_parser_by_url(self, url: str, parser: ParserType[Any]) -> None:
         self._lazy_call('mount_parser_by_url', url, parser)
-
-
-T_co = TypeVar('T_co', covariant=True)
-T_cv = TypeVar('T_cv', contravariant=True)
 
 
 @dataclass(frozen=True)
@@ -346,3 +347,9 @@ def wrap_exceptions(url: str, when: str) -> Iterator[None]:
         raise ParseError(url, message=f"error {when}") from e
     except Exception as e:
         raise ParseError(url, message=f"unexpected error {when}") from e
+
+
+@contextmanager
+def wrap_cm_exceptions(cm: ContextManager[T], url: str, when: str) -> Iterator[T]:
+    with wrap_exceptions(url, when), cm as target:
+        yield target

@@ -1,3 +1,4 @@
+import io
 from contextlib import contextmanager
 from datetime import datetime
 
@@ -158,38 +159,58 @@ def test_delete_entries(reader):
 class CustomRetriever:
     slow_to_read = False
 
+    def __call__(self, url, http_etag, *_):
+        self.before_enter(url)
+        return self._make_cm(url, http_etag)
+
     @contextmanager
-    def __call__(self, url, http_etag, *_, **__):
-        self.raise_exc('__call__', url)
-        yield RetrieveResult('file', 'x.test', http_etag=http_etag.upper())
+    def _make_cm(self, url, http_etag):
+        self.after_enter(url)
+        yield RetrieveResult(
+            io.BytesIO(b'file'),
+            'x.test',
+            http_etag=http_etag.upper() if http_etag else http_etag,
+        )
+
+    def before_enter(self, url):
+        pass
+
+    def after_enter(self, url):
+        pass
 
     def validate_url(self, url):
         pass
 
     def process_feed_for_update(self, feed):
-        self.raise_exc('process_feed_for_update', feed.url)
         assert feed.http_etag is None
         return feed._replace(http_etag='etag')
-
-    def raise_exc(self, method_name, feed_url):
-        pass
 
 
 class CustomParser:
     http_accept = 'x.test'
 
     def __call__(self, url, file, headers):
-        self.raise_exc('__call__', url)
-        feed = FeedData(url, title=file.upper())
-        entries = [EntryData(url, 'id', title='entry')]
-        return feed, entries
+        self.in_call(url)
+        feed = FeedData(url, title=file.read().decode().upper())
+
+        def make_entries():
+            self.in_entries_iter(url)
+            yield EntryData(url, 'id', title='entry')
+
+        return feed, make_entries()
+
+    def in_entries_iter(self, url):
+        pass
+
+    def in_call(self, url):
+        pass
 
     def process_entry_pairs(self, url, pairs):
-        self.raise_exc('process_entry_pairs', url)
+        self.in_entry_pairs_iter(url)
         for new, old in pairs:
             yield new._replace(title=new.title.upper()), old
 
-    def raise_exc(self, method_name, feed_url):
+    def in_entry_pairs_iter(self, url):
         pass
 
 
@@ -215,26 +236,90 @@ def test_retriever_parser_process_hooks(reader):
     assert entry.feed.title == 'FILE'
 
 
-def test_retriever_process_feed_for_update_parse_error(reader):
-    cause = Exception('bar')
-
-    def process_feed_for_update(feed):
-        raise ParseError(feed.url, 'foo') from cause
-
+def setup_custom(reader, target_name, method_name, slow_to_read):
     retriever = CustomRetriever()
-    retriever.process_feed_for_update = process_feed_for_update
-
     reader._parser.mount_retriever('test:', retriever)
-    reader._parser.mount_parser_by_mime_type(CustomParser())
+    parser = CustomParser()
+    reader._parser.mount_parser_by_mime_type(parser)
 
-    reader.add_feed('test:one')
+    for feed_id in 1, 2, 3:
+        reader.add_feed(f'test:{feed_id}')
 
-    with pytest.raises(ParseError) as excinfo:
-        reader.update_feed('test:one')
-    assert 'foo' == excinfo.value.message
-    assert excinfo.value.__cause__ is cause
+    target = locals()[target_name]
+    method = getattr(target, method_name)
 
-    (feed,) = reader.get_feeds()
-    assert feed.last_exception is not None
-    assert feed.last_exception.type_name == 'builtins.Exception'
-    assert feed.last_exception.value_str == 'bar'
+    def raise_exc(obj, *args):
+        url = getattr(obj, 'url', obj)
+        if '1' in url:
+            raise raise_exc.exc
+        return method(obj, *args)
+
+    raise_exc.exc = None
+
+    setattr(target, method_name, raise_exc)
+
+    retriever.slow_to_read = slow_to_read
+
+    return retriever, parser, raise_exc
+
+
+RETRIEVER_PARSER_METHOD_PARAMS = [
+    ('retriever', 'before_enter', False, 'unexpected error during retriever'),
+    ('retriever', 'after_enter', False, 'unexpected error during retriever'),
+    ('retriever', 'after_enter', True, 'unexpected error during retriever'),
+    (
+        'retriever',
+        'process_feed_for_update',
+        False,
+        'unexpected error during retriever.process_feed_for_update()',
+    ),
+    ('parser', 'in_call', False, 'unexpected error during parser'),
+    ('parser', 'in_entries_iter', False, 'unexpected error during parser'),
+    (
+        'parser',
+        'process_entry_pairs',
+        False,
+        'unexpected error during parser.process_entry_pairs()',
+    ),
+    (
+        'parser',
+        'in_entry_pairs_iter',
+        False,
+        'unexpected error during parser.process_entry_pairs()',
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    'target, method, slow_to_read, message', RETRIEVER_PARSER_METHOD_PARAMS
+)
+def test_retriever_parser_error(
+    reader, update_feeds_iter, target, method, slow_to_read, message
+):
+    retriever, parser, raise_exc = setup_custom(reader, target, method, slow_to_read)
+    raise_exc.exc = exc = RuntimeError('error')
+
+    rv = {int(r.url.rpartition(':')[2]): r for r in update_feeds_iter(reader)}
+
+    assert isinstance(rv[1].error, ParseError)
+    assert rv[1].error.message == message
+    assert rv[1].error.__cause__ is exc
+    assert rv[2].updated_feed
+    assert rv[3].updated_feed
+
+
+@pytest.mark.parametrize(
+    'target, method, slow_to_read', [t[:-1] for t in RETRIEVER_PARSER_METHOD_PARAMS]
+)
+def test_retriever_parser_parse_error(
+    reader, update_feeds_iter, target, method, slow_to_read
+):
+    retriever, parser, raise_exc = setup_custom(reader, target, method, slow_to_read)
+    raise_exc.exc = exc = ParseError('x')
+
+    rv = {int(r.url.rpartition(':')[2]): r for r in update_feeds_iter(reader)}
+
+    assert isinstance(rv[1].error, ParseError)
+    assert rv[1].error is exc
+    assert rv[2].updated_feed
+    assert rv[3].updated_feed

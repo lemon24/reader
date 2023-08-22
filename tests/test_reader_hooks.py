@@ -500,44 +500,6 @@ def test_update_feeds_other_error(reader):
     check_sublists(other_calls, OTHER_CALLS_ONE, OTHER_CALLS_TWO, ends=OTHER_CALLS_ENDS)
 
 
-@pytest.mark.parametrize(
-    'target_name, method_name',
-    [
-        ('retriever', '__call__'),
-        ('retriever', 'process_feed_for_update'),
-        ('parser', '__call__'),
-        ('parser', 'process_entry_pairs'),
-    ],
-)
-@pytest.mark.xfail(raises=RuntimeError, strict=True)
-def test_retriever_parser_unexpected_exception(
-    reader, update_feeds_iter, target_name, method_name
-):
-    retriever = CustomRetriever()
-    reader._parser.mount_retriever('test:', retriever)
-    parser = CustomParser()
-    reader._parser.mount_parser_by_mime_type(parser)
-
-    for feed_id in 1, 2, 3:
-        reader.add_feed(f'test:{feed_id}')
-
-    exc = RuntimeError('error')
-
-    def raise_exc(name, url):
-        if name == method_name and '1' in url:
-            raise exc
-
-    locals()[target_name].raise_exc = raise_exc
-
-    rv = {int(r.url.rpartition(':')[2]): r for r in update_feeds_iter(reader)}
-
-    assert rv[1].error.__cause__ is exc
-    assert isinstance(rv[1].error, ParseError)
-    assert rv[1].error.__cause__ is exc
-    assert rv[2].updated_feed
-    assert rv[3].updated_feed
-
-
 @pytest.mark.parametrize('hook_name', ['request_hooks', 'response_hooks'])
 def test_session_hook_unexpected_exception(
     reader, data_dir, update_feeds_iter, requests_mock, hook_name

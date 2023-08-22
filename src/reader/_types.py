@@ -225,6 +225,7 @@ class ParsedFeed(NamedTuple):
     #: The feed.
     feed: FeedData
     # TODO: wrap entries in iter(entries) to ensure stuff doesn't rely on it being a list
+    # TODO: make entries a list (may simplify _update code)
     #: Iterable of entries.
     entries: Iterable[EntryData]
     #: The HTTP ``ETag`` header associated with the feed resource.

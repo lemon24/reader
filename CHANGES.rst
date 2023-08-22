@@ -11,6 +11,13 @@ Version 3.9
 
 Unreleased
 
+* Wrap unexpected retriever/parser errors in :exc:`ParseError`,
+  instead of letting them bubble up,
+  so exceptions raised by custom retrievers/parsers
+  for one feed don't prevent updates for the others
+  during :meth:`~Reader.update_feeds_iter()` / :meth:`~Reader.update_feeds()`.
+  (:issue:`218`)
+
 
 Version 3.8
 -----------
