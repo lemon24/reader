@@ -137,9 +137,14 @@ class Feed(_namedtuple_compat):
     #: .. versionadded:: 1.3
     last_updated: datetime | None = None
 
-    #: If a :exc:`ParseError` happend during the last update, its cause.
+    #: If a :exc:`UpdateError` happened during the last update, its details.
     #:
     #: .. versionadded:: 1.3
+    #:
+    #: .. versionchanged:: 3.9
+    #:  Store the details of any :exc:`UpdateError` (except hook errors),
+    #:  not just the ``__cause__`` of :exc:`ParseError`\s.
+    #:
     last_exception: ExceptionInfo | None = None
 
     #: Whether updates are enabled for this feed.

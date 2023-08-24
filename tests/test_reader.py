@@ -734,8 +734,8 @@ def test_last_exception_failed(reader, update_feed):
     # The cause gets stored.
     last_exception = reader.get_feed('1').last_exception
     assert next(reader.get_entries()).feed.last_exception == last_exception
-    assert last_exception.type_name == 'builtins.Exception'
-    assert last_exception.value_str == 'failing'
+    assert last_exception.type_name == 'reader.exceptions.ParseError'
+    assert last_exception.value_str == "'1': builtins.Exception: failing"
     assert last_exception.traceback_str.startswith('Traceback')
 
     reader._parser.exception = ValueError('another')
@@ -746,8 +746,8 @@ def test_last_exception_failed(reader, update_feed):
 
     # The cause changes.
     last_exception = reader.get_feed('1').last_exception
-    assert last_exception.type_name == 'builtins.ValueError'
-    assert last_exception.value_str == 'another'
+    assert last_exception.type_name == 'reader.exceptions.ParseError'
+    assert last_exception.value_str == "'1': builtins.ValueError: another"
 
     # The cause does not get reset if other feeds get updated.
     reader._parser = old_parser

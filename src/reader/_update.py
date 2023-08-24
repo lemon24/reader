@@ -276,9 +276,7 @@ class Decider:
             return None, ()
 
         if isinstance(parsed_feed, ParseError):
-            exc_info = ExceptionInfo.from_exception(
-                parsed_feed.__cause__ or parsed_feed
-            )
+            exc_info = ExceptionInfo.from_exception(parsed_feed)
             return FeedUpdateIntent(self.url, None, last_exception=exc_info), ()
 
         entries_to_update = list(self.get_entries_to_update(entry_pairs))

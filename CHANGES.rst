@@ -17,6 +17,10 @@ Unreleased
   for one feed don't prevent updates for the others
   during :meth:`~Reader.update_feeds_iter()` / :meth:`~Reader.update_feeds()`.
   (:issue:`218`)
+* Store the details of any :exc:`UpdateError` in :attr:`Feed.last_exception`
+  (except hook errors),
+  not just the ``__cause__`` of :exc:`ParseError`\s.
+  (:issue:`218`)
 
 
 Version 3.8
