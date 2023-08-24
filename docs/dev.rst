@@ -298,6 +298,8 @@ Requests session plugins:
 Retriever / parser split:
 
 * :issue:`205#issuecomment-766321855`
+* split exception hierarchy (not implemented as of 3.9): :issue:`218#issuecomment-1687094315`
+
 
 Alternative feed parsers:
 
@@ -549,6 +551,13 @@ List of potential hooks (from mid-2018): :issue:`80`.
 Minimal plugin API (from 2021) – case study and built-in plugin naming scheme: :issue:`229#issuecomment-803870781`.
 
 We'll add / document new (public) hooks as needed.
+
+"Tag before, clear tag after" pattern for resilient plugins: :issue:`246#issuecomment-1596097300`.
+
+Update hook error handling:
+
+* expected behavior: :issue:`218#issuecomment-1595691410`, :issue:`218#issuecomment-1666823222`
+* update hook pseudocode + exception hierarchy: :issue:`218#issuecomment-1666869215`
 
 
 Reserved names
