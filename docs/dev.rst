@@ -114,6 +114,7 @@ and it will keep working until a better one exists.
 Long term, I'd like to:
 
 * re-design it from scratch to improve usability
+  (see :issue:`318` for a wishlist)
 * switch to `htmx`_ instead of using a home-grown solution
 * spin it off into a separate package/project
 
