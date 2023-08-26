@@ -110,6 +110,24 @@ def add_reader_version():
     g.reader_version = reader.__version__
 
 
+@blueprint.before_request
+def enable_reader_timer():
+    g.reader_timings = None
+    # if 'timings' not in request.args: return
+    reader = get_reader()
+    if not hasattr(reader, 'timer'):
+        return
+    g.reader_timings = reader.timer.__enter__()
+
+
+@blueprint.teardown_request
+def close_reader_timer(_):
+    reader = get_reader()
+    if not g.reader_timings:
+        return
+    reader.timer.__exit__()
+
+
 def highlighted(string):
     # needs to be marked as safe so we don't need to do it everywhere in the template
     # TODO: maybe use something "more semantic" than <b> (CSS needs changing too if so)

@@ -90,6 +90,8 @@ unstable-plugins = [
     "blinker>=1.4",
     # sqlite-releases
     "beautifulsoup4",
+    # timer
+    "tabulate",
 ]
 
 # DEVELOPMENT

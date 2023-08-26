@@ -48,6 +48,11 @@ by <a href="https://github.com/lemon24/reader">reader</a>._app
 {{ g.reader_version }}
 </p>
 
+{% if g.reader_timings %}
+<p>spent {{ g.reader_timings.total | round(3, 'ceil') }} seconds in reader calls</p>
+{{ g.reader_timings.format_stats(tablefmt='html') | safe }}
+{% endif %}
+
 </div>
 
 
