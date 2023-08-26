@@ -1,4 +1,6 @@
 import inspect
+from collections.abc import Collection
+from collections.abc import Iterable
 from dataclasses import dataclass
 from dataclasses import field
 from functools import wraps
@@ -105,7 +107,7 @@ def timed(fn, push, pop):
             raise
         else:
             time = perf_counter() - start
-            if not hasattr(rv, '__iter__'):
+            if not isinstance(rv, Iterable) or isinstance(rv, Collection):
                 pop(name, time)
                 return rv
             else:
