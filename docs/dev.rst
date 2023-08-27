@@ -45,10 +45,13 @@ but I will prioritize supporting :doc:`contributors <contributing>`
 * sorting
 
   * reverse order, :issue:`201`
-  * sort by unread entries, :issue:`245`
   * sort by "recently interacted with", :issue:`294`
   * better feed title sort, :issue:`250`
-  * sort feeds by entry counts, including :attr:`~EntryCounts.averages`
+  * sort feeds by entry counts
+
+    * by unread entries, :issue:`245`
+    * by :attr:`~EntryCounts.averages` (implemented in the web app, but not in core)
+    * :ref:`sorting by tag values <sort by tag>` can help do this in a plugin
 
 * resource tags
 
@@ -356,6 +359,8 @@ Metrics
 
 Some thoughts on implementing metrics: :issue:`68#issuecomment-450025175`.
 
+Per-call timings introduced in the :mod:`~reader._plugins.timer` experimental plugin.
+
 
 Query builder
 ~~~~~~~~~~~~~
@@ -395,6 +400,16 @@ Sort by random
 ~~~~~~~~~~~~~~
 
 Some thoughts in the initial issue: :issue:`105`.
+
+
+.. _sort by tag:
+
+Sort by tag values
+~~~~~~~~~~~~~~~~~~
+
+It may be useful to be able to sort by tag values
+in order to allow sorting by cached entry counts:
+:issue:`306#issuecomment-1694655504`.
 
 
 Entry/feed "primary key" attribute naming
@@ -536,6 +551,8 @@ convenience can be added on top as a plugin.
 See the 2.12 reader._app.ResourceTags class for an idea of how to
 represent a bunch of tags in a reserved-name-scheme-agnostic way
 (useful e.g. for when get_entries() should return tags x, y, z of each entry).
+
+Some web app measurements that show a few cases where batch methods may help: :issue:`306#issuecomment-1694655504`.
 
 
 Using a single Reader objects from multiple threads

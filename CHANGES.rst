@@ -22,6 +22,11 @@ Unreleased
   not just the ``__cause__`` of :exc:`ParseError`\s.
   (:issue:`218`)
 
+* Add the :mod:`~reader._plugins.timer` experimental plugin
+  to collect per-call method timings.
+  Show per-request statistics in the web app.
+  (:issue:`306`)
+
 
 Version 3.8
 -----------

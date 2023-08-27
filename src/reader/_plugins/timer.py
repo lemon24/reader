@@ -1,3 +1,45 @@
+"""
+timer
+~~~~~
+
+Measure :class:`~reader.Reader`, :class:`~reader._storage.Storage`, and search
+method calls, including time spent in iterables.
+
+If loaded, the :doc:`app` will show per-request method statistics in the footer.
+
+Once ``reader.timer.enable()`` is called,
+the timing of each method call is collected in ``reader.timer.calls``;
+``disable()`` clears the list of calls and stops collection::
+
+    >>> reader = make_reader('db.sqlite', plugins=[
+    ...     'reader._plugins.timer:init_reader'
+    ... ])
+    >>> reader.timer.enable()
+    >>> for _ in reader.get_entries(limit=500): pass
+    >>> for call in reader.timer.calls:
+    ...     print(f"{call.name:30} {call.time:9.6f}")
+    ...
+    Reader.get_entries              0.304127
+    Storage.get_entries             0.290139
+    Storage.get_entries_page        0.159803
+    Storage.get_db                  0.000008
+    Storage.get_entries_page        0.128641
+    Storage.get_db                  0.000826
+    >>> print(reader.timer.format_stats())
+                                len    sum    min    avg    max
+    Reader.get_entries            1  0.304  0.304  0.304  0.304
+    Storage.get_db                2  0.001  0.000  0.000  0.001
+    Storage.get_entries           1  0.290  0.290  0.290  0.290
+    Storage.get_entries_page      2  0.288  0.129  0.144  0.160
+
+This plugin needs additional dependencies, use the ``unstable-plugins`` extra
+to install them:
+
+.. code-block:: bash
+
+    pip install reader[unstable-plugins]
+
+"""
 import inspect
 from collections.abc import Collection
 from collections.abc import Iterable
