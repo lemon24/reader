@@ -118,7 +118,25 @@ class Timer:
 
 def init_reader(reader):
     reader.timer = timer = Timer()
-    timer.decorate(reader)
+    timer.decorate(
+        reader,
+        exclude={
+            # delegate to other Reader methods,
+            # excluded so total() doesn't count them twice
+            'get_feed',
+            'update_feeds',
+            'update_feed',
+            'get_entry',
+            'mark_entry_as_read',
+            'mark_entry_as_unread',
+            'mark_entry_as_important',
+            'mark_entry_as_unimportant',
+            # just string manipulation, don't need timing
+            'make_reader_reserved_name',
+            'make_plugin_reserved_name',
+        },
+    )
+    # not bothering with methods that delegate to methods for these
     timer.decorate(reader._storage)
     timer.decorate(reader._search)
 
