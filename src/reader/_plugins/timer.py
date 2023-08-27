@@ -1,8 +1,8 @@
 import inspect
 from collections.abc import Collection
 from collections.abc import Iterable
+from contextlib import nullcontext
 from dataclasses import dataclass
-from dataclasses import field
 from functools import wraps
 from time import perf_counter
 
@@ -11,35 +11,88 @@ from time import perf_counter
 class Call:
     name: str = ''
     time: float = 0
-    calls: list = field(default_factory=list)
+    start: float = 0
 
-    @property
-    def total(self):
-        return sum(c.time for c in self.calls)
+    def __enter__(self):
+        self.start = perf_counter()
+        return self
 
-    def format_tree(self):
-        header = f"{self.total:.6f}\n"
-        t_width = len(header.strip())
+    def __exit__(self, *_):
+        self.time += perf_counter() - self.start
 
-        def _format_tree(calls=self.calls, level=1):
-            indent = '  ' * level
-            for call in calls:
-                yield f"{call.time:{t_width}.6f}{indent}{call.name}\n"
-                yield from _format_tree(call.calls, level + 1)
 
-        lines = [header]
-        lines.extend(_format_tree())
-        return ''.join(lines).rstrip()
+# a previous version of this tried to build a tree of calls
+# pushing to a stack at the beginning of the timer() wrapper and
+# popping at the end of that or the end of timed_iter();
+# this approach sometimes resulted in wrong nesting
+# when an iterable was consumed far from where it was created,
+# so I removed the tree of calls feature entirely.
+
+
+@dataclass
+class Timer:
+    calls: list[Call] | None = None
+    entered: int = 0
+
+    nc = nullcontext()
+
+    def call(self, name):
+        if self.calls is None:
+            return self.nc
+        call = Call(name)
+        self.calls.append(call)
+        return call
+
+    def timed(self, fn, prefix=''):
+        name = f'{prefix}{fn.__name__}'
+
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            with self.call(name) as call:
+                rv = fn(*args, **kwargs)
+            if call is None:
+                return rv
+            if not isinstance(rv, Iterable) or isinstance(rv, Collection):
+                return rv
+            return self.timed_iter(rv, call)
+
+        return wrapper
+
+    def timed_iter(self, it, call):
+        with call:
+            it = iter(it)
+        while True:
+            with call:
+                try:
+                    rv = next(it)
+                except StopIteration:
+                    break
+            yield rv
+
+    def decorate(self, obj, exclude=()):
+        prefix = f'{type(obj).__name__}.'
+        for name, member in inspect.getmembers(obj, callable):
+            if name in exclude:
+                continue
+            if name.startswith('_'):
+                continue
+            if not hasattr(member, '__name__'):
+                continue
+            setattr(obj, name, self.timed(member, prefix=prefix))
+
+    def enable(self):
+        self.calls = []
+
+    def disable(self, *args):
+        self.calls = None
 
     def format_stats(self, tablefmt='plain'):
+        if not self.calls:
+            return None
+
         times_by_name = {}
-
-        def walk(calls=self.calls):
-            for call in calls:
-                times_by_name.setdefault(call.name, []).append(call.time)
-                walk(call.calls)
-
-        walk()
+        for call in self.calls:
+            times_by_name.setdefault(call.name, []).append(call.time)
 
         def avg(times):
             return sum(times) / len(times)
@@ -59,112 +112,15 @@ class Call:
             rows, headers, tablefmt=tablefmt, numalign='decimal', floatfmt='.3f'
         )
 
-
-@dataclass
-class Timer:
-    stack: list[Call] | None = None
-    entered: int = 0
-
-    def push(self, name):
-        if self.stack is None:
-            return
-        call = Call(name)
-        self.stack[-1].calls.append(call)
-        self.stack.append(call)
-
-    def pop(self, name, time):
-        if self.stack is None:
-            return
-        call = self.stack.pop()
-        assert name == call.name
-        call.time = time
-
-    def __enter__(self):
-        # not thread safe
-        if not self.entered:
-            self.stack = [Call()]
-        self.entered += 1
-        return self.stack[0]
-
-    def __exit__(self, *args):
-        assert self.entered > 0
-        self.entered -= 1
-        if not self.entered:
-            self.stack = None
-
-
-def timed(fn, push, pop):
-    name = fn.__name__
-
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        push(name)
-        start = perf_counter()
-        try:
-            rv = fn(*args, **kwargs)
-        except BaseException:
-            pop(name, perf_counter() - start)
-            raise
-        else:
-            time = perf_counter() - start
-            if not isinstance(rv, Iterable) or isinstance(rv, Collection):
-                pop(name, time)
-                return rv
-            else:
-                return timed_iter(rv, time, name, pop)
-
-    return wrapper
-
-
-def timed_iter(it, time, name, pop):
-    start = perf_counter()
-    it = iter(it)
-    time += perf_counter() - start
-    while True:
-        start = perf_counter()
-        try:
-            rv = next(it)
-        except StopIteration:
-            time += perf_counter() - start
-            pop(name, time)
-            break
-        else:
-            time += perf_counter() - start
-            yield rv
-
-
-def decorate(obj, push, pop, exclude=()):
-    obj_name = type(obj).__name__
-
-    def push_prefixed(name):
-        push(f'{obj_name}.{name}')
-
-    def pop_prefixed(name, time):
-        pop(f'{obj_name}.{name}', time)
-
-    for name, member in inspect.getmembers(obj, callable):
-        if name in exclude:
-            continue
-        if name.startswith('_'):
-            continue
-        if not hasattr(member, '__name__'):
-            continue
-        setattr(obj, name, timed(member, push_prefixed, pop_prefixed))
+    def total(self, prefix=''):
+        return sum(c.time for c in self.calls or () if c.name.startswith(prefix))
 
 
 def init_reader(reader):
     reader.timer = timer = Timer()
-    decorate(
-        reader,
-        timer.push,
-        timer.pop,
-        exclude={
-            'make_reader_reserved_name',
-            'make_plugin_reserved_name',
-        },
-    )
-    decorate(reader._storage, timer.push, timer.pop)
-    decorate(reader._search, timer.push, timer.pop)
+    timer.decorate(reader)
+    timer.decorate(reader._storage)
+    timer.decorate(reader._search)
 
 
 if __name__ == '__main__':
@@ -173,16 +129,18 @@ if __name__ == '__main__':
     reader = make_reader('db.sqlite')
     init_reader(reader)
 
-    with reader.timer as timings:
-        start = perf_counter()
-        for _ in reader.get_feeds():
-            pass
-        for _ in reader.get_entries(limit=1000):
-            pass
-        for _ in reader.search_entries('mars'):
-            pass
-        end = perf_counter()
+    reader.timer.enable()
+
+    start = perf_counter()
+    for _ in reader.get_feeds():
+        pass
+    for _ in reader.get_entries(limit=1000):
+        pass
+    for _ in reader.search_entries('mars'):
+        pass
+    end = perf_counter()
 
     print(f"{end-start:1.6f}")
-    print(timings.format_tree())
-    print(timings.format_stats())
+    print(f"{reader.timer.total('Reader.'):1.6f}")
+    print(reader.timer.format_stats())
+    print(reader.make_reader_reserved_name('ok'))

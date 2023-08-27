@@ -112,20 +112,20 @@ def add_reader_version():
 
 @blueprint.before_request
 def enable_reader_timer():
-    g.reader_timings = None
+    g.reader_timer = None
     # if 'timings' not in request.args: return
     reader = get_reader()
     if not hasattr(reader, 'timer'):
         return
-    g.reader_timings = reader.timer.__enter__()
+    g.reader_timer = reader.timer
+    reader.timer.enable()
 
 
 @blueprint.teardown_request
 def close_reader_timer(_):
-    reader = get_reader()
-    if not g.reader_timings:
+    if not g.reader_timer:
         return
-    reader.timer.__exit__()
+    g.reader_timer.disable()
 
 
 def highlighted(string):
