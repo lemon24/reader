@@ -9,7 +9,7 @@ Changelog
 Version 3.9
 -----------
 
-Unreleased
+Released 2023-08-28
 
 * Wrap unexpected retriever/parser errors in :exc:`ParseError`,
   instead of letting them bubble up,
