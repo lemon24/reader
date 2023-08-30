@@ -799,6 +799,13 @@ def additional_enclosure_links(enclosure, entry):
         yield from func(enclosure, entry)
 
 
+@blueprint.app_template_global()
+def additional_links(entry):
+    funcs = getattr(current_app, 'reader_additional_links', ())
+    for func in funcs:
+        yield from func(entry)
+
+
 def create_app(config):
     app = Flask(__name__)
     app.secret_key = 'secret'
@@ -809,6 +816,7 @@ def create_app(config):
 
     # NOTE: this is part of the app extension API
     app.reader_additional_enclosure_links = []
+    app.reader_additional_links = []
 
     app.plugin_loader = loader = Loader()
 

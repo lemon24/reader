@@ -90,5 +90,12 @@
 {{ macros.entry_enclosures(entry) }}
 
 
+<p>Links:
+{% for title, href in additional_links(entry) %}
+<a href="{{ href }}">{{ title }}</a>&ensp;
+{% endfor %}
+</ul>
+
+
 </div>
 {% endblock %}

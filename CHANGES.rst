@@ -11,6 +11,9 @@ Version 3.10
 
 Unreleased
 
+* Add the :mod:`~reader._plugins.share` experimental plugin
+  to add social sharing links in the web app.
+
 
 Version 3.9
 -----------
