@@ -26,8 +26,13 @@ def percent_encode(s, encoding="ascii"):
 
 
 def share(entry):
+    if not entry.link:
+        return
+    link = quote(entry.link)
+    title = quote(entry.title or '')
+
     for name, template in TEMPLATES.items():
-        url = template.format(url=quote(entry.link), title=quote(entry.title))
+        url = template.format(url=link, title=title)
 
         # prevent ad blockers from messing with these
         url = urlparse(url)
