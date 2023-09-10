@@ -32,7 +32,7 @@ def get_lines(reader):
         line
         for entry in entries
         for line in textwrap.wrap(
-            f"{(entry.published or entry.updated).date()} - "
+            f"{(entry.published or entry.updated or entry.added).date()} - "
             f"{entry.feed.title} - {entry.title}",
             width=size.columns,
         )
