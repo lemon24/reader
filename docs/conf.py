@@ -29,8 +29,8 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.extlinks',
     'sphinx_click.ext',
-    'sphinx_issues',
     'hoverxref.extension',
     'sphinxcontrib.log_cabinet',
 ]
@@ -92,7 +92,7 @@ if GOOGLE_SITE_VERIFICATION:
 """
 
 
-issues_github_path = 'lemon24/reader'
+extlinks = {'issue': ('https://github.com/lemon24/reader/issues/%s', '#%s')}
 
 hoverxref_auto_ref = True
 hoverxref_domains = ["py"]
