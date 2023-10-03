@@ -389,6 +389,10 @@ From the initial issue:
 
 Enabling search by default, and alternative search APIs: :issue:`252`.
 
+External resources:
+
+* Comprehensive, although a bit old (2017): `What every software engineer should know about search <https://medium.com/startup-grind/what-every-software-engineer-should-know-about-search-27d1df99f80d>`_ (`full version <http://webcache.googleusercontent.com/search?q=cache:https://medium.com/startup-grind/what-every-software-engineer-should-know-about-search-27d1df99f80d&sca_esv=570067020&prmd=ivn&strip=1&vwsrc=0>`_)
+
 
 reader types to Atom mapping
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
