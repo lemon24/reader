@@ -31,6 +31,8 @@ from ._types import EntryUpdateIntent
 from ._types import FeedFilterOptions
 from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
+from ._types import SearchType
+from ._types import StorageType
 from ._types import UpdateHooks
 from ._update import Pipeline
 from ._utils import make_pool_map
@@ -357,8 +359,8 @@ class Reader:
 
     def __init__(
         self,
-        _storage: Storage,
-        _search: Search,
+        _storage: StorageType,
+        _search: SearchType,
         _parser: Parser,
         _reserved_name_scheme: NameScheme,
         _enable_search: bool = False,

@@ -33,8 +33,8 @@ from .types import UpdateResult
 
 if TYPE_CHECKING:  # pragma: no cover
     from ._parser import Parser
-    from ._storage import Storage
     from ._types import FeedFilterOptions
+    from ._types import StorageType
     from ._utils import MapFunction
     from .core import Reader
 
@@ -315,7 +315,7 @@ class Pipeline:
 
     """
 
-    storage: Storage
+    storage: StorageType
     parser: Parser
     hooks: UpdateHooks[Any]
     now: Callable[[], datetime]

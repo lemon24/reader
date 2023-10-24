@@ -16,6 +16,8 @@ from typing import Generic
 from typing import get_args
 from typing import Literal
 from typing import NamedTuple
+from typing import overload
+from typing import Protocol
 from typing import TypeVar
 from typing import Union
 
@@ -26,14 +28,24 @@ from .exceptions import UpdateHookErrorGroup
 from .types import _entry_argument
 from .types import _feed_argument
 from .types import _namedtuple_compat
+from .types import AnyResourceId
 from .types import Content
 from .types import Enclosure
 from .types import Entry
 from .types import EntryAddedBy
+from .types import EntryCounts
 from .types import EntryInput
+from .types import EntrySearchCounts
+from .types import EntrySearchResult
+from .types import EntrySortOrder
 from .types import ExceptionInfo
 from .types import Feed
+from .types import FeedCounts
 from .types import FeedInput
+from .types import FeedSortOrder
+from .types import JSONType
+from .types import ResourceId
+from .types import SearchSortOrder
 from .types import TagFilterInput
 from .types import TristateFilterInput
 
@@ -348,9 +360,6 @@ class EntryUpdateIntent(NamedTuple):
         return self.first_updated_epoch is not None
 
 
-# TODO: these should probably be in storage.py (along with some of the above)
-
-
 TagFilter = Sequence[Sequence[Union[bool, tuple[bool, str]]]]
 
 
@@ -631,3 +640,202 @@ class _UpdateHookErrorGrouper:
     def close(self) -> None:
         if self.exceptions:
             raise UpdateHookErrorGroup(self.message, self.exceptions)
+
+
+class StorageType(Protocol):  # pragma: no cover
+
+    """Storage DAO.
+
+    Lifecycle methods:
+
+    * __enter__
+    * __exit__
+    * close
+
+    User feed methods:
+
+    * add_feed
+    * delete_feed
+    * change_feed_url
+    * get_feeds
+    * get_feed_counts
+    * set_feed_user_title
+    * set_feed_updates_enabled
+
+    User entry methods:
+
+    * add_entry
+        * merge with add_or_update_entries?
+    * delete_entries
+    * get_entries
+    * get_entry_counts
+    * mark_as_read
+        * rename to set_entry_read(entry, read, /, modified)
+    * mark_as_important
+        * rename to set_entry_important(entry, read, /, modified)
+
+    Update methods:
+
+    * get_feeds_for_update
+    * get_entries_for_update
+    * update_feed
+    * add_or_update_entries
+        * is this a good name?
+    * mark_as_stale
+        * only used in tests, remove? if not, rename
+    * get_entry_recent_sort
+    * set_entry_recent_sort
+
+    Tags:
+
+    * get_tags
+    * set_tag
+    * delete_tag
+
+    """
+
+    def __enter__(self) -> None:
+        ...
+
+    def __exit__(self, *_: Any) -> None:
+        ...
+
+    def close(self) -> None:
+        ...
+
+    def add_feed(self, url: str, added: datetime) -> None:
+        ...
+
+    def delete_feed(self, url: str) -> None:
+        ...
+
+    def change_feed_url(self, old: str, new: str) -> None:
+        ...
+
+    def get_feeds(
+        self,
+        filter_options: FeedFilterOptions,
+        sort: FeedSortOrder,
+        limit: int | None,
+        starting_after: str | None,
+    ) -> Iterable[Feed]:
+        ...
+
+    def get_feed_counts(self, filter_options: FeedFilterOptions) -> FeedCounts:
+        ...
+
+    def get_feeds_for_update(
+        self, filter_options: FeedFilterOptions
+    ) -> Iterable[FeedForUpdate]:
+        ...
+
+    def get_entries_for_update(
+        self, entries: Iterable[tuple[str, str]]
+    ) -> Iterable[EntryForUpdate | None]:
+        ...
+
+    def set_feed_user_title(self, url: str, title: str | None) -> None:
+        ...
+
+    def set_feed_updates_enabled(self, url: str, enabled: bool) -> None:
+        ...
+
+    def mark_as_stale(self, url: str) -> None:
+        ...
+
+    def mark_as_read(
+        self, feed_url: str, entry_id: str, read: bool, modified: datetime | None
+    ) -> None:
+        ...
+
+    def mark_as_important(
+        self,
+        feed_url: str,
+        entry_id: str,
+        important: bool | None,
+        modified: datetime | None,
+    ) -> None:
+        ...
+
+    def get_entry_recent_sort(self, entry: tuple[str, str]) -> datetime:
+        ...
+
+    def set_entry_recent_sort(
+        self, entry: tuple[str, str], recent_sort: datetime
+    ) -> None:
+        ...
+
+    def update_feed(self, intent: FeedUpdateIntent) -> None:
+        ...
+
+    def add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
+        ...
+
+    def add_entry(self, intent: EntryUpdateIntent) -> None:
+        ...
+
+    def delete_entries(
+        self, entries: Iterable[tuple[str, str]], *, added_by: str | None
+    ) -> None:
+        ...
+
+    def get_entries(
+        self,
+        now: datetime,
+        filter_options: EntryFilterOptions,
+        sort: EntrySortOrder,
+        limit: int | None,
+        starting_after: tuple[str, str] | None,
+    ) -> Iterable[Entry]:
+        ...
+
+    def get_entry_counts(
+        self, now: datetime, filter_options: EntryFilterOptions
+    ) -> EntryCounts:
+        ...
+
+    def get_tags(
+        self, resource_id: AnyResourceId, key: str | None = None
+    ) -> Iterable[tuple[str, JSONType]]:
+        ...
+
+    @overload
+    def set_tag(self, resource_id: ResourceId, key: str) -> None:
+        ...
+
+    @overload
+    def set_tag(self, resource_id: ResourceId, key: str, value: JSONType) -> None:
+        ...
+
+    def delete_tag(self, resource_id: ResourceId, key: str) -> None:
+        ...
+
+
+class SearchType(Protocol):  # pragma: no cover
+    def enable(self) -> None:
+        ...
+
+    def disable(self) -> None:
+        ...
+
+    def is_enabled(self) -> bool:
+        ...
+
+    def update(self) -> None:
+        ...
+
+    def search_entries(
+        self,
+        query: str,
+        now: datetime,
+        filter_options: EntryFilterOptions,
+        sort: SearchSortOrder,
+        limit: int | None,
+        starting_after: tuple[str, str] | None,
+    ) -> Iterable[EntrySearchResult]:
+        ...
+
+    def search_entry_counts(
+        self, query: str, now: datetime, filter_options: EntryFilterOptions
+    ) -> EntrySearchCounts:
+        ...
