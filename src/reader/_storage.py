@@ -711,9 +711,10 @@ class Storage:
             rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     @wrap_exceptions(StorageError)
-    def mark_as_read(
-        self, feed_url: str, entry_id: str, read: bool, modified: datetime | None
+    def set_entry_read(
+        self, entry: tuple[str, str], read: bool, modified: datetime | None
     ) -> None:
+        feed_url, entry_id = entry
         with self.get_db() as db:
             cursor = db.execute(
                 """
@@ -730,13 +731,10 @@ class Storage:
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
     @wrap_exceptions(StorageError)
-    def mark_as_important(
-        self,
-        feed_url: str,
-        entry_id: str,
-        important: bool | None,
-        modified: datetime | None,
+    def set_entry_important(
+        self, entry: tuple[str, str], important: bool | None, modified: datetime | None
     ) -> None:
+        feed_url, entry_id = entry
         with self.get_db() as db:
             cursor = db.execute(
                 """

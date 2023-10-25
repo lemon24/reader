@@ -200,12 +200,12 @@ def mark_as_stale(storage, feed, __):
     storage.mark_as_stale(feed.url)
 
 
-def mark_as_read(storage, feed, entry):
-    storage.mark_as_read(feed.url, entry.id, 1, None)
+def set_entry_read(storage, feed, entry):
+    storage.set_entry_read(entry.resource_id, 1, None)
 
 
-def mark_as_important(storage, feed, entry):
-    storage.mark_as_important(feed.url, entry.id, 1, None)
+def set_entry_important(storage, feed, entry):
+    storage.set_entry_important(entry.resource_id, 1, None)
 
 
 def get_entry_recent_sort(storage, feed, entry):
@@ -315,8 +315,8 @@ def get_entry_last(storage, feed, entry):
         set_feed_user_title,
         set_feed_updates_enabled,
         mark_as_stale,
-        mark_as_read,
-        mark_as_important,
+        set_entry_read,
+        set_entry_important,
         get_entry_recent_sort,
         set_entry_recent_sort,
         update_feed,
@@ -486,9 +486,9 @@ def check_iter_locked(db_path, pre_stuff, iter_stuff):
 
     # shouldn't raise an exception
     storage = Storage(db_path, timeout=0, wal_enabled=False)
-    storage.mark_as_read(feed.url, entry.id, 1, None)
+    storage.set_entry_read((feed.url, entry.id), 1, None)
     storage = Storage(db_path, timeout=0)
-    storage.mark_as_read(feed.url, entry.id, 0, None)
+    storage.set_entry_read((feed.url, entry.id), 0, None)
 
 
 def test_update_feed_last_updated_not_found(db_path):
@@ -542,7 +542,7 @@ def test_important_unimportant_by_default(storage):
 
 @rename_argument('storage', 'storage_with_two_entries')
 def test_important_get_entries(storage):
-    storage.mark_as_important('feed', 'one', True, datetime(2010, 1, 2))
+    storage.set_entry_important(('feed', 'one'), True, datetime(2010, 1, 2))
 
     assert {e.id for e in storage.get_entries(now=datetime(2010, 1, 1))} == {
         'one',
@@ -570,7 +570,7 @@ def test_important_get_entries(storage):
 
 @rename_argument('storage', 'storage_with_two_entries')
 def test_important_entry_important(storage):
-    storage.mark_as_important('feed', 'one', True, None)
+    storage.set_entry_important(('feed', 'one'), True, None)
 
     assert {e.id: e.important for e in storage.get_entries(datetime(2010, 1, 1))} == {
         'one': True,
@@ -580,8 +580,8 @@ def test_important_entry_important(storage):
 
 @rename_argument('storage', 'storage_with_two_entries')
 def test_important_mark_as_unimportant(storage):
-    storage.mark_as_important('feed', 'one', True, None)
-    storage.mark_as_important('feed', 'one', False, None)
+    storage.set_entry_important(('feed', 'one'), True, None)
+    storage.set_entry_important(('feed', 'one'), False, None)
 
     assert {
         e.id
@@ -593,7 +593,7 @@ def test_important_mark_as_unimportant(storage):
 
 def test_important_mark_entry_not_found(storage):
     with pytest.raises(EntryNotFoundError):
-        storage.mark_as_important('feed', 'one', True, None)
+        storage.set_entry_important(('feed', 'one'), True, None)
 
 
 def test_minimum_sqlite_version(db_path, monkeypatch):

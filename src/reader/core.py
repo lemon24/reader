@@ -1364,8 +1364,7 @@ class Reader:
         else:
             modified_naive = modified.astimezone(timezone.utc).replace(tzinfo=None)
 
-        feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_read(feed_url, entry_id, read, modified_naive)
+        self._storage.set_entry_read(_entry_argument(entry), read, modified_naive)
 
     def mark_entry_as_read(self, entry: EntryInput, /) -> None:
         """Mark an entry as read.
@@ -1457,8 +1456,9 @@ class Reader:
         else:
             modified_naive = modified.astimezone(timezone.utc).replace(tzinfo=None)
 
-        feed_url, entry_id = _entry_argument(entry)
-        self._storage.mark_as_important(feed_url, entry_id, important, modified_naive)
+        self._storage.set_entry_important(
+            _entry_argument(entry), important, modified_naive
+        )
 
     def mark_entry_as_important(self, entry: EntryInput, /) -> None:
         """Mark an entry as important.

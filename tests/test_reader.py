@@ -1517,10 +1517,8 @@ class FakeStorage:
     def close(self):
         self.calls.append(('close',))
 
-    def mark_as_important(self, feed_url, entry_id, important, modified):
-        self.calls.append(
-            ('mark_as_important', feed_url, entry_id, important, modified)
-        )
+    def set_entry_important(self, entry, important, modified):
+        self.calls.append(('set_entry_important', entry, important, modified))
         if self.exc:
             raise self.exc
 
@@ -1541,13 +1539,7 @@ def test_mark_as_important(reader, entry_arg):
     entry = Entry('entry', None, feed=Feed('feed'))
     reader.mark_entry_as_important(entry_arg(entry))
     assert reader._storage.calls == [
-        (
-            'mark_as_important',
-            'feed',
-            'entry',
-            True,
-            naive_datetime(2010, 1, 1),
-        )
+        ('set_entry_important', ('feed', 'entry'), True, naive_datetime(2010, 1, 1))
     ]
 
 
@@ -1557,13 +1549,7 @@ def test_mark_as_unimportant(reader, entry_arg):
     entry = Entry('entry', None, feed=Feed('feed'))
     reader.mark_entry_as_unimportant(entry_arg(entry))
     assert reader._storage.calls == [
-        (
-            'mark_as_important',
-            'feed',
-            'entry',
-            False,
-            naive_datetime(2010, 1, 1),
-        )
+        ('set_entry_important', ('feed', 'entry'), False, naive_datetime(2010, 1, 1))
     ]
 
 

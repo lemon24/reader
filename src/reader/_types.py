@@ -669,10 +669,8 @@ class StorageType(Protocol):  # pragma: no cover
     * delete_entries
     * get_entries
     * get_entry_counts
-    * mark_as_read
-        * rename to set_entry_read(entry, read, /, modified)
-    * mark_as_important
-        * rename to set_entry_important(entry, read, /, modified)
+    * set_entry_read
+    * set_entry_important
 
     Update methods:
 
@@ -691,6 +689,10 @@ class StorageType(Protocol):  # pragma: no cover
     * get_tags
     * set_tag
     * delete_tag
+
+    Other renames:
+
+    * filter_options -> filter?
 
     """
 
@@ -743,17 +745,13 @@ class StorageType(Protocol):  # pragma: no cover
     def mark_as_stale(self, url: str) -> None:
         ...
 
-    def mark_as_read(
-        self, feed_url: str, entry_id: str, read: bool, modified: datetime | None
+    def set_entry_read(
+        self, entry: tuple[str, str], read: bool, modified: datetime | None
     ) -> None:
         ...
 
-    def mark_as_important(
-        self,
-        feed_url: str,
-        entry_id: str,
-        important: bool | None,
-        modified: datetime | None,
+    def set_entry_important(
+        self, entry: tuple[str, str], important: bool | None, modified: datetime | None
     ) -> None:
         ...
 
