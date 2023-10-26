@@ -37,7 +37,7 @@ def test_update_stale(reader, update_feed, entry_updated):
     entry = parser.entry(1, 1, entry_updated)
 
     with pytest.raises(FeedNotFoundError):
-        reader._storage.mark_as_stale(feed.url)
+        reader._storage.set_feed_stale(feed.url, True)
 
     reader.add_feed(feed.url)
 
@@ -73,7 +73,7 @@ def test_update_stale(reader, update_feed, entry_updated):
 
     # but it does if we mark the feed as stale
     parser.calls[:] = []
-    reader._storage.mark_as_stale(feed.url)
+    reader._storage.set_feed_stale(feed.url, True)
     reader._now = lambda: naive_datetime(2010, 1, 3)
     update_feed(reader, feed.url)
     assert parser.calls == [(feed.url, None, None)]

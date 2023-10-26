@@ -269,7 +269,7 @@ class FeedForUpdate(NamedTuple):
     http_last_modified: str | None
 
     #: Whether the next update should update *all* entries,
-    #: regardless of their .updated.
+    #: regardless of their :attr:`hash` or :attr:`updated`.
     stale: bool
 
     #: The date the feed was last updated, according to reader; none if never.
@@ -675,12 +675,11 @@ class StorageType(Protocol):  # pragma: no cover
     Update methods:
 
     * get_feeds_for_update
-    * get_entries_for_update
     * update_feed
+    * set_feed_stale
+    * get_entries_for_update
     * add_or_update_entries
         * is this a good name?
-    * mark_as_stale
-        * only used in tests, remove? if not, rename
     * get_entry_recent_sort
     * set_entry_recent_sort
 
@@ -742,7 +741,7 @@ class StorageType(Protocol):  # pragma: no cover
     def set_feed_updates_enabled(self, url: str, enabled: bool) -> None:
         ...
 
-    def mark_as_stale(self, url: str) -> None:
+    def set_feed_stale(self, url: str, stale: bool) -> None:
         ...
 
     def set_entry_read(

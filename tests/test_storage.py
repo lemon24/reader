@@ -196,8 +196,8 @@ def set_feed_updates_enabled(storage, feed, __):
     storage.set_feed_updates_enabled(feed.url, 1)
 
 
-def mark_as_stale(storage, feed, __):
-    storage.mark_as_stale(feed.url)
+def set_feed_stale(storage, feed, __):
+    storage.set_feed_stale(feed.url, True)
 
 
 def set_entry_read(storage, feed, entry):
@@ -314,7 +314,7 @@ def get_entry_last(storage, feed, entry):
         get_entries_for_update,
         set_feed_user_title,
         set_feed_updates_enabled,
-        mark_as_stale,
+        set_feed_stale,
         set_entry_read,
         set_entry_important,
         get_entry_recent_sort,

@@ -1988,7 +1988,7 @@ def test_change_feed_url_feeds_for_update(reader):
     reader._parser.condition = lambda url: url == '1'
     reader.update_feeds()
 
-    reader._storage.mark_as_stale('1')
+    reader._storage.set_feed_stale('1', True)
 
     def get_feed(feed):
         return next(
