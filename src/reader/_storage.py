@@ -877,12 +877,8 @@ class Storage:
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
     @wrap_exceptions(StorageError)
-    def add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
-        iterables = (
-            chunks(self.chunk_size, entry_tuples)
-            if self.chunk_size
-            else (entry_tuples,)
-        )
+    def add_or_update_entries(self, intents: Iterable[EntryUpdateIntent]) -> None:
+        iterables = chunks(self.chunk_size, intents) if self.chunk_size else (intents,)
 
         # It's acceptable for this to not be atomic (only some of the entries
         # may be updated if we get an exception), since they will likely

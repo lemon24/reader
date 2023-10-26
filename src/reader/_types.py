@@ -766,7 +766,7 @@ class StorageType(Protocol):  # pragma: no cover
     def update_feed(self, intent: FeedUpdateIntent) -> None:
         ...
 
-    def add_or_update_entries(self, entry_tuples: Iterable[EntryUpdateIntent]) -> None:
+    def add_or_update_entries(self, intents: Iterable[EntryUpdateIntent]) -> None:
         ...
 
     def add_entry(self, intent: EntryUpdateIntent) -> None:
