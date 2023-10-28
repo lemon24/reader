@@ -778,7 +778,6 @@ class StorageType(Protocol):  # pragma: no cover
 
     def get_entries(
         self,
-        now: datetime,
         filter_options: EntryFilterOptions,
         sort: EntrySortOrder,
         limit: int | None,
@@ -824,7 +823,6 @@ class SearchType(Protocol):  # pragma: no cover
     def search_entries(
         self,
         query: str,
-        now: datetime,
         filter_options: EntryFilterOptions,
         sort: SearchSortOrder,
         limit: int | None,

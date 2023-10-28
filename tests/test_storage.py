@@ -267,11 +267,11 @@ def delete_entries(storage, feed, entry):
 
 
 def get_entries_chunk_size_0(storage, _, __):
-    list(storage.get_entries_page(chunk_size=0, now=datetime(2010, 1, 1)))
+    list(storage.get_entries_page(chunk_size=0))
 
 
 def get_entries_chunk_size_1(storage, _, __):
-    list(storage.get_entries_page(chunk_size=1, now=datetime(2010, 1, 1)))
+    list(storage.get_entries_page(chunk_size=1))
 
 
 def get_tags(storage, feed, __):
@@ -299,7 +299,7 @@ def get_feed_last(storage, feed, __):
 
 
 def get_entry_last(storage, feed, entry):
-    storage.get_entry_last(datetime(2010, 1, 1), 'recent', (feed.url, entry.id))
+    storage.get_entry_last('recent', (feed.url, entry.id))
 
 
 @pytest.mark.slow
@@ -402,19 +402,19 @@ def iter_get_feeds_for_update(storage):
 
 
 def iter_pagination_chunk_size_0(storage):
-    return storage.get_entries_page(chunk_size=0, now=datetime(2010, 1, 1))
+    return storage.get_entries_page(chunk_size=0)
 
 
 def iter_pagination_chunk_size_1(storage):
-    return storage.get_entries_page(chunk_size=1, now=datetime(2010, 1, 1))
+    return storage.get_entries_page(chunk_size=1)
 
 
 def iter_pagination_chunk_size_2(storage):
-    return storage.get_entries_page(chunk_size=2, now=datetime(2010, 1, 1))
+    return storage.get_entries_page(chunk_size=2)
 
 
 def iter_pagination_chunk_size_3(storage):
-    return storage.get_entries_page(chunk_size=3, now=datetime(2010, 1, 1))
+    return storage.get_entries_page(chunk_size=3)
 
 
 def iter_get_tags(storage):
@@ -533,10 +533,7 @@ def storage_with_two_entries(storage):
 @rename_argument('storage', 'storage_with_two_entries')
 def test_important_unimportant_by_default(storage):
     assert {
-        e.id
-        for e in storage.get_entries(
-            datetime(2010, 1, 1), EntryFilterOptions(important='nottrue')
-        )
+        e.id for e in storage.get_entries(EntryFilterOptions(important='nottrue'))
     } == {'one', 'two'}
 
 
@@ -544,27 +541,19 @@ def test_important_unimportant_by_default(storage):
 def test_important_get_entries(storage):
     storage.set_entry_important(('feed', 'one'), True, datetime(2010, 1, 2))
 
-    assert {e.id for e in storage.get_entries(now=datetime(2010, 1, 1))} == {
+    assert {e.id for e in storage.get_entries()} == {
+        'one',
+        'two',
+    }
+    assert {e.id for e in storage.get_entries(EntryFilterOptions(important='any'))} == {
         'one',
         'two',
     }
     assert {
-        e.id
-        for e in storage.get_entries(
-            datetime(2010, 1, 1), EntryFilterOptions(important='any')
-        )
-    } == {'one', 'two'}
-    assert {
-        e.id
-        for e in storage.get_entries(
-            datetime(2010, 1, 1), EntryFilterOptions(important='istrue')
-        )
+        e.id for e in storage.get_entries(EntryFilterOptions(important='istrue'))
     } == {'one'}
     assert {
-        e.id
-        for e in storage.get_entries(
-            datetime(2010, 1, 1), EntryFilterOptions(important='nottrue')
-        )
+        e.id for e in storage.get_entries(EntryFilterOptions(important='nottrue'))
     } == {'two'}
 
 
@@ -572,7 +561,7 @@ def test_important_get_entries(storage):
 def test_important_entry_important(storage):
     storage.set_entry_important(('feed', 'one'), True, None)
 
-    assert {e.id: e.important for e in storage.get_entries(datetime(2010, 1, 1))} == {
+    assert {e.id: e.important for e in storage.get_entries()} == {
         'one': True,
         'two': None,
     }
@@ -584,10 +573,7 @@ def test_important_mark_as_unimportant(storage):
     storage.set_entry_important(('feed', 'one'), False, None)
 
     assert {
-        e.id
-        for e in storage.get_entries(
-            datetime(2010, 1, 1), EntryFilterOptions(important='istrue')
-        )
+        e.id for e in storage.get_entries(EntryFilterOptions(important='istrue'))
     } == set()
 
 

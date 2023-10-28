@@ -1056,7 +1056,6 @@ class Storage:
 
     def get_entries(
         self,
-        now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: EntrySortOrder = 'recent',
         limit: int | None = None,
@@ -1065,17 +1064,14 @@ class Storage:
         # TODO: deduplicate
         if sort == 'recent':
             rv = join_paginated_iter(
-                partial(self.get_entries_page, now, filter_options, sort),  # type: ignore[arg-type]
+                partial(self.get_entries_page, filter_options, sort),  # type: ignore[arg-type]
                 self.chunk_size,
-                self.get_entry_last(now, sort, starting_after)
-                if starting_after
-                else None,
+                self.get_entry_last(sort, starting_after) if starting_after else None,
                 limit or 0,
             )
         elif sort == 'random':
             assert not starting_after
             it = self.get_entries_page(
-                now,
                 filter_options,
                 sort,
                 min(limit, self.chunk_size or limit) if limit else self.chunk_size,
@@ -1087,9 +1083,7 @@ class Storage:
         yield from rv
 
     @wrap_exceptions(StorageError)
-    def get_entry_last(
-        self, now: datetime, sort: str, entry: tuple[str, str]
-    ) -> tuple[Any, ...]:
+    def get_entry_last(self, sort: str, entry: tuple[str, str]) -> tuple[Any, ...]:
         # TODO: make this method private?
 
         feed_url, entry_id = entry
@@ -1114,7 +1108,6 @@ class Storage:
     @wrap_exceptions_iter(StorageError)
     def get_entries_page(
         self,
-        now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: EntrySortOrder = 'recent',
         chunk_size: int | None = None,

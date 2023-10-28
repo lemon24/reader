@@ -1204,9 +1204,7 @@ class Reader:
         if starting_after and sort == 'random':
             raise ValueError("using starting_after with sort='random' not supported")
 
-        now = self._now()
         rv = self._storage.get_entries(
-            now,
             filter_options,
             sort,
             limit,
@@ -1797,10 +1795,8 @@ class Reader:
         if starting_after and sort == 'random':
             raise ValueError("using starting_after with sort='random' not supported")
 
-        now = self._now()
         return self._search.search_entries(
             query,
-            now,
             filter_options,
             sort,
             limit,

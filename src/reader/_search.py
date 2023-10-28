@@ -747,7 +747,6 @@ class Search:
     def search_entries(
         self,
         query: str,
-        now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: SearchSortOrder = 'relevant',
         limit: int | None = None,
@@ -758,12 +757,12 @@ class Search:
             last = None
             if starting_after:
                 if sort == 'recent':
-                    last = self.storage.get_entry_last(now, sort, starting_after)
+                    last = self.storage.get_entry_last(sort, starting_after)
                 else:
                     last = self.search_entry_last(query, starting_after)
 
             rv = join_paginated_iter(
-                partial(self.search_entries_page, query, now, filter_options, sort),  # type: ignore[arg-type]
+                partial(self.search_entries_page, query, filter_options, sort),  # type: ignore[arg-type]
                 self.chunk_size,
                 last,
                 limit or 0,
@@ -773,7 +772,6 @@ class Search:
             assert not starting_after
             it = self.search_entries_page(
                 query,
-                now,
                 filter_options,
                 sort,
                 min(limit, self.chunk_size or limit) if limit else self.chunk_size,
@@ -810,7 +808,6 @@ class Search:
     def search_entries_page(
         self,
         query: str,
-        now: datetime,
         filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
         sort: SearchSortOrder = 'relevant',
         chunk_size: int | None = None,

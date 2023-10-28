@@ -49,15 +49,11 @@ def update_search(storage, _, __):
 
 
 def search_entries_chunk_size_0(storage, _, __):
-    list(
-        Search(storage).search_entries_page('entry', datetime(2010, 1, 1), chunk_size=0)
-    )
+    list(Search(storage).search_entries_page('entry', chunk_size=0))
 
 
 def search_entries_chunk_size_1(storage, _, __):
-    list(
-        Search(storage).search_entries_page('entry', datetime(2010, 1, 1), chunk_size=1)
-    )
+    list(Search(storage).search_entries_page('entry', chunk_size=1))
 
 
 def search_entry_counts(storage, _, __):
@@ -97,27 +93,19 @@ def enable_and_update_search(storage):
 
 
 def iter_search_entries_chunk_size_0(storage):
-    return Search(storage).search_entries_page(
-        'entry', datetime(2010, 1, 1), chunk_size=0
-    )
+    return Search(storage).search_entries_page('entry', chunk_size=0)
 
 
 def iter_search_entries_chunk_size_1(storage):
-    return Search(storage).search_entries_page(
-        'entry', datetime(2010, 1, 1), chunk_size=1
-    )
+    return Search(storage).search_entries_page('entry', chunk_size=1)
 
 
 def iter_search_entries_chunk_size_2(storage):
-    return Search(storage).search_entries_page(
-        'entry', datetime(2010, 1, 1), chunk_size=2
-    )
+    return Search(storage).search_entries_page('entry', chunk_size=2)
 
 
 def iter_search_entries_chunk_size_3(storage):
-    return Search(storage).search_entries_page(
-        'entry', datetime(2010, 1, 1), chunk_size=3
-    )
+    return Search(storage).search_entries_page('entry', chunk_size=3)
 
 
 @pytest.mark.slow
@@ -149,7 +137,7 @@ class ActuallyOK(Exception):
 
 def call_search_entries(search, query):
     try:
-        next(search.search_entries(query, datetime(2010, 1, 1)))
+        next(search.search_entries(query))
     except StopIteration:
         raise ActuallyOK
 
