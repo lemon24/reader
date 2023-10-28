@@ -655,13 +655,9 @@ class Reader:
         if limit is not None:
             if not isinstance(limit, numbers.Integral) or limit < 1:
                 raise ValueError("limit should be a positive integer")
+        starting_after = _feed_argument(starting_after) if starting_after else None
 
-        rv = self._storage.get_feeds(
-            filter,
-            sort,
-            limit,
-            _feed_argument(starting_after) if starting_after else None,
-        )
+        rv = self._storage.get_feeds(filter, sort, limit, starting_after)
 
         for rv_feed in rv:
             yield fix_datetime_tzinfo(rv_feed, 'updated', 'added', 'last_updated')
@@ -1194,16 +1190,12 @@ class Reader:
         if limit is not None:
             if not isinstance(limit, numbers.Integral) or limit < 1:
                 raise ValueError("limit should be a positive integer")
+        starting_after = _entry_argument(starting_after) if starting_after else None
 
         if starting_after and sort == 'random':
             raise ValueError("using starting_after with sort='random' not supported")
 
-        rv = self._storage.get_entries(
-            filter,
-            sort,
-            limit,
-            _entry_argument(starting_after) if starting_after else None,
-        )
+        rv = self._storage.get_entries(filter, sort, limit, starting_after)
 
         for rv_entry in rv:
             yield fix_datetime_tzinfo(
@@ -1785,17 +1777,12 @@ class Reader:
         if limit is not None:
             if not isinstance(limit, numbers.Integral) or limit < 1:
                 raise ValueError("limit should be a positive integer")
+        starting_after = _entry_argument(starting_after) if starting_after else None
 
         if starting_after and sort == 'random':
             raise ValueError("using starting_after with sort='random' not supported")
 
-        return self._search.search_entries(
-            query,
-            filter,
-            sort,
-            limit,
-            _entry_argument(starting_after) if starting_after else None,
-        )
+        return self._search.search_entries(query, filter, sort, limit, starting_after)
 
     def search_entry_counts(
         self,
