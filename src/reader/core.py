@@ -26,9 +26,9 @@ from ._storage import Storage
 from ._types import DEFAULT_RESERVED_NAME_SCHEME
 from ._types import entry_data_from_obj
 from ._types import EntryData
-from ._types import EntryFilterOptions
+from ._types import EntryFilter
 from ._types import EntryUpdateIntent
-from ._types import FeedFilterOptions
+from ._types import FeedFilter
 from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
 from ._types import SearchType
@@ -61,12 +61,12 @@ from .types import EntryCounts
 from .types import EntryInput
 from .types import EntrySearchCounts
 from .types import EntrySearchResult
-from .types import EntrySortOrder
+from .types import EntrySort
 from .types import EntryUpdateStatus
 from .types import Feed
 from .types import FeedCounts
 from .types import FeedInput
-from .types import FeedSortOrder
+from .types import FeedSort
 from .types import JSONType
 from .types import MISSING
 from .types import MissingType
@@ -552,7 +552,7 @@ class Reader:
         broken: bool | None = None,
         updates_enabled: bool | None = None,
         new: bool | None = None,
-        sort: FeedSortOrder = 'title',
+        sort: FeedSort = 'title',
         limit: int | None = None,
         starting_after: FeedInput | None = None,
     ) -> Iterable[Feed]:
@@ -647,9 +647,7 @@ class Reader:
             The ``new`` keyword argument.
 
         """
-        filter_options = FeedFilterOptions.from_args(
-            feed, tags, broken, updates_enabled, new
-        )
+        filter = FeedFilter.from_args(feed, tags, broken, updates_enabled, new)
 
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
@@ -659,7 +657,7 @@ class Reader:
                 raise ValueError("limit should be a positive integer")
 
         rv = self._storage.get_feeds(
-            filter_options,
+            filter,
             sort,
             limit,
             _feed_argument(starting_after) if starting_after else None,
@@ -749,10 +747,8 @@ class Reader:
             The ``new`` keyword argument.
 
         """
-        filter_options = FeedFilterOptions.from_args(
-            feed, tags, broken, updates_enabled, new
-        )
-        return self._storage.get_feed_counts(filter_options)
+        filter = FeedFilter.from_args(feed, tags, broken, updates_enabled, new)
+        return self._storage.get_feed_counts(filter)
 
     def set_feed_user_title(self, feed: FeedInput, title: str | None, /) -> None:
         """Set a user-defined title for a feed.
@@ -1018,9 +1014,7 @@ class Reader:
             (other than :exc:`UpdateHookError`).
 
         """
-        filter_options = FeedFilterOptions.from_args(
-            feed, tags, broken, updates_enabled, new
-        )
+        filter = FeedFilter.from_args(feed, tags, broken, updates_enabled, new)
 
         if workers < 1:
             raise ValueError("workers must be a positive integer")
@@ -1033,7 +1027,7 @@ class Reader:
             self._update_hooks.run('before_feeds_update', None)
 
         with make_map as map:
-            yield from Pipeline.from_reader(self, map).update(filter_options)
+            yield from Pipeline.from_reader(self, map).update(filter)
 
         if _call_feeds_update_hooks:
             hook_errors = self._update_hooks.group(
@@ -1107,7 +1101,7 @@ class Reader:
         important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
         feed_tags: TagFilterInput = None,
-        sort: EntrySortOrder = 'recent',
+        sort: EntrySort = 'recent',
         limit: int | None = None,
         starting_after: EntryInput | None = None,
     ) -> Iterable[Entry]:
@@ -1190,7 +1184,7 @@ class Reader:
         # If we ever implement pagination, consider following the guidance in
         # https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
 
-        filter_options = EntryFilterOptions.from_args(
+        filter = EntryFilter.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
         )
 
@@ -1205,7 +1199,7 @@ class Reader:
             raise ValueError("using starting_after with sort='random' not supported")
 
         rv = self._storage.get_entries(
-            filter_options,
+            filter,
             sort,
             limit,
             _entry_argument(starting_after) if starting_after else None,
@@ -1311,11 +1305,11 @@ class Reader:
 
         """
 
-        filter_options = EntryFilterOptions.from_args(
+        filter = EntryFilter.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
         )
         now = self._now()
-        return self._storage.get_entry_counts(now, filter_options)
+        return self._storage.get_entry_counts(now, filter)
 
     def set_entry_read(
         self,
@@ -1781,7 +1775,7 @@ class Reader:
             The ``important`` argument also accepts string values.
 
         """
-        filter_options = EntryFilterOptions.from_args(
+        filter = EntryFilter.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
         )
 
@@ -1797,7 +1791,7 @@ class Reader:
 
         return self._search.search_entries(
             query,
-            filter_options,
+            filter,
             sort,
             limit,
             _entry_argument(starting_after) if starting_after else None,
@@ -1856,11 +1850,11 @@ class Reader:
 
         """
 
-        filter_options = EntryFilterOptions.from_args(
+        filter = EntryFilter.from_args(
             feed, entry, read, important, has_enclosures, feed_tags
         )
         now = self._now()
-        return self._search.search_entry_counts(query, now, filter_options)
+        return self._search.search_entry_counts(query, now, filter)
 
     def get_tags(
         self, resource: ResourceInput, /, *, key: str | None = None

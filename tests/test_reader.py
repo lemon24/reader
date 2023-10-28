@@ -51,7 +51,7 @@ from reader import UpdatedFeed
 from reader import UpdateResult
 from reader._storage import Storage
 from reader._types import DEFAULT_RESERVED_NAME_SCHEME
-from reader._types import FeedFilterOptions
+from reader._types import FeedFilter
 from reader._types import FeedUpdateIntent
 
 
@@ -606,7 +606,7 @@ def test_update_last_updated_entries_updated_feed_not_updated(reader, update_fee
     update_feed(reader, feed.url)
 
     def get_feed_for_update(feed):
-        options = FeedFilterOptions.from_args(feed)
+        options = FeedFilter.from_args(feed)
         (rv,) = reader._storage.get_feeds_for_update(options)
         return rv
 
@@ -718,7 +718,7 @@ def test_last_exception_failed(reader, update_feed):
     old_parser = reader._parser
 
     def get_feed_last_updated(feed):
-        options = FeedFilterOptions.from_args(feed)
+        options = FeedFilter.from_args(feed)
         (rv,) = reader._storage.get_feeds_for_update(options)
         return rv.last_updated
 
@@ -1437,7 +1437,7 @@ def test_data_roundtrip(reader):
 
     # TODO: this should be a different test
     (feed_for_update,) = reader._storage.get_feeds_for_update(
-        FeedFilterOptions.from_args(feed)
+        FeedFilter.from_args(feed)
     )
     assert feed.hash == feed_for_update.hash
     (entry_for_update,) = reader._storage.get_entries_for_update(
@@ -1992,7 +1992,7 @@ def test_change_feed_url_feeds_for_update(reader):
 
     def get_feed(feed):
         return next(
-            reader._storage.get_feeds_for_update(FeedFilterOptions.from_args(feed)),
+            reader._storage.get_feeds_for_update(FeedFilter.from_args(feed)),
             None,
         )
 

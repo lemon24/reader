@@ -37,12 +37,12 @@ from .types import EntryCounts
 from .types import EntryInput
 from .types import EntrySearchCounts
 from .types import EntrySearchResult
-from .types import EntrySortOrder
+from .types import EntrySort
 from .types import ExceptionInfo
 from .types import Feed
 from .types import FeedCounts
 from .types import FeedInput
-from .types import FeedSortOrder
+from .types import FeedSort
 from .types import JSONType
 from .types import ResourceId
 from .types import SearchSortOrder
@@ -434,10 +434,10 @@ def tristate_filter_argument(value: TristateFilterInput, name: str) -> TristateF
     raise ValueError(f"{name} must be none, bool, or one of {args}")
 
 
-_EFO = TypeVar('_EFO', bound='EntryFilterOptions')
+_EFO = TypeVar('_EFO', bound='EntryFilter')
 
 
-class EntryFilterOptions(NamedTuple):
+class EntryFilter(NamedTuple):
 
     """Options for filtering the results of the "get entry" storage methods."""
 
@@ -480,10 +480,10 @@ class EntryFilterOptions(NamedTuple):
         )
 
 
-_FFO = TypeVar('_FFO', bound='FeedFilterOptions')
+_FFO = TypeVar('_FFO', bound='FeedFilter')
 
 
-class FeedFilterOptions(NamedTuple):
+class FeedFilter(NamedTuple):
 
     """Options for filtering the results of the "get feed" storage methods."""
 
@@ -691,7 +691,7 @@ class StorageType(Protocol):  # pragma: no cover
 
     Other renames:
 
-    * filter_options -> filter?
+    * ...
 
     """
 
@@ -715,19 +715,17 @@ class StorageType(Protocol):  # pragma: no cover
 
     def get_feeds(
         self,
-        filter_options: FeedFilterOptions,
-        sort: FeedSortOrder,
+        filter: FeedFilter,
+        sort: FeedSort,
         limit: int | None,
         starting_after: str | None,
     ) -> Iterable[Feed]:
         ...
 
-    def get_feed_counts(self, filter_options: FeedFilterOptions) -> FeedCounts:
+    def get_feed_counts(self, filter: FeedFilter) -> FeedCounts:
         ...
 
-    def get_feeds_for_update(
-        self, filter_options: FeedFilterOptions
-    ) -> Iterable[FeedForUpdate]:
+    def get_feeds_for_update(self, filter: FeedFilter) -> Iterable[FeedForUpdate]:
         ...
 
     def get_entries_for_update(
@@ -778,16 +776,14 @@ class StorageType(Protocol):  # pragma: no cover
 
     def get_entries(
         self,
-        filter_options: EntryFilterOptions,
-        sort: EntrySortOrder,
+        filter: EntryFilter,
+        sort: EntrySort,
         limit: int | None,
         starting_after: tuple[str, str] | None,
     ) -> Iterable[Entry]:
         ...
 
-    def get_entry_counts(
-        self, now: datetime, filter_options: EntryFilterOptions
-    ) -> EntryCounts:
+    def get_entry_counts(self, now: datetime, filter: EntryFilter) -> EntryCounts:
         ...
 
     def get_tags(
@@ -823,7 +819,7 @@ class SearchType(Protocol):  # pragma: no cover
     def search_entries(
         self,
         query: str,
-        filter_options: EntryFilterOptions,
+        filter: EntryFilter,
         sort: SearchSortOrder,
         limit: int | None,
         starting_after: tuple[str, str] | None,
@@ -831,6 +827,6 @@ class SearchType(Protocol):  # pragma: no cover
         ...
 
     def search_entry_counts(
-        self, query: str, now: datetime, filter_options: EntryFilterOptions
+        self, query: str, now: datetime, filter: EntryFilter
     ) -> EntrySearchCounts:
         ...

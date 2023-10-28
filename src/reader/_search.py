@@ -27,12 +27,12 @@ from ._sqlite_utils import require_version
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
 from ._sqlite_utils import wrap_exceptions_iter
-from ._storage import apply_entry_filter_options
+from ._storage import apply_entry_filter
 from ._storage import apply_random
 from ._storage import apply_recent
 from ._storage import make_entry_counts_query
 from ._storage import Storage
-from ._types import EntryFilterOptions
+from ._types import EntryFilter
 from ._utils import exactly_one
 from ._utils import join_paginated_iter
 from ._utils import zero_or_one
@@ -747,7 +747,7 @@ class Search:
     def search_entries(
         self,
         query: str,
-        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
+        filter: EntryFilter = EntryFilter(),  # noqa: B008
         sort: SearchSortOrder = 'relevant',
         limit: int | None = None,
         starting_after: tuple[str, str] | None = None,
@@ -762,7 +762,7 @@ class Search:
                     last = self.search_entry_last(query, starting_after)
 
             rv = join_paginated_iter(
-                partial(self.search_entries_page, query, filter_options, sort),  # type: ignore[arg-type]
+                partial(self.search_entries_page, query, filter, sort),  # type: ignore[arg-type]
                 self.chunk_size,
                 last,
                 limit or 0,
@@ -772,7 +772,7 @@ class Search:
             assert not starting_after
             it = self.search_entries_page(
                 query,
-                filter_options,
+                filter,
                 sort,
                 min(limit, self.chunk_size or limit) if limit else self.chunk_size,
             )
@@ -808,12 +808,12 @@ class Search:
     def search_entries_page(
         self,
         query: str,
-        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
+        filter: EntryFilter = EntryFilter(),  # noqa: B008
         sort: SearchSortOrder = 'relevant',
         chunk_size: int | None = None,
         last: _T | None = None,
     ) -> Iterable[tuple[EntrySearchResult, _T | None]]:
-        sql_query, context = make_search_entries_query(filter_options, sort)
+        sql_query, context = make_search_entries_query(filter, sort)
 
         random_mark = ''.join(
             random.choices(string.ascii_letters + string.digits, k=20)
@@ -846,7 +846,7 @@ class Search:
         self,
         query: str,
         now: datetime,
-        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
+        filter: EntryFilter = EntryFilter(),  # noqa: B008
     ) -> EntrySearchCounts:
         entries_query = (
             Query()
@@ -865,7 +865,7 @@ class Search:
             .FROM('entries')
             .JOIN("search ON (id, feed) = (_id, _feed)")
         )
-        query_context = apply_entry_filter_options(entries_query, filter_options)
+        query_context = apply_entry_filter(entries_query, filter)
 
         sql_query, new_context = make_entry_counts_query(
             now, self.storage.entry_counts_average_periods, entries_query
@@ -878,7 +878,7 @@ class Search:
 
 
 def make_search_entries_query(
-    filter_options: EntryFilterOptions, sort: SearchSortOrder
+    filter: EntryFilter, sort: SearchSortOrder
 ) -> tuple[Query, dict[str, Any]]:
     search = (
         Query()
@@ -915,7 +915,7 @@ def make_search_entries_query(
         .LIMIT("-1 OFFSET 0")
     )
 
-    context = apply_entry_filter_options(search, filter_options)
+    context = apply_entry_filter(search, filter)
 
     query = (
         Query()

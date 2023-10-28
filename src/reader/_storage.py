@@ -23,10 +23,10 @@ from ._sqlite_utils import rowcount_exactly_one
 from ._sqlite_utils import setup_db as setup_sqlite_db
 from ._sqlite_utils import wrap_exceptions
 from ._sqlite_utils import wrap_exceptions_iter
-from ._types import EntryFilterOptions
+from ._types import EntryFilter
 from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
-from ._types import FeedFilterOptions
+from ._types import FeedFilter
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
 from ._types import TagFilter
@@ -47,11 +47,11 @@ from .types import Content
 from .types import Enclosure
 from .types import Entry
 from .types import EntryCounts
-from .types import EntrySortOrder
+from .types import EntrySort
 from .types import ExceptionInfo
 from .types import Feed
 from .types import FeedCounts
-from .types import FeedSortOrder
+from .types import FeedSort
 from .types import JSONType
 from .types import MISSING
 from .types import MissingType
@@ -527,13 +527,13 @@ class Storage:
 
     def get_feeds(
         self,
-        filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
-        sort: FeedSortOrder = 'title',
+        filter: FeedFilter = FeedFilter(),  # noqa: B008
+        sort: FeedSort = 'title',
         limit: int | None = None,
         starting_after: str | None = None,
     ) -> Iterable[Feed]:
         rv = join_paginated_iter(
-            partial(self.get_feeds_page, filter_options, sort),  # type: ignore[arg-type]
+            partial(self.get_feeds_page, filter, sort),  # type: ignore[arg-type]
             self.chunk_size,
             self.get_feed_last(sort, starting_after) if starting_after else None,
             limit or 0,
@@ -562,12 +562,12 @@ class Storage:
     @wrap_exceptions_iter(StorageError)
     def get_feeds_page(
         self,
-        filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
-        sort: FeedSortOrder = 'title',
+        filter: FeedFilter = FeedFilter(),  # noqa: B008
+        sort: FeedSort = 'title',
         chunk_size: int | None = None,
         last: _T | None = None,
     ) -> Iterable[tuple[Feed, _T | None]]:
-        query, context = make_get_feeds_query(filter_options, sort)
+        query, context = make_get_feeds_query(filter, sort)
         yield from paginated_query(
             self.get_db(), query, context, chunk_size, last, feed_factory
         )
@@ -575,7 +575,7 @@ class Storage:
     @wrap_exceptions(StorageError)
     def get_feed_counts(
         self,
-        filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
+        filter: FeedFilter = FeedFilter(),  # noqa: B008
     ) -> FeedCounts:
         query = (
             Query()
@@ -587,7 +587,7 @@ class Storage:
             .FROM("feeds")
         )
 
-        context = apply_feed_filter_options(query, filter_options)
+        context = apply_feed_filter(query, filter)
 
         row = exactly_one(self.get_db().execute(str(query), context))
 
@@ -596,7 +596,7 @@ class Storage:
     @wrap_exceptions_iter(StorageError)
     def get_feeds_for_update(
         self,
-        filter_options: FeedFilterOptions = FeedFilterOptions(),  # noqa: B008
+        filter: FeedFilter = FeedFilter(),  # noqa: B008
     ) -> Iterable[FeedForUpdate]:
         # Reader shouldn't care this is paginated,
         # so we don't expose any pagination stuff.
@@ -621,7 +621,7 @@ class Storage:
 
             # TODO: stale and last_exception should be bool, not int
 
-            context = apply_feed_filter_options(query, filter_options)
+            context = apply_feed_filter(query, filter)
 
             query.scrolling_window_order_by("url")
 
@@ -1056,15 +1056,15 @@ class Storage:
 
     def get_entries(
         self,
-        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
-        sort: EntrySortOrder = 'recent',
+        filter: EntryFilter = EntryFilter(),  # noqa: B008
+        sort: EntrySort = 'recent',
         limit: int | None = None,
         starting_after: tuple[str, str] | None = None,
     ) -> Iterable[Entry]:
         # TODO: deduplicate
         if sort == 'recent':
             rv = join_paginated_iter(
-                partial(self.get_entries_page, filter_options, sort),  # type: ignore[arg-type]
+                partial(self.get_entries_page, filter, sort),  # type: ignore[arg-type]
                 self.chunk_size,
                 self.get_entry_last(sort, starting_after) if starting_after else None,
                 limit or 0,
@@ -1072,7 +1072,7 @@ class Storage:
         elif sort == 'random':
             assert not starting_after
             it = self.get_entries_page(
-                filter_options,
+                filter,
                 sort,
                 min(limit, self.chunk_size or limit) if limit else self.chunk_size,
             )
@@ -1108,12 +1108,12 @@ class Storage:
     @wrap_exceptions_iter(StorageError)
     def get_entries_page(
         self,
-        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
-        sort: EntrySortOrder = 'recent',
+        filter: EntryFilter = EntryFilter(),  # noqa: B008
+        sort: EntrySort = 'recent',
         chunk_size: int | None = None,
         last: _T | None = None,
     ) -> Iterable[tuple[Entry, _T | None]]:
-        query, context = make_get_entries_query(filter_options, sort)
+        query, context = make_get_entries_query(filter, sort)
         yield from paginated_query(
             self.get_db(), query, context, chunk_size, last, entry_factory
         )
@@ -1122,10 +1122,10 @@ class Storage:
     def get_entry_counts(
         self,
         now: datetime,
-        filter_options: EntryFilterOptions = EntryFilterOptions(),  # noqa: B008
+        filter: EntryFilter = EntryFilter(),  # noqa: B008
     ) -> EntryCounts:
         entries_query = Query().SELECT('id', 'feed').FROM('entries')
-        context = apply_entry_filter_options(entries_query, filter_options)
+        context = apply_entry_filter(entries_query, filter)
 
         query, new_context = make_entry_counts_query(
             now, self.entry_counts_average_periods, entries_query
@@ -1269,7 +1269,7 @@ class Storage:
 
 
 def make_get_feeds_query(
-    filter_options: FeedFilterOptions, sort: FeedSortOrder
+    filter: FeedFilter, sort: FeedSort
 ) -> tuple[Query, dict[str, Any]]:
     query = (
         Query()
@@ -1290,7 +1290,7 @@ def make_get_feeds_query(
         .FROM("feeds")
     )
 
-    context = apply_feed_filter_options(query, filter_options)
+    context = apply_feed_filter(query, filter)
 
     # NOTE: when changing, ensure none of the values can be null
     # to prevent https://github.com/lemon24/reader/issues/203
@@ -1318,11 +1318,11 @@ def feed_factory(t: tuple[Any, ...]) -> Feed:
     )
 
 
-def apply_feed_filter_options(
+def apply_feed_filter(
     query: Query,
-    filter_options: FeedFilterOptions,
+    filter: FeedFilter,
 ) -> dict[str, Any]:
-    url, tags, broken, updates_enabled, new = filter_options
+    url, tags, broken, updates_enabled, new = filter
 
     context: dict[str, object] = {}
 
@@ -1330,7 +1330,7 @@ def apply_feed_filter_options(
         query.WHERE("url = :url")
         context.update(url=url)
 
-    context.update(apply_feed_tags_filter_options(query, tags, 'feeds.url'))
+    context.update(apply_feed_tags_filter(query, tags, 'feeds.url'))
 
     if broken is not None:
         query.WHERE(f"last_exception IS {'NOT' if broken else ''} NULL")
@@ -1343,8 +1343,8 @@ def apply_feed_filter_options(
 
 
 def make_get_entries_query(
-    filter_options: EntryFilterOptions,
-    sort: EntrySortOrder,
+    filter: EntryFilter,
+    sort: EntrySort,
 ) -> tuple[Query, dict[str, Any]]:
     query = (
         Query()
@@ -1385,7 +1385,7 @@ def make_get_entries_query(
         .JOIN("feeds ON feeds.url = entries.feed")
     )
 
-    filter_context = apply_entry_filter_options(query, filter_options)
+    filter_context = apply_entry_filter(query, filter)
 
     if sort == 'recent':
         apply_recent(query)
@@ -1429,11 +1429,11 @@ TRISTATE_FILTER_TO_SQL = dict(
 )
 
 
-def apply_entry_filter_options(
-    query: Query, filter_options: EntryFilterOptions, keyword: str = 'WHERE'
+def apply_entry_filter(
+    query: Query, filter: EntryFilter, keyword: str = 'WHERE'
 ) -> dict[str, Any]:
     add = getattr(query, keyword)
-    feed_url, entry_id, read, important, has_enclosures, feed_tags = filter_options
+    feed_url, entry_id, read, important, has_enclosures, feed_tags = filter
 
     context = {}
 
@@ -1460,15 +1460,13 @@ def apply_entry_filter_options(
         )
 
     context.update(
-        apply_feed_tags_filter_options(
-            query, feed_tags, 'entries.feed', keyword=keyword
-        )
+        apply_feed_tags_filter(query, feed_tags, 'entries.feed', keyword=keyword)
     )
 
     return context
 
 
-def apply_feed_tags_filter_options(
+def apply_feed_tags_filter(
     query: Query,
     tags: TagFilter,
     url_column: str,

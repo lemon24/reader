@@ -19,7 +19,7 @@ from reader._sqlite_utils import HeavyMigration
 from reader._sqlite_utils import require_version
 from reader._storage import Storage
 from reader._types import EntryData
-from reader._types import EntryFilterOptions
+from reader._types import EntryFilter
 from reader._types import EntryForUpdate
 from reader._types import EntryUpdateIntent
 from reader._types import FeedData
@@ -532,9 +532,10 @@ def storage_with_two_entries(storage):
 
 @rename_argument('storage', 'storage_with_two_entries')
 def test_important_unimportant_by_default(storage):
-    assert {
-        e.id for e in storage.get_entries(EntryFilterOptions(important='nottrue'))
-    } == {'one', 'two'}
+    assert {e.id for e in storage.get_entries(EntryFilter(important='nottrue'))} == {
+        'one',
+        'two',
+    }
 
 
 @rename_argument('storage', 'storage_with_two_entries')
@@ -545,16 +546,16 @@ def test_important_get_entries(storage):
         'one',
         'two',
     }
-    assert {e.id for e in storage.get_entries(EntryFilterOptions(important='any'))} == {
+    assert {e.id for e in storage.get_entries(EntryFilter(important='any'))} == {
         'one',
         'two',
     }
-    assert {
-        e.id for e in storage.get_entries(EntryFilterOptions(important='istrue'))
-    } == {'one'}
-    assert {
-        e.id for e in storage.get_entries(EntryFilterOptions(important='nottrue'))
-    } == {'two'}
+    assert {e.id for e in storage.get_entries(EntryFilter(important='istrue'))} == {
+        'one'
+    }
+    assert {e.id for e in storage.get_entries(EntryFilter(important='nottrue'))} == {
+        'two'
+    }
 
 
 @rename_argument('storage', 'storage_with_two_entries')
@@ -572,9 +573,7 @@ def test_important_mark_as_unimportant(storage):
     storage.set_entry_important(('feed', 'one'), True, None)
     storage.set_entry_important(('feed', 'one'), False, None)
 
-    assert {
-        e.id for e in storage.get_entries(EntryFilterOptions(important='istrue'))
-    } == set()
+    assert {e.id for e in storage.get_entries(EntryFilter(important='istrue'))} == set()
 
 
 def test_important_mark_entry_not_found(storage):

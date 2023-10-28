@@ -33,7 +33,7 @@ from .types import UpdateResult
 
 if TYPE_CHECKING:  # pragma: no cover
     from ._parser import Parser
-    from ._types import FeedFilterOptions
+    from ._types import FeedFilter
     from ._types import StorageType
     from ._utils import MapFunction
     from .core import Reader
@@ -332,7 +332,7 @@ class Pipeline:
             map=map,
         )
 
-    def update(self, filter_options: FeedFilterOptions) -> Iterable[UpdateResult]:
+    def update(self, filter: FeedFilter) -> Iterable[UpdateResult]:
         # global_now is used as first_updated_epoch for all new entries,
         # so that the subset of new entries from an update appears before
         # all others and the entries in it are sorted by published/updated;
@@ -370,7 +370,7 @@ class Pipeline:
                     parser_process_feeds_for_update_errors.append((feed, e))
 
         # assemble pipeline
-        feeds_for_update = self.storage.get_feeds_for_update(filter_options)
+        feeds_for_update = self.storage.get_feeds_for_update(filter)
         # feeds_for_update = map(self.parser.process_feed_for_update, feeds_for_update)
         feeds_for_update = parser_process_feeds_for_update(feeds_for_update)
         feeds_for_update = map(self.decider.process_feed_for_update, feeds_for_update)

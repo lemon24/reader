@@ -17,7 +17,7 @@ from reader import ParseError
 from reader._parser import RetrieveResult
 from reader._types import EntryData
 from reader._types import FeedData
-from reader._types import FeedFilterOptions
+from reader._types import FeedFilter
 
 
 @pytest.mark.parametrize('entry_updated', [utc_datetime(2010, 1, 1), None])
@@ -226,9 +226,7 @@ def test_retriever_parser_process_hooks(reader):
     reader.add_feed('test:one')
     reader.update_feeds()
 
-    (feed_for_update,) = reader._storage.get_feeds_for_update(
-        FeedFilterOptions('test:one')
-    )
+    (feed_for_update,) = reader._storage.get_feeds_for_update(FeedFilter('test:one'))
     assert feed_for_update.http_etag == 'ETAG'
 
     (entry,) = reader.get_entries()

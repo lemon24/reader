@@ -672,8 +672,8 @@ class EntryUpdateStatus(enum.Enum):
 # because we sometimes get them dynamically, e.g.
 # https://github.com/lemon24/reader/blob/1.18/src/reader/_app/__init__.py#L151
 #
-FeedSortOrder = Literal['title', 'added']
-EntrySortOrder = Literal['recent', 'random']
+FeedSort = Literal['title', 'added']
+EntrySort = Literal['recent', 'random']
 SearchSortOrder = Literal['relevant', 'recent', 'random']
 
 
