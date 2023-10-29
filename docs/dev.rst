@@ -229,6 +229,50 @@ Making a release (from ``x`` to ``y`` == ``x + 1``):
 * (release.py prompts) trigger Read the Docs build for `<major>.x` (doesn't happen automatically)
 
 
+
+.. _documentation:
+
+Documentation
+-------------
+
+Following are notes about what documentation should look like,
+especially for the stable high-level :doc:`API <api>`,
+since that's what most users will see.
+
+
+We prefer type information in the method description,
+not in the signature,
+since the result is more readable.
+For the same reason,
+we prefer hand-written `Sphinx-style field list types`_.
+
+We still use `autodoc-provided type hints`_
+as fallback for parameters that don't have hand-written types,
+for type documentation for dataclasses,
+and for the unstable :doc:`internal`,
+where it's too much effort to maintain hand-written types.
+
+
+Known issues (October 2023, Sphinx version ~7):
+
+* Overloads are shown with full annotation regardless of autodoc_typehints
+  (known, documented behavior).
+  May get better with https://github.com/sphinx-doc/sphinx/issues/10359.
+
+* Type aliases that do not come from hand-written types
+  but from the autodoc typehints are expanded in-place;
+  this also affects the overload type annotations.
+  The documented work-around is to add the aliases to autodoc_type_aliases.
+
+* Type alias names that appear in parameter types
+  do not link to the documentation in :ref:`type aliases`.
+  May get better with https://github.com/sphinx-doc/sphinx/issues/9705
+
+.. _Sphinx-style field list types: https://www.sphinx-doc.org/en/master/usage/domains/python.html#info-field-lists
+.. _autodoc-provided type hints: https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#confval-autodoc_typehints
+
+
+
 .. _design notes:
 
 Design notes

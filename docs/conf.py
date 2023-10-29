@@ -68,7 +68,14 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 todo_include_todos = False
 
 autodoc_member_order = 'bysource'
-autodoc_typehints = 'none'
+# see dev.rst # Documentation
+autodoc_typehints = 'description'
+autodoc_typehints_description_target = 'documented'
+autodoc_type_aliases = {
+    'ResourceInput': 'reader.types.ResourceInput',
+    'AnyResourceInput': 'reader.types.AnyResourceInput',
+    'JSONType': 'reader.types.JSONType',
+}
 
 
 pyproject_toml = read_configuration('../pyproject.toml')

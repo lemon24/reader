@@ -61,7 +61,8 @@ Include the following in your patch:
   if you install `pre-commit`_ using the instructions below.
 * Include tests if your patch adds or changes code.
   Make sure the test fails without your patch.
-* Update any relevant documentation pages and docstrings.
+* Update any relevant documentation pages and docstrings;
+  also see :ref:`documentation`.
   Documentation pages and docstrings should be wrapped at 72 characters.
 * Add an entry in ``CHANGES.rst``.
   Use the same style as other entries.

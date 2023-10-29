@@ -11,6 +11,10 @@ Version 3.10
 
 Unreleased
 
+* In the API documentation,
+  fall back to type hints if hand-written parameter types are not available.
+  Add relevant :ref:`documentation` guidelines to the dev documentation.
+  (:issue:`287`)
 * Add the :mod:`~reader._plugins.share` experimental plugin
   to add social sharing links in the web app.
 

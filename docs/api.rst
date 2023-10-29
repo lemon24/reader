@@ -168,6 +168,8 @@ The class hierarchy for :mod:`reader` exceptions is:
 
 
 
+.. _type aliases:
+
 Type aliases
 ------------
 
