@@ -12,6 +12,7 @@ import requests
 from . import TimeoutType
 
 if TYPE_CHECKING:  # pragma: no cover
+    from typing_extensions import Self
     from . import Headers
     from . import RequestHook
     from . import ResponseHook
@@ -136,8 +137,7 @@ class SessionWrapper:
 
         return response, etag, last_modified
 
-    def __enter__(self: _T) -> _T:
-        # TODO: use typing.Self instead of _T
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *args: Any) -> None:

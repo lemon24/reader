@@ -78,6 +78,7 @@ from .types import UpdatedFeed
 from .types import UpdateResult
 
 if TYPE_CHECKING:  # pragma: no cover
+    from typing_extensions import Self
     from ._parser import Parser
 
 
@@ -86,8 +87,6 @@ log = logging.getLogger('reader')
 
 _T = TypeVar('_T')
 _U = TypeVar('_U')
-# mypy doesn't seem to support Self yet.
-_TReader = TypeVar('_TReader', bound='Reader')
 
 AfterEntryUpdateHook = Callable[['Reader', EntryData, EntryUpdateStatus], None]
 FeedUpdateHook = Callable[['Reader', str], None]
@@ -384,7 +383,7 @@ class Reader:
                 stacklevel=2,
             )
 
-    def __enter__(self: _TReader) -> _TReader:
+    def __enter__(self) -> Self:
         self._storage.__enter__()
         return self
 

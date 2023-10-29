@@ -18,6 +18,7 @@ from typing import Literal
 from typing import NamedTuple
 from typing import overload
 from typing import Protocol
+from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
@@ -48,6 +49,10 @@ from .types import ResourceId
 from .types import SearchSortOrder
 from .types import TagFilterInput
 from .types import TristateFilterInput
+
+if TYPE_CHECKING:  # pragma: no cover
+    from typing_extensions import Self
+
 
 log = logging.getLogger("reader")
 
@@ -434,9 +439,6 @@ def tristate_filter_argument(value: TristateFilterInput, name: str) -> TristateF
     raise ValueError(f"{name} must be none, bool, or one of {args}")
 
 
-_EFO = TypeVar('_EFO', bound='EntryFilter')
-
-
 class EntryFilter(NamedTuple):
 
     """Options for filtering the results of the "get entry" storage methods."""
@@ -450,14 +452,14 @@ class EntryFilter(NamedTuple):
 
     @classmethod
     def from_args(
-        cls: type[_EFO],
+        cls,
         feed: FeedInput | None = None,
         entry: EntryInput | None = None,
         read: bool | None = None,
         important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
         feed_tags: TagFilterInput = None,
-    ) -> _EFO:
+    ) -> Self:
         feed_url = _feed_argument(feed) if feed is not None else None
 
         # TODO: should we allow specifying both feed and entry?
@@ -480,9 +482,6 @@ class EntryFilter(NamedTuple):
         )
 
 
-_FFO = TypeVar('_FFO', bound='FeedFilter')
-
-
 class FeedFilter(NamedTuple):
 
     """Options for filtering the results of the "get feed" storage methods."""
@@ -495,13 +494,13 @@ class FeedFilter(NamedTuple):
 
     @classmethod
     def from_args(
-        cls: type[_FFO],
+        cls,
         feed: FeedInput | None = None,
         tags: TagFilterInput = None,
         broken: bool | None = None,
         updates_enabled: bool | None = None,
         new: bool | None = None,
-    ) -> _FFO:
+    ) -> Self:
         feed_url = _feed_argument(feed) if feed is not None else None
         tag_filter = tag_filter_argument(tags)
 
@@ -522,7 +521,7 @@ class NameScheme(_namedtuple_compat):
     separator: str
 
     @classmethod
-    def from_value(cls, value: Mapping[str, str]) -> NameScheme:
+    def from_value(cls, value: Mapping[str, str]) -> Self:
         # Use is validation.
         self = cls(**value)
         self.make_reader_name('key')

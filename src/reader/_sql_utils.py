@@ -36,11 +36,14 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
+if TYPE_CHECKING:  # pragma: no cover
+    from typing_extensions import Self
+
+
 _T = TypeVar('_T')
 _U = TypeVar('_U')
 
 
-_Q = TypeVar('_Q', bound='BaseQuery')
 _QArg = Union[str, tuple[str, ...]]
 
 
@@ -108,7 +111,7 @@ class BaseQuery:
         if separators is not None:
             self.separators = separators
 
-    def add(self: _Q, keyword: str, *args: _QArg) -> _Q:
+    def add(self, keyword: str, *args: _QArg) -> Self:
         keyword, fake_keyword = self._resolve_fakes(keyword)
         keyword, flag = self._resolve_flags(keyword)
         target = self.data[keyword]
@@ -143,7 +146,7 @@ class BaseQuery:
             return prefix, flag
         return keyword, ''
 
-    def __getattr__(self: _Q, name: str) -> Callable[..., _Q]:
+    def __getattr__(self, name: str) -> Callable[..., Self]:
         # conveniently, avoids shadowing dunder methods (e.g. __deepcopy__)
         if not name.isupper():
             return getattr(super(), name)  # type: ignore
@@ -206,8 +209,8 @@ class ScrollingWindowMixin(_SWMBase):
         self.scrolling_window_order_by()
 
     def scrolling_window_order_by(
-        self: _SWM, *things: str, desc: bool = False, keyword: str = 'WHERE'
-    ) -> _SWM:
+        self, *things: str, desc: bool = False, keyword: str = 'WHERE'
+    ) -> Self:
         self.__things = [_clean_up(t) for t in things]
         self.__desc = desc
         self.__keyword = keyword
@@ -225,7 +228,7 @@ class ScrollingWindowMixin(_SWMBase):
 
     __make_label = 'last_{}'.format
 
-    def __add_last(self: _SWM) -> None:
+    def __add_last(self) -> None:
         op = '<' if self.__desc else '>'
         labels = (':' + self.__make_label(i) for i in range(len(self.__things)))
         comparison = BaseQuery({'(': self.__things, f') {op} (': labels, ')': ['']})

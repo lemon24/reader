@@ -19,7 +19,7 @@ from typing import NamedTuple
 from typing import overload
 from typing import Protocol
 from typing import runtime_checkable
-from typing import TypeVar
+from typing import TYPE_CHECKING
 from typing import Union
 
 from reader.exceptions import UpdateError
@@ -29,8 +29,8 @@ from reader.exceptions import UpdateError
 from reader._utils import MISSING as MISSING  # noqa: F401
 from reader._utils import MissingType as MissingType  # noqa: F401
 
-
-_T = TypeVar('_T')
+if TYPE_CHECKING:  # pragma: no cover
+    from typing_extensions import Self
 
 
 class _namedtuple_compat:
@@ -40,7 +40,7 @@ class _namedtuple_compat:
     # TODO: can we get rid of _namedtuple_compat?
 
     @classmethod
-    def _make(cls: type[_T], iterable: Iterable[Any]) -> _T:
+    def _make(cls, iterable: Iterable[Any]) -> Self:
         iterable = tuple(iterable)
         attrs_len = len(dataclasses.fields(cls))  # type: ignore[arg-type]
         if len(iterable) != attrs_len:
@@ -49,7 +49,7 @@ class _namedtuple_compat:
             )
         return cls(*iterable)
 
-    def _replace(self: _T, **kargs: Any) -> _T:
+    def _replace(self, **kargs: Any) -> Self:
         return dataclasses.replace(self, **kargs)  # type: ignore[type-var,misc]
 
     def _asdict(self) -> dict[str, Any]:
@@ -162,9 +162,6 @@ class Feed(_namedtuple_compat):
         return (self.url,)
 
 
-_EI = TypeVar('_EI', bound='ExceptionInfo')
-
-
 @dataclass(frozen=True)
 class ExceptionInfo(_namedtuple_compat):
 
@@ -187,7 +184,7 @@ class ExceptionInfo(_namedtuple_compat):
     traceback_str: str
 
     @classmethod
-    def from_exception(cls: type[_EI], exc: BaseException) -> _EI:
+    def from_exception(cls, exc: BaseException) -> Self:
         return cls(
             f'{type(exc).__module__}.{type(exc).__qualname__}',
             str(exc),
@@ -430,9 +427,6 @@ class Enclosure(_namedtuple_compat):
     length: int | None = None
 
 
-_HS = TypeVar('_HS', bound='HighlightedString')
-
-
 @dataclass(frozen=True)
 class HighlightedString:
 
@@ -486,7 +480,7 @@ class HighlightedString:
         return self.value
 
     @classmethod
-    def extract(cls: type[_HS], text: str, before: str, after: str) -> _HS:
+    def extract(cls, text: str, before: str, after: str) -> Self:
         """Extract highlights with before/after markers from text.
 
         >>> HighlightedString.extract( '>one< two', '>', '<')
