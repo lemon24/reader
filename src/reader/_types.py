@@ -665,7 +665,6 @@ class StorageType(Protocol):  # pragma: no cover
     User entry methods:
 
     * add_entry
-        * merge with add_or_update_entries?
     * delete_entries
     * get_entries
     * get_entry_counts
@@ -679,7 +678,6 @@ class StorageType(Protocol):  # pragma: no cover
     * set_feed_stale
     * get_entries_for_update
     * add_or_update_entries
-        * is this a good name?
     * get_entry_recent_sort
     * set_entry_recent_sort
 
@@ -688,10 +686,6 @@ class StorageType(Protocol):  # pragma: no cover
     * get_tags
     * set_tag
     * delete_tag
-
-    Other renames:
-
-    * ...
 
     """
 
@@ -725,45 +719,10 @@ class StorageType(Protocol):  # pragma: no cover
     def get_feed_counts(self, filter: FeedFilter) -> FeedCounts:
         ...
 
-    def get_feeds_for_update(self, filter: FeedFilter) -> Iterable[FeedForUpdate]:
-        ...
-
-    def get_entries_for_update(
-        self, entries: Iterable[tuple[str, str]]
-    ) -> Iterable[EntryForUpdate | None]:
-        ...
-
     def set_feed_user_title(self, url: str, title: str | None) -> None:
         ...
 
     def set_feed_updates_enabled(self, url: str, enabled: bool) -> None:
-        ...
-
-    def set_feed_stale(self, url: str, stale: bool) -> None:
-        ...
-
-    def set_entry_read(
-        self, entry: tuple[str, str], read: bool, modified: datetime | None
-    ) -> None:
-        ...
-
-    def set_entry_important(
-        self, entry: tuple[str, str], important: bool | None, modified: datetime | None
-    ) -> None:
-        ...
-
-    def get_entry_recent_sort(self, entry: tuple[str, str]) -> datetime:
-        ...
-
-    def set_entry_recent_sort(
-        self, entry: tuple[str, str], recent_sort: datetime
-    ) -> None:
-        ...
-
-    def update_feed(self, intent: FeedUpdateIntent) -> None:
-        ...
-
-    def add_or_update_entries(self, intents: Iterable[EntryUpdateIntent]) -> None:
         ...
 
     def add_entry(self, intent: EntryUpdateIntent) -> None:
@@ -786,6 +745,41 @@ class StorageType(Protocol):  # pragma: no cover
     def get_entry_counts(self, now: datetime, filter: EntryFilter) -> EntryCounts:
         ...
 
+    def set_entry_read(
+        self, entry: tuple[str, str], read: bool, modified: datetime | None
+    ) -> None:
+        ...
+
+    def set_entry_important(
+        self, entry: tuple[str, str], important: bool | None, modified: datetime | None
+    ) -> None:
+        ...
+
+    def get_feeds_for_update(self, filter: FeedFilter) -> Iterable[FeedForUpdate]:
+        ...
+
+    def update_feed(self, intent: FeedUpdateIntent) -> None:
+        ...
+
+    def set_feed_stale(self, url: str, stale: bool) -> None:
+        ...
+
+    def get_entries_for_update(
+        self, entries: Iterable[tuple[str, str]]
+    ) -> Iterable[EntryForUpdate | None]:
+        ...
+
+    def add_or_update_entries(self, intents: Iterable[EntryUpdateIntent]) -> None:
+        ...
+
+    def get_entry_recent_sort(self, entry: tuple[str, str]) -> datetime:
+        ...
+
+    def set_entry_recent_sort(
+        self, entry: tuple[str, str], recent_sort: datetime
+    ) -> None:
+        ...
+
     def get_tags(
         self, resource_id: AnyResourceId, key: str | None = None
     ) -> Iterable[tuple[str, JSONType]]:
@@ -804,6 +798,26 @@ class StorageType(Protocol):  # pragma: no cover
 
 
 class SearchType(Protocol):  # pragma: no cover
+
+    """Search DAO.
+
+    Search lifecycle methods:
+
+    * enable
+    * disable
+    * is_enabled
+
+    User:
+
+    * search_entries
+    * search_entry_counts
+
+    Update:
+
+    * update
+
+    """
+
     def enable(self) -> None:
         ...
 
@@ -811,9 +825,6 @@ class SearchType(Protocol):  # pragma: no cover
         ...
 
     def is_enabled(self) -> bool:
-        ...
-
-    def update(self) -> None:
         ...
 
     def search_entries(
@@ -829,4 +840,7 @@ class SearchType(Protocol):  # pragma: no cover
     def search_entry_counts(
         self, query: str, now: datetime, filter: EntryFilter
     ) -> EntrySearchCounts:
+        ...
+
+    def update(self) -> None:
         ...
