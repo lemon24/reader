@@ -40,6 +40,8 @@ so the path behaves like the ``database`` argument of :func:`sqlite3.connect`:
   the data will disappear when the reader is closed.
 
 
+.. _lifecycle:
+
 Lifecycle
 ~~~~~~~~~
 
@@ -62,6 +64,9 @@ for the duration of the with block.
 In either case, you can reuse the reader object after closing it;
 database connections will be re-created automatically.
 
+
+
+.. _threading:
 
 Threading
 ~~~~~~~~~

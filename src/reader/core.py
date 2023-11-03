@@ -365,9 +365,9 @@ class Reader:
         _enable_search: bool = False,
         _called_directly: bool = True,
     ):
-        #: The :class:`~reader._storage.Storage` instance used by this reader.
+        #: The :class:`~reader._types.StorageType` instance used by this reader.
         self._storage = _storage
-        #: The :class:`~reader._search.Search` instance used by this reader.
+        #: The :class:`~reader._types.SearchType` instance used by this reader.
         self._search = _search
         #: The :class:`~reader._parser.Parser` instance used by this reader.
         self._parser = _parser

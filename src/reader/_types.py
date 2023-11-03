@@ -45,6 +45,7 @@ from .types import FeedCounts
 from .types import FeedInput
 from .types import FeedSort
 from .types import JSONType
+from .types import MissingType
 from .types import ResourceId
 from .types import SearchSortOrder
 from .types import TagFilterInput
@@ -642,69 +643,117 @@ class _UpdateHookErrorGrouper:
 
 
 class StorageType(Protocol):  # pragma: no cover
+    r"""Storage DAO protocol.
 
-    """Storage DAO.
+    Methods, grouped by topic:
 
-    Lifecycle methods:
+    object lifecycle
+        :meth:`__enter__`
+        :meth:`__exit__`
+        :meth:`close`
 
-    * __enter__
-    * __exit__
-    * close
+    feeds
+        :meth:`add_feed`
+        :meth:`delete_feed`
+        :meth:`change_feed_url`
+        :meth:`get_feeds`
+        :meth:`get_feed_counts`
+        :meth:`set_feed_user_title`
+        :meth:`set_feed_updates_enabled`
 
-    User feed methods:
+    entries
+        :meth:`add_entry`
+        :meth:`delete_entries`
+        :meth:`get_entries`
+        :meth:`get_entry_counts`
+        :meth:`set_entry_read`
+        :meth:`set_entry_important`
 
-    * add_feed
-    * delete_feed
-    * change_feed_url
-    * get_feeds
-    * get_feed_counts
-    * set_feed_user_title
-    * set_feed_updates_enabled
+    tags
+        :meth:`get_tags`
+        :meth:`set_tag`
+        :meth:`delete_tag`
 
-    User entry methods:
+    update
+        :meth:`get_feeds_for_update`
+        :meth:`update_feed`
+        :meth:`set_feed_stale`
+        :meth:`get_entries_for_update`
+        :meth:`add_or_update_entries`
+        :meth:`get_entry_recent_sort`
+        :meth:`set_entry_recent_sort`
 
-    * add_entry
-    * delete_entries
-    * get_entries
-    * get_entry_counts
-    * set_entry_read
-    * set_entry_important
+    For methods with :class:`.Reader` correspondents,
+    see the Reader docstrings for detailed semantics.
 
-    Update methods:
+    Any method can raise :exc:`.StorageError`.
 
-    * get_feeds_for_update
-    * update_feed
-    * set_feed_stale
-    * get_entries_for_update
-    * add_or_update_entries
-    * get_entry_recent_sort
-    * set_entry_recent_sort
+    The behaviors described in :ref:`lifecycle` and :ref:`threading`
+    are implemented at the storage level; specifically:
 
-    Tags:
+    * The storage can be used directly, without :meth:`__enter__`\ing it.
+    * The storage can be reused after :meth:`__exit__` / :meth:`close`.
+    * The storage can be used from multiple threads,
+      either directly, or as a context manager.
+      Closing the storage in one thread should not close it in another thread.
 
-    * get_tags
-    * set_tag
-    * delete_tag
+    All :class:`~datetime.datetime` attributes
+    of all parameters and return values are timezone-naive,
+    with the timezone assumed to be UTC by convention.
+
+    .. admonition:: Unstable
+
+        As part of :issue:`321`,
+        :class:`~datetime.datetime`\s will be required to be timezone-aware,
+        with the timezone set to :attr:`~datetime.timezone.utc`.
+        At some later point, implementations will be required
+        to accept datetimes with any timezone.
 
     """
 
     def __enter__(self) -> None:
-        ...
+        """Called when :class:`.Reader` is used as a context manager."""
 
     def __exit__(self, *_: Any) -> None:
-        ...
+        """Called when :class:`.Reader` is used as a context manager."""
 
     def close(self) -> None:
-        ...
+        """Called by :meth:`.Reader.close`."""
 
     def add_feed(self, url: str, added: datetime) -> None:
-        ...
+        """Called by :meth:`.Reader.add_feed`.
+
+        Args:
+            url
+            added: :attr:`.Feed.added`
+
+        Raises:
+            FeedExistsError
+
+        """
 
     def delete_feed(self, url: str) -> None:
-        ...
+        """Called by :meth:`.Reader.delete_feed`.
+
+        Args:
+            url
+
+        Raises:
+            FeedNotFoundError
+
+        """
 
     def change_feed_url(self, old: str, new: str) -> None:
-        ...
+        """Called by :meth:`.Reader.change_feed_url`.
+
+        Args:
+            old
+            new
+
+        Raises:
+            FeedNotFoundError
+
+        """
 
     def get_feeds(
         self,
@@ -713,24 +762,89 @@ class StorageType(Protocol):  # pragma: no cover
         limit: int | None,
         starting_after: str | None,
     ) -> Iterable[Feed]:
-        ...
+        """Called by :meth:`.Reader.get_feeds`.
+
+        Args:
+            filter
+            sort
+            limit
+            starting_after
+
+        Returns:
+            A lazy iterable.
+
+        Raises:
+            FeedNotFoundError: If ``starting_after`` does not exist.
+
+        """
 
     def get_feed_counts(self, filter: FeedFilter) -> FeedCounts:
-        ...
+        """Called by :meth:`.Reader.get_feed_counts`.
+
+        Args:
+            filter
+
+        Returns:
+            The counts.
+
+        """
 
     def set_feed_user_title(self, url: str, title: str | None) -> None:
-        ...
+        """Called by :meth:`.Reader.set_feed_user_title`.
+
+        Args:
+            url
+            title
+
+        Raises:
+            FeedNotFoundError
+
+        """
 
     def set_feed_updates_enabled(self, url: str, enabled: bool) -> None:
-        ...
+        """Called by :meth:`.Reader.enable_feed_updates` and
+        :meth:`.Reader.disable_feed_updates`.
+
+        Args:
+            url
+            enabled
+
+        Raises:
+            FeedNotFoundError
+
+        """
 
     def add_entry(self, intent: EntryUpdateIntent) -> None:
-        ...
+        """Called by :meth:`.Reader.add_entry`.
+
+        Args:
+            intent
+
+        Raises:
+            EntryExistsError
+            FeedNotFoundError
+
+        """
 
     def delete_entries(
         self, entries: Iterable[tuple[str, str]], *, added_by: str | None
     ) -> None:
-        ...
+        r"""Called by :meth:`.Reader.delete_entry`.
+
+        Also called by plugins like :mod:`.entry_dedupe`.
+
+        Args:
+            entries:
+                A list of :attr:`.Entry.resource_id`\s.
+            added_by:
+                If given, only delete the entries if their
+                :attr:`~.Entry.added_by` is equal to this.
+
+        Raises:
+            EntryNotFoundError: An entry does not exist.
+            EntryError: An entry ``added_by`` is different from the given one.
+
+        """
 
     def get_entries(
         self,
@@ -739,50 +853,83 @@ class StorageType(Protocol):  # pragma: no cover
         limit: int | None,
         starting_after: tuple[str, str] | None,
     ) -> Iterable[Entry]:
-        ...
+        """Called by :meth:`.Reader.get_entries`.
+
+        Args:
+            filter
+            sort
+            limit
+            starting_after
+
+        Returns:
+            A lazy iterable.
+
+        Raises:
+            EntryNotFoundError: If ``starting_after`` does not exist.
+
+        """
 
     def get_entry_counts(self, now: datetime, filter: EntryFilter) -> EntryCounts:
-        ...
+        """Called by :meth:`.Reader.get_entry_counts`.
+
+        Args:
+            now
+            filter
+
+        Returns:
+            The counts.
+
+        """
 
     def set_entry_read(
         self, entry: tuple[str, str], read: bool, modified: datetime | None
     ) -> None:
-        ...
+        """Called by :meth:`.Reader.set_entry_read`.
+
+        Args:
+            entry
+            read
+            modified
+
+        Raises:
+            EntryNotFoundError
+
+        """
 
     def set_entry_important(
         self, entry: tuple[str, str], important: bool | None, modified: datetime | None
     ) -> None:
-        ...
+        """Called by :meth:`.Reader.set_entry_important`.
 
-    def get_feeds_for_update(self, filter: FeedFilter) -> Iterable[FeedForUpdate]:
-        ...
+        Args:
+            entry
+            important
+            modified
 
-    def update_feed(self, intent: FeedUpdateIntent) -> None:
-        ...
+        Raises:
+            EntryNotFoundError
 
-    def set_feed_stale(self, url: str, stale: bool) -> None:
-        ...
-
-    def get_entries_for_update(
-        self, entries: Iterable[tuple[str, str]]
-    ) -> Iterable[EntryForUpdate | None]:
-        ...
-
-    def add_or_update_entries(self, intents: Iterable[EntryUpdateIntent]) -> None:
-        ...
-
-    def get_entry_recent_sort(self, entry: tuple[str, str]) -> datetime:
-        ...
-
-    def set_entry_recent_sort(
-        self, entry: tuple[str, str], recent_sort: datetime
-    ) -> None:
-        ...
+        """
 
     def get_tags(
         self, resource_id: AnyResourceId, key: str | None = None
     ) -> Iterable[tuple[str, JSONType]]:
-        ...
+        """Called by :meth:`.Reader.get_tags`.
+
+        Also called by :meth:`.Reader.get_tag_keys`.
+
+        .. admonition:: Unstable
+
+            A dedicated ``get_tag_keys()`` method will be added in the future.
+
+        Args:
+            resource_id
+            key
+
+        Returns:
+            A lazy iterable.
+
+        """
 
     @overload
     def set_tag(self, resource_id: ResourceId, key: str) -> None:
@@ -792,39 +939,154 @@ class StorageType(Protocol):  # pragma: no cover
     def set_tag(self, resource_id: ResourceId, key: str, value: JSONType) -> None:
         ...
 
+    def set_tag(
+        self,
+        resource_id: ResourceId,
+        key: str,
+        value: MissingType | JSONType,
+    ) -> None:
+        """Called by :meth:`.Reader.set_tag`.
+
+        Args:
+            resource_id
+            key
+            value
+
+        Raises:
+            ResourceNotFoundError
+
+        """
+
     def delete_tag(self, resource_id: ResourceId, key: str) -> None:
-        ...
+        """Called by :meth:`.Reader.delete_tag`.
+
+        Args:
+            resource_id
+            key
+
+        Raises:
+            TagNotFoundError
+
+        """
+
+    def get_feeds_for_update(self, filter: FeedFilter) -> Iterable[FeedForUpdate]:
+        """Called by update logic.
+
+        Args:
+            filter
+
+        Returns:
+            A lazy iterable.
+
+        """
+
+    def update_feed(self, intent: FeedUpdateIntent) -> None:
+        """Called by update logic.
+
+        Args:
+            intent
+
+        Raises:
+            FeedNotFoundError
+
+        """
+
+    def set_feed_stale(self, url: str, stale: bool) -> None:
+        """Used by update logic tests.
+
+        Args:
+            url
+            stale: :attr:`.FeedForUpdate.stale`
+
+        Raises:
+            FeedNotFoundError
+
+        """
+
+    def get_entries_for_update(
+        self, entries: Iterable[tuple[str, str]]
+    ) -> Iterable[EntryForUpdate | None]:
+        """Called by update logic.
+
+        Args:
+            entries
+
+        Returns:
+            An iterable of entry or None (if an entry does not exist),
+            matching the order of the input iterable.
+
+        """
+
+    def add_or_update_entries(self, intents: Iterable[EntryUpdateIntent]) -> None:
+        """Called by update logic.
+
+        Args:
+            intents
+
+        Raises:
+            FeedNotFoundError
+
+        """
+
+    def get_entry_recent_sort(self, entry: tuple[str, str]) -> datetime:
+        """Get :attr:`EntryUpdateIntent.recent_sort`.
+
+        Used by plugins like :mod:`~.entry_dedupe`.
+
+        Args:
+            entry
+
+        Returns:
+            entry :attr:`~EntryUpdateIntent.recent_sort`
+
+        Raises:
+            EntryNotFoundError
+
+        """
+
+    def set_entry_recent_sort(
+        self, entry: tuple[str, str], recent_sort: datetime
+    ) -> None:
+        """Set :attr:`EntryUpdateIntent.recent_sort`.
+
+        Used by plugins like :mod:`~.entry_dedupe`.
+
+        Args:
+            entry
+            recent_sort
+
+        Raises:
+            EntryNotFoundError
+
+        """
 
 
 class SearchType(Protocol):  # pragma: no cover
 
     """Search DAO.
 
-    Search lifecycle methods:
-
-    * enable
-    * disable
-    * is_enabled
-
-    User:
-
-    * search_entries
-    * search_entry_counts
-
-    Update:
-
-    * update
+    Any method can raise :exc:`.SearchError`.
 
     """
 
     def enable(self) -> None:
-        ...
+        """Called by :meth:`.Reader.enable_search`.
+
+        Raises:
+            StorageError
+
+        """
 
     def disable(self) -> None:
-        ...
+        """Called by :meth:`.Reader.disable_search`."""
 
     def is_enabled(self) -> bool:
-        ...
+        """Called by :meth:`.Reader.is_search_enabled`.
+
+        Returns:
+            Whether search is enabled or not.
+
+        """
 
     def search_entries(
         self,
@@ -834,12 +1096,50 @@ class SearchType(Protocol):  # pragma: no cover
         limit: int | None,
         starting_after: tuple[str, str] | None,
     ) -> Iterable[EntrySearchResult]:
-        ...
+        """Called by :meth:`.Reader.search_entries`.
+
+        Args:
+            query
+            filter
+            sort
+            limit
+            starting_after
+
+        Returns:
+            A lazy iterable.
+
+        Raises:
+            SearchNotEnabledError
+            InvalidSearchQueryError
+            EntryNotFoundError: If ``starting_after`` does not exist.
+
+        """
 
     def search_entry_counts(
         self, query: str, now: datetime, filter: EntryFilter
     ) -> EntrySearchCounts:
-        ...
+        """Called by :meth:`.Reader.search_entry_counts`.
+
+        Args:
+            query
+            now
+            filter
+
+        Returns:
+            The counts.
+
+        Raises:
+            SearchNotEnabledError
+            InvalidSearchQueryError
+            StorageError
+
+        """
 
     def update(self) -> None:
-        ...
+        """Called by :meth:`.Reader.update_search`.
+
+        Raises:
+            SearchNotEnabledError
+            StorageError
+
+        """
