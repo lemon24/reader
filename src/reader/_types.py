@@ -45,6 +45,7 @@ from .types import FeedCounts
 from .types import FeedInput
 from .types import FeedSort
 from .types import JSONType
+from .types import MISSING
 from .types import MissingType
 from .types import ResourceId
 from .types import SearchSortOrder
@@ -645,6 +646,32 @@ class _UpdateHookErrorGrouper:
 class StorageType(Protocol):  # pragma: no cover
     r"""Storage DAO protocol.
 
+    For methods with :class:`.Reader` correspondents,
+    see the Reader docstrings for detailed semantics.
+
+    Any method can raise :exc:`.StorageError`.
+
+    The behaviors described in :ref:`lifecycle` and :ref:`threading`
+    are implemented at the storage level; specifically:
+
+    * The storage can be used directly, without :meth:`__enter__`\ing it.
+    * The storage can be reused after :meth:`__exit__` / :meth:`close`.
+    * The storage can be used from multiple threads,
+      either directly, or as a context manager.
+      Closing the storage in one thread should not close it in another thread.
+
+    All :class:`~datetime.datetime` attributes
+    of all parameters and return values are timezone-naive,
+    with the timezone assumed to be UTC by convention.
+
+    .. admonition:: Unstable
+
+        As part of :issue:`321`,
+        :class:`~datetime.datetime`\s will be required to be timezone-aware,
+        with the timezone set to :attr:`~datetime.timezone.utc`.
+        At some later point, implementations will be required
+        to accept datetimes with any timezone.
+
     Methods, grouped by topic:
 
     object lifecycle
@@ -682,32 +709,6 @@ class StorageType(Protocol):  # pragma: no cover
         :meth:`add_or_update_entries`
         :meth:`get_entry_recent_sort`
         :meth:`set_entry_recent_sort`
-
-    For methods with :class:`.Reader` correspondents,
-    see the Reader docstrings for detailed semantics.
-
-    Any method can raise :exc:`.StorageError`.
-
-    The behaviors described in :ref:`lifecycle` and :ref:`threading`
-    are implemented at the storage level; specifically:
-
-    * The storage can be used directly, without :meth:`__enter__`\ing it.
-    * The storage can be reused after :meth:`__exit__` / :meth:`close`.
-    * The storage can be used from multiple threads,
-      either directly, or as a context manager.
-      Closing the storage in one thread should not close it in another thread.
-
-    All :class:`~datetime.datetime` attributes
-    of all parameters and return values are timezone-naive,
-    with the timezone assumed to be UTC by convention.
-
-    .. admonition:: Unstable
-
-        As part of :issue:`321`,
-        :class:`~datetime.datetime`\s will be required to be timezone-aware,
-        with the timezone set to :attr:`~datetime.timezone.utc`.
-        At some later point, implementations will be required
-        to accept datetimes with any timezone.
 
     """
 
@@ -943,7 +944,7 @@ class StorageType(Protocol):  # pragma: no cover
         self,
         resource_id: ResourceId,
         key: str,
-        value: MissingType | JSONType,
+        value: MissingType | JSONType = MISSING,
     ) -> None:
         """Called by :meth:`.Reader.set_tag`.
 
