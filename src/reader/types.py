@@ -39,16 +39,6 @@ class _namedtuple_compat:
 
     # TODO: can we get rid of _namedtuple_compat?
 
-    @classmethod
-    def _make(cls, iterable: Iterable[Any]) -> Self:
-        iterable = tuple(iterable)
-        attrs_len = len(dataclasses.fields(cls))  # type: ignore[arg-type]
-        if len(iterable) != attrs_len:
-            raise TypeError(
-                'Expected %d arguments, got %d' % (attrs_len, len(iterable))
-            )
-        return cls(*iterable)
-
     def _replace(self, **kargs: Any) -> Self:
         return dataclasses.replace(self, **kargs)  # type: ignore[type-var,misc]
 
