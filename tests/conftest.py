@@ -68,6 +68,17 @@ def pytest_runtest_setup(item):
             pytest.skip("flask tests are flaky on pypy")
 
 
+@pytest.fixture(autouse=True, scope="session")
+def no_sqlite3_adapters(request):
+    # bring about the removal of deprecated sqlite3 default adapters
+    # (adapters cannot be disabled per-connection like converters)
+    # https://github.com/lemon24/reader/issues/321
+    # TODO: remove this once sqlite3 default adapters are removed
+    original_adapters = sqlite3.adapters.copy()
+    sqlite3.adapters.clear()
+    request.addfinalizer(lambda: sqlite3.adapters.update(original_adapters))
+
+
 @pytest.fixture
 def make_reader(request):
     @wraps(original_make_reader)

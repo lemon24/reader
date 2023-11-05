@@ -410,11 +410,7 @@ class Storage:
             kwargs['factory'] = factory
 
         with wrap_exceptions(StorageError, "error while opening database"):
-            self.factory = LocalConnectionFactory(
-                path,
-                detect_types=sqlite3.PARSE_DECLTYPES,
-                **kwargs,
-            )
+            self.factory = LocalConnectionFactory(path, **kwargs)
             db = self.factory()
 
         with wrap_exceptions(StorageError, "error while setting up database"):
@@ -466,7 +462,7 @@ class Storage:
             try:
                 db.execute(
                     "INSERT INTO feeds (url, added) VALUES (:url, :added);",
-                    dict(url=url, added=added),
+                    dict(url=url, added=adapt_datetime(added)),
                 )
             except sqlite3.IntegrityError as e:
                 if "unique constraint failed" not in str(e).lower():  # pragma: no cover
@@ -601,6 +597,28 @@ class Storage:
         # Reader shouldn't care this is paginated,
         # so we don't expose any pagination stuff.
 
+        def make_feed_for_update(row: tuple[Any, ...]) -> FeedForUpdate:
+            (
+                url,
+                updated,
+                http_etag,
+                http_last_modified,
+                stale,
+                last_updated,
+                last_exception,
+                data_hash,
+            ) = row
+            return FeedForUpdate(
+                url,
+                convert_timestamp(updated) if updated else None,
+                http_etag,
+                http_last_modified,
+                stale == 1,
+                convert_timestamp(last_updated) if last_updated else None,
+                last_exception == 1,
+                data_hash,
+            )
+
         def inner(
             chunk_size: int | None, last: _T | None
         ) -> Iterable[tuple[FeedForUpdate, _T | None]]:
@@ -619,14 +637,12 @@ class Storage:
                 .FROM("feeds")
             )
 
-            # TODO: stale and last_exception should be bool, not int
-
             context = apply_feed_filter(query, filter)
 
             query.scrolling_window_order_by("url")
 
             yield from paginated_query(
-                self.get_db(), query, context, chunk_size, last, FeedForUpdate._make
+                self.get_db(), query, context, chunk_size, last, make_feed_for_update
             )
 
         yield from join_paginated_iter(inner, self.chunk_size)
@@ -645,6 +661,15 @@ class Storage:
         #   Cursor needed to be reset because of commit/rollback
         #   and can no longer be fetched from.
         rv = []
+
+        def make_entry_for_update(row: tuple[Any, ...]) -> EntryForUpdate:
+            updated, published, data_hash, data_hash_changed = row
+            return EntryForUpdate(
+                convert_timestamp(updated) if updated else None,
+                convert_timestamp(published) if published else None,
+                data_hash,
+                data_hash_changed,
+            )
 
         with self.get_db() as db:
             # We use an explicit transaction for speed,
@@ -666,7 +691,7 @@ class Storage:
                     """,
                     context,
                 ).fetchone()
-                rv.append(EntryForUpdate._make(row) if row else None)
+                rv.append(make_entry_for_update(row) if row else None)
 
         return rv
 
@@ -726,7 +751,10 @@ class Storage:
                 WHERE feed = :feed_url AND id = :entry_id;
                 """,
                 dict(
-                    feed_url=feed_url, entry_id=entry_id, read=read, modified=modified
+                    feed_url=feed_url,
+                    entry_id=entry_id,
+                    read=read,
+                    modified=adapt_datetime(modified) if modified else None,
                 ),
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
@@ -749,7 +777,7 @@ class Storage:
                     feed_url=feed_url,
                     entry_id=entry_id,
                     important=important,
-                    modified=modified,
+                    modified=adapt_datetime(modified) if modified else None,
                 ),
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
@@ -768,7 +796,8 @@ class Storage:
             dict(feed_url=feed_url, entry_id=entry_id),
         )
         return zero_or_one(
-            (r[0] for r in rows), lambda: EntryNotFoundError(feed_url, entry_id)
+            (convert_timestamp(r[0]) for r in rows),
+            lambda: EntryNotFoundError(feed_url, entry_id),
         )
 
     @wrap_exceptions(StorageError)
@@ -784,7 +813,11 @@ class Storage:
                     recent_sort = :recent_sort
                 WHERE feed = :feed_url AND id = :entry_id;
                 """,
-                dict(feed_url=feed_url, entry_id=entry_id, recent_sort=recent_sort),
+                dict(
+                    feed_url=feed_url,
+                    entry_id=entry_id,
+                    recent_sort=adapt_datetime(recent_sort),
+                ),
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
@@ -822,7 +855,14 @@ class Storage:
         assert feed is not None
         context.pop('last_exception')
 
-        context.update(feed._asdict(), data_hash=feed.hash)
+        context.update(
+            feed._asdict(),
+            updated=adapt_datetime(feed.updated) if feed.updated else None,
+            last_updated=adapt_datetime(intent.last_updated)
+            if intent.last_updated
+            else None,
+            data_hash=feed.hash,
+        )
 
         with self.get_db() as db:
             cursor = db.execute(
@@ -858,7 +898,7 @@ class Storage:
                     last_exception = NULL
                 WHERE url = :url;
                 """,
-                dict(url=url, last_updated=last_updated),
+                dict(url=url, last_updated=adapt_datetime(last_updated)),
             )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
@@ -1294,13 +1334,34 @@ def make_get_feeds_query(
     return query, context
 
 
-def feed_factory(t: tuple[Any, ...]) -> Feed:
-    return Feed._make(
-        t[:10]
-        + (
-            ExceptionInfo(**json.loads(t[10])) if t[10] else None,
-            t[11] == 1,
-        )
+def feed_factory(row: tuple[Any, ...]) -> Feed:
+    (
+        url,
+        updated,
+        title,
+        link,
+        author,
+        subtitle,
+        version,
+        user_title,
+        added,
+        last_updated,
+        last_exception,
+        updates_enabled,
+    ) = row[:12]
+    return Feed(
+        url,
+        convert_timestamp(updated) if updated else None,
+        title,
+        link,
+        author,
+        subtitle,
+        version,
+        user_title,
+        convert_timestamp(added),
+        convert_timestamp(last_updated) if last_updated else None,
+        ExceptionInfo(**json.loads(last_exception)) if last_exception else None,
+        updates_enabled == 1,
     )
 
 
@@ -1387,22 +1448,47 @@ def make_get_entries_query(
     return query, filter_context
 
 
-def entry_factory(t: tuple[Any, ...]) -> Entry:
-    feed = feed_factory(t[0:12])
-    entry = t[12:19] + (
-        tuple(Content(**d) for d in json.loads(t[19])) if t[19] else (),
-        tuple(Enclosure(**d) for d in json.loads(t[20])) if t[20] else (),
-        t[21] == 1,
-        t[22],
-        t[23] == 1 if t[23] is not None else None,
-        t[24],
-        t[25],
-        t[26],
-        t[27],
-        t[28] or feed.url,
+def entry_factory(row: tuple[Any, ...]) -> Entry:
+    feed = feed_factory(row[0:12])
+    (
+        id,
+        updated,
+        title,
+        link,
+        author,
+        published,
+        summary,
+        content,
+        enclosures,
+        read,
+        read_modified,
+        important,
+        important_modified,
+        first_updated,
+        added_by,
+        last_updated,
+        original_feed,
+    ) = row[12:29]
+    return Entry(
+        id,
+        convert_timestamp(updated) if updated else None,
+        title,
+        link,
+        author,
+        convert_timestamp(published) if published else None,
+        summary,
+        tuple(Content(**d) for d in json.loads(content)) if content else (),
+        tuple(Enclosure(**d) for d in json.loads(enclosures)) if enclosures else (),
+        read == 1,
+        convert_timestamp(read_modified) if read_modified else None,
+        important == 1 if important is not None else None,
+        convert_timestamp(important_modified) if important_modified else None,
+        convert_timestamp(first_updated),
+        added_by,
+        convert_timestamp(last_updated),
+        original_feed or feed.url,
         feed,
     )
-    return Entry._make(entry)
 
 
 TRISTATE_FILTER_TO_SQL = dict(
@@ -1606,7 +1692,7 @@ def make_entry_counts_query(
     # one CTE / period + HAVING in the CTE is a tiny bit faster than
     # one CTE + WHERE in the SELECT
 
-    context: dict[str, Any] = dict(now=now)
+    context: dict[str, Any] = dict(now=adapt_datetime(now))
 
     for period_i, period_days in enumerate(average_periods):
         # TODO: when we get first_updated, use it instead of first_updated_epoch
@@ -1615,7 +1701,7 @@ def make_entry_counts_query(
         context[days_param] = float(period_days)
 
         start_param = f'kfu_{period_i}_start'
-        context[start_param] = now - timedelta(days=period_days)
+        context[start_param] = adapt_datetime(now - timedelta(days=period_days))
 
         kfu_query = (
             Query()
@@ -1645,7 +1731,28 @@ def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> Mapping[str, Any]:
             if entry.enclosures
             else None
         ),
+        updated=adapt_datetime(entry.updated) if entry.updated else None,
+        published=adapt_datetime(entry.published) if entry.published else None,
+        last_updated=adapt_datetime(intent.last_updated),
+        first_updated=adapt_datetime(intent.first_updated)
+        if intent.first_updated
+        else None,
+        first_updated_epoch=adapt_datetime(intent.first_updated_epoch)
+        if intent.first_updated_epoch
+        else None,
+        recent_sort=adapt_datetime(intent.recent_sort) if intent.recent_sort else None,
         data_hash=entry.hash,
         data_hash_changed=context.pop('hash_changed'),
     )
     return context
+
+
+def adapt_datetime(val: datetime) -> str:
+    assert not val.tzinfo, val
+    return val.isoformat(" ")
+
+
+def convert_timestamp(val: str) -> datetime:
+    rv = datetime.fromisoformat(val)
+    assert not rv.tzinfo, val
+    return rv

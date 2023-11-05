@@ -11,6 +11,8 @@ Version 3.10
 
 Unreleased
 
+* Stop using deprecated :mod:`sqlite3` datetime converters/adapters.
+  (:issue:`321`)
 * In the API documentation,
   fall back to type hints if hand-written parameter types are not available.
   Add relevant :ref:`documentation` guidelines to the dev documentation.
