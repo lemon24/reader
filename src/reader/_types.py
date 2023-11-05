@@ -311,18 +311,33 @@ class FeedUpdateIntent(NamedTuple):
 
     """Data to be passed to Storage when updating a feed."""
 
+    #: The feed URL.
     url: str
 
     #: The time at the start of updating this feed.
     last_updated: datetime | None
 
+    #: The feed data, if any.
     feed: FeedData | None = None
+
+    #: The feed's ``ETag`` header;
+    #: see :attr:`ParsedFeed.http_etag` for details.
+    #:
+    #: .. admonition:: Unstable
+    #:
+    #:  :attr:`http_etag` and :attr:`http_last_modified`
+    #:  may be grouped in a single attribute in the future.
+    #:
     http_etag: str | None = None
+
+    #: The feed's ``Last-Modified`` header;
+    #: see :attr:`ParsedFeed.http_last_modified` for details.
     http_last_modified: str | None = None
 
     # TODO: Is there a better way of modeling/enforcing these? A sort of tagged union, maybe? (last_updated should be non-optional then)
 
-    #: Cause of ParseError, if any; if set, everything else except url should be None.
+    #: Cause of :exc:`.UpdateError`, if any;
+    #: if set, everything else except :attr:`url` should be :const:`None`.
     last_exception: ExceptionInfo | None = None
 
 
@@ -330,35 +345,34 @@ class EntryUpdateIntent(NamedTuple):
 
     """Data to be passed to Storage when updating a feed."""
 
-    #: The entry.
+    #: The entry data.
     entry: EntryData
 
-    #: The time at the start of updating this feed (start of update_feed
-    #: in update_feed, the start of each feed update in update_feeds).
+    #: The time at the start of updating the feed
+    #: (start of :meth:`~.Reader.update_feed` in :meth:`~.Reader.update_feed`,
+    #: start of each feed update in :meth:`~.Reader.update_feeds`).
     last_updated: datetime
 
-    #: First last_updated (sets Entry.added).
-    #: None if the entry already exists.
+    #: First :attr:`last_updated` (sets :attr:`.Entry.added`).
+    #: :const:`None` if the entry already exists.
     first_updated: datetime | None
 
-    #: The time at the start of updating this batch of feeds (start of
-    #: update_feed in update_feed, start of update_feeds in update_feeds);
-    #: None if the entry already exists.
+    #: The time at the start of updating this batch of feeds
+    #: (start of :meth:`~.Reader.update_feed` in :meth:`~.Reader.update_feed`,
+    #: start of :meth:`~.Reader.update_feeds` in :meth:`~.Reader.update_feeds`).
+    #: :const:`None` if the entry already exists.
     first_updated_epoch: datetime | None
 
-    #: Sort key for get_entries(sort='recent').
-    #: Currently, first_updated_epoch if the feed is not new,
-    #: published or updated or first_updated_epoch otherwise.
-    #: None if the entry already exists.
+    #: Sort key for the :meth:`~.Reader.get_entries` ``recent`` sort order.
     recent_sort: datetime | None
 
     #: The index of the entry in the feed (zero-based).
     feed_order: int = 0
 
-    #: Same as EntryForUpdate.hash_changed.
+    #: Same as :attr:`EntryForUpdate.hash_changed`.
     hash_changed: int | None = 0
 
-    #: Same as Entry.source.
+    #: Same as :attr:`.Entry.added_by`.
     added_by: EntryAddedBy = 'feed'
 
     @property
@@ -367,6 +381,26 @@ class EntryUpdateIntent(NamedTuple):
         return self.first_updated_epoch is not None
 
 
+#: Like the ``tags`` argument of :meth:`.Reader.get_feeds`, except:
+#:
+#: * only the full mutiple-tags-with-disjunction form is used
+#: * tags are represented as *(is negated, tag name)* tuples
+#:   (the ``-`` prefix is stripped)
+#:
+#: Assuming a ``tag_filter_argument()`` function
+#: that converts :meth:`~.Reader.get_feeds` tags to :data:`TagFilter`:
+#:
+#: >>> tag_filter_argument(['one'])
+#: [[(False, 'one')]]
+#: >>> tag_filter_argument(['one', 'two'])
+#: [[(False, 'one')], [(False, 'two')]]
+#: >>> tag_filter_argument([['one', 'two']])
+#: [[(False, 'one'), (False, 'two')]]
+#: >>> tag_filter_argument(['one', '-two'])
+#: [[(False, 'one')], [(True, 'two')]]
+#: >>> tag_filter_argument(True)
+#: [[True]]
+#:
 TagFilter = Sequence[Sequence[Union[bool, tuple[bool, str]]]]
 
 
@@ -416,6 +450,7 @@ def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
     return rv
 
 
+#: Like :data:`.TristateFilterInput`, but without bool/None aliases.
 TristateFilter = Literal[
     'istrue',
     'isfalse',
@@ -443,7 +478,11 @@ def tristate_filter_argument(value: TristateFilterInput, name: str) -> TristateF
 
 class EntryFilter(NamedTuple):
 
-    """Options for filtering the results of the "get entry" storage methods."""
+    """Options for filtering the results entry list operations.
+
+    See the :meth:`.Reader.get_entries()` docstring for detailed semantics.
+
+    """
 
     feed_url: str | None = None
     entry_id: str | None = None
@@ -486,7 +525,11 @@ class EntryFilter(NamedTuple):
 
 class FeedFilter(NamedTuple):
 
-    """Options for filtering the results of the "get feed" storage methods."""
+    """Options for filtering the results feed list operations.
+
+    See the :meth:`.Reader.get_feeds()` docstring for detailed semantics.
+
+    """
 
     feed_url: str | None = None
     tags: TagFilter = ()

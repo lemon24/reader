@@ -128,6 +128,29 @@ Storage
     :special-members: __enter__, __exit__
 
 
+Data objects
+~~~~~~~~~~~~
+
+.. autoclass:: FeedFilter
+    :members:
+
+.. autoclass:: EntryFilter
+    :members:
+
+.. autoclass:: FeedUpdateIntent
+    :members:
+
+.. autoclass:: EntryUpdateIntent
+    :members:
+
+
+Type aliases
+~~~~~~~~~~~~
+
+.. autodata:: TagFilter
+.. autodata:: TristateFilter
+
+
 Search
 ------
 

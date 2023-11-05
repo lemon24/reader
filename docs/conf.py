@@ -75,6 +75,8 @@ autodoc_type_aliases = {
     'ResourceInput': 'reader.types.ResourceInput',
     'AnyResourceInput': 'reader.types.AnyResourceInput',
     'JSONType': 'reader.types.JSONType',
+    'TagFilter': 'reader._types.TagFilter',
+    'TristateFilter': 'reader._types.TristateFilter',
 }
 
 
