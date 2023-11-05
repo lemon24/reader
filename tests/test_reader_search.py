@@ -3,7 +3,6 @@ from datetime import timezone
 
 import pytest
 from fakeparser import Parser
-from utils import naive_datetime
 from utils import rename_argument
 from utils import utc_datetime
 from utils import utc_datetime as datetime
@@ -495,7 +494,7 @@ def test_search_entries_basic(reader, sort):
     parser = Parser()
     reader._parser = parser
     # we're far intro the future, there are no recent entries
-    reader._now = lambda: naive_datetime(2020, 1, 1)
+    reader._now = lambda: datetime(2020, 1, 1)
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
@@ -653,7 +652,7 @@ def test_search_entry_counts_basic(reader, query, expected):
     reader.enable_search()
     reader.update_search()
 
-    reader._now = lambda: naive_datetime(2010, 12, 31)
+    reader._now = lambda: datetime(2010, 12, 31)
 
     assert reader.search_entry_counts(query).averages == expected
 

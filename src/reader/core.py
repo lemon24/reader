@@ -29,7 +29,6 @@ from ._types import EntryData
 from ._types import EntryFilter
 from ._types import EntryUpdateIntent
 from ._types import FeedFilter
-from ._types import fix_datetime_tzinfo
 from ._types import NameScheme
 from ._types import SearchType
 from ._types import StorageType
@@ -656,10 +655,7 @@ class Reader:
                 raise ValueError("limit should be a positive integer")
         starting_after = _feed_argument(starting_after) if starting_after else None
 
-        rv = self._storage.get_feeds(filter, sort, limit, starting_after)
-
-        for rv_feed in rv:
-            yield fix_datetime_tzinfo(rv_feed, 'updated', 'added', 'last_updated')
+        return self._storage.get_feeds(filter, sort, limit, starting_after)
 
     @overload
     def get_feed(self, feed: FeedInput, /) -> Feed:  # pragma: no cover
@@ -1085,7 +1081,7 @@ class Reader:
 
     @staticmethod
     def _now() -> datetime:
-        return datetime.utcnow()
+        return datetime.now(timezone.utc)
 
     def get_entries(
         self,
@@ -1194,21 +1190,7 @@ class Reader:
         if starting_after and sort == 'random':
             raise ValueError("using starting_after with sort='random' not supported")
 
-        rv = self._storage.get_entries(filter, sort, limit, starting_after)
-
-        for rv_entry in rv:
-            yield fix_datetime_tzinfo(
-                rv_entry,
-                'updated',
-                'published',
-                'added',
-                'last_updated',
-                'read_modified',
-                'important_modified',
-                feed=fix_datetime_tzinfo(
-                    rv_entry.feed, 'updated', 'added', 'last_updated'
-                ),
-            )
+        return self._storage.get_entries(filter, sort, limit, starting_after)
 
     @overload
     def get_entry(self, entry: EntryInput, /) -> Entry:  # pragma: no cover
@@ -1339,15 +1321,15 @@ class Reader:
         if read not in (True, False):
             raise ValueError("read should be one of (True, False)")
 
-        modified_naive: datetime | None
+        modified_aware: datetime | None
         if isinstance(modified, MissingType):
-            modified_naive = self._now()
+            modified_aware = self._now()
         elif modified is None:
-            modified_naive = None
+            modified_aware = None
         else:
-            modified_naive = modified.astimezone(timezone.utc).replace(tzinfo=None)
+            modified_aware = modified.astimezone(timezone.utc)
 
-        self._storage.set_entry_read(_entry_argument(entry), read, modified_naive)
+        self._storage.set_entry_read(_entry_argument(entry), read, modified_aware)
 
     def mark_entry_as_read(self, entry: EntryInput, /) -> None:
         """Mark an entry as read.
@@ -1431,16 +1413,16 @@ class Reader:
         if important not in (True, False, None):
             raise ValueError("important should be one of (True, False, None)")
 
-        modified_naive: datetime | None
+        modified_aware: datetime | None
         if isinstance(modified, MissingType):
-            modified_naive = self._now()
+            modified_aware = self._now()
         elif modified is None:
-            modified_naive = None
+            modified_aware = None
         else:
-            modified_naive = modified.astimezone(timezone.utc).replace(tzinfo=None)
+            modified_aware = modified.astimezone(timezone.utc)
 
         self._storage.set_entry_important(
-            _entry_argument(entry), important, modified_naive
+            _entry_argument(entry), important, modified_aware
         )
 
     def mark_entry_as_important(self, entry: EntryInput, /) -> None:

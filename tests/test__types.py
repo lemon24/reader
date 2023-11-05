@@ -5,7 +5,6 @@ import pytest
 from reader._types import entry_data_from_obj
 from reader._types import EntryData
 from reader._types import FeedData
-from reader._types import fix_datetime_tzinfo
 from reader._types import tag_filter_argument
 from reader._types import tristate_filter_argument
 
@@ -82,11 +81,9 @@ def test_entry_data_from_obj(data_dir, data_file):
     exec(data_dir.joinpath(f'{data_file}.rss.py').read_bytes(), expected)
 
     for i, entry in enumerate(expected['entries']):
-        entry_utc = fix_datetime_tzinfo(entry, 'updated', 'published')
+        assert entry == entry_data_from_obj(entry), i
 
-        assert entry == entry_data_from_obj(entry_utc), i
-
-        entry_dict = entry_utc._asdict()
+        entry_dict = entry._asdict()
         if 'content' in entry_dict:
             entry_dict['content'] = [c._asdict() for c in entry_dict['content']]
         if 'enclosures' in entry_dict:

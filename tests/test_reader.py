@@ -24,7 +24,6 @@ from reader_methods import search_entries_random
 from reader_methods import search_entries_recent
 from reader_methods import search_entries_relevant
 from utils import make_url_base
-from utils import naive_datetime
 from utils import rename_argument
 from utils import utc_datetime
 from utils import utc_datetime as datetime
@@ -74,9 +73,9 @@ def test_update_feed_updated(reader, update_feed, caplog):
     old_feed = parser.feed(1, datetime(2010, 1, 1), title='old')
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
 
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     reader.add_feed(old_feed.url)
-    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader._now = lambda: datetime(2010, 1, 2)
 
     with caplog.at_level(logging.DEBUG, 'reader'):
         update_feed(reader, old_feed.url)
@@ -96,7 +95,7 @@ def test_update_feed_updated(reader, update_feed, caplog):
 
     # Entries should be processed anyway.
     entry_two = parser.entry(1, 2, datetime(2010, 2, 1))
-    reader._now = lambda: naive_datetime(2010, 1, 3)
+    reader._now = lambda: datetime(2010, 1, 3)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
         update_feed(reader, old_feed.url)
@@ -121,7 +120,7 @@ def test_update_feed_updated(reader, update_feed, caplog):
 
     # Feed gets updated because content (hash) changed.
     old_feed = parser.feed(1, datetime(2010, 1, 1), title='old-different-title')
-    reader._now = lambda: naive_datetime(2010, 1, 3, 12)
+    reader._now = lambda: datetime(2010, 1, 3, 12)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
         update_feed(reader, old_feed.url)
@@ -137,7 +136,7 @@ def test_update_feed_updated(reader, update_feed, caplog):
     # Entries get updated regardless.
     old_feed = parser.feed(1, datetime(2009, 1, 1), title='old-different-title')
     entry_three = parser.entry(1, 3, datetime(2010, 2, 1))
-    reader._now = lambda: naive_datetime(2010, 1, 4)
+    reader._now = lambda: datetime(2010, 1, 4)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
         update_feed(reader, old_feed.url)
@@ -171,7 +170,7 @@ def test_update_feed_updated(reader, update_feed, caplog):
 
     # The feed doesn't change; despite being newer, no entries have changed.
     old_feed = parser.feed(1, datetime(2010, 1, 2), title='old-different-title')
-    reader._now = lambda: naive_datetime(2010, 1, 4, 12)
+    reader._now = lambda: datetime(2010, 1, 4, 12)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
         update_feed(reader, old_feed.url)
@@ -206,7 +205,7 @@ def test_update_feed_updated(reader, update_feed, caplog):
     # The feeds changes because it is newer *and* entries get updated.
     new_feed = parser.feed(1, datetime(2010, 1, 2), title='new')
     entry_four = parser.entry(1, 4, datetime(2010, 2, 1))
-    reader._now = lambda: naive_datetime(2010, 1, 5)
+    reader._now = lambda: datetime(2010, 1, 5)
     feed = new_feed.as_feed(
         added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 5)
     )
@@ -252,9 +251,9 @@ def test_update_entry_updated(reader, update_feed, caplog, monkeypatch):
     feed = parser.feed(1, datetime(2010, 1, 1))
     old_entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
-    reader._now = lambda: naive_datetime(2010, 2, 1)
+    reader._now = lambda: datetime(2010, 2, 1)
     reader.add_feed(feed.url)
-    reader._now = lambda: naive_datetime(2010, 2, 2)
+    reader._now = lambda: datetime(2010, 2, 2)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
         update_feed(reader, feed.url)
@@ -273,7 +272,7 @@ def test_update_entry_updated(reader, update_feed, caplog, monkeypatch):
 
     # Feed newer (doesn't change), entry remains unchanged.
     feed = parser.feed(1, datetime(2010, 1, 2))
-    reader._now = lambda: naive_datetime(2010, 2, 3)
+    reader._now = lambda: datetime(2010, 2, 3)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
         update_feed(reader, feed.url)
@@ -298,7 +297,7 @@ def test_update_entry_updated(reader, update_feed, caplog, monkeypatch):
     feed = parser.feed(1, datetime(2010, 1, 2))
     new_entry = old_entry._replace(title='New Entry')
     parser.entries[1][1] = new_entry
-    reader._now = lambda: naive_datetime(2010, 2, 3, 12)
+    reader._now = lambda: datetime(2010, 2, 3, 12)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
         update_feed(reader, feed.url)
@@ -320,7 +319,7 @@ def test_update_entry_updated(reader, update_feed, caplog, monkeypatch):
     feed = parser.feed(1, datetime(2010, 1, 3))
     new_entry = new_entry._replace(updated=datetime(2010, 1, 2))
     parser.entries[1][1] = new_entry
-    reader._now = lambda: naive_datetime(2010, 2, 4)
+    reader._now = lambda: datetime(2010, 2, 4)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
         update_feed(reader, feed.url)
@@ -337,7 +336,7 @@ def test_update_entry_updated(reader, update_feed, caplog, monkeypatch):
     caplog.clear()
 
     # Entry hash changes, but reaches the update limit.
-    reader._now = lambda: naive_datetime(2010, 2, 5)
+    reader._now = lambda: datetime(2010, 2, 5)
     monkeypatch.setattr('reader._update.HASH_CHANGED_LIMIT', 3)
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
@@ -366,7 +365,7 @@ def test_update_no_updated(reader, chunk_size, update_feed):
 
     feed = parser.feed(1, None, title='old')
     entry_one = parser.entry(1, 1, None, title='old')
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     reader.add_feed(feed.url)
     update_feed(reader, feed)
     feed = feed.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 1))
@@ -384,7 +383,7 @@ def test_update_no_updated(reader, chunk_size, update_feed):
     feed = parser.feed(1, None, title='new')
     entry_one = parser.entry(1, 1, None, title='new')
     entry_two = parser.entry(1, 2, None)
-    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader._now = lambda: datetime(2010, 1, 2)
     update_feed(reader, feed)
     feed = feed.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2))
 
@@ -472,7 +471,7 @@ def test_update_new(reader):
     reader._parser = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     reader.add_feed(one.url)
     reader.update_feeds(new=True)
 
@@ -482,7 +481,7 @@ def test_update_new(reader):
     one = parser.feed(1, datetime(2010, 2, 1), title='title')
     two = parser.feed(2, datetime(2010, 2, 1))
     entry_two = parser.entry(2, 2, datetime(2010, 2, 1))
-    reader._now = lambda: naive_datetime(2010, 1, 1, 12)
+    reader._now = lambda: datetime(2010, 1, 1, 12)
     reader.add_feed(two.url)
 
     reader.update_feeds(new=False)
@@ -491,7 +490,7 @@ def test_update_new(reader):
         ('2', None, None),
     }
 
-    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader._now = lambda: datetime(2010, 1, 2)
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
     reader.update_feeds(new=True)
 
@@ -505,7 +504,7 @@ def test_update_new(reader):
         )
     }
 
-    reader._now = lambda: naive_datetime(2010, 1, 3)
+    reader._now = lambda: datetime(2010, 1, 3)
     reader.update_feeds()
 
     one = one.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 3))
@@ -559,7 +558,7 @@ def test_update_new_not_modified(reader):
     parser = NotModifiedParser()
     reader._parser = parser
 
-    feed = parser.feed(1, naive_datetime(2010, 1, 1))
+    feed = parser.feed(1, datetime(2010, 1, 1))
 
     reader.add_feed(feed.url)
     reader._storage.update_feed(FeedUpdateIntent(feed.url, None, feed=feed))
@@ -569,7 +568,7 @@ def test_update_new_not_modified(reader):
     parser = Parser.from_parser(parser)
     reader._parser = parser
 
-    parser.entry(1, 1, naive_datetime(2010, 1, 1))
+    parser.entry(1, 1, datetime(2010, 1, 1))
     reader.update_feeds(new=True)
 
     # the entry isn't added because feed is not new on the second update_feeds
@@ -602,7 +601,7 @@ def test_update_last_updated_entries_updated_feed_not_updated(reader, update_fee
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     update_feed(reader, feed.url)
 
     def get_feed_for_update(feed):
@@ -611,14 +610,14 @@ def test_update_last_updated_entries_updated_feed_not_updated(reader, update_fee
         return rv
 
     feed_for_update = get_feed_for_update(feed)
-    assert feed_for_update.last_updated == naive_datetime(2010, 1, 1)
+    assert feed_for_update.last_updated == datetime(2010, 1, 1)
 
     parser.entry(1, 1, datetime(2010, 1, 1))
-    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader._now = lambda: datetime(2010, 1, 2)
     update_feed(reader, feed.url)
 
     feed_for_update = get_feed_for_update(feed)
-    assert feed_for_update.last_updated == naive_datetime(2010, 1, 2)
+    assert feed_for_update.last_updated == datetime(2010, 1, 2)
 
 
 @pytest.mark.parametrize('workers', [1, 2])
@@ -930,7 +929,7 @@ def test_update_feed(reader, feed_arg):
     with pytest.raises(FeedNotFoundError):
         reader.update_feed(feed_arg(one))
 
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     one = one.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 1))
     two = two.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 1))
 
@@ -1229,7 +1228,7 @@ def test_add_remove_get_feeds(reader, feed_arg):
     # no exception
     reader.delete_feed(feed_arg(one), True)
 
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     reader.add_feed(feed_arg(one))
     reader.add_feed(feed_arg(two))
 
@@ -1247,7 +1246,7 @@ def test_add_remove_get_feeds(reader, feed_arg):
     # no exception
     reader.add_feed(feed_arg(one), True)
 
-    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader._now = lambda: datetime(2010, 1, 2)
     reader.update_feeds()
 
     one = one.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2))
@@ -1350,15 +1349,15 @@ def test_get_feeds_order_added(reader):
     parser = Parser()
     reader._parser = parser
 
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     feed1 = parser.feed(1, datetime(2010, 1, 2))
     reader.add_feed(feed1.url)
 
-    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader._now = lambda: datetime(2010, 1, 2)
     feed2 = parser.feed(2, datetime(2010, 1, 1))
     reader.add_feed(feed2.url)
 
-    reader._now = lambda: naive_datetime(2009, 12, 31)
+    reader._now = lambda: datetime(2009, 12, 31)
     feed3 = parser.feed(3, datetime(2010, 1, 3))
     reader.add_feed(feed3.url)
 
@@ -1420,9 +1419,9 @@ def test_data_roundtrip(reader):
         enclosures=(Enclosure('http://e1', 'type', 1000), Enclosure('http://e2')),
     )
 
-    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader._now = lambda: datetime(2010, 1, 2)
     reader.add_feed(feed.url)
-    reader._now = lambda: naive_datetime(2010, 1, 3)
+    reader._now = lambda: datetime(2010, 1, 3)
     reader.update_feeds()
 
     assert list(reader.get_entries()) == [
@@ -1484,7 +1483,7 @@ def test_get_entry(reader, entry_arg):
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
-    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader._now = lambda: datetime(2010, 1, 2)
     reader.add_feed(feed.url)
 
     with pytest.raises(EntryNotFoundError) as excinfo:
@@ -1494,7 +1493,7 @@ def test_get_entry(reader, entry_arg):
     assert reader.get_entry(entry_arg(entry.as_entry(feed=feed)), None) == None
     assert reader.get_entry(entry_arg(entry.as_entry(feed=feed)), 1) == 1
 
-    reader._now = lambda: naive_datetime(2010, 1, 3)
+    reader._now = lambda: datetime(2010, 1, 3)
     reader.update_feeds()
 
     # TODO: find a way to not test added/last_updated here
@@ -1535,21 +1534,21 @@ class FakeStorage:
 
 def test_mark_as_important(reader, entry_arg):
     reader._storage = FakeStorage()
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     entry = Entry('entry', None, feed=Feed('feed'))
     reader.mark_entry_as_important(entry_arg(entry))
     assert reader._storage.calls == [
-        ('set_entry_important', ('feed', 'entry'), True, naive_datetime(2010, 1, 1))
+        ('set_entry_important', ('feed', 'entry'), True, datetime(2010, 1, 1))
     ]
 
 
 def test_mark_as_unimportant(reader, entry_arg):
     reader._storage = FakeStorage()
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     entry = Entry('entry', None, feed=Feed('feed'))
     reader.mark_entry_as_unimportant(entry_arg(entry))
     assert reader._storage.calls == [
-        ('set_entry_important', ('feed', 'entry'), False, naive_datetime(2010, 1, 1))
+        ('set_entry_important', ('feed', 'entry'), False, datetime(2010, 1, 1))
     ]
 
 
@@ -1564,12 +1563,12 @@ def test_set_entry_important_none(reader, entry_arg):
     assert entry.important is None
     assert entry.important_modified is None
 
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     reader.mark_entry_as_important(entry_arg(entry))
     entry = reader.get_entry(entry)
     assert entry.important is True
 
-    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader._now = lambda: datetime(2010, 1, 2)
     reader.set_entry_important(entry, None)
 
     entry = reader.get_entry(entry)
@@ -2065,7 +2064,7 @@ def test_change_feed_url_second_update(reader, new_feed_url):
     )
     reader._parser.entry(eval(new_feed_url), 1, datetime(2010, 1, 1))
 
-    reader._now = lambda: naive_datetime(2010, 1, 3)
+    reader._now = lambda: datetime(2010, 1, 3)
 
     reader.update_feeds()
 
@@ -2574,7 +2573,7 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
 
     reader.set_tag(one, 'tag')
 
-    reader._now = lambda: naive_datetime(2011, 12, 16)
+    reader._now = lambda: datetime(2011, 12, 16)
 
     reader.update_feeds()
     pre_stuff(reader)
@@ -2586,7 +2585,7 @@ def test_entry_counts(reader, kwargs, expected, pre_stuff, call_method, rv_type)
         reader.mark_entry_as_important(entry)
     reader.mark_entry_as_important(two_entries[-1])
 
-    reader._now = lambda: naive_datetime(2011, 12, 31)
+    reader._now = lambda: datetime(2011, 12, 31)
 
     rv = call_method(reader, **kwargs)
     assert type(rv) is rv_type
@@ -2791,18 +2790,18 @@ def test_entry_read_important_modified_gets_set_to_now(reader, flag):
     assert not getattr(entry, flag)
     assert getattr(entry, f'{flag}_modified') is None
 
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     getattr(reader, f'mark_entry_as_{flag}')(entry)
     entry = next(reader.get_entries())
     assert getattr(entry, flag)
     assert getattr(entry, f'{flag}_modified') == datetime(2010, 1, 1)
 
-    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader._now = lambda: datetime(2010, 1, 2)
     getattr(reader, f'mark_entry_as_{flag}')(entry)
     entry = next(reader.get_entries())
     assert getattr(entry, f'{flag}_modified') == datetime(2010, 1, 2)
 
-    reader._now = lambda: naive_datetime(2010, 1, 3)
+    reader._now = lambda: datetime(2010, 1, 3)
     getattr(reader, f'mark_entry_as_un{flag}')(entry)
     entry = next(reader.get_entries())
     assert not getattr(entry, flag)
@@ -2817,7 +2816,7 @@ def test_entry_read_important_modified_argument(reader, flag, monkeypatch_tz):
     reader.update_feeds()
 
     entry = next(reader.get_entries())
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
 
     getattr(reader, f'set_entry_{flag}')(
         entry, True, modified=datetime(2010, 1, 1, tzinfo=timezone(timedelta(hours=-2)))
@@ -2857,7 +2856,7 @@ def test_entry_read_important_modified_remains_set_after_update(reader, flag):
     assert not getattr(entry, flag)
     assert getattr(entry, f'{flag}_modified') is None
 
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     getattr(reader, f'mark_entry_as_{flag}')(entry)
 
     entry = parser.entry(1, 1, title='new')
@@ -2932,7 +2931,7 @@ def test_entry_source(reader):
 
 def test_add_entry(reader):
     reader._parser = parser = Parser()
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
 
     # adding it fails if feed doesn't exist
 
@@ -2966,7 +2965,7 @@ def test_add_entry(reader):
     # add it by user (from object)
 
     reader._storage.delete_entries([('1', '1, 1')])
-    reader._now = lambda: naive_datetime(2010, 1, 2)
+    reader._now = lambda: datetime(2010, 1, 2)
 
     reader.add_entry(expected_entry)
     assert reader.get_entry(('1', '1, 1')) == expected_entry._replace(
@@ -2976,7 +2975,7 @@ def test_add_entry(reader):
 
     # add it by feed (update)
 
-    reader._now = lambda: naive_datetime(2010, 1, 3)
+    reader._now = lambda: datetime(2010, 1, 3)
 
     entry = parser.entry(1, 1)
     reader.update_feeds()

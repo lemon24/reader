@@ -639,6 +639,10 @@ Wrapping underlying storage exceptions
 
 Which exception to wrap, and which not: :issue:`21#issuecomment-365442439`.
 
+In version 3.10 (November 2023), all internal APIs were changed
+to use timezone-aware datetimes, with the timezone set to UTC,
+in preparation for support for any timezone.
+
 
 Timezone handling
 ~~~~~~~~~~~~~~~~~

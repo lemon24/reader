@@ -9,7 +9,6 @@ from reader import ParseError
 from reader._parser import RetrieveResult
 from reader._types import EntryData
 from reader._types import FeedData
-from reader._types import fix_datetime_tzinfo
 from reader._types import ParsedFeed
 from reader.types import _entry_argument
 
@@ -84,12 +83,7 @@ class Parser:
         else:
             raise RuntimeError(f"unkown feed: {url}")
 
-        feed = fix_datetime_tzinfo(feed, 'updated', _old=self.tzinfo, _new=None)
-
-        entries = [
-            fix_datetime_tzinfo(e, 'updated', 'published', _old=self.tzinfo, _new=None)
-            for e in self.entries[feed_number].values()
-        ]
+        entries = list(self.entries[feed_number].values())
 
         return ParsedFeed(
             feed,

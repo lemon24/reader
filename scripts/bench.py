@@ -14,6 +14,7 @@ from contextlib import contextmanager
 from contextlib import ExitStack
 from datetime import datetime
 from datetime import timedelta
+from datetime import timezone
 from fnmatch import fnmatchcase
 from functools import partial
 
@@ -87,7 +88,7 @@ def make_reader_with_entries(path, num_entries, num_feeds=NUM_FEEDS, text=False)
     parser.tzinfo = None
 
     for i in range(num_feeds):
-        feed = parser.feed(i, datetime(2010, 1, 1))
+        feed = parser.feed(i, datetime(2010, 1, 1, tzinfo=timezone.utc))
         reader.add_feed(feed.url)
 
     random.seed(0)
@@ -98,7 +99,12 @@ def make_reader_with_entries(path, num_entries, num_feeds=NUM_FEEDS, text=False)
                 title=generate_lorem_ipsum(html=False, n=1, min=1, max=10),
                 summary=generate_lorem_ipsum(html=False),
             )
-        parser.entry(i % num_feeds, i, datetime(2010, 1, 1) + timedelta(i), **kwargs)
+        parser.entry(
+            i % num_feeds,
+            i,
+            datetime(2010, 1, 1, tzinfo=timezone.utc) + timedelta(i),
+            **kwargs,
+        )
 
     return reader
 

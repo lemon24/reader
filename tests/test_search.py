@@ -1,10 +1,10 @@
-from datetime import datetime
 from unittest.mock import ANY
 from unittest.mock import MagicMock
 
 import bs4
 import pytest
 from fakeparser import Parser
+from utils import utc_datetime as datetime
 
 from reader import Content
 from reader import HighlightedString

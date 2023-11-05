@@ -189,4 +189,4 @@ def _parse_date(s: str) -> datetime | None:
     except iso8601.ParseError:
         return None
     assert isinstance(dt, datetime)
-    return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt.astimezone(timezone.utc)

@@ -106,16 +106,8 @@ def monkeypatch_tz(monkeypatch):
                 raise
 
 
-# FIXME: explain what this is
-# https://github.com/lemon24/reader/issues/233
-
-
 def utc_datetime(*args, **kwargs):
     return datetime(*args, tzinfo=timezone.utc, **kwargs)
-
-
-def naive_datetime(*args, **kwargs):
-    return datetime(*args, tzinfo=None, **kwargs)
 
 
 def parametrize_dict(names, values, **kwargs):

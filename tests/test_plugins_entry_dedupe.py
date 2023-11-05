@@ -2,7 +2,6 @@ from random import randrange
 
 import pytest
 from fakeparser import Parser
-from utils import naive_datetime
 from utils import utc_datetime as datetime
 
 from reader import Content
@@ -237,7 +236,7 @@ def test_plugin_once(make_reader, db_path, monkeypatch, tags):
         1, 11, datetime(2010, 1, 1), title='title', summary='unread'
     )
 
-    reader._now = lambda: naive_datetime(2010, 1, 10)
+    reader._now = lambda: datetime(2010, 1, 10)
     reader.update_feeds()
     reader.mark_entry_as_read(read_one)
 
@@ -246,7 +245,7 @@ def test_plugin_once(make_reader, db_path, monkeypatch, tags):
         1, 7, datetime(2010, 1, 2), title='title', summary='important'
     )
 
-    reader._now = lambda: naive_datetime(2010, 1, 11)
+    reader._now = lambda: datetime(2010, 1, 11)
     reader.update_feeds()
     reader.mark_entry_as_important(important_two)
 
@@ -254,12 +253,12 @@ def test_plugin_once(make_reader, db_path, monkeypatch, tags):
         1, 12, datetime(2010, 1, 1), title='title', summary='unread'
     )
 
-    reader._now = lambda: naive_datetime(2010, 1, 12)
+    reader._now = lambda: datetime(2010, 1, 12)
     reader.update_feeds()
 
     reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
     reader._parser = parser
-    reader._now = lambda: naive_datetime(2010, 1, 12)
+    reader._now = lambda: datetime(2010, 1, 12)
     reader.update_feeds()
 
     # nothing changes without tag
@@ -571,7 +570,7 @@ def _test_modified_copying(
         # the entry with the most recent .last_updated remains
 
         for day_i, (id, *_) in enumerate(data, 1):
-            reader._now = lambda: naive_datetime(2010, 1, day_i)
+            reader._now = lambda: datetime(2010, 1, day_i)
             # updated doesn't matter, this should never make the test fail
             updated = datetime(2010, 1, randrange(1, 30))
             parser.entry(1, id, updated, title='title', summary='summary')
@@ -582,14 +581,14 @@ def _test_modified_copying(
         # the order from get_entries(sort='recent') is preserved;
         # in this case, the entry with the most recent .updated remains
 
-        reader._now = lambda: naive_datetime(2010, 1, 1)
+        reader._now = lambda: datetime(2010, 1, 1)
         for day_i, (id, *_) in enumerate(data, 1):
             parser.entry(
                 1, id, datetime(2010, 1, day_i), title='title', summary='summary'
             )
         reader.update_feeds()
 
-    reader._now: lambda: naive_datetime(2011, 1, 1)
+    reader._now: lambda: datetime(2011, 1, 1)
 
     # the entry with the highest id is the last one
     for id, flag, modified in data:
@@ -732,12 +731,12 @@ def test_recent_sort_copying(make_reader, db_path):
     reader.add_feed(parser.feed(1))
 
     parser.entry(1, 1, title='title', summary='summary')
-    reader._now = lambda: naive_datetime(2010, 1, 10)
+    reader._now = lambda: datetime(2010, 1, 10)
     reader.update_feeds()
 
     parser.entry(1, 2, title='title', summary='summary')
     parser.entry(1, 3, title='other')
-    reader._now = lambda: naive_datetime(2010, 1, 20)
+    reader._now = lambda: datetime(2010, 1, 20)
     reader.update_feeds()
 
     reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
@@ -746,13 +745,13 @@ def test_recent_sort_copying(make_reader, db_path):
     del parser.entries[1][1]
     del parser.entries[1][2]
     four = parser.entry(1, 4, title='title', summary='summary')
-    reader._now = lambda: naive_datetime(2010, 2, 1)
+    reader._now = lambda: datetime(2010, 2, 1)
     reader.update_feeds()
 
     assert [eval(e.id)[1] for e in reader.get_entries(sort='recent')] == [3, 4]
 
     actual_recent_sort = reader._storage.get_entry_recent_sort(four.resource_id)
-    assert actual_recent_sort == naive_datetime(2010, 1, 10)
+    assert actual_recent_sort == datetime(2010, 1, 10)
 
 
 @pytest.mark.parametrize('update_after_one', [False, True])

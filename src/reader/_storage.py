@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from collections.abc import Sequence
 from datetime import datetime
 from datetime import timedelta
+from datetime import timezone
 from functools import partial
 from typing import Any
 from typing import NamedTuple
@@ -1748,11 +1749,13 @@ def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> Mapping[str, Any]:
 
 
 def adapt_datetime(val: datetime) -> str:
-    assert not val.tzinfo, val
+    assert val.tzinfo == timezone.utc, val
+    val = val.replace(tzinfo=None)
     return val.isoformat(" ")
 
 
 def convert_timestamp(val: str) -> datetime:
     rv = datetime.fromisoformat(val)
     assert not rv.tzinfo, val
+    rv = rv.replace(tzinfo=timezone.utc)
     return rv

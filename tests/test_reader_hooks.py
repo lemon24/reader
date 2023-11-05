@@ -1,4 +1,3 @@
-from datetime import datetime
 from functools import partial
 
 import pytest
@@ -7,6 +6,7 @@ from fakeparser import NotModifiedParser
 from fakeparser import Parser
 from test_reader_private import CustomParser
 from test_reader_private import CustomRetriever
+from utils import utc_datetime as datetime
 
 from reader import EntryUpdateStatus
 from reader import ParseError

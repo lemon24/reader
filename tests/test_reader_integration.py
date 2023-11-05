@@ -6,7 +6,6 @@ from utils import make_url_base
 from utils import utc_datetime
 
 from reader import USER_AGENT
-from reader._types import fix_datetime_tzinfo
 
 
 class Server(socketserver.TCPServer):
@@ -95,7 +94,7 @@ def test_local(reader, feed_type, data_dir, monkeypatch):
 
     # TODO: maybe don't mock, and just check datetimes are in the correct order
 
-    # On CPython, we can't mock datetime.datetime.utcnow because
+    # On CPython, we can't mock datetime.datetime.now because
     # datetime.datetime is a built-in/extension type; we can mock the class.
     # On PyPy, we can mock the class, but it results in weird type errors
     # when the mock/subclass and original datetime class interact.
@@ -103,9 +102,9 @@ def test_local(reader, feed_type, data_dir, monkeypatch):
     from datetime import datetime
 
     try:
-        # if we can set attributes on the class, we just patch utcnow() directly
+        # if we can set attributes on the class, we just patch now() directly
         # (we don't use monkeypatch because it breaks cleanup if it doesn't work)
-        datetime.utcnow = datetime.utcnow
+        datetime.now = datetime.now
         datetime_mock = datetime
     except TypeError:
         # otherwise, we monkeypatch the datetime class on the module
@@ -115,9 +114,13 @@ def test_local(reader, feed_type, data_dir, monkeypatch):
         # reader.core must "from datetime import datetime" !
         monkeypatch.setattr('reader.core.datetime', datetime_mock)
 
-    monkeypatch.setattr(datetime_mock, 'utcnow', lambda: datetime(2010, 1, 1))
+    monkeypatch.setattr(
+        datetime_mock, 'now', lambda tz=None: datetime(2010, 1, 1, tzinfo=tz)
+    )
     reader.add_feed(feed_url)
-    monkeypatch.setattr(datetime_mock, 'utcnow', lambda: datetime(2010, 1, 2))
+    monkeypatch.setattr(
+        datetime_mock, 'now', lambda tz=None: datetime(2010, 1, 2, tzinfo=tz)
+    )
     reader.update_feeds()
     monkeypatch.undo()
 
@@ -131,18 +134,13 @@ def test_local(reader, feed_type, data_dir, monkeypatch):
     expected_feed = expected['feed'].as_feed(
         added=utc_datetime(2010, 1, 1), last_updated=utc_datetime(2010, 1, 2)
     )
-    expected_feed = fix_datetime_tzinfo(expected_feed, 'updated')
 
     assert feed == expected_feed
     assert entries == {
-        fix_datetime_tzinfo(
-            e.as_entry(
-                feed=feed,
-                added=utc_datetime(2010, 1, 2),
-                last_updated=utc_datetime(2010, 1, 2),
-            ),
-            'updated',
-            'published',
+        e.as_entry(
+            feed=feed,
+            added=utc_datetime(2010, 1, 2),
+            last_updated=utc_datetime(2010, 1, 2),
         )
         for e in expected['entries']
     }

@@ -2,12 +2,12 @@ import os
 import sqlite3
 import sys
 import threading
-from datetime import datetime
 from unittest.mock import ANY
 from unittest.mock import MagicMock
 
 import pytest
 from utils import rename_argument
+from utils import utc_datetime as datetime
 
 import reader._sqlite_utils
 from reader import EntryNotFoundError

@@ -8,7 +8,7 @@ from reader._types import FeedData
 
 feed = FeedData(
     url=f'{url_base}full.rss',
-    updated=datetime.datetime(2010, 9, 6, 0, 1),
+    updated=datetime.datetime(2010, 9, 6, 0, 1, tzinfo=datetime.timezone.utc),
     title='RSS Title',
     link='http://www.example.com/main.html',
     author='Example editor (me@example.com)',
@@ -24,7 +24,7 @@ entries = [
         title='Example entry',
         link='http://www.example.com/blog/post/1',
         author='Example editor',
-        published=datetime.datetime(2009, 9, 6, 16, 20),
+        published=datetime.datetime(2009, 9, 6, 16, 20, tzinfo=datetime.timezone.utc),
         summary='Here is some text containing an interesting description.',
         content=(
             # the text/plain type comes from feedparser
@@ -41,7 +41,7 @@ entries = [
         feed_url=feed.url,
         id='00000000-1655-4c27-aeee-00000000',
         updated=None,
-        published=datetime.datetime(2009, 9, 6, 0, 0, 0),
+        published=datetime.datetime(2009, 9, 6, 0, 0, 0, tzinfo=datetime.timezone.utc),
         title='Example entry, again',
     ),
 ]

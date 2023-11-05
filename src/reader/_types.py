@@ -235,7 +235,7 @@ def _getattr_optional_datetime(obj: object, name: str) -> datetime | None:
     value = _getattr_optional(obj, name, datetime)
     if value is None:
         return value
-    return value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value.astimezone(timezone.utc)
 
 
 class ParsedFeed(NamedTuple):
@@ -549,34 +549,6 @@ DEFAULT_RESERVED_NAME_SCHEME = MappingProxyType(
 )
 
 
-_NT = TypeVar('_NT', bound=_namedtuple_compat)
-
-
-def fix_datetime_tzinfo(
-    obj: _NT,
-    *names: str,
-    _old: None | timezone | bool = None,
-    _new: None | timezone = timezone.utc,
-    **kwargs: Any,
-) -> _NT:
-    """For specific optional datetime attributes of an object,
-    and set their tzinfo to `_new`.
-
-    Build and return a new object, using the old ones _replace() method.
-    Pass any other kwargs to _replace().
-
-    If `_old` is not False, assert the old tzinfo is equal to it.
-
-    """
-    for name in names:
-        assert name not in kwargs, (name, list(kwargs))
-        value = getattr(obj, name)
-        if value:
-            assert _old is False or value.tzinfo == _old, value
-            kwargs[name] = value.replace(tzinfo=_new)
-    return obj._replace(**kwargs)
-
-
 UpdateHook = Callable[..., None]
 UpdateHookType = Literal[
     'before_feeds_update',
@@ -661,15 +633,12 @@ class StorageType(Protocol):  # pragma: no cover
       Closing the storage in one thread should not close it in another thread.
 
     All :class:`~datetime.datetime` attributes
-    of all parameters and return values are timezone-naive,
-    with the timezone assumed to be UTC by convention.
+    of all parameters and return values are timezone-aware,
+    with the timezone set to :attr:`~datetime.timezone.utc`.
 
     .. admonition:: Unstable
 
-        As part of :issue:`321`,
-        :class:`~datetime.datetime`\s will be required to be timezone-aware,
-        with the timezone set to :attr:`~datetime.timezone.utc`.
-        At some later point, implementations will be required
+        In the future, implementations will be required
         to accept datetimes with any timezone.
 
     Methods, grouped by topic:

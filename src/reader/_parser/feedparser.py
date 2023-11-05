@@ -5,6 +5,7 @@ import logging
 import time
 import warnings
 from datetime import datetime
+from datetime import timezone
 from typing import Any
 from typing import IO
 from typing import TYPE_CHECKING
@@ -122,7 +123,7 @@ def _get_datetime_attr(thing: Any, key: str) -> datetime | None:
 
 
 def _datetime_from_timetuple(tt: time.struct_time) -> datetime:
-    return datetime.utcfromtimestamp(calendar.timegm(tt))
+    return datetime.fromtimestamp(calendar.timegm(tt), timezone.utc)
 
 
 def _process_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:

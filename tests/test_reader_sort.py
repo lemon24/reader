@@ -3,7 +3,6 @@ from functools import partial
 
 import pytest
 from fakeparser import Parser
-from utils import naive_datetime
 from utils import rename_argument
 from utils import utc_datetime as datetime
 
@@ -35,7 +34,7 @@ def test_entries_recent_first_updated(reader, chunk_size, get_entries, entry_kwa
     reader.add_feed(parser.feed(1))
 
     for id, day in [(3, 2), (2, 4), (4, 1), (1, 3)]:
-        reader._now = lambda: naive_datetime(2010, 1, day)
+        reader._now = lambda: datetime(2010, 1, day)
         parser.entry(1, id, **entry_kwargs)
         reader.update_feeds()
 
@@ -59,7 +58,7 @@ def test_entries_recent_feed_order(reader, chunk_size, get_entries, entry_kwargs
     for id in [3, 2, 4, 1]:
         parser.entry(1, id, **entry_kwargs)
 
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     reader.update_feeds()
     get_entries.after_update(reader)
 
@@ -131,11 +130,11 @@ def test_entries_recent_all(reader, chunk_size, get_entries, reverse):
 
     def by_published_or_updated_first_update():
         # first update, ignored
-        reader._now = lambda: naive_datetime(2010, 1, 1)
+        reader._now = lambda: datetime(2010, 1, 1)
         update_with_published_or_updated(0, 'first update')
 
     def by_id():
-        reader._now = lambda: naive_datetime(2010, 1, 6)
+        reader._now = lambda: datetime(2010, 1, 6)
 
         functions = [
             partial(parser.entry, 1, 6, title='entry by id, older'),
@@ -150,7 +149,7 @@ def test_entries_recent_all(reader, chunk_size, get_entries, reverse):
             reader.update_feeds()
 
     def by_feed_order():
-        reader._now = lambda: naive_datetime(2010, 1, 11)
+        reader._now = lambda: datetime(2010, 1, 11)
 
         parser.entries[1].clear()
         parser.entry(1, 11, title='entry by feed order, newer')
@@ -158,7 +157,7 @@ def test_entries_recent_all(reader, chunk_size, get_entries, reverse):
         reader.update_feeds()
 
     def by_feed_url():
-        reader._now = lambda: naive_datetime(2010, 1, 16)
+        reader._now = lambda: datetime(2010, 1, 16)
 
         functions = [
             partial(parser.entry, 2, 1, title='entry by feed url, older'),
@@ -173,7 +172,7 @@ def test_entries_recent_all(reader, chunk_size, get_entries, reverse):
         reader.update_feeds()
 
     def by_published_or_updated_not_first_update():
-        reader._now = lambda: naive_datetime(2010, 1, 21)
+        reader._now = lambda: datetime(2010, 1, 21)
         update_with_published_or_updated(20, 'not first update')
 
     updates = [by_published_or_updated_first_update]
@@ -192,7 +191,7 @@ def test_entries_recent_all(reader, chunk_size, get_entries, reverse):
 
     get_entries.after_update(reader)
 
-    reader._now = lambda: naive_datetime(2010, 1, 31)
+    reader._now = lambda: datetime(2010, 1, 31)
 
     assert [eval(e.id) for e in get_entries(reader)] == [
         (1, 21),
@@ -221,7 +220,7 @@ def test_entries_recent_new_feed(reader, get_entries):
     parser.entry(1, 1, published=datetime(2010, 1, 30))
     parser.entry(1, 2, published=datetime(2010, 1, 10))
     parser.entry(1, 3, published=datetime(2010, 1, 20))
-    reader._now = lambda: naive_datetime(2010, 1, 1)
+    reader._now = lambda: datetime(2010, 1, 1)
     reader.update_feeds()
 
     # update after change_feed_url() also counts as first update
@@ -230,7 +229,7 @@ def test_entries_recent_new_feed(reader, get_entries):
     parser.entry(2, 5, published=datetime(2010, 1, 5))
     parser.entry(2, 6, published=datetime(2010, 1, 25))
     reader.change_feed_url(one, two)
-    reader._now = lambda: naive_datetime(2010, 3, 1)
+    reader._now = lambda: datetime(2010, 3, 1)
     reader.update_feeds()
 
     get_entries.after_update(reader)

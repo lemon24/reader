@@ -1,10 +1,10 @@
 import sys
-from datetime import datetime
 
 import pytest
 import requests
 import wsgiadapter
 from fakeparser import Parser
+from utils import utc_datetime as datetime
 
 from reader._app import create_app
 from reader._config import make_reader_config

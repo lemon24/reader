@@ -24,6 +24,7 @@ To load::
 """
 import warnings
 from datetime import datetime
+from datetime import timezone
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
@@ -71,7 +72,9 @@ def extract_text(soup):
 def make_entries(feed_url, url, soup):
     for title, fragment, content in extract_text(soup):
         try:
-            updated = datetime.strptime(title.split()[0], '%Y-%m-%d')
+            updated = datetime.strptime(title.split()[0], '%Y-%m-%d').replace(
+                tzinfo=timezone.utc
+            )
         except (ValueError, IndexError):
             continue
 
