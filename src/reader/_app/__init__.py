@@ -6,6 +6,7 @@ import time
 import typing
 from dataclasses import dataclass
 from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
 
 import flask.signals
@@ -47,8 +48,14 @@ blueprint = Blueprint('reader', __name__)
 def humanize_naturaltime(dt):
     when = None
     if dt.tzinfo:
-        when = datetime.utcnow().replace(tzinfo=timezone.utc)
-    return humanize.naturaltime(dt, when=when)
+        when = datetime.now(tz=timezone.utc)
+    try:
+        return humanize.naturaltime(dt, when=when)
+    except ValueError as e:
+        # can happen for 0001-01-01
+        if 'year 0 is out of range' not in str(e):
+            raise
+        return humanize.naturaltime(dt + timedelta(days=1), when=when)
 
 
 @blueprint.app_template_filter()
