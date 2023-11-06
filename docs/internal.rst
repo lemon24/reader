@@ -118,7 +118,7 @@ Storage
 -------
 
 .. autoattribute:: reader.Reader._storage
-
+.. autoattribute:: reader.Reader._search
 
 .. module:: reader._types
     :noindex:
@@ -126,6 +126,13 @@ Storage
 .. autoclass:: StorageType()
     :members:
     :special-members: __enter__, __exit__
+
+.. autoclass:: BoundSearchStorageType()
+    :members:
+    :show-inheritance:
+
+.. autoclass:: SearchType()
+    :members:
 
 
 Data objects
@@ -149,19 +156,6 @@ Type aliases
 
 .. autodata:: TagFilter
 .. autodata:: TristateFilter
-
-
-Search
-------
-
-.. autoattribute:: reader.Reader._search
-
-
-.. module:: reader._types
-    :noindex:
-
-.. autoclass:: SearchType
-    :members:
 
 
 Recipes

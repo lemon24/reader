@@ -30,6 +30,7 @@ from ._types import EntryUpdateIntent
 from ._types import FeedFilter
 from ._types import FeedForUpdate
 from ._types import FeedUpdateIntent
+from ._types import SearchType
 from ._types import TagFilter
 from ._utils import chunks
 from ._utils import exactly_one
@@ -456,6 +457,11 @@ class Storage:
     @wrap_exceptions(StorageError)
     def close(self) -> None:
         self.factory.close()
+
+    def make_search(self) -> SearchType:
+        from ._search import Search
+
+        return Search(self)
 
     @wrap_exceptions(StorageError)
     def add_feed(self, url: str, added: datetime) -> None:

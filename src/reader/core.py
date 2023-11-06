@@ -21,8 +21,8 @@ from typing import TypeVar
 from ._parser import default_parser
 from ._parser.requests import DEFAULT_TIMEOUT
 from ._parser.requests import TimeoutType
-from ._search import Search
 from ._storage import Storage
+from ._types import BoundSearchStorageType
 from ._types import DEFAULT_RESERVED_NAME_SCHEME
 from ._types import entry_data_from_obj
 from ._types import EntryData
@@ -100,7 +100,7 @@ def make_reader(
     session_timeout: TimeoutType = DEFAULT_TIMEOUT,
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
     search_enabled: bool | None | Literal['auto'] = 'auto',
-    _storage: Storage | None = None,
+    _storage: StorageType | None = None,
     _storage_factory: Any = None,
 ) -> Reader:
     """Create a new :class:`Reader`.
@@ -258,11 +258,13 @@ def make_reader(
     # See this comment for details on how it should evolve:
     # https://github.com/lemon24/reader/issues/168#issuecomment-642002049
 
-    storage = _storage or Storage(url, factory=_storage_factory)
+    storage: StorageType = _storage or Storage(url, factory=_storage_factory)
 
     try:
         # For now, we're using a storage-bound search provider.
-        search = Search(storage)
+        if not isinstance(storage, BoundSearchStorageType):  # pragma: no cover
+            raise TypeError("storage must have a make_search factory")
+        search = storage.make_search()
 
         if search_enabled is True:
             search.check_dependencies()

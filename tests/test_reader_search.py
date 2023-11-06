@@ -395,7 +395,7 @@ def test_update_triggers_no_change(db_path, make_reader, monkeypatch, set_user_t
             return Search.strip_html(*args, **kwargs)
 
     # TODO: remove monkeypatching when make_reader() gets a search_cls argument
-    monkeypatch.setattr('reader.core.Search', MySearch)
+    monkeypatch.setattr('reader.core.Storage.make_search', lambda s: MySearch(s))
 
     reader = make_reader(db_path)
     reader._parser = parser = Parser()
@@ -870,7 +870,7 @@ def test_update_search_entry_changed_during_strip_html(
                 return Search.strip_html(*args, **kwargs)
 
         # TODO: remove monkeypatching when make_reader() gets a search_cls argument
-        monkeypatch.setattr('reader.core.Search', MySearch)
+        monkeypatch.setattr('reader.core.Storage.make_search', lambda s: MySearch(s))
 
         reader = make_reader(db_path)
         try:
@@ -1024,7 +1024,7 @@ def test_update_search_concurrent_calls(db_path, make_reader, monkeypatch):
                 return Search.strip_html(*args, **kwargs)
 
         # TODO: remove monkeypatching when make_reader() gets a search_cls argument
-        monkeypatch.setattr('reader.core.Search', MySearch)
+        monkeypatch.setattr('reader.core.Storage.make_search', lambda s: MySearch(s))
 
         reader = make_reader(db_path)
         try:

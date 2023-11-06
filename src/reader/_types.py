@@ -18,6 +18,7 @@ from typing import Literal
 from typing import NamedTuple
 from typing import overload
 from typing import Protocol
+from typing import runtime_checkable
 from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
@@ -670,6 +671,7 @@ class StorageType(Protocol):  # pragma: no cover
     are implemented at the storage level; specifically:
 
     * The storage can be used directly, without :meth:`__enter__`\ing it.
+      There is no guarantee :meth:`close` will be called at the end.
     * The storage can be reused after :meth:`__exit__` / :meth:`close`.
     * The storage can be used from multiple threads,
       either directly, or as a context manager.
@@ -1074,9 +1076,23 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
 
+@runtime_checkable
+class BoundSearchStorageType(StorageType, Protocol):
+
+    """A storage that can create a storage-bound search provider."""
+
+    def make_search(self) -> SearchType:
+        """Create a search provider.
+
+        Returns:
+            A search provider.
+
+        """
+
+
 class SearchType(Protocol):  # pragma: no cover
 
-    """Search DAO.
+    """Search DAO protocol.
 
     Any method can raise :exc:`.SearchError`.
 
@@ -1098,6 +1114,15 @@ class SearchType(Protocol):  # pragma: no cover
 
         Returns:
             Whether search is enabled or not.
+
+        """
+
+    def check_dependencies(self) -> None:
+        """Raise :exc:`.SearchError` if any required dependencies are missing.
+
+        .. admonition:: Unstable
+
+            This method may be removed in the future.
 
         """
 
