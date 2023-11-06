@@ -1096,10 +1096,23 @@ class SearchType(Protocol):  # pragma: no cover
 
     Any method can raise :exc:`.SearchError`.
 
+    There are two sets of methods that may be called at different times:
+
+    management methods
+        :meth:`enable` :meth:`disable` :meth:`is_enabled` :meth:`update`
+
+    read-only methods
+        :meth:`search_entries` :meth:`search_entry_counts`
+
     """
 
     def enable(self) -> None:
         """Called by :meth:`.Reader.enable_search`.
+
+        A no-op and reasonably fast if search is already enabled.
+
+        Checks if all dependencies needed for :meth:`update` are available,
+        raises :exc:`.SearchError` if not.
 
         Raises:
             StorageError
@@ -1112,17 +1125,21 @@ class SearchType(Protocol):  # pragma: no cover
     def is_enabled(self) -> bool:
         """Called by :meth:`.Reader.is_search_enabled`.
 
+        Not called otherwise.
+
         Returns:
             Whether search is enabled or not.
 
         """
 
-    def check_dependencies(self) -> None:
-        """Raise :exc:`.SearchError` if any required dependencies are missing.
+    def update(self) -> None:
+        """Called by :meth:`.Reader.update_search`.
 
-        .. admonition:: Unstable
+        Should not enable search automatically (handled by :class:`.Reader`).
 
-            This method may be removed in the future.
+        Raises:
+            SearchNotEnabledError
+            StorageError
 
         """
 
@@ -1169,15 +1186,6 @@ class SearchType(Protocol):  # pragma: no cover
         Raises:
             SearchNotEnabledError
             InvalidSearchQueryError
-            StorageError
-
-        """
-
-    def update(self) -> None:
-        """Called by :meth:`.Reader.update_search`.
-
-        Raises:
-            SearchNotEnabledError
             StorageError
 
         """

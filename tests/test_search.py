@@ -182,16 +182,22 @@ def test_invalid_search_query_error(storage, query, exc_type, call_method):
 
 
 def test_minimum_sqlite_version(storage, monkeypatch):
+    search = Search(storage)
+    search.enable()
+
     mock = MagicMock(wraps=require_version, side_effect=DBError('version'))
     monkeypatch.setattr('reader._search.require_version', mock)
 
-    search = Search(storage)
-    search.enable()
+    with pytest.raises(SearchError) as excinfo:
+        search.enable()
+    assert 'version' in excinfo.value.message
+    mock.assert_called_with(ANY, (3, 18))
+
+    mock.reset_mock()
 
     with pytest.raises(SearchError) as excinfo:
         search.update()
     assert 'version' in excinfo.value.message
-
     mock.assert_called_with(ANY, (3, 18))
 
 

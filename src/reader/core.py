@@ -267,7 +267,6 @@ def make_reader(
         search = storage.make_search()
 
         if search_enabled is True:
-            search.check_dependencies()
             search.enable()
         elif search_enabled is False:
             search.disable()

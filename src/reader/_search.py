@@ -160,7 +160,7 @@ class Search:
         return strip_html(text)
 
     @wrap_exceptions(SearchError)
-    def check_dependencies(self) -> None:
+    def check_update_dependencies(self) -> None:
         # Only update() requires these, so we don't check in __init__().
         # ... except json_each(), which is used in one of the triggers
         # (which is acceptable, we're trying to fail early for *most* cases).
@@ -173,13 +173,14 @@ class Search:
 
     @wrap_exceptions(SearchError)
     def enable(self) -> None:
+        self.check_update_dependencies()
         try:
             with ddl_transaction(self.get_db()) as db:
                 self._enable(db)
         except sqlite3.OperationalError as e:
             if "table entries_search already exists" in str(e).lower():
                 return
-            raise
+            raise  # pragma: no cover
 
     @classmethod
     def _enable(cls, db: sqlite3.Connection) -> None:
@@ -453,7 +454,7 @@ class Search:
     @wrap_exceptions(SearchError)
     @wrap_search_exceptions()
     def update(self) -> None:
-        self.check_dependencies()
+        self.check_update_dependencies()
         self._delete_from_search()
         self._insert_into_search()
 
