@@ -940,7 +940,7 @@ class StorageType(Protocol):  # pragma: no cover
         .. admonition:: Unstable
 
             Both this method and ``get_tag_keys()`` will allow filtering by prefix (include/exclude),
-           both case sensitive and case insensitive; implementations should allow for this.
+            case sensitive and insensitive; implementations should allow for this.
 
         Args:
             resource_id
