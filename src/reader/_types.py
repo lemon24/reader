@@ -937,6 +937,11 @@ class StorageType(Protocol):  # pragma: no cover
 
             A dedicated ``get_tag_keys()`` method will be added in the future.
 
+        .. admonition:: Unstable
+
+            Both this method and ``get_tag_keys()`` will allow filtering by prefix (include/exclude),
+           both case sensitive and case insensitive; implementations should allow for this.
+
         Args:
             resource_id
             key
@@ -1103,6 +1108,12 @@ class SearchType(Protocol):  # pragma: no cover
 
     read-only methods
         :meth:`search_entries` :meth:`search_entry_counts`
+
+    .. admonition:: Unstable
+
+        In the future, search may receive object lifecycle methods (context manager + ``close()``),
+        to support implementations that do not share state with the storage.
+        If you need support for this, please open a issue.
 
     """
 
