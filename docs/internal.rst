@@ -114,8 +114,40 @@ Data objects
     :members:
 
 
+.. _storage:
+
 Storage
 -------
+
+*reader* storage is abstracted by two :abbr:`DAO (data access object)` protocols:
+:class:`StorageType`, which provides the main storage,
+and :class:`SearchType`, which provides search-related operations.
+
+Currently, there's only one supported implementation, based on SQLite.
+
+That said, it is possible to use an alternate implementation
+by passing a :class:`StorageType` instance
+via the ``_storage`` :func:`.make_reader` argument::
+
+    reader = make_reader('unused', _storage=MyStorage(...))
+
+The protocols are *mostly* stable,
+but some backwards-incompatible changes are expected in the future
+(known ones are marked below with *Unstable*).
+The long term goal is for the storage API to become stable,
+but at least one other implementation needs to exists before that.
+(Working on one? :doc:`Let me know! <contributing>`)
+
+
+.. admonition:: Unstable
+
+    Currently, search is tightly-bound to a storage implementation
+    (see :meth:`~.BoundSearchStorageType.make_search`).
+    In the future, it may be possible to mix and match
+    main storage and search implementations,
+    but :class:`StorageType` will likely need
+    additional capabilities to support this.
+
 
 .. autoattribute:: reader.Reader._storage
 .. autoattribute:: reader.Reader._search

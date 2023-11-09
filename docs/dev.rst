@@ -180,6 +180,17 @@ Other exceptions are possible; they will be marked aggresively as such.
   which served as inspiration for this.
 
 
+Internal API
+~~~~~~~~~~~~
+
+The :doc:`internal` is not stable,
+but the long term goal is for it to become so.
+
+In order to support / encourage potential users
+(e.g. plugins, alternate storage implementations),
+changes should at least be announced in the :doc:`changelog`.
+
+
 Supported Python versions
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

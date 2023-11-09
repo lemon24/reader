@@ -13,6 +13,8 @@ Unreleased
 
 * Stop using deprecated :mod:`sqlite3` datetime converters/adapters.
   (:issue:`321`)
+* Document the storage :doc:`internal`.
+  (:issue:`325`)
 * Change all :doc:`internal APIs <internal>` to use timezone-aware datetimes,
   with the timezone set to UTC.
   (:issue:`321`)
