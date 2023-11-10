@@ -157,7 +157,7 @@ class Search:
     def strip_html(text: SQLiteType) -> SQLiteType:
         # strip_html is not part of the Search interface,
         # but is part of the private API of this implementation.
-        return strip_html(text)
+        return strip_html(text)  # type: ignore[no-any-return]
 
     @wrap_exceptions(SearchError)
     def check_update_dependencies(self) -> None:

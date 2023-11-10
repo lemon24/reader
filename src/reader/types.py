@@ -40,7 +40,7 @@ class _namedtuple_compat:
     # TODO: can we get rid of _namedtuple_compat?
 
     def _replace(self, **kargs: Any) -> Self:
-        return dataclasses.replace(self, **kargs)  # type: ignore[type-var,misc]
+        return dataclasses.replace(self, **kargs)  # type: ignore[type-var]
 
     def _asdict(self) -> dict[str, Any]:
         return dict(self.__dict__)

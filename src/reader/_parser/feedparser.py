@@ -55,7 +55,7 @@ class FeedparserParser:
             resource,
             resolve_relative_uris=True,
             sanitize_html=True,
-            response_headers=headers,
+            response_headers=headers or {},  # type: ignore[arg-type]
         )
         return _process_feed(url, result)
 
