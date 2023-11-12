@@ -9,7 +9,7 @@ Changelog
 Version 3.10
 ------------
 
-Unreleased
+Released 2023-11-12
 
 * Stop using deprecated :mod:`sqlite3` datetime converters/adapters.
   (:issue:`321`)
