@@ -586,6 +586,9 @@ Counts API
 
 Detailed requirements and API discussion: :issue:`185#issuecomment-731743327`.
 
+Tracking additional statistics (e.g. :attr:`~Entry.read_modified`): :issue:`254`;
+how to expose said statistics: :issue:`254#issuecomment-1807064610`.
+
 
 Using None as a special argument value
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

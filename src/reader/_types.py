@@ -677,6 +677,10 @@ class StorageType(Protocol):  # pragma: no cover
       either directly, or as a context manager.
       Closing the storage in one thread should not close it in another thread.
 
+    Schema migrations are transparent to :class:`.Reader`.
+    The current storage implementation does them at initialization,
+    but others may require them to happen out-of-band with user intervention.
+
     All :class:`~datetime.datetime` attributes
     of all parameters and return values are timezone-aware,
     with the timezone set to :attr:`~datetime.timezone.utc`.
@@ -735,7 +739,7 @@ class StorageType(Protocol):  # pragma: no cover
     def close(self) -> None:
         """Called by :meth:`.Reader.close`."""
 
-    def add_feed(self, url: str, added: datetime) -> None:
+    def add_feed(self, url: str, /, added: datetime) -> None:
         """Called by :meth:`.Reader.add_feed`.
 
         Args:
@@ -747,7 +751,7 @@ class StorageType(Protocol):  # pragma: no cover
 
         """
 
-    def delete_feed(self, url: str) -> None:
+    def delete_feed(self, url: str, /) -> None:
         """Called by :meth:`.Reader.delete_feed`.
 
         Args:
@@ -758,7 +762,7 @@ class StorageType(Protocol):  # pragma: no cover
 
         """
 
-    def change_feed_url(self, old: str, new: str) -> None:
+    def change_feed_url(self, old: str, new: str, /) -> None:
         """Called by :meth:`.Reader.change_feed_url`.
 
         Args:
@@ -804,7 +808,7 @@ class StorageType(Protocol):  # pragma: no cover
 
         """
 
-    def set_feed_user_title(self, url: str, title: str | None) -> None:
+    def set_feed_user_title(self, url: str, title: str | None, /) -> None:
         """Called by :meth:`.Reader.set_feed_user_title`.
 
         Args:
@@ -816,7 +820,7 @@ class StorageType(Protocol):  # pragma: no cover
 
         """
 
-    def set_feed_updates_enabled(self, url: str, enabled: bool) -> None:
+    def set_feed_updates_enabled(self, url: str, enabled: bool, /) -> None:
         """Called by :meth:`.Reader.enable_feed_updates` and
         :meth:`.Reader.disable_feed_updates`.
 
@@ -829,7 +833,7 @@ class StorageType(Protocol):  # pragma: no cover
 
         """
 
-    def add_entry(self, intent: EntryUpdateIntent) -> None:
+    def add_entry(self, intent: EntryUpdateIntent, /) -> None:
         """Called by :meth:`.Reader.add_entry`.
 
         Args:
@@ -842,7 +846,7 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
     def delete_entries(
-        self, entries: Iterable[tuple[str, str]], *, added_by: str | None
+        self, entries: Iterable[tuple[str, str]], /, *, added_by: str | None
     ) -> None:
         r"""Called by :meth:`.Reader.delete_entry`.
 
@@ -887,8 +891,19 @@ class StorageType(Protocol):  # pragma: no cover
     def get_entry_counts(self, now: datetime, filter: EntryFilter) -> EntryCounts:
         """Called by :meth:`.Reader.get_entry_counts`.
 
+        .. admonition:: Unstable
+
+            In order to expose better feed interaction statistics,
+            this method will need to return more granular data.
+
+        .. admonition:: Unstable
+
+            In order to support :meth:`~SearchType.search_entry_counts`
+            of search implementations that are not bound to a storage,
+            this method will need to take an ``entries`` argument.
+
         Args:
-            now
+            now: Time :attr:`~.EntryCounts.averages` is relative to.
             filter
 
         Returns:
@@ -897,7 +912,11 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
     def set_entry_read(
-        self, entry: tuple[str, str], read: bool, modified: datetime | None
+        self,
+        entry: tuple[str, str],
+        read: bool,
+        modified: datetime | None,
+        /,
     ) -> None:
         """Called by :meth:`.Reader.set_entry_read`.
 
@@ -912,7 +931,11 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
     def set_entry_important(
-        self, entry: tuple[str, str], important: bool | None, modified: datetime | None
+        self,
+        entry: tuple[str, str],
+        important: bool | None,
+        modified: datetime | None,
+        /,
     ) -> None:
         """Called by :meth:`.Reader.set_entry_important`.
 
@@ -927,7 +950,7 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
     def get_tags(
-        self, resource_id: AnyResourceId, key: str | None = None
+        self, resource_id: AnyResourceId, key: str | None = None, /  # noqa: W504
     ) -> Iterable[tuple[str, JSONType]]:
         """Called by :meth:`.Reader.get_tags`.
 
@@ -952,11 +975,11 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
     @overload
-    def set_tag(self, resource_id: ResourceId, key: str) -> None:
+    def set_tag(self, resource_id: ResourceId, key: str, /) -> None:
         ...
 
     @overload
-    def set_tag(self, resource_id: ResourceId, key: str, value: JSONType) -> None:
+    def set_tag(self, resource_id: ResourceId, key: str, value: JSONType, /) -> None:
         ...
 
     def set_tag(
@@ -964,6 +987,7 @@ class StorageType(Protocol):  # pragma: no cover
         resource_id: ResourceId,
         key: str,
         value: MissingType | JSONType = MISSING,
+        /,
     ) -> None:
         """Called by :meth:`.Reader.set_tag`.
 
@@ -977,7 +1001,7 @@ class StorageType(Protocol):  # pragma: no cover
 
         """
 
-    def delete_tag(self, resource_id: ResourceId, key: str) -> None:
+    def delete_tag(self, resource_id: ResourceId, key: str, /) -> None:
         """Called by :meth:`.Reader.delete_tag`.
 
         Args:
@@ -1000,7 +1024,7 @@ class StorageType(Protocol):  # pragma: no cover
 
         """
 
-    def update_feed(self, intent: FeedUpdateIntent) -> None:
+    def update_feed(self, intent: FeedUpdateIntent, /) -> None:
         """Called by update logic.
 
         Args:
@@ -1011,7 +1035,7 @@ class StorageType(Protocol):  # pragma: no cover
 
         """
 
-    def set_feed_stale(self, url: str, stale: bool) -> None:
+    def set_feed_stale(self, url: str, stale: bool, /) -> None:
         """Used by update logic tests.
 
         Args:
@@ -1024,7 +1048,7 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
     def get_entries_for_update(
-        self, entries: Iterable[tuple[str, str]]
+        self, entries: Iterable[tuple[str, str]], /  # noqa: W504
     ) -> Iterable[EntryForUpdate | None]:
         """Called by update logic.
 
@@ -1037,7 +1061,7 @@ class StorageType(Protocol):  # pragma: no cover
 
         """
 
-    def add_or_update_entries(self, intents: Iterable[EntryUpdateIntent]) -> None:
+    def add_or_update_entries(self, intents: Iterable[EntryUpdateIntent], /) -> None:
         """Called by update logic.
 
         Args:
@@ -1048,7 +1072,7 @@ class StorageType(Protocol):  # pragma: no cover
 
         """
 
-    def get_entry_recent_sort(self, entry: tuple[str, str]) -> datetime:
+    def get_entry_recent_sort(self, entry: tuple[str, str], /) -> datetime:
         """Get :attr:`EntryUpdateIntent.recent_sort`.
 
         Used by plugins like :mod:`~.entry_dedupe`.
@@ -1065,7 +1089,7 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
     def set_entry_recent_sort(
-        self, entry: tuple[str, str], recent_sort: datetime
+        self, entry: tuple[str, str], recent_sort: datetime, /  # noqa: W504
     ) -> None:
         """Set :attr:`EntryUpdateIntent.recent_sort`.
 
@@ -1104,10 +1128,14 @@ class SearchType(Protocol):  # pragma: no cover
     There are two sets of methods that may be called at different times:
 
     management methods
-        :meth:`enable` :meth:`disable` :meth:`is_enabled` :meth:`update`
+        :meth:`enable`
+        :meth:`disable`
+        :meth:`is_enabled`
+        :meth:`update`
 
     read-only methods
-        :meth:`search_entries` :meth:`search_entry_counts`
+        :meth:`search_entries`
+        :meth:`search_entry_counts`
 
     .. admonition:: Unstable
 
@@ -1157,6 +1185,7 @@ class SearchType(Protocol):  # pragma: no cover
     def search_entries(
         self,
         query: str,
+        /,
         filter: EntryFilter,
         sort: SearchSortOrder,
         limit: int | None,
@@ -1182,13 +1211,13 @@ class SearchType(Protocol):  # pragma: no cover
         """
 
     def search_entry_counts(
-        self, query: str, now: datetime, filter: EntryFilter
+        self, query: str, /, now: datetime, filter: EntryFilter
     ) -> EntrySearchCounts:
         """Called by :meth:`.Reader.search_entry_counts`.
 
         Args:
             query
-            now
+            now: Time :attr:`~.EntrySearchCounts.averages` is relative to.
             filter
 
         Returns:
