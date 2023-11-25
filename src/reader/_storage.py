@@ -652,9 +652,7 @@ class Storage:
                 self.get_db(), query, context, chunk_size, last, make_feed_for_update
             )
 
-        # ignore needed may be due to possible regression in mypy 1.7
-        # https://github.com/python/mypy/issues/16451
-        yield from join_paginated_iter(inner, self.chunk_size)  # type: ignore[arg-type]
+        yield from join_paginated_iter(inner, self.chunk_size)
 
     def _get_entries_for_update(
         self, entries: Iterable[tuple[str, str]]
