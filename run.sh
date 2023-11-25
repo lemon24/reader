@@ -99,7 +99,7 @@ function typing {
 
 
 function docs {
-    make -C docs html "$@"
+    make -C docs html SPHINXOPTS="-W" "$@"
 }
 
 

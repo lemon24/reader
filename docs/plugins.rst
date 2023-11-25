@@ -67,8 +67,8 @@ However, the plugin used the internal :ref:`parser` API
 and stored old tweets alongside the rendered HTML content
 to avoid retrieving them again when updating the thread/entry.
 
-You can still find the code
-`on GitHub <https://github.com/lemon24/reader/blob/3.6/src/reader/_plugins/twitter.py>`_.
+You can still find the code on GitHub:
+`twitter.py <https://github.com/lemon24/reader/blob/3.6/src/reader/_plugins/twitter.py>`_.
 
 
 .. _tumblr_gdpr:
@@ -84,8 +84,8 @@ including machine-readable RSS feeds).
 This plugin is a good example of how to set cookies
 on the Requests session used to retrieve feeds.
 
-You can still find the code
-`on GitHub <https://github.com/lemon24/reader/blob/3.6/src/reader/_plugins/tumblr_gdpr.py>`_.
+You can still find the code on GitHub:
+`tumblr_gdpr.py <https://github.com/lemon24/reader/blob/3.6/src/reader/_plugins/tumblr_gdpr.py>`_.
 
 
 
