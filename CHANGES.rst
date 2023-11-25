@@ -11,6 +11,8 @@ Version 3.11
 
 Unreleased
 
+* Support Python 3.12. (:issue:`326`)
+
 
 Version 3.10
 ------------
