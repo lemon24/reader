@@ -18,7 +18,6 @@ from typing import Literal
 from typing import NamedTuple
 from typing import overload
 from typing import Protocol
-from typing import runtime_checkable
 from typing import TYPE_CHECKING
 from typing import Union
 
@@ -672,7 +671,6 @@ JSONType = Union[dict[str, JSONValue], list[JSONValue]]
 # see https://github.com/python/mypy/issues/8056.
 
 
-@runtime_checkable
 class FeedLike(Protocol):
     # We don't use "url: str" because we don't care if url is writable.
 
@@ -681,7 +679,6 @@ class FeedLike(Protocol):
         ...
 
 
-@runtime_checkable
 class EntryLike(Protocol):
     @property
     def id(self) -> str:  # pragma: no cover
@@ -703,24 +700,26 @@ AnyResourceId = Union[ResourceId, None, tuple[None], tuple[None, None]]
 
 
 def _feed_argument(feed: FeedInput) -> str:
-    if isinstance(feed, FeedLike):
-        rv = feed.url
-    elif isinstance(feed, tuple) and len(feed) == 1:
-        rv = feed[0]
-    else:
-        rv = feed
+    try:
+        rv = feed.url  # type: ignore[union-attr]
+    except AttributeError:
+        if isinstance(feed, tuple) and len(feed) == 1:
+            rv = feed[0]
+        else:
+            rv = feed
     if isinstance(rv, str):
         return rv
     raise ValueError(f'invalid feed argument: {feed!r}')
 
 
 def _entry_argument(entry: EntryInput) -> tuple[str, str]:
-    if isinstance(entry, EntryLike):
-        rv = _feed_argument(entry.feed_url), entry.id
-    elif isinstance(entry, tuple) and len(entry) == 2:
-        rv = entry
-    else:
-        rv = None
+    try:
+        rv = entry.feed_url, entry.id  # type: ignore[union-attr]
+    except AttributeError:
+        if isinstance(entry, tuple) and len(entry) == 2:
+            rv = entry
+        else:
+            rv = None
     if rv:
         feed_url, entry_id = rv
         if isinstance(feed_url, str) and isinstance(entry_id, str):
