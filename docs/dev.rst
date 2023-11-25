@@ -34,7 +34,7 @@ but I will prioritize supporting :doc:`contributors <contributing>`
 
 * OPML support, :issue:`165`
 * :ref:`deleting entries <deleting entries>`
-* more feed interaction statistics, :issue:`254`
+* :ref:`feed interaction statistics <counts api>`
 
 * security
 
@@ -57,7 +57,7 @@ but I will prioritize supporting :doc:`contributors <contributing>`
 
   * :ref:`searchable tag values <searchable tags>`, e.g. for comments
   * :ref:`unification with entry.read/important <entry flag unification>`
-  * filter entries by entry tags
+  * filter entries by entry tags, :issue:`328`
   * optimistic locking, :issue:`308`
   * filter tags by prefix, :issue:`309`
 
@@ -581,6 +581,8 @@ Requirements, open questions, and how it interacts with :mod:`~reader.plugins.en
 A summary of why it isn't easy to do: :issue:`301#issuecomment-1442423151`.
 
 
+.. _counts api:
+
 Counts API
 ~~~~~~~~~~
 
@@ -588,6 +590,11 @@ Detailed requirements and API discussion: :issue:`185#issuecomment-731743327`.
 
 Tracking additional statistics (e.g. :attr:`~Entry.read_modified`): :issue:`254`;
 how to expose said statistics: :issue:`254#issuecomment-1807064610`.
+
+Notebook with a successful attempt to determine a feed "usefulness" score
+based on how many entries I mark as read / important / don't care;
+highlights a number of gaps in the *reader* API:
+https://gist.github.com/lemon24/93222ef4bc4a775092b56546a6e6cd0f
 
 
 Using None as a special argument value
