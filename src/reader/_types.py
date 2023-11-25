@@ -490,6 +490,7 @@ class EntryFilter(NamedTuple):
     read: bool | None = None
     important: TristateFilter = 'any'
     has_enclosures: bool | None = None
+    tags: TagFilter = ()
     feed_tags: TagFilter = ()
 
     @classmethod
@@ -500,6 +501,7 @@ class EntryFilter(NamedTuple):
         read: bool | None = None,
         important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
+        tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
     ) -> Self:
         feed_url = _feed_argument(feed) if feed is not None else None
@@ -517,10 +519,17 @@ class EntryFilter(NamedTuple):
         if has_enclosures not in (None, False, True):
             raise ValueError("has_enclosures should be one of (None, False, True)")
 
+        tag_filter = tag_filter_argument(tags)
         feed_tag_filter = tag_filter_argument(feed_tags, 'feed_tags')
 
         return cls(
-            feed_url, entry_id, read, important_filter, has_enclosures, feed_tag_filter
+            feed_url,
+            entry_id,
+            read,
+            important_filter,
+            has_enclosures,
+            tag_filter,
+            feed_tag_filter,
         )
 
 

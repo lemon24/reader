@@ -1291,7 +1291,7 @@ class Storage:
             WHERE (
                 {', '.join(columns)}
             ) = (
-                {', '.join(('?' for _ in columns))}
+                {', '.join('?' for _ in columns)}
             )
         """
         params = resource_id + (key,)
@@ -1512,7 +1512,7 @@ def apply_entry_filter(
     query: Query, filter: EntryFilter, keyword: str = 'WHERE'
 ) -> dict[str, Any]:
     add = getattr(query, keyword)
-    feed_url, entry_id, read, important, has_enclosures, feed_tags = filter
+    feed_url, entry_id, read, important, has_enclosures, tags, feed_tags = filter
 
     context = {}
 
@@ -1538,6 +1538,7 @@ def apply_entry_filter(
             """
         )
 
+    context.update(apply_entry_tags_filter(query, tags, keyword=keyword))
     context.update(
         apply_feed_tags_filter(query, feed_tags, 'entries.feed', keyword=keyword)
     )
@@ -1546,14 +1547,67 @@ def apply_entry_filter(
 
 
 def apply_feed_tags_filter(
-    query: Query,
-    tags: TagFilter,
-    url_column: str,
-    keyword: str = 'WHERE',
-) -> dict[str, Any]:
+    query: Query, tags: TagFilter, url_column: str, keyword: str = 'WHERE'
+) -> dict[str, str]:
+    context, tags_cte, tags_count_cte = apply_tags_filter(
+        query, tags, keyword, 'feed_tags'
+    )
+
+    if tags_cte:
+        query.WITH((tags_cte, f"SELECT key FROM feed_tags WHERE feed = {url_column}"))
+
+    if tags_count_cte:
+        query.WITH(
+            (
+                tags_count_cte,
+                f"SELECT count(key) FROM feed_tags WHERE feed = {url_column}",
+            )
+        )
+
+    return context
+
+
+def apply_entry_tags_filter(
+    query: Query, tags: TagFilter, keyword: str = 'WHERE'
+) -> dict[str, str]:
+    context, tags_cte, tags_count_cte = apply_tags_filter(
+        query, tags, keyword, 'entry_tags'
+    )
+
+    if tags_cte:
+        query.WITH(
+            (
+                tags_cte,
+                """
+                SELECT key FROM entry_tags
+                WHERE (id, feed) = (entries.id, entries.feed)
+                """,
+            )
+        )
+
+    if tags_count_cte:
+        query.WITH(
+            (
+                tags_count_cte,
+                """
+                SELECT count(key) FROM entry_tags
+                WHERE (id, feed) = (entries.id, entries.feed)
+                """,
+            )
+        )
+
+    return context
+
+
+def apply_tags_filter(
+    query: Query, tags: TagFilter, keyword: str, base_table: str
+) -> tuple[dict[str, str], str | None, str | None]:
     add = getattr(query, keyword)
 
     context = {}
+
+    tags_cte = f'__{base_table}'
+    tags_count_cte = f'__{base_table}_count'
 
     add_tags_cte = False
     add_tags_count_cte = False
@@ -1566,31 +1620,26 @@ def apply_feed_tags_filter(
 
         for maybe_tag in subtags:
             if isinstance(maybe_tag, bool):
-                tag_add(f"{'NOT' if not maybe_tag else ''} (SELECT * FROM tags_count)")
+                tag_add(
+                    f"{'NOT' if not maybe_tag else ''} (SELECT * FROM {tags_count_cte})"
+                )
                 add_tags_count_cte = True
                 continue
 
             is_negation, tag = maybe_tag
-            tag_name = f'__tag_{next_tag_id}'
+            tag_name = f'__{base_table}_{next_tag_id}'
             next_tag_id += 1
             context[tag_name] = tag
-            tag_add(f":{tag_name} {'NOT' if is_negation else ''} IN tags")
+            tag_add(f":{tag_name} {'NOT' if is_negation else ''} IN {tags_cte}")
             add_tags_cte = True
 
         add(str(tag_query))
 
-    if add_tags_cte:
-        query.WITH(("tags", f"SELECT key FROM feed_tags WHERE feed = {url_column}"))
-
-    if add_tags_count_cte:
-        query.WITH(
-            (
-                "tags_count",
-                f"SELECT count(key) FROM feed_tags WHERE feed = {url_column}",
-            )
-        )
-
-    return context
+    return (
+        context,
+        tags_cte if add_tags_cte else None,
+        tags_count_cte if add_tags_count_cte else None,
+    )
 
 
 def make_recent_last_select(id_prefix: str = 'entries.') -> Sequence[Any]:

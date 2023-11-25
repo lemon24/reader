@@ -1092,6 +1092,7 @@ class Reader:
         read: bool | None = None,
         important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
+        tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
         sort: EntrySort = 'recent',
         limit: int | None = None,
@@ -1177,7 +1178,7 @@ class Reader:
         # https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
 
         filter = EntryFilter.from_args(
-            feed, entry, read, important, has_enclosures, feed_tags
+            feed, entry, read, important, has_enclosures, tags, feed_tags
         )
 
         if sort not in ('recent', 'random'):
@@ -1246,6 +1247,7 @@ class Reader:
         read: bool | None = None,
         important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
+        tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
     ) -> EntryCounts:
         """Count all or some of the entries.
@@ -1280,7 +1282,7 @@ class Reader:
         """
 
         filter = EntryFilter.from_args(
-            feed, entry, read, important, has_enclosures, feed_tags
+            feed, entry, read, important, has_enclosures, tags, feed_tags
         )
         now = self._now()
         return self._storage.get_entry_counts(now, filter)
@@ -1641,6 +1643,7 @@ class Reader:
         read: bool | None = None,
         important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
+        tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
         sort: SearchSortOrder = 'relevant',
         limit: int | None = None,
@@ -1750,7 +1753,7 @@ class Reader:
 
         """
         filter = EntryFilter.from_args(
-            feed, entry, read, important, has_enclosures, feed_tags
+            feed, entry, read, important, has_enclosures, tags, feed_tags
         )
 
         if sort not in ('relevant', 'recent', 'random'):
@@ -1776,6 +1779,7 @@ class Reader:
         read: bool | None = None,
         important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
+        tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
     ) -> EntrySearchCounts:
         """Count entries matching a full-text search query.
@@ -1820,7 +1824,7 @@ class Reader:
         """
 
         filter = EntryFilter.from_args(
-            feed, entry, read, important, has_enclosures, feed_tags
+            feed, entry, read, important, has_enclosures, tags, feed_tags
         )
         now = self._now()
         return self._search.search_entry_counts(query, now, filter)
