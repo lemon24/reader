@@ -1207,7 +1207,7 @@ class Storage:
                 f"SELECT key, value FROM {i.table_prefix}tags"
                 for i in SCHEMA_INFO.values()
             )
-            query.WITH(('tags', union)).FROM('tags')
+            query.with_('tags', union).FROM('tags')
             query.SELECT_DISTINCT("'null'")
 
         if key is not None:
@@ -1554,14 +1554,12 @@ def apply_feed_tags_filter(
     )
 
     if tags_cte:
-        query.WITH((tags_cte, f"SELECT key FROM feed_tags WHERE feed = {url_column}"))
+        query.with_(tags_cte, f"SELECT key FROM feed_tags WHERE feed = {url_column}")
 
     if tags_count_cte:
-        query.WITH(
-            (
-                tags_count_cte,
-                f"SELECT count(key) FROM feed_tags WHERE feed = {url_column}",
-            )
+        query.with_(
+            tags_count_cte,
+            f"SELECT count(key) FROM feed_tags WHERE feed = {url_column}",
         )
 
     return context
@@ -1575,25 +1573,21 @@ def apply_entry_tags_filter(
     )
 
     if tags_cte:
-        query.WITH(
-            (
-                tags_cte,
-                """
-                SELECT key FROM entry_tags
-                WHERE (id, feed) = (entries.id, entries.feed)
-                """,
-            )
+        query.with_(
+            tags_cte,
+            """
+            SELECT key FROM entry_tags
+            WHERE (id, feed) = (entries.id, entries.feed)
+            """,
         )
 
     if tags_count_cte:
-        query.WITH(
-            (
-                tags_count_cte,
-                """
-                SELECT count(key) FROM entry_tags
-                WHERE (id, feed) = (entries.id, entries.feed)
-                """,
-            )
+        query.with_(
+            tags_count_cte,
+            """
+            SELECT count(key) FROM entry_tags
+            WHERE (id, feed) = (entries.id, entries.feed)
+            """,
         )
 
     return context
@@ -1661,27 +1655,25 @@ def apply_recent(
     # WARNING: Always keep the entries_by_recent index in sync
     # with the ORDER BY of the CTE below.
 
-    query.WITH(
-        (
-            'ids',
-            """
-            SELECT
-                feed,
-                id,
-                last_updated,
-                recent_sort,
-                coalesce(published, updated, first_updated) as kinda_published,
-                - feed_order as negative_feed_order
-            FROM entries
-            ORDER BY
-                recent_sort DESC,
-                kinda_published DESC,
-                feed DESC,
-                last_updated DESC,
-                negative_feed_order DESC,
-                id DESC
-            """,
-        ),
+    query.with_(
+        'ids',
+        """
+        SELECT
+            feed,
+            id,
+            last_updated,
+            recent_sort,
+            coalesce(published, updated, first_updated) as kinda_published,
+            - feed_order as negative_feed_order
+        FROM entries
+        ORDER BY
+            recent_sort DESC,
+            kinda_published DESC,
+            feed DESC,
+            last_updated DESC,
+            negative_feed_order DESC,
+            id DESC
+        """,
     )
     query.JOIN(f"ids ON (ids.id, ids.feed) = ({id_prefix}id, {id_prefix}feed)")
 
@@ -1726,7 +1718,7 @@ def make_entry_counts_query(
 ) -> tuple[Query, dict[str, Any]]:
     query = (
         Query()
-        .WITH(('entries_filtered', str(entries_query)))
+        .with_('entries_filtered', str(entries_query))
         .SELECT(
             'count(*)',
             'coalesce(sum(read == 1), 0)',
@@ -1768,7 +1760,7 @@ def make_entry_counts_query(
             .HAVING(f"kfu BETWEEN :{start_param} AND :now")
         )
 
-        query.WITH((f'kfu_{period_i}', str(kfu_query)))
+        query.with_(f'kfu_{period_i}', str(kfu_query))
         query.SELECT(f"(SELECT count(*) / :{days_param} FROM kfu_{period_i})")
 
     return query, context

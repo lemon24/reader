@@ -851,16 +851,14 @@ class Search:
     ) -> EntrySearchCounts:
         entries_query = (
             Query()
-            .WITH(
-                (
-                    "search",
-                    """
+            .with_(
+                "search",
+                """
                     SELECT _id, _feed
                     FROM entries_search
                     WHERE entries_search MATCH :query
                     GROUP BY _id, _feed
                     """,
-                )
             )
             .SELECT('id', 'feed')
             .FROM('entries')
@@ -920,7 +918,7 @@ def make_search_entries_query(
 
     query = (
         Query()
-        .WITH(("search", str(search)))
+        .with_("search", str(search))
         .SELECT(
             "search._id",
             "search._feed",

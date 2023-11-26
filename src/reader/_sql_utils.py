@@ -37,6 +37,7 @@ from typing import TypeVar
 from typing import Union
 
 if TYPE_CHECKING:  # pragma: no cover
+    import sqlite3
     from typing_extensions import Self
 
 
@@ -196,14 +197,12 @@ class BaseQuery:
 
 
 if TYPE_CHECKING:  # pragma: no cover
-    _SWMBase = BaseQuery
+    _MixinBase = BaseQuery
 else:
-    _SWMBase = object
-
-_SWM = TypeVar('_SWM', bound='ScrollingWindowMixin')
+    _MixinBase = object
 
 
-class ScrollingWindowMixin(_SWMBase):
+class ScrollingWindowMixin(_MixinBase):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self.scrolling_window_order_by()
@@ -238,12 +237,13 @@ class ScrollingWindowMixin(_SWMBase):
         return [(self.__make_label(i), t) for i, t in enumerate(last or ())]
 
 
-class Query(ScrollingWindowMixin, BaseQuery):
+class SugarMixin(_MixinBase):
+    def with_(self, alias: str, value: str) -> Self:
+        return self.WITH((alias, value))
+
+
+class Query(SugarMixin, ScrollingWindowMixin, BaseQuery):
     pass
-
-
-if TYPE_CHECKING:  # pragma: no cover
-    import sqlite3
 
 
 def paginated_query(
