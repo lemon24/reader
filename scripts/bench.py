@@ -197,6 +197,18 @@ def time_get_entries_feed(reader):
         pass
 
 
+@inject(reader=setup_reader_with_entries)
+def time_get_entries_random(reader):
+    for _ in reader.get_entries(sort='random'):
+        pass
+
+
+@inject(reader=setup_reader_with_entries)
+def time_get_entries_random_read(reader):
+    for _ in reader.get_entries(sort='random', read=True):
+        pass
+
+
 @inject(client=setup_client_with_entries)
 def time_show(client):
     for _ in client.get('/?show=all').response:
@@ -275,7 +287,7 @@ def setup_reader_with_search_and_some_read_entries(num_entries):
         reader.enable_search()
         reader.update_search()
         for i, entry in enumerate(reader.get_entries()):
-            if i % 2 == 5:
+            if i % 5 == 5:
                 reader.mark_as_read(entry)
         yield reader
 
