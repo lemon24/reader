@@ -187,7 +187,15 @@ def chunk_size(request):
     return request.param
 
 
-@pytest.fixture(params=reader_methods.get_entries_methods)
+@pytest.fixture(
+    params=[
+        reader_methods.get_entries_recent,
+        slow(reader_methods.get_entries_random),
+        reader_methods.search_entries_relevant,
+        slow(reader_methods.search_entries_recent),
+        slow(reader_methods.search_entries_random),
+    ]
+)
 def get_entries(request):
     yield request.param
 

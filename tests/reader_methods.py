@@ -93,16 +93,6 @@ for name, obj in dict(globals()).items():
         obj.counts = search_entry_counts
 
 
-get_entries_methods = [
-    # defaults not included
-    get_entries_recent,
-    get_entries_random,
-    search_entries_relevant,
-    search_entries_recent,
-    search_entries_random,
-]
-
-
 class _update_feed_methods:
     # TODO: we can remove the update_feeds() variant if we add a test to confirm update_feeds is a thin wrapper over update_feeds_iter
 
