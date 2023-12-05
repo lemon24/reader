@@ -8,39 +8,42 @@ from utils import utc_datetime as datetime
 ALL_IDS = {(1, 1), (1, 2), (2, 1), (3, 1)}
 
 TAGS_AND_EXPECTED_IDS = [
-    ((), ALL_IDS),
-    ((None,), ALL_IDS),
-    (([],), ALL_IDS),
-    (([[]],), ALL_IDS),
-    ((True,), ALL_IDS - {(3, 1)}),
-    (([True],), ALL_IDS - {(3, 1)}),
-    ((False,), {(3, 1)}),
-    (([False],), {(3, 1)}),
-    (([True, False],), set()),
-    (([[True, False]],), ALL_IDS),
-    ((['tag'],), ALL_IDS - {(3, 1)}),
-    (([['tag']],), ALL_IDS - {(3, 1)}),
-    ((['tag', 'tag'],), ALL_IDS - {(3, 1)}),
-    (([['tag'], ['tag']],), ALL_IDS - {(3, 1)}),
-    (([['tag', 'tag']],), ALL_IDS - {(3, 1)}),
-    ((['-tag'],), {(3, 1)}),
-    ((['unknown'],), set()),
-    ((['-unknown'],), ALL_IDS),
-    ((['first'],), {(1, 1), (1, 2)}),
-    ((['second'],), {(2, 1)}),
-    ((['first', 'second'],), set()),
-    (([['first'], ['second']],), set()),
-    (([['first', 'second']],), {(1, 1), (1, 2), (2, 1)}),
-    ((['first', 'tag'],), {(1, 1), (1, 2)}),
-    ((['second', 'tag'],), {(2, 1)}),
-    (([['first', 'second'], 'tag'],), {(1, 1), (1, 2), (2, 1)}),
-    (([['first'], ['tag']],), {(1, 1), (1, 2)}),
-    (([['first', 'tag']],), {(1, 1), (1, 2), (2, 1)}),
-    ((['-first', 'tag'],), {(2, 1)}),
-    (([['first', '-tag']],), ALL_IDS - {(2, 1)}),
-    (([[False, 'first']],), {(1, 1), (1, 2), (3, 1)}),
-    (([True, '-first'],), {(2, 1)}),
+    (None, ALL_IDS),
+    ([], ALL_IDS),
+    ([[]], ALL_IDS),
+    (True, ALL_IDS - {(3, 1)}),
+    ([True], ALL_IDS - {(3, 1)}),
+    (False, {(3, 1)}),
+    ([False], {(3, 1)}),
+    ([True, False], set()),
+    ([[True, False]], ALL_IDS),
+    (['tag'], ALL_IDS - {(3, 1)}),
+    ([['tag']], ALL_IDS - {(3, 1)}),
+    (['tag', 'tag'], ALL_IDS - {(3, 1)}),
+    ([['tag'], ['tag']], ALL_IDS - {(3, 1)}),
+    ([['tag', 'tag']], ALL_IDS - {(3, 1)}),
+    (['-tag'], {(3, 1)}),
+    (['unknown'], set()),
+    (['-unknown'], ALL_IDS),
+    (['first'], {(1, 1), (1, 2)}),
+    (['second'], {(2, 1)}),
+    (['first', 'second'], set()),
+    ([['first'], ['second']], set()),
+    ([['first', 'second']], {(1, 1), (1, 2), (2, 1)}),
+    (['first', 'tag'], {(1, 1), (1, 2)}),
+    (['second', 'tag'], {(2, 1)}),
+    ([['first', 'second'], 'tag'], {(1, 1), (1, 2), (2, 1)}),
+    ([['first'], ['tag']], {(1, 1), (1, 2)}),
+    ([['first', 'tag']], {(1, 1), (1, 2), (2, 1)}),
+    (['-first', 'tag'], {(2, 1)}),
+    ([['first', '-tag']], ALL_IDS - {(2, 1)}),
+    ([[False, 'first']], {(1, 1), (1, 2), (3, 1)}),
+    ([True, '-first'], {(2, 1)}),
 ]
+
+
+def resource_ids_to_int(resource_ids):
+    return {tuple(map(eval, rid)) for rid in resource_ids}
 
 
 @pytest.fixture
@@ -74,32 +77,32 @@ def reader_feed_tags(reader):
     return reader
 
 
-@pytest.mark.parametrize('args, expected', TAGS_AND_EXPECTED_IDS)
+@pytest.mark.parametrize('tags, expected', TAGS_AND_EXPECTED_IDS)
 @rename_argument('reader', 'reader_feed_tags')
-def test_entries_by_feed_tags(reader, get_entries, args, expected):
+def test_entries_by_feed_tags(reader, get_entries, tags, expected):
     get_entries.after_update(reader)
 
-    assert len(args) <= 1
-    kwargs = {'feed_tags': a for a in args}
+    resource_ids = [e.resource_id for e in get_entries(reader, feed_tags=tags)]
+    assert resource_ids_to_int(resource_ids) == expected, tags
 
-    actual = {tuple(map(eval, o.resource_id)) for o in get_entries(reader, **kwargs)}
-    assert actual == expected, args
+    if tags is None:
+        assert resource_ids == [e.resource_id for e in get_entries(reader)]
 
 
 # TODO: maybe test all the get_feeds sort orders (maybe fixture?)
 
 
 @pytest.mark.parametrize('get_feeds', [get_feeds])
-@pytest.mark.parametrize('args, expected', TAGS_AND_EXPECTED_IDS)
+@pytest.mark.parametrize('tags, expected', TAGS_AND_EXPECTED_IDS)
 @rename_argument('reader', 'reader_feed_tags')
-def test_feeds_by_tags(reader, get_feeds, args, expected):
+def test_feeds_by_tags(reader, get_feeds, tags, expected):
     get_feeds.after_update(reader)
 
-    assert len(args) <= 1
-    kwargs = {'tags': a for a in args}
+    resource_ids = [f.resource_id for f in get_feeds(reader, tags=tags)]
+    assert resource_ids_to_int(resource_ids) == {t[:1] for t in expected}, tags
 
-    actual = {eval(o.resource_id[0]) for o in get_feeds(reader, **kwargs)}
-    assert actual == {t[0] for t in expected}, args
+    if tags is None:
+        assert resource_ids == [f.resource_id for f in get_feeds(reader)]
 
 
 def test_entry_tags_basic(reader):
