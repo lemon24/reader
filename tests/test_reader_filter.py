@@ -79,11 +79,11 @@ def test_entries_by_feed_tags(reader, get_entries, tags, expected):
     reader.set_tag('2', 'tag')
     reader.set_tag('2', 'second')
 
-    resource_ids = [e.resource_id for e in get_entries(reader, feed_tags=tags)]
+    resource_ids = {e.resource_id for e in get_entries(reader, feed_tags=tags)}
     assert resource_ids_to_int(resource_ids) == expected, tags
 
     if tags is None:
-        assert resource_ids == [e.resource_id for e in get_entries(reader)]
+        assert resource_ids == {e.resource_id for e in get_entries(reader)}
 
 
 # TODO: maybe test all the get_feeds sort orders (maybe fixture?)
@@ -100,11 +100,11 @@ def test_feeds_by_feed_tags(reader, get_feeds, tags, expected):
     reader.set_tag('2', 'tag')
     reader.set_tag('2', 'second')
 
-    resource_ids = [f.resource_id for f in get_feeds(reader, tags=tags)]
+    resource_ids = {f.resource_id for f in get_feeds(reader, tags=tags)}
     assert resource_ids_to_int(resource_ids) == {t[:1] for t in expected}, tags
 
     if tags is None:
-        assert resource_ids == [f.resource_id for f in get_feeds(reader)]
+        assert resource_ids == {f.resource_id for f in get_feeds(reader)}
 
 
 @pytest.mark.parametrize('tags, expected', TAGS_AND_EXPECTED_IDS)
@@ -119,11 +119,11 @@ def test_entries_by_entry_tags(reader, get_entries, tags, expected):
     reader.set_tag(('2', '1'), 'tag')
     reader.set_tag(('2', '1'), 'second')
 
-    resource_ids = [e.resource_id for e in get_entries(reader, tags=tags)]
+    resource_ids = {e.resource_id for e in get_entries(reader, tags=tags)}
     assert resource_ids_to_int(resource_ids) == expected, tags
 
     if tags is None:
-        assert resource_ids == [e.resource_id for e in get_entries(reader)]
+        assert resource_ids == {e.resource_id for e in get_entries(reader)}
 
 
 # END tag filtering tests
