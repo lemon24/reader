@@ -4,6 +4,8 @@ from reader_methods import get_feeds
 from utils import rename_argument
 from utils import utc_datetime as datetime
 
+from reader import make_reader
+
 
 # BEGIN tag filtering tests
 
@@ -44,8 +46,7 @@ TAGS_AND_EXPECTED_IDS = [
 ]
 
 
-@pytest.fixture
-def reader_for_tags(reader):
+def setup_reader_for_tags(reader):
     reader._parser = parser = Parser()
 
     one = parser.feed(1, datetime(2010, 1, 1))  # tag, first
@@ -62,19 +63,40 @@ def reader_for_tags(reader):
         reader.add_feed(feed)
 
     reader.update_feeds()
-    return reader
+    reader.update_search()
+
+
+@pytest.fixture(scope='module')
+def reader_feed_tags():
+    with make_reader(':memory:') as reader:
+        setup_reader_for_tags(reader)
+
+        reader.set_tag('1', 'tag')
+        reader.set_tag('1', 'first')
+        reader.set_tag('2', 'tag')
+        reader.set_tag('2', 'second')
+
+        yield reader
+
+
+@pytest.fixture(scope='module')
+def reader_entry_tags():
+    with make_reader(':memory:') as reader:
+        setup_reader_for_tags(reader)
+
+        reader.set_tag(('1', '1, 1'), 'tag')
+        reader.set_tag(('1', '1, 2'), 'tag')
+        reader.set_tag(('1', '1, 1'), 'first')
+        reader.set_tag(('1', '1, 2'), 'first')
+        reader.set_tag(('2', '2, 1'), 'tag')
+        reader.set_tag(('2', '2, 1'), 'second')
+
+        yield reader
 
 
 @pytest.mark.parametrize('tags, expected', TAGS_AND_EXPECTED_IDS)
-@rename_argument('reader', 'reader_for_tags')
+@rename_argument('reader', 'reader_feed_tags')
 def test_entries_by_feed_tags(reader, get_entries, tags, expected):
-    get_entries.after_update(reader)
-
-    reader.set_tag('1', 'tag')
-    reader.set_tag('1', 'first')
-    reader.set_tag('2', 'tag')
-    reader.set_tag('2', 'second')
-
     actual = {eval(e.id) for e in get_entries(reader, feed_tags=tags)}
     assert actual == expected
 
@@ -87,15 +109,8 @@ def test_entries_by_feed_tags(reader, get_entries, tags, expected):
 
 @pytest.mark.parametrize('get_feeds', [get_feeds])
 @pytest.mark.parametrize('tags, expected', TAGS_AND_EXPECTED_IDS)
-@rename_argument('reader', 'reader_for_tags')
+@rename_argument('reader', 'reader_feed_tags')
 def test_feeds_by_feed_tags(reader, get_feeds, tags, expected):
-    get_feeds.after_update(reader)
-
-    reader.set_tag('1', 'tag')
-    reader.set_tag('1', 'first')
-    reader.set_tag('2', 'tag')
-    reader.set_tag('2', 'second')
-
     actual = {eval(f.url) for f in get_feeds(reader, tags=tags)}
     assert actual == {t[0] for t in expected}
 
@@ -104,17 +119,8 @@ def test_feeds_by_feed_tags(reader, get_feeds, tags, expected):
 
 
 @pytest.mark.parametrize('tags, expected', TAGS_AND_EXPECTED_IDS)
-@rename_argument('reader', 'reader_for_tags')
+@rename_argument('reader', 'reader_entry_tags')
 def test_entries_by_entry_tags(reader, get_entries, tags, expected):
-    get_entries.after_update(reader)
-
-    reader.set_tag(('1', '1, 1'), 'tag')
-    reader.set_tag(('1', '1, 2'), 'tag')
-    reader.set_tag(('1', '1, 1'), 'first')
-    reader.set_tag(('1', '1, 2'), 'first')
-    reader.set_tag(('2', '2, 1'), 'tag')
-    reader.set_tag(('2', '2, 1'), 'second')
-
     actual = {eval(e.id) for e in get_entries(reader, tags=tags)}
     assert actual == expected
 
