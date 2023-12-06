@@ -435,10 +435,8 @@ def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
     rv = []
     for subtags in tags:
         if isinstance(subtags, (bool, str)):
-            rv.append([normalize_tag(subtags)])
-            continue
-
-        if not isinstance(subtags, Sequence):
+            subtags = [subtags]
+        elif not isinstance(subtags, Sequence):
             raise ValueError(
                 f"the elements of {name} must be strings, bool or string/bool sequences"
             )
@@ -447,6 +445,29 @@ def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
             continue
 
         rv.append(list(map(normalize_tag, subtags)))
+
+    return unique_tags(rv)
+
+
+def unique_tags(tags: TagFilter) -> TagFilter:
+    # ಠ_ಠ this wouldn't be needed if we used frozensets
+    # (but they make examples and tests look bad)
+
+    rv = []
+    rv_seen = set()
+
+    for subtags in tags:
+        subtags_rv = []
+        subtags_seen = set()
+        for tag in subtags:
+            if tag not in subtags_seen:
+                subtags_rv.append(tag)
+                subtags_seen.add(tag)
+
+        subtags_seen_frozen = frozenset(subtags_seen)
+        if subtags_seen_frozen not in rv_seen:
+            rv.append(subtags_rv)
+            rv_seen.add(subtags_seen_frozen)
 
     return rv
 
