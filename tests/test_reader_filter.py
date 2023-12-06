@@ -103,19 +103,22 @@ def test_entries_by_feed_tags(reader, get_entries, tags, expected):
     if tags is None:
         assert actual == {eval(e.id) for e in get_entries(reader)}
 
+    assert get_entries.counts(reader, feed_tags=tags).total == len(actual)
+
 
 # TODO: maybe test all the get_feeds sort orders (maybe fixture?)
 
 
-@pytest.mark.parametrize('get_feeds', [get_feeds])
 @pytest.mark.parametrize('tags, expected', TAGS_AND_EXPECTED_IDS)
 @rename_argument('reader', 'reader_feed_tags')
-def test_feeds_by_feed_tags(reader, get_feeds, tags, expected):
-    actual = {eval(f.url) for f in get_feeds(reader, tags=tags)}
+def test_feeds_by_feed_tags(reader, tags, expected):
+    actual = {eval(f.url) for f in reader.get_feeds(tags=tags)}
     assert actual == {t[0] for t in expected}
 
     if tags is None:
         assert actual == {eval(f.url) for f in get_feeds(reader)}
+
+    assert reader.get_feed_counts(tags=tags).total == len(actual)
 
 
 @pytest.mark.parametrize('tags, expected', TAGS_AND_EXPECTED_IDS)
@@ -126,6 +129,8 @@ def test_entries_by_entry_tags(reader, get_entries, tags, expected):
 
     if tags is None:
         assert actual == {eval(e.id) for e in get_entries(reader)}
+
+    assert get_entries.counts(reader, tags=tags).total == len(actual)
 
 
 # END tag filtering tests
