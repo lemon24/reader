@@ -141,6 +141,32 @@ ALL_IDS = {
 }
 
 
+@pytest.fixture(scope='module')
+def reader_entries():
+    with make_reader(':memory:') as reader:
+        reader._parser = parser = Parser()
+
+        one = parser.feed(1, datetime(2010, 1, 1))
+        one_one = parser.entry(1, 1, datetime(2010, 1, 1))
+        one_two = parser.entry(1, 2, datetime(2010, 2, 1))  # read
+        one_three = parser.entry(1, 3, datetime(2010, 2, 1))  # important
+        one_four = parser.entry(
+            1, 4, datetime(2010, 2, 1), enclosures=[Enclosure('http://e2')]
+        )
+        two = parser.feed(2, datetime(2010, 1, 1))
+        two_one = parser.entry(2, 1, datetime(2010, 2, 1))
+
+        reader.add_feed(one.url)
+        reader.add_feed(two.url)
+        reader.update_feeds()
+        reader.update_search()
+
+        reader.mark_entry_as_read((one.url, one_two.id))
+        reader.mark_entry_as_important((one.url, one_three.id))
+
+        yield reader
+
+
 @pytest.mark.parametrize(
     'kwargs, expected',
     [
@@ -175,28 +201,8 @@ ALL_IDS = {
         (dict(entry=('inexistent', 'also-inexistent')), set()),
     ],
 )
+@rename_argument('reader', 'reader_entries')
 def test_entries(reader, get_entries, kwargs, expected):
-    parser = Parser()
-    reader._parser = parser
-
-    one = parser.feed(1, datetime(2010, 1, 1))
-    one_one = parser.entry(1, 1, datetime(2010, 1, 1))
-    one_two = parser.entry(1, 2, datetime(2010, 2, 1))  # read
-    one_three = parser.entry(1, 3, datetime(2010, 2, 1))  # important
-    one_four = parser.entry(
-        1, 4, datetime(2010, 2, 1), enclosures=[Enclosure('http://e2')]
-    )
-    two = parser.feed(2, datetime(2010, 1, 1))
-    two_one = parser.entry(2, 1, datetime(2010, 2, 1))
-
-    reader.add_feed(one.url)
-    reader.add_feed(two.url)
-    reader.update_feeds()
-    get_entries.after_update(reader)
-
-    reader.mark_entry_as_read((one.url, one_two.id))
-    reader.mark_entry_as_important((one.url, one_three.id))
-
     assert {eval(e.id) for e in get_entries(reader, **kwargs)} == expected
 
     # TODO: how do we test the combinations between arguments?
