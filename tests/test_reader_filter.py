@@ -44,15 +44,15 @@ TAGS_AND_EXPECTED_IDS = [
 def setup_reader_for_tags(reader):
     reader._parser = parser = Parser()
 
-    one = parser.feed(1, datetime(2010, 1, 1))  # tag, first
-    one_one = parser.entry(1, 1, datetime(2010, 1, 1))
-    one_two = parser.entry(1, 2, datetime(2010, 2, 1))
+    one = parser.feed(1)  # tag, first
+    one_one = parser.entry(1, 1)
+    one_two = parser.entry(1, 2)
 
-    two = parser.feed(2, datetime(2010, 1, 1))  # tag, second
-    two_one = parser.entry(2, 1, datetime(2010, 1, 1))
+    two = parser.feed(2)  # tag, second
+    two_one = parser.entry(2, 1)
 
-    three = parser.feed(3, datetime(2010, 1, 1))  # <no tags>
-    three_one = parser.entry(3, 1, datetime(2010, 1, 1))
+    three = parser.feed(3)  # <no tags>
+    three_one = parser.entry(3, 1)
 
     for feed in one, two, three:
         reader.add_feed(feed)
@@ -147,15 +147,13 @@ def reader_entries():
     with make_reader(':memory:') as reader:
         reader._parser = parser = Parser()
 
-        one = parser.feed(1, datetime(2010, 1, 1))
-        one_one = parser.entry(1, 1, datetime(2010, 1, 1))
-        one_two = parser.entry(1, 2, datetime(2010, 2, 1))  # read
-        one_three = parser.entry(1, 3, datetime(2010, 2, 1))  # important
-        one_four = parser.entry(
-            1, 4, datetime(2010, 2, 1), enclosures=[Enclosure('http://e2')]
-        )
-        two = parser.feed(2, datetime(2010, 1, 1))
-        two_one = parser.entry(2, 1, datetime(2010, 2, 1))
+        one = parser.feed(1)
+        one_one = parser.entry(1, 1)
+        one_two = parser.entry(1, 2)  # read
+        one_three = parser.entry(1, 3)  # important
+        one_four = parser.entry(1, 4, enclosures=[Enclosure('http://e2')])
+        two = parser.feed(2)
+        two_one = parser.entry(2, 1)
 
         reader.add_feed(one.url)
         reader.add_feed(two.url)
@@ -189,16 +187,7 @@ def reader_entries():
         (dict(entry=None), ALL_IDS),
         (dict(entry=('1', '1, 1')), {(1, 1)}),
         (dict(entry=('1', '1, 2')), {(1, 2)}),
-        (
-            dict(
-                entry=Entry(
-                    '1, 2',
-                    datetime(2010, 2, 1),
-                    feed=Feed('1'),
-                )
-            ),
-            {(1, 2)},
-        ),
+        (dict(entry=Entry('1, 2', feed=Feed('1'))), {(1, 2)}),
         (dict(entry=('inexistent', 'also-inexistent')), set()),
     ],
 )
@@ -284,10 +273,10 @@ def reader_feeds():
     with make_reader(':memory:') as reader:
         reader._parser = parser = FailingParser(condition=lambda url: url == '2')
 
-        one = parser.feed(1, datetime(2010, 1, 1))
-        two = parser.feed(2, datetime(2010, 1, 1))  # broken
-        three = parser.feed(3, datetime(2010, 1, 1))
-        four = parser.feed(4, datetime(2010, 1, 1))  # updates disabled
+        one = parser.feed(1)
+        two = parser.feed(2)  # broken
+        three = parser.feed(3)
+        four = parser.feed(4)  # updates disabled
 
         for feed in one, two, three, four:
             reader.add_feed(feed)
