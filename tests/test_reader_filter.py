@@ -284,6 +284,25 @@ def test_entries_important(reader, subtests, get_entries, modified):
 ALL_IDS = {1, 2, 3, 4}
 
 
+@pytest.fixture(scope='module')
+def reader_feeds():
+    with make_reader(':memory:') as reader:
+        reader._parser = parser = FailingParser(condition=lambda url: url == '2')
+
+        one = parser.feed(1, datetime(2010, 1, 1))
+        two = parser.feed(2, datetime(2010, 1, 1))  # broken
+        three = parser.feed(3, datetime(2010, 1, 1))
+        four = parser.feed(4, datetime(2010, 1, 1))  # updates disabled
+
+        for feed in one, two, three, four:
+            reader.add_feed(feed)
+
+        reader.disable_feed_updates(four)
+        reader.update_feeds()
+
+        yield reader
+
+
 @pytest.mark.parametrize(
     'kwargs, expected',
     [
@@ -298,21 +317,8 @@ ALL_IDS = {1, 2, 3, 4}
         (dict(updates_enabled=False), {4}),
     ],
 )
+@rename_argument('reader', 'reader_feeds')
 def test_feeds(reader, kwargs, expected):
-    reader._parser = parser = FailingParser(condition=lambda url: url == '2')
-
-    one = parser.feed(1, datetime(2010, 1, 1))
-    two = parser.feed(2, datetime(2010, 1, 1))
-    three = parser.feed(3, datetime(2010, 1, 1))
-    four = parser.feed(4, datetime(2010, 1, 1))
-
-    for feed in one, two, three, four:
-        reader.add_feed(feed)
-
-    reader.disable_feed_updates(four)
-
-    reader.update_feeds()
-
     assert {eval(f.url) for f in reader.get_feeds(**kwargs)} == expected
 
     # TODO: how do we test the combinations between arguments?
