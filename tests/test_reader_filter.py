@@ -1,4 +1,5 @@
 import pytest
+from fakeparser import FailingParser
 from fakeparser import Parser
 from reader_methods import get_feeds
 from utils import rename_argument
@@ -275,3 +276,66 @@ def test_entries_important(reader, subtests, get_entries, modified):
 # TODO: ideally, systematize all filtering tests?
 
 # END entry filtering tests
+
+
+# BEGIN feed filtering tests
+
+
+ALL_IDS = {1, 2, 3, 4}
+
+
+@pytest.mark.parametrize(
+    'kwargs, expected',
+    [
+        (dict(), ALL_IDS),
+        (dict(feed='1'), {1}),
+        (dict(feed=Feed('1')), {1}),
+        (dict(broken=None), ALL_IDS),
+        (dict(broken=True), {2}),
+        (dict(broken=False), ALL_IDS - {2}),
+        (dict(updates_enabled=None), ALL_IDS),
+        (dict(updates_enabled=True), ALL_IDS - {4}),
+        (dict(updates_enabled=False), {4}),
+    ],
+)
+def test_feeds(reader, kwargs, expected):
+    reader._parser = parser = FailingParser(condition=lambda url: url == '2')
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+    two = parser.feed(2, datetime(2010, 1, 1))
+    three = parser.feed(3, datetime(2010, 1, 1))
+    four = parser.feed(4, datetime(2010, 1, 1))
+
+    for feed in one, two, three, four:
+        reader.add_feed(feed)
+
+    reader.disable_feed_updates(four)
+
+    reader.update_feeds()
+
+    assert {eval(f.url) for f in reader.get_feeds(**kwargs)} == expected
+
+    # TODO: how do we test the combinations between arguments?
+
+
+@pytest.mark.parametrize(
+    'kwargs',
+    [
+        dict(feed=object()),
+        dict(broken=object()),
+        dict(updates_enabled=object()),
+    ],
+)
+def test_feeds_error(reader, kwargs):
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+
+    reader.add_feed(one)
+    reader.update_feeds()
+
+    with pytest.raises(ValueError):
+        list(reader.get_feeds(**kwargs))
+
+
+# END feed filtering tests

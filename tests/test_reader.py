@@ -1619,63 +1619,6 @@ def test_make_reader_feed_root(monkeypatch, make_reader, kwargs, feed_root):
     assert default_parser.feed_root == feed_root
 
 
-ALL_IDS = {1, 2, 3, 4}
-
-
-@pytest.mark.parametrize(
-    'kwargs, expected',
-    [
-        (dict(), ALL_IDS),
-        (dict(feed='1'), {1}),
-        (dict(feed=Feed('1')), {1}),
-        (dict(broken=None), ALL_IDS),
-        (dict(broken=True), {2}),
-        (dict(broken=False), ALL_IDS - {2}),
-        (dict(updates_enabled=None), ALL_IDS),
-        (dict(updates_enabled=True), ALL_IDS - {4}),
-        (dict(updates_enabled=False), {4}),
-    ],
-)
-def test_feeds_filtering(reader, kwargs, expected):
-    reader._parser = parser = FailingParser(condition=lambda url: url == '2')
-
-    one = parser.feed(1, datetime(2010, 1, 1))
-    two = parser.feed(2, datetime(2010, 1, 1))
-    three = parser.feed(3, datetime(2010, 1, 1))
-    four = parser.feed(4, datetime(2010, 1, 1))
-
-    for feed in one, two, three, four:
-        reader.add_feed(feed)
-
-    reader.disable_feed_updates(four)
-
-    reader.update_feeds()
-
-    assert {eval(f.url) for f in reader.get_feeds(**kwargs)} == expected
-
-    # TODO: how do we test the combinations between arguments?
-
-
-@pytest.mark.parametrize(
-    'kwargs',
-    [
-        dict(feed=object()),
-        dict(broken=object()),
-        dict(updates_enabled=object()),
-    ],
-)
-def test_feeds_filtering_error(reader, kwargs):
-    reader._parser = parser = Parser()
-
-    one = parser.feed(1, datetime(2010, 1, 1))
-
-    reader.add_feed(one)
-    reader.update_feeds()
-
-    with pytest.raises(ValueError):
-        list(reader.get_feeds(**kwargs))
-
-
 @pytest.fixture
 def reader_with_two_feeds(reader):
     reader._parser = parser = FailingParser(condition=lambda url: False)
