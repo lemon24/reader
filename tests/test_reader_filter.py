@@ -219,17 +219,8 @@ def test_entries(reader, get_entries, kwargs, expected):
         dict(entry=object()),
     ],
 )
+@rename_argument('reader', 'reader_entries')
 def test_entries_error(reader, get_entries, kwargs):
-    parser = Parser()
-    reader._parser = parser
-
-    one = parser.feed(1, datetime(2010, 1, 1))
-    one_one = parser.entry(1, 1, datetime(2010, 1, 1))
-
-    reader.add_feed(one.url)
-    reader.update_feeds()
-    get_entries.after_update(reader)
-
     with pytest.raises(ValueError):
         list(get_entries(reader, **kwargs))
 
@@ -332,14 +323,8 @@ def test_feeds(reader, kwargs, expected):
         dict(updates_enabled=object()),
     ],
 )
+@rename_argument('reader', 'reader_feeds')
 def test_feeds_error(reader, kwargs):
-    reader._parser = parser = Parser()
-
-    one = parser.feed(1, datetime(2010, 1, 1))
-
-    reader.add_feed(one)
-    reader.update_feeds()
-
     with pytest.raises(ValueError):
         list(reader.get_feeds(**kwargs))
 
