@@ -1,3 +1,5 @@
+from reader import EntryCounts
+from reader import EntrySearchCounts
 from reader import UpdateError
 from reader import UpdateResult
 
@@ -78,11 +80,11 @@ for name, obj in dict(globals()).items():
         obj.after_update = enable_and_update_search
 
 
-def get_entry_counts(reader, **kwargs):
+def get_entry_counts(reader, **kwargs) -> EntryCounts:
     return reader.get_entry_counts(**kwargs)
 
 
-def search_entry_counts(reader, **kwargs):
+def search_entry_counts(reader, **kwargs) -> EntrySearchCounts:
     return reader.search_entry_counts('entry', **kwargs)
 
 
@@ -91,6 +93,9 @@ for name, obj in dict(globals()).items():
         obj.counts = get_entry_counts
     if name.startswith('search_entries'):
         obj.counts = search_entry_counts
+
+get_entry_counts.get_entries = get_entries
+search_entry_counts.get_entries = search_entries
 
 
 class _update_feed_methods:

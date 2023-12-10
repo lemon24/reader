@@ -4,6 +4,7 @@ from datetime import timezone
 
 import pytest
 from fakeparser import Parser
+from test_reader_counts import entries_per_day
 from utils import rename_argument
 from utils import utc_datetime
 from utils import utc_datetime as datetime
@@ -617,9 +618,6 @@ def test_search_entries_basic(reader, sort):
 
 
 # search_entries() filtering is tested in test_reader.py::test_entries_filtering{,_error}
-
-
-from test_reader import entries_per_day
 
 
 @pytest.mark.parametrize(

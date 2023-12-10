@@ -211,3 +211,13 @@ def get_entries(request):
 )
 def get_entries_recent(request):
     yield request.param
+
+
+@pytest.fixture(
+    params=[
+        reader_methods.get_entry_counts,
+        reader_methods.search_entry_counts,
+    ]
+)
+def get_entry_counts(request):
+    yield request.param
