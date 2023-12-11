@@ -1,6 +1,8 @@
 import threading
 from collections import OrderedDict
 from contextlib import nullcontext
+from dataclasses import dataclass
+from dataclasses import field
 from datetime import timezone
 from io import BytesIO
 
@@ -39,14 +41,16 @@ def _make_entry(feed_number, number, updated=None, **kwargs):
     )
 
 
+@dataclass
 class Parser:
-    tzinfo = timezone.utc
+    feeds: dict = field(default_factory=dict)
+    entries: dict = field(default_factory=dict)
+    http_etag: str = None
+    http_last_modified: str = None
 
-    def __init__(self, feeds=None, entries=None):
-        self.feeds = feeds or {}
-        self.entries = entries or {}
-        self.http_etag = None
-        self.http_last_modified = None
+    should_raise: callable or None = None
+    exc: Exception = None
+    is_not_modified: bool = False
 
     @classmethod
     def from_parser(cls, other):
@@ -63,6 +67,28 @@ class Parser:
         self.entries[feed_number][number] = entry
         return entry
 
+    def raise_exc(self, cond=None, exc=None):
+        self.reset_mode()
+        if isinstance(cond, Exception):
+            assert not exc
+            cond, exc = None, cond
+        self.should_raise = cond or (lambda _: True)
+        self.exc = exc or Exception('failing')
+        return self
+
+    def not_modified(self):
+        self.reset_mode()
+        self.is_not_modified = True
+        return self
+
+    def reset_mode(self):
+        self.should_raise = None
+        self.exc = None
+        self.is_not_modified = False
+        return self
+
+    # parser API
+
     def __call__(self, url, http_etag, http_last_modified):
         raise NotImplementedError
 
@@ -72,6 +98,14 @@ class Parser:
         persistent = staticmethod(nullcontext)
 
     def retrieve(self, url, http_etag, http_last_modified, is_parallel):
+        if self.should_raise and self.should_raise(url):
+            try:
+                # We raise so the exception has a traceback set.
+                raise self.exc
+            except Exception as e:
+                raise ParseError(url) from e
+        if self.is_not_modified:
+            return nullcontext(None)
         return nullcontext(RetrieveResult(BytesIO(b'opaque')))
 
     def parse(self, url, result):
@@ -115,30 +149,6 @@ class BlockingParser(Parser):
     def retrieve(self, *args):
         self.wait()
         return super().retrieve(*args)
-
-
-class FailingParser(Parser):
-    def __init__(self, *args, condition=lambda url: True, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.condition = condition
-        self.exception = Exception('failing')
-
-    def raise_exc(self, url):
-        if self.condition(url):
-            try:
-                # We raise so the exception has a traceback set.
-                raise self.exception
-            except Exception as e:
-                raise ParseError(url) from e
-
-    def retrieve(self, url, *args):
-        self.raise_exc(url)
-        return super().retrieve(url, *args)
-
-
-class NotModifiedParser(Parser):
-    def retrieve(self, *args):
-        return nullcontext(None)
 
 
 class ParserThatRemembers(Parser):

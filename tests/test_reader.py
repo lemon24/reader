@@ -11,8 +11,6 @@ from itertools import permutations
 
 import pytest
 from fakeparser import BlockingParser
-from fakeparser import FailingParser
-from fakeparser import NotModifiedParser
 from fakeparser import Parser
 from reader_methods import enable_and_update_search
 from reader_methods import get_entries
@@ -457,8 +455,7 @@ def test_update_not_modified(reader, update_feed):
     parser.feed(1, datetime(2010, 1, 2))
     parser.entry(1, 1, datetime(2010, 1, 2))
 
-    not_modified_parser = NotModifiedParser.from_parser(parser)
-    reader._parser = not_modified_parser
+    reader._parser.not_modified()
 
     # shouldn't raise an exception
     update_feed(reader, feed.url)
@@ -555,8 +552,7 @@ def test_update_new_not_modified(reader):
     https://github.com/lemon24/reader/issues/95
 
     """
-    parser = NotModifiedParser()
-    reader._parser = parser
+    reader._parser = parser = Parser().not_modified()
 
     feed = parser.feed(1, datetime(2010, 1, 1))
 
@@ -635,8 +631,7 @@ def test_update_feeds_parse_error(reader, workers, caplog):
 
     assert {f.title for f in reader.get_feeds()} == {'one', 'two', 'three'}
 
-    parser = FailingParser(condition=lambda url: url == '2')
-    reader._parser = parser
+    reader._parser = parser = Parser().raise_exc(lambda url: url == '2')
 
     one = parser.feed(1, datetime(2010, 1, 2), title='ONE')
     two = parser.feed(2, datetime(2010, 1, 2), title='TWO')
@@ -724,7 +719,7 @@ def test_last_exception_failed(reader, update_feed):
     old_last_updated = get_feed_last_updated('1')
     assert old_last_updated is not None
 
-    reader._parser = FailingParser()
+    reader._parser = Parser().raise_exc()
     try:
         update_feed(reader, '1')
     except ParseError:
@@ -737,7 +732,7 @@ def test_last_exception_failed(reader, update_feed):
     assert last_exception.value_str == "'1': builtins.Exception: failing"
     assert last_exception.traceback_str.startswith('Traceback')
 
-    reader._parser.exception = ValueError('another')
+    reader._parser.raise_exc(ValueError('another'))
     try:
         update_feed(reader, '1')
     except ParseError:
@@ -761,10 +756,6 @@ def test_last_exception_failed(reader, update_feed):
     assert new_last_updated == old_last_updated
 
 
-def same_parser(parser):
-    return parser
-
-
 def updated_feeds_parser(parser):
     parser.feeds = {
         number: feed._replace(
@@ -772,33 +763,29 @@ def updated_feeds_parser(parser):
         )
         for number, feed in parser.feeds.items()
     }
-    return parser
-
-
-def raises_not_modified_parser(_):
-    return NotModifiedParser()
+    parser.reset_mode()
 
 
 @pytest.mark.parametrize(
-    'make_new_parser',
+    'update_parser',
     [
-        same_parser,
+        Parser.reset_mode,
         updated_feeds_parser,
-        raises_not_modified_parser,
+        Parser.not_modified,
     ],
 )
 @rename_argument('reader', 'reader_with_one_feed')
-def test_last_exception_reset(reader, update_feed, make_new_parser):
+def test_last_exception_reset(reader, update_feed, update_parser):
     update_feed(reader, '1')
-    old_parser = reader._parser
 
-    reader._parser = FailingParser()
+    reader._parser.raise_exc()
     try:
         update_feed(reader, '1')
     except ParseError:
         pass
 
-    reader._parser = make_new_parser(old_parser)
+    update_parser(reader._parser)
+
     update_feed(reader, '1')
     assert reader.get_feed('1').last_exception is None
 
@@ -875,14 +862,9 @@ def test_update_feed_deleted(
     if feed_action is FeedAction.update:
         feed = parser.feed(1, datetime(2010, 1, 2), title='new title')
 
-    if feed_action is not FeedAction.fail:
-        parser_cls = BlockingParser
-    else:
-
-        class parser_cls(BlockingParser, FailingParser):
-            pass
-
-    blocking_parser = parser_cls.from_parser(parser)
+    blocking_parser = BlockingParser.from_parser(parser)
+    if feed_action is FeedAction.fail:
+        blocking_parser.raise_exc()
 
     def target():
         blocking_parser.in_parser.wait()
@@ -966,7 +948,7 @@ def test_update_feed(reader, feed_arg):
         ),
     }
 
-    reader._parser = FailingParser()
+    reader._parser.raise_exc()
 
     with pytest.raises(ParseError):
         reader.update_feed(feed_arg(one))
@@ -995,7 +977,7 @@ def call_update_iter_method(request):
 
 
 def test_update_feeds_iter(reader, call_update_iter_method):
-    reader._parser = parser = FailingParser(condition=lambda url: url == '3')
+    reader._parser = parser = Parser().raise_exc(lambda url: url == '3')
 
     one = parser.feed(1, datetime(2010, 1, 1))
     one_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -1030,9 +1012,9 @@ def test_update_feeds_iter(reader, call_update_iter_method):
 
     assert isinstance(rv['3'], ParseError)
     assert rv['3'].url == '3'
-    assert rv['3'].__cause__ is parser.exception
+    assert rv['3'].__cause__ is parser.exc
 
-    reader._parser = parser = NotModifiedParser()
+    reader._parser.not_modified()
 
     assert dict(call_update_iter_method(reader)) == dict.fromkeys('123')
 
@@ -1621,7 +1603,7 @@ def test_make_reader_feed_root(monkeypatch, make_reader, kwargs, feed_root):
 
 @pytest.fixture
 def reader_with_two_feeds(reader):
-    reader._parser = parser = FailingParser(condition=lambda url: False)
+    reader._parser = parser = Parser()
 
     one = parser.feed(1, datetime(2010, 1, 1))
     one_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -1921,7 +1903,7 @@ def test_updates_enabled(reader):
     https://github.com/lemon24/reader/issues/187#issuecomment-706539658
 
     """
-    reader._parser = parser = FailingParser(condition=lambda url: False)
+    reader._parser = parser = Parser()
 
     one = parser.feed(1, datetime(2010, 1, 1))
     one_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -1947,11 +1929,11 @@ def test_updates_enabled(reader):
     }
 
     # make one feed fail temporarily, so last_exception gets set
-    parser.condition = lambda url: url == one.url
+    parser.raise_exc(lambda url: url == one.url)
     reader.update_feeds()
     last_exception = reader.get_feed(one).last_exception
     assert last_exception is not None
-    parser.condition = lambda url: False
+    parser.reset_mode()
 
     # disable_feed_updates sets updates_enabled to False
     reader.disable_feed_updates(one)

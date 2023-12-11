@@ -1,8 +1,6 @@
 from functools import partial
 
 import pytest
-from fakeparser import FailingParser
-from fakeparser import NotModifiedParser
 from fakeparser import Parser
 from test_reader_private import CustomParser
 from test_reader_private import CustomRetriever
@@ -17,7 +15,6 @@ from reader._types import EntryData
 
 def test_after_entry_update_hooks(reader):
     reader._parser = parser = Parser()
-    parser.tzinfo = False
 
     plugin_calls = []
 
@@ -81,7 +78,6 @@ def test_after_entry_update_hooks_add_entry(reader):
 
 def test_feed_update_hooks(reader):
     reader._parser = parser = Parser()
-    parser.tzinfo = False
 
     plugin_calls = []
 
@@ -124,21 +120,21 @@ def test_feed_update_hooks(reader):
     plugin_calls[:] = []
 
     # gets called even if the feed was not modified
-    reader._parser = NotModifiedParser()
+    parser.not_modified()
     reader.update_feeds()
     assert plugin_calls == [(before_plugin, one.url), (first_plugin, one.url)]
 
     plugin_calls[:] = []
 
     # gets called even if there was an error
-    reader._parser = FailingParser()
+    parser.raise_exc()
     reader.update_feeds()
     assert plugin_calls == [(before_plugin, one.url), (first_plugin, one.url)]
 
     plugin_calls[:] = []
 
     # plugin order and feed order is maintained
-    reader._parser = parser
+    parser.reset_mode()
     two = parser.feed(2, datetime(2010, 1, 1))
     reader.add_feed(two)
     reader.after_feed_update_hooks.append(second_plugin)
@@ -165,7 +161,6 @@ def test_feed_update_hooks(reader):
 
 def test_feeds_update_hooks(reader):
     reader._parser = parser = Parser()
-    parser.tzinfo = False
 
     plugin_calls = []
 
@@ -225,7 +220,7 @@ def test_feeds_update_hooks(reader):
     plugin_calls[:] = []
 
     # called even if there's an error
-    reader._parser = FailingParser()
+    parser.raise_exc()
     reader.update_feeds()
     assert plugin_calls[0] == (before_feeds_plugin,)
     assert plugin_calls[-1] == (after_feeds_plugin,)

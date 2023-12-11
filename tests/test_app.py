@@ -58,7 +58,6 @@ def browser(app):
 @pytest.mark.slow
 def test_mark_as_read_unread(db_path, make_reader, browser):
     parser = Parser()
-    parser.tzinfo = None
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -95,7 +94,6 @@ def test_mark_as_read_unread(db_path, make_reader, browser):
 @pytest.mark.slow
 def test_mark_all_as_read_unread(db_path, make_reader, browser):
     parser = Parser()
-    parser.tzinfo = None
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -137,7 +135,6 @@ def test_mark_all_as_read_unread(db_path, make_reader, browser):
 @pytest.mark.slow
 def test_add_delete_feed(db_path, browser, app, monkeypatch):
     parser = Parser()
-    parser.tzinfo = None
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -208,7 +205,6 @@ def test_add_delete_feed(db_path, browser, app, monkeypatch):
 @pytest.mark.slow
 def test_delete_feed_from_entries_page_redirects(db_path, make_reader, browser):
     parser = Parser()
-    parser.tzinfo = None
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -231,7 +227,6 @@ def test_delete_feed_from_entries_page_redirects(db_path, make_reader, browser):
 @pytest.mark.slow
 def test_limit(db_path, make_reader, browser):
     parser = Parser()
-    parser.tzinfo = None
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -258,7 +253,6 @@ def test_limit(db_path, make_reader, browser):
 @pytest.mark.slow
 def test_search(db_path, make_reader, browser):
     parser = Parser()
-    parser.tzinfo = None
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')

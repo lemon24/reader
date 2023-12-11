@@ -1,5 +1,4 @@
 import pytest
-from fakeparser import FailingParser
 from fakeparser import Parser
 from reader_methods import get_feeds
 from utils import rename_argument
@@ -271,12 +270,14 @@ ALL_IDS = {1, 2, 3, 4}
 @pytest.fixture(scope='module')
 def reader_feeds():
     with make_reader(':memory:') as reader:
-        reader._parser = parser = FailingParser(condition=lambda url: url == '2')
+        reader._parser = parser = Parser()
 
         one = parser.feed(1)
         two = parser.feed(2)  # broken
         three = parser.feed(3)
         four = parser.feed(4)  # updates disabled
+
+        parser.raise_exc(lambda url: url == two.url)
 
         for feed in one, two, three, four:
             reader.add_feed(feed)

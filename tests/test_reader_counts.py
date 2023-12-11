@@ -1,7 +1,6 @@
 import typing
 
 import pytest
-from fakeparser import FailingParser
 from fakeparser import Parser
 from utils import rename_argument
 from utils import utc_datetime as datetime
@@ -28,7 +27,7 @@ KWARGS_AND_EXPECTED_FEED_COUNTS = [
 @pytest.fixture(scope='module')
 def reader_feed_counts():
     with make_reader(':memory:') as reader:
-        reader._parser = parser = FailingParser(condition=lambda url: False)
+        reader._parser = parser = Parser()
 
         one = parser.feed(1)
         two = parser.feed(2)
@@ -37,7 +36,7 @@ def reader_feed_counts():
         for feed in one, two, three:
             reader.add_feed(feed)
 
-        parser.condition = lambda url: url == two.url
+        parser.raise_exc(lambda url: url == two.url)
         reader.disable_feed_updates(three)
         reader.set_tag(one, 'tag')
         reader.set_tag(two, 'tag')
