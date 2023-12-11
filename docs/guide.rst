@@ -493,8 +493,7 @@ in which case the behavior is to ensure the tag exists
 
 Besides storing resource metadata,
 tags can be used for filtering feeds and entries
-(as of version |version|, only by feed tags;
-see the :meth:`~Reader.get_feeds()` documentation for more complex examples)::
+(see :data:`.TagFilterInput` for more complex examples)::
 
     >>> # feeds that have the tag "one"
     >>> [f.title for f in reader.get_feeds(tags=['one'])]
