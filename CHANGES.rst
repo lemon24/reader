@@ -11,6 +11,7 @@ Version 3.11
 
 Unreleased
 
+* Allow filtering entries by their (entry) tags. (:issue:`328`)
 * Support Python 3.12. (:issue:`326`)
 
 

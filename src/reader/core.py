@@ -1096,6 +1096,9 @@ class Reader:
                 :data:`~reader.types.TristateFilterInput` string filters.
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
+            tags (None or bool or list(str or bool or list(str or bool))):
+                Only return entries matching these tags;
+                see :data:`~reader.types.TagFilterInput` for details.
             feed_tags (None or bool or list(str or bool or list(str or bool))):
                 Only return entries from feeds matching these tags;
                 see :data:`~reader.types.TagFilterInput` for details.
@@ -1125,6 +1128,9 @@ class Reader:
 
         .. versionchanged:: 3.5
             The ``important`` argument also accepts string values.
+
+        .. versionadded:: 3.11
+            The ``tags`` keyword argument.
 
         """
 
@@ -1217,6 +1223,9 @@ class Reader:
                 :data:`~reader.types.TristateFilterInput` string filters.
             has_enclosures (bool or None): Only count entries that (don't)
                 have enclosures.
+            tags (None or bool or list(str or bool or list(str or bool))):
+                Only count entries matching these tags;
+                see :data:`~reader.types.TagFilterInput` for details.
             feed_tags (None or bool or list(str or bool or list(str or bool))):
                 Only count entries from feeds matching these tags;
                 see :data:`~reader.types.TagFilterInput` for details.
@@ -1231,6 +1240,9 @@ class Reader:
 
         .. versionchanged:: 3.5
             The ``important`` argument also accepts string values.
+
+        .. versionadded:: 3.11
+            The ``tags`` keyword argument.
 
         """
 
@@ -1668,6 +1680,9 @@ class Reader:
                 :data:`~reader.types.TristateFilterInput` string filters.
             has_enclosures (bool or None): Only search entries that (don't)
                 have enclosures.
+            tags (None or bool or list(str or bool or list(str or bool))):
+                Only search entries matching these tags;
+                see :data:`~reader.types.TagFilterInput` for details.
             feed_tags (None or bool or list(str or bool or list(str or bool))):
                 Only search entries from feeds matching these tags;
                 see :data:`~reader.types.TagFilterInput` for details.
@@ -1703,6 +1718,9 @@ class Reader:
 
         .. versionchanged:: 3.5
             The ``important`` argument also accepts string values.
+
+        .. versionadded:: 3.11
+            The ``tags`` keyword argument.
 
         """
         filter = EntryFilter.from_args(
@@ -1753,6 +1771,9 @@ class Reader:
             important (bool or None): Only count (un)important entries.
             has_enclosures (bool or None): Only count entries that (don't)
                 have enclosures.
+            tags (None or bool or list(str or bool or list(str or bool))):
+                Only count entries matching these tags;
+                see :data:`~reader.types.TagFilterInput` for details.
             feed_tags (None or bool or list(str or bool or list(str or bool))):
                 Only count entries from feeds matching these tags;
                 see :data:`~reader.types.TagFilterInput` for details.
@@ -1773,6 +1794,9 @@ class Reader:
 
         .. versionchanged:: 3.5
             The ``important`` argument also accepts string values.
+
+        .. versionadded:: 3.11
+            The ``tags`` keyword argument.
 
         """
 
