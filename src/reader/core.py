@@ -557,58 +557,11 @@ class Reader:
     ) -> Iterable[Feed]:
         """Get all or some of the feeds.
 
-        The ``tags`` argument can be a list of one or more feed tags.
-        Multiple tags are interpreted as a conjunction (AND).
-        To use a disjunction (OR), use a nested list.
-        To negate a tag, prefix the tag value with a minus sign (``-``).
-        Examples:
-
-        ``['one']``
-
-            one
-
-        ``['one', 'two']``
-        ``[['one'], ['two']]``
-
-            one AND two
-
-        ``[['one', 'two']]``
-
-            one OR two
-
-        ``[['one', 'two'], 'three']``
-
-            (one OR two) AND three
-
-        ``['one', '-two']``
-
-            one AND NOT two
-
-        Special values :const:`True` and :const:`False`
-        match feeds with any tags and no tags, respectively.
-
-        ``True``
-        ``[True]``
-
-            *any tags*
-
-        ``False``
-        ``[False]``
-
-            *no tags*
-
-        ``[True, '-one']``
-
-            *any tags* AND NOT one
-
-        ``[[False, 'one']]``
-
-            *no tags* OR one
-
         Args:
             feed (str or tuple(str) or Feed or None): Only return the feed with this URL.
             tags (None or bool or list(str or bool or list(str or bool))):
-                Only return feeds matching these tags.
+                Only return feeds matching these tags;
+                see :data:`~reader.types.TagFilterInput` for details.
             broken (bool or None): Only return broken / healthy feeds.
             updates_enabled (bool or None):
                 Only return feeds that have updates enabled / disabled.
@@ -714,12 +667,11 @@ class Reader:
     ) -> FeedCounts:
         """Count all or some of the feeds.
 
-        See :meth:`~Reader.get_feeds()` for details on how filtering works.
-
         Args:
             feed (str or tuple(str) or Feed or None): Only count the feed with this URL.
             tags (None or bool or list(str or bool or list(str or bool))):
-                Only count feeds matching these tags.
+                Only count feeds matching these tags;
+                see :data:`~reader.types.TagFilterInput` for details.
             broken (bool or None): Only count broken / healthy feeds.
             updates_enabled (bool or None):
                 Only count feeds that have updates enabled / disabled.
@@ -829,7 +781,8 @@ class Reader:
         Args:
             feed (str or tuple(str) or Feed or None): Only update the feed with this URL.
             tags (None or bool or list(str or bool or list(str or bool))):
-                Only update feeds matching these tags.
+                Only update feeds matching these tags;
+                see :data:`~reader.types.TagFilterInput` for details.
             broken (bool or None): Only update broken / healthy feeds.
             updates_enabled (bool or None):
                 Only update feeds that have updates enabled / disabled.
@@ -944,7 +897,8 @@ class Reader:
         Args:
             feed (str or tuple(str) or Feed or None): Only update the feed with this URL.
             tags (None or bool or list(str or bool or list(str or bool))):
-                Only update feeds matching these tags.
+                Only update feeds matching these tags;
+                see :data:`~reader.types.TagFilterInput` for details.
             broken (bool or None): Only update broken / healthy feeds.
             updates_enabled (bool or None):
                 Only update feeds that have updates enabled / disabled.
@@ -1143,8 +1097,8 @@ class Reader:
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
             feed_tags (None or bool or list(str or bool or list(str or bool))):
-                Only return the entries from feeds matching these tags;
-                works like the :meth:`~Reader.get_feeds()` ``tags`` argument.
+                Only return entries from feeds matching these tags;
+                see :data:`~reader.types.TagFilterInput` for details.
             sort (str): How to order entries; one of ``'recent'`` (default)
                 or ``'random'``.
             limit (int or None): A limit on the number of entries to be returned;
@@ -1252,8 +1206,6 @@ class Reader:
     ) -> EntryCounts:
         """Count all or some of the entries.
 
-        See :meth:`~Reader.get_entries()` for details on how filtering works.
-
         Args:
             feed (str or tuple(str) or Feed or None): Only count the entries for this feed.
             entry (tuple(str, str) or Entry or None):
@@ -1266,7 +1218,8 @@ class Reader:
             has_enclosures (bool or None): Only count entries that (don't)
                 have enclosures.
             feed_tags (None or bool or list(str or bool or list(str or bool))):
-                Only count the entries from feeds matching these tags.
+                Only count entries from feeds matching these tags;
+                see :data:`~reader.types.TagFilterInput` for details.
 
         Returns:
             EntryCounts:
@@ -1716,8 +1669,8 @@ class Reader:
             has_enclosures (bool or None): Only search entries that (don't)
                 have enclosures.
             feed_tags (None or bool or list(str or bool or list(str or bool))):
-                Only return the entries from feeds matching these tags;
-                works like the :meth:`~Reader.get_feeds()` ``tags`` argument.
+                Only search entries from feeds matching these tags;
+                see :data:`~reader.types.TagFilterInput` for details.
             sort (str): How to order results; one of ``'relevant'`` (default),
                 ``'recent'``, or ``'random'``.
             limit (int or None): A limit on the number of results to be returned;
@@ -1784,8 +1737,7 @@ class Reader:
     ) -> EntrySearchCounts:
         """Count entries matching a full-text search query.
 
-        See :meth:`~Reader.search_entries()` for details on how
-        the query syntax and filtering work.
+        See :meth:`~Reader.search_entries()` for details on the query syntax.
 
         Search must be enabled to call this method.
 
@@ -1802,7 +1754,8 @@ class Reader:
             has_enclosures (bool or None): Only count entries that (don't)
                 have enclosures.
             feed_tags (None or bool or list(str or bool or list(str or bool))):
-                Only count the entries from feeds matching these tags.
+                Only count entries from feeds matching these tags;
+                see :data:`~reader.types.TagFilterInput` for details.
 
         Returns:
             EntrySearchCounts:

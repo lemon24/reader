@@ -758,6 +758,59 @@ def _resource_argument(resource: ResourceInput) -> ResourceId:
 
 # str explicitly excluded, to allow for a string-based query language;
 # https://github.com/lemon24/reader/issues/184#issuecomment-689587006
+
+#: Possible values for filtering resources by their tags.
+#:
+#: Tag filters consist of a list of one or more tags.
+#: Multiple tags are interpreted as a conjunction (AND).
+#: To use a disjunction (OR), use a nested list.
+#: To negate a tag, prefix the tag value with a minus sign (``-``).
+#: Examples:
+#:
+#: ``['one']``
+#:
+#:     one
+#:
+#: ``['one', 'two']``
+#: ``[['one'], ['two']]``
+#:
+#:     one AND two
+#:
+#: ``[['one', 'two']]``
+#:
+#:     one OR two
+#:
+#: ``[['one', 'two'], 'three']``
+#:
+#:     (one OR two) AND three
+#:
+#: ``['one', '-two']``
+#:
+#:     one AND NOT two
+#:
+#: Special values :const:`True` and :const:`False`
+#: match resources with any tags and no tags, respectively.
+#:
+#: ``True``
+#: ``[True]``
+#:
+#:     *any tags*
+#:
+#: ``False``
+#: ``[False]``
+#:
+#:     *no tags*
+#:
+#: ``[True, '-one']``
+#:
+#:     *any tags* AND NOT one
+#:
+#: ``[[False, 'one']]``
+#:
+#:     *no tags* OR one
+#:
+#: .. versionadded:: 3.11
+#:
 TagFilterInput = Union[
     None, bool, Sequence[Union[str, bool, Sequence[Union[str, bool]]]]
 ]

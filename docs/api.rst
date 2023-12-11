@@ -173,6 +173,7 @@ The class hierarchy for :mod:`reader` exceptions is:
 Type aliases
 ------------
 
+.. autodata:: reader.types.TagFilterInput
 .. autodata:: reader.types.TristateFilterInput
 
 
