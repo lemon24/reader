@@ -3,6 +3,9 @@ import sys
 
 import pytest
 from click.testing import CliRunner
+from test_reader_filter import setup_reader_for_tags
+
+from reader import make_reader
 
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../scripts'))
@@ -18,13 +21,21 @@ pytestmark = [
 ]
 
 
-@pytest.mark.parametrize('command', [['time', '-n1'], ['profile']])
-def test_commands_work(command, monkeypatch):
-    monkeypatch.setattr(bench, 'TIMINGS_PARAMS_LIST', bench.TIMINGS_PARAMS_LIST[:2])
-    monkeypatch.setattr(bench, 'PROFILE_PARAMS', bench.TIMINGS_PARAMS_LIST[0])
+@pytest.fixture(scope='module')
+def db_path(tmp_path_factory):
+    dir = tmp_path_factory.mktemp("data")
+    db_path = str(dir.joinpath('db.sqlite'))
+    with make_reader(db_path) as reader:
+        setup_reader_for_tags(reader)
+    return db_path
 
+
+@pytest.mark.parametrize('command', [['time', '-n1'], ['profile']])
+def test_commands_work(command, db_path):
     runner = CliRunner()
-    result = runner.invoke(cli, command + ['get_entries_all', 'show'])
+    result = runner.invoke(
+        cli, ['--db', db_path] + command + ['get_entries_all', 'show']
+    )
     assert result.exit_code == 0
 
 

@@ -3,23 +3,17 @@ import inspect
 import math
 import os.path
 import pstats
-import random
-import sqlite3
-import statistics
 import sys
 import tempfile
 import timeit
 from collections import OrderedDict
 from contextlib import contextmanager
 from contextlib import ExitStack
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
 from fnmatch import fnmatchcase
 from functools import partial
 
 import click
-from jinja2.utils import generate_lorem_ipsum
+import numpy as np
 
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../src'))
@@ -79,36 +73,6 @@ def inject(**factories):
     return decorator
 
 
-NUM_FEEDS = 8
-
-
-def make_reader_with_entries(path, num_entries, num_feeds=NUM_FEEDS, text=False):
-    reader = make_reader(path)
-    reader._parser = parser = Parser()
-    parser.tzinfo = None
-
-    for i in range(num_feeds):
-        feed = parser.feed(i, datetime(2010, 1, 1, tzinfo=timezone.utc))
-        reader.add_feed(feed.url)
-
-    random.seed(0)
-    for i in range(num_entries):
-        kwargs = {}
-        if text:
-            kwargs.update(
-                title=generate_lorem_ipsum(html=False, n=1, min=1, max=10),
-                summary=generate_lorem_ipsum(html=False),
-            )
-        parser.entry(
-            i % num_feeds,
-            i,
-            datetime(2010, 1, 1, tzinfo=timezone.utc) + timedelta(i),
-            **kwargs,
-        )
-
-    return reader
-
-
 def make_test_client(path):
     app = create_app(make_reader_config({'reader': {'url': path}}))
     client = app.test_client()
@@ -117,105 +81,97 @@ def make_test_client(path):
     return client
 
 
+# these get set by the CLI
+DB_PATH = None
+QUERY = None
+
+
 @contextmanager
 def setup_db():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        yield os.path.join(tmpdir, 'db.sqlite')
-
-
-EXISTING_DB_PATH = None
+    assert DB_PATH
+    yield DB_PATH
 
 
 @contextmanager
-def setup_db_with_entries(num_entries):
-    if EXISTING_DB_PATH:
-        yield EXISTING_DB_PATH
-        return
+def setup_reader():
     with setup_db() as path:
-        make_reader_with_entries(path, num_entries).update_feeds()
-        yield path
-
-
-@contextmanager
-def setup_reader_with_entries(num_entries):
-    with setup_db_with_entries(num_entries) as path:
         yield make_reader(path)
 
 
 @contextmanager
-def setup_client_with_entries(num_entries):
-    with setup_db_with_entries(num_entries) as path:
+def setup_client():
+    with setup_db() as path:
         yield make_test_client(path)
 
 
-@inject(reader=setup_reader_with_entries)
+@inject(reader=setup_reader)
 def time_get_entries_all(reader):
     for _ in reader.get_entries():
         pass
 
 
-@inject(reader=setup_reader_with_entries)
+@inject(reader=setup_reader)
 def time_get_entries_read(reader):
     for _ in reader.get_entries(read=True):
         pass
 
 
-@inject(reader=setup_reader_with_entries)
+@inject(reader=setup_reader)
 def time_get_entries_unread(reader):
     for _ in reader.get_entries(read=False):
         pass
 
 
-@inject(reader=setup_reader_with_entries)
+@inject(reader=setup_reader)
 def time_get_entries_important(reader):
     for _ in reader.get_entries(important=True):
         pass
 
 
-@inject(reader=setup_reader_with_entries)
+@inject(reader=setup_reader)
 def time_get_entries_unimportant(reader):
     for _ in reader.get_entries(important=False):
         pass
 
 
-@inject(reader=setup_reader_with_entries)
+@inject(reader=setup_reader)
 def time_get_entries_enclosures(reader):
     for _ in reader.get_entries(has_enclosures=True):
         pass
 
 
-@inject(reader=setup_reader_with_entries)
+@inject(reader=setup_reader)
 def time_get_entries_no_enclosures(reader):
     for _ in reader.get_entries(has_enclosures=False):
         pass
 
 
-@inject(reader=setup_reader_with_entries)
+@inject(reader=setup_reader)
 def time_get_entries_feed(reader):
     feed = next(reader.get_feeds())
     for _ in reader.get_entries(feed=feed):
         pass
 
 
-@inject(reader=setup_reader_with_entries)
+@inject(reader=setup_reader)
 def time_get_entries_random(reader):
     for _ in reader.get_entries(sort='random'):
         pass
 
 
-@inject(reader=setup_reader_with_entries)
+@inject(reader=setup_reader)
 def time_get_entries_random_read(reader):
     for _ in reader.get_entries(sort='random', read=True):
         pass
 
 
-@inject(client=setup_client_with_entries)
+@inject(client=setup_client)
 def time_show(client):
     for _ in client.get('/?show=all').response:
         pass
 
 
-@inject(client=setup_client_with_entries)
+@inject(client=setup_client)
 def time_show_100k(client):
     length = 0
     for chunk in client.get('/?show=all').response:
@@ -224,109 +180,42 @@ def time_show_100k(client):
             break
 
 
-@contextmanager
-def setup_reader_with_fake_parser(num_entries):
-    with setup_db() as path:
-        yield make_reader_with_entries(path, num_entries)
+# there were some update_feeds() timings here (up to 537348c);
+# I removed them because they relied on fake feeds (also removed in #330),
+# and I didn't want to spend the time to find another way of doing it
 
 
-@inject(reader=setup_reader_with_fake_parser)
-def time_update_feeds(reader):
-    reader.update_feeds()
-
-
-@contextmanager
-def setup_reader_feed_new(num_entries):
-    with setup_db() as path:
-        yield make_reader_with_entries(path, num_entries, num_feeds=1)
-
-
-@contextmanager
-def setup_reader_feed_old(num_entries):
-    with setup_reader_feed_new(num_entries) as reader:
-        reader.update_feeds()
-        yield reader
-
-
-def raise_too_many_variables(reader):
-    original = getattr(reader._storage, '_get_entries_for_update_one_query', None)
-
-    def wrapper(*args):
-        original(*args)
-        raise sqlite3.OperationalError("too many SQL variables")
-
-    reader._storage._get_entries_for_update_one_query = wrapper
-
-
-def _time_update_feed(reader):
-    feed_url = list(reader._parser.feeds.values())[0].url
-    reader.update_feed(feed_url)
-
-
-time_update_feed_new = inject(reader=setup_reader_feed_new)(_time_update_feed)
-time_update_feed_old = inject(reader=setup_reader_feed_old)(_time_update_feed)
-
-
-@contextmanager
-def setup_reader_with_text_entries(num_entries):
-    if EXISTING_DB_PATH:
-        yield make_reader(EXISTING_DB_PATH)
-        return
-    with setup_db() as path:
-        reader = make_reader_with_entries(path, num_entries, text=True)
-        reader.update_feeds()
-        yield reader
-
-
-@contextmanager
-def setup_reader_with_search_and_some_read_entries(num_entries):
-    if EXISTING_DB_PATH:
-        yield make_reader(EXISTING_DB_PATH)
-        return
-    with setup_reader_with_text_entries(num_entries) as reader:
-        reader.enable_search()
-        reader.update_search()
-        for i, entry in enumerate(reader.get_entries()):
-            if i % 5 == 5:
-                reader.mark_as_read(entry)
-        yield reader
-
-
-SEARCH_ENTRIES_QUERY = 'porta justo scelerisque dignissim convallis primis lacus'
-
-
-@inject(reader=setup_reader_with_search_and_some_read_entries)
+@inject(reader=setup_reader)
 def time_search_entries_relevant_all(reader):
-    for _ in reader.search_entries(SEARCH_ENTRIES_QUERY):
+    for _ in reader.search_entries(QUERY):
         pass
 
 
-@inject(reader=setup_reader_with_search_and_some_read_entries)
+@inject(reader=setup_reader)
 def time_search_entries_relevant_read(reader):
-    for _ in reader.search_entries(SEARCH_ENTRIES_QUERY, read=True):
+    for _ in reader.search_entries(QUERY, read=True):
         pass
 
 
-@inject(reader=setup_reader_with_search_and_some_read_entries)
+@inject(reader=setup_reader)
 def time_search_entries_recent_all(reader):
-    for _ in reader.search_entries(SEARCH_ENTRIES_QUERY, sort='recent'):
+    for _ in reader.search_entries(QUERY, sort='recent'):
         pass
 
 
-@inject(reader=setup_reader_with_search_and_some_read_entries)
+@inject(reader=setup_reader)
 def time_search_entries_recent_read(reader):
-    for _ in reader.search_entries(SEARCH_ENTRIES_QUERY, sort='recent', read=True):
+    for _ in reader.search_entries(QUERY, sort='recent', read=True):
         pass
 
 
-@inject(reader=setup_reader_with_text_entries)
+@inject(reader=setup_reader)
 def time_update_search(reader):
     # Sadly time() doesn't allow running the setup for every repeat,
-    # so we enable/disable search inside the benchmark
-    # (otherwise the second update_search() call has nothing to do).
+    # so we disable/enable search inside the benchmark.
     reader.enable_search()
-    reader.update_search()
     reader.disable_search()
+    reader.update_search()
 
 
 TIMINGS = OrderedDict(
@@ -334,15 +223,17 @@ TIMINGS = OrderedDict(
     for tn, t in sorted(globals().items())
     if tn.startswith('time_')
 )
-TIMINGS_PARAMS_LIST = [(2**i,) for i in range(5, 12)]
-TIMINGS_NUMBER = 4
-PROFILE_PARAMS = TIMINGS_PARAMS_LIST[-1]
-PARAM_IDS = ('num_entries',)
 
 
 @click.group()
-def cli():
-    pass
+@click.option('--db', default='db.sqlite', show_default=True, help="Database to use.")
+@click.option(
+    '--query', default='query', show_default=True, help="search_entries() query."
+)
+def cli(db, query):
+    global DB_PATH, QUERY
+    DB_PATH = db
+    QUERY = query
 
 
 @cli.command(name='list')
@@ -363,71 +254,39 @@ def make_row_fmt(extra, names, num_fmt='.3f'):
 
 @cli.command()
 @click.argument('which', nargs=-1)
-@click.option('-n', '--number', type=int, default=TIMINGS_NUMBER, show_default=True)
-@click.option('-r', '--repeat', type=int, show_default=True)
-@click.option(
-    '--db',
-    type=click.Path(exists=True, dir_okay=False),
-    help="Use an existing database instead of generating ones of varying sizes. "
-    "WARNING: Benchmarks that mutate the database might not make sense.",
-)
-@click.option('--query', help="Query for search_entries() timings; useful with --db.")
-def time(which, number, repeat, db, query):
+@click.option('-n', '--number', type=int, default=1, show_default=True)
+@click.option('-r', '--repeat', type=int, default=1, show_default=True)
+def time(which, number, repeat):
     if not which:
         which = ['*']
 
-    if not repeat:
-        extra = ['number'] + list(PARAM_IDS)
-        timeit_func = timeit.timeit
-        stats = {'': lambda x: x}
-    else:
-        extra = ['stat', 'number', 'repeat'] + list(PARAM_IDS)
-        timeit_func = partial(timeit.repeat, repeat=repeat)
+    extra = ['stat', 'number', 'repeat']
+    timeit_func = partial(timeit.repeat, repeat=repeat)
 
-        # statistics.quantiles only gets added in Python 3.8
-        import numpy as np
-
-        stats = {
-            'avg': np.mean,
-            'min': lambda xs: min(xs),
-            'p50': partial(np.quantile, q=0.5),
-            'p90': partial(np.quantile, q=0.9),
-        }
+    stats = {
+        'avg': np.mean,
+        'min': lambda xs: min(xs),
+        'p50': partial(np.quantile, q=0.5),
+        'p90': partial(np.quantile, q=0.9),
+    }
 
     names = [name for name in TIMINGS if any(fnmatchcase(name, w) for w in which)]
 
     header = make_header(extra, names)
     row_fmt = make_row_fmt(extra, names)
 
-    if db:
-        # HACK: use an existing DB
-        # (for which num_entries can't vary, since it exists already)
-        global EXISTING_DB_PATH
-        EXISTING_DB_PATH = db
-        global TIMINGS_PARAMS_LIST
-        TIMINGS_PARAMS_LIST = [(0,)]
-    if query:
-        global SEARCH_ENTRIES_QUERY
-        SEARCH_ENTRIES_QUERY = query
-
-    def get_results():
-        for params in TIMINGS_PARAMS_LIST:
-            times = []
-            for name in names:
-                cm = TIMINGS[name](**dict(zip(PARAM_IDS, params)))
-                with cm as fn:
-                    time = timeit_func('fn()', globals=dict(fn=fn), number=number)
-                times.append(time)
-            yield list(params), times
+    times = []
+    for name in names:
+        print('* timing', name, file=sys.stderr)
+        cm = TIMINGS[name]()
+        with cm as fn:
+            time = timeit_func('fn()', globals=dict(fn=fn), number=number)
+        times.append(time)
 
     print(header)
-    for params, results in get_results():
-        for stat_name, stat in stats.items():
-            if not repeat:
-                prefix = [number]
-            else:
-                prefix = [stat_name, number, repeat]
-            print(row_fmt.format(*prefix, *params, *map(stat, results)))
+    for stat_name, stat in stats.items():
+        prefix = [stat_name, number, repeat]
+        print(row_fmt.format(*prefix, *map(stat, times)))
 
 
 def fancy_division(a, b):
@@ -464,10 +323,7 @@ def diff(before, after, format):
     assert b_line == a_line
 
     parts = b_line.split()
-    first_param_index = parts.index(PARAM_IDS[0])
-    first_name_index = first_param_index + len(PARAM_IDS)
-    assert parts[first_param_index:first_name_index] == list(PARAM_IDS)
-
+    first_name_index = 3  # ['stat', 'number', 'repeat']
     extra = parts[:first_name_index]
     names = parts[first_name_index:]
 
@@ -490,13 +346,12 @@ def diff(before, after, format):
 @click.argument('which', nargs=-1)
 def profile(which):
     names = [name for name in TIMINGS if any(fnmatchcase(name, w) for w in which)]
-    params = PROFILE_PARAMS
 
     for name in names:
-        print(name, ' '.join(f'{i}={p}' for i, p in zip(PARAM_IDS, params)))
+        print(name)
         print()
 
-        cm = TIMINGS[name](**dict(zip(PARAM_IDS, params)))
+        cm = TIMINGS[name]()
 
         pr = cProfile.Profile()
         with cm as fn:
