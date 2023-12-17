@@ -13,7 +13,6 @@ from fnmatch import fnmatchcase
 from functools import partial
 
 import click
-import numpy as np
 
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../src'))
@@ -262,6 +261,9 @@ def time(which, number, repeat):
 
     extra = ['stat', 'number', 'repeat']
     timeit_func = partial(timeit.repeat, repeat=repeat)
+
+    # we're not installing this on pypy
+    import numpy as np
 
     stats = {
         'avg': np.mean,
