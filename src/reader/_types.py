@@ -1005,11 +1005,13 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
     @overload
-    def set_tag(self, resource_id: ResourceId, key: str, /) -> None:
+    def set_tag(self, resource_id: ResourceId, key: str, /) -> None:  # pragma: no cover
         ...
 
     @overload
-    def set_tag(self, resource_id: ResourceId, key: str, value: JSONType, /) -> None:
+    def set_tag(
+        self, resource_id: ResourceId, key: str, value: JSONType, /  # noqa: W504
+    ) -> None:  # pragma: no cover
         ...
 
     def set_tag(
