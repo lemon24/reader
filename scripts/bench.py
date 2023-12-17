@@ -84,6 +84,9 @@ def make_test_client(path):
 DB_PATH = None
 QUERY = None
 
+LIMIT = 100
+SEARCH_LIMIT = 20
+
 
 @contextmanager
 def setup_db():
@@ -110,6 +113,12 @@ def time_get_entries_all(reader):
 
 
 @inject(reader=setup_reader)
+def time_get_entries_all_page(reader):
+    for _ in reader.get_entries(limit=LIMIT):
+        pass
+
+
+@inject(reader=setup_reader)
 def time_get_entries_read(reader):
     for _ in reader.get_entries(read=True):
         pass
@@ -122,8 +131,20 @@ def time_get_entries_unread(reader):
 
 
 @inject(reader=setup_reader)
+def time_get_entries_unread_page(reader):
+    for _ in reader.get_entries(read=False, limit=LIMIT):
+        pass
+
+
+@inject(reader=setup_reader)
 def time_get_entries_important(reader):
     for _ in reader.get_entries(important=True):
+        pass
+
+
+@inject(reader=setup_reader)
+def time_get_entries_important_page(reader):
+    for _ in reader.get_entries(important=True, limit=LIMIT):
         pass
 
 
@@ -191,6 +212,12 @@ def time_search_entries_relevant_all(reader):
 
 
 @inject(reader=setup_reader)
+def time_search_entries_relevant_all_page(reader):
+    for _ in reader.search_entries(QUERY, limit=SEARCH_LIMIT):
+        pass
+
+
+@inject(reader=setup_reader)
 def time_search_entries_relevant_read(reader):
     for _ in reader.search_entries(QUERY, read=True):
         pass
@@ -199,6 +226,12 @@ def time_search_entries_relevant_read(reader):
 @inject(reader=setup_reader)
 def time_search_entries_recent_all(reader):
     for _ in reader.search_entries(QUERY, sort='recent'):
+        pass
+
+
+@inject(reader=setup_reader)
+def time_search_entries_recent_all_page(reader):
+    for _ in reader.search_entries(QUERY, sort='recent', limit=SEARCH_LIMIT):
         pass
 
 
@@ -212,8 +245,8 @@ def time_search_entries_recent_read(reader):
 def time_update_search(reader):
     # Sadly time() doesn't allow running the setup for every repeat,
     # so we disable/enable search inside the benchmark.
-    reader.enable_search()
     reader.disable_search()
+    reader.enable_search()
     reader.update_search()
 
 
@@ -224,15 +257,43 @@ TIMINGS = OrderedDict(
 )
 
 
+def common_options(fn):
+    def set_global(ctx, param, value):
+        name = param.name.upper()
+        gs = globals()
+        assert name in gs, name
+        assert gs[name] is None, name
+        gs[name] = value
+
+        @ctx.call_on_close
+        def reset():
+            gs[name] = None
+
+    click.option(
+        '--db',
+        'db_path',
+        default='db.sqlite',
+        show_default=True,
+        callback=set_global,
+        expose_value=False,
+        help="Database to use.",
+    )(fn)
+    click.option(
+        '-q',
+        '--query',
+        default='query',
+        show_default=True,
+        callback=set_global,
+        expose_value=False,
+        help="search_entries() query.",
+    )(fn)
+
+    return fn
+
+
 @click.group()
-@click.option('--db', default='db.sqlite', show_default=True, help="Database to use.")
-@click.option(
-    '--query', default='query', show_default=True, help="search_entries() query."
-)
-def cli(db, query):
-    global DB_PATH, QUERY
-    DB_PATH = db
-    QUERY = query
+def cli():
+    pass
 
 
 @cli.command(name='list')
@@ -253,9 +314,12 @@ def make_row_fmt(extra, names, num_fmt='.3f'):
 
 @cli.command()
 @click.argument('which', nargs=-1)
+@common_options
 @click.option('-n', '--number', type=int, default=1, show_default=True)
 @click.option('-r', '--repeat', type=int, default=1, show_default=True)
-def time(which, number, repeat):
+@click.option('-s', '--stat', multiple=True)
+def time(which, number, repeat, stat):
+    show_stat = stat
     if not which:
         which = ['*']
 
@@ -271,22 +335,30 @@ def time(which, number, repeat):
         'p50': partial(np.quantile, q=0.5),
         'p90': partial(np.quantile, q=0.9),
     }
+    if not show_stat:
+        show_stat = list(stats)
 
     names = [name for name in TIMINGS if any(fnmatchcase(name, w) for w in which)]
+    names_display = [
+        n if not n.startswith('search_') else f"{n}({QUERY})" for n in names
+    ]
+    header = make_header(extra, names_display)
+    row_fmt = make_row_fmt(extra, names_display)
 
-    header = make_header(extra, names)
-    row_fmt = make_row_fmt(extra, names)
+    print(header)
 
     times = []
     for name in names:
-        print('* timing', name, file=sys.stderr)
+        if len(names) > 1:
+            print('* timing', name, file=sys.stderr)
         cm = TIMINGS[name]()
         with cm as fn:
             time = timeit_func('fn()', globals=dict(fn=fn), number=number)
         times.append(time)
 
-    print(header)
     for stat_name, stat in stats.items():
+        if stat_name not in show_stat:
+            continue
         prefix = [stat_name, number, repeat]
         print(row_fmt.format(*prefix, *map(stat, times)))
 
@@ -346,6 +418,7 @@ def diff(before, after, format):
 
 @cli.command()
 @click.argument('which', nargs=-1)
+@common_options
 def profile(which):
     names = [name for name in TIMINGS if any(fnmatchcase(name, w) for w in which)]
 
@@ -364,4 +437,4 @@ def profile(which):
 
 
 if __name__ == '__main__':
-    cli()
+    cli(auto_envvar_prefix='BENCH')

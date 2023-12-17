@@ -34,9 +34,9 @@ def db_path(tmp_path_factory):
 def test_commands_work(command, db_path):
     runner = CliRunner()
     result = runner.invoke(
-        cli, ['--db', db_path] + command + ['get_entries_all', 'show']
+        cli, command + ['--db', db_path] + ['get_entries_all', 'show']
     )
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.exception
 
 
 def test_list():
