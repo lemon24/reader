@@ -83,6 +83,7 @@ def make_test_client(path):
 # these get set by the CLI
 DB_PATH = None
 QUERY = None
+SNIPPET = None
 
 LIMIT = 100
 SEARCH_LIMIT = 20
@@ -200,6 +201,11 @@ def time_show_100k(client):
             break
 
 
+@inject(reader=setup_reader)
+def time_snippet(reader):
+    exec(SNIPPET, {'reader': reader})
+
+
 # there were some update_feeds() timings here (up to 537348c);
 # I removed them because they relied on fake feeds (also removed in #330),
 # and I didn't want to spend the time to find another way of doing it
@@ -286,6 +292,13 @@ def common_options(fn):
         callback=set_global,
         expose_value=False,
         help="search_entries() query.",
+    )(fn)
+    click.option(
+        '--snippet',
+        show_default=True,
+        callback=set_global,
+        expose_value=False,
+        help="Python snippet.",
     )(fn)
 
     return fn
