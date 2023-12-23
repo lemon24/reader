@@ -339,6 +339,26 @@ Detailed requirements and API discussion: :issue:`168#issuecomment-642002049`.
 
 Minimal work needed to support alternate storages: :issue:`168#issuecomment-1383127564`.
 
+Storage internal API documented in version 3.10 (November 2023) in :issue:`325`.
+
+
+Database optimization
+~~~~~~~~~~~~~~~~~~~~~
+
+Some general guidance on schema/index design: :issue:`327#issuecomment-1859147186`.
+
+Speeding up ``get_entries(sort='recent')``:
+
+* first attempt at adding indexes: :issue:`134`
+* using a computed column (``recent_sort``) didn't change things very much: :issue:`279`
+* an index on ``recent_sort`` alone is not enough for pagination,
+  the index needs to match 1:1 the WHERE clause: :issue:`330`.
+
+Speeding up ``get_entry_counts(feed=...)``:
+
+* having an index on entries(feed) yielded a 4x improvement: :issue:`251`
+* even better, we should cache commonly-used counts: :issue:`306#issuecomment-1694655504`
+
 
 Parser
 ~~~~~~
@@ -522,11 +542,16 @@ and why I want more use-cases before implementing them (basically, YAGNI):
 
 :issue:`253` discusses using entry tags to implement the current entry flags
 (read, important); tl;dr: it's not worth adding entry tags just for this.
+:issue:`327` discusses using entry tags for ``has_enclosures``; tl;dr:
+it wouldn't save a lot of code, it would be only *a bit* slower,
+and it reconfirms that read and important are integral to the data model,
+so we still want them as regular columns.
 
 After closing :issue:`228` with `wontfix` in late 2021,
 in early 2022 (following the :issue:`266` tag/metadata unification)
 I implemented entry and global tags in :issue:`272`;
 there's a list of known use cases in the issue description.
+
 
 Resource tags
 ^^^^^^^^^^^^^
@@ -628,6 +653,12 @@ Using a single Reader objects from multiple threads
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Some thoughts on why it's difficult to do: :issue:`206#issuecomment-751383418`.
+
+Requirements and use cases: :issue:`206#issuecomment-1179739301`.
+
+When/how to run ``pragma optimize``: :issue:`206#issuecomment-1183660880`.
+
+Full support added in version 2.16 (July 2022).
 
 
 Plugins
