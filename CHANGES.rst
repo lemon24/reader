@@ -9,7 +9,7 @@ Changelog
 Version 3.11
 ------------
 
-Unreleased
+Released 2023-12-30
 
 * Allow filtering entries by their (entry) tags. (:issue:`328`)
 * Support Python 3.12. (:issue:`326`)
