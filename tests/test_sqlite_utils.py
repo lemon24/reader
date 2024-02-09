@@ -6,17 +6,17 @@ from functools import wraps
 import pytest
 from utils import rename_argument
 
-from reader._sqlite_utils import DBError
-from reader._sqlite_utils import ddl_transaction
-from reader._sqlite_utils import HeavyMigration
-from reader._sqlite_utils import IdError
-from reader._sqlite_utils import IntegrityError
-from reader._sqlite_utils import require_functions
-from reader._sqlite_utils import require_version
-from reader._sqlite_utils import RequirementError
-from reader._sqlite_utils import SchemaVersionError
-from reader._sqlite_utils import setup_db
-from reader._sqlite_utils import wrap_exceptions
+from reader._storage._sqlite_utils import DBError
+from reader._storage._sqlite_utils import ddl_transaction
+from reader._storage._sqlite_utils import HeavyMigration
+from reader._storage._sqlite_utils import IdError
+from reader._storage._sqlite_utils import IntegrityError
+from reader._storage._sqlite_utils import require_functions
+from reader._storage._sqlite_utils import require_version
+from reader._storage._sqlite_utils import RequirementError
+from reader._storage._sqlite_utils import SchemaVersionError
+from reader._storage._sqlite_utils import setup_db
+from reader._storage._sqlite_utils import wrap_exceptions
 
 
 original_sqlite3_connect = sqlite3.connect
@@ -344,7 +344,7 @@ class MockConnection:
 
 
 def test_require_functions(monkeypatch):
-    from reader._sqlite_utils import FUNCTION_TESTS
+    from reader._storage._sqlite_utils import FUNCTION_TESTS
 
     db = sqlite3.connect(':memory:')
 

@@ -11,10 +11,10 @@ from reader import HighlightedString
 from reader import InvalidSearchQueryError
 from reader import SearchError
 from reader import StorageError
-from reader._search import Search
-from reader._search import strip_html
-from reader._sqlite_utils import DBError
-from reader._sqlite_utils import require_version
+from reader._storage._search import Search
+from reader._storage._search import strip_html
+from reader._storage._sqlite_utils import DBError
+from reader._storage._sqlite_utils import require_version
 
 
 STRIP_HTML_DATA = [(i, i) for i in [None, 10, 11.2, b'aabb', b'aa<br>bb']] + [
@@ -186,7 +186,7 @@ def test_minimum_sqlite_version(storage, monkeypatch):
     search.enable()
 
     mock = MagicMock(wraps=require_version, side_effect=DBError('version'))
-    monkeypatch.setattr('reader._search.require_version', mock)
+    monkeypatch.setattr('reader._storage._search.require_version', mock)
 
     with pytest.raises(SearchError) as excinfo:
         search.enable()

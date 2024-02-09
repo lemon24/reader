@@ -30,7 +30,9 @@ if TYPE_CHECKING:  # pragma: no cover
 # TODO: Expose BeautifulSoup(features=...) when we have a config system.
 #
 warnings.filterwarnings(
-    'ignore', message='No parser was explicitly specified', module='reader._html_utils'
+    'ignore',
+    message='No parser was explicitly specified',
+    module='reader._storage._html_utils',
 )
 
 

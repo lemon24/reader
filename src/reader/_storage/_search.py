@@ -17,6 +17,23 @@ from types import MappingProxyType
 from typing import Any
 from typing import TypeVar
 
+from . import apply_entry_filter
+from . import apply_random
+from . import apply_recent
+from . import make_entry_counts_query
+from . import Storage
+from .._types import EntryFilter
+from .._utils import exactly_one
+from .._utils import join_paginated_iter
+from .._utils import zero_or_one
+from ..exceptions import EntryNotFoundError
+from ..exceptions import InvalidSearchQueryError
+from ..exceptions import SearchError
+from ..exceptions import SearchNotEnabledError
+from ..types import EntrySearchCounts
+from ..types import EntrySearchResult
+from ..types import HighlightedString
+from ..types import SearchSortOrder
 from ._html_utils import strip_html as strip_html_str
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
@@ -27,23 +44,6 @@ from ._sqlite_utils import require_version
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
 from ._sqlite_utils import wrap_exceptions_iter
-from ._storage import apply_entry_filter
-from ._storage import apply_random
-from ._storage import apply_recent
-from ._storage import make_entry_counts_query
-from ._storage import Storage
-from ._types import EntryFilter
-from ._utils import exactly_one
-from ._utils import join_paginated_iter
-from ._utils import zero_or_one
-from .exceptions import EntryNotFoundError
-from .exceptions import InvalidSearchQueryError
-from .exceptions import SearchError
-from .exceptions import SearchNotEnabledError
-from .types import EntrySearchCounts
-from .types import EntrySearchResult
-from .types import HighlightedString
-from .types import SearchSortOrder
 
 
 log = logging.getLogger('reader')

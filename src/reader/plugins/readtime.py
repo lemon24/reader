@@ -48,8 +48,8 @@ import logging
 import math
 import re
 
-from reader._html_utils import get_soup
-from reader._html_utils import remove_nontext_elements
+from reader._storage._html_utils import get_soup
+from reader._storage._html_utils import remove_nontext_elements
 from reader.exceptions import EntryNotFoundError
 from reader.types import _get_entry_content
 

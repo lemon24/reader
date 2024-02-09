@@ -9,15 +9,15 @@ import pytest
 from utils import rename_argument
 from utils import utc_datetime as datetime
 
-import reader._sqlite_utils
+import reader._storage._sqlite_utils
 from reader import EntryNotFoundError
 from reader import FeedNotFoundError
 from reader import InvalidSearchQueryError
 from reader import StorageError
-from reader._sqlite_utils import DBError
-from reader._sqlite_utils import HeavyMigration
-from reader._sqlite_utils import require_version
 from reader._storage import Storage
+from reader._storage._sqlite_utils import DBError
+from reader._storage._sqlite_utils import HeavyMigration
+from reader._storage._sqlite_utils import require_version
 from reader._types import EntryData
 from reader._types import EntryFilter
 from reader._types import EntryForUpdate
@@ -34,7 +34,7 @@ def test_storage_errors_connect(tmp_path):
     assert 'while opening' in excinfo.value.message
 
 
-@pytest.mark.parametrize('db_error_cls', reader._sqlite_utils.db_errors)
+@pytest.mark.parametrize('db_error_cls', reader._storage._sqlite_utils.db_errors)
 def test_db_errors(db_path, db_error_cls):
     """..._sqlite_utils.DBError subclasses should be wrapped in StorageError."""
 
@@ -583,7 +583,7 @@ def test_important_mark_entry_not_found(storage):
 
 def test_minimum_sqlite_version(db_path, monkeypatch):
     mock = MagicMock(wraps=require_version, side_effect=DBError)
-    monkeypatch.setattr('reader._sqlite_utils.require_version', mock)
+    monkeypatch.setattr('reader._storage._sqlite_utils.require_version', mock)
 
     with pytest.raises(StorageError):
         Storage(db_path)

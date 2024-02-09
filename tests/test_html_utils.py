@@ -1,7 +1,7 @@
 import bs4
 import pytest
 
-from reader._html_utils import strip_html
+from reader._storage._html_utils import strip_html
 
 
 STRIP_HTML_DATA = [

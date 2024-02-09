@@ -3,8 +3,8 @@ from textwrap import dedent
 
 import pytest
 
-from reader._sql_utils import BaseQuery
-from reader._sql_utils import Query
+from reader._storage._sql_utils import BaseQuery
+from reader._storage._sql_utils import Query
 
 
 def test_query_simple():

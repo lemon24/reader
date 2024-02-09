@@ -20,8 +20,8 @@ from reader import ReaderError
 from reader import SearchError
 from reader import SearchNotEnabledError
 from reader import StorageError
-from reader._search import Search
 from reader._storage import Storage
+from reader._storage._search import Search
 
 
 @pytest.fixture(params=[False, True], ids=['without_entries', 'with_entries'])
@@ -385,7 +385,7 @@ def test_update_triggers_no_change(db_path, make_reader, monkeypatch, set_user_t
     if anything else except the indexed fields changes.
 
     """
-    from reader._search import Search
+    from reader._storage._search import Search
 
     strip_html_called = 0
 
@@ -864,7 +864,7 @@ def test_update_search_entry_changed_during_strip_html(
     def target():
         # can't use fixture because it would run close() in a different thread
         from reader import make_reader
-        from reader._search import Search
+        from reader._storage._search import Search
 
         # strip_html() may or may not be used a SQLite user-defined function,
         # hence the whole subclassing thing
@@ -1021,7 +1021,7 @@ def test_update_search_concurrent_calls(db_path, make_reader, monkeypatch):
     def target():
         # can't use fixture because it would run close() in a different thread
         from reader import make_reader
-        from reader._search import Search
+        from reader._storage._search import Search
 
         class MySearch(Search):
             @staticmethod
