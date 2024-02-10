@@ -58,66 +58,6 @@ def exactly_one(it: Iterable[_U]) -> _U:
         assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
 
-def join_paginated_iter(
-    get_things: Callable[[int, _T | None], Iterable[tuple[_U, _T]]],
-    chunk_size: int,
-    last: _T | None = None,
-    limit: int = 0,
-) -> Iterable[_U]:
-    """
-    count_to_ten(4, None) -> ('one', 1), ..., ('four', 4)
-    count_to_ten(0, None) -> ('one', 1), ..., ('ten', 10)
-    count_to_ten(4, 4) -> ('five', 5), ..., ('eight', 8)
-    count_to_ten(0, 4) -> ('five', 5), ..., ('ten', 10)
-
-    join_paginated_iter(count_to_ten, 4, None) -> one, ..., ten (3 calls)
-    join_paginated_iter(count_to_ten, 0, None) -> one, ..., ten (1 call)
-    join_paginated_iter(count_to_ten, 4, 4) -> five, ..., ten (2 calls)
-    join_paginated_iter(count_to_ten, 0, 4) -> five, ..., ten (1 call)
-    join_paginated_iter(count_to_ten, 4, 4, limit=5) -> five, ..., nine (2 calls)
-    join_paginated_iter(count_to_ten, 0, 4, limit=5) -> five, ..., nine (1 call)
-
-    """
-    # At the moment get_things must take positional arguments.
-    # We could make it work with kwargs by using protocols,
-    # but mypy gets confused about partials with kwargs.
-    # https://github.com/python/mypy/issues/1484
-
-    if not chunk_size:
-        # When chunk_size is 0, don't chunk the query.
-        #
-        # This will ensure there are no missing/duplicated entries, but
-        # will block database writes until the whole generator is consumed.
-        #
-        # Currently not exposed through the public API.
-        #
-        things = get_things(limit, last)
-        yield from (t for t, _ in things)
-        return
-
-    remaining = limit
-
-    while True:
-        if limit:
-            if not remaining:
-                break
-            to_get = min(remaining, chunk_size)
-            remaining = max(0, remaining - to_get)
-        else:
-            to_get = chunk_size
-
-        things = list(get_things(to_get, last))
-        if not things:
-            break
-
-        _, last = things[-1]
-
-        yield from (t for t, _ in things)
-
-        if len(things) < to_get:
-            break
-
-
 def chunks(n: int, iterable: Iterable[_T]) -> Iterable[Iterable[_T]]:
     """grouper(2, 'ABCDE') --> AB CD E"""
     # based on https://stackoverflow.com/a/8991553

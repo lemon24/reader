@@ -266,12 +266,8 @@ def delete_entries(storage, feed, entry):
     storage.delete_entries([entry.resource_id])
 
 
-def get_entries_chunk_size_0(storage, _, __):
-    list(storage.get_entries_page(chunk_size=0))
-
-
-def get_entries_chunk_size_1(storage, _, __):
-    list(storage.get_entries_page(chunk_size=1))
+def get_entries(storage, _, __):
+    list(storage.get_entries())
 
 
 def get_tags(storage, feed, __):
@@ -292,14 +288,6 @@ def get_feed_counts(storage, _, __):
 
 def get_entry_counts(storage, _, __):
     storage.get_entry_counts(now=datetime(2010, 1, 1)),
-
-
-def get_feed_last(storage, feed, __):
-    storage.get_feed_last('title', feed.url)
-
-
-def get_entry_last(storage, feed, entry):
-    storage.get_entry_last('recent', (feed.url, entry.id))
 
 
 @pytest.mark.slow
@@ -325,15 +313,12 @@ def get_entry_last(storage, feed, entry):
         add_or_update_entries,
         add_entry,
         delete_entries,
-        get_entries_chunk_size_0,
-        get_entries_chunk_size_1,
+        get_entries,
         get_tags,
         set_tag,
         delete_tag,
         get_feed_counts,
         get_entry_counts,
-        get_feed_last,
-        get_entry_last,
     ],
 )
 def test_errors_locked(db_path, do_stuff):
@@ -394,31 +379,19 @@ def check_errors_locked(db_path, pre_stuff, do_stuff, exc_type):
 
 
 def iter_get_feeds(storage):
-    return storage.get_feeds_page(chunk_size=1)
+    return storage.get_feeds()
 
 
 def iter_get_feeds_for_update(storage):
     return storage.get_feeds_for_update()
 
 
-def iter_pagination_chunk_size_0(storage):
-    return storage.get_entries_page(chunk_size=0)
-
-
-def iter_pagination_chunk_size_1(storage):
-    return storage.get_entries_page(chunk_size=1)
-
-
-def iter_pagination_chunk_size_2(storage):
-    return storage.get_entries_page(chunk_size=2)
-
-
-def iter_pagination_chunk_size_3(storage):
-    return storage.get_entries_page(chunk_size=3)
+def iter_get_entries(storage):
+    return storage.get_entries()
 
 
 def iter_get_tags(storage):
-    return storage.get_tags_page(('two',), chunk_size=1)
+    return storage.get_tags(('two',))
 
 
 @pytest.mark.slow
@@ -427,23 +400,17 @@ def iter_get_tags(storage):
     [
         iter_get_feeds,
         iter_get_feeds_for_update,
-        pytest.param(
-            iter_pagination_chunk_size_0,
-            marks=pytest.mark.xfail(raises=StorageError, strict=True),
-        ),
-        iter_pagination_chunk_size_1,
-        iter_pagination_chunk_size_2,
-        iter_pagination_chunk_size_3,
+        iter_get_entries,
         iter_get_tags,
     ],
 )
-def test_iter_locked(db_path, iter_stuff):
+def test_iter_locked(db_path, iter_stuff, chunk_size):
     """Methods that return an iterable shouldn't block the underlying storage
     if the iterable is not consumed."""
-    check_iter_locked(db_path, None, iter_stuff)
+    check_iter_locked(db_path, None, iter_stuff, chunk_size)
 
 
-def check_iter_locked(db_path, pre_stuff, iter_stuff):
+def check_iter_locked(db_path, pre_stuff, iter_stuff, chunk_size):
     """Actual implementation of test_errors_locked, so it can be reused."""
 
     # WAL provides more concurrency; some things won't to block with it enabled.

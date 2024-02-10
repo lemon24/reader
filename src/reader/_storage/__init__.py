@@ -25,7 +25,6 @@ from .._types import SearchType
 from .._types import TagFilter
 from .._utils import chunks
 from .._utils import exactly_one
-from .._utils import join_paginated_iter
 from .._utils import zero_or_one
 from ..exceptions import EntryError
 from ..exceptions import EntryExistsError
@@ -137,6 +136,7 @@ class Storage:
     # are not part of the Storage interface,
     # but are part of the private API of this implementation.
     chunk_size = 2**8
+
     # 1, 3, 12 months rounded down to days,
     # assuming an average of 30.436875 days/month
     entry_counts_average_periods = (30, 91, 365)
@@ -272,6 +272,7 @@ class Storage:
                 dict(old=old, new=new),
             )
 
+    @wrap_exceptions_iter(StorageError)
     def get_feeds(
         self,
         filter: FeedFilter = FeedFilter(),  # noqa: B008
@@ -279,18 +280,16 @@ class Storage:
         limit: int | None = None,
         starting_after: str | None = None,
     ) -> Iterable[Feed]:
-        rv = join_paginated_iter(
-            partial(self.get_feeds_page, filter, sort),  # type: ignore[arg-type]
+        return paginated_query(
+            self.get_db(),
+            partial(make_get_feeds_query, filter, sort),
             self.chunk_size,
-            self.get_feed_last(sort, starting_after) if starting_after else None,
             limit or 0,
+            self.get_feed_last(sort, starting_after) if starting_after else None,
+            feed_factory,
         )
-        yield from rv
 
-    @wrap_exceptions(StorageError)
     def get_feed_last(self, sort: str, url: str) -> tuple[Any, ...]:
-        # TODO: make this method private?
-
         query = Query().FROM("feeds").WHERE("url = :url")
 
         # TODO: kinda sorta duplicates the scrolling_window_order_by call
@@ -304,19 +303,6 @@ class Storage:
         return zero_or_one(
             self.get_db().execute(str(query), dict(url=url)),
             lambda: FeedNotFoundError(url),
-        )
-
-    @wrap_exceptions_iter(StorageError)
-    def get_feeds_page(
-        self,
-        filter: FeedFilter = FeedFilter(),  # noqa: B008
-        sort: FeedSort = 'title',
-        chunk_size: int | None = None,
-        last: _T | None = None,
-    ) -> Iterable[tuple[Feed, _T | None]]:
-        query, context = make_get_feeds_query(filter, sort)
-        yield from paginated_query(
-            self.get_db(), query, context, chunk_size, last, feed_factory
         )
 
     @wrap_exceptions(StorageError)
@@ -345,10 +331,7 @@ class Storage:
         self,
         filter: FeedFilter = FeedFilter(),  # noqa: B008
     ) -> Iterable[FeedForUpdate]:
-        # Reader shouldn't care this is paginated,
-        # so we don't expose any pagination stuff.
-
-        def make_feed_for_update(row: tuple[Any, ...]) -> FeedForUpdate:
+        def row_factory(row: tuple[Any, ...]) -> FeedForUpdate:
             (
                 url,
                 updated,
@@ -370,9 +353,7 @@ class Storage:
                 data_hash,
             )
 
-        def inner(
-            chunk_size: int | None, last: _T | None
-        ) -> Iterable[tuple[FeedForUpdate, _T | None]]:
+        def make_query() -> tuple[Query, dict[str, Any]]:
             query = (
                 Query()
                 .SELECT(
@@ -386,34 +367,34 @@ class Storage:
                     'data_hash',
                 )
                 .FROM("feeds")
+                .scrolling_window_order_by("url")
             )
-
             context = apply_feed_filter(query, filter)
+            return query, context
 
-            query.scrolling_window_order_by("url")
+        return paginated_query(
+            self.get_db(),
+            make_query,
+            self.chunk_size,
+            row_factory=row_factory,
+        )
 
-            yield from paginated_query(
-                self.get_db(), query, context, chunk_size, last, make_feed_for_update
-            )
-
-        yield from join_paginated_iter(inner, self.chunk_size)
-
-    def _get_entries_for_update(
+    @wrap_exceptions_iter(StorageError)
+    def get_entries_for_update(
         self, entries: Iterable[tuple[str, str]]
     ) -> Iterable[EntryForUpdate | None]:
-        # We could fetch everything in a single query,
-        # but there are limits to the number of variables used in a query,
-        # and we'd have to fall back to this anyway.
-        # This is only ~10% slower than the single query version.
-        # Single query version last in e39b0134cb3a2fe2bb346d42355a764181926a82.
+        for iterable in chunks(self.chunk_size, entries):
+            yield from self._get_entries_for_update_page(iterable)
 
-        # This can't be a generator;
-        # we must get the result inside the transaction, otherwise we get:
-        #   Cursor needed to be reset because of commit/rollback
-        #   and can no longer be fetched from.
-        rv = []
+    def _get_entries_for_update_page(
+        self, entries: Iterable[tuple[str, str]]
+    ) -> Iterable[EntryForUpdate | None]:
+        # Fetching everything in a single query is not much faster.
+        # Also, the maximum number of SQL variables can be as low as 999.
+        # See https://github.com/lemon24/reader/issues/109 for details.
+        # See e39b0134cb3a2fe2bb346d42355a764181926a82 for a single query version.
 
-        def make_entry_for_update(row: tuple[Any, ...]) -> EntryForUpdate:
+        def row_factory(_: sqlite3.Cursor, row: sqlite3.Row) -> EntryForUpdate:
             updated, published, data_hash, data_hash_changed = row
             return EntryForUpdate(
                 convert_timestamp(updated) if updated else None,
@@ -422,43 +403,25 @@ class Storage:
                 data_hash_changed,
             )
 
+        query = """
+            SELECT
+                updated,
+                published,
+                data_hash,
+                data_hash_changed
+            FROM entries
+            WHERE feed = ?
+                AND id = ?;
+        """
+
         with self.get_db() as db:
-            # We use an explicit transaction for speed,
-            # otherwise we get an implicit one for each query).
-            db.execute('BEGIN;')
+            cursor = db.cursor()
+            cursor.row_factory = row_factory
 
-            for feed_url, id in entries:  # noqa: B007
-                context = dict(feed_url=feed_url, id=id)
-                row = db.execute(
-                    """
-                    SELECT
-                        updated,
-                        published,
-                        data_hash,
-                        data_hash_changed
-                    FROM entries
-                    WHERE feed = :feed_url
-                        AND id = :id;
-                    """,
-                    context,
-                ).fetchone()
-                rv.append(make_entry_for_update(row) if row else None)
+            # Use an explicit transaction for speed.
+            cursor.execute('BEGIN;')
 
-        return rv
-
-    @wrap_exceptions_iter(StorageError)
-    def get_entries_for_update(
-        self, entries: Iterable[tuple[str, str]]
-    ) -> Iterable[EntryForUpdate | None]:
-        # It's acceptable for this method to not be atomic. TODO: Why?
-
-        iterables = chunks(self.chunk_size, entries) if self.chunk_size else (entries,)
-
-        for iterable in iterables:
-            rv = self._get_entries_for_update(iterable)
-            if self.chunk_size:
-                rv = list(rv)
-            yield from rv
+            return [cursor.execute(query, entry).fetchone() for entry in entries]
 
     @wrap_exceptions(StorageError)
     def set_feed_user_title(self, url: str, title: str | None) -> None:
@@ -831,6 +794,7 @@ class Storage:
                     cursor, lambda: EntryNotFoundError(feed_url, entry_id)  # noqa: B023
                 )
 
+    @wrap_exceptions_iter(StorageError)
     def get_entries(
         self,
         filter: EntryFilter = EntryFilter(),  # noqa: B008
@@ -838,36 +802,28 @@ class Storage:
         limit: int | None = None,
         starting_after: tuple[str, str] | None = None,
     ) -> Iterable[Entry]:
-        # TODO: deduplicate
-        if sort == 'recent':
-            rv = join_paginated_iter(
-                partial(self.get_entries_page, filter, sort),  # type: ignore[arg-type]
+        if sort != 'random':
+            return paginated_query(
+                self.get_db(),
+                partial(make_get_entries_query, filter, sort),
                 self.chunk_size,
-                self.get_entry_last(sort, starting_after) if starting_after else None,
                 limit or 0,
+                self.get_entry_last(sort, starting_after) if starting_after else None,
+                entry_factory,
             )
-        elif sort == 'random':
-            assert not starting_after
-            it = self.get_entries_page(
-                filter,
-                sort,
-                min(limit, self.chunk_size or limit) if limit else self.chunk_size,
-            )
-            rv = (entry for entry, _ in it)
         else:
-            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+            return paginated_query(
+                self.get_db(),
+                partial(make_get_entries_query, filter, sort),
+                self.chunk_size,
+                min(limit, self.chunk_size) if limit else self.chunk_size,
+                row_factory=entry_factory,
+            )
 
-        yield from rv
-
-    @wrap_exceptions(StorageError)
     def get_entry_last(self, sort: str, entry: tuple[str, str]) -> tuple[Any, ...]:
-        # TODO: make this method private?
-
         feed_url, entry_id = entry
 
         query = Query().FROM("entries").WHERE("feed = :feed AND id = :id")
-
-        assert sort != 'random'
 
         # TODO: kinda sorta duplicates the scrolling_window_order_by call
         if sort == 'recent':
@@ -880,19 +836,6 @@ class Storage:
         return zero_or_one(
             self.get_db().execute(str(query), context),
             lambda: EntryNotFoundError(feed_url, entry_id),
-        )
-
-    @wrap_exceptions_iter(StorageError)
-    def get_entries_page(
-        self,
-        filter: EntryFilter = EntryFilter(),  # noqa: B008
-        sort: EntrySort = 'recent',
-        chunk_size: int | None = None,
-        last: _T | None = None,
-    ) -> Iterable[tuple[Entry, _T | None]]:
-        query, context = make_get_entries_query(filter, sort)
-        yield from paginated_query(
-            self.get_db(), query, context, chunk_size, last, entry_factory
         )
 
     @wrap_exceptions(StorageError)
@@ -913,59 +856,53 @@ class Storage:
 
         return EntryCounts(*row[:4], row[4:7])  # type: ignore[call-arg]
 
+    @wrap_exceptions_iter(StorageError)
     def get_tags(
         self,
         resource_id: AnyResourceId,
         key: str | None = None,
     ) -> Iterable[tuple[str, JSONType]]:
-        yield from join_paginated_iter(
-            partial(self.get_tags_page, resource_id, key),
-            self.chunk_size,
-        )
+        def make_query() -> tuple[Query, dict[str, Any]]:
+            query = Query().SELECT("key")
+            context: dict[str, Any] = dict()
 
-    @wrap_exceptions_iter(StorageError)
-    def get_tags_page(
-        self,
-        resource_id: AnyResourceId,
-        key: str | None = None,
-        chunk_size: int | None = None,
-        last: _T | None = None,
-    ) -> Iterable[tuple[tuple[str, JSONType], _T | None]]:
-        query = Query().SELECT("key")
-        context: dict[str, Any] = dict()
+            if resource_id is not None:
+                info = SCHEMA_INFO[len(resource_id)]
+                query.FROM(f"{info.table_prefix}tags")
 
-        if resource_id is not None:
-            info = SCHEMA_INFO[len(resource_id)]
-            query.FROM(f"{info.table_prefix}tags")
+                if not any(p is None for p in resource_id):
+                    query.SELECT("value")
+                    for column in info.id_columns:
+                        query.WHERE(f"{column} = :{column}")
+                    context.update(zip(info.id_columns, resource_id, strict=True))
+                else:
+                    query.SELECT_DISTINCT("'null'")
 
-            if not any(p is None for p in resource_id):
-                query.SELECT("value")
-                for column in info.id_columns:
-                    query.WHERE(f"{column} = :{column}")
-                context.update(zip(info.id_columns, resource_id, strict=True))
             else:
+                union = '\nUNION\n'.join(
+                    f"SELECT key, value FROM {i.table_prefix}tags"
+                    for i in SCHEMA_INFO.values()
+                )
+                query.with_('tags', union).FROM('tags')
                 query.SELECT_DISTINCT("'null'")
 
-        else:
-            union = '\nUNION\n'.join(
-                f"SELECT key, value FROM {i.table_prefix}tags"
-                for i in SCHEMA_INFO.values()
-            )
-            query.with_('tags', union).FROM('tags')
-            query.SELECT_DISTINCT("'null'")
+            if key is not None:
+                query.WHERE("key = :key")
+                context.update(key=key)
 
-        if key is not None:
-            query.WHERE("key = :key")
-            context.update(key=key)
+            query.scrolling_window_order_by("key")
 
-        query.scrolling_window_order_by("key")
+            return query, context
 
-        def row_factory(t: tuple[Any, ...]) -> tuple[str, JSONType]:
-            key, value, *_ = t
+        def row_factory(row: tuple[Any, ...]) -> tuple[str, JSONType]:
+            key, value, *_ = row
             return key, json.loads(value)
 
-        yield from paginated_query(
-            self.get_db(), query, context, chunk_size, last, row_factory
+        return paginated_query(
+            self.get_db(),
+            make_query,
+            self.chunk_size,
+            row_factory=row_factory,
         )
 
     @overload

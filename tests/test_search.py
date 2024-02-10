@@ -48,20 +48,12 @@ def update_search(storage, _, __):
     Search(storage).update()
 
 
-def search_entries_chunk_size_0(storage, _, __):
-    list(Search(storage).search_entries_page('entry', chunk_size=0))
-
-
-def search_entries_chunk_size_1(storage, _, __):
-    list(Search(storage).search_entries_page('entry', chunk_size=1))
+def search_entries(storage, _, __):
+    list(Search(storage).search_entries('entry'))
 
 
 def search_entry_counts(storage, _, __):
     Search(storage).search_entry_counts('entry', now=datetime(2010, 1, 1))
-
-
-def search_entry_last(storage, feed, entry):
-    Search(storage).search_entry_last('entry', (feed.url, entry.id))
 
 
 @pytest.mark.slow
@@ -72,10 +64,8 @@ def search_entry_last(storage, feed, entry):
         (None, disable_search),
         (None, is_search_enabled),
         (enable_search, update_search),
-        (enable_search, search_entries_chunk_size_0),
-        (enable_search, search_entries_chunk_size_1),
+        (enable_search, search_entries),
         (enable_search, search_entry_counts),
-        (enable_search, search_entry_last),
     ],
 )
 def test_errors_locked(db_path, pre_stuff, do_stuff):
@@ -92,43 +82,20 @@ def enable_and_update_search(storage):
     search.update()
 
 
-def iter_search_entries_chunk_size_0(storage):
-    return Search(storage).search_entries_page('entry', chunk_size=0)
-
-
-def iter_search_entries_chunk_size_1(storage):
-    return Search(storage).search_entries_page('entry', chunk_size=1)
-
-
-def iter_search_entries_chunk_size_2(storage):
-    return Search(storage).search_entries_page('entry', chunk_size=2)
-
-
-def iter_search_entries_chunk_size_3(storage):
-    return Search(storage).search_entries_page('entry', chunk_size=3)
+def iter_search_entries(storage):
+    return Search(storage).search_entries('entry')
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    'iter_stuff',
-    [
-        pytest.param(
-            iter_search_entries_chunk_size_0,
-            marks=pytest.mark.xfail(raises=StorageError, strict=True),
-        ),
-        iter_search_entries_chunk_size_1,
-        iter_search_entries_chunk_size_2,
-        iter_search_entries_chunk_size_3,
-    ],
-)
-def test_iter_locked(db_path, iter_stuff):
+@pytest.mark.parametrize('iter_stuff', [iter_search_entries])
+def test_iter_locked(db_path, iter_stuff, chunk_size):
     """Methods that return an iterable shouldn't block the underlying storage
     if the iterable is not consumed.
 
     """
     from test_storage import check_iter_locked
 
-    check_iter_locked(db_path, enable_and_update_search, iter_stuff)
+    check_iter_locked(db_path, enable_and_update_search, iter_stuff, chunk_size)
 
 
 class ActuallyOK(Exception):

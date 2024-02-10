@@ -32,7 +32,6 @@ from collections.abc import Callable
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
-from typing import cast
 from typing import NamedTuple
 from typing import TYPE_CHECKING
 from typing import TypeVar
@@ -250,32 +249,42 @@ class Query(SugarMixin, ScrollingWindowMixin, BaseQuery):
 
 def paginated_query(
     db: sqlite3.Connection,
-    query: Query,
-    params: dict[str, Any] = {},  # noqa: B006
-    chunk_size: int | None = 0,
-    last: _U | None = None,
+    make_query: Callable[[], tuple[Query, dict[str, Any]]],
+    max_size: int,
+    limit: int = 0,
+    last: tuple[Any, ...] | None = None,
     row_factory: Callable[[tuple[Any, ...]], _T] | None = None,
-) -> Iterable[tuple[_T, _U]]:
-    params = dict(params)
+) -> Iterable[_T]:
+    remaining = limit
 
-    if chunk_size:
-        query.LIMIT(":chunk_size")
-        params['chunk_size'] = chunk_size
-    if last:
-        params.update(query.add_last(last))  # type: ignore
+    while True:
+        query, params = make_query()
 
-    rv = (
-        (row_factory(t) if row_factory else t, cast(_U, query.extract_last(t)))
-        for t in db.execute(str(query), params)
-    )
+        if limit:
+            if not remaining:
+                break
+            size = min(remaining, max_size)
+            remaining = max(0, remaining - size)
+        else:
+            size = max_size
 
-    # Consume the result to avoid blocking the database,
-    # but only if the query is actually paginated
-    # (we may need the pass-through for performance).
-    if chunk_size:
-        return iter(list(rv))
+        query.LIMIT(":limit")
+        params['limit'] = size
 
-    return rv
+        if last:
+            params.update(query.add_last(last))
+
+        chunk = list(db.execute(str(query), params))
+        if not chunk:
+            break
+
+        for thing in chunk:
+            yield row_factory(thing) if row_factory else thing
+
+        last = query.extract_last(thing)
+
+        if len(chunk) < max_size:
+            break
 
 
 @dataclass(frozen=True)

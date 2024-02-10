@@ -179,8 +179,6 @@ def data_dir(tests_dir):
         # rough result size (order of magnitude)
         1,
         slow(2),
-        # unchunked query, likely to be ok
-        slow(0),
     ]
 )
 def chunk_size(request):

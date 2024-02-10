@@ -24,7 +24,6 @@ from . import make_entry_counts_query
 from . import Storage
 from .._types import EntryFilter
 from .._utils import exactly_one
-from .._utils import join_paginated_iter
 from .._utils import zero_or_one
 from ..exceptions import EntryNotFoundError
 from ..exceptions import InvalidSearchQueryError
@@ -43,7 +42,6 @@ from ._sqlite_utils import require_functions
 from ._sqlite_utils import require_version
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
-from ._sqlite_utils import wrap_exceptions_iter
 
 
 log = logging.getLogger('reader')
@@ -753,38 +751,62 @@ class Search:
         limit: int | None = None,
         starting_after: tuple[str, str] | None = None,
     ) -> Iterable[EntrySearchResult]:
+        random_mark = ''.join(
+            random.choices(string.ascii_letters + string.digits, k=20)
+        )
+        before_mark = f'>>>{random_mark}>>>'
+        after_mark = f'<<<{random_mark}<<<'
+
+        def make_query() -> tuple[Query, dict[str, Any]]:
+            sql_query, context = make_search_entries_query(filter, sort)
+            context.update(
+                query=query,
+                before_mark=before_mark,
+                after_mark=after_mark,
+                # 255 letters / 4.7 letters per word (average in English)
+                snippet_tokens=54,
+            )
+            return sql_query, context
+
+        row_factory = partial(
+            entry_search_result_factory,
+            before_mark=before_mark,
+            after_mark=after_mark,
+        )
+
         # TODO: dupe of at least Storage.get_entries(), maybe deduplicate
-        if sort in ('relevant', 'recent'):
+        if sort != 'random':
             last = None
             if starting_after:
-                if sort == 'recent':
+                if sort == 'relevant':
+                    last = self.search_entry_last(query, starting_after)
+                elif sort == 'recent':
                     last = self.storage.get_entry_last(sort, starting_after)
                 else:
-                    last = self.search_entry_last(query, starting_after)
+                    assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
-            rv = join_paginated_iter(
-                partial(self.search_entries_page, query, filter, sort),  # type: ignore[arg-type]
+            rv = paginated_query(
+                self.get_db(),
+                make_query,
                 self.chunk_size,
-                last,
                 limit or 0,
+                last,
+                row_factory,
             )
-
-        elif sort == 'random':
-            assert not starting_after
-            it = self.search_entries_page(
-                query,
-                filter,
-                sort,
-                min(limit, self.chunk_size or limit) if limit else self.chunk_size,
-            )
-            rv = (entry for entry, _ in it)
 
         else:
-            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+            rv = paginated_query(
+                self.get_db(),
+                make_query,
+                self.chunk_size,
+                min(limit, self.chunk_size) if limit else self.chunk_size,
+                row_factory=row_factory,
+            )
 
-        yield from rv
+        # can't just return rv, wrap_search_exceptions doesn't work with iterators
+        with wrap_exceptions(SearchError), wrap_search_exceptions(query=True):
+            yield from rv
 
-    @wrap_exceptions(SearchError)
     @wrap_search_exceptions()
     def search_entry_last(self, query: str, entry: tuple[str, str]) -> tuple[Any, ...]:
         feed_url, entry_id = entry
@@ -804,42 +826,6 @@ class Search:
             self.get_db().execute(str(sql_query), context),
             lambda: EntryNotFoundError(feed_url, entry_id),
         )
-
-    @wrap_exceptions_iter(SearchError)
-    def search_entries_page(
-        self,
-        query: str,
-        filter: EntryFilter = EntryFilter(),  # noqa: B008
-        sort: SearchSortOrder = 'relevant',
-        chunk_size: int | None = None,
-        last: _T | None = None,
-    ) -> Iterable[tuple[EntrySearchResult, _T | None]]:
-        sql_query, context = make_search_entries_query(filter, sort)
-
-        random_mark = ''.join(
-            random.choices(string.ascii_letters + string.digits, k=20)
-        )
-        before_mark = f'>>>{random_mark}>>>'
-        after_mark = f'<<<{random_mark}<<<'
-
-        context.update(
-            query=query,
-            before_mark=before_mark,
-            after_mark=after_mark,
-            # 255 letters / 4.7 letters per word (average in English)
-            snippet_tokens=54,
-        )
-
-        row_factory = partial(
-            entry_search_result_factory,
-            before_mark=before_mark,
-            after_mark=after_mark,
-        )
-
-        with wrap_search_exceptions(query=True):
-            yield from paginated_query(
-                self.get_db(), sql_query, context, chunk_size, last, row_factory
-            )
 
     @wrap_exceptions(SearchError)
     @wrap_search_exceptions(query=True)
