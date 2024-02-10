@@ -25,10 +25,12 @@ https://death.andgravity.com/query-builder-how
 from __future__ import annotations
 
 import functools
+import re
 import textwrap
 from collections import defaultdict
 from collections.abc import Callable
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any
 from typing import cast
 from typing import NamedTuple
@@ -274,3 +276,36 @@ def paginated_query(
         return iter(list(rv))
 
     return rv
+
+
+@dataclass(frozen=True)
+class Create:
+    name: str
+    type: str
+    stmt: str
+
+    def create(self, db: sqlite3.Connection, name: str | None = None) -> None:
+        db.execute(self.stmt.format(name=name or self.name))
+
+
+def parse_schema(sql: str) -> dict[str, dict[str, Create]]:
+    rv = defaultdict(dict)  # type: ignore[var-annotated]
+    for name, type, stmt in _parse_schema(sql):
+        rv[type][name] = Create(name, type, stmt.replace(name, '{name}', 1))
+    return rv
+
+
+_create_re = r"""(?isx:
+    (?m:^create)
+    \s+ (\S+) \s+ (\S+) .*?
+    (?= \s+ (?m:^create) | $)
+)"""
+
+
+def _parse_schema(sql: str) -> Iterable[tuple[str, str, str]]:
+    sql = re.sub('--.*', '', sql)
+    sql = re.sub('(?m: +$)', '', sql)
+    sql = re.sub('\n\n+', '\n\n', sql)
+    for match in re.finditer(_create_re, sql):
+        stmt, type, name = match.group(0, 1, 2)
+        yield name, type.lower(), stmt
