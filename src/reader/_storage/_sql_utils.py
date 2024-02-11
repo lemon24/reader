@@ -238,13 +238,26 @@ class ScrollingWindowMixin(_MixinBase):
         return [(self.__make_label(i), t) for i, t in enumerate(last or ())]
 
 
-class SugarMixin(_MixinBase):
+class Query(ScrollingWindowMixin, BaseQuery):
     def with_(self, alias: str, value: str) -> Self:
         return self.WITH((alias, value))
 
+    def scrolling_window_sort_key(self, key: SortKey, keyword: str = 'WHERE') -> Self:
+        self.SELECT(*key)
+        super().scrolling_window_order_by(*key.names(), desc=key.desc, keyword=keyword)
+        return self
 
-class Query(SugarMixin, ScrollingWindowMixin, BaseQuery):
-    pass
+
+class SortKey(list[_QArg]):
+    def __init__(self, *by: _QArg, desc: bool = False):
+        super().__init__(by)
+        self.desc = desc
+
+    def names(self, prefix: str = '') -> list[str]:
+        rv = [t if isinstance(t, str) else t[0] for t in self]
+        if prefix:
+            rv = [prefix + n for n in rv]
+        return rv
 
 
 def paginated_query(

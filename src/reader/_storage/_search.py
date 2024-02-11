@@ -7,6 +7,7 @@ import random
 import sqlite3
 import string
 from collections import OrderedDict
+from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -913,21 +914,26 @@ def make_search_entries_query(
         .FROM("search")
         .GROUP_BY("search._id", "search._feed")
     )
-
-    if sort == 'relevant':
-        query.scrolling_window_order_by(
-            *"rank search._feed search._id".split(), keyword='HAVING'
-        )
-    elif sort == 'recent':
-        _queries.entries_recent_sort(query, keyword='HAVING', id_prefix='search._')
-    elif sort == 'random':
-        _queries.entries_random_sort(query)
-    else:
-        assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
+    SEARCH_ENTRIES_SORT[sort](query)
 
     log.debug("_search_entries query\n%s\n", query)
 
     return query, context
+
+
+def relevant_sort(query: Query) -> None:
+    query.scrolling_window_order_by(
+        'rank', 'search._feed', 'search._id', keyword='HAVING'
+    )
+
+
+SEARCH_ENTRIES_SORT: dict[str, Callable[[Query], None]] = {
+    'relevant': relevant_sort,
+    'recent': partial(
+        _queries.entries_recent_sort, keyword='HAVING', id_prefix='search._'
+    ),
+    'random': _queries.entries_random_sort,
+}
 
 
 def entry_search_result_factory(

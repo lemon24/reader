@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
@@ -19,6 +20,7 @@ from ..types import Feed
 from ..types import FeedSort
 from ._sql_utils import BaseQuery
 from ._sql_utils import Query
+from ._sql_utils import SortKey
 
 
 # get_feeds()
@@ -42,23 +44,9 @@ def get_feeds(filter: FeedFilter, sort: FeedSort) -> tuple[Query, dict[str, Any]
             'updates_enabled',
         )
         .FROM("feeds")
+        .scrolling_window_sort_key(FEED_SORT_KEYS[sort])
     )
-
     context = feed_filter(query, filter)
-
-    # NOTE: when changing, ensure none of the values can be null
-    # to prevent https://github.com/lemon24/reader/issues/203
-
-    # sort by url at the end to make sure the order is deterministic
-    if sort == 'title':
-        query.SELECT(("kinda_title", "lower(coalesce(user_title, title, ''))"))
-        query.scrolling_window_order_by("kinda_title", "url")
-    elif sort == 'added':
-        query.SELECT("added")
-        query.scrolling_window_order_by("added", "url", desc=True)
-    else:
-        assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
-
     return query, context
 
 
@@ -91,6 +79,14 @@ def feed_factory(row: tuple[Any, ...]) -> Feed:
         ExceptionInfo(**json.loads(last_exception)) if last_exception else None,
         updates_enabled == 1,
     )
+
+
+FEED_SORT_KEYS = {
+    # values must be non-null, see #203 for details.
+    # url at the end makes the order deterministic.
+    'title': SortKey(("kinda_title", "lower(coalesce(user_title, title, ''))"), "url"),
+    'added': SortKey("added", "url", desc=True),
+}
 
 
 def feed_filter(query: Query, filter: FeedFilter) -> dict[str, Any]:
@@ -156,22 +152,9 @@ def get_entries(filter: EntryFilter, sort: EntrySort) -> tuple[Query, dict[str, 
         .FROM("entries")
         .JOIN("feeds ON feeds.url = entries.feed")
     )
-
-    filter_context = entry_filter(query, filter)
-
-    if sort == 'recent':
-        entries_recent_sort(query)
-
-    elif sort == 'random':
-        entries_random_sort(query)
-
-    else:
-        assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
-
-    # FIXME: move to Storage
-    # log.debug("_get_entries query\n%s\n", query)
-
-    return query, filter_context
+    context = entry_filter(query, filter)
+    ENTRIES_SORT[sort](query)
+    return query, context
 
 
 def entry_factory(row: tuple[Any, ...]) -> Entry:
@@ -349,57 +332,32 @@ def tags_filter(
     )
 
 
+RECENT_SORT_KEY = SortKey(
+    # keep this in sync with the entries_by_recent.
+    # values must be non-null, see #203 for details.
+    # id at the end makes the order deterministic.
+    'recent_sort',
+    ('kinda_published', 'coalesce(published, updated, first_updated)'),
+    'feed',
+    'last_updated',
+    ('negative_feed_order', '- feed_order'),
+    'id',
+    desc=True,
+)
+
+ENTRY_SORT_KEYS = {'recent': RECENT_SORT_KEY}
+
+
 def entries_recent_sort(
     query: Query, keyword: str = 'WHERE', id_prefix: str = 'entries.'
 ) -> None:
-    """Change query to sort entries by "recent"."""
-
-    # WARNING: Always keep the entries_by_recent index in sync
-    # with the ORDER BY of the CTE below.
-
-    query.with_(
-        'ids',
-        """
-        SELECT
-            feed,
-            id,
-            last_updated,
-            recent_sort,
-            coalesce(published, updated, first_updated) as kinda_published,
-            - feed_order as negative_feed_order
-        FROM entries
-        ORDER BY
-            recent_sort DESC,
-            kinda_published DESC,
-            feed DESC,
-            last_updated DESC,
-            negative_feed_order DESC,
-            id DESC
-        """,
-    )
+    ids_query = Query().FROM('entries').scrolling_window_sort_key(RECENT_SORT_KEY)
+    query.with_('ids', str(ids_query))
     query.JOIN(f"ids ON (ids.id, ids.feed) = ({id_prefix}id, {id_prefix}feed)")
 
-    query.SELECT(
-        'ids.recent_sort',
-        'ids.kinda_published',
-        'ids.feed',
-        'ids.last_updated',
-        'ids.negative_feed_order',
-        'ids.id',
-    )
-
-    # NOTE: when changing, ensure none of the values can be null
-    # to prevent https://github.com/lemon24/reader/issues/203
-    query.scrolling_window_order_by(
-        'ids.recent_sort',
-        'ids.kinda_published',
-        'ids.feed',
-        'ids.last_updated',
-        'ids.negative_feed_order',
-        'ids.id',
-        desc=True,
-        keyword=keyword,
-    )
+    ids_names = RECENT_SORT_KEY.names('ids.')
+    query.SELECT(*ids_names)
+    query.scrolling_window_order_by(*ids_names, desc=True, keyword=keyword)
 
 
 def entries_random_sort(query: Query) -> None:
@@ -411,6 +369,12 @@ def entries_random_sort(query: Query) -> None:
     # can benefit from future optimizations.
     #
     query.ORDER_BY("random()")
+
+
+ENTRIES_SORT: dict[str, Callable[[Query], None]] = {
+    'recent': entries_recent_sort,
+    'random': entries_random_sort,
+}
 
 
 def get_entry_counts(

@@ -292,17 +292,13 @@ class Storage:
             _queries.feed_factory,
         )
 
-    def get_feed_last(self, sort: str, url: str) -> tuple[Any, ...]:
-        query = Query().FROM("feeds").WHERE("url = :url")
-
-        # TODO: kinda sorta duplicates the scrolling_window_order_by call
-        if sort == 'title':
-            query.SELECT(("kinda_title", "lower(coalesce(user_title, title))"), 'url')
-        elif sort == 'added':
-            query.SELECT("added", 'url')
-        else:
-            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
-
+    def get_feed_last(self, sort: FeedSort, url: str) -> tuple[Any, ...]:
+        query = (
+            Query()
+            .SELECT(*_queries.FEED_SORT_KEYS[sort])
+            .FROM("feeds")
+            .WHERE("url = :url")
+        )
         return zero_or_one(
             self.get_db().execute(str(query), dict(url=url)),
             lambda: FeedNotFoundError(url),
@@ -823,21 +819,18 @@ class Storage:
                 row_factory=_queries.entry_factory,
             )
 
-    def get_entry_last(self, sort: str, entry: tuple[str, str]) -> tuple[Any, ...]:
+    def get_entry_last(
+        self, sort: EntrySort, entry: tuple[str, str]
+    ) -> tuple[Any, ...]:
         feed_url, entry_id = entry
-
-        query = Query().FROM("entries").WHERE("feed = :feed AND id = :id")
-
-        # TODO: kinda sorta duplicates the scrolling_window_order_by call
-        if sort == 'recent':
-            query.SELECT(*make_recent_last_select())
-        else:
-            assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
-
-        context = dict(feed=feed_url, id=entry_id)
-
+        query = (
+            Query()
+            .SELECT(*_queries.ENTRY_SORT_KEYS[sort])
+            .FROM("entries")
+            .WHERE("feed = :feed AND id = :id")
+        )
         return zero_or_one(
-            self.get_db().execute(str(query), context),
+            self.get_db().execute(str(query), dict(feed=feed_url, id=entry_id)),
             lambda: EntryNotFoundError(feed_url, entry_id),
         )
 
@@ -1012,14 +1005,3 @@ def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> Mapping[str, Any]:
         data_hash_changed=context.pop('hash_changed'),
     )
     return context
-
-
-def make_recent_last_select(id_prefix: str = 'entries.') -> Sequence[Any]:
-    return [
-        'recent_sort',
-        ('kinda_published', 'coalesce(published, updated, first_updated)'),
-        f'{id_prefix}feed',
-        'last_updated',
-        ('negative_feed_order', '- feed_order'),
-        f'{id_prefix}id',
-    ]
