@@ -17,10 +17,7 @@ from types import MappingProxyType
 from typing import Any
 from typing import TypeVar
 
-from . import apply_entry_filter
-from . import apply_random
-from . import apply_recent
-from . import make_entry_counts_query
+from . import _queries
 from . import Storage
 from .._types import EntryFilter
 from .._utils import exactly_one
@@ -42,7 +39,6 @@ from ._sqlite_utils import require_functions
 from ._sqlite_utils import require_version
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
-
 
 log = logging.getLogger('reader')
 
@@ -850,9 +846,9 @@ class Search:
             .FROM('entries')
             .JOIN("search ON (id, feed) = (_id, _feed)")
         )
-        query_context = apply_entry_filter(entries_query, filter)
+        query_context = _queries.entry_filter(entries_query, filter)
 
-        sql_query, new_context = make_entry_counts_query(
+        sql_query, new_context = _queries.get_entry_counts(
             now, self.storage.entry_counts_average_periods, entries_query
         )
         query_context.update(new_context)
@@ -900,7 +896,7 @@ def make_search_entries_query(
         .LIMIT("-1 OFFSET 0")
     )
 
-    context = apply_entry_filter(search, filter)
+    context = _queries.entry_filter(search, filter)
 
     query = (
         Query()
@@ -923,9 +919,9 @@ def make_search_entries_query(
             *"rank search._feed search._id".split(), keyword='HAVING'
         )
     elif sort == 'recent':
-        apply_recent(query, keyword='HAVING', id_prefix='search._')
+        _queries.entries_recent_sort(query, keyword='HAVING', id_prefix='search._')
     elif sort == 'random':
-        apply_random(query)
+        _queries.entries_random_sort(query)
     else:
         assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
