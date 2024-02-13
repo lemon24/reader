@@ -13,7 +13,6 @@ from ._sqlite_utils import DBError
 from ._sqlite_utils import LocalConnectionFactory
 from ._sqlite_utils import setup_db
 from ._sqlite_utils import wrap_exceptions
-from ._sqlite_utils import wrap_exceptions_iter
 
 
 MISSING_MIGRATION_DETAIL = (
@@ -102,7 +101,6 @@ class StorageBase:
     def close(self) -> None:
         self.factory.close()
 
-    @wrap_exceptions_iter(StorageError)
     def paginated_query(
         self,
         make_query: Callable[[], tuple[Query, dict[str, Any]]],
@@ -110,11 +108,12 @@ class StorageBase:
         last: tuple[Any, ...] | None = None,
         row_factory: Callable[[tuple[Any, ...]], _T] | None = None,
     ) -> Iterable[_T]:
-        return paginated_query(
-            self.get_db(),
-            make_query,
-            self.chunk_size,
-            limit or 0,
-            last,
-            row_factory,
-        )
+        with wrap_exceptions(StorageError):
+            yield from paginated_query(
+                self.get_db(),
+                make_query,
+                self.chunk_size,
+                limit or 0,
+                last,
+                row_factory,
+            )

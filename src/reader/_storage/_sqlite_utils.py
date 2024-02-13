@@ -21,7 +21,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
 from typing import Any
-from typing import cast
 from typing import no_type_check
 from typing import TypeVar
 
@@ -119,24 +118,6 @@ def wrap_exceptions(
                 raise exc_type(message) from e
 
         raise
-
-
-FuncType = Callable[..., Any]
-F = TypeVar('F', bound=FuncType)
-
-
-def wrap_exceptions_iter(exc_type: Callable[[str], Exception]) -> Callable[[F], F]:
-    """Like wrap_exceptions(), but for generators."""
-
-    def decorator(fn: F) -> F:
-        @functools.wraps(fn)
-        def wrapper(*args, **kwargs):  # type: ignore
-            with wrap_exceptions(exc_type):
-                yield from fn(*args, **kwargs)
-
-        return cast(F, wrapper)
-
-    return decorator
 
 
 @contextmanager
