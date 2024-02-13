@@ -345,6 +345,8 @@ Storage internal API documented in version 3.10 (November 2023) in :issue:`325`.
 Database optimization
 ~~~~~~~~~~~~~~~~~~~~~
 
+Optimization lessons learned while fixing "database is locked" errors: :issue:`175#issuecomment-657495233`.
+
 Some general guidance on schema/index design: :issue:`327#issuecomment-1859147186`.
 
 Speeding up ``get_entries(sort='recent')``:
@@ -449,7 +451,8 @@ https://death.andgravity.com/query-builder
 Pagination for methods that return iterators
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Why do it for the private implementation: :issue:`167#issuecomment-626753299` (also a comment in storage code).
+Why do it for the private implementation: :issue:`167#issuecomment-626753299`;
+
 
 Detailed requirements and API discussion for public pagination: :issue:`196#issuecomment-706038363`.
 

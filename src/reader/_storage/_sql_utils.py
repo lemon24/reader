@@ -268,6 +268,17 @@ def paginated_query(
     last: tuple[Any, ...] | None = None,
     row_factory: Callable[[tuple[Any, ...]], _T] | None = None,
 ) -> Iterable[_T]:
+    """Break up a single query into multiple scrolling window queries.
+
+    Each query returns up to `max_size` rows, and up to `limit` rows total.
+
+    Breaking up a query like this is useful with SQLite,
+    to avoid locking the database for too long.
+    Reading the entire result can consume too much memory,
+    and doesn't fix the locking issue for big queries anyway
+    Also see https://github.com/lemon24/reader/issues/167.
+
+    """
     remaining = limit
 
     while True:
