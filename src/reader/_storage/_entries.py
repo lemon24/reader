@@ -28,14 +28,12 @@ from ..types import Entry
 from ..types import EntryCounts
 from ..types import EntrySort
 from ._feeds import feed_factory
-from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sql_utils import SortKey
 from ._sqlite_utils import adapt_datetime
 from ._sqlite_utils import convert_timestamp
 from ._sqlite_utils import rowcount_exactly_one
 from ._sqlite_utils import wrap_exceptions
-from ._sqlite_utils import wrap_exceptions_iter
 from ._tags import entry_tags_filter
 from ._tags import feed_tags_filter
 
@@ -53,7 +51,6 @@ class EntriesMixin(StorageBase):
     # assuming an average of 30.436875 days/month
     entry_counts_average_periods = (30, 91, 365)
 
-    @wrap_exceptions_iter(StorageError)
     def get_entries(
         self,
         filter: EntryFilter = EntryFilter(),  # noqa: B008
@@ -61,24 +58,19 @@ class EntriesMixin(StorageBase):
         limit: int | None = None,
         starting_after: tuple[str, str] | None = None,
     ) -> Iterable[Entry]:
+        paginated_query = partial(
+            self.paginated_query,
+            partial(get_entries_query, filter, sort),
+            row_factory=entry_factory,
+        )  # type: ignore[var-annotated]
         if sort != 'random':
-            return paginated_query(
-                self.get_db(),
-                partial(get_entries_query, filter, sort),
-                self.chunk_size,
-                limit or 0,
-                self.get_entry_last(sort, starting_after) if starting_after else None,
-                entry_factory,
-            )
+            last = self.get_entry_last(sort, starting_after) if starting_after else None
+            return paginated_query(limit, last)
         else:
-            return paginated_query(
-                self.get_db(),
-                partial(get_entries_query, filter, sort),
-                self.chunk_size,
-                min(limit, self.chunk_size) if limit else self.chunk_size,
-                row_factory=entry_factory,
-            )
+            limit = min(limit, self.chunk_size) if limit else self.chunk_size
+            return paginated_query(limit)
 
+    @wrap_exceptions(StorageError)
     def get_entry_last(
         self, sort: EntrySort, entry: tuple[str, str]
     ) -> tuple[Any, ...]:
@@ -158,12 +150,12 @@ class EntriesMixin(StorageBase):
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
-    @wrap_exceptions_iter(StorageError)
     def get_entries_for_update(
         self, entries: Iterable[tuple[str, str]]
     ) -> Iterable[EntryForUpdate | None]:
-        for iterable in chunks(self.chunk_size, entries):
-            yield from self._get_entries_for_update_page(iterable)
+        with wrap_exceptions(StorageError):
+            for iterable in chunks(self.chunk_size, entries):
+                yield from self._get_entries_for_update_page(iterable)
 
     def _get_entries_for_update_page(
         self, entries: Iterable[tuple[str, str]]

@@ -21,11 +21,9 @@ from ..types import MISSING
 from ..types import MissingType
 from ..types import ResourceId
 from ._sql_utils import BaseQuery
-from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import rowcount_exactly_one
 from ._sqlite_utils import wrap_exceptions
-from ._sqlite_utils import wrap_exceptions_iter
 
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
@@ -34,7 +32,6 @@ else:
 
 
 class TagsMixin(StorageBase):
-    @wrap_exceptions_iter(StorageError)
     def get_tags(
         self,
         resource_id: AnyResourceId,
@@ -76,12 +73,7 @@ class TagsMixin(StorageBase):
             key, value, *_ = row
             return key, json.loads(value)
 
-        return paginated_query(
-            self.get_db(),
-            make_query,
-            self.chunk_size,
-            row_factory=row_factory,
-        )
+        return self.paginated_query(make_query, row_factory=row_factory)
 
     @overload
     def set_tag(self, resource_id: ResourceId, key: str) -> None:  # pragma: no cover

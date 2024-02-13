@@ -1,19 +1,28 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable
+from collections.abc import Iterable
 from typing import Any
+from typing import TypeVar
 
 from ..exceptions import StorageError
+from ._sql_utils import paginated_query
+from ._sql_utils import Query
 from ._sqlite_utils import DBError
 from ._sqlite_utils import LocalConnectionFactory
 from ._sqlite_utils import setup_db
 from ._sqlite_utils import wrap_exceptions
+from ._sqlite_utils import wrap_exceptions_iter
 
 
 MISSING_MIGRATION_DETAIL = (
     "; you may have skipped some required migrations, see "
     "https://reader.readthedocs.io/en/latest/changelog.html#removed-migrations-3-0"
 )
+
+
+_T = TypeVar('_T')
 
 
 class StorageBase:
@@ -92,3 +101,20 @@ class StorageBase:
     @wrap_exceptions(StorageError)
     def close(self) -> None:
         self.factory.close()
+
+    @wrap_exceptions_iter(StorageError)
+    def paginated_query(
+        self,
+        make_query: Callable[[], tuple[Query, dict[str, Any]]],
+        limit: int | None = None,
+        last: tuple[Any, ...] | None = None,
+        row_factory: Callable[[tuple[Any, ...]], _T] | None = None,
+    ) -> Iterable[_T]:
+        return paginated_query(
+            self.get_db(),
+            make_query,
+            self.chunk_size,
+            limit or 0,
+            last,
+            row_factory,
+        )

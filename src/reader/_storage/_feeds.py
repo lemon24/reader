@@ -20,14 +20,12 @@ from ..types import ExceptionInfo
 from ..types import Feed
 from ..types import FeedCounts
 from ..types import FeedSort
-from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sql_utils import SortKey
 from ._sqlite_utils import adapt_datetime
 from ._sqlite_utils import convert_timestamp
 from ._sqlite_utils import rowcount_exactly_one
 from ._sqlite_utils import wrap_exceptions
-from ._sqlite_utils import wrap_exceptions_iter
 from ._tags import feed_tags_filter
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -102,7 +100,6 @@ class FeedsMixin(StorageBase):
                 dict(old=old, new=new),
             )
 
-    @wrap_exceptions_iter(StorageError)
     def get_feeds(
         self,
         filter: FeedFilter = FeedFilter(),  # noqa: B008
@@ -110,15 +107,14 @@ class FeedsMixin(StorageBase):
         limit: int | None = None,
         starting_after: str | None = None,
     ) -> Iterable[Feed]:
-        return paginated_query(
-            self.get_db(),
+        return self.paginated_query(
             partial(get_feeds_query, filter, sort),
-            self.chunk_size,
-            limit or 0,
+            limit,
             self.get_feed_last(sort, starting_after) if starting_after else None,
             feed_factory,
         )
 
+    @wrap_exceptions(StorageError)
     def get_feed_last(self, sort: FeedSort, url: str) -> tuple[Any, ...]:
         query = (
             Query()
@@ -170,7 +166,6 @@ class FeedsMixin(StorageBase):
             )
             rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    @wrap_exceptions_iter(StorageError)
     def get_feeds_for_update(
         self,
         filter: FeedFilter = FeedFilter(),  # noqa: B008
@@ -216,12 +211,7 @@ class FeedsMixin(StorageBase):
             context = feed_filter(query, filter)
             return query, context
 
-        return paginated_query(
-            self.get_db(),
-            make_query,
-            self.chunk_size,
-            row_factory=row_factory,
-        )
+        return self.paginated_query(make_query, row_factory=row_factory)
 
     @wrap_exceptions(StorageError)
     def set_feed_stale(self, url: str, stale: bool) -> None:
