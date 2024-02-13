@@ -18,7 +18,7 @@ from types import MappingProxyType
 from typing import Any
 from typing import TypeVar
 
-from . import _queries
+from . import _entries
 from . import Storage
 from .._types import EntryFilter
 from .._utils import exactly_one
@@ -847,9 +847,9 @@ class Search:
             .FROM('entries')
             .JOIN("search ON (id, feed) = (_id, _feed)")
         )
-        query_context = _queries.entry_filter(entries_query, filter)
+        query_context = _entries.entry_filter(entries_query, filter)
 
-        sql_query, new_context = _queries.get_entry_counts(
+        sql_query, new_context = _entries.get_entry_counts_query(
             now, self.storage.entry_counts_average_periods, entries_query
         )
         query_context.update(new_context)
@@ -897,7 +897,7 @@ def make_search_entries_query(
         .LIMIT("-1 OFFSET 0")
     )
 
-    context = _queries.entry_filter(search, filter)
+    context = _entries.entry_filter(search, filter)
 
     query = (
         Query()
@@ -930,9 +930,9 @@ def relevant_sort(query: Query) -> None:
 SEARCH_ENTRIES_SORT: dict[str, Callable[[Query], None]] = {
     'relevant': relevant_sort,
     'recent': partial(
-        _queries.entries_recent_sort, keyword='HAVING', id_prefix='search._'
+        _entries.entries_recent_sort, keyword='HAVING', id_prefix='search._'
     ),
-    'random': _queries.entries_random_sort,
+    'random': _entries.entries_random_sort,
 }
 
 

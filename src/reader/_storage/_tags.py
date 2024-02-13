@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Iterable
+from functools import partial
 from typing import Any
 from typing import NamedTuple
 from typing import overload
 from typing import TYPE_CHECKING
 
+from .._types import TagFilter
 from ..exceptions import EntryNotFoundError
 from ..exceptions import FeedNotFoundError
 from ..exceptions import ReaderError
@@ -18,6 +20,7 @@ from ..types import JSONType
 from ..types import MISSING
 from ..types import MissingType
 from ..types import ResourceId
+from ._sql_utils import BaseQuery
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import rowcount_exactly_one
@@ -168,3 +171,89 @@ SCHEMA_INFO = {
     1: SchemaInfo('feed_', ('feed',), FeedNotFoundError),
     2: SchemaInfo('entry_', ('feed', 'id'), EntryNotFoundError),
 }
+
+
+def feed_tags_filter(
+    query: Query, tags: TagFilter, url_column: str, keyword: str = 'WHERE'
+) -> dict[str, str]:
+    context, tags_cte, tags_count_cte = tags_filter(query, tags, keyword, 'feed_tags')
+
+    if tags_cte:
+        query.with_(tags_cte, f"SELECT key FROM feed_tags WHERE feed = {url_column}")
+
+    if tags_count_cte:
+        query.with_(
+            tags_count_cte,
+            f"SELECT count(key) FROM feed_tags WHERE feed = {url_column}",
+        )
+
+    return context
+
+
+def entry_tags_filter(
+    query: Query, tags: TagFilter, keyword: str = 'WHERE'
+) -> dict[str, str]:
+    context, tags_cte, tags_count_cte = tags_filter(query, tags, keyword, 'entry_tags')
+
+    if tags_cte:
+        query.with_(
+            tags_cte,
+            """
+            SELECT key FROM entry_tags
+            WHERE (id, feed) = (entries.id, entries.feed)
+            """,
+        )
+
+    if tags_count_cte:
+        query.with_(
+            tags_count_cte,
+            """
+            SELECT count(key) FROM entry_tags
+            WHERE (id, feed) = (entries.id, entries.feed)
+            """,
+        )
+
+    return context
+
+
+def tags_filter(
+    query: Query, tags: TagFilter, keyword: str, base_table: str
+) -> tuple[dict[str, str], str | None, str | None]:
+    add = getattr(query, keyword)
+
+    context = {}
+
+    tags_cte = f'__{base_table}'
+    tags_count_cte = f'__{base_table}_count'
+
+    add_tags_cte = False
+    add_tags_count_cte = False
+
+    next_tag_id = 0
+
+    for subtags in tags:
+        tag_query = BaseQuery({'(': [], ')': ['']}, {'(': 'OR'})
+        tag_add = partial(tag_query.add, '(')
+
+        for maybe_tag in subtags:
+            if isinstance(maybe_tag, bool):
+                tag_add(
+                    f"{'NOT' if not maybe_tag else ''} (SELECT * FROM {tags_count_cte})"
+                )
+                add_tags_count_cte = True
+                continue
+
+            is_negation, tag = maybe_tag
+            tag_name = f'__{base_table}_{next_tag_id}'
+            next_tag_id += 1
+            context[tag_name] = tag
+            tag_add(f":{tag_name} {'NOT' if is_negation else ''} IN {tags_cte}")
+            add_tags_cte = True
+
+        add(str(tag_query))
+
+    return (
+        context,
+        tags_cte if add_tags_cte else None,
+        tags_count_cte if add_tags_count_cte else None,
+    )

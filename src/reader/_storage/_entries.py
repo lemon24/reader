@@ -3,13 +3,14 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+from collections.abc import Callable
 from collections.abc import Iterable
 from datetime import datetime
+from datetime import timedelta
 from functools import partial
 from typing import Any
 from typing import TYPE_CHECKING
 
-from . import _queries
 from .._types import EntryFilter
 from .._types import EntryForUpdate
 from .._types import EntryUpdateIntent
@@ -21,16 +22,22 @@ from ..exceptions import EntryExistsError
 from ..exceptions import EntryNotFoundError
 from ..exceptions import FeedNotFoundError
 from ..exceptions import StorageError
+from ..types import Content
+from ..types import Enclosure
 from ..types import Entry
 from ..types import EntryCounts
 from ..types import EntrySort
-from ._queries import adapt_datetime
-from ._queries import convert_timestamp
+from ._feeds import feed_factory
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
+from ._sql_utils import SortKey
+from ._sqlite_utils import adapt_datetime
+from ._sqlite_utils import convert_timestamp
 from ._sqlite_utils import rowcount_exactly_one
 from ._sqlite_utils import wrap_exceptions
 from ._sqlite_utils import wrap_exceptions_iter
+from ._tags import entry_tags_filter
+from ._tags import feed_tags_filter
 
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
@@ -57,19 +64,19 @@ class EntriesMixin(StorageBase):
         if sort != 'random':
             return paginated_query(
                 self.get_db(),
-                partial(_queries.get_entries, filter, sort),
+                partial(get_entries_query, filter, sort),
                 self.chunk_size,
                 limit or 0,
                 self.get_entry_last(sort, starting_after) if starting_after else None,
-                _queries.entry_factory,
+                entry_factory,
             )
         else:
             return paginated_query(
                 self.get_db(),
-                partial(_queries.get_entries, filter, sort),
+                partial(get_entries_query, filter, sort),
                 self.chunk_size,
                 min(limit, self.chunk_size) if limit else self.chunk_size,
-                row_factory=_queries.entry_factory,
+                row_factory=entry_factory,
             )
 
     def get_entry_last(
@@ -78,7 +85,7 @@ class EntriesMixin(StorageBase):
         feed_url, entry_id = entry
         query = (
             Query()
-            .SELECT(*_queries.ENTRY_SORT_KEYS[sort])
+            .SELECT(*ENTRY_SORT_KEYS[sort])
             .FROM("entries")
             .WHERE("feed = :feed AND id = :id")
         )
@@ -94,9 +101,9 @@ class EntriesMixin(StorageBase):
         filter: EntryFilter = EntryFilter(),  # noqa: B008
     ) -> EntryCounts:
         entries_query = Query().SELECT('id', 'feed').FROM('entries')
-        context = _queries.entry_filter(entries_query, filter)
+        context = entry_filter(entries_query, filter)
 
-        query, new_context = _queries.get_entry_counts(
+        query, new_context = get_entry_counts_query(
             now, self.entry_counts_average_periods, entries_query
         )
         context.update(new_context)
@@ -394,6 +401,241 @@ class EntriesMixin(StorageBase):
                 ),
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
+
+
+def get_entries_query(
+    filter: EntryFilter, sort: EntrySort
+) -> tuple[Query, dict[str, Any]]:
+    query = (
+        Query()
+        .SELECT(
+            *"""
+            entries.feed
+            feeds.updated
+            feeds.title
+            feeds.link
+            feeds.author
+            feeds.subtitle
+            feeds.version
+            feeds.user_title
+            feeds.added
+            feeds.last_updated
+            feeds.last_exception
+            feeds.updates_enabled
+            entries.id
+            entries.updated
+            entries.title
+            entries.link
+            entries.author
+            entries.published
+            entries.summary
+            entries.content
+            entries.enclosures
+            entries.read
+            entries.read_modified
+            entries.important
+            entries.important_modified
+            entries.first_updated
+            entries.added_by
+            entries.last_updated
+            entries.original_feed
+            """.split()
+        )
+        .FROM("entries")
+        .JOIN("feeds ON feeds.url = entries.feed")
+    )
+    context = entry_filter(query, filter)
+    ENTRIES_SORT[sort](query)
+    return query, context
+
+
+def entry_factory(row: tuple[Any, ...]) -> Entry:
+    feed = feed_factory(row[0:12])
+    (
+        id,
+        updated,
+        title,
+        link,
+        author,
+        published,
+        summary,
+        content,
+        enclosures,
+        read,
+        read_modified,
+        important,
+        important_modified,
+        first_updated,
+        added_by,
+        last_updated,
+        original_feed,
+    ) = row[12:29]
+    return Entry(
+        id,
+        convert_timestamp(updated) if updated else None,
+        title,
+        link,
+        author,
+        convert_timestamp(published) if published else None,
+        summary,
+        tuple(Content(**d) for d in json.loads(content)) if content else (),
+        tuple(Enclosure(**d) for d in json.loads(enclosures)) if enclosures else (),
+        read == 1,
+        convert_timestamp(read_modified) if read_modified else None,
+        important == 1 if important is not None else None,
+        convert_timestamp(important_modified) if important_modified else None,
+        convert_timestamp(first_updated),
+        added_by,
+        convert_timestamp(last_updated),
+        original_feed or feed.url,
+        feed,
+    )
+
+
+TRISTATE_FILTER_TO_SQL = dict(
+    istrue="({expr} IS NOT NULL AND {expr})",
+    isfalse="({expr} IS NOT NULL AND NOT {expr})",
+    notset="{expr} IS NULL",
+    nottrue="({expr} IS NULL OR NOT {expr})",
+    notfalse="({expr} IS NULL OR {expr})",
+    isset="{expr} IS NOT NULL",
+)
+
+
+def entry_filter(
+    query: Query, filter: EntryFilter, keyword: str = 'WHERE'
+) -> dict[str, Any]:
+    add = getattr(query, keyword)
+    feed_url, entry_id, read, important, has_enclosures, tags, feed_tags = filter
+
+    context = {}
+
+    if feed_url:
+        add("entries.feed = :feed_url")
+        context['feed_url'] = feed_url
+        if entry_id:
+            add("entries.id = :entry_id")
+            context['entry_id'] = entry_id
+
+    if read is not None:
+        add(f"{'' if read else 'NOT'} entries.read")
+
+    if important != 'any':
+        add(TRISTATE_FILTER_TO_SQL[important].format(expr='entries.important'))
+
+    if has_enclosures is not None:
+        add(
+            f"""
+            {'NOT' if has_enclosures else ''}
+                (json_array_length(entries.enclosures) IS NULL
+                    OR json_array_length(entries.enclosures) = 0)
+            """
+        )
+
+    context.update(entry_tags_filter(query, tags, keyword=keyword))
+    context.update(feed_tags_filter(query, feed_tags, 'entries.feed', keyword=keyword))
+
+    return context
+
+
+RECENT_SORT_KEY = SortKey(
+    # keep this in sync with the entries_by_recent.
+    # values must be non-null, see #203 for details.
+    # id at the end makes the order deterministic.
+    'recent_sort',
+    ('kinda_published', 'coalesce(published, updated, first_updated)'),
+    'feed',
+    'last_updated',
+    ('negative_feed_order', '- feed_order'),
+    'id',
+    desc=True,
+)
+
+ENTRY_SORT_KEYS = {'recent': RECENT_SORT_KEY}
+
+
+def entries_recent_sort(
+    query: Query, keyword: str = 'WHERE', id_prefix: str = 'entries.'
+) -> None:
+    ids_query = Query().FROM('entries').scrolling_window_sort_key(RECENT_SORT_KEY)
+    query.with_('ids', str(ids_query))
+    query.JOIN(f"ids ON (ids.id, ids.feed) = ({id_prefix}id, {id_prefix}feed)")
+
+    ids_names = RECENT_SORT_KEY.names('ids.')
+    query.SELECT(*ids_names)
+    query.scrolling_window_order_by(*ids_names, desc=True, keyword=keyword)
+
+
+def entries_random_sort(query: Query) -> None:
+    # TODO: "order by random()" always goes through the full result set,
+    # which is inefficient; details:
+    # https://github.com/lemon24/reader/issues/105#issue-409493128
+    #
+    # This is a separate function in the hope that search
+    # can benefit from future optimizations.
+    #
+    query.ORDER_BY("random()")
+
+
+ENTRIES_SORT: dict[str, Callable[[Query], None]] = {
+    'recent': entries_recent_sort,
+    'random': entries_random_sort,
+}
+
+
+def get_entry_counts_query(
+    now: datetime,
+    average_periods: tuple[float, ...],
+    entries_query: Query,
+) -> tuple[Query, dict[str, Any]]:
+    query = (
+        Query()
+        .with_('entries_filtered', str(entries_query))
+        .SELECT(
+            'count(*)',
+            'coalesce(sum(read == 1), 0)',
+            'coalesce(sum(important == 1), 0)',
+            """
+            coalesce(
+                sum(
+                    NOT (
+                        json_array_length(entries.enclosures) IS NULL OR json_array_length(entries.enclosures) = 0
+                    )
+                ), 0
+            )
+            """,
+        )
+        .FROM("entries_filtered")
+        .JOIN("entries USING (id, feed)")
+    )
+
+    # one CTE / period + HAVING in the CTE is a tiny bit faster than
+    # one CTE + WHERE in the SELECT
+
+    context: dict[str, Any] = dict(now=adapt_datetime(now))
+
+    for period_i, period_days in enumerate(average_periods):
+        # TODO: when we get first_updated, use it instead of first_updated_epoch
+
+        days_param = f'kfu_{period_i}_days'
+        context[days_param] = float(period_days)
+
+        start_param = f'kfu_{period_i}_start'
+        context[start_param] = adapt_datetime(now - timedelta(days=period_days))
+
+        kfu_query = (
+            Query()
+            .SELECT('coalesce(published, updated, first_updated_epoch) AS kfu')
+            .FROM('entries_filtered')
+            .JOIN("entries USING (id, feed)")
+            .GROUP_BY('published, updated, first_updated_epoch, feed')
+            .HAVING(f"kfu BETWEEN :{start_param} AND :now")
+        )
+
+        query.with_(f'kfu_{period_i}', str(kfu_query))
+        query.SELECT(f"(SELECT count(*) / :{days_param} FROM kfu_{period_i})")
+
+    return query, context
 
 
 def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> dict[str, Any]:

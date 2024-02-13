@@ -18,11 +18,12 @@ from contextlib import closing
 from contextlib import contextmanager
 from contextlib import nullcontext
 from dataclasses import dataclass
+from datetime import datetime
+from datetime import timezone
 from typing import Any
 from typing import cast
 from typing import no_type_check
 from typing import TypeVar
-
 
 SQLiteType = TypeVar('SQLiteType', None, int, float, str, bytes)
 
@@ -592,6 +593,19 @@ def busy_timeout(
         yield db
     finally:
         db.execute(f"PRAGMA busy_timeout = {old};")
+
+
+def adapt_datetime(val: datetime) -> str:
+    assert val.tzinfo == timezone.utc, val
+    val = val.replace(tzinfo=None)
+    return val.isoformat(" ")
+
+
+def convert_timestamp(val: str) -> datetime:
+    rv = datetime.fromisoformat(val)
+    assert not rv.tzinfo, val
+    rv = rv.replace(tzinfo=timezone.utc)
+    return rv
 
 
 # BEGIN DebugConnection

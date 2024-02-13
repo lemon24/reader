@@ -8,7 +8,6 @@ from functools import partial
 from typing import Any
 from typing import TYPE_CHECKING
 
-from . import _queries
 from .._types import FeedFilter
 from .._types import FeedForUpdate
 from .._types import FeedUpdateIntent
@@ -21,13 +20,15 @@ from ..types import ExceptionInfo
 from ..types import Feed
 from ..types import FeedCounts
 from ..types import FeedSort
-from ._queries import adapt_datetime
-from ._queries import convert_timestamp
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
+from ._sql_utils import SortKey
+from ._sqlite_utils import adapt_datetime
+from ._sqlite_utils import convert_timestamp
 from ._sqlite_utils import rowcount_exactly_one
 from ._sqlite_utils import wrap_exceptions
 from ._sqlite_utils import wrap_exceptions_iter
+from ._tags import feed_tags_filter
 
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
@@ -111,20 +112,20 @@ class FeedsMixin(StorageBase):
     ) -> Iterable[Feed]:
         return paginated_query(
             self.get_db(),
-            partial(_queries.get_feeds, filter, sort),
+            partial(get_feeds_query, filter, sort),
             self.chunk_size,
             limit or 0,
             self.get_feed_last(sort, starting_after) if starting_after else None,
-            _queries.feed_factory,
+            feed_factory,
         )
 
     def get_feed_last(self, sort: FeedSort, url: str) -> tuple[Any, ...]:
         query = (
             Query()
-            .SELECT(*_queries.FEED_SORT_KEYS[sort])
+            .SELECT(*FEED_SORT_KEYS[sort])
             .FROM("feeds")
             .WHERE("url = :url")
-        )
+        )  # fmt: skip
         return zero_or_one(
             self.get_db().execute(str(query), dict(url=url)),
             lambda: FeedNotFoundError(url),
@@ -145,7 +146,7 @@ class FeedsMixin(StorageBase):
             .FROM("feeds")
         )
 
-        context = _queries.feed_filter(query, filter)
+        context = feed_filter(query, filter)
 
         row = exactly_one(self.get_db().execute(str(query), context))
 
@@ -212,7 +213,7 @@ class FeedsMixin(StorageBase):
                 .FROM("feeds")
                 .scrolling_window_order_by("url")
             )
-            context = _queries.feed_filter(query, filter)
+            context = feed_filter(query, filter)
             return query, context
 
         return paginated_query(
@@ -326,3 +327,87 @@ class FeedsMixin(StorageBase):
                 dict(url=url, last_exception=json.dumps(last_exception._asdict())),
             )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
+
+
+def get_feeds_query(filter: FeedFilter, sort: FeedSort) -> tuple[Query, dict[str, Any]]:
+    query = (
+        Query()
+        .SELECT(
+            'url',
+            'updated',
+            'title',
+            'link',
+            'author',
+            'subtitle',
+            'version',
+            'user_title',
+            'added',
+            'last_updated',
+            'last_exception',
+            'updates_enabled',
+        )
+        .FROM("feeds")
+        .scrolling_window_sort_key(FEED_SORT_KEYS[sort])
+    )
+    context = feed_filter(query, filter)
+    return query, context
+
+
+def feed_factory(row: tuple[Any, ...]) -> Feed:
+    (
+        url,
+        updated,
+        title,
+        link,
+        author,
+        subtitle,
+        version,
+        user_title,
+        added,
+        last_updated,
+        last_exception,
+        updates_enabled,
+    ) = row[:12]
+    return Feed(
+        url,
+        convert_timestamp(updated) if updated else None,
+        title,
+        link,
+        author,
+        subtitle,
+        version,
+        user_title,
+        convert_timestamp(added),
+        convert_timestamp(last_updated) if last_updated else None,
+        ExceptionInfo(**json.loads(last_exception)) if last_exception else None,
+        updates_enabled == 1,
+    )
+
+
+FEED_SORT_KEYS = {
+    # values must be non-null, see #203 for details.
+    # url at the end makes the order deterministic.
+    'title': SortKey(("kinda_title", "lower(coalesce(user_title, title, ''))"), "url"),
+    'added': SortKey("added", "url", desc=True),
+}
+
+
+def feed_filter(query: Query, filter: FeedFilter) -> dict[str, Any]:
+    url, tags, broken, updates_enabled, new = filter
+
+    context: dict[str, object] = {}
+
+    if url:
+        query.WHERE("url = :url")
+        context.update(url=url)
+
+    context.update(feed_tags_filter(query, tags, 'feeds.url'))
+
+    if broken is not None:
+        query.WHERE(f"last_exception IS {'NOT' if broken else ''} NULL")
+    if updates_enabled is not None:
+        query.WHERE(f"{'' if updates_enabled else 'NOT'} updates_enabled")
+    if new is not None:
+        query.WHERE(f"last_updated is {'' if new else 'NOT'} NULL")
+
+    return context
