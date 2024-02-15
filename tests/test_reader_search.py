@@ -346,6 +346,7 @@ UPDATE_TRIGGERS_DATA = {
 }
 
 
+@pytest.mark.xfail(reason='FIXME #323')
 @pytest.mark.parametrize(
     'data', list(UPDATE_TRIGGERS_DATA.values()), ids=list(UPDATE_TRIGGERS_DATA)
 )

@@ -205,14 +205,31 @@ class EntriesMixin(StorageBase):
         for iterable in iterables:
             self._add_or_update_entries(iterable)
 
-    def _add_or_update_entries(
-        self, intents: Iterable[EntryUpdateIntent], exclusive: bool = False
-    ) -> None:
-        query = f"""
-            INSERT {'OR ABORT' if exclusive else 'OR REPLACE'} INTO entries (
+    def _add_or_update_entries(self, intents: Iterable[EntryUpdateIntent]) -> None:
+        with self.get_db() as db:
+            try:
+                for intent in intents:
+                    new = not list(
+                        db.execute(
+                            "SELECT 1 FROM entries WHERE (feed, id) = (?, ?)",
+                            intent.entry.resource_id,
+                        )
+                    )
+                    if new:
+                        self._insert_entry(db, intent)
+                    else:
+                        self._update_entry(db, intent)
+            except sqlite3.IntegrityError as e:
+                e_msg = str(e).lower()
+                if "foreign key constraint failed" in e_msg:
+                    raise FeedNotFoundError(intent.entry.feed_url) from None
+                raise  # pragma: no cover
+
+    def _insert_entry(self, db: sqlite3.Connection, intent: EntryUpdateIntent) -> None:
+        query = """
+            INSERT INTO entries (
                 id,
                 feed,
-                --
                 title,
                 link,
                 updated,
@@ -222,15 +239,11 @@ class EntriesMixin(StorageBase):
                 content,
                 enclosures,
                 read,
-                read_modified,
-                important,
-                important_modified,
                 last_updated,
                 first_updated,
                 first_updated_epoch,
                 feed_order,
                 recent_sort,
-                original_feed,
                 data_hash,
                 data_hash_changed,
                 added_by
@@ -245,75 +258,47 @@ class EntriesMixin(StorageBase):
                 :summary,
                 :content,
                 :enclosures,
-                coalesce((
-                    SELECT read
-                    FROM entries
-                    WHERE id = :id AND feed = :feed_url
-                ), 0),
-                (
-                    SELECT read_modified
-                    FROM entries
-                    WHERE id = :id AND feed = :feed_url
-                ),
-                (
-                    SELECT important
-                    FROM entries
-                    WHERE id = :id AND feed = :feed_url
-                ),
-                (
-                    SELECT important_modified
-                    FROM entries
-                    WHERE id = :id AND feed = :feed_url
-                ),
+                0,  -- read (should be not null in the schema, but isn't)
                 :last_updated,
-                coalesce(:first_updated, (
-                    SELECT first_updated
-                    FROM entries
-                    WHERE id = :id AND feed = :feed_url
-                )),
-                coalesce(:first_updated_epoch, (
-                    SELECT first_updated_epoch
-                    FROM entries
-                    WHERE id = :id AND feed = :feed_url
-                )),
+                :first_updated,
+                :first_updated_epoch,
                 :feed_order,
-                coalesce(:recent_sort, (
-                    SELECT recent_sort
-                    FROM entries
-                    WHERE id = :id AND feed = :feed_url
-                )),
-                NULL, -- original_feed
+                :recent_sort,
                 :data_hash,
                 :data_hash_changed,
                 :added_by
             );
         """
+        db.execute(query, entry_update_intent_to_dict(intent))
 
-        with self.get_db() as db:
-            try:
-                # we could use executemany(), but it's not noticeably faster
-                for intent in intents:
-                    db.execute(query, entry_update_intent_to_dict(intent))
-
-            except sqlite3.IntegrityError as e:
-                e_msg = str(e).lower()
-                feed_url, entry_id = intent.entry.resource_id
-
-                log.debug(
-                    "add_entry %r of feed %r: got IntegrityError",
-                    entry_id,
-                    feed_url,
-                    exc_info=True,
-                )
-
-                if "foreign key constraint failed" in e_msg:
-                    raise FeedNotFoundError(feed_url) from None
-
-                elif "unique constraint failed: entries.id, entries.feed" in e_msg:
-                    raise EntryExistsError(feed_url, entry_id) from None
-
-                else:  # pragma: no cover
-                    raise
+    def _update_entry(self, db: sqlite3.Connection, intent: EntryUpdateIntent) -> None:
+        assert intent.first_updated is None, intent.first_updated
+        assert intent.first_updated_epoch is None, intent.first_updated_epoch
+        query = """
+            UPDATE entries
+            SET
+                title = :title,
+                link = :link,
+                updated = :updated,
+                author = :author,
+                published = :published,
+                summary = :summary,
+                content = :content,
+                enclosures = :enclosures,
+                last_updated = :last_updated,
+                feed_order = :feed_order,
+                recent_sort = coalesce(:recent_sort, (
+                    SELECT recent_sort
+                    FROM entries
+                    WHERE id = :id AND feed = :feed_url
+                )),
+                original_feed = NULL,
+                data_hash = :data_hash,
+                data_hash_changed = :data_hash_changed,
+                added_by = :added_by
+            WHERE (feed, id) = (:feed_url, :id)
+        """
+        db.execute(query, entry_update_intent_to_dict(intent))
 
     def add_or_update_entry(self, intent: EntryUpdateIntent) -> None:
         # TODO: this method is for testing convenience only, maybe delete it?
@@ -321,8 +306,16 @@ class EntriesMixin(StorageBase):
 
     @wrap_exceptions(StorageError)
     def add_entry(self, intent: EntryUpdateIntent) -> None:
-        # TODO: unify with the or_update variants
-        self._add_or_update_entries([intent], exclusive=True)
+        with self.get_db() as db:
+            try:
+                self._insert_entry(db, intent)
+            except sqlite3.IntegrityError as e:
+                e_msg = str(e).lower()
+                if "foreign key constraint failed" in e_msg:
+                    raise FeedNotFoundError(intent.entry.feed_url) from None
+                if "unique constraint failed: entries.id, entries.feed" in e_msg:
+                    raise EntryExistsError(*intent.entry.resource_id) from None
+                raise  # pragma: no cover
 
     @wrap_exceptions(StorageError)
     def delete_entries(
