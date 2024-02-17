@@ -65,6 +65,7 @@ class FeedsMixin(StorageBase):
             except sqlite3.IntegrityError as e:
                 if "unique constraint failed" not in str(e).lower():  # pragma: no cover
                     raise
+                # FIXME: check message for the failed constraint, same for add feed
                 raise FeedExistsError(new) from None
             else:
                 rowcount_exactly_one(cursor, lambda: FeedNotFoundError(old))

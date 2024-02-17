@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
+from enum import Enum
 from functools import cached_property
 from types import MappingProxyType
 from types import SimpleNamespace
@@ -1261,3 +1262,19 @@ class SearchType(Protocol):  # pragma: no cover
             StorageError
 
         """
+
+
+class Action(Enum):
+    # FIXME: docstring
+    INSERT = 1
+    DELETE = 2
+
+
+@dataclass(frozen=True)
+class Change:
+    # FIXME: docstring
+    action: Action
+    sequence: bytes
+    feed_url: str | None = None
+    entry_id: str | None = None
+    tag_key: str | None = None

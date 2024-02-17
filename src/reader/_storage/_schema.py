@@ -60,6 +60,7 @@ CREATE TABLE entries (
     first_updated_epoch TIMESTAMP NOT NULL,
     feed_order INTEGER NOT NULL,
     recent_sort TIMESTAMP NOT NULL,
+    sequence BLOB,  -- FIXME: needs migration!
 
     PRIMARY KEY (id, feed),
     FOREIGN KEY (feed) REFERENCES feeds(url)
