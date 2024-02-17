@@ -424,6 +424,7 @@ def get_entries_query(
             entries.added_by
             entries.last_updated
             entries.original_feed
+            entries.sequence
             """.split()
         )
         .FROM("entries")
@@ -454,7 +455,8 @@ def entry_factory(row: tuple[Any, ...]) -> Entry:
         added_by,
         last_updated,
         original_feed,
-    ) = row[12:29]
+        sequence,
+    ) = row[12:30]
     return Entry(
         id,
         convert_timestamp(updated) if updated else None,
@@ -473,6 +475,7 @@ def entry_factory(row: tuple[Any, ...]) -> Entry:
         added_by,
         convert_timestamp(last_updated),
         original_feed or feed.url,
+        sequence,
         feed,
     )
 

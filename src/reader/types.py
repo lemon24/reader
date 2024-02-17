@@ -296,6 +296,9 @@ class Entry(_namedtuple_compat):
     #: .. versionadded:: 1.8
     original_feed_url: str = cast(str, None)
 
+    # FIXME: docstring
+    _sequence: bytes | None = None
+
     # feed should not have a default, but I'd prefer objects that aren't
     # entry data to be at the end, and dataclasses don't support keyword-only
     # arguments yet.
