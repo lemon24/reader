@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
 from typing import TYPE_CHECKING
 
 from .._types import Action
 from .._types import Change
+from ..exceptions import ChangeTrackingNotEnabledError
 from ..exceptions import StorageError
 from ._sql_utils import parse_schema
 from ._sql_utils import Query
@@ -15,6 +19,17 @@ if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
 
 
+@contextmanager
+def wrap_changes_exceptions(enabled: bool = True) -> Iterator[None]:
+    try:
+        yield
+    except sqlite3.OperationalError as e:
+        msg_lower = str(e).lower()
+        if enabled and 'no such table' in msg_lower:
+            raise ChangeTrackingNotEnabledError() from None
+        raise  # pragma: no cover
+
+
 class Changes:
     # FIXME: protocol
 
@@ -23,36 +38,49 @@ class Changes:
 
     @wrap_exceptions(StorageError)
     def enable(self) -> None:
-        # FIXME: already enabled exc
         with ddl_transaction(self.storage.get_db()) as db:
-            for objects in SCHEMA.values():
-                for object in objects.values():
-                    object.create(db)
-            db.execute("UPDATE entries SET sequence = randomblob(16)")
-            db.execute(
-                """
-                INSERT INTO changes
-                SELECT sequence, feed, id, '', 1 FROM entries
-                """
-            )
+            try:
+                self._enable(db)
+            except sqlite3.OperationalError as e:
+                if "table changes already exists" in str(e).lower():
+                    return
+                raise  # pragma: no cover
+
+    @classmethod
+    def _enable(cls, db: sqlite3.Connection) -> None:
+        assert db.in_transaction
+        for objects in SCHEMA.values():
+            for object in objects.values():
+                object.create(db)
+        db.execute("UPDATE entries SET sequence = randomblob(16)")
+        db.execute(
+            """
+            INSERT INTO changes
+            SELECT sequence, feed, id, '', 1 FROM entries
+            """
+        )
 
     @wrap_exceptions(StorageError)
     def disable(self) -> None:
-        # FIXME: already enabled exc
         with ddl_transaction(self.storage.get_db()) as db:
-            for objects in SCHEMA.values():
-                for object in objects.values():
-                    db.execute(f"DROP {object.type} {object.name}")
-            db.execute("UPDATE entries SET sequence = NULL")
+            self._disable(db)
+
+    @classmethod
+    def _disable(cls, db: sqlite3.Connection) -> None:
+        assert db.in_transaction
+        for objects in SCHEMA.values():
+            for object in objects.values():
+                db.execute(f"DROP {object.type} IF EXISTS {object.name}")
+        db.execute("UPDATE entries SET sequence = NULL")
 
     @wrap_exceptions(StorageError)
+    @wrap_changes_exceptions()
     def get(
         self, action: Action | None = None, limit: int | None = None
     ) -> list[Change]:
-        # FIXME: not enabled exc
-        context = {
-            'limit': min(limit or self.storage.chunk_size, self.storage.chunk_size)
-        }
+        if not limit or limit > self.storage.chunk_size:
+            limit = self.storage.chunk_size
+        context = {'limit': limit}
         # the ORDER_BY is only used for testing; should this return a set instead?
         query = Query().SELECT('*').FROM('changes').ORDER_BY('rowid').LIMIT(':limit')
         if action:
@@ -62,8 +90,8 @@ class Changes:
         return list(map(change_factory, rows))
 
     @wrap_exceptions(StorageError)
+    @wrap_changes_exceptions()
     def done(self, changes: list[Change]) -> None:
-        # FIXME: not enabled exc
         # FIXME: len(changes) <= self.storage.chunk_size
         with self.storage.get_db() as db:
             for change in changes:
