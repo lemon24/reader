@@ -464,3 +464,14 @@ class TagNotFoundError(TagError):
     """
 
     _default_message = "no such tag"
+
+
+class ChangeTrackingNotEnabledError(StorageError):
+    """A change tracking method was called when change tracking was not enabled.
+
+    .. admonition:: Unstable
+        This exception is part of the unstable :doc:`internal API <internal>`.
+
+    """
+
+    _default_message = "operation not supported with change tracking disabled"

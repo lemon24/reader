@@ -4,6 +4,7 @@ from fakeparser import Parser
 from reader import StorageError
 from reader._types import Action
 from reader._types import Change
+from reader.exceptions import ChangeTrackingNotEnabledError
 
 
 def test_basic(reader):
@@ -29,18 +30,19 @@ def test_basic(reader):
     reader.update_feeds()
 
     assert reader.get_entry(('1', 'a'))._sequence is None
-    # FIXME: check message
-    with pytest.raises(StorageError):
+
+    with pytest.raises(ChangeTrackingNotEnabledError) as excinfo:
         storage.changes.get()
-    with pytest.raises(StorageError):
-        # FIXME: should be a no-op
-        storage.changes.disable()
+    with pytest.raises(ChangeTrackingNotEnabledError) as excinfo:
+        storage.changes.done([Change(Action.INSERT, b'seq1', '1', 'a')])
+
+    # should be a no-op
+    storage.changes.disable()
 
     storage.changes.enable()
 
-    with pytest.raises(StorageError):
-        # FIXME: should be a no-op
-        storage.changes.enable()
+    # should be a no-op
+    storage.changes.enable()
 
     assert get_entries() == {('1', 'a', b'seq1')}
     changes = storage.changes.get()
