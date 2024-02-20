@@ -13,16 +13,18 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from functools import partial
-from itertools import groupby
 from types import MappingProxyType
 from typing import Any
 from typing import TypeVar
 
 from . import _entries
 from . import Storage
+from .._types import Action
+from .._types import Change
 from .._types import EntryFilter
 from .._utils import exactly_one
 from .._utils import zero_or_one
+from ..exceptions import ChangeTrackingNotEnabledError
 from ..exceptions import EntryNotFoundError
 from ..exceptions import InvalidSearchQueryError
 from ..exceptions import SearchError
@@ -99,12 +101,7 @@ class Search:
 
     """Search provider tightly coupled to the SQLite storage.
 
-    This is a separate class because conceptually search is not coupled to
-    storage (and future/alternative search providers may not be).
-
-    See "Do we want to support external search providers in the future?" in
-    https://github.com/lemon24/reader/issues/122#issuecomment-591302580
-    for details.
+    Originally done in #122. Updated to use the change tracking API in #323.
 
     Schema changes related to search must be added to a Storage migration::
 
@@ -114,10 +111,7 @@ class Search:
             search = Search(db)
 
             if search.is_enabled():
-                # We're already within a transaction, we use _enable/_disable,
-                # not enable/disable.
-                # Or, we can selectively call some of the _drop_*/_create_*
-                # methods (e.g. to only re-create triggers)
+                # Using _enable/_disable because we're already in a transaction.
 
                 # This works only if the names of things remain the same.
                 # Otherwise, the queries from the previous version's disable()
@@ -127,9 +121,6 @@ class Search:
                 search.enable()
 
     Example: https://github.com/lemon24/reader/blob/f0894d93d8573680c656335ded46ebcf482cf7cd/src/reader/_storage.py#L146
-
-    Also see "How does this interact with migrations?" in
-    https://github.com/lemon24/reader/issues/122#issuecomment-591302580
 
     """
 
@@ -143,10 +134,6 @@ class Search:
             return self.storage.factory()
         except DBError as e:
             raise SearchError(message=str(e)) from None
-
-    @property
-    def chunk_size(self) -> int:
-        return self.storage.chunk_size
 
     @staticmethod
     def strip_html(text: SQLiteType) -> SQLiteType:
@@ -169,6 +156,7 @@ class Search:
     @wrap_exceptions(SearchError)
     def enable(self) -> None:
         self.check_update_dependencies()
+        self.storage.changes.enable()
         try:
             with ddl_transaction(self.get_db()) as db:
                 self._enable(db)
@@ -179,12 +167,6 @@ class Search:
 
     @classmethod
     def _enable(cls, db: sqlite3.Connection) -> None:
-        # Private API, may be called from migrations.
-        cls._create_tables(db)
-        cls._create_triggers(db)
-
-    @staticmethod
-    def _create_tables(db: sqlite3.Connection) -> None:
         # Private API, may be called from migrations.
 
         assert db.in_transaction
@@ -220,181 +202,12 @@ class Search:
         db.execute(
             """
             CREATE TABLE entries_search_sync_state (
-                id TEXT NOT NULL,
+                sequence BLOB NOT NULL,
                 feed TEXT NOT NULL,
-                to_update INTEGER NOT NULL DEFAULT 1,
-                to_delete INTEGER NOT NULL DEFAULT 0,
+                id TEXT NOT NULL,
                 es_rowids TEXT NOT NULL DEFAULT '[]',
-                PRIMARY KEY (id, feed)
+                PRIMARY KEY (sequence, feed, id)
             );
-            """
-        )
-        # TODO: This should probably be paginated,
-        # but it's called once and should not take too long, so we can do it later.
-        db.execute(
-            """
-            INSERT INTO entries_search_sync_state (id, feed)
-            SELECT id, feed
-            FROM entries;
-            """
-        )
-
-    @staticmethod
-    def _create_triggers(db: sqlite3.Connection) -> None:
-        # Private API, may be called from migrations.
-
-        assert db.in_transaction
-
-        # We can't use just "INSERT INTO entries_search_sync_state (id, feed)",
-        # because this trigger also gets called in case of
-        # "INSERT OR REPLACE INTO entries" (REPLACE = DELETE + INSERT),
-        # which would wipe out es_rowids.
-        #
-        # Per https://www.sqlite.org/lang_conflict.html,
-        # the ON DELETE trigger doesn't fire during REPLACE
-        # if recursive_triggers are not enabled (they aren't, as of 1.5).
-        #
-        # Note the entries_search_entries_insert{,_esss_exists} trigers
-        # cannot use OR REPLACE, so we must have one trigger for each case.
-
-        db.execute(
-            """
-            CREATE TRIGGER entries_search_entries_insert
-            AFTER INSERT ON entries
-
-            WHEN
-                NOT EXISTS (
-                    SELECT *
-                    FROM entries_search_sync_state AS esss
-                    WHERE (esss.id, esss.feed) = (new.id, new.feed)
-                )
-
-            BEGIN
-                INSERT INTO entries_search_sync_state (id, feed)
-                VALUES (new.id, new.feed);
-            END;
-            """
-        )
-        db.execute(
-            """
-            CREATE TRIGGER entries_search_entries_insert_esss_exists
-            AFTER INSERT ON entries
-
-            WHEN
-                EXISTS (
-                    SELECT *
-                    FROM entries_search_sync_state AS esss
-                    WHERE (esss.id, esss.feed) = (new.id, new.feed)
-                )
-
-            BEGIN
-                UPDATE entries_search_sync_state
-                SET
-                    to_update = 1,
-                    to_delete = 0
-                WHERE (new.id, new.feed) = (
-                    entries_search_sync_state.id,
-                    entries_search_sync_state.feed
-                );
-            END;
-            """
-        )
-        db.execute(
-            """
-            CREATE TRIGGER entries_search_entries_update
-            AFTER UPDATE
-
-            OF title, summary, content
-            ON entries
-            WHEN
-                new.title != old.title
-                OR new.summary != old.summary
-                OR new.content != old.content
-
-            BEGIN
-                UPDATE entries_search_sync_state
-                SET to_update = 1
-                WHERE (new.id, new.feed) = (
-                    entries_search_sync_state.id,
-                    entries_search_sync_state.feed
-                );
-            END;
-            """
-        )
-        db.execute(
-            """
-            CREATE TRIGGER entries_search_entries_delete
-            AFTER DELETE ON entries
-            BEGIN
-                UPDATE entries_search_sync_state
-                SET to_delete = 1
-                WHERE (old.id, old.feed) = (
-                    entries_search_sync_state.id,
-                    entries_search_sync_state.feed
-                );
-            END;
-            """
-        )
-
-        # No need to do anything for added feeds, since they don't have
-        # any entries. No need to do anything for deleted feeds, since
-        # the entries delete trigger will take care of its entries.
-        db.execute(
-            """
-            CREATE TRIGGER entries_search_feeds_update
-            AFTER UPDATE
-
-            OF title, user_title
-            ON feeds
-            WHEN
-                new.title != old.title
-                OR new.user_title != old.user_title
-
-            BEGIN
-                UPDATE entries_search_sync_state
-                SET to_update = 1
-                WHERE new.url = entries_search_sync_state.feed;
-            END;
-            """
-        )
-
-        # We must delete stuff from the old feed early, before update().
-        # Otherwise, if the old feed was just deleted and had an entry
-        # with the same id as one from the new feed, we'll get an
-        # "UNIQUE constraint failed" for esss(id, feed)
-        # when we update esss.feed to new.url.
-        db.execute(
-            """
-            CREATE TRIGGER entries_search_feeds_update_url
-            AFTER UPDATE
-
-            OF url ON feeds
-            WHEN new.url != old.url
-
-            BEGIN
-                DELETE FROM entries_search
-                WHERE rowid IN (
-                    SELECT value
-                    FROM entries_search_sync_state
-                    JOIN json_each(es_rowids)
-                    WHERE feed = new.url AND to_delete = 1
-                );
-                DELETE FROM entries_search_sync_state
-                WHERE feed = new.url AND to_delete = 1;
-
-                UPDATE entries_search
-                SET _feed = new.url
-                WHERE rowid IN (
-                    SELECT value
-                    FROM entries_search_sync_state
-                    JOIN json_each(es_rowids)
-                    WHERE feed = old.url
-                );
-                UPDATE entries_search_sync_state
-                SET feed = new.url
-                WHERE feed = old.url;
-
-            END;
             """
         )
 
@@ -402,30 +215,14 @@ class Search:
     def disable(self) -> None:
         with ddl_transaction(self.get_db()) as db:
             self._disable(db)
+        self.storage.changes.disable()
 
     @classmethod
     def _disable(cls, db: sqlite3.Connection) -> None:
         # Private API, may be called from migrations.
-        cls._drop_triggers(db)
-        cls._drop_tables(db)
-
-    @staticmethod
-    def _drop_tables(db: sqlite3.Connection) -> None:
-        # Private API, may be called from migrations.
         assert db.in_transaction
         db.execute("DROP TABLE IF EXISTS entries_search;")
         db.execute("DROP TABLE IF EXISTS entries_search_sync_state;")
-
-    @staticmethod
-    def _drop_triggers(db: sqlite3.Connection) -> None:
-        # Private API, may be called from migrations.
-        assert db.in_transaction
-        db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert;")
-        db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert_esss_exists;")
-        db.execute("DROP TRIGGER IF EXISTS entries_search_entries_update;")
-        db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
-        db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")
-        db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update_url;")
 
     @wrap_exceptions(SearchError)
     def is_enabled(self) -> bool:
@@ -450,264 +247,151 @@ class Search:
     @wrap_search_exceptions()
     def update(self) -> None:
         self.check_update_dependencies()
-        self._delete_from_search()
-        self._insert_into_search()
+        try:
+            self._delete_from_search()
+            self._insert_into_search()
+        except ChangeTrackingNotEnabledError as e:
+            raise SearchNotEnabledError() from e
 
     def _delete_from_search(self) -> None:
-        done = False
-        while not done:
-            done = not self._delete_from_search_one_chunk()
+        # The loop is done outside of the chunk logic to help testing.
+        while changes := self.storage.changes.get(Action.DELETE):
+            self._delete_from_search_one_chunk(changes)
+            self.storage.changes.done(changes)
 
-    def _delete_from_search_one_chunk(self) -> bool:
-        # if it's not chunked, it's one by one;
-        # we can't / don't want to pull all the entries into memory
-        chunk_size = self.chunk_size or 1
-
+    def _delete_from_search_one_chunk(self, changes: list[Change]) -> None:
         with self.get_db() as db:
-            # See _insert_into_search_one_chunk for why we're doing this.
-            db.execute('BEGIN IMMEDIATE;')
+            for change in changes:
+                # ignore non-entry changes
+                if not (
+                    change.feed_url and change.entry_id and not change.tag_key
+                ):  # pragma: no cover
+                    continue
+                assert change.action == Action.DELETE, change.action
 
-            # TODO: maybe use a single cursor
-
-            rows = list(
                 db.execute(
                     """
-                    SELECT id, feed, es_rowids
-                    FROM entries_search_sync_state
-                    WHERE to_delete
-                    LIMIT ?;
+                    DELETE FROM entries_search WHERE rowid IN (
+                        SELECT value
+                        FROM entries_search_sync_state AS ss
+                        JOIN json_each(es_rowids)
+                        WHERE (ss.sequence, ss.feed, ss.id) = (?, ?, ?)
+                    )
                     """,
-                    (chunk_size,),
+                    (change.sequence, change.feed_url, change.entry_id),
                 )
-            )
-
-            first_entry = (rows[0][1], rows[0][0]) if rows else None
-            log.debug(
-                "Search.update: _delete_from_search (chunk_size: %s): "
-                "got %s entries; first entry: %r",
-                self.chunk_size,
-                len(rows),
-                first_entry,
-            )
-
-            if not rows:
-                # nothing to delete
-                return False
-
-            # it may be possible to delete all of them in a single query,
-            # but because we're using SQLite (and they execute locally),
-            # we're not gonna bother
-
-            db.executemany(
-                "DELETE FROM entries_search WHERE rowid = ?;",
-                ((id,) for row in rows for id in json.loads(row[2])),
-            )
-            db.executemany(
-                "DELETE FROM entries_search_sync_state WHERE (id, feed) = (?, ?);",
-                (row[:2] for row in rows),
-            )
-
-            if len(rows) < chunk_size:
-                # no results left (at least when nothing else happens in parallel)
-                return False
+                db.execute(
+                    """
+                    DELETE FROM entries_search_sync_state
+                    WHERE (sequence, feed, id) = (?, ?, ?)
+                    """,
+                    (change.sequence, change.feed_url, change.entry_id),
+                )
 
         log.debug("Search.update: _delete_from_search: chunk done")
-        return True
 
     def _insert_into_search(self) -> None:
         # The loop is done outside of the chunk logic to help testing.
-        done = False
-        while not done:
-            done = not self._insert_into_search_one_chunk()
+        while changes := self.storage.changes.get(Action.INSERT):
+            self._insert_into_search_one_chunk(changes)
+            self.storage.changes.done(changes)
 
-    def _insert_into_search_one_chunk(self) -> bool:
-        # We don't call strip_html() in transactions, because it keeps
-        # the database locked for too long; instead, we:
+    def _insert_into_search_one_chunk(self, changes: list[Change]) -> None:
+        # We don't call strip_html() in transactions,
+        # because it keeps the database locked for too long.
         #
-        # * pull a bunch of entry content into Python (one transaction),
-        # * strip HTML outside of a transaction, and then
-        # * update each entry and clear entries_search_sync_state,
-        #   but only if it still needs to be updated,
-        #   and its last_updated didn't change (another transaction).
-        #
-        # Before reader 1.4, we would insert the data from entries
-        # into entries_search in a single INSERT statement
-        # (with stripping HTML taking ~90% of the time)
-        # and then clear entries_search_sync_state,
-        # all in a single transaction.
-        #
-        # The advantage was that entries could not be updated while
-        # updating search (because the database was locked);
-        # now it *can* happen, and we must not clear entries_search_sync_state
-        # if it did (we rely on last_updated for this).
-        #
-        # See this comment for pseudocode of both approaches:
-        # https://github.com/lemon24/reader/issues/175#issuecomment-652489019
+        # Before reader 3.11, the search index was in the main database,
+        # and the list of changes would be recorded using triggers.
+        # Before reader 1.4 / #175, updates were done in a single transaction,
+        # which made the "database locked" issue visibly bad.
+        # Since 3.11, the search index is in a separate, attached database,
+        # so we don't care about locking that one that much.
+        # FIXME: need to use a separate connection for this to be true!
 
-        db = self.get_db()
-
-        rows = list(
-            db.execute(
-                """
-                SELECT
-                    entries.id,
-                    entries.feed,
-                    entries.last_updated,
-                    esss.es_rowids,
-                    coalesce(feeds.user_title, feeds.title),
-                    feeds.user_title IS NOT NULL,
-                    entries.title,
-                    entries.summary,
-                    entries.content
-                FROM entries_search_sync_state AS esss
-                JOIN entries USING (id, feed)
-                JOIN feeds ON feeds.url = esss.feed
-                WHERE esss.to_update
-                LIMIT ?
-                """,
-                # if it's not chunked, it's one by one;
-                # we can't / don't want to pull all the entries into memory
-                (self.chunk_size or 1,),
+        # split in a separate loop in preparation for future optimization
+        # https://github.com/lemon24/reader/issues/323#issuecomment-1930756417
+        entries = {}
+        for change in changes:
+            # ignore non-entry changes
+            if not (
+                change.feed_url and change.entry_id and not change.tag_key
+            ):  # pragma: no cover
+                continue
+            assert change.action == Action.INSERT, change.action
+            entry = next(
+                iter(
+                    self.storage.get_entries(
+                        EntryFilter(change.feed_url, change.entry_id), limit=1
+                    )
+                ),
+                None,
             )
-        )
+            if not entry:  # pragma: no cover FIXME: needs test
+                continue
+            if entry._sequence != change.sequence:
+                continue
+            entries[change] = entry
 
-        first_entry = (rows[0][1], rows[0][0]) if rows else None
-        log.debug(
-            "Search.update: _insert_into_search (chunk_size: %s): "
-            "got %s entries; first entry: %r",
-            self.chunk_size,
-            len(rows),
-            first_entry,
-        )
-
-        if not rows:
-            # nothing to update
-            return False
-
-        stripped: list[dict[str, Any]] = []
-        for (
-            id,
-            feed_url,
-            last_updated,
-            es_rowids_json,
-            feed_title,
-            is_feed_user_title,
-            title,
-            summary,
-            content_json,
-        ) in rows:
+        stripped = {}
+        for change, entry in entries.items():
             final: list[tuple[str, str] | tuple[None, None]] = []
 
-            content = json.loads(content_json) if content_json else []
-            if content and isinstance(content, list):
-                for i, content_dict in enumerate(content):
-                    if (content_dict.get('type') or '').lower() not in (
-                        '',
-                        'text/html',
-                        'text/xhtml',
-                        'text/plain',
-                    ):
-                        continue
+            for i, content in enumerate(entry.content):
+                if (content.type or '').lower() not in (
+                    '',
+                    'text/html',
+                    'text/xhtml',
+                    'text/plain',
+                ):
+                    continue
+                final.append((self.strip_html(content.value), f'.content[{i}].value'))
 
-                    final.append(
-                        (
-                            self.strip_html(content_dict.get('value')),
-                            f'.content[{i}].value',
-                        )
-                    )
-
-            if summary:
-                final.append((self.strip_html(summary), '.summary'))
+            if entry.summary:
+                final.append((self.strip_html(entry.summary), '.summary'))
 
             if not final:
                 final.append((None, None))
 
-            stripped_title = self.strip_html(title)
+            stripped_title = self.strip_html(entry.title or '')
+            feed_title = entry.feed.user_title or entry.feed.title or ''
+            is_feed_user_title = bool(entry.feed.user_title)
             stripped_feed_title = self.strip_html(feed_title)
 
-            stripped.extend(
+            stripped[change] = [
                 dict(
                     title=stripped_title,
                     content=content_value,
                     feed=stripped_feed_title,
-                    _id=id,
-                    _feed=feed_url,
+                    _id=entry.id,
+                    _feed=entry.feed_url,
                     _content_path=content_path,
                     _is_feed_user_title=is_feed_user_title,
-                    _last_updated=last_updated,
-                    _es_rowids=json.loads(es_rowids_json),
                 )
                 for content_value, content_path in final
-            )
+            ]
 
-        # presumably we could insert everything in a single transaction,
-        # but we'd have to throw everything away if just one entry changed;
-        # https://github.com/lemon24/reader/issues/175#issuecomment-653535994
+        for change, group in stripped.items():
+            with self.storage.get_db() as db:
+                # SELECT does not acquire a lock, use BEGIN IMMEDIATE
+                # to do so if the first statement is not a DML one.
 
-        groups = groupby(stripped, lambda d: (d['_id'], d['_feed']))
-        for (id, feed_url), group_iter in groups:
-            group = list(group_iter)
-            with db:
-                # With the default isolation mode, a BEGIN is emitted
-                # only when a DML statement is executed (I think);
-                # this means that any SELECTs aren't actually
-                # inside of a transaction; this is a DBAPI2 (mis)feature.
-                #
-                # BEGIN IMMEDIATE acquires a write lock immediately;
-                # this will fail now, or will succeed and none
-                # of the following statements until COMMIT/ROLLBACK
-                # can fail with "database is locked".
-                # We can't use a plain BEGIN (== DEFFERED), since
-                # it delays acquiring a write lock until the first write
-                # statement (the insert).
-                #
-                db.execute('BEGIN IMMEDIATE;')
-
-                # TODO: maybe use a single cursor
-                # TODO: these two checks look very cumbersome, make them easier to read
-
-                to_update = db.execute(
+                cursor = db.execute(
                     """
-                    SELECT to_update, es_rowids
-                    FROM entries_search_sync_state
-                    WHERE (id, feed) = (?, ?);
+                    DELETE FROM entries_search WHERE rowid IN (
+                        SELECT value
+                        FROM entries_search_sync_state AS ss
+                        JOIN json_each(es_rowids)
+                        WHERE (ss.sequence, ss.feed, ss.id) = (?, ?, ?)
+                    )
                     """,
-                    (id, feed_url),
-                ).fetchone()
-                if not (
-                    to_update
-                    and to_update[0]
-                    and set(json.loads(to_update[1])) == set(group[0]['_es_rowids'])
-                ):
-                    # a concurrent call updated this entry, skip it
-                    log.debug(
-                        "Search.update: _insert_into_search: "
-                        "entry already updated, skipping: %r",
-                        (feed_url, id),
-                    )
-                    continue
-
-                last_updated = db.execute(
-                    "SELECT last_updated FROM entries WHERE (id, feed) = (?, ?);",
-                    (id, feed_url),
-                ).fetchone()
-                if not last_updated or last_updated[0] != group[0]['_last_updated']:
-                    # last_updated changed since we got it;
-                    # skip the entry, we'll catch it on the next loop
-                    log.debug(
-                        "Search.update: _insert_into_search: "
-                        "entry last_updated changed, skipping: %r",
-                        (feed_url, id),
-                    )
-                    continue
-
-                # we can't rely on _delete_from_search doing it,
-                # since a parallel update may have added some rows since then
-                # (and we'd duplicate them)
-                db.executemany(
-                    "DELETE FROM entries_search WHERE rowid = ?;",
-                    ((id,) for id in group[0]['_es_rowids']),
+                    (change.sequence, change.feed_url, change.entry_id),
                 )
+                if cursor.rowcount:  # pragma: no cover
+                    log.warn(
+                        "during insert, found and deleted %d rows for %r",
+                        cursor.rowcount,
+                        change,
+                    )
 
                 new_es_rowids = []
                 for params in group:
@@ -730,15 +414,18 @@ class Search:
 
                 db.execute(
                     """
-                    UPDATE entries_search_sync_state
-                    SET to_update = 0, es_rowids = ?
-                    WHERE (id, feed) = (?, ?);
+                    INSERT OR REPLACE INTO entries_search_sync_state
+                    VALUES (?, ?, ?, ?)
                     """,
-                    (json.dumps(new_es_rowids), id, feed_url),
+                    (
+                        change.sequence,
+                        change.feed_url,
+                        change.entry_id,
+                        json.dumps(new_es_rowids),
+                    ),
                 )
 
         log.debug("Search.update: _insert_into_search: chunk done")
-        return True
 
     def search_entries(
         self,
@@ -771,6 +458,8 @@ class Search:
             after_mark=after_mark,
         )
 
+        chunk_size = self.storage.chunk_size
+
         # TODO: dupe of at least Storage.get_entries(), maybe deduplicate
         if sort != 'random':
             last = None
@@ -785,7 +474,7 @@ class Search:
             rv = paginated_query(
                 self.get_db(),
                 make_query,
-                self.chunk_size,
+                chunk_size,
                 limit or 0,
                 last,
                 row_factory,
@@ -795,8 +484,8 @@ class Search:
             rv = paginated_query(
                 self.get_db(),
                 make_query,
-                self.chunk_size,
-                min(limit, self.chunk_size) if limit else self.chunk_size,
+                chunk_size,
+                min(limit, chunk_size) if limit else chunk_size,
                 row_factory=row_factory,
             )
 

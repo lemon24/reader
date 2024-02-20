@@ -264,7 +264,7 @@ def test_optimize_direct_usage(reader):
 
     for _ in range(1000):
         reader.set_tag((), 'tag')
-    assert 2 < count_optimize_calls(statements) < 8
+    assert 1 < count_optimize_calls(statements) < 7
 
     statements.clear()
 

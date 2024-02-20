@@ -1864,9 +1864,7 @@ def test_change_feed_url_search(reader):
     assert {e.feed_url for e in old} == {'1'}
 
     reader.change_feed_url('1', '3')
-
-    # TODO: maybe we should add an update_search() here,
-    # to allow for the search results not being updated immediately
+    reader.update_search()
 
     assert list(reader.search_entries('entry', feed='1')) == []
 

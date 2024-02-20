@@ -22,6 +22,7 @@ from reader import SearchNotEnabledError
 from reader import StorageError
 from reader._storage import Storage
 from reader._storage._search import Search
+from reader.exceptions import ChangeTrackingNotEnabledError
 
 
 @pytest.fixture(params=[False, True], ids=['without_entries', 'with_entries'])
@@ -97,7 +98,7 @@ def test_update_search(reader):
 def test_update_search_fails_if_not_enabled(reader):
     with pytest.raises(SearchNotEnabledError) as excinfo:
         reader.update_search()
-    assert excinfo.value.__cause__ is None
+    assert isinstance(excinfo.value.__cause__, ChangeTrackingNotEnabledError)
     assert excinfo.value.message
 
 
@@ -346,7 +347,6 @@ UPDATE_TRIGGERS_DATA = {
 }
 
 
-@pytest.mark.xfail(reason='FIXME #323')
 @pytest.mark.parametrize(
     'data', list(UPDATE_TRIGGERS_DATA.values()), ids=list(UPDATE_TRIGGERS_DATA)
 )
@@ -430,52 +430,18 @@ def test_update_triggers_no_change(db_path, make_reader, monkeypatch, set_user_t
     feed = parser.feed(
         1, datetime(2010, 1, 2), title='feed', link='link', author='author'
     )
-
-    """
     entry = parser.entry(
-        1, 1, datetime(2010, 1, 2),
+        1,
+        1,
+        datetime(2010, 1, 2),
         title='entry',
         summary='summary',
         content=[Content('content')],
-        link='link', author='author',
+        link='link',
+        author='author',
         published=datetime(2010, 1, 2),
         enclosures=[Enclosure('enclosure')],
     )
-    """
-    # NOTE: As of 1.4, updating entries normally (above) uses INSERT OR REPLACE.
-    # REPLACE == DELETE + INSERT (https://www.sqlite.org/lang_conflict.html),
-    # so updating the entry normally *will not* fire the ON UPDATE trigger,
-    # but the ON DELETE and ON INSERT ones (basically, the ON UPDATE trigger
-    # never fires at the moment).
-    #
-    # Meanwhile, we do a (more intrusive/brittle) manual update:
-    with reader._search.get_db() as db:
-        db.execute(
-            """
-            UPDATE entries
-            SET (
-                title,
-                link,
-                updated,
-                author,
-                published,
-                summary,
-                content,
-                enclosures
-            ) = (
-                'entry',
-                'http://www.example.com/entries/1',
-                '2010-01-02 00:00:00',
-                'author',
-                '2010-01-02 00:00:00',
-                'summary',
-                '[{"value": "content", "type": null, "language": null}]',
-                '[{"href": "enclosure", "type": null, "length": null}]'
-            )
-            WHERE (id, feed) = ('1, 1', '1');
-            """
-        )
-    # TODO: Change this test when updating entries uses UPDATE instead of INSERT OR REPLACE
 
     reader.mark_entry_as_read(entry)
     reader.mark_entry_as_important(entry)
@@ -915,19 +881,7 @@ def test_update_search_entry_changed_between_insert_loops(
     """Test the entry can't be added twice to the search index if it changes
     during reader.update_search() between two insert loops.
 
-    The scenario is:
-
-    * entry has to_update set
-    * _delete_from_search removes it from search
-    * loop 1 of _insert_into_search finds entry and inserts it into search,
-      clears to_update
-    * entry has to_update set (if to_update is set because the feed changed,
-      last_updated does not change; even if it did, it doesn't matter,
-      since the transaction only spans a single loop)
-    * loop 2 of _insert_into_search finds entry and inserts it into search
-      again, clears to_update
-    * loop 3 of _insert_into_search doesn't find any entry, returns
-
+    This was especially relevant for the pre-change-tracking (#323) version:
     https://github.com/lemon24/reader/issues/175#issuecomment-654213853
 
     """
@@ -953,14 +907,9 @@ def test_update_search_entry_changed_between_insert_loops(
         reader = make_reader(db_path)
         original_insert_chunk = reader._search._insert_into_search_one_chunk
 
-        loop = 0
-
         def insert_chunk(*args, **kwargs):
-            nonlocal loop
-            if loop == 1:
-                in_insert_chunk.set()
-                can_return_from_insert_chunk.wait()
-            loop += 1
+            in_insert_chunk.set()
+            can_return_from_insert_chunk.wait()
             return original_insert_chunk(*args, **kwargs)
 
         reader._search._insert_into_search_one_chunk = insert_chunk

@@ -157,8 +157,10 @@ def recreate_search_triggers(db: sqlite3.Connection) -> None:  # pragma: no cove
     from ._search import Search
 
     if Search._is_enabled(db):
-        Search._drop_triggers(db)
-        Search._create_triggers(db)
+        # Search._drop_triggers(db)
+        # Search._create_triggers(db)
+        # FIXME: drop old (pre-#323) search triggers once
+        pass
 
 
 def update_from_37_to_38(db: sqlite3.Connection, /) -> None:  # pragma: no cover
