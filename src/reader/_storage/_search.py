@@ -71,6 +71,7 @@ def wrap_search_exceptions(enabled: bool = True, query: bool = False) -> Iterato
     except sqlite3.OperationalError as e:
         msg_lower = str(e).lower()
 
+        # TODO: check table name and/or set cause
         if enabled and 'no such table' in msg_lower:
             raise SearchNotEnabledError() from None
 
@@ -126,8 +127,8 @@ class Search:
 
     def __init__(self, storage: Storage):
         self.storage = storage
-
-    # get_db() and chunk_size exposed for convenience.
+        if not storage.factory.is_private():
+            storage.factory.attach('search', storage.factory.path + '.search')
 
     def get_db(self) -> sqlite3.Connection:
         try:
@@ -159,14 +160,16 @@ class Search:
         self.storage.changes.enable()
         try:
             with ddl_transaction(self.get_db()) as db:
-                self._enable(db)
+                # FIXME: enable WAL and set app id?
+                self._enable(db, '' if self.storage.factory.is_private() else 'search.')
         except sqlite3.OperationalError as e:
             if "table entries_search already exists" in str(e).lower():
                 return
-            raise  # pragma: no cover
+            else:  # pragma: no cover
+                raise
 
     @classmethod
-    def _enable(cls, db: sqlite3.Connection) -> None:
+    def _enable(cls, db: sqlite3.Connection, prefix: str) -> None:
         # Private API, may be called from migrations.
 
         assert db.in_transaction
@@ -178,8 +181,8 @@ class Search:
         # stuff depended on the column index if we add new columns.
         #
         db.execute(
-            """
-            CREATE VIRTUAL TABLE entries_search USING fts5(
+            f"""
+            CREATE VIRTUAL TABLE {prefix}entries_search USING fts5(
                 title,  -- entries.title
                 content,  -- entries.summary or one of entries.content
                 feed,  -- feeds.title or feed.user_title
@@ -200,8 +203,8 @@ class Search:
         )
 
         db.execute(
-            """
-            CREATE TABLE entries_search_sync_state (
+            f"""
+            CREATE TABLE {prefix}entries_search_sync_state (
                 sequence BLOB NOT NULL,
                 feed TEXT NOT NULL,
                 id TEXT NOT NULL,
@@ -215,6 +218,7 @@ class Search:
     def disable(self) -> None:
         with ddl_transaction(self.get_db()) as db:
             self._disable(db)
+        # FIXME: vacuum attached db, detach, or maybe delete file
         self.storage.changes.disable()
 
     @classmethod
@@ -231,17 +235,15 @@ class Search:
     @staticmethod
     def _is_enabled(db: sqlite3.Connection) -> bool:
         # Private API, may be called from migrations.
-        search_table_exists = (
-            db.execute(
-                """
-                SELECT name
-                FROM sqlite_master
-                WHERE type = 'table' AND name = 'entries_search';
-                """
-            ).fetchone()
-            is not None
-        )
-        return search_table_exists
+        try:
+            list(db.execute("SELECT * FROM entries_search LIMIT 0;"))
+        except sqlite3.OperationalError as e:
+            if "no such table: entries_search" in str(e):
+                return False
+            else:  # pragma: no cover
+                raise
+        else:
+            return True
 
     @wrap_exceptions(SearchError)
     @wrap_search_exceptions()
@@ -250,6 +252,7 @@ class Search:
         try:
             self._delete_from_search()
             self._insert_into_search()
+            # FIXME: optimize?
         except ChangeTrackingNotEnabledError as e:
             raise SearchNotEnabledError() from e
 
@@ -304,9 +307,10 @@ class Search:
         # and the list of changes would be recorded using triggers.
         # Before reader 1.4 / #175, updates were done in a single transaction,
         # which made the "database locked" issue visibly bad.
+        #
         # Since 3.11, the search index is in a separate, attached database,
         # so we don't care about locking that one that much.
-        # FIXME: need to use a separate connection for this to be true!
+        # https://gist.github.com/lemon24/c57b3772ed5a36aabfe723df9820d6bc
 
         # split in a separate loop in preparation for future optimization
         # https://github.com/lemon24/reader/issues/323#issuecomment-1930756417
@@ -371,7 +375,7 @@ class Search:
             ]
 
         for change, group in stripped.items():
-            with self.storage.get_db() as db:
+            with self.get_db() as db:
                 # SELECT does not acquire a lock, use BEGIN IMMEDIATE
                 # to do so if the first statement is not a DML one.
 
