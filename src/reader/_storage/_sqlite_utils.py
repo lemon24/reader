@@ -431,7 +431,8 @@ class LocalConnectionFactory:
         self.path = path
         self.kwargs = kwargs
         if kwargs.get('uri'):  # pragma: no cover
-            raise NotImplementedError("_is_private() does not work for uri=True")
+            raise NotImplementedError("is_private() does not work for uri=True")
+        self.attached: dict[str, str] = {}
         self._local = _LocalConnectionFactoryState()
         self._local.is_creating_thread = True
         # connect immediately, so exceptions are raised before the first call
@@ -446,13 +447,13 @@ class LocalConnectionFactory:
                 self._local.call_count += 1
             return db
 
-        if self._is_private(self.path) and not self._local.is_creating_thread:
+        if self.is_private() and not self._local.is_creating_thread:
             raise UsageError(
                 "cannot use a private database "
                 "from threads other than the creating thread"
             )
 
-        if self._is_private(self.path) and self._local.closed:
+        if self.is_private() and self._local.closed:
             raise UsageError("cannot reuse a private database after close()")
 
         self._local.db = db = sqlite3.connect(self.path, **self.kwargs)
@@ -466,6 +467,9 @@ class LocalConnectionFactory:
             threading.current_thread(), self._close, db
         )
 
+        for name, path in self.attached.items():
+            self._attach(db, name, path)
+
         return db
 
     def __enter__(self) -> sqlite3.Connection:
@@ -474,7 +478,7 @@ class LocalConnectionFactory:
 
     def __exit__(self, *args: Any) -> None:
         self._local.context_stack.pop()
-        if not self._local.context_stack and not self._is_private(self.path):
+        if not self._local.context_stack and not self.is_private():
             self.close()
 
     def close(self) -> None:
@@ -532,6 +536,22 @@ class LocalConnectionFactory:
         if count > 1024:
             return count % 2048 == 0
         return count in {2, 4, 8, 16, 64, 256, 1024}
+
+    def attach(self, name: str, path: str) -> None:
+        if self._is_private(name):  # pragma: no cover
+            raise NotImplementedError(f"cannot attach private database: {name!r}")
+        if name in self.attached:  # pragma: no cover
+            raise ValueError(f"database already attached: {name!r}")
+        self.attached[name] = path
+        db = self._local.db
+        if db:  # pragma: no cover FIXME: needs test
+            self._attach(db, name, path)
+
+    def _attach(self, db: sqlite3.Connection, name: str, path: str) -> None:
+        db.execute("ATTACH DATABASE ? AS ?;", (path, name))
+
+    def is_private(self) -> bool:
+        return self._is_private(self.path)
 
     @staticmethod
     def _is_private(path: str) -> bool:

@@ -362,7 +362,7 @@ def check_errors_locked(db_path, pre_stuff, do_stuff, exc_type):
         db.execute("ROLLBACK;")
 
     if pre_stuff:
-        pre_stuff(storage, feed, entry)
+        pre_stuff(storage)
 
     thread = threading.Thread(target=target)
     thread.start()

@@ -25,6 +25,7 @@ def wrap_changes_exceptions(enabled: bool = True) -> Iterator[None]:
         yield
     except sqlite3.OperationalError as e:
         msg_lower = str(e).lower()
+        # TODO: check table name and/or set cause
         if enabled and 'no such table' in msg_lower:
             raise ChangeTrackingNotEnabledError() from None
         raise  # pragma: no cover

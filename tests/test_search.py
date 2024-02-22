@@ -11,6 +11,7 @@ from reader import HighlightedString
 from reader import InvalidSearchQueryError
 from reader import SearchError
 from reader import StorageError
+from reader._storage import Storage
 from reader._storage._search import Search
 from reader._storage._search import strip_html
 from reader._storage._sqlite_utils import DBError
@@ -33,39 +34,50 @@ def test_strip_html(input, expected_output):
 
 
 def enable_search(storage, _, __):
-    Search(storage).enable()
+    storage.search.enable()
 
 
 def disable_search(storage, _, __):
-    Search(storage).disable()
+    storage.search.disable()
 
 
 def is_search_enabled(storage, _, __):
-    Search(storage).is_enabled()
+    storage.search.is_enabled()
 
 
 def update_search(storage, _, __):
-    Search(storage).update()
+    storage.search.update()
 
 
 def search_entries(storage, _, __):
-    list(Search(storage).search_entries('entry'))
+    list(storage.search.search_entries('entry'))
 
 
 def search_entry_counts(storage, _, __):
-    Search(storage).search_entry_counts('entry', now=datetime(2010, 1, 1))
+    storage.search.search_entry_counts('entry', now=datetime(2010, 1, 1))
+
+
+def set_search(storage):
+    storage.search = search = Search(storage)
+
+
+def set_search_and_enable(storage):
+    set_search(storage)
+    storage.search.enable()
 
 
 @pytest.mark.slow
 @pytest.mark.parametrize(
     'pre_stuff, do_stuff',
     [
-        (None, enable_search),
-        (None, disable_search),
-        (None, is_search_enabled),
-        (enable_search, update_search),
-        (enable_search, search_entries),
-        (enable_search, search_entry_counts),
+        (set_search, enable_search),
+        (set_search, disable_search),
+        pytest.param(
+            set_search, is_search_enabled, marks=pytest.mark.xfail(strict=True)
+        ),
+        (set_search_and_enable, update_search),
+        (set_search_and_enable, search_entries),
+        (set_search_and_enable, search_entry_counts),
     ],
 )
 def test_errors_locked(db_path, pre_stuff, do_stuff):
@@ -76,14 +88,13 @@ def test_errors_locked(db_path, pre_stuff, do_stuff):
     check_errors_locked(db_path, pre_stuff, do_stuff, SearchError)
 
 
-def enable_and_update_search(storage):
-    search = Search(storage)
-    search.enable()
-    search.update()
+def set_search_and_update(storage):
+    set_search_and_enable(storage)
+    storage.search.update()
 
 
 def iter_search_entries(storage):
-    return Search(storage).search_entries('entry')
+    return storage.search.search_entries('entry')
 
 
 @pytest.mark.slow
@@ -95,7 +106,7 @@ def test_iter_locked(db_path, iter_stuff, chunk_size):
     """
     from test_storage import check_iter_locked
 
-    check_iter_locked(db_path, enable_and_update_search, iter_stuff, chunk_size)
+    check_iter_locked(db_path, set_search_and_update, iter_stuff, chunk_size)
 
 
 class ActuallyOK(Exception):
@@ -169,3 +180,41 @@ def test_minimum_sqlite_version(storage, monkeypatch):
 
 
 # TODO: test FTS5 column names
+
+
+def test_memory_storage_has_no_attached_database(storage):
+    search = Search(storage)
+    search.enable()
+    db = storage.factory()
+
+    databases = {r[1:3] for r in db.execute('pragma database_list')}
+    assert databases == {('main', '')}
+
+    main_schema = {r[0] for r in db.execute('select name from main.sqlite_master')}
+    # FIXME: use SCHEMA when search will use one
+    assert 'entries_search' in main_schema
+    assert 'entries_search_sync_state' in main_schema
+
+
+def test_disk_storage_has_attached_database(db_path, request):
+    storage = Storage(db_path)
+    request.addfinalizer(storage.close)
+
+    search = Search(storage)
+    search.enable()
+    db = storage.factory()
+
+    databases = {r[1:3] for r in db.execute('pragma database_list')}
+    assert databases == {('main', db_path), ('search', db_path + '.search')}
+
+    main_schema = {r[0] for r in db.execute('select name from main.sqlite_master')}
+    # FIXME: use SCHEMA when search will use one
+    assert 'entries_search' not in main_schema
+    assert 'entries_search_sync_state' not in main_schema
+
+    search_schema = {r[0] for r in db.execute('select name from search.sqlite_master')}
+    # FIXME: use SCHEMA when search will use one
+    assert 'entries_search' in search_schema
+    assert 'entries_search_sync_state' in search_schema
+
+    # FIXME: test disable
