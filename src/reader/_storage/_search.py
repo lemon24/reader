@@ -38,9 +38,12 @@ from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
 from ._sqlite_utils import ddl_transaction
+from ._sqlite_utils import get_int_pragma
 from ._sqlite_utils import require_functions
 from ._sqlite_utils import require_version
+from ._sqlite_utils import set_int_pragma
 from ._sqlite_utils import SQLiteType
+from ._sqlite_utils import table_count
 from ._sqlite_utils import wrap_exceptions
 
 log = logging.getLogger('reader')
@@ -62,6 +65,8 @@ _QUERY_ERROR_MESSAGE_FRAGMENTS = [
     "no such cursor",
     "unterminated string",
 ]
+
+APPLICATION_ID = int(''.join(f'{ord(c):x}' for c in 'reaD'), 16)
 
 
 @contextmanager
@@ -127,8 +132,35 @@ class Search:
 
     def __init__(self, storage: Storage):
         self.storage = storage
+        self.path = None
         if not storage.factory.is_private():
-            storage.factory.attach('search', storage.factory.path + '.search')
+            self.path = storage.factory.path + '.search'
+
+            with wrap_exceptions(SearchError, "error while opening database"):
+                storage.factory.attach('search', self.path)
+
+                db = self.get_db()
+
+                # FIXME: this duplicates HeavyMigration logic, extract it
+                # (all recent main dbs should have application_id)
+                id = get_int_pragma(db, 'search.application_id')
+                if id:
+                    if id != APPLICATION_ID:  # pragma: no cover
+                        raise SearchError(f"invalid id: 0x{id:x}")
+                else:
+                    if table_count(db, 'search') != 0:  # pragma: no cover
+                        raise SearchError(
+                            "database with no application id already has tables"
+                        )
+                    set_int_pragma(db, 'search.application_id', APPLICATION_ID)
+
+                # FIXME: this duplicates setup_db, extract it
+                # also, maybe it is enough to set wal the first time
+                if storage.wal_enabled is not None:  # pragma: no cover
+                    if storage.wal_enabled:
+                        db.execute("PRAGMA search.journal_mode = WAL;")
+                    else:
+                        db.execute("PRAGMA search.journal_mode = DELETE;")
 
     def get_db(self) -> sqlite3.Connection:
         try:
@@ -160,8 +192,7 @@ class Search:
         self.storage.changes.enable()
         try:
             with ddl_transaction(self.get_db()) as db:
-                # FIXME: enable WAL and set app id?
-                self._enable(db, '' if self.storage.factory.is_private() else 'search.')
+                self._enable(db, 'search.' if self.path else '')
         except sqlite3.OperationalError as e:
             if "table entries_search already exists" in str(e).lower():
                 return
@@ -169,7 +200,7 @@ class Search:
                 raise
 
     @classmethod
-    def _enable(cls, db: sqlite3.Connection, prefix: str) -> None:
+    def _enable(cls, db: sqlite3.Connection, prefix: str = '') -> None:
         # Private API, may be called from migrations.
 
         assert db.in_transaction
@@ -216,10 +247,27 @@ class Search:
 
     @wrap_exceptions(SearchError)
     def disable(self) -> None:
-        with ddl_transaction(self.get_db()) as db:
-            self._disable(db)
-        # FIXME: vacuum attached db, detach, or maybe delete file
         self.storage.changes.disable()
+
+        db = self.get_db()
+        with ddl_transaction(db):
+            self._disable(db)
+
+        # I don't know how to delete the search database correctly
+        # while it's attached to other connections.
+        #
+        # For example, if I delete the database from connection A,
+        # B can still use it, even the file is not visible on disk;
+        # then, new connection C will create a new database,
+        # while B still points to the old one.
+        #
+        # So, it's best to leave deleting the files to the user,
+        # who can guarantee no connections actually use them anymore.
+        #
+        # However, we at least minimize the space they take using VACUUM.
+
+        if self.path:
+            db.execute("VACUUM search;")
 
     @classmethod
     def _disable(cls, db: sqlite3.Connection) -> None:
@@ -252,7 +300,6 @@ class Search:
         try:
             self._delete_from_search()
             self._insert_into_search()
-            # FIXME: optimize?
         except ChangeTrackingNotEnabledError as e:
             raise SearchNotEnabledError() from e
 

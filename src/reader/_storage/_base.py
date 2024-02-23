@@ -61,6 +61,7 @@ class StorageBase:
 
         self.path = path
         self.timeout = timeout
+        self.wal_enabled = wal_enabled
 
     def get_db(self) -> sqlite3.Connection:
         """Private storage API (used by search)."""
