@@ -85,7 +85,7 @@ def test_errors_locked(db_path, pre_stuff, do_stuff):
 
     from test_storage import check_errors_locked
 
-    check_errors_locked(db_path, pre_stuff, do_stuff, SearchError)
+    check_errors_locked(db_path, pre_stuff, do_stuff, (SearchError, StorageError))
 
 
 def set_search_and_update(storage):
@@ -190,10 +190,15 @@ def test_memory_storage_has_no_attached_database(storage):
     databases = {r[1:3] for r in db.execute('pragma database_list')}
     assert databases == {('main', '')}
 
-    main_schema = {r[0] for r in db.execute('select name from main.sqlite_master')}
-    # FIXME: use SCHEMA when search will use one
-    assert 'entries_search' in main_schema
-    assert 'entries_search_sync_state' in main_schema
+    search_schema = {r[0] for r in db.execute('select name from main.sqlite_master')}
+    assert 'entries_search' in search_schema
+    assert 'entries_search_sync_state' in search_schema
+
+    search.disable()
+
+    search_schema = {r[0] for r in db.execute('select name from main.sqlite_master')}
+    assert 'entries_search' not in search_schema
+    assert 'entries_search_sync_state' not in search_schema
 
 
 def test_disk_storage_has_attached_database(db_path, request):
@@ -208,13 +213,18 @@ def test_disk_storage_has_attached_database(db_path, request):
     assert databases == {('main', db_path), ('search', db_path + '.search')}
 
     main_schema = {r[0] for r in db.execute('select name from main.sqlite_master')}
-    # FIXME: use SCHEMA when search will use one
     assert 'entries_search' not in main_schema
     assert 'entries_search_sync_state' not in main_schema
 
     search_schema = {r[0] for r in db.execute('select name from search.sqlite_master')}
-    # FIXME: use SCHEMA when search will use one
     assert 'entries_search' in search_schema
     assert 'entries_search_sync_state' in search_schema
 
-    # FIXME: test disable
+    search.disable()
+
+    search_schema = {r[0] for r in db.execute('select name from main.sqlite_master')}
+    assert 'entries_search' not in search_schema
+    assert 'entries_search_sync_state' not in search_schema
+
+    # check the VACUUM actually happened; may be brittle
+    assert db.execute('pragma search.page_count').fetchone() == (1,)

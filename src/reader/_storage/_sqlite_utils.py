@@ -302,8 +302,8 @@ def set_int_pragma(
     db.execute(f"PRAGMA {pragma} = {value};")
 
 
-def table_count(db: sqlite3.Connection) -> int:
-    (value,) = db.execute("select count(*) from sqlite_master;").fetchone()
+def table_count(db: sqlite3.Connection, schema: str = 'main') -> int:
+    (value,) = db.execute(f"select count(*) from {schema}.sqlite_master;").fetchone()
     assert isinstance(value, int), value  # for mypy
     return value
 
