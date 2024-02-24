@@ -10,8 +10,6 @@ from ._feeds import FeedsMixin
 from ._tags import TagsMixin
 
 
-APPLICATION_ID = b'read'
-
 # Row value support was added in 3.15.
 # TODO: Remove the Search.update() check once this gets bumped to >=3.18.
 MINIMUM_SQLITE_VERSION = (3, 15)

@@ -358,14 +358,20 @@ def test_require_functions(monkeypatch):
         require_functions(db, ['missing_function', 'bad_sql'])
 
 
-@pytest.mark.parametrize(
-    'wal_enabled, expected_mode', [(None, 'memory'), (True, 'wal'), (False, 'delete')]
-)
-def test_setup_db_wal_enabled(db_path, wal_enabled, expected_mode):
+def test_setup_db_wal_enabled(db_path):
     db = sqlite3.connect(db_path)
     db.execute("PRAGMA journal_mode = MEMORY;").close()
 
-    setup_db(db, id=b'1234', wal_enabled=wal_enabled)
+    setup_db(db, id=b'1234')
 
-    ((mode,),) = db.execute("PRAGMA journal_mode;")
-    assert mode.lower() == expected_mode
+    cursor = db.execute("PRAGMA journal_mode;")
+    assert cursor.fetchone()[0].lower() == 'wal'
+    cursor.close()
+
+    db.execute("PRAGMA journal_mode = DELETE;").close()
+
+    setup_db(db, id=b'1234')
+
+    cursor = db.execute("PRAGMA journal_mode;")
+    assert cursor.fetchone()[0].lower() == 'delete'
+    cursor.close()

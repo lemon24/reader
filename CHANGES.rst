@@ -11,6 +11,10 @@ Version 3.12
 
 Unreleased
 
+* Enable `write-ahead logging`_ only once, when the database is created,
+  instead of every time it is opened.
+  (:issue:`323`)
+
 
 Version 3.11
 ------------
