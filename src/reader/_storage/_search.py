@@ -39,9 +39,9 @@ from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
 from ._sqlite_utils import ddl_transaction
-from ._sqlite_utils import ensure_application_id
 from ._sqlite_utils import require_functions
 from ._sqlite_utils import require_version
+from ._sqlite_utils import setup_db
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
 
@@ -142,17 +142,9 @@ class Search:
                 # (see setup_db() for details)
                 with closing(sqlite3.connect(self.path)) as db:
                     try:
-                        ensure_application_id(db, APPLICATION_ID)
+                        setup_db(db, id=APPLICATION_ID, wal_enabled=storage.wal_enabled)
                     except DBError as e:  # pragma: no cover
                         raise SearchError(message=str(e)) from None
-
-                    # FIXME: this duplicates setup_db, extract it
-                    # also, maybe it is enough to set wal the first time
-                    if storage.wal_enabled is not None:  # pragma: no cover
-                        if storage.wal_enabled:
-                            db.execute("PRAGMA journal_mode = WAL;")
-                        else:
-                            db.execute("PRAGMA journal_mode = DELETE;")
 
             storage.factory.attach(self.schema, self.path)
 

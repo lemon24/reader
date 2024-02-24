@@ -341,16 +341,16 @@ def require_functions(db: sqlite3.Connection, names: Sequence[str]) -> None:
 def setup_db(
     db: sqlite3.Connection,
     *,
-    create: _DBFunction,
-    version: int,
-    migrations: dict[int, _DBFunction],
     id: bytes,
-    minimum_sqlite_version: tuple[int, ...],
+    minimum_sqlite_version: tuple[int, ...] = (),
     required_sqlite_functions: Sequence[str] = (),
+    migration: HeavyMigration | None = None,
     wal_enabled: bool | None = None,
 ) -> None:
-    require_version(db, minimum_sqlite_version)
-    require_functions(db, required_sqlite_functions)
+    if minimum_sqlite_version:
+        require_version(db, minimum_sqlite_version)
+    if required_sqlite_functions:
+        require_functions(db, required_sqlite_functions)
 
     ensure_application_id(db, id)
 
@@ -376,8 +376,8 @@ def setup_db(
             else:
                 cursor.execute("PRAGMA journal_mode = DELETE;")
 
-    migration = HeavyMigration(create, version, migrations)
-    migration.migrate(db)
+    if migration:
+        migration.migrate(db)
 
 
 def rowcount_exactly_one(

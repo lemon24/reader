@@ -73,14 +73,12 @@ class StorageBase:
     @staticmethod
     def setup_db(db: sqlite3.Connection, wal_enabled: bool | None) -> None:
         """Private storage API (used by tests)."""
-        from . import _schema
+        from ._schema import MIGRATION
         from . import APPLICATION_ID, MINIMUM_SQLITE_VERSION, REQUIRED_SQLITE_FUNCTIONS
 
         return setup_db(
             db,
-            create=_schema.create_all,
-            version=_schema.VERSION,
-            migrations=_schema.MIGRATIONS,
+            migration=MIGRATION,
             id=APPLICATION_ID,
             minimum_sqlite_version=MINIMUM_SQLITE_VERSION,
             required_sqlite_functions=REQUIRED_SQLITE_FUNCTIONS,
