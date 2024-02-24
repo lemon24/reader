@@ -560,7 +560,7 @@ def test_minimum_sqlite_version(db_path, monkeypatch):
     with pytest.raises(StorageError):
         Storage(db_path)
 
-    mock.assert_called_with(ANY, (3, 15))
+    mock.assert_called_with(ANY, (3, 18))
 
 
 MIGRATION_MINIMUM_VERSION = 29
