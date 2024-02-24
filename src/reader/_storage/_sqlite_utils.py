@@ -197,51 +197,26 @@ class HeavyMigration:
     create: _DBFunction
     version: int  # must be positive
     migrations: dict[int, _DBFunction]
-    id: int = 0
 
     def migrate(self, db: sqlite3.Connection) -> None:
-        # pseudo-code for how the application_id is handled:
-        # https://github.com/lemon24/reader/issues/211#issuecomment-778392468
-        # unlike there, we allow bypassing it for testing
-
         with foreign_keys_off(db), ddl_transaction(db):
-            if self.id:
-                id = self.get_id(db)
-                if id and id != self.id:
-                    raise IdError(f"invalid id: 0x{id:x}")
-
             version = self.get_version(db)
 
             if not version:
-                # avoid clobbering a database with application_id
                 if table_count(db) != 0:
-                    # TODO: maybe use a custom exception here?
                     raise DBError("database with no version already has tables")
 
                 self.create(db)
                 self.set_version(db, self.version)
-                self.set_id(db, self.id)
                 return
 
             if version == self.version:
-                if self.id:
-                    if not id:
-                        raise IdError("database with version has missing id")
                 return
 
             if version > self.version:
                 raise SchemaVersionError(f"invalid version: {version}")
 
             # version < self.version
-
-            # the actual migration code;
-            #
-            # might clobber a database if all of the below are true:
-            #
-            # * an application_id was not used from the start
-            # * the database has a non-zero version which predates
-            #   the migration which set application_id
-            # * all of the migrations succeed
 
             for from_version in range(version, self.version):
                 to_version = from_version + 1
@@ -253,8 +228,8 @@ class HeavyMigration:
                         f"later than {version}"
                     )
 
-                self.set_version(db, to_version)
                 migration(db)
+                self.set_version(db, to_version)
 
                 try:
                     foreign_key_check(db)
@@ -262,11 +237,6 @@ class HeavyMigration:
                     raise IntegrityError(
                         f"after migrating to version {to_version}: {e}"
                     ) from None
-
-            if self.id:
-                id = self.get_id(db)
-                if id != self.id:
-                    raise IdError(f"missing or invalid id after migration: 0x{id:x}")
 
     @staticmethod
     def get_version(db: sqlite3.Connection) -> int:
@@ -276,17 +246,29 @@ class HeavyMigration:
     def set_version(db: sqlite3.Connection, version: int) -> None:
         set_int_pragma(db, 'user_version', version)
 
-    @staticmethod
-    def get_id(db: sqlite3.Connection) -> int:
-        return get_int_pragma(db, 'application_id')
 
-    @staticmethod
-    def set_id(db: sqlite3.Connection, id: int) -> None:
-        set_int_pragma(db, 'application_id', id)
+def ensure_application_id(db: sqlite3.Connection, id: bytes) -> bool:
+    if len(id) != 4:
+        raise ValueError(f"id must be exactly 4 bytes long, got: {id!r}")
+
+    new_id = int.from_bytes(id, 'big')
+
+    old_id = get_int_pragma(db, 'application_id')
+    if old_id:
+        if old_id != new_id:
+            raise IdError(f"invalid existing application id: 0x{old_id:x}")
+        return False
+
+    if table_count(db) != 0:
+        raise DBError("database with no application id already has tables")
+
+    set_int_pragma(db, 'application_id', new_id)
+    return True
 
 
 def get_int_pragma(db: sqlite3.Connection, pragma: str) -> int:
-    (value,) = db.execute(f"PRAGMA {pragma};").fetchone()
+    with closing(db.cursor()) as cursor:
+        (value,) = cursor.execute(f"PRAGMA {pragma};").fetchone()
     assert isinstance(value, int), value  # for mypy
     return value
 
@@ -299,11 +281,13 @@ def set_int_pragma(
     if lower_bound is not None and value < lower_bound:
         raise ValueError(f"{pragma} must be >={lower_bound}, got {value!r}")
 
-    db.execute(f"PRAGMA {pragma} = {value};")
+    with closing(db.cursor()) as cursor:
+        cursor.execute(f"PRAGMA {pragma} = {value};")
 
 
-def table_count(db: sqlite3.Connection, schema: str = 'main') -> int:
-    (value,) = db.execute(f"select count(*) from {schema}.sqlite_master;").fetchone()
+def table_count(db: sqlite3.Connection) -> int:
+    with closing(db.cursor()) as cursor:
+        (value,) = cursor.execute("select count(*) from sqlite_master;").fetchone()
     assert isinstance(value, int), value  # for mypy
     return value
 
@@ -360,13 +344,15 @@ def setup_db(
     create: _DBFunction,
     version: int,
     migrations: dict[int, _DBFunction],
-    id: int,
+    id: bytes,
     minimum_sqlite_version: tuple[int, ...],
     required_sqlite_functions: Sequence[str] = (),
     wal_enabled: bool | None = None,
 ) -> None:
     require_version(db, minimum_sqlite_version)
     require_functions(db, required_sqlite_functions)
+
+    ensure_application_id(db, id)
 
     with closing(db.cursor()) as cursor:
         cursor.execute("PRAGMA foreign_keys = ON;")
@@ -379,13 +365,18 @@ def setup_db(
         #
         # https://github.com/lemon24/reader/issues/169
         #
+        # Still happening as of February 2024:
+        #
+        # https://github.com/pypy/pypy/issues/3080 (closed)
+        # https://github.com/pypy/pypy/issues/3183
+
         if wal_enabled is not None:
             if wal_enabled:
                 cursor.execute("PRAGMA journal_mode = WAL;")
             else:
                 cursor.execute("PRAGMA journal_mode = DELETE;")
 
-    migration = HeavyMigration(create, version, migrations, id)
+    migration = HeavyMigration(create, version, migrations)
     migration.migrate(db)
 
 

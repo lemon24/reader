@@ -10,6 +10,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
+from contextlib import closing
 from contextlib import contextmanager
 from datetime import datetime
 from functools import partial
@@ -38,12 +39,10 @@ from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
 from ._sqlite_utils import ddl_transaction
-from ._sqlite_utils import get_int_pragma
+from ._sqlite_utils import ensure_application_id
 from ._sqlite_utils import require_functions
 from ._sqlite_utils import require_version
-from ._sqlite_utils import set_int_pragma
 from ._sqlite_utils import SQLiteType
-from ._sqlite_utils import table_count
 from ._sqlite_utils import wrap_exceptions
 
 log = logging.getLogger('reader')
@@ -66,7 +65,7 @@ _QUERY_ERROR_MESSAGE_FRAGMENTS = [
     "unterminated string",
 ]
 
-APPLICATION_ID = int(''.join(f'{ord(c):x}' for c in 'reaD'), 16)
+APPLICATION_ID = b'reaD'
 
 
 @contextmanager
@@ -133,34 +132,29 @@ class Search:
     def __init__(self, storage: Storage):
         self.storage = storage
         self.path = None
+        self.schema = 'main'
         if not storage.factory.is_private():
             self.path = storage.factory.path + '.search'
+            self.schema = 'search'
 
             with wrap_exceptions(SearchError, "error while opening database"):
-                storage.factory.attach('search', self.path)
+                # not using the storage connection because PyPy doesn't like it
+                # (see setup_db() for details)
+                with closing(sqlite3.connect(self.path)) as db:
+                    try:
+                        ensure_application_id(db, APPLICATION_ID)
+                    except DBError as e:  # pragma: no cover
+                        raise SearchError(message=str(e)) from None
 
-                db = self.get_db()
+                    # FIXME: this duplicates setup_db, extract it
+                    # also, maybe it is enough to set wal the first time
+                    if storage.wal_enabled is not None:  # pragma: no cover
+                        if storage.wal_enabled:
+                            db.execute("PRAGMA journal_mode = WAL;")
+                        else:
+                            db.execute("PRAGMA journal_mode = DELETE;")
 
-                # FIXME: this duplicates HeavyMigration logic, extract it
-                # (all recent main dbs should have application_id)
-                id = get_int_pragma(db, 'search.application_id')
-                if id:
-                    if id != APPLICATION_ID:  # pragma: no cover
-                        raise SearchError(f"invalid id: 0x{id:x}")
-                else:
-                    if table_count(db, 'search') != 0:  # pragma: no cover
-                        raise SearchError(
-                            "database with no application id already has tables"
-                        )
-                    set_int_pragma(db, 'search.application_id', APPLICATION_ID)
-
-                # FIXME: this duplicates setup_db, extract it
-                # also, maybe it is enough to set wal the first time
-                if storage.wal_enabled is not None:  # pragma: no cover
-                    if storage.wal_enabled:
-                        db.execute("PRAGMA search.journal_mode = WAL;")
-                    else:
-                        db.execute("PRAGMA search.journal_mode = DELETE;")
+            storage.factory.attach(self.schema, self.path)
 
     def get_db(self) -> sqlite3.Connection:
         try:
@@ -192,7 +186,7 @@ class Search:
         self.storage.changes.enable()
         try:
             with ddl_transaction(self.get_db()) as db:
-                self._enable(db, 'search.' if self.path else '')
+                self._enable(db, self.schema)
         except sqlite3.OperationalError as e:
             if "table entries_search already exists" in str(e).lower():
                 return
@@ -200,7 +194,7 @@ class Search:
                 raise
 
     @classmethod
-    def _enable(cls, db: sqlite3.Connection, prefix: str = '') -> None:
+    def _enable(cls, db: sqlite3.Connection, schema: str = 'main') -> None:
         # Private API, may be called from migrations.
 
         assert db.in_transaction
@@ -213,7 +207,7 @@ class Search:
         #
         db.execute(
             f"""
-            CREATE VIRTUAL TABLE {prefix}entries_search USING fts5(
+            CREATE VIRTUAL TABLE {schema}.entries_search USING fts5(
                 title,  -- entries.title
                 content,  -- entries.summary or one of entries.content
                 feed,  -- feeds.title or feed.user_title
@@ -235,7 +229,7 @@ class Search:
 
         db.execute(
             f"""
-            CREATE TABLE {prefix}entries_search_sync_state (
+            CREATE TABLE {schema}.entries_search_sync_state (
                 sequence BLOB NOT NULL,
                 feed TEXT NOT NULL,
                 id TEXT NOT NULL,

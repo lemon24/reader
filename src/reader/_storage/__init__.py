@@ -10,7 +10,7 @@ from ._feeds import FeedsMixin
 from ._tags import TagsMixin
 
 
-APPLICATION_ID = int(''.join(f'{ord(c):x}' for c in 'read'), 16)
+APPLICATION_ID = b'read'
 
 # Row value support was added in 3.15.
 # TODO: Remove the Search.update() check once this gets bumped to >=3.18.
