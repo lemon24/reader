@@ -15,6 +15,8 @@ from ._sqlite_utils import setup_db
 from ._sqlite_utils import wrap_exceptions
 
 
+APPLICATION_ID = b'read'
+
 MISSING_MIGRATION_DETAIL = (
     "; you may have skipped some required migrations, see "
     "https://reader.readthedocs.io/en/latest/changelog.html#removed-migrations-3-0"
@@ -33,7 +35,6 @@ class StorageBase:
         self,
         path: str,
         timeout: float | None = None,
-        wal_enabled: bool | None = True,
         factory: type[sqlite3.Connection] | None = None,
     ):
         kwargs: dict[str, Any] = {}
@@ -49,7 +50,7 @@ class StorageBase:
         with wrap_exceptions(StorageError, "error while setting up database"):
             try:
                 try:
-                    self.setup_db(db, wal_enabled)
+                    self.setup_db(db)
                 except BaseException:
                     db.close()
                     raise
@@ -61,7 +62,6 @@ class StorageBase:
 
         self.path = path
         self.timeout = timeout
-        self.wal_enabled = wal_enabled
 
     def get_db(self) -> sqlite3.Connection:
         """Private storage API (used by search)."""
@@ -71,10 +71,10 @@ class StorageBase:
             raise StorageError(message=str(e)) from None
 
     @staticmethod
-    def setup_db(db: sqlite3.Connection, wal_enabled: bool | None) -> None:
+    def setup_db(db: sqlite3.Connection) -> None:
         """Private storage API (used by tests)."""
         from ._schema import MIGRATION
-        from . import APPLICATION_ID, MINIMUM_SQLITE_VERSION, REQUIRED_SQLITE_FUNCTIONS
+        from . import MINIMUM_SQLITE_VERSION, REQUIRED_SQLITE_FUNCTIONS
 
         return setup_db(
             db,
@@ -82,7 +82,6 @@ class StorageBase:
             id=APPLICATION_ID,
             minimum_sqlite_version=MINIMUM_SQLITE_VERSION,
             required_sqlite_functions=REQUIRED_SQLITE_FUNCTIONS,
-            wal_enabled=wal_enabled,
         )
 
     @wrap_exceptions(StorageError)

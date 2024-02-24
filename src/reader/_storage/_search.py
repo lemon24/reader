@@ -142,7 +142,7 @@ class Search:
                 # (see setup_db() for details)
                 with closing(sqlite3.connect(self.path)) as db:
                     try:
-                        setup_db(db, id=APPLICATION_ID, wal_enabled=storage.wal_enabled)
+                        setup_db(db, id=APPLICATION_ID)
                     except DBError as e:  # pragma: no cover
                         raise SearchError(message=str(e)) from None
 

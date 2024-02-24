@@ -345,36 +345,28 @@ def setup_db(
     minimum_sqlite_version: tuple[int, ...] = (),
     required_sqlite_functions: Sequence[str] = (),
     migration: HeavyMigration | None = None,
-    wal_enabled: bool | None = None,
 ) -> None:
     if minimum_sqlite_version:
         require_version(db, minimum_sqlite_version)
     if required_sqlite_functions:
         require_functions(db, required_sqlite_functions)
 
-    ensure_application_id(db, id)
+    new_db = ensure_application_id(db, id)
 
     with closing(db.cursor()) as cursor:
         cursor.execute("PRAGMA foreign_keys = ON;")
 
-        # Can't do this in a transaction, so we just do it all the time.
+        # We enable WAL exactly once, when the database if first created.
         #
-        # Also, every cursor up to here must be closed explictly, othewise
-        # we get an "cannot commit transaction - SQL statements in progress"
-        # on PyPy.
-        #
-        # https://github.com/lemon24/reader/issues/169
-        #
-        # Still happening as of February 2024:
+        # Every cursor up to here must be closed explictly, othewise we get
+        # "cannot commit transaction - SQL statements in progress" on PyPy;
+        # this is still happening as of February 2024:
         #
         # https://github.com/pypy/pypy/issues/3080 (closed)
         # https://github.com/pypy/pypy/issues/3183
-
-        if wal_enabled is not None:
-            if wal_enabled:
-                cursor.execute("PRAGMA journal_mode = WAL;")
-            else:
-                cursor.execute("PRAGMA journal_mode = DELETE;")
+        #
+        if new_db:
+            cursor.execute("PRAGMA journal_mode = WAL;")
 
     if migration:
         migration.migrate(db)
@@ -517,9 +509,9 @@ class LocalConnectionFactory:
         try:
             with ctx:
                 db.execute("PRAGMA optimize;")
-        except sqlite3.OperationalError as e:
+        except sqlite3.OperationalError as e:  # pragma: no cover
             message = str(e).lower()
-            if "database is locked" not in message:  # pragma: no cover
+            if "database is locked" not in message:
                 raise
 
     @staticmethod
