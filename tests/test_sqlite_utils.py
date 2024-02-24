@@ -365,15 +365,7 @@ def test_setup_db_wal_enabled(db_path, wal_enabled, expected_mode):
     db = sqlite3.connect(db_path)
     db.execute("PRAGMA journal_mode = MEMORY;").close()
 
-    setup_db(
-        db,
-        create=lambda db: None,
-        version=1,
-        migrations={},
-        id=b'1234',
-        minimum_sqlite_version=(3, 15, 0),
-        wal_enabled=wal_enabled,
-    )
+    setup_db(db, id=b'1234', wal_enabled=wal_enabled)
 
     ((mode,),) = db.execute("PRAGMA journal_mode;")
     assert mode.lower() == expected_mode

@@ -1,9 +1,10 @@
 import sqlite3
 
 from ._sql_utils import parse_schema
+from ._sqlite_utils import HeavyMigration
 
 
-SCHEMA_STR = """\
+SCHEMA = parse_schema("""
 
 CREATE TABLE feeds (
 
@@ -111,9 +112,7 @@ CREATE INDEX entries_by_recent ON entries (
 -- speed up get_entry_counts(feed=...)
 CREATE INDEX entries_by_feed ON entries (feed);
 
-"""
-
-SCHEMA = parse_schema(SCHEMA_STR)
+""")  # fmt: skip
 
 feeds_table = SCHEMA['table']['feeds']
 entries_table = SCHEMA['table']['entries']
@@ -246,3 +245,5 @@ MIGRATIONS = {
     36: update_from_36_to_37,
     37: update_from_37_to_38,
 }
+
+MIGRATION = HeavyMigration(create_all, VERSION, MIGRATIONS)
