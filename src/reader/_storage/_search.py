@@ -39,8 +39,6 @@ from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import DBError
 from ._sqlite_utils import ddl_transaction
-from ._sqlite_utils import require_functions
-from ._sqlite_utils import require_version
 from ._sqlite_utils import setup_db
 from ._sqlite_utils import SQLiteType
 from ._sqlite_utils import wrap_exceptions
@@ -93,13 +91,6 @@ def wrap_search_exceptions(enabled: bool = True, query: bool = False) -> Iterato
 # tl;dr: Measure. Measure in prod. FTS5 tables are slow for non-FTS queries.
 
 # When adding a new method, add a new test_search.py::test_errors_locked test.
-
-
-# last_insert_rowid() / cursor.lastrowid works correctly for FTS5
-# tables only starting with SQLite 3.18.
-# https://www.sqlite.org/releaselog/3_18_0.html
-MINIMUM_SQLITE_VERSION = (3, 18)
-REQUIRED_SQLITE_FUNCTIONS = ['json', 'json_object', 'json_group_array', 'json_each']
 
 
 class Search:
@@ -161,20 +152,7 @@ class Search:
         return strip_html(text)  # type: ignore[no-any-return]
 
     @wrap_exceptions(SearchError)
-    def check_update_dependencies(self) -> None:
-        # Only update() requires these, so we don't check in __init__().
-        # ... except json_each(), which is used in one of the triggers
-        # (which is acceptable, we're trying to fail early for *most* cases).
-        db = self.get_db()
-        try:
-            require_version(db, MINIMUM_SQLITE_VERSION)
-            require_functions(db, REQUIRED_SQLITE_FUNCTIONS)
-        except DBError as e:
-            raise SearchError(message=str(e)) from None
-
-    @wrap_exceptions(SearchError)
     def enable(self) -> None:
-        self.check_update_dependencies()
         self.storage.changes.enable()
         try:
             with ddl_transaction(self.get_db()) as db:
@@ -282,7 +260,6 @@ class Search:
     @wrap_exceptions(SearchError)
     @wrap_search_exceptions()
     def update(self) -> None:
-        self.check_update_dependencies()
         try:
             self._delete_from_search()
             self._insert_into_search()

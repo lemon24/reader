@@ -11,10 +11,11 @@ from ._tags import TagsMixin
 
 
 # Row value support was added in 3.15.
-# TODO: Remove the Search.update() check once this gets bumped to >=3.18.
-MINIMUM_SQLITE_VERSION = (3, 15)
-# We use the JSON1 extension for entries.content.
-REQUIRED_SQLITE_FUNCTIONS = ['json_array_length']
+# last_insert_rowid() support for FTS5 was added in 3.18.
+MINIMUM_SQLITE_VERSION = (3, 18)
+
+# Both storage and search use the JSON1 extension.
+REQUIRED_SQLITE_FUNCTIONS = ['json']
 
 
 class Storage(FeedsMixin, EntriesMixin, TagsMixin, StorageBase):
