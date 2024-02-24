@@ -228,3 +228,11 @@ def test_disk_storage_has_attached_database(db_path, request):
 
     # check the VACUUM actually happened; may be brittle
     assert db.execute('pragma search.page_count').fetchone() == (1,)
+
+
+def test_application_id(db_path, request):
+    storage = Storage(db_path)
+    request.addfinalizer(storage.close)
+    search = Search(storage)
+    id = storage.factory().execute('pragma search.application_id').fetchone()[0]
+    assert id == int.from_bytes(b'reaD', 'big')

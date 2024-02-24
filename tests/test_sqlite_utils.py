@@ -8,6 +8,7 @@ from utils import rename_argument
 
 from reader._storage._sqlite_utils import DBError
 from reader._storage._sqlite_utils import ddl_transaction
+from reader._storage._sqlite_utils import ensure_application_id
 from reader._storage._sqlite_utils import HeavyMigration
 from reader._storage._sqlite_utils import IdError
 from reader._storage._sqlite_utils import IntegrityError
@@ -150,28 +151,18 @@ def update_from_1_to_2_error(db):
     raise WeirdError('update')
 
 
-@dataclass
-class NewDefaultIdMigration(HeavyMigration):
-    id: int = 1234
-
-
-@pytest.fixture(params=[False, True])
-def migration_cls(request):
-    return HeavyMigration if not request.param else NewDefaultIdMigration
-
-
-def test_migration_create(migration_cls):
+def test_migration_create():
     db = sqlite3.connect(':memory:')
-    migration = migration_cls(create_db_2, 2, {})
+    migration = HeavyMigration(create_db_2, 2, {})
     # should call migration.create but not migration.migrations[1]
     migration.migrate(db)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one', 'two']
 
 
-def test_migration_create_error(migration_cls):
+def test_migration_create_error():
     db = sqlite3.connect(':memory:')
-    migration = migration_cls(create_db_2_error, 2, {})
+    migration = HeavyMigration(create_db_2_error, 2, {})
     # should call migration.create but not migration.migrations[1]
     with pytest.raises(WeirdError) as excinfo:
         migration.migrate(db)
@@ -180,33 +171,33 @@ def test_migration_create_error(migration_cls):
     assert columns == []
 
 
-def test_migration_update(migration_cls):
+def test_migration_update():
     db = sqlite3.connect(':memory:')
-    migration = migration_cls(create_db_1, 1, {})
+    migration = HeavyMigration(create_db_1, 1, {})
     migration.migrate(db)
-    migration = migration_cls(create_db_2_error, 2, {1: update_from_1_to_2})
+    migration = HeavyMigration(create_db_2_error, 2, {1: update_from_1_to_2})
     # should call migration.migrations[1] but not migration.create
     migration.migrate(db)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one', 'two']
 
 
-def test_migration_no_update(migration_cls):
+def test_migration_no_update():
     db = sqlite3.connect(':memory:')
-    migration = migration_cls(create_db_2, 2, {})
+    migration = HeavyMigration(create_db_2, 2, {})
     migration.migrate(db)
-    migration = migration_cls(create_db_2_error, 2, {})
+    migration = HeavyMigration(create_db_2_error, 2, {})
     # should call neither migration.create nor migration.migrations[1]
     migration.migrate(db)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one', 'two']
 
 
-def test_migration_update_error(migration_cls):
+def test_migration_update_error():
     db = sqlite3.connect(':memory:')
-    migration = migration_cls(create_db_1, 1, {})
+    migration = HeavyMigration(create_db_1, 1, {})
     migration.migrate(db)
-    migration = migration_cls(create_db_2_error, 2, {1: update_from_1_to_2_error})
+    migration = HeavyMigration(create_db_2_error, 2, {1: update_from_1_to_2_error})
     # should call migration.migrations[1] but not migration.create
     with pytest.raises(WeirdError) as excinfo:
         migration.migrate(db)
@@ -215,40 +206,40 @@ def test_migration_update_error(migration_cls):
     assert columns == ['one']
 
 
-def test_migration_unsupported_old_version(migration_cls):
+def test_migration_unsupported_old_version():
     db = sqlite3.connect(':memory:')
-    migration = migration_cls(create_db_1, 1, {})
+    migration = HeavyMigration(create_db_1, 1, {})
     migration.migrate(db)
-    migration = migration_cls(create_db_2, 2, {})
+    migration = HeavyMigration(create_db_2, 2, {})
     with pytest.raises(SchemaVersionError) as excinfo:
         migration.migrate(db)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one']
 
 
-def test_migration_unsupported_intermediary_version(migration_cls):
+def test_migration_unsupported_intermediary_version():
     db = sqlite3.connect(':memory:')
-    migration = migration_cls(create_db_1, 1, {})
+    migration = HeavyMigration(create_db_1, 1, {})
     migration.migrate(db)
-    migration = migration_cls(create_db_2, 3, {1: update_from_1_to_2})
+    migration = HeavyMigration(create_db_2, 3, {1: update_from_1_to_2})
     with pytest.raises(SchemaVersionError) as excinfo:
         migration.migrate(db)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one']
 
 
-def test_migration_invalid_version(migration_cls):
+def test_migration_invalid_version():
     db = sqlite3.connect(':memory:')
-    migration = migration_cls(create_db_2, 2, {})
+    migration = HeavyMigration(create_db_2, 2, {})
     migration.migrate(db)
-    migration = migration_cls(create_db_1, 1, {})
+    migration = HeavyMigration(create_db_1, 1, {})
     with pytest.raises(SchemaVersionError) as excinfo:
         migration.migrate(db)
     columns = [r[1] for r in db.execute("PRAGMA table_info(t);")]
     assert columns == ['one', 'two']
 
 
-def test_migration_integrity_error(migration_cls):
+def test_migration_integrity_error():
     def create_db(db):
         db.execute("CREATE TABLE t (one INTEGER PRIMARY KEY);")
         db.execute(
@@ -261,61 +252,60 @@ def test_migration_integrity_error(migration_cls):
     db = sqlite3.connect(':memory:')
     db.execute("PRAGMA foreign_keys = ON;")
 
-    migration = migration_cls(create_db, 1, {})
+    migration = HeavyMigration(create_db, 1, {})
     migration.migrate(db)
-    migration = migration_cls(create_db, 2, {1: update_from_1_to_2})
+    migration = HeavyMigration(create_db, 2, {1: update_from_1_to_2})
     with pytest.raises(IntegrityError):
         migration.migrate(db)
 
 
 @pytest.mark.parametrize('version', [-1, []])
-def test_migration_version_valuerror(migration_cls, version):
+def test_migration_version_valuerror(version):
     db = sqlite3.connect(':memory:')
-    migration = migration_cls(create_db_1, version, {})
+    migration = HeavyMigration(create_db_1, version, {})
     with pytest.raises(ValueError) as excinfo:
         migration.migrate(db)
 
 
-def test_nonempty(migration_cls):
+def test_migration_nonempty():
     db = sqlite3.connect(':memory:')
     db.execute("CREATE TABLE unexpected (one INTEGER);")
-    migration = migration_cls(create_db_2, 2, {})
+    migration = HeavyMigration(create_db_2, 2, {})
     with pytest.raises(DBError):
         migration.migrate(db)
 
 
-def test_invalid_id(migration_cls):
+def test_application_id_not_set():
+    db = sqlite3.connect(':memory:')
+    assert ensure_application_id(db, b'\x00\x00\x00\x02') is True
+    assert db.execute("PRAGMA application_id;").fetchone() == (2,)
+
+
+def test_application_id_already_set():
     db = sqlite3.connect(':memory:')
     db.execute("PRAGMA application_id = 2;")
-    migration = migration_cls(create_db_2, 2, {}, id=1)
-    with pytest.raises(IdError):
-        migration.migrate(db)
+    assert ensure_application_id(db, b'\x00\x00\x00\x02') is False
+    assert db.execute("PRAGMA application_id;").fetchone() == (2,)
 
 
-def test_missing_id_with_version(migration_cls):
+def test_application_id_invalid():
     db = sqlite3.connect(':memory:')
-    migration_cls.set_version(db, 2)
-    migration = migration_cls(create_db_2, 2, {}, id=1)
+    db.execute("PRAGMA application_id = 2;")
     with pytest.raises(IdError):
-        migration.migrate(db)
+        ensure_application_id(db, b'\x00\x00\x00\x01')
 
 
-def test_missing_id_after_migration(migration_cls):
+def test_application_id_nonempty():
     db = sqlite3.connect(':memory:')
+    db.execute("CREATE TABLE unexpected (one INTEGER);")
+    with pytest.raises(DBError):
+        ensure_application_id(db, b'\x00\x00\x00\x02')
 
-    migration = migration_cls(create_db_1, 1, {})
-    migration.migrate(db)
 
-    migration = migration_cls(create_db_2_error, 2, {1: update_from_1_to_2}, id=1)
-    with pytest.raises(IdError):
-        migration.migrate(db)
-
-    def bad_update_from_1_to_2(db):
-        migration_cls.set_id(db, 2)
-
-    migration = migration_cls(create_db_2_error, 2, {1: bad_update_from_1_to_2}, id=1)
-    with pytest.raises(IdError):
-        migration.migrate(db)
+def test_application_id_valueerror():
+    db = sqlite3.connect(':memory:')
+    with pytest.raises(ValueError):
+        ensure_application_id(db, b'\x00\x00')
 
 
 def test_require_version():
@@ -380,7 +370,7 @@ def test_setup_db_wal_enabled(db_path, wal_enabled, expected_mode):
         create=lambda db: None,
         version=1,
         migrations={},
-        id=1234,
+        id=b'1234',
         minimum_sqlite_version=(3, 15, 0),
         wal_enabled=wal_enabled,
     )

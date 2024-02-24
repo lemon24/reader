@@ -592,3 +592,8 @@ def test_get_set_recent_sort(storage):
     with pytest.raises(EntryNotFoundError) as excinfo:
         storage.set_entry_recent_sort(('feed', 'xxx'), datetime(2010, 1, 1))
     assert excinfo.value.resource_id == ('feed', 'xxx')
+
+
+def test_application_id(storage):
+    id = storage.factory().execute('pragma application_id').fetchone()[0]
+    assert id == int.from_bytes(b'read', 'big')
