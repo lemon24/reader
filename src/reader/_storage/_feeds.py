@@ -15,17 +15,16 @@ from .._utils import exactly_one
 from .._utils import zero_or_one
 from ..exceptions import FeedExistsError
 from ..exceptions import FeedNotFoundError
-from ..exceptions import StorageError
 from ..types import ExceptionInfo
 from ..types import Feed
 from ..types import FeedCounts
 from ..types import FeedSort
+from ._base import wrap_exceptions
 from ._sql_utils import Query
 from ._sql_utils import SortKey
 from ._sqlite_utils import adapt_datetime
 from ._sqlite_utils import convert_timestamp
 from ._sqlite_utils import rowcount_exactly_one
-from ._sqlite_utils import wrap_exceptions
 from ._tags import feed_tags_filter
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -35,7 +34,7 @@ else:
 
 
 class FeedsMixin(StorageBase):
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def add_feed(self, url: str, added: datetime) -> None:
         with self.get_db() as db:
             try:
@@ -48,13 +47,13 @@ class FeedsMixin(StorageBase):
                     raise
                 raise FeedExistsError(url) from None
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def delete_feed(self, url: str) -> None:
         with self.get_db() as db:
             cursor = db.execute("DELETE FROM feeds WHERE url = :url;", dict(url=url))
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def change_feed_url(self, old: str, new: str) -> None:
         with self.get_db() as db:
             try:
@@ -115,7 +114,7 @@ class FeedsMixin(StorageBase):
             feed_factory,
         )
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def get_feed_last(self, sort: FeedSort, url: str) -> tuple[Any, ...]:
         query = (
             Query()
@@ -128,7 +127,7 @@ class FeedsMixin(StorageBase):
             lambda: FeedNotFoundError(url),
         )
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def get_feed_counts(
         self,
         filter: FeedFilter = FeedFilter(),  # noqa: B008
@@ -149,7 +148,7 @@ class FeedsMixin(StorageBase):
 
         return FeedCounts(*row)
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def set_feed_user_title(self, url: str, title: str | None) -> None:
         with self.get_db() as db:
             cursor = db.execute(
@@ -158,7 +157,7 @@ class FeedsMixin(StorageBase):
             )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def set_feed_updates_enabled(self, url: str, enabled: bool) -> None:
         with self.get_db() as db:
             cursor = db.execute(
@@ -214,7 +213,7 @@ class FeedsMixin(StorageBase):
 
         return self.paginated_query(make_query, row_factory=row_factory)
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def set_feed_stale(self, url: str, stale: bool) -> None:
         with self.get_db() as db:
             cursor = db.execute(
@@ -223,7 +222,7 @@ class FeedsMixin(StorageBase):
             )
             rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def update_feed(self, intent: FeedUpdateIntent) -> None:
         url, last_updated, feed, http_etag, http_last_modified, last_exception = intent
 

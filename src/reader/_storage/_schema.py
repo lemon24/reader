@@ -245,5 +245,9 @@ MIGRATIONS = {
     36: update_from_36_to_37,
     37: update_from_37_to_38,
 }
+MISSING_SUFFIX = (
+    "; you may have skipped some required migrations, see "
+    "https://reader.readthedocs.io/en/latest/changelog.html#removed-migrations-3-0"
+)
 
-MIGRATION = HeavyMigration(create_all, VERSION, MIGRATIONS)
+MIGRATION = HeavyMigration(create_all, VERSION, MIGRATIONS, MISSING_SUFFIX)

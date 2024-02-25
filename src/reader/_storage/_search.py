@@ -9,9 +9,7 @@ import string
 from collections import OrderedDict
 from collections.abc import Callable
 from collections.abc import Iterable
-from collections.abc import Iterator
 from contextlib import closing
-from contextlib import contextmanager
 from datetime import datetime
 from functools import partial
 from types import MappingProxyType
@@ -19,6 +17,7 @@ from typing import Any
 from typing import TypeVar
 
 from . import _entries
+from . import _sqlite_utils
 from . import Storage
 from .._types import Action
 from .._types import Change
@@ -37,15 +36,16 @@ from ..types import SearchSortOrder
 from ._html_utils import strip_html as strip_html_str
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
-from ._sqlite_utils import DBError
 from ._sqlite_utils import ddl_transaction
-from ._sqlite_utils import setup_db
 from ._sqlite_utils import SQLiteType
-from ._sqlite_utils import wrap_exceptions
 
-log = logging.getLogger('reader')
+
+APPLICATION_ID = b'reaD'
 
 _T = TypeVar('_T')
+
+
+log = logging.getLogger('reader')
 
 
 @functools.lru_cache
@@ -55,34 +55,19 @@ def strip_html(text: SQLiteType) -> SQLiteType:
     return strip_html_str(text)
 
 
-_QUERY_ERROR_MESSAGE_FRAGMENTS = [
-    "fts5: syntax error near",
-    "unknown special query",
-    "no such column",
-    "no such cursor",
-    "unterminated string",
-]
+wrap_exceptions = partial(_sqlite_utils.wrap_exceptions, SearchError)
 
-APPLICATION_ID = b'reaD'
-
-
-@contextmanager
-def wrap_search_exceptions(enabled: bool = True, query: bool = False) -> Iterator[None]:
-    try:
-        yield
-    except sqlite3.OperationalError as e:
-        msg_lower = str(e).lower()
-
-        # TODO: check table name and/or set cause
-        if enabled and 'no such table' in msg_lower:
-            raise SearchNotEnabledError() from None
-
-        if query and any(
-            fragment in msg_lower for fragment in _QUERY_ERROR_MESSAGE_FRAGMENTS
-        ):
-            raise InvalidSearchQueryError(message=str(e)) from None
-
-        raise
+ENABLED_EXC = {'no such table': lambda _: SearchNotEnabledError()}
+QUERY_EXC = dict.fromkeys(
+    [
+        "fts5: syntax error near",
+        "unknown special query",
+        "no such column",
+        "no such cursor",
+        "unterminated string",
+    ],
+    InvalidSearchQueryError,
+)
 
 
 # When trying to fix "database is locked" errors or to optimize stuff,
@@ -128,22 +113,16 @@ class Search:
             self.path = storage.factory.path + '.search'
             self.schema = 'search'
 
-            with wrap_exceptions(SearchError, "error while opening database"):
+            with wrap_exceptions(message="while opening database"):
                 # not using the storage connection because PyPy doesn't like it
                 # (see setup_db() for details)
                 with closing(sqlite3.connect(self.path)) as db:
-                    try:
-                        setup_db(db, id=APPLICATION_ID)
-                    except DBError as e:  # pragma: no cover
-                        raise SearchError(message=str(e)) from None
+                    _sqlite_utils.setup_db(db, id=APPLICATION_ID)
 
-            storage.factory.attach(self.schema, self.path)
+                storage.factory.attach(self.schema, self.path)
 
     def get_db(self) -> sqlite3.Connection:
-        try:
-            return self.storage.factory()
-        except DBError as e:
-            raise SearchError(message=str(e)) from None
+        return self.storage.factory()
 
     @staticmethod
     def strip_html(text: SQLiteType) -> SQLiteType:
@@ -151,7 +130,7 @@ class Search:
         # but is part of the private API of this implementation.
         return strip_html(text)  # type: ignore[no-any-return]
 
-    @wrap_exceptions(SearchError)
+    @wrap_exceptions()
     def enable(self) -> None:
         self.storage.changes.enable()
         try:
@@ -209,7 +188,7 @@ class Search:
             """
         )
 
-    @wrap_exceptions(SearchError)
+    @wrap_exceptions()
     def disable(self) -> None:
         self.storage.changes.disable()
 
@@ -240,7 +219,7 @@ class Search:
         db.execute("DROP TABLE IF EXISTS entries_search;")
         db.execute("DROP TABLE IF EXISTS entries_search_sync_state;")
 
-    @wrap_exceptions(SearchError)
+    @wrap_exceptions()
     def is_enabled(self) -> bool:
         return self._is_enabled(self.get_db())
 
@@ -257,8 +236,7 @@ class Search:
         else:
             return True
 
-    @wrap_exceptions(SearchError)
-    @wrap_search_exceptions()
+    @wrap_exceptions(ENABLED_EXC)
     def update(self) -> None:
         try:
             self._delete_from_search()
@@ -474,6 +452,19 @@ class Search:
 
         chunk_size = self.storage.chunk_size
 
+        def pq(
+            limit: int | None, last: tuple[Any, ...] | None = None
+        ) -> Iterable[EntrySearchResult]:
+            with wrap_exceptions(ENABLED_EXC | QUERY_EXC):
+                yield from paginated_query(
+                    self.get_db(),
+                    make_query,
+                    chunk_size,
+                    limit or 0,
+                    last,
+                    row_factory,
+                )
+
         # TODO: dupe of at least Storage.get_entries(), maybe deduplicate
         if sort != 'random':
             last = None
@@ -485,29 +476,12 @@ class Search:
                 else:
                     assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
-            rv = paginated_query(
-                self.get_db(),
-                make_query,
-                chunk_size,
-                limit or 0,
-                last,
-                row_factory,
-            )
+            return pq(limit, last)
 
         else:
-            rv = paginated_query(
-                self.get_db(),
-                make_query,
-                chunk_size,
-                min(limit, chunk_size) if limit else chunk_size,
-                row_factory=row_factory,
-            )
+            return pq(min(limit, chunk_size) if limit else chunk_size)
 
-        # can't just return rv, wrap_search_exceptions doesn't work with iterators
-        with wrap_exceptions(SearchError), wrap_search_exceptions(query=True):
-            yield from rv
-
-    @wrap_search_exceptions()
+    @wrap_exceptions(ENABLED_EXC)
     def search_entry_last(self, query: str, entry: tuple[str, str]) -> tuple[Any, ...]:
         feed_url, entry_id = entry
 
@@ -527,8 +501,7 @@ class Search:
             lambda: EntryNotFoundError(feed_url, entry_id),
         )
 
-    @wrap_exceptions(SearchError)
-    @wrap_search_exceptions(query=True)
+    @wrap_exceptions(ENABLED_EXC | QUERY_EXC)
     def search_entry_counts(
         self,
         query: str,

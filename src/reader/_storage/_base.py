@@ -3,34 +3,29 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Callable
 from collections.abc import Iterable
+from functools import partial
 from typing import Any
 from typing import TypeVar
 
+from . import _sqlite_utils
 from ..exceptions import StorageError
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
-from ._sqlite_utils import DBError
-from ._sqlite_utils import LocalConnectionFactory
-from ._sqlite_utils import setup_db
-from ._sqlite_utils import wrap_exceptions
 
 
 APPLICATION_ID = b'read'
 
-MISSING_MIGRATION_DETAIL = (
-    "; you may have skipped some required migrations, see "
-    "https://reader.readthedocs.io/en/latest/changelog.html#removed-migrations-3-0"
-)
-
-
 _T = TypeVar('_T')
+
+
+wrap_exceptions = partial(_sqlite_utils.wrap_exceptions, StorageError)
 
 
 class StorageBase:
     #: Private storage API.
     chunk_size = 2**8
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions(message="while opening database")
     def __init__(
         self,
         path: str,
@@ -43,32 +38,19 @@ class StorageBase:
         if factory:  # pragma: no cover
             kwargs['factory'] = factory
 
-        with wrap_exceptions(StorageError, "error while opening database"):
-            self.factory = LocalConnectionFactory(path, **kwargs)
-            db = self.factory()
-
-        with wrap_exceptions(StorageError, "error while setting up database"):
-            try:
-                try:
-                    self.setup_db(db)
-                except BaseException:
-                    db.close()
-                    raise
-            except DBError as e:
-                message = str(e)
-                if 'no migration' in message:
-                    message += MISSING_MIGRATION_DETAIL
-                raise StorageError(message=message) from None
+        self.factory = _sqlite_utils.LocalConnectionFactory(path, **kwargs)
+        db = self.factory()
+        try:
+            self.setup_db(db)
+        except BaseException:
+            db.close()
+            raise
 
         self.path = path
         self.timeout = timeout
 
     def get_db(self) -> sqlite3.Connection:
-        """Private storage API (used by search)."""
-        try:
-            return self.factory()
-        except DBError as e:
-            raise StorageError(message=str(e)) from None
+        return self.factory()
 
     @staticmethod
     def setup_db(db: sqlite3.Connection) -> None:
@@ -76,7 +58,7 @@ class StorageBase:
         from ._schema import MIGRATION
         from . import MINIMUM_SQLITE_VERSION, REQUIRED_SQLITE_FUNCTIONS
 
-        return setup_db(
+        return _sqlite_utils.setup_db(
             db,
             migration=MIGRATION,
             id=APPLICATION_ID,
@@ -84,18 +66,15 @@ class StorageBase:
             required_sqlite_functions=REQUIRED_SQLITE_FUNCTIONS,
         )
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def __enter__(self) -> None:
-        try:
-            self.factory.__enter__()
-        except DBError as e:
-            raise StorageError(message=str(e)) from None
+        self.factory.__enter__()
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def __exit__(self, *_: Any) -> None:
         self.factory.__exit__()
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def close(self) -> None:
         self.factory.close()
 
@@ -106,7 +85,7 @@ class StorageBase:
         last: tuple[Any, ...] | None = None,
         row_factory: Callable[[tuple[Any, ...]], _T] | None = None,
     ) -> Iterable[_T]:
-        with wrap_exceptions(StorageError):
+        with wrap_exceptions():
             yield from paginated_query(
                 self.get_db(),
                 make_query,
