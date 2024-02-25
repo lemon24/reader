@@ -82,7 +82,9 @@ def ddl_transaction(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
 
 @contextmanager
 def wrap_exceptions(
-    exc_type: Callable[[str], Exception], message: str = "unexpected error"
+    exc_type: Callable[[str], Exception],
+    op_exc_types: dict[str, Callable[[str], Exception]] = {},  # noqa: B006
+    message: str = "unexpected error",
 ) -> Iterator[None]:
     """Wrap sqlite3 exceptions in a custom exception.
 
@@ -100,6 +102,10 @@ def wrap_exceptions(
         yield
 
     except sqlite3.OperationalError as e:
+        e_str_lower = str(e).lower()
+        for fragment, op_exc_type in op_exc_types.items():
+            if fragment.lower() in e_str_lower:
+                raise op_exc_type(str(e)) from None
         raise exc_type(message) from e
 
     except sqlite3.ProgrammingError as e:
@@ -118,6 +124,9 @@ def wrap_exceptions(
                 raise exc_type(message) from e
 
         raise
+
+    except DBError as e:
+        raise exc_type(str(e)) from None
 
 
 @contextmanager
@@ -197,6 +206,7 @@ class HeavyMigration:
     create: _DBFunction
     version: int  # must be positive
     migrations: dict[int, _DBFunction]
+    missing_suffix: str = ''
 
     def migrate(self, db: sqlite3.Connection) -> None:
         with foreign_keys_off(db), ddl_transaction(db):
@@ -225,7 +235,7 @@ class HeavyMigration:
                     raise SchemaVersionError(
                         f"no migration from {from_version} to {to_version}; "
                         f"expected migrations for all versions "
-                        f"later than {version}"
+                        f"later than {version}" + self.missing_suffix
                     )
 
                 migration(db)

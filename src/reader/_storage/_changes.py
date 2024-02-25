@@ -1,34 +1,22 @@
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Iterator
-from contextlib import contextmanager
 from typing import Any
 from typing import TYPE_CHECKING
 
 from .._types import Action
 from .._types import Change
 from ..exceptions import ChangeTrackingNotEnabledError
-from ..exceptions import StorageError
+from ._base import wrap_exceptions
 from ._sql_utils import parse_schema
 from ._sql_utils import Query
 from ._sqlite_utils import ddl_transaction
-from ._sqlite_utils import wrap_exceptions
 
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
 
 
-@contextmanager
-def wrap_changes_exceptions(enabled: bool = True) -> Iterator[None]:
-    try:
-        yield
-    except sqlite3.OperationalError as e:
-        msg_lower = str(e).lower()
-        # TODO: check table name and/or set cause
-        if enabled and 'no such table' in msg_lower:
-            raise ChangeTrackingNotEnabledError() from None
-        raise  # pragma: no cover
+ENABLED_EXC = {'no such table': lambda _: ChangeTrackingNotEnabledError()}
 
 
 class Changes:
@@ -37,7 +25,7 @@ class Changes:
     def __init__(self, storage: StorageBase):
         self.storage = storage
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def enable(self) -> None:
         with ddl_transaction(self.storage.get_db()) as db:
             try:
@@ -61,7 +49,7 @@ class Changes:
             """
         )
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def disable(self) -> None:
         with ddl_transaction(self.storage.get_db()) as db:
             self._disable(db)
@@ -74,8 +62,7 @@ class Changes:
                 db.execute(f"DROP {object.type} IF EXISTS {object.name}")
         db.execute("UPDATE entries SET sequence = NULL")
 
-    @wrap_exceptions(StorageError)
-    @wrap_changes_exceptions()
+    @wrap_exceptions(ENABLED_EXC)
     def get(
         self, action: Action | None = None, limit: int | None = None
     ) -> list[Change]:
@@ -90,8 +77,7 @@ class Changes:
         rows = self.storage.get_db().execute(str(query), context)
         return list(map(change_factory, rows))
 
-    @wrap_exceptions(StorageError)
-    @wrap_changes_exceptions()
+    @wrap_exceptions(ENABLED_EXC)
     def done(self, changes: list[Change]) -> None:
         # FIXME: len(changes) <= self.storage.chunk_size
         with self.storage.get_db() as db:

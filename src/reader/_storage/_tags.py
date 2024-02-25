@@ -13,17 +13,16 @@ from .._types import TagFilter
 from ..exceptions import EntryNotFoundError
 from ..exceptions import FeedNotFoundError
 from ..exceptions import ReaderError
-from ..exceptions import StorageError
 from ..exceptions import TagNotFoundError
 from ..types import AnyResourceId
 from ..types import JSONType
 from ..types import MISSING
 from ..types import MissingType
 from ..types import ResourceId
+from ._base import wrap_exceptions
 from ._sql_utils import BaseQuery
 from ._sql_utils import Query
 from ._sqlite_utils import rowcount_exactly_one
-from ._sqlite_utils import wrap_exceptions
 
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
@@ -85,7 +84,7 @@ class TagsMixin(StorageBase):
     ) -> None:  # pragma: no cover
         ...
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def set_tag(
         self,
         resource_id: ResourceId,
@@ -132,7 +131,7 @@ class TagsMixin(StorageBase):
                     raise
                 raise info.not_found_exc(*resource_id) from None
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def delete_tag(self, resource_id: ResourceId, key: str) -> None:
         info = SCHEMA_INFO[len(resource_id)]
 

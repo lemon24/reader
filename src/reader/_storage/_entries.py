@@ -21,19 +21,18 @@ from ..exceptions import EntryError
 from ..exceptions import EntryExistsError
 from ..exceptions import EntryNotFoundError
 from ..exceptions import FeedNotFoundError
-from ..exceptions import StorageError
 from ..types import Content
 from ..types import Enclosure
 from ..types import Entry
 from ..types import EntryCounts
 from ..types import EntrySort
+from ._base import wrap_exceptions
 from ._feeds import feed_factory
 from ._sql_utils import Query
 from ._sql_utils import SortKey
 from ._sqlite_utils import adapt_datetime
 from ._sqlite_utils import convert_timestamp
 from ._sqlite_utils import rowcount_exactly_one
-from ._sqlite_utils import wrap_exceptions
 from ._tags import entry_tags_filter
 from ._tags import feed_tags_filter
 
@@ -70,7 +69,7 @@ class EntriesMixin(StorageBase):
             limit = min(limit, self.chunk_size) if limit else self.chunk_size
             return paginated_query(limit)
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def get_entry_last(
         self, sort: EntrySort, entry: tuple[str, str]
     ) -> tuple[Any, ...]:
@@ -86,7 +85,7 @@ class EntriesMixin(StorageBase):
             lambda: EntryNotFoundError(feed_url, entry_id),
         )
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def get_entry_counts(
         self,
         now: datetime,
@@ -104,7 +103,7 @@ class EntriesMixin(StorageBase):
 
         return EntryCounts(*row[:4], row[4:7])  # type: ignore[call-arg]
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def set_entry_read(
         self, entry: tuple[str, str], read: bool, modified: datetime | None
     ) -> None:
@@ -127,7 +126,7 @@ class EntriesMixin(StorageBase):
             )
         rowcount_exactly_one(cursor, lambda: EntryNotFoundError(feed_url, entry_id))
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def set_entry_important(
         self, entry: tuple[str, str], important: bool | None, modified: datetime | None
     ) -> None:
@@ -153,7 +152,7 @@ class EntriesMixin(StorageBase):
     def get_entries_for_update(
         self, entries: Iterable[tuple[str, str]]
     ) -> Iterable[EntryForUpdate | None]:
-        with wrap_exceptions(StorageError):
+        with wrap_exceptions():
             for iterable in chunks(self.chunk_size, entries):
                 yield from self._get_entries_for_update_page(iterable)
 
@@ -194,7 +193,7 @@ class EntriesMixin(StorageBase):
 
             return [cursor.execute(query, entry).fetchone() for entry in entries]
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def add_or_update_entries(self, intents: Iterable[EntryUpdateIntent]) -> None:
         iterables = chunks(self.chunk_size, intents) if self.chunk_size else (intents,)
 
@@ -304,7 +303,7 @@ class EntriesMixin(StorageBase):
         # TODO: this method is for testing convenience only, maybe delete it?
         self.add_or_update_entries([intent])
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def add_entry(self, intent: EntryUpdateIntent) -> None:
         with self.get_db() as db:
             try:
@@ -317,7 +316,7 @@ class EntriesMixin(StorageBase):
                     raise EntryExistsError(*intent.entry.resource_id) from None
                 raise  # pragma: no cover
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def delete_entries(
         self, entries: Iterable[tuple[str, str]], *, added_by: str | None = None
     ) -> None:
@@ -350,7 +349,7 @@ class EntriesMixin(StorageBase):
                     cursor, lambda: EntryNotFoundError(feed_url, entry_id)  # noqa: B023
                 )
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def get_entry_recent_sort(self, entry: tuple[str, str]) -> datetime:
         feed_url, entry_id = entry
         rows = self.get_db().execute(
@@ -366,7 +365,7 @@ class EntriesMixin(StorageBase):
             lambda: EntryNotFoundError(feed_url, entry_id),
         )
 
-    @wrap_exceptions(StorageError)
+    @wrap_exceptions()
     def set_entry_recent_sort(
         self, entry: tuple[str, str], recent_sort: datetime
     ) -> None:
