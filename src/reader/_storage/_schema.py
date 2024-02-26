@@ -1,6 +1,7 @@
 import sqlite3
 
 from ._sql_utils import parse_schema
+from ._sqlite_utils import ddl_transaction
 from ._sqlite_utils import HeavyMigration
 
 
@@ -61,7 +62,7 @@ CREATE TABLE entries (
     first_updated_epoch TIMESTAMP NOT NULL,
     feed_order INTEGER NOT NULL,
     recent_sort TIMESTAMP NOT NULL,
-    sequence BLOB,  -- FIXME: needs migration!
+    sequence BLOB,
 
     PRIMARY KEY (id, feed),
     FOREIGN KEY (feed) REFERENCES feeds(url)
@@ -152,16 +153,6 @@ def update_from_36_to_37(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     entries_by_recent_index.create(db)
 
 
-def recreate_search_triggers(db: sqlite3.Connection) -> None:  # pragma: no cover
-    from ._search import Search
-
-    if Search._is_enabled(db):
-        # Search._drop_triggers(db)
-        # Search._create_triggers(db)
-        # FIXME: drop old (pre-#323) search triggers once
-        pass
-
-
 def update_from_37_to_38(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     # https://github.com/lemon24/reader/issues/254#issuecomment-1404215814
 
@@ -232,10 +223,49 @@ def update_from_37_to_38(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     db.execute("ALTER TABLE new_entries RENAME TO entries;")
 
     create_indexes(db)
-    recreate_search_triggers(db)
+    # pre-3.12 (version 38), we'd re-create the entries search triggers here;
+    # no point in doing that anymore, update_from_38_to_39 drops them anyway
 
 
-VERSION = 38
+def update_from_38_to_39(db: sqlite3.Connection, /) -> None:  # pragma: no cover
+    # https://github.com/lemon24/reader/issues/323
+
+    from ._search import Search
+    from ._changes import Changes
+
+    db.execute("ALTER TABLE entries ADD COLUMN sequence BLOB;")
+
+    if not Search._is_enabled(db):
+        return
+
+    db.execute("DROP TABLE IF EXISTS entries_search;")
+    db.execute("DROP TABLE IF EXISTS entries_search_sync_state;")
+    db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert;")
+    db.execute("DROP TRIGGER IF EXISTS entries_search_entries_insert_esss_exists;")
+    db.execute("DROP TRIGGER IF EXISTS entries_search_entries_update;")
+    db.execute("DROP TRIGGER IF EXISTS entries_search_entries_delete;")
+    db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update;")
+    db.execute("DROP TRIGGER IF EXISTS entries_search_feeds_update_url;")
+
+    Changes._enable(db)
+
+    path = db.execute(
+        "SELECT file FROM pragma_database_list() WHERE name = 'main';"
+    ).fetchone()[0]
+    if not path:
+        raise Exception("temporary databases should not need migrations")
+
+    search_db = sqlite3.connect(path + '.search')
+    try:
+        Search.setup_db(search_db)
+        with ddl_transaction(search_db):
+            Search._disable(search_db)
+            Search._enable(search_db)
+    finally:
+        search_db.close()
+
+
+VERSION = 39
 
 MIGRATIONS = {
     # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
@@ -244,6 +274,7 @@ MIGRATIONS = {
     # 29-35 removed before 3.0 (last in 69c75529a3f80107b68346d592d6450f9725187c)
     36: update_from_36_to_37,
     37: update_from_37_to_38,
+    38: update_from_38_to_39,
 }
 MISSING_SUFFIX = (
     "; you may have skipped some required migrations, see "

@@ -112,17 +112,19 @@ class Search:
         if not storage.factory.is_private():
             self.path = storage.factory.path + '.search'
             self.schema = 'search'
-
             with wrap_exceptions(message="while opening database"):
                 # not using the storage connection because PyPy doesn't like it
-                # (see setup_db() for details)
+                # (see _sqlite_utils.setup_db() for details)
                 with closing(sqlite3.connect(self.path)) as db:
-                    _sqlite_utils.setup_db(db, id=APPLICATION_ID)
-
+                    self.setup_db(db)
                 storage.factory.attach(self.schema, self.path)
 
     def get_db(self) -> sqlite3.Connection:
         return self.storage.factory()
+
+    @staticmethod
+    def setup_db(db: sqlite3.Connection) -> None:
+        _sqlite_utils.setup_db(db, id=APPLICATION_ID)
 
     @staticmethod
     def strip_html(text: SQLiteType) -> SQLiteType:
