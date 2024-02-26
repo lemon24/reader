@@ -14,6 +14,7 @@ Unreleased
 * Enable `write-ahead logging`_ only once, when the database is created,
   instead of every time it is opened.
   (:issue:`323`)
+* Vacuum the main database after migrations. (:issue:`323`)
 * Require at least SQLite 3.18 (released 2017-03-30).
   Previously, *reader* core required 3.15,
   and only :meth:`~Reader.update_search` required 3.18.

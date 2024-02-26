@@ -248,6 +248,10 @@ class HeavyMigration:
                         f"after migrating to version {to_version}: {e}"
                     ) from None
 
+        # cannot VACUUM from within a transaction,
+        # so just do it any time migrations happen
+        db.execute("VACUUM;")
+
     @staticmethod
     def get_version(db: sqlite3.Connection) -> int:
         return get_int_pragma(db, 'user_version')
