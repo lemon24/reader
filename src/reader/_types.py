@@ -1264,17 +1264,160 @@ class SearchType(Protocol):  # pragma: no cover
         """
 
 
-class Action(Enum):
-    # FIXME: docstring
-    INSERT = 1
-    DELETE = 2
+@runtime_checkable
+class ChangeTrackingStorageType(StorageType, Protocol):
+
+    """A storage that can track changes to the text content of resources."""
+
+    @property
+    def changes(self) -> ChangeTrackerType:
+        """The change tracker associated with this storage."""
+
+
+class ChangeTrackerType(Protocol):  # pragma: no cover
+    """Storage API used to keep the full-text search index in sync.
+
+    The sync model works as follows.
+
+    Each resource to be indexed has sequence that changes
+    every time its text content changes.
+    The sequence can be a global counter, a random number,
+    or a high-precision timestamp;
+    the only requirement is that it won't be used again
+    (or it's extremely unlikely that will happen).
+
+    Each sequence change gets recorded.
+    Updates are recorded as pairs of
+    :attr:`~Action.DELETE` + :attr:`~Action.INSERT` changes
+    with the old / new sequences, respectively.
+
+    :meth:`SearchType.update` gets changes and processes them.
+    For :attr:`~Action.INSERT`,
+    the resource is indexed only if the change sequence
+    matches the current main storage sequence;
+    otherwise, the change is ignored.
+    For :attr:`~Action.DELETE`,
+    the resource is deleted only if the change sequence
+    matches the search index sequence.
+    (This means that, during updates,
+    multiple versions of a resource may appear in the index,
+    with different sequences.)
+    Processed changes are marked as done,
+    regardless of the action taken. Pseudocode::
+
+        def update(self):
+            while True:
+                changes = self.storage.changes.get()
+                if not changes:
+                    break
+                self._process_changes(changes)
+                self.storage.changes.done(changes)
+
+    Enabling change tracking sets the sequence of all resources
+    and adds matching :attr:`~Action.INSERT` changes
+    to allow backfilling the search index.
+    The sequence may be :const:`None` when change tracking is disabled.
+    There is no guarantee the sequence of a resource is the same
+    if change tracking is disabled and then enabled again.
+
+    The entry sequence is exposed as :attr:`.Entry._sequence`,
+    and should change when
+    the entry :attr:`~.Entry.title`, :attr:`~.Entry.summary`,
+    or :attr:`~.Entry.content` change,
+    or when its feed's :attr:`~.Feed.title` or :attr:`~.Feed.user_title` change.
+
+    As of version |version|, only entry changes are tracked,
+    but the API supports tracking feeds and tags in the future;
+    search implementations should ignore
+    changes to resources they do not support
+    (but still mark them as done!).
+
+    Any method can raise :exc:`.StorageError`.
+
+    """
+
+    def enable(self) -> None:
+        """Enable change tracking.
+
+        A no-op and reasonably fast if change tracking is already enabled.
+
+        """
+
+    def disable(self) -> None:
+        """Disable change tracking.
+
+        A no-op if change tracking is already disabled.
+
+        """
+
+    def get(
+        self, action: Action | None = None, limit: int | None = None
+    ) -> list[Change]:
+        """Return the next batch of changes, if any.
+
+        Args:
+            action: Only return changes of this type.
+            limit: Return at most this many changes;
+                may return fewer, depending on storage internal limits.
+                If none, reasonable limit should be used (hundreds).
+
+        Returns:
+            A batch of changes.
+
+        Raises:
+            ChangeTrackingNotEnabledError
+
+        """
+
+    def done(self, changes: list[Change]) -> None:
+        """Mark changes as done. Ignore unknown changes.
+
+        Args:
+            changes:
+
+        Raises:
+            ChangeTrackingNotEnabledError
+            ValueError: If more changes than :meth:`get` returns are passed;
+                ``done(get())`` should always work.
+
+        """
 
 
 @dataclass(frozen=True)
 class Change:
-    # FIXME: docstring
+    """A change to be applied to the search index.
+
+    The change can be of an entry, a feed, or a resource tag,
+    with identifiers set accordingly:
+
+    =========== =========== =========== ===========
+    subject     feed_url    entry_id    tag_key
+    =========== =========== =========== ===========
+    feed        set
+    entry       set         set
+    global tag                          set
+    feed tag    set                     set
+    entry tag   set         set         set
+    =========== =========== =========== ===========
+
+    """
+
+    #: Action to take.
     action: Action
+    #: Resource/tag sequence.
     sequence: bytes
+    #: Feed URL.
     feed_url: str | None = None
+    #: Entry id.
     entry_id: str | None = None
+    #: Tag key.
     tag_key: str | None = None
+
+
+class Action(Enum):
+    """Action to take."""
+
+    #: The resource needs to be added to the search index.
+    INSERT = 1
+    #: The resource needs to be deleted from the search index.
+    DELETE = 2

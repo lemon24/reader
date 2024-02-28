@@ -20,8 +20,6 @@ ENABLED_EXC = {'no such table': lambda _: ChangeTrackingNotEnabledError()}
 
 
 class Changes:
-    # FIXME: protocol
-
     def __init__(self, storage: StorageBase):
         self.storage = storage
 

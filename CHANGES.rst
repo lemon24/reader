@@ -14,7 +14,7 @@ Unreleased
 * Split the :ref:`full-text search <fts>` index into a separate,
   attached database.
   (:issue:`323`)
-* Require at least SQLite 3.18 (released 2017-03-30).
+* Require at least SQLite 3.18.
   Previously, *reader* core required 3.15,
   and only :meth:`~Reader.update_search` required 3.18.
   (:issue:`323`)
@@ -22,6 +22,9 @@ Unreleased
   instead of every time it is opened.
   (:issue:`323`)
 * Vacuum the main database after migrations. (:issue:`323`)
+* Add an internal :ref:`change tracking API <changes>`
+  to formalize how search keeps in sync with storage.
+  (:issue:`323`)
 
 
 Version 3.11

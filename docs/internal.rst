@@ -143,9 +143,11 @@ but at least one other implementation needs to exists before that.
 
     Currently, search is tightly-bound to a storage implementation
     (see :meth:`~.BoundSearchStorageType.make_search`).
-    In the future, it may be possible to mix and match
-    main storage and search implementations,
-    but :class:`StorageType` will likely need
+    While the :ref:`change tracking API <changes>` allows
+    search implementations to keep in sync with text content changes,
+    there is no convenient way for :meth:`SearchType.search_entries`
+    to filter/sort results without storage cooperation;
+    :class:`StorageType` will need
     additional capabilities to support this.
 
 
@@ -165,6 +167,27 @@ but at least one other implementation needs to exists before that.
 
 .. autoclass:: SearchType()
     :members:
+
+
+.. _changes:
+
+.. autoclass:: ChangeTrackingStorageType()
+    :members:
+    :show-inheritance:
+
+.. autoclass:: ChangeTrackerType()
+    :members:
+
+.. autoclass:: Change
+    :members:
+
+.. autoclass:: Action
+    :members:
+
+.. autoattribute:: reader.Entry._sequence
+
+.. autoexception:: reader.exceptions.ChangeTrackingNotEnabledError
+    :show-inheritance:
 
 
 Data objects

@@ -470,7 +470,8 @@ class ChangeTrackingNotEnabledError(StorageError):
     """A change tracking method was called when change tracking was not enabled.
 
     .. admonition:: Unstable
-        This exception is part of the unstable :doc:`internal API <internal>`.
+
+        This exception is part of the unstable :ref:`change tracking API <changes>`.
 
     """
 

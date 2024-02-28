@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .._types import ChangeTrackerType
 from .._types import SearchType
 from ._base import StorageBase
 from ._changes import Changes
@@ -30,9 +31,8 @@ class Storage(FeedsMixin, EntriesMixin, TagsMixin, StorageBase):
 
     def __init__(self, *args: Any, **kwargs: Any):
         # FIXME: types
-        # FIXME: protocol
         super().__init__(*args, **kwargs)
-        self.changes = Changes(self)
+        self.changes: ChangeTrackerType = Changes(self)
 
     def make_search(self) -> SearchType:
         from ._search import Search

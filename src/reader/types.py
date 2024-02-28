@@ -296,7 +296,14 @@ class Entry(_namedtuple_compat):
     #: .. versionadded:: 1.8
     original_feed_url: str = cast(str, None)
 
-    # FIXME: docstring
+    #: Change sequence.
+    #:
+    #: May be :const:`None` when change tracking is disabled.
+    #:
+    #: .. admonition:: Unstable
+    #:
+    #:  This field is part of the unstable :ref:`change tracking API <changes>`.
+    #:
     _sequence: bytes | None = None
 
     # feed should not have a default, but I'd prefer objects that aren't
