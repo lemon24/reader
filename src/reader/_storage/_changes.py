@@ -92,20 +92,16 @@ class Changes:
 
 def change_factory(row: tuple[Any, ...]) -> Change:
     sequence, feed, id, key, action = row
-    return Change(
-        Action(action),
-        sequence,
-        feed or None,
-        id or None,
-        key or None,
-    )
+    resource = tuple(filter(bool, (feed, id)))
+    return Change(Action(action), sequence, resource, key or None)
 
 
 def change_to_dict(change: Change) -> dict[str, Any]:
+    resource = change.resource_id + ('', '')
     return dict(
         sequence=change.sequence,
-        feed=change.feed_url or '',
-        id=change.entry_id or '',
+        feed=resource[0],
+        id=resource[1],
         key=change.tag_key or '',
         action=change.action.value,
     )

@@ -256,9 +256,7 @@ class Search:
         with self.get_db() as db:
             for change in changes:
                 # ignore non-entry changes
-                if not (
-                    change.feed_url and change.entry_id and not change.tag_key
-                ):  # pragma: no cover
+                if change.tag_key or len(change.resource_id) != 2:  # pragma: no cover
                     continue
                 assert change.action == Action.DELETE, change.action
 
@@ -271,14 +269,14 @@ class Search:
                         WHERE (ss.sequence, ss.feed, ss.id) = (?, ?, ?)
                     )
                     """,
-                    (change.sequence, change.feed_url, change.entry_id),
+                    (change.sequence, *change.resource_id),
                 )
                 db.execute(
                     """
                     DELETE FROM entries_search_sync_state
                     WHERE (sequence, feed, id) = (?, ?, ?)
                     """,
-                    (change.sequence, change.feed_url, change.entry_id),
+                    (change.sequence, *change.resource_id),
                 )
 
         log.debug("Search.update: _delete_from_search: chunk done")
@@ -307,16 +305,12 @@ class Search:
         entries = {}
         for change in changes:
             # ignore non-entry changes
-            if not (
-                change.feed_url and change.entry_id and not change.tag_key
-            ):  # pragma: no cover
+            if change.tag_key or len(change.resource_id) != 2:  # pragma: no cover
                 continue
             assert change.action == Action.INSERT, change.action
             entry = next(
                 iter(
-                    self.storage.get_entries(
-                        EntryFilter(change.feed_url, change.entry_id), limit=1
-                    )
+                    self.storage.get_entries(EntryFilter(*change.resource_id), limit=1)
                 ),
                 None,
             )
@@ -378,7 +372,7 @@ class Search:
                         WHERE (ss.sequence, ss.feed, ss.id) = (?, ?, ?)
                     )
                     """,
-                    (change.sequence, change.feed_url, change.entry_id),
+                    (change.sequence, *change.resource_id),
                 )
                 if cursor.rowcount:  # pragma: no cover
                     log.warn(
@@ -411,12 +405,7 @@ class Search:
                     INSERT OR REPLACE INTO entries_search_sync_state
                     VALUES (?, ?, ?, ?)
                     """,
-                    (
-                        change.sequence,
-                        change.feed_url,
-                        change.entry_id,
-                        json.dumps(new_es_rowids),
-                    ),
+                    (change.sequence, *change.resource_id, json.dumps(new_es_rowids)),
                 )
 
         log.debug("Search.update: _insert_into_search: chunk done")

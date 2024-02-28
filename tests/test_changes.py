@@ -34,7 +34,7 @@ def test_basic(reader):
     with pytest.raises(ChangeTrackingNotEnabledError) as excinfo:
         storage.changes.get()
     with pytest.raises(ChangeTrackingNotEnabledError) as excinfo:
-        storage.changes.done([Change(Action.INSERT, b'seq1', '1', 'a')])
+        storage.changes.done([Change(Action.INSERT, b'seq1', ('1', 'a'))])
 
     # should be a no-op
     storage.changes.disable()
@@ -47,7 +47,7 @@ def test_basic(reader):
     assert get_entries() == {('1', 'a', b'seq1')}
     changes = storage.changes.get()
     assert changes == [
-        Change(Action.INSERT, b'seq1', '1', 'a'),
+        Change(Action.INSERT, b'seq1', ('1', 'a')),
     ]
 
     parser.entry('1', 'a', title='AAA')
@@ -55,8 +55,8 @@ def test_basic(reader):
     assert get_entries() == {('1', 'a', b'seq2')}
     changes = storage.changes.get()
     assert changes == [
-        Change(Action.DELETE, b'seq1', '1', 'a'),
-        Change(Action.INSERT, b'seq2', '1', 'a'),
+        Change(Action.DELETE, b'seq1', ('1', 'a')),
+        Change(Action.INSERT, b'seq2', ('1', 'a')),
     ]
     storage.changes.done(changes)
     assert storage.changes.get() == []
@@ -74,7 +74,7 @@ def test_basic(reader):
     assert get_entries() == {('1', 'a', b'seq2'), ('1', 'b', b'seq3')}
     changes = storage.changes.get()
     assert changes == [
-        Change(Action.INSERT, b'seq3', '1', 'b'),
+        Change(Action.INSERT, b'seq3', ('1', 'b')),
     ]
     # don't clear, want to see if it changes to DELETE below
 
@@ -82,18 +82,18 @@ def test_basic(reader):
     assert get_entries() == {('2', 'a', b'seq4'), ('2', 'b', b'seq5')}
     changes = storage.changes.get()
     assert changes == [
-        Change(Action.DELETE, b'seq2', '1', 'a'),
-        Change(Action.DELETE, b'seq3', '1', 'b'),
-        Change(Action.INSERT, b'seq4', '2', 'a'),
-        Change(Action.INSERT, b'seq5', '2', 'b'),
+        Change(Action.DELETE, b'seq2', ('1', 'a')),
+        Change(Action.DELETE, b'seq3', ('1', 'b')),
+        Change(Action.INSERT, b'seq4', ('2', 'a')),
+        Change(Action.INSERT, b'seq5', ('2', 'b')),
     ]
 
     # partial done (and also test get() filtering)
     storage.changes.done(storage.changes.get(action=Action.INSERT, limit=1))
     assert storage.changes.get() == [
-        Change(Action.DELETE, b'seq2', '1', 'a'),
-        Change(Action.DELETE, b'seq3', '1', 'b'),
-        Change(Action.INSERT, b'seq5', '2', 'b'),
+        Change(Action.DELETE, b'seq2', ('1', 'a')),
+        Change(Action.DELETE, b'seq3', ('1', 'b')),
+        Change(Action.INSERT, b'seq5', ('2', 'b')),
     ]
     # remaining done, unknown ignored
     storage.changes.done(changes)
@@ -104,10 +104,10 @@ def test_basic(reader):
     assert get_entries() == {('2', 'a', b'seq6'), ('2', 'b', b'seq7')}
     changes = storage.changes.get()
     assert changes == [
-        Change(Action.DELETE, b'seq4', '2', 'a'),
-        Change(Action.DELETE, b'seq5', '2', 'b'),
-        Change(Action.INSERT, b'seq6', '2', 'a'),
-        Change(Action.INSERT, b'seq7', '2', 'b'),
+        Change(Action.DELETE, b'seq4', ('2', 'a')),
+        Change(Action.DELETE, b'seq5', ('2', 'b')),
+        Change(Action.INSERT, b'seq6', ('2', 'a')),
+        Change(Action.INSERT, b'seq7', ('2', 'b')),
     ]
     storage.changes.done(changes)
 
@@ -115,10 +115,10 @@ def test_basic(reader):
     assert get_entries() == {('2', 'a', b'seq8'), ('2', 'b', b'seq9')}
     changes = storage.changes.get()
     assert changes == [
-        Change(Action.DELETE, b'seq6', '2', 'a'),
-        Change(Action.DELETE, b'seq7', '2', 'b'),
-        Change(Action.INSERT, b'seq8', '2', 'a'),
-        Change(Action.INSERT, b'seq9', '2', 'b'),
+        Change(Action.DELETE, b'seq6', ('2', 'a')),
+        Change(Action.DELETE, b'seq7', ('2', 'b')),
+        Change(Action.INSERT, b'seq8', ('2', 'a')),
+        Change(Action.INSERT, b'seq9', ('2', 'b')),
     ]
     storage.changes.done(changes)
 
@@ -126,7 +126,7 @@ def test_basic(reader):
     assert get_entries() == {('2', 'b', b'seq9')}
     changes = storage.changes.get()
     assert changes == [
-        Change(Action.DELETE, b'seq8', '2', 'a'),
+        Change(Action.DELETE, b'seq8', ('2', 'a')),
     ]
 
     reader.delete_feed('2')
@@ -134,8 +134,8 @@ def test_basic(reader):
     changes = storage.changes.get()
 
     assert changes == [
-        Change(Action.DELETE, b'seq8', '2', 'a'),
-        Change(Action.DELETE, b'seq9', '2', 'b'),
+        Change(Action.DELETE, b'seq8', ('2', 'a')),
+        Change(Action.DELETE, b'seq9', ('2', 'b')),
     ]
 
     storage.changes.disable()

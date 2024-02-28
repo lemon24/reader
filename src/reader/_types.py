@@ -1387,18 +1387,7 @@ class ChangeTrackerType(Protocol):  # pragma: no cover
 class Change:
     """A change to be applied to the search index.
 
-    The change can be of an entry, a feed, or a resource tag,
-    with identifiers set accordingly:
-
-    =========== =========== =========== ===========
-    subject     feed_url    entry_id    tag_key
-    =========== =========== =========== ===========
-    feed        set
-    entry       set         set
-    global tag                          set
-    feed tag    set                     set
-    entry tag   set         set         set
-    =========== =========== =========== ===========
+    The change can be of an entry, a feed, or a resource tag.
 
     """
 
@@ -1406,11 +1395,9 @@ class Change:
     action: Action
     #: Resource/tag sequence.
     sequence: bytes
-    #: Feed URL.
-    feed_url: str | None = None
-    #: Entry id.
-    entry_id: str | None = None
-    #: Tag key.
+    #: Resource id.
+    resource_id: ResourceId
+    #: Tag key, if the change is about a tag.
     tag_key: str | None = None
 
 
