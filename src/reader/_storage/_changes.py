@@ -77,7 +77,8 @@ class Changes:
 
     @wrap_exceptions(ENABLED_EXC)
     def done(self, changes: list[Change]) -> None:
-        # FIXME: len(changes) <= self.storage.chunk_size
+        if len(changes) > self.storage.chunk_size:
+            raise ValueError(f"too many changes, expected <= {self.storage.chunk_size}")
         with self.storage.get_db() as db:
             for change in changes:
                 db.execute(
