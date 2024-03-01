@@ -43,9 +43,10 @@ class FeedsMixin(StorageBase):
                     dict(url=url, added=adapt_datetime(added)),
                 )
             except sqlite3.IntegrityError as e:
-                if "unique constraint failed" not in str(e).lower():  # pragma: no cover
-                    raise
-                raise FeedExistsError(url) from None
+                e_msg = str(e).lower()
+                if "unique constraint failed: feeds.url" in e_msg:
+                    raise FeedExistsError(url) from None
+                raise  # pragma: no cover
 
     @wrap_exceptions()
     def delete_feed(self, url: str) -> None:
@@ -62,10 +63,10 @@ class FeedsMixin(StorageBase):
                     dict(old=old, new=new),
                 )
             except sqlite3.IntegrityError as e:
-                if "unique constraint failed" not in str(e).lower():  # pragma: no cover
-                    raise
-                # FIXME: check message for the failed constraint, same for add feed
-                raise FeedExistsError(new) from None
+                e_msg = str(e).lower()
+                if "unique constraint failed: feeds.url" in e_msg:
+                    raise FeedExistsError(new) from None
+                raise  # pragma: no cover
             else:
                 rowcount_exactly_one(cursor, lambda: FeedNotFoundError(old))
 

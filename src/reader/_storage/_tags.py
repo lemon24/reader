@@ -126,10 +126,10 @@ class TagsMixin(StorageBase):
             try:
                 db.execute(query, params)
             except sqlite3.IntegrityError as e:
-                foreign_key_error = "foreign key constraint failed" in str(e).lower()
-                if not foreign_key_error:  # pragma: no cover
-                    raise
-                raise info.not_found_exc(*resource_id) from None
+                e_msg = str(e).lower()
+                if "foreign key constraint failed" in e_msg:
+                    raise info.not_found_exc(*resource_id) from None
+                raise  # pragma: no cover
 
     @wrap_exceptions()
     def delete_tag(self, resource_id: ResourceId, key: str) -> None:

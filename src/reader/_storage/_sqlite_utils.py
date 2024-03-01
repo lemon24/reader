@@ -102,9 +102,9 @@ def wrap_exceptions(
         yield
 
     except sqlite3.OperationalError as e:
-        e_str_lower = str(e).lower()
+        e_msg = str(e).lower()
         for fragment, op_exc_type in op_exc_types.items():
-            if fragment.lower() in e_str_lower:
+            if fragment.lower() in e_msg:
                 raise op_exc_type(str(e)) from None
         raise exc_type(message) from e
 
