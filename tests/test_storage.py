@@ -130,7 +130,7 @@ def test_timeout(db_path, monkeypatch):
     assert connect.expected_timeout == 19
 
 
-def test_close():
+def test_close(monkeypatch):
     close_called = False
 
     class Connection(sqlite3.Connection):
@@ -139,7 +139,9 @@ def test_close():
             nonlocal close_called
             close_called = True
 
-    storage = Storage(':memory:', factory=Connection)
+    monkeypatch.setattr('reader._storage._base.CONNECTION_CLS', Connection)
+
+    storage = Storage(':memory:')
     storage.get_db().execute('values (1)')
 
     storage.close()
@@ -149,14 +151,16 @@ def test_close():
     storage.close()
 
 
-def test_close_error():
+def test_close_error(monkeypatch):
     class Connection(sqlite3.Connection):
         pass
 
     def execute(*args):
         raise sqlite3.ProgrammingError('unexpected error')
 
-    storage = Storage(':memory:', factory=Connection)
+    monkeypatch.setattr('reader._storage._base.CONNECTION_CLS', Connection)
+
+    storage = Storage(':memory:')
     storage.get_db().execute = execute
 
     # should not be StorageError, because it's likely a bug

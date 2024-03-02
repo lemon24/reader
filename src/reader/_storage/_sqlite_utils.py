@@ -636,17 +636,12 @@ def _make_debug_method_wrapper(method, stmt=False):  # pragma: no cover
             io_counters = self._io_counters
 
         if io_counters:
-            fields = ['read_count', 'write_count', 'read_bytes', 'write_bytes']
-            try:
-                import psutil  # type: ignore
+            import psutil  # type: ignore
 
-                process = psutil.Process()
-            except ImportError:
-                process = None
-            try:
-                start_io_counters = process.io_counters()
-            except AttributeError:
-                pass
+            fields = ['read_count', 'write_count', 'read_bytes', 'write_bytes']
+            process = psutil.Process()
+            # this will fail on MacOS, but that's OK
+            start_io_counters = process.io_counters()
 
         start = time.perf_counter()
         try:
@@ -660,14 +655,11 @@ def _make_debug_method_wrapper(method, stmt=False):  # pragma: no cover
             data['duration'] = end - start
 
             if io_counters:
-                try:
-                    end_io_counters = process.io_counters()
-                    data['io_counters'] = {
-                        f: getattr(end_io_counters, f) - getattr(start_io_counters, f)
-                        for f in fields
-                    }
-                except AttributeError:
-                    pass
+                end_io_counters = process.io_counters()
+                data['io_counters'] = {
+                    f: getattr(end_io_counters, f) - getattr(start_io_counters, f)
+                    for f in fields
+                }
 
             self._log(data)
 
@@ -680,6 +672,7 @@ def _make_debug_connection_cls():  # pragma: no cover
     # typing.no_type_check not supporting classes (yet);
     # https://github.com/python/mypy/issues/607
 
+    @no_type_check
     class DebugCursor(sqlite3.Cursor):
         def _log(self, data):
             # can't rely on id(self) as it's likely to be reused
@@ -691,6 +684,7 @@ def _make_debug_connection_cls():  # pragma: no cover
         close = _make_debug_method_wrapper(sqlite3.Cursor.close)
         __del__ = _make_debug_method_wrapper('__del__')
 
+    @no_type_check
     class DebugConnection(sqlite3.Connection):
 
         """sqlite3 connection subclass for debugging stuff.

@@ -101,7 +101,6 @@ def make_reader(
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
     search_enabled: bool | None | Literal['auto'] = 'auto',
     _storage: StorageType | None = None,
-    _storage_factory: Any = None,
 ) -> Reader:
     """Create a new :class:`Reader`.
 
@@ -258,7 +257,7 @@ def make_reader(
     # See this comment for details on how it should evolve:
     # https://github.com/lemon24/reader/issues/168#issuecomment-642002049
 
-    storage: StorageType = _storage or Storage(url, factory=_storage_factory)
+    storage: StorageType = _storage or Storage(url)
 
     try:
         # For now, we're using a storage-bound search provider.

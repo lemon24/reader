@@ -1,5 +1,4 @@
 import functools
-import json
 import logging
 import os.path
 import shutil
@@ -17,7 +16,6 @@ from ._config import make_reader_config
 from ._config import make_reader_from_config
 from ._plugins import Loader
 from ._plugins import LoaderError
-from ._storage._sqlite_utils import DebugConnection
 
 
 APP_NAME = reader.__name__
@@ -45,23 +43,7 @@ def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
 
 
-def make_reader_with_plugins(*, debug_storage=False, **kwargs):
-    if debug_storage:
-        # TODO: the web app should be able to do this too
-
-        log_debug = logging.getLogger('reader._storage').debug
-        pid = os.getpid()
-
-        class Connection(DebugConnection):
-            _io_counters = True
-
-            @staticmethod
-            def _log_method(data):
-                data['pid'] = pid
-                log_debug(json.dumps(data))
-
-        kwargs['_storage_factory'] = Connection
-
+def make_reader_with_plugins(**kwargs):
     try:
         return make_reader_from_config(**kwargs)
     except StorageError as e:
@@ -170,7 +152,7 @@ def pass_reader(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         ctx = click.get_current_context().find_root()
-        # TODO: replace with ctx.obj.make_reader('cli') when we get rid of debug_storage
+        # TODO: replace with ctx.obj.make_reader('cli')
         reader = make_reader_with_plugins(**ctx.obj.merged('cli').get('reader', {}))
         ctx.call_on_close(reader.close)
         return fn(reader, *args, **kwargs)
@@ -215,14 +197,9 @@ def pass_reader(fn):
         "If not provided, don't open local feeds."
     ),
 )
-@click.option(
-    '--debug-storage/--no-debug-storage',
-    hidden=True,
-    help="NOT TESTED. With -vv, log storage database calls.",
-)
 @click.version_option(reader.__version__, message='%(prog)s %(version)s')
 @click.pass_obj
-def cli(config, db, plugin, cli_plugin, feed_root, debug_storage):
+def cli(config, db, plugin, cli_plugin, feed_root):
     # TODO: mention in docs that --db/--plugin/envvars ALWAYS override the config
     # (same for wsgi envvars)
     # NOTE: we can never use click defaults for --db/--plugin, because they would override the config always
@@ -246,10 +223,6 @@ def cli(config, db, plugin, cli_plugin, feed_root, debug_storage):
 
     if feed_root is not None:
         config['default']['reader']['feed_root'] = feed_root
-
-    # until we make debug_storage a proper make_reader argument,
-    # and we get rid of make_reader_with_plugins
-    config['default']['reader']['debug_storage'] = debug_storage
 
     try:
         loader = Loader()

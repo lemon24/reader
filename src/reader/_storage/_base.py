@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+import os
 import sqlite3
+import sys
 from collections.abc import Callable
 from collections.abc import Iterable
 from functools import partial
@@ -18,6 +21,24 @@ APPLICATION_ID = b'read'
 _T = TypeVar('_T')
 
 
+# also used by tests
+CONNECTION_CLS = sqlite3.Connection
+
+debug = os.environ.get('READER_DEBUG_STORAGE', '')
+assert set(debug) <= {'m', 't', 'i'}, f"invalid READER_DEBUG_STORAGE={debug}"
+
+if debug:  # pragma: no cover
+
+    class CONNECTION_CLS(_sqlite_utils.DebugConnection):  # type: ignore # noqa: F811
+        _set_trace = 't' in debug
+        _io_counters = 'i' in debug
+        _pid = os.getpid()
+
+        def _log_method(self, data):  # type: ignore
+            data['pid'] = self._pid
+            print('STORAGE_DEBUG', json.dumps(data), file=sys.stderr)
+
+
 wrap_exceptions = partial(_sqlite_utils.wrap_exceptions, StorageError)
 
 
@@ -26,17 +47,10 @@ class StorageBase:
     chunk_size = 2**8
 
     @wrap_exceptions(message="while opening database")
-    def __init__(
-        self,
-        path: str,
-        timeout: float | None = None,
-        factory: type[sqlite3.Connection] | None = None,
-    ):
-        kwargs: dict[str, Any] = {}
+    def __init__(self, path: str, timeout: float | None = None):
+        kwargs: dict[str, Any] = {'factory': CONNECTION_CLS}
         if timeout is not None:
             kwargs['timeout'] = timeout
-        if factory:  # pragma: no cover
-            kwargs['factory'] = factory
 
         self.factory = _sqlite_utils.LocalConnectionFactory(path, **kwargs)
         db = self.factory()
