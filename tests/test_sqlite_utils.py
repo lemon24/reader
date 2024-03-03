@@ -1,5 +1,6 @@
 import sqlite3
 import sys
+import threading
 from dataclasses import dataclass
 from functools import wraps
 
@@ -12,11 +13,13 @@ from reader._storage._sqlite_utils import ensure_application_id
 from reader._storage._sqlite_utils import HeavyMigration
 from reader._storage._sqlite_utils import IdError
 from reader._storage._sqlite_utils import IntegrityError
+from reader._storage._sqlite_utils import LocalConnectionFactory
 from reader._storage._sqlite_utils import require_functions
 from reader._storage._sqlite_utils import require_version
 from reader._storage._sqlite_utils import RequirementError
 from reader._storage._sqlite_utils import SchemaVersionError
 from reader._storage._sqlite_utils import setup_db
+from reader._storage._sqlite_utils import UsageError
 from reader._storage._sqlite_utils import wrap_exceptions
 
 
@@ -24,7 +27,10 @@ original_sqlite3_connect = sqlite3.connect
 
 
 @pytest.fixture(autouse=True)
-def patch_sqlite3_connect(monkeypatch, request):
+def autoclose(monkeypatch, request):
+    if 'noautoclose' in request.keywords:
+        return
+
     @wraps(original_sqlite3_connect)
     def connect(*args, **kwargs):
         db = original_sqlite3_connect(*args, **kwargs)
@@ -375,3 +381,44 @@ def test_setup_db_wal_enabled(db_path):
     cursor = db.execute("PRAGMA journal_mode;")
     assert cursor.fetchone()[0].lower() == 'delete'
     cursor.close()
+
+
+@pytest.mark.slow
+@pytest.mark.noautoclose
+def test_factory_attach(db_path):
+    attached_path = db_path + '.attached'
+    factory = LocalConnectionFactory(db_path)
+
+    def get_databases():
+        nonlocal rv
+        rv = dict(factory().execute("select name, file from pragma_database_list()"))
+
+    factory.attach('attached', attached_path)
+
+    expected = {'main': db_path, 'attached': attached_path}
+
+    rv = None
+    get_databases()
+    assert rv == expected
+
+    rv = None
+    t = threading.Thread(target=get_databases)
+    t.start()
+    t.join()
+    assert rv == expected
+
+    with pytest.raises(UsageError):
+        factory.attach('another', attached_path)
+
+    def attach_second():
+        nonlocal rv
+        try:
+            factory.attach('second', attached_path)
+        except Exception as e:
+            rv = e
+
+    rv = None
+    t = threading.Thread(target=attach_second)
+    t.start()
+    t.join()
+    assert isinstance(rv, UsageError), rv

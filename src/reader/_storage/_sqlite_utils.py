@@ -432,6 +432,7 @@ class LocalConnectionFactory:
         self.attached: dict[str, str] = {}
         self._local = _LocalConnectionFactoryState()
         self._local.is_creating_thread = True
+        self._other_threads = False
         # connect immediately, so exceptions are raised before the first call
         self.__call__()
 
@@ -452,6 +453,9 @@ class LocalConnectionFactory:
 
         if self.is_private() and self._local.closed:
             raise UsageError("cannot reuse a private database after close()")
+
+        if not self._local.is_creating_thread:
+            self._other_threads = True
 
         self._local.db = db = sqlite3.connect(self.path, **self.kwargs)
         self._local.call_count = 0
@@ -535,14 +539,23 @@ class LocalConnectionFactory:
         return count in {2, 4, 8, 16, 64, 256, 1024}
 
     def attach(self, name: str, path: str) -> None:
+        if not self._local.is_creating_thread:
+            raise UsageError(
+                "cannot call attach() from threads other than the creating thread"
+            )
+        if self._other_threads:
+            raise UsageError(
+                "cannot call attach() after the factory was used from other threads"
+            )
         if self._is_private(name):  # pragma: no cover
             raise NotImplementedError(f"cannot attach private database: {name!r}")
         if name in self.attached:  # pragma: no cover
             raise ValueError(f"database already attached: {name!r}")
+
         self.attached[name] = path
         db = self._local.db
-        if db:  # pragma: no cover FIXME: needs test
-            self._attach(db, name, path)
+        assert db is not None
+        self._attach(db, name, path)
 
     def _attach(self, db: sqlite3.Connection, name: str, path: str) -> None:
         db.execute("ATTACH DATABASE ? AS ?;", (path, name))
