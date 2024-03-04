@@ -256,7 +256,7 @@ class Search:
         with self.get_db() as db:
             for change in changes:
                 # ignore non-entry changes
-                if change.tag_key or len(change.resource_id) != 2:  # pragma: no cover
+                if change.tag_key or len(change.resource_id) != 2:
                     continue
                 assert change.action == Action.DELETE, change.action
 
@@ -305,7 +305,7 @@ class Search:
         entries = {}
         for change in changes:
             # ignore non-entry changes
-            if change.tag_key or len(change.resource_id) != 2:  # pragma: no cover
+            if change.tag_key or len(change.resource_id) != 2:
                 continue
             assert change.action == Action.INSERT, change.action
             entry = next(
@@ -314,7 +314,7 @@ class Search:
                 ),
                 None,
             )
-            if not entry:  # pragma: no cover FIXME: needs test
+            if not entry:
                 continue
             if entry._sequence != change.sequence:
                 continue
