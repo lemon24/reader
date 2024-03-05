@@ -9,7 +9,7 @@ Changelog
 Version 3.12
 ------------
 
-Unreleased
+Released 2024-03-05
 
 * Split the :ref:`full-text search <fts>` index into a separate,
   attached database.
