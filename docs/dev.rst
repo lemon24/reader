@@ -57,7 +57,6 @@ but I will prioritize supporting :doc:`contributors <contributing>`
 
   * :ref:`searchable tag values <searchable tags>`, e.g. for comments
   * :ref:`unification with entry.read/important <entry flag unification>`
-  * filter entries by entry tags, :issue:`328`
   * optimistic locking, :issue:`308`
   * filter tags by prefix, :issue:`309`
 
@@ -466,6 +465,9 @@ From the initial issue:
 * discussion of possible backend-independent search queries: :issue:`122#issuecomment-508938311`
 
 Enabling search by default, and alternative search APIs: :issue:`252`.
+
+Change tracking API: :issue:`323#issuecomment-1930756417`, model validated in
+`this gist <https://gist.github.com/lemon24/558955ad82ba2e4f50c0184c630c668c>`_.
 
 External resources:
 

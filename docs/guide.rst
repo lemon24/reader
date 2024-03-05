@@ -127,6 +127,8 @@ since each connection would be to a *different* database::
     reader.exceptions.StorageError: usage error: cannot use a private database from threads other than the creating thread
 
 
+.. _backups:
+
 Back-ups
 ~~~~~~~~
 
@@ -439,16 +441,27 @@ the entries that changed since the last call,
 so it is OK to call it relatively often.
 
 
-Because search adds  minor overhead to other :class:`Reader` methods
-and can almost double the size of the database,
-it can be turned on/off through the
-:meth:`~Reader.enable_search()` / :meth:`~Reader.disable_search()` methods.
-This is persistent across instances using the same database,
-and only needs to be done once.
-You can also use the ``search_enabled`` :func:`make_reader` argument
-for the same purpose.
-By default, search is disabled,
-and enabled automatically on the first :meth:`~Reader.update_search()` call.
+Search can be turned on/off through the
+:meth:`~Reader.enable_search()` / :meth:`~Reader.disable_search()` methods
+(persistent across instances using the same database),
+or the ``search_enabled`` argument of :func:`make_reader`;
+by default, search is enabled automatically
+on the first :meth:`~Reader.update_search()` call.
+If search is enabled,
+you should call :meth:`~Reader.update_search()` regularly
+to prevent unprocesses changes from accumulating over time.
+
+
+Because the search index can be almost as large as the main database,
+the default implementation splits it into a separate, attached database,
+which allows :ref:`backing up <backups>` the main database separately;
+for a reader created with ``make_reader('db.sqlite')``,
+the search index will be in ``db.sqlite.search``.
+
+
+.. versionchanged:: 3.12
+    Split the full-text search index into a separate database.
+
 
 
 

@@ -25,6 +25,7 @@ Unreleased
 * Add an internal :ref:`change tracking API <changes>`
   to formalize how search keeps in sync with storage.
   (:issue:`323`)
+* Refactor storage internals. (:issue:`323`)
 
 
 Version 3.11

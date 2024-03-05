@@ -1277,9 +1277,11 @@ class ChangeTrackingStorageType(StorageType, Protocol):
 class ChangeTrackerType(Protocol):  # pragma: no cover
     """Storage API used to keep the full-text search index in sync.
 
+    ----
+
     The sync model works as follows.
 
-    Each resource to be indexed has sequence that changes
+    Each resource to be indexed has a sequence that changes
     every time its text content changes.
     The sequence can be a global counter, a random number,
     or a high-precision timestamp;
@@ -1305,20 +1307,23 @@ class ChangeTrackerType(Protocol):  # pragma: no cover
     Processed changes are marked as done,
     regardless of the action taken. Pseudocode::
 
-        def update(self):
-            while True:
-                changes = self.storage.changes.get()
-                if not changes:
-                    break
-                self._process_changes(changes)
-                self.storage.changes.done(changes)
+        while changes := self.storage.changes.get():
+            self._process_changes(changes)
+            self.storage.changes.done(changes)
 
     Enabling change tracking sets the sequence of all resources
     and adds matching :attr:`~Action.INSERT` changes
     to allow backfilling the search index.
     The sequence may be :const:`None` when change tracking is disabled.
-    There is no guarantee the sequence of a resource is the same
-    if change tracking is disabled and then enabled again.
+    There is no guarantee the sequence of a resource remains the same
+    when change tracking is disabled and then enabled again.
+
+    .. seealso::
+
+        The model was validated using property-based testing
+        in `this gist <https://gist.github.com/lemon24/558955ad82ba2e4f50c0184c630c668c>`_.
+
+    ----
 
     The entry sequence is exposed as :attr:`.Entry._sequence`,
     and should change when
