@@ -70,38 +70,16 @@ QUERY_EXC = dict.fromkeys(
 )
 
 
-# When trying to fix "database is locked" errors or to optimize stuff,
-# have a look at the lessons here first:
-# https://github.com/lemon24/reader/issues/175#issuecomment-657495233
-# tl;dr: Measure. Measure in prod. FTS5 tables are slow for non-FTS queries.
-
-# When adding a new method, add a new test_search.py::test_errors_locked test.
-
-
 class Search:
 
     """Search provider tightly coupled to the SQLite storage.
 
     Originally done in #122. Updated to use the change tracking API in #323.
 
-    Schema changes related to search must be added to a Storage migration::
+    Schema changes must be added to a Storage migration, example:
+    https://github.com/lemon24/reader/blob/3.12/src/reader/_storage/_schema.py#L258-L265
 
-        def update_from_X_to_Y(db):
-            from ._search import Search
-
-            search = Search(db)
-
-            if search.is_enabled():
-                # Using _enable/_disable because we're already in a transaction.
-
-                # This works only if the names of things remain the same.
-                # Otherwise, the queries from the previous version's disable()
-                # need to be copied verbatim.
-                search.disable()
-
-                search.enable()
-
-    Example: https://github.com/lemon24/reader/blob/f0894d93d8573680c656335ded46ebcf482cf7cd/src/reader/_storage.py#L146
+    Add a test_search.py::test_errors_locked test for each new public method.
 
     """
 
@@ -128,8 +106,7 @@ class Search:
 
     @staticmethod
     def strip_html(text: SQLiteType) -> SQLiteType:
-        # strip_html is not part of the Search interface,
-        # but is part of the private API of this implementation.
+        # Private API, used by tests.
         return strip_html(text)  # type: ignore[no-any-return]
 
     @wrap_exceptions()

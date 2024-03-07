@@ -43,7 +43,7 @@ wrap_exceptions = partial(_sqlite_utils.wrap_exceptions, StorageError)
 
 
 class StorageBase:
-    #: Private storage API.
+    # Private API, used by tests.
     chunk_size = 2**8
 
     @wrap_exceptions(message="while opening database")
@@ -68,7 +68,8 @@ class StorageBase:
 
     @staticmethod
     def setup_db(db: sqlite3.Connection) -> None:
-        """Private storage API (used by tests)."""
+        # Private API, used by tests.
+
         from ._schema import MIGRATION
         from . import MINIMUM_SQLITE_VERSION, REQUIRED_SQLITE_FUNCTIONS
 
