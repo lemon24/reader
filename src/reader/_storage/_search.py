@@ -17,6 +17,7 @@ from typing import Any
 from typing import TypeVar
 
 from . import _entries
+from . import _html_utils
 from . import _sqlite_utils
 from . import Storage
 from .._types import Action
@@ -33,7 +34,6 @@ from ..types import EntrySearchCounts
 from ..types import EntrySearchResult
 from ..types import HighlightedString
 from ..types import SearchSortOrder
-from ._html_utils import strip_html as strip_html_str
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import ddl_transaction
@@ -46,13 +46,6 @@ _T = TypeVar('_T')
 
 
 log = logging.getLogger('reader')
-
-
-@functools.lru_cache
-def strip_html(text: SQLiteType) -> SQLiteType:
-    if not isinstance(text, str):
-        return text
-    return strip_html_str(text)
 
 
 wrap_exceptions = partial(_sqlite_utils.wrap_exceptions, SearchError)
@@ -105,9 +98,12 @@ class Search:
         _sqlite_utils.setup_db(db, id=APPLICATION_ID)
 
     @staticmethod
+    @functools.lru_cache
     def strip_html(text: SQLiteType) -> SQLiteType:
         # Private API, used by tests.
-        return strip_html(text)  # type: ignore[no-any-return]
+        if not isinstance(text, str):
+            return text
+        return _html_utils.strip_html(text)
 
     @wrap_exceptions()
     def enable(self) -> None:
@@ -317,8 +313,8 @@ class Search:
             if not final:
                 final.append((None, None))
 
-            stripped_title = self.strip_html(entry.title or '')
-            feed_title = entry.feed.user_title or entry.feed.title or ''
+            stripped_title = self.strip_html(entry.title)
+            feed_title = entry.feed.user_title or entry.feed.title
             is_feed_user_title = bool(entry.feed.user_title)
             stripped_feed_title = self.strip_html(feed_title)
 

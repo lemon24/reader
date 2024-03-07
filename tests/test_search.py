@@ -13,7 +13,6 @@ from reader import SearchError
 from reader import StorageError
 from reader._storage import Storage
 from reader._storage._search import Search
-from reader._storage._search import strip_html
 from reader._storage._sqlite_utils import DBError
 from reader._storage._sqlite_utils import require_version
 
@@ -26,7 +25,7 @@ STRIP_HTML_DATA = [(i, i) for i in [None, 10, 11.2, b'aabb', b'aa<br>bb']] + [
 
 @pytest.mark.parametrize('input, expected_output', STRIP_HTML_DATA)
 def test_strip_html(input, expected_output):
-    output = strip_html(input)
+    output = Search.strip_html(input)
     if isinstance(output, str):
         output = '\n'.join(output.split())
 
