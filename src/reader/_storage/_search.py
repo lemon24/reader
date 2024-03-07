@@ -6,7 +6,6 @@ import logging
 import random
 import sqlite3
 import string
-from collections import OrderedDict
 from collections.abc import Callable
 from collections.abc import Iterable
 from contextlib import closing
@@ -408,11 +407,10 @@ class Search:
             )
             return sql_query, context
 
-        row_factory = partial(
-            entry_search_result_factory,
-            before_mark=before_mark,
-            after_mark=after_mark,
+        extract = partial(
+            HighlightedString.extract, before=before_mark, after=after_mark
         )
+        row_factory = partial(entry_search_result_factory, extract=extract)
 
         chunk_size = self.storage.chunk_size
 
@@ -577,36 +575,19 @@ SEARCH_ENTRIES_SORT: dict[str, Callable[[Query], None]] = {
 
 
 def entry_search_result_factory(
-    t: tuple[Any, ...], before_mark: str, after_mark: str
+    t: tuple[Any, ...], extract: Callable[[str], HighlightedString]
 ) -> EntrySearchResult:
-    (
-        entry_id,
-        feed_url,
-        rank,
-        title,
-        feed_title,
-        is_feed_user_title,
-        content,
-        *_,
-    ) = t
+    entry_id, feed_url, rank, title, feed_title, is_feed_user_title, content, *_ = t
     content = json.loads(content)
 
     metadata = {}
     if title:
-        metadata['.title'] = HighlightedString.extract(title, before_mark, after_mark)
+        metadata['.title'] = extract(title)
     if feed_title:
-        metadata[
-            '.feed.title' if not is_feed_user_title else '.feed.user_title'
-        ] = HighlightedString.extract(feed_title, before_mark, after_mark)
+        path = '.feed.title' if not is_feed_user_title else '.feed.user_title'
+        metadata[path] = extract(feed_title)
 
-    rv_content: dict[str, HighlightedString] = OrderedDict(
-        (
-            c['path'],
-            HighlightedString.extract(c['value'], before_mark, after_mark),
-        )
-        for c in content
-        if c['path']
-    )
+    rv_content = {c['path']: extract(c['value']) for c in content if c['path']}
 
     return EntrySearchResult(
         feed_url,
