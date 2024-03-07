@@ -61,6 +61,9 @@ QUERY_EXC = dict.fromkeys(
     InvalidSearchQueryError,
 )
 
+# 255 letters / 4.7 letters per word (average in English)
+TOKENS = 54
+
 
 class Search:
 
@@ -390,26 +393,16 @@ class Search:
         limit: int | None = None,
         starting_after: tuple[str, str] | None = None,
     ) -> Iterable[EntrySearchResult]:
-        random_mark = ''.join(
-            random.choices(string.ascii_letters + string.digits, k=20)
-        )
-        before_mark = f'>>>{random_mark}>>>'
-        after_mark = f'<<<{random_mark}<<<'
+        marker = ''.join(random.choices(string.ascii_letters + string.digits, k=20))
+        before = f'>>>{marker}>>>'
+        after = f'<<<{marker}<<<'
 
         def make_query() -> tuple[Query, dict[str, Any]]:
             sql_query, context = make_search_entries_query(filter, sort)
-            context.update(
-                query=query,
-                before_mark=before_mark,
-                after_mark=after_mark,
-                # 255 letters / 4.7 letters per word (average in English)
-                snippet_tokens=54,
-            )
+            context.update(query=query, before=before, after=after, tokens=TOKENS)
             return sql_query, context
 
-        extract = partial(
-            HighlightedString.extract, before=before_mark, after=after_mark
-        )
+        extract = partial(HighlightedString.extract, before=before, after=after)
         row_factory = partial(entry_search_result_factory, extract=extract)
 
         chunk_size = self.storage.chunk_size
@@ -507,21 +500,12 @@ def make_search_entries_query(
             _id,
             _feed,
             rank,
-            snippet(
-                entries_search, 0, :before_mark, :after_mark, '...',
-                :snippet_tokens
-            ) AS title,
-            snippet(
-                entries_search, 2, :before_mark, :after_mark, '...',
-                :snippet_tokens
-            ) AS feed,
+            snippet(entries_search, 0, :before, :after, '...', :tokens) AS title,
+            snippet(entries_search, 2, :before, :after, '...', :tokens) AS feed,
             _is_feed_user_title AS is_feed_user_title,
             json_object(
                 'path', _content_path,
-                'value', snippet(
-                    entries_search, 1,
-                    :before_mark, :after_mark, '...', :snippet_tokens
-                ),
+                'value', snippet(entries_search, 1, :before, :after, '...', :tokens),
                 'rank', rank
             ) AS content
             """
