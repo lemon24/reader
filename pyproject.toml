@@ -102,7 +102,7 @@ tests = [
     "pytest>=4",
     "pytest-randomly",
     "pytest-subtests",
-    "flaky",
+    "pytest-rerunfailures",
     "coverage",
     "pytest-cov",
     "requests-mock",
@@ -153,7 +153,6 @@ markers = [
     "requires_lxml: mark a test to only run in places where we have lxml.",
     "apptest: mark a test as a web app test (skipped sometimes).",
 ]
-addopts = "--no-success-flaky-report"
 filterwarnings = [
     "ignore:No parser was explicitly specified::reader._html_utils",
 ]

@@ -294,7 +294,6 @@ def test_optimize_with(reader):
     assert count_optimize_calls(statements) == 1
 
 
-@pytest.mark.flaky(max_runs=5)
 @pytest.mark.skipif("sys.implementation.name != 'cpython'")
 @pytest.mark.slow
 @rename_argument('reader', 'reader_shared')
