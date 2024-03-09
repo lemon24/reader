@@ -282,30 +282,22 @@ Getting feeds
 -------------
 
 As seen in the previous sections,
-:meth:`~Reader.get_feed` returns a :class:`Feed` object
-with more information about a feed::
+:meth:`~Reader.get_feed` returns a :class:`Feed` object::
 
-    >>> from prettyprinter import pprint, install_extras;
-    >>> install_extras(include=['dataclasses'])
     >>> feed = reader.get_feed(feed)
     >>> pprint(feed)
-    reader.types.Feed(
-        url='http://www.hellointernet.fm/podcast?format=rss',
-        updated=datetime.datetime(
-            year=2020,
-            month=2,
-            day=28,
-            hour=9,
-            minute=34,
-            second=2,
-            tzinfo=datetime.timezone.utc
-        ),
+    Feed(url='http://www.hellointernet.fm/podcast?format=rss',
+        updated=datetime.datetime(2020, 2, 28, 9, 34, 2, tzinfo=datetime.timezone.utc),
         title='Hello Internet',
         link='http://www.hellointernet.fm/',
         author='CGP Grey',
+        subtitle='CGP Grey and Brady Haran talk about YouTube, life, work, whatever.',
+        version='rss20',
+        user_title=None,
         added=datetime.datetime(2020, 10, 12, tzinfo=datetime.timezone.utc),
-        last_updated=datetime.datetime(2020, 10, 12, tzinfo=datetime.timezone.utc)
-    )
+        last_updated=datetime.datetime(2020, 10, 12, tzinfo=datetime.timezone.utc),
+        last_exception=None,
+        updates_enabled=True)
 
 To get all the feeds, use the :meth:`~Reader.get_feeds` method::
 
@@ -355,7 +347,7 @@ You can get all the entries, most-recent first,
 by using :meth:`~Reader.get_entries()`,
 which generates :class:`Entry` objects::
 
-    >>> for entry, _ in zip(reader.get_entries(), range(10)):
+    >>> for entry in reader.get_entries(limit=10):
     ...     print(entry.feed.title, '-', entry.title)
     ...
     Cortex - 106: Clear and Boring
@@ -370,12 +362,11 @@ Here is an example of getting entries for a single feed::
 
     >>> feed.title
     'Hello Internet'
-    >>> entries = list(reader.get_entries(feed=feed))
-    >>> for entry in entries[:2]:
-    ...     print(entry.feed.title, '-', entry.title)
+    >>> for entry in reader.get_entries(feed=feed, limit=2):
+    ...     print(entry.title)
     ...
-    Hello Internet - H.I. #136: Dog Bingo
-    Hello Internet - H.I. #135: Place Your Bets
+    H.I. #136: Dog Bingo
+    H.I. #135: Place Your Bets
 
 
 
@@ -385,9 +376,11 @@ Entry flags
 Entries can be marked as :attr:`~Entry.read` or :attr:`~Entry.important`.
 These flags can be used for filtering::
 
-    >>> reader.mark_entry_as_read(entries[0])
-    >>> entries = list(reader.get_entries(feed=feed, read=False))
-    >>> for entry in entries[:2]:
+    >>> entry = next(reader.get_entries(feed=feed))
+    >>> entry.title
+    'H.I. #136: Dog Bingo'
+    >>> reader.mark_entry_as_read(entry)
+    >>> for entry in reader.get_entries(feed=feed, read=False, limit=2):
     ...     print(entry.title)
     ...
     H.I. #135: Place Your Bets
