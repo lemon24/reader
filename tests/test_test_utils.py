@@ -2,7 +2,11 @@ from utils import reload_module
 
 
 def test_reload_module(monkeypatch, reload_module):
-    import os, os.path, urllib.request, ntpath, posixpath
+    import ntpath
+    import os
+    import os.path
+    import posixpath
+    import urllib.request
 
     os_path_by_name = {'nt': ntpath, 'posix': posixpath}
 

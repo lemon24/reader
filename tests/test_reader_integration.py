@@ -2,10 +2,10 @@ import socketserver
 import threading
 
 import pytest
-from utils import make_url_base
-from utils import utc_datetime
 
 from reader import USER_AGENT
+from utils import make_url_base
+from utils import utc_datetime
 
 
 class Server(socketserver.TCPServer):

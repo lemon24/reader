@@ -11,8 +11,10 @@ import requests
 
 from . import TimeoutType
 
+
 if TYPE_CHECKING:  # pragma: no cover
     from typing_extensions import Self
+
     from . import Headers
     from . import RequestHook
     from . import ResponseHook

@@ -20,8 +20,10 @@ from typing import Union
 
 from ..._utils import lazy_import
 
+
 if TYPE_CHECKING:  # pragma: no cover
     import requests
+
     from ._lazy import SessionWrapper as SessionWrapper
 
 __getattr__ = lazy_import(__name__, ['SessionWrapper', 'TimeoutHTTPAdapter'])
@@ -115,7 +117,8 @@ class SessionFactory:
             SessionWrapper:
 
         """
-        from . import SessionWrapper, TimeoutHTTPAdapter
+        from . import SessionWrapper
+        from . import TimeoutHTTPAdapter
 
         session = SessionWrapper(
             request_hooks=list(self.request_hooks),

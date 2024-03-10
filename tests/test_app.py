@@ -3,12 +3,13 @@ import sys
 import pytest
 import requests
 import wsgiadapter
-from fakeparser import Parser
-from utils import utc_datetime as datetime
 
+from fakeparser import Parser
 from reader._app import create_app
 from reader._config import make_reader_config
 from reader._config import make_reader_from_config
+from utils import utc_datetime as datetime
+
 
 # mechanicalsoup depends on lxml, but we don't have that everywhere.
 try:

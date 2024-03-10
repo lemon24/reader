@@ -39,6 +39,8 @@ Print the titles of the unread entries::
 
 __version__ = '3.13.dev0'
 
+# isort: off
+
 from .core import (
     Reader as Reader,
     make_reader as make_reader,

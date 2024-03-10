@@ -54,6 +54,7 @@ from .types import SearchSortOrder
 from .types import TagFilterInput
 from .types import TristateFilterInput
 
+
 if TYPE_CHECKING:  # pragma: no cover
     from typing_extensions import Self
 

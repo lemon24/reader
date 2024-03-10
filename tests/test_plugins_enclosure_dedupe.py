@@ -1,7 +1,6 @@
 from fakeparser import Parser
-from utils import utc_datetime as datetime
-
 from reader import Enclosure
+from utils import utc_datetime as datetime
 
 
 def test_plugin(make_reader):

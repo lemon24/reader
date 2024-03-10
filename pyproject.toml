@@ -179,3 +179,14 @@ module = [
     "reader._vendor.feedparser.*",
 ]
 ignore_errors = true
+
+[tool.isort]
+profile = "black"
+py_version = 310
+src_paths = ["src", "tests"]
+extend_skip = ["examples", "src/reader/_vendor"]
+skip_gitignore = true
+filter_files = true
+force_single_line = true
+order_by_type = false
+lines_after_imports = 2

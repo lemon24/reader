@@ -1,6 +1,7 @@
 import inspect
 import random
 
+
 context = {}
 exec('from reader import *', context)
 context.pop('__builtins__')

@@ -31,6 +31,7 @@ from .types import ExceptionInfo
 from .types import UpdatedFeed
 from .types import UpdateResult
 
+
 if TYPE_CHECKING:  # pragma: no cover
     from ._parser import Parser
     from ._types import FeedFilter

@@ -30,6 +30,7 @@ def serve(config, host, port, plugin, verbose):
     """Start a local HTTP reader server."""
     setup_logging(verbose)
     from werkzeug.serving import run_simple
+
     from . import create_app
 
     if plugin:

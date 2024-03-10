@@ -6,7 +6,6 @@ import click
 import pytest
 import yaml
 from click.testing import CliRunner
-from utils import make_url_base
 
 from reader import Reader
 from reader import ReaderError
@@ -14,6 +13,7 @@ from reader import UpdateHookError
 from reader._cli import cli
 from reader._cli import config_option
 from reader.types import MISSING
+from utils import make_url_base
 
 
 @pytest.fixture(autouse=True)

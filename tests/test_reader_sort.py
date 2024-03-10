@@ -2,6 +2,7 @@ from datetime import timedelta
 from functools import partial
 
 import pytest
+
 from fakeparser import Parser
 from utils import rename_argument
 from utils import utc_datetime as datetime

@@ -1,15 +1,15 @@
 import typing
 
 import pytest
-from fakeparser import Parser
-from utils import rename_argument
-from utils import utc_datetime as datetime
 
+from fakeparser import Parser
 from reader import Content
 from reader import Enclosure
 from reader import EntryCounts
 from reader import FeedCounts
 from reader import make_reader
+from utils import rename_argument
+from utils import utc_datetime as datetime
 
 
 KWARGS_AND_EXPECTED_FEED_COUNTS = [

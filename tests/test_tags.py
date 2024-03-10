@@ -1,15 +1,15 @@
 from contextlib import contextmanager
 
 import pytest
-from fakeparser import Parser
-from utils import parametrize_dict
 
+from fakeparser import Parser
 from reader import Entry
 from reader import EntryNotFoundError
 from reader import Feed
 from reader import FeedNotFoundError
 from reader import TagNotFoundError
 from reader._storage import Storage
+from utils import parametrize_dict
 
 
 @contextmanager

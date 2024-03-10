@@ -7,6 +7,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:  # pragma: no cover
     import bs4
 

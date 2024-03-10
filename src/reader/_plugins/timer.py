@@ -200,7 +200,7 @@ if __name__ == '__main__':
         pass
     end = perf_counter()
 
-    print(f"{end-start:1.6f}")
+    print(f"{end - start:1.6f}")
     print(f"{reader.timer.total('Reader.'):1.6f}")
     print(reader.timer.format_stats())
     print(reader.make_reader_reserved_name('ok'))

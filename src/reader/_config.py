@@ -9,9 +9,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from dataclasses import field
 
-from .plugins import DEFAULT_PLUGINS
 from reader import make_reader
 from reader._plugins import Loader
+
+from .plugins import DEFAULT_PLUGINS
 
 
 MAKE_READER_IMPORT_KWARGS = ('storage_cls', 'search_cls')

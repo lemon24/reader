@@ -11,6 +11,11 @@ from contextlib import nullcontext
 from typing import Any
 from typing import ContextManager
 
+from .._types import FeedForUpdate
+from .._types import ParsedFeed
+from .._utils import MapFunction
+from ..exceptions import InvalidFeedURLError
+from ..exceptions import ParseError
 from . import EntryPair
 from . import EntryPairsParserType
 from . import FeedArgument
@@ -22,11 +27,6 @@ from . import RetrieveResult
 from . import RetrieverType
 from . import wrap_cm_exceptions
 from . import wrap_exceptions
-from .._types import FeedForUpdate
-from .._types import ParsedFeed
-from .._utils import MapFunction
-from ..exceptions import InvalidFeedURLError
-from ..exceptions import ParseError
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
 from ._url_utils import normalize_url

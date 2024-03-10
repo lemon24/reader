@@ -53,6 +53,7 @@ from reader._storage._html_utils import remove_nontext_elements
 from reader.exceptions import EntryNotFoundError
 from reader.types import _get_entry_content
 
+
 log = logging.getLogger('reader.plugins.readtime')
 
 

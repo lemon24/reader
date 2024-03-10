@@ -1,10 +1,10 @@
 import pytest
-from fakeparser import Parser
-from utils import rename_argument
-from utils import utc_datetime as datetime
 
+from fakeparser import Parser
 from reader import Content
 from reader import Entry
+from utils import rename_argument
+from utils import utc_datetime as datetime
 
 
 def get_readtimes(reader):

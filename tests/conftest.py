@@ -6,12 +6,12 @@ from contextlib import closing
 from functools import wraps
 
 import pytest
-import reader_methods
-from utils import monkeypatch_tz
-from utils import reload_module
 
+import reader_methods
 from reader import make_reader as original_make_reader
 from reader._storage import Storage
+from utils import monkeypatch_tz
+from utils import reload_module
 
 
 def pytest_addoption(parser):

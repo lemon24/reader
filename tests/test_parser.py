@@ -6,7 +6,6 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
-from utils import make_url_base
 
 from reader import Feed
 from reader._parser import default_parser
@@ -20,6 +19,7 @@ from reader._parser.requests import SessionWrapper
 from reader._types import FeedData
 from reader._vendor import feedparser
 from reader.exceptions import ParseError
+from utils import make_url_base
 
 
 @pytest.fixture(params=[True, False])
@@ -113,7 +113,8 @@ def _make_http_gzip_url(requests_mock, **_):
         with open(str(feed_path), 'rb') as f:
             body = f.read()
 
-        import io, gzip
+        import gzip
+        import io
 
         compressed_file = io.BytesIO()
         gz = gzip.GzipFile(fileobj=compressed_file, mode='wb')
@@ -796,7 +797,8 @@ RELATIVE_ROOTS = [
 
 @pytest.mark.parametrize('os_name, root', RELATIVE_ROOTS)
 def test_feed_root_relative_root_error(monkeypatch, os_name, root):
-    import ntpath, posixpath
+    import ntpath
+    import posixpath
 
     monkeypatch.setattr('os.name', os_name)
     monkeypatch.setattr('os.path', {'nt': ntpath, 'posix': posixpath}[os_name])
@@ -871,7 +873,8 @@ BAD_PATHS_WITH_OS = [
 
 @pytest.mark.parametrize('os_name, url, reason', BAD_PATHS_WITH_OS)
 def test_normalize_url_errors(monkeypatch, reload_module, os_name, url, reason):
-    import ntpath, posixpath
+    import ntpath
+    import posixpath
 
     data_dir = {'nt': 'C:\\feeds', 'posix': '/feeds'}[os_name]
 

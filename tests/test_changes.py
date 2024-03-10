@@ -1,6 +1,6 @@
 import pytest
-from fakeparser import Parser
 
+from fakeparser import Parser
 from reader import Content
 from reader import StorageError
 from reader._types import Action

@@ -12,6 +12,7 @@ from typing import Union
 
 from ..exceptions import InvalidPluginError
 
+
 if TYPE_CHECKING:  # pragma: no cover
     from . import Reader
 

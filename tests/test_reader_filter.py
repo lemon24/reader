@@ -1,13 +1,13 @@
 import pytest
-from fakeparser import Parser
-from reader_methods import get_feeds
-from utils import rename_argument
-from utils import utc_datetime as datetime
 
+from fakeparser import Parser
 from reader import Enclosure
 from reader import Entry
 from reader import Feed
 from reader import make_reader
+from reader_methods import get_feeds
+from utils import rename_argument
+from utils import utc_datetime as datetime
 
 
 # BEGIN tag filtering tests

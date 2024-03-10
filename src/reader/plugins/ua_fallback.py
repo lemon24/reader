@@ -23,6 +23,7 @@ Servers/CDNs known to not accept the *reader* UA: Cloudflare, WP Engine.
 """
 import logging
 
+
 _LOG_HEADERS = ['Server', 'X-Powered-By']
 
 log = logging.getLogger(__name__)

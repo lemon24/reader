@@ -24,6 +24,7 @@ from ._sql_utils import BaseQuery
 from ._sql_utils import Query
 from ._sqlite_utils import rowcount_exactly_one
 
+
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
 else:

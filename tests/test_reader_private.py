@@ -3,11 +3,9 @@ from contextlib import contextmanager
 from datetime import datetime
 
 import pytest
+
 from fakeparser import Parser
 from fakeparser import ParserThatRemembers
-from utils import utc_datetime
-from utils import utc_datetime as datetime
-
 from reader import Entry
 from reader import EntryNotFoundError
 from reader import Feed
@@ -18,6 +16,8 @@ from reader._parser import RetrieveResult
 from reader._types import EntryData
 from reader._types import FeedData
 from reader._types import FeedFilter
+from utils import utc_datetime
+from utils import utc_datetime as datetime
 
 
 @pytest.mark.parametrize('entry_updated', [utc_datetime(2010, 1, 1), None])

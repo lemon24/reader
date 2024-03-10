@@ -6,8 +6,10 @@ from functools import cached_property
 from traceback import format_exception
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:  # pragma: no cover
-    from ._types import UpdateHook, UpdateHookType
+    from ._types import UpdateHook
+    from ._types import UpdateHookType
 
 
 class _FancyExceptionBase(Exception):

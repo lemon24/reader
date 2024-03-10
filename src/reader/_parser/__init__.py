@@ -30,6 +30,7 @@ from .requests import Headers
 from .requests import SessionFactory
 from .requests import TimeoutType
 
+
 if TYPE_CHECKING:  # pragma: no cover
     from ._lazy import Parser as Parser
 
@@ -66,8 +67,8 @@ def default_parser(
         file_retriever = FileRetriever(feed_root)
 
     def post_init(parser: Parser) -> None:
-        from .http import HTTPRetriever
         from .feedparser import FeedparserParser
+        from .http import HTTPRetriever
         from .jsonfeed import JSONFeedParser
 
         parser.session_factory.timeout = session_timeout

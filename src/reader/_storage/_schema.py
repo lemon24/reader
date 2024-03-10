@@ -230,8 +230,8 @@ def update_from_37_to_38(db: sqlite3.Connection, /) -> None:  # pragma: no cover
 def update_from_38_to_39(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     # https://github.com/lemon24/reader/issues/323
 
-    from ._search import Search
     from ._changes import Changes
+    from ._search import Search
 
     db.execute("ALTER TABLE entries ADD COLUMN sequence BLOB;")
 

@@ -15,10 +15,6 @@ from types import MappingProxyType
 from typing import Any
 from typing import TypeVar
 
-from . import _entries
-from . import _html_utils
-from . import _sqlite_utils
-from . import Storage
 from .._types import Action
 from .._types import Change
 from .._types import EntryFilter
@@ -33,6 +29,10 @@ from ..types import EntrySearchCounts
 from ..types import EntrySearchResult
 from ..types import HighlightedString
 from ..types import SearchSortOrder
+from . import _entries
+from . import _html_utils
+from . import _sqlite_utils
+from . import Storage
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import ddl_transaction

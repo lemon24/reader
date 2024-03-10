@@ -9,9 +9,9 @@ import sys
 import textwrap
 
 import pytest
-from utils import parametrize_dict
 
 import reader.plugins
+from utils import parametrize_dict
 
 
 # these tests take ~1s in total

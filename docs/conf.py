@@ -6,6 +6,7 @@ import unittest.mock
 import packaging.version
 from setuptools.config.pyprojecttoml import read_configuration
 
+
 sys.path.insert(0, os.path.abspath('../src'))
 
 # mock some things "by hand", so we can import reader below without any dependencies
@@ -22,6 +23,7 @@ for name in [
     sys.modules[name] = unittest.mock.Mock()
 
 import reader
+
 
 extensions = [
     'sphinx_rtd_theme',
@@ -155,6 +157,7 @@ texinfo_documents = [
 
 
 import pkgutil
+
 from docutils import nodes
 from sphinx.util.docutils import SphinxDirective
 

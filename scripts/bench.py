@@ -14,14 +14,15 @@ from functools import partial
 
 import click
 
+
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../src'))
 sys.path.insert(0, os.path.join(root_dir, '../tests'))
 
 from fakeparser import Parser
-
 from reader import make_reader
-from reader._app import create_app, get_reader
+from reader._app import create_app
+from reader._app import get_reader
 from reader._config import make_reader_config
 
 

@@ -3,9 +3,8 @@ from unittest.mock import MagicMock
 
 import bs4
 import pytest
-from fakeparser import Parser
-from utils import utc_datetime as datetime
 
+from fakeparser import Parser
 from reader import Content
 from reader import HighlightedString
 from reader import InvalidSearchQueryError
@@ -15,6 +14,7 @@ from reader._storage import Storage
 from reader._storage._search import Search
 from reader._storage._sqlite_utils import DBError
 from reader._storage._sqlite_utils import require_version
+from utils import utc_datetime as datetime
 
 
 STRIP_HTML_DATA = [(i, i) for i in [None, 10, 11.2, b'aabb', b'aa<br>bb']] + [

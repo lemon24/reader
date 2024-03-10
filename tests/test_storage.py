@@ -6,8 +6,6 @@ from unittest.mock import ANY
 from unittest.mock import MagicMock
 
 import pytest
-from utils import rename_argument
-from utils import utc_datetime as datetime
 
 import reader._storage._sqlite_utils
 from reader import EntryNotFoundError
@@ -24,6 +22,8 @@ from reader._types import EntryForUpdate
 from reader._types import EntryUpdateIntent
 from reader._types import FeedData
 from reader._types import FeedUpdateIntent
+from utils import rename_argument
+from utils import utc_datetime as datetime
 
 
 def test_storage_errors_connect(tmp_path):

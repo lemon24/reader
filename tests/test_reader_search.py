@@ -3,12 +3,8 @@ import threading
 from datetime import timezone
 
 import pytest
-from fakeparser import Parser
-from test_reader_counts import entries_per_day
-from utils import rename_argument
-from utils import utc_datetime
-from utils import utc_datetime as datetime
 
+from fakeparser import Parser
 from reader import Content
 from reader import Enclosure
 from reader import EntrySearchCounts
@@ -25,6 +21,10 @@ from reader._storage._search import Search
 from reader._types import Action
 from reader._types import Change
 from reader.exceptions import ChangeTrackingNotEnabledError
+from test_reader_counts import entries_per_day
+from utils import rename_argument
+from utils import utc_datetime
+from utils import utc_datetime as datetime
 
 
 @pytest.fixture(params=[False, True], ids=['without_entries', 'with_entries'])

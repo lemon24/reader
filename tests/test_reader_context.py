@@ -15,11 +15,11 @@ import threading
 import time
 
 import pytest
-from fakeparser import Parser
-from utils import rename_argument
 
+from fakeparser import Parser
 from reader import SearchError
 from reader import StorageError
+from utils import rename_argument
 
 
 # paths for which different connections see the same database

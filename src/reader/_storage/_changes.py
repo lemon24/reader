@@ -12,6 +12,7 @@ from ._sql_utils import parse_schema
 from ._sql_utils import Query
 from ._sqlite_utils import ddl_transaction
 
+
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
 

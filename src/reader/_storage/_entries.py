@@ -36,6 +36,7 @@ from ._sqlite_utils import rowcount_exactly_one
 from ._tags import entry_tags_filter
 from ._tags import feed_tags_filter
 
+
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
 else:

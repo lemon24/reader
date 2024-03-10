@@ -3,9 +3,10 @@ import sys
 
 import pytest
 from click.testing import CliRunner
-from test_reader_filter import setup_reader_for_tags
 
 from reader import make_reader
+from test_reader_filter import setup_reader_for_tags
+
 
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../scripts'))

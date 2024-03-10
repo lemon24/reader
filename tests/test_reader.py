@@ -10,23 +10,10 @@ from enum import Enum
 from itertools import permutations
 
 import pytest
-from fakeparser import BlockingParser
-from fakeparser import Parser
-from reader_methods import enable_and_update_search
-from reader_methods import get_entries
-from reader_methods import get_entries_random
-from reader_methods import get_entries_recent
-from reader_methods import get_feeds
-from reader_methods import search_entries
-from reader_methods import search_entries_random
-from reader_methods import search_entries_recent
-from reader_methods import search_entries_relevant
-from utils import make_url_base
-from utils import rename_argument
-from utils import utc_datetime
-from utils import utc_datetime as datetime
 
 import reader._parser
+from fakeparser import BlockingParser
+from fakeparser import Parser
 from reader import Content
 from reader import Enclosure
 from reader import Entry
@@ -50,6 +37,19 @@ from reader._storage import Storage
 from reader._types import DEFAULT_RESERVED_NAME_SCHEME
 from reader._types import FeedFilter
 from reader._types import FeedUpdateIntent
+from reader_methods import enable_and_update_search
+from reader_methods import get_entries
+from reader_methods import get_entries_random
+from reader_methods import get_entries_recent
+from reader_methods import get_feeds
+from reader_methods import search_entries
+from reader_methods import search_entries_random
+from reader_methods import search_entries_recent
+from reader_methods import search_entries_relevant
+from utils import make_url_base
+from utils import rename_argument
+from utils import utc_datetime
+from utils import utc_datetime as datetime
 
 
 # TODO: testing added/last_updated everywhere is kinda ugly

@@ -1,9 +1,9 @@
 import pytest
+
+from reader._plugins.preview_feed_list import get_alternates
 from test_app import make_app
 from test_app import make_browser
 from test_app import pytestmark
-
-from reader._plugins.preview_feed_list import get_alternates
 
 
 pytestmark = list(pytestmark)

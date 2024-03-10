@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from functools import wraps
 
 import pytest
-from utils import rename_argument
 
 from reader._storage._sqlite_utils import DBError
 from reader._storage._sqlite_utils import ddl_transaction
@@ -21,6 +20,7 @@ from reader._storage._sqlite_utils import SchemaVersionError
 from reader._storage._sqlite_utils import setup_db
 from reader._storage._sqlite_utils import UsageError
 from reader._storage._sqlite_utils import wrap_exceptions
+from utils import rename_argument
 
 
 original_sqlite3_connect = sqlite3.connect

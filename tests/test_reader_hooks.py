@@ -1,16 +1,16 @@
 from functools import partial
 
 import pytest
-from fakeparser import Parser
-from test_reader_private import CustomParser
-from test_reader_private import CustomRetriever
-from utils import utc_datetime as datetime
 
+from fakeparser import Parser
 from reader import EntryUpdateStatus
 from reader import ParseError
 from reader import SingleUpdateHookError
 from reader import UpdateHookErrorGroup
 from reader._types import EntryData
+from test_reader_private import CustomParser
+from test_reader_private import CustomRetriever
+from utils import utc_datetime as datetime
 
 
 def test_after_entry_update_hooks(reader):

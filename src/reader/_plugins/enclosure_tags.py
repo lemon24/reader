@@ -37,6 +37,7 @@ from flask import Response
 from flask import stream_with_context
 from flask import url_for
 
+
 blueprint = Blueprint('enclosure_tags', __name__)
 
 

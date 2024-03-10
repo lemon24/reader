@@ -28,8 +28,6 @@ from flask import stream_with_context
 from flask import url_for
 
 import reader
-from .api_thing import APIError
-from .api_thing import APIThing
 from reader import Content
 from reader import Entry
 from reader import EntrySearchResult
@@ -39,6 +37,9 @@ from reader import ReaderError
 from reader._plugins import Loader
 from reader.types import _get_entry_content
 from reader.types import TristateFilterInput
+
+from .api_thing import APIError
+from .api_thing import APIThing
 
 
 blueprint = Blueprint('reader', __name__)

@@ -1,13 +1,13 @@
 from random import randrange
 
 import pytest
-from fakeparser import Parser
-from utils import utc_datetime as datetime
 
+from fakeparser import Parser
 from reader import Content
 from reader import Entry
 from reader.plugins.entry_dedupe import _is_duplicate_full
 from reader.plugins.entry_dedupe import _normalize
+from utils import utc_datetime as datetime
 
 
 def test_normalize():

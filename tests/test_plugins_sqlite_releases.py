@@ -1,9 +1,9 @@
 import pytest
-from utils import utc_datetime as datetime
 
 from reader._plugins.sqlite_releases import FULL_URL
 from reader._plugins.sqlite_releases import init
 from reader._types import FeedFilter
+from utils import utc_datetime as datetime
 
 
 @pytest.mark.filterwarnings("ignore:No parser was explicitly specified")

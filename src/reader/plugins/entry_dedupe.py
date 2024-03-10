@@ -121,6 +121,7 @@ from reader.exceptions import TagNotFoundError
 from reader.types import EntryUpdateStatus
 from reader.types import Feed
 
+
 log = logging.getLogger('reader.plugins.entry_dedupe')
 
 
@@ -520,8 +521,9 @@ def init_reader(reader):
 
 
 if __name__ == '__main__':  # pragma: no cover
-    import sys
     import logging
+    import sys
+
     from reader import make_reader
 
     db = sys.argv[1]

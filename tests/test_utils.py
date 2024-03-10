@@ -3,6 +3,7 @@ import pytest
 from reader._utils import deprecated
 from reader._utils import deprecated_wrapper
 
+
 # Normally, the stuff in _utils is tested by tests for higher level code,
 # but some of the things aren't always used.
 

@@ -10,8 +10,8 @@ from functools import partial
 from typing import Any
 from typing import TypeVar
 
-from . import _sqlite_utils
 from ..exceptions import StorageError
+from . import _sqlite_utils
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
 
@@ -70,8 +70,9 @@ class StorageBase:
     def setup_db(db: sqlite3.Connection) -> None:
         # Private API, used by tests.
 
+        from . import MINIMUM_SQLITE_VERSION
+        from . import REQUIRED_SQLITE_FUNCTIONS
         from ._schema import MIGRATION
-        from . import MINIMUM_SQLITE_VERSION, REQUIRED_SQLITE_FUNCTIONS
 
         return _sqlite_utils.setup_db(
             db,
