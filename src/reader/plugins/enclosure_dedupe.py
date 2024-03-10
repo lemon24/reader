@@ -12,6 +12,7 @@ Deduplicate the enclosures of an entry by enclosure URL.
     Implemented for https://github.com/lemon24/reader/issues/78.
 
 """
+
 import functools
 
 

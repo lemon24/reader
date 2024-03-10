@@ -13,7 +13,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class _FancyExceptionBase(Exception):
-
     """Exception base that renders a message and __cause__ in str(e).
 
     The message looks something like:

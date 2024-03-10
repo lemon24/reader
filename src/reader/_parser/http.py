@@ -18,7 +18,6 @@ from .requests import SessionWrapper
 
 @dataclass(frozen=True)
 class HTTPRetriever:
-
     """http(s):// retriever that uses Requests.
 
     Roughly following feedparser's implementation[*]_,

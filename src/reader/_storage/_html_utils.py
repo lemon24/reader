@@ -2,6 +2,7 @@
 HTML utilities. Contains no business logic.
 
 """
+
 from __future__ import annotations
 
 import warnings

@@ -21,7 +21,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class TimeoutHTTPAdapter(requests.adapters.HTTPAdapter):
-
     """Add a default timeout to requests.
 
     https://requests.readthedocs.io/en/master/user/advanced/#timeouts
@@ -45,7 +44,6 @@ _T = TypeVar('_T')
 
 @dataclass
 class SessionWrapper:
-
     """Minimal wrapper over a :class:`requests.Session`.
 
     Only provides a limited :meth:`get` method.

@@ -4,6 +4,7 @@ Config file support.
 https://github.com/lemon24/reader/issues/177
 
 """
+
 import copy
 from collections.abc import Mapping
 from dataclasses import dataclass

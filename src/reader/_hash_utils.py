@@ -17,6 +17,7 @@ Design choices explained in https://death.andgravity.com/stable-hashing
 Implemented for https://github.com/lemon24/reader/issues/179
 
 """
+
 from __future__ import annotations
 
 import dataclasses

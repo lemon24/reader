@@ -492,9 +492,11 @@ def feeds():
         (
             feed,
             list(reader.get_tag_keys(feed)),
-            reader.get_entry_counts(feed=feed)
-            if with_counts or sort in FEED_SORT_FANCY
-            else None,
+            (
+                reader.get_entry_counts(feed=feed)
+                if with_counts or sort in FEED_SORT_FANCY
+                else None
+            ),
         )
         for feed in feeds
     )

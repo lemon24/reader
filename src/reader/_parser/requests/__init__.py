@@ -2,6 +2,7 @@
 Requests utilities. Contains no business logic.
 
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator
@@ -30,7 +31,6 @@ __getattr__ = lazy_import(__name__, ['SessionWrapper', 'TimeoutHTTPAdapter'])
 
 
 class RequestHook(Protocol):
-
     """Hook to modify a :class:`~requests.Request` before it is sent."""
 
     def __call__(
@@ -92,7 +92,6 @@ DEFAULT_TIMEOUT = (3.05, 60)
 
 @dataclass
 class SessionFactory:
-
     """Manage the lifetime of a session.
 
     To get new session, :meth:`call<__call__>` the factory directly.

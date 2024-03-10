@@ -6,6 +6,7 @@ but until we have a different implementation it's simpler this way
 (and most of the tests should apply to all Storages anyway).
 
 """
+
 import asyncio
 import concurrent.futures
 import functools

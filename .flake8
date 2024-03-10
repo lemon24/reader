@@ -21,6 +21,8 @@ ignore =
     W503
     # string formatting opinion
     B907
+    # multiple statements on one line, handled by black
+    E704
 per-file-ignores =
     # __init__ modules export names
     **/__init__.py: F401

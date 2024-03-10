@@ -33,7 +33,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class _namedtuple_compat:
-
     """Add namedtuple-like methods to a dataclass."""
 
     # TODO: can we get rid of _namedtuple_compat?
@@ -58,7 +57,6 @@ class _namedtuple_compat:
 
 @dataclass(frozen=True)
 class Feed(_namedtuple_compat):
-
     """Data type representing a feed.
 
     All :class:`~datetime.datetime` attributes are timezone-aware,
@@ -153,7 +151,6 @@ class Feed(_namedtuple_compat):
 
 @dataclass(frozen=True)
 class ExceptionInfo(_namedtuple_compat):
-
     """Data type representing information about an exception.
 
     .. versionadded:: 1.3
@@ -186,7 +183,6 @@ EntryAddedBy = Literal['feed', 'user']
 
 @dataclass(frozen=True)
 class Entry(_namedtuple_compat):
-
     """Data type representing an entry.
 
     All :class:`~datetime.datetime` attributes are timezone-aware,
@@ -359,7 +355,6 @@ class Entry(_namedtuple_compat):
 
 @dataclass(frozen=True)
 class Content(_namedtuple_compat):
-
     """Data type representing a piece of content."""
 
     # WARNING: When changing attributes, keep content_from_obj in sync.
@@ -411,7 +406,6 @@ def _get_entry_content(entry: Entry, prefer_summary: bool = False) -> Content | 
 
 @dataclass(frozen=True)
 class Enclosure(_namedtuple_compat):
-
     """Data type representing an external file."""
 
     # WARNING: When changing attributes, keep enclosure_from_obj in sync.
@@ -428,7 +422,6 @@ class Enclosure(_namedtuple_compat):
 
 @dataclass(frozen=True)
 class HighlightedString:
-
     """A string that has some of its parts highlighted."""
 
     # TODO: show if we're at the start/end of the value
@@ -586,7 +579,6 @@ class HighlightedString:
 
 @dataclass(frozen=True)
 class EntrySearchResult(_namedtuple_compat):
-
     """Data type representing the result of an entry search.
 
     :attr:`metadata` and :attr:`content` are dicts where
@@ -633,7 +625,6 @@ class EntrySearchResult(_namedtuple_compat):
 
 
 class EntryUpdateStatus(enum.Enum):
-
     """Enum representing how an entry was updated.
 
     .. versionadded:: 1.20
@@ -738,18 +729,15 @@ def _entry_argument(entry: EntryInput) -> tuple[str, str]:
 
 
 @overload
-def _resource_argument(resource: GlobalInput) -> tuple[()]:
-    ...  # pragma: no cover
+def _resource_argument(resource: GlobalInput) -> tuple[()]: ...  # pragma: no cover
 
 
 @overload
-def _resource_argument(resource: FeedInput) -> tuple[str]:
-    ...  # pragma: no cover
+def _resource_argument(resource: FeedInput) -> tuple[str]: ...  # pragma: no cover
 
 
 @overload
-def _resource_argument(resource: EntryInput) -> tuple[str, str]:
-    ...  # pragma: no cover
+def _resource_argument(resource: EntryInput) -> tuple[str, str]: ...  # pragma: no cover
 
 
 def _resource_argument(resource: ResourceInput) -> ResourceId:
@@ -864,7 +852,6 @@ TristateFilterInput = Literal[
 
 @dataclass(frozen=True)
 class FeedCounts(_namedtuple_compat):
-
     """Count information about feeds.
 
     .. versionadded:: 1.11
@@ -883,7 +870,6 @@ class FeedCounts(_namedtuple_compat):
 
 @dataclass(frozen=True)
 class EntryCounts(_namedtuple_compat):
-
     """Count information about entries.
 
     .. versionadded:: 1.11
@@ -914,7 +900,6 @@ class EntryCounts(_namedtuple_compat):
 
 @dataclass(frozen=True)
 class EntrySearchCounts(_namedtuple_compat):
-
     """Count information about entry search results.
 
     .. versionadded:: 1.11

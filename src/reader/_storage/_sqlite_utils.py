@@ -2,6 +2,7 @@
 sqlite3 utilities. Contains no business logic.
 
 """
+
 from __future__ import annotations
 
 import functools
@@ -400,7 +401,6 @@ class UsageError(DBError):
 
 
 class LocalConnectionFactory:
-
     """Maintain a set of connections to the same database, one per thread.
 
     connect() on object creation in the creating thread,
@@ -700,7 +700,6 @@ def _make_debug_connection_cls():  # pragma: no cover
 
     @no_type_check
     class DebugConnection(sqlite3.Connection):
-
         """sqlite3 connection subclass for debugging stuff.
 
         >>> debug = logging.getLogger('whatever').debug

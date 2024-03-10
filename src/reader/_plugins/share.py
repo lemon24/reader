@@ -10,6 +10,7 @@ To load::
     python -m reader serve
 
 """
+
 from urllib.parse import quote
 from urllib.parse import urlparse
 

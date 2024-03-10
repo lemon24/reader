@@ -26,6 +26,7 @@ Implemented for https://github.com/lemon24/reader/issues/50.
 Became a plugin in https://github.com/lemon24/reader/issues/52.
 
 """
+
 import tempfile
 from urllib.parse import urlparse
 

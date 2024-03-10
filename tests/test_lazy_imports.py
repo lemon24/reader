@@ -2,6 +2,7 @@
 See https://github.com/lemon24/reader/issues/297 for details.
 
 """
+
 import os
 import pkgutil
 import subprocess

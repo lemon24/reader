@@ -300,7 +300,6 @@ def make_reader(
 
 
 class Reader:
-
     """A feed reader.
 
     Persists feed and entry state, provides operations on them,

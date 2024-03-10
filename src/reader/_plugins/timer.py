@@ -40,6 +40,7 @@ to install them:
     pip install reader[unstable-plugins]
 
 """
+
 import inspect
 from collections.abc import Collection
 from collections.abc import Iterable

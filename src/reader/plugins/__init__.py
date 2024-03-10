@@ -2,6 +2,7 @@
 Built-in plug-ins.
 
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable

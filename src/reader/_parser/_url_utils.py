@@ -4,6 +4,7 @@ URL and path utilities. Contains no business logic.
 In this context, bare paths are considered equivalent to file:// URIs.
 
 """
+
 from __future__ import annotations
 
 import os.path

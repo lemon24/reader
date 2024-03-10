@@ -2,6 +2,7 @@
 HTTP utilities. Contains no business logic.
 
 """
+
 from collections.abc import Iterable
 
 import werkzeug.http

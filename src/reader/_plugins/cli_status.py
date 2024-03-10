@@ -19,6 +19,7 @@ To load::
     python -m reader ...
 
 """
+
 import io
 import shlex
 import sys

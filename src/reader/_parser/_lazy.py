@@ -37,7 +37,6 @@ log = logging.getLogger('reader')
 
 
 class Parser:
-
     """Retrieve and parse feeds by delegating to
     :class:`retrievers <RetrieverType>` and :class:`parsers <ParserType>`.
 

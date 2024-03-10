@@ -50,7 +50,6 @@ EntryPairs = Iterable[tuple[EntryData, Optional[EntryForUpdate]]]
 
 @dataclass(frozen=True)
 class Decider:
-
     """Decide whether a feed or entry should be updated.
 
     Does not interact with any dependencies, only processes data.
@@ -293,7 +292,6 @@ class Decider:
 
 @dataclass(frozen=True)
 class Pipeline:
-
     """Update multiple feeds.
 
     Calls dependencies and hooks in the right order, possibly in parallel.

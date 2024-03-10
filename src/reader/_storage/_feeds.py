@@ -261,9 +261,9 @@ class FeedsMixin(StorageBase):
         context.update(
             feed._asdict(),
             updated=adapt_datetime(feed.updated) if feed.updated else None,
-            last_updated=adapt_datetime(intent.last_updated)
-            if intent.last_updated
-            else None,
+            last_updated=(
+                adapt_datetime(intent.last_updated) if intent.last_updated else None
+            ),
             data_hash=feed.hash,
         )
 

@@ -6,6 +6,7 @@ Contains no business logic.
 See scripts/jscontrols.py for a minimal usage example.
 
 """
+
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 

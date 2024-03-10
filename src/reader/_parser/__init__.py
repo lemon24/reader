@@ -186,7 +186,6 @@ class RetrieveResult(_namedtuple_compat, Generic[T_co]):
 
 
 class RetrieverType(Protocol[T_co]):  # pragma: no cover
-
     """A callable that knows how to retrieve a feed."""
 
     #: Allow :class:`Parser` to :meth:`~io.BufferedIOBase.read`
@@ -234,7 +233,6 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
 
 @runtime_checkable
 class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no cover
-
     """A :class:`RetrieverType` that can change update-relevant information."""
 
     def process_feed_for_update(self, feed: FeedForUpdate) -> FeedForUpdate:
@@ -256,7 +254,6 @@ EntryPair = tuple[EntryData, Optional[EntryForUpdate]]
 
 
 class ParserType(Protocol[T_cv]):  # pragma: no cover
-
     """A callable that knows how to parse a retrieved feed."""
 
     def __call__(
@@ -280,7 +277,6 @@ class ParserType(Protocol[T_cv]):  # pragma: no cover
 
 @runtime_checkable
 class HTTPAcceptParserType(ParserType[T_cv], Protocol):  # pragma: no cover
-
     """A :class:`ParserType` that knows what content it can handle."""
 
     @property
@@ -293,7 +289,6 @@ class HTTPAcceptParserType(ParserType[T_cv], Protocol):  # pragma: no cover
 
 @runtime_checkable
 class EntryPairsParserType(ParserType[T_cv], Protocol):  # pragma: no cover
-
     """A :class:`ParserType` that can modify entry data before being stored."""
 
     def process_entry_pairs(
@@ -314,7 +309,6 @@ class EntryPairsParserType(ParserType[T_cv], Protocol):  # pragma: no cover
 
 
 class FeedArgument(Protocol):  # pragma: no cover
-
     """Any :class:`~reader._types.FeedForUpdate`-like object."""
 
     @property

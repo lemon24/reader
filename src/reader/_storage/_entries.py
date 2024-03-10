@@ -642,12 +642,14 @@ def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> dict[str, Any]:
         updated=adapt_datetime(entry.updated) if entry.updated else None,
         published=adapt_datetime(entry.published) if entry.published else None,
         last_updated=adapt_datetime(intent.last_updated),
-        first_updated=adapt_datetime(intent.first_updated)
-        if intent.first_updated
-        else None,
-        first_updated_epoch=adapt_datetime(intent.first_updated_epoch)
-        if intent.first_updated_epoch
-        else None,
+        first_updated=(
+            adapt_datetime(intent.first_updated) if intent.first_updated else None
+        ),
+        first_updated_epoch=(
+            adapt_datetime(intent.first_updated_epoch)
+            if intent.first_updated_epoch
+            else None
+        ),
         recent_sort=adapt_datetime(intent.recent_sort) if intent.recent_sort else None,
         data_hash=entry.hash,
         data_hash_changed=context.pop('hash_changed'),

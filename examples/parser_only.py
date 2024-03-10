@@ -12,6 +12,7 @@ retrieved asynchronously with `HTTPX <https://www.python-httpx.org/>`_:
     Has your password been pwned? Or, how I almost failed to search a 37 GB text file in under 1 millisecond (in Python)
 
 """  # docstring-end
+
 import asyncio
 import io
 import httpx

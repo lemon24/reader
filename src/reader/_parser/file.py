@@ -16,7 +16,6 @@ from ._url_utils import resolve_root
 
 @dataclass(frozen=True)
 class FileRetriever:
-
     """Bare path and file:// URI parser.
 
     Allows restricting file-system access to a single directory;

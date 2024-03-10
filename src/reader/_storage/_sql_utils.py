@@ -22,6 +22,7 @@ https://death.andgravity.com/query-builder-how
     How to implement: INSERT/UPDATE/DELETE, subqueries, UNION/...
 
 """
+
 from __future__ import annotations
 
 import functools

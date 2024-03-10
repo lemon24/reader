@@ -66,7 +66,6 @@ TOKENS = 54
 
 
 class Search:
-
     """Search provider tightly coupled to the SQLite storage.
 
     Originally done in #122. Updated to use the change tracking API in #323.

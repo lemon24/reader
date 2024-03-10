@@ -73,7 +73,6 @@ _T = TypeVar('_T')
 
 @dataclass(frozen=True)
 class FeedData(_namedtuple_compat):
-
     """Feed data that comes from the feed.
 
     Attributes are a subset of those of :class:`~reader.Feed`.
@@ -113,7 +112,6 @@ class FeedData(_namedtuple_compat):
 
 @dataclass(frozen=True)
 class EntryData(_namedtuple_compat):
-
     """Entry data that comes from the feed.
 
     Attributes are a subset of those of :class:`~reader.Entry`.
@@ -263,7 +261,6 @@ class ParsedFeed(NamedTuple):
 
 
 class FeedForUpdate(NamedTuple):
-
     """Update-relevant information about an existing feed, from Storage."""
 
     #: The feed URL.
@@ -293,7 +290,6 @@ class FeedForUpdate(NamedTuple):
 
 
 class EntryForUpdate(NamedTuple):
-
     """Update-relevant information about an existing entry, from Storage."""
 
     #: The date the entry was last updated, according to the entry.
@@ -311,7 +307,6 @@ class EntryForUpdate(NamedTuple):
 
 
 class FeedUpdateIntent(NamedTuple):
-
     """Data to be passed to Storage when updating a feed."""
 
     #: The feed URL.
@@ -345,7 +340,6 @@ class FeedUpdateIntent(NamedTuple):
 
 
 class EntryUpdateIntent(NamedTuple):
-
     """Data to be passed to Storage when updating a feed."""
 
     #: The entry data.
@@ -501,7 +495,6 @@ def tristate_filter_argument(value: TristateFilterInput, name: str) -> TristateF
 
 
 class EntryFilter(NamedTuple):
-
     """Options for filtering the results entry list operations.
 
     See the :meth:`.Reader.get_entries()` docstring for detailed semantics.
@@ -557,7 +550,6 @@ class EntryFilter(NamedTuple):
 
 
 class FeedFilter(NamedTuple):
-
     """Options for filtering the results feed list operations.
 
     See the :meth:`.Reader.get_feeds()` docstring for detailed semantics.
@@ -1141,7 +1133,6 @@ class StorageType(Protocol):  # pragma: no cover
 
 @runtime_checkable
 class BoundSearchStorageType(StorageType, Protocol):
-
     """A storage that can create a storage-bound search provider."""
 
     def make_search(self) -> SearchType:
@@ -1154,7 +1145,6 @@ class BoundSearchStorageType(StorageType, Protocol):
 
 
 class SearchType(Protocol):  # pragma: no cover
-
     """Search DAO protocol.
 
     Any method can raise :exc:`.SearchError`.
@@ -1267,7 +1257,6 @@ class SearchType(Protocol):  # pragma: no cover
 
 @runtime_checkable
 class ChangeTrackingStorageType(StorageType, Protocol):
-
     """A storage that can track changes to the text content of resources."""
 
     @property

@@ -7,6 +7,7 @@ Note that while the plugin entry points (import names) are relatively stable,
 the contents of the actual plugins is not.
 
 """
+
 import functools
 from contextlib import contextmanager
 from pkgutil import resolve_name
@@ -21,7 +22,6 @@ def raise_exception(message, cause):
 
 
 class Loader:
-
     """Plugin loader.
 
     Allows customizing plugin import/initialization failure behavior.
