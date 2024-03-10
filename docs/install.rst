@@ -24,9 +24,7 @@ These packages will be installed automatically when installing *reader*:
 * `typing-extensions`_ is used for :mod:`typing` backports.
 
 *reader* also depends on the :mod:`sqlite3` standard library module
-(at least SQLite 3.15), and on the `JSON1`_ SQLite extension.
-To use the :ref:`full-text search <fts>` functionality,
-at least SQLite 3.18 with the `FTS5`_ extension is required.
+(at least SQLite 3.18 with the `JSON1`_ and `FTS5`_ extensions).
 
 
 .. _optional dependencies:
