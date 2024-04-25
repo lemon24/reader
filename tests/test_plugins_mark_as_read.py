@@ -7,6 +7,63 @@ from fakeparser import Parser
 from utils import utc_datetime as datetime
 
 
+def test_regex_mark_as_read_backfill(make_reader):
+    key = '.reader.mark-as-read'
+    value = {'title': ['^match']}
+
+    reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
+
+    def get_entry_data(**kwargs):
+        return {
+            (e.id, e.read, e.read_modified, e.important, e.important_modified)
+            for e in reader.get_entries(**kwargs)
+        }
+
+    parser = Parser()
+    reader._parser = parser
+
+    one = parser.feed(1, datetime(2010, 1, 1))
+
+    match_1 = parser.entry(1, 1, datetime(2010, 1, 1), title='match 1')
+    match_2 = parser.entry(1, 2, datetime(2010, 1, 2), title='match 2')
+    match_3 = parser.entry(1, 3, datetime(2010, 1, 2), title='match 3')
+    no_match_4 = parser.entry(1, 4, datetime(2010, 1, 2), title='no match 4')
+    no_match_5 = parser.entry(1, 5, datetime(2010, 1, 2), title='no match 5')
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.add_feed(one)
+
+    reader.update_feeds()
+
+    assert len(list(reader.get_entries(read=True))) == 0
+    assert len(list(reader.get_entries(read=False))) == 5
+
+    reader.set_tag(one, reader.make_reader_reserved_name('mark-as-read.once'))
+    reader.set_tag(one, key, value)
+
+    one = parser.feed(1, datetime(2010, 1, 2))
+    match_new = parser.entry(1, 6, datetime(2010, 1, 2), title='match new')
+    no_match_new = parser.entry(1, 7, datetime(2010, 1, 2), title='no match new')
+
+    reader._now = lambda: datetime(2010, 2, 1)
+    reader.update_feeds()
+
+    assert len(list(reader.get_entries())) == 7
+
+    assert get_entry_data(read=False) == {
+        (no_match_4.id, False, None, None, None),
+        (no_match_5.id, False, None, None, None),
+        (no_match_new.id, False, None, None, None),
+    }
+
+    assert get_entry_data(read=True) == {
+        (match_1.id, True, None, False, None),
+        (match_2.id, True, None, False, None),
+        (match_3.id, True, None, False, None),
+        (match_new.id, True, None, False, None),
+    }
+
+
 def test_regex_mark_as_read(make_reader):
     key = '.reader.mark-as-read'
     value = {'title': ['^match']}
