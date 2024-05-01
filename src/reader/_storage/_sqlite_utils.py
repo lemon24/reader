@@ -459,6 +459,7 @@ class LocalConnectionFactory:
             self._other_threads = True
 
         self._local.db = db = sqlite3.connect(self.path, **self.kwargs)
+        assert db is not None, "for mypy"
         self._local.call_count = 0
 
         # http://threebean.org/blog/atexit-for-threads/
