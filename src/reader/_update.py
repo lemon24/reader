@@ -114,42 +114,39 @@ class Decider:
 
     def should_update_feed(self, new: FeedData, entries_to_update: bool) -> bool:
         old = self.old_feed
-        self.log.debug("old updated %s, new updated %s", old.updated, new.updated)
+
+        if self.stale:
+            # logging for stale happened in process_feed_for_update()
+            return True
 
         if not old.last_updated:
             self.log.info("feed has no last_updated, treating as updated")
             assert not old.updated, "updated must be None if last_updated is None"
             return True
 
-        if not new.updated:
-            self.log.info("feed has no updated, treating as updated")
+        # Some feeds have entries newer than the feed;
+        # we always update the feed if entries changed, for simplicity.
+        # https://github.com/lemon24/reader/issues/76
+        if entries_to_update:
+            self.log.info("feed has entries to update, treating as updated")
             return True
 
-        if self.stale:
-            # logging for stale happened in process_feed_for_update()
-            return True
-
-        # we only care if feed.updated changed if any entries changed:
-        # https://github.com/lemon24/reader/issues/231#issuecomment-812601988
-        #
-        # for RSS, if there's no date element,
-        # feedparser user lastBuildDate as .updated,
-        # which may (obviously) change without the feed actually changing
-        #
-        if entries_to_update and (not old.updated or new.updated > old.updated):
-            self.log.info("feed updated")
-            return True
-
-        # check if the feed content actually changed:
+        # Check if the feed content actually changed:
         # https://github.com/lemon24/reader/issues/179
         if not old.hash or new.hash != old.hash:
-            self.log.debug("feed hash changed, treating as updated")
+            self.log.info("feed hash changed, treating as updated")
             return True
 
-        # Some feeds have entries newer than the feed.
-        # https://github.com/lemon24/reader/issues/76
-        self.log.info("feed not updated, updating entries anyway")
+        # For RSS feeds with no date element,
+        # feedparser user lastBuildDate as .updated,
+        # which can change without the feed actually changing,
+        # so feed.updated is excluded from the hash.
+        # https://github.com/lemon24/reader/issues/231#issuecomment-812601988
+        if new.updated != old.updated:
+            self.log.info("only feed updated changed, skipping")
+            return False
 
+        self.log.info("feed not updated, skipping")
         return False
 
     def should_update_entry(
@@ -236,8 +233,6 @@ class Decider:
                 parsed_feed.http_etag,
                 parsed_feed.http_last_modified,
             )
-        if entries_to_update:
-            return FeedUpdateIntent(self.url, self.now)
         return None
 
     def update(

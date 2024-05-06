@@ -113,7 +113,7 @@ def test_update_feed_updated(reader, update_feed, caplog):
             last_updated=datetime(2010, 1, 3),
         ),
     }
-    assert "feed not updated, updating entries anyway" in caplog.text
+    assert "feed has entries to update, treating as updated" in caplog.text
     caplog.clear()
 
     # Feed gets updated because content (hash) changed.
@@ -130,7 +130,7 @@ def test_update_feed_updated(reader, update_feed, caplog):
     assert "feed hash changed, treating as updated" in caplog.text
     caplog.clear()
 
-    # The feed doesn't change, because .updated is older.
+    # The feed changes if entries changed, regardless of .updated being older.
     # Entries get updated regardless.
     old_feed = parser.feed(1, datetime(2009, 1, 1), title='old-different-title')
     entry_three = parser.entry(1, 3, datetime(2010, 2, 1))
@@ -141,9 +141,7 @@ def test_update_feed_updated(reader, update_feed, caplog):
 
     feed = old_feed.as_feed(
         added=datetime(2010, 1, 1),
-        # doesn't change because it's not newer
-        updated=datetime(2010, 1, 1),
-        # changes because entries changed
+        updated=datetime(2009, 1, 1),
         last_updated=datetime(2010, 1, 4),
     )
     assert set(reader.get_entries()) == {
@@ -163,10 +161,10 @@ def test_update_feed_updated(reader, update_feed, caplog):
             last_updated=datetime(2010, 1, 4),
         ),
     }
-    assert "feed not updated, updating entries anyway" in caplog.text
+    assert "feed has entries to update, treating as updated" in caplog.text
     caplog.clear()
 
-    # The feed doesn't change; despite being newer, no entries have changed.
+    # The feed doesn't change if only .updated changes (and there are no updated entries).
     old_feed = parser.feed(1, datetime(2010, 1, 2), title='old-different-title')
     reader._now = lambda: datetime(2010, 1, 4, 12)
 
@@ -175,8 +173,8 @@ def test_update_feed_updated(reader, update_feed, caplog):
 
     feed = old_feed.as_feed(
         added=datetime(2010, 1, 1),
-        # doesn't change because no entries have changed
-        updated=datetime(2010, 1, 1),
+        # doesn't change because nothing except .updated changed
+        updated=datetime(2009, 1, 1),
         # doesn't change because nothing changed
         last_updated=datetime(2010, 1, 4),
     )
@@ -197,10 +195,11 @@ def test_update_feed_updated(reader, update_feed, caplog):
             last_updated=datetime(2010, 1, 4),
         ),
     }
-    assert "feed not updated, updating entries anyway" in caplog.text
+    assert "only feed updated changed, skipping" in caplog.text
     caplog.clear()
 
-    # The feeds changes because it is newer *and* entries get updated.
+    # The feeds changes because ~~it is newer *and*~~ entries get updated.
+    # TODO: same as "The feed changes if entries changed, regardless ...", remove?
     new_feed = parser.feed(1, datetime(2010, 1, 2), title='new')
     entry_four = parser.entry(1, 4, datetime(2010, 2, 1))
     reader._now = lambda: datetime(2010, 1, 5)
@@ -233,7 +232,7 @@ def test_update_feed_updated(reader, update_feed, caplog):
             last_updated=datetime(2010, 1, 5),
         ),
     }
-    assert "feed updated" in caplog.text
+    assert "feed has entries to update, treating as updated" in caplog.text
     caplog.clear()
 
 
