@@ -166,14 +166,10 @@ class Decider:
             debug("entry new, updating")
             return UpdateReasons()
 
-        new_updated = new.updated or new.published
-        old_updated = old.updated or old.published
-
-        if not new_updated:
-            debug("entry has no updated, updating")
-            return UpdateReasons()
-
-        if not (old_updated and new_updated <= old_updated):
+        # entry.updated was excluded from hash for (fake) symmetry with feed.
+        # https://github.com/lemon24/reader/issues/231#issuecomment-812601988
+        # Unlike feed.updated, we always trust entry.updated (so far).
+        if new.updated != old.updated:
             debug("entry updated, updating")
             return UpdateReasons()
 
@@ -196,12 +192,7 @@ class Decider:
                 )
                 return None
 
-        debug(
-            "entry not updated, skipping (old updated %s, new updated %s)",
-            old_updated,
-            new_updated,
-        )
-
+        debug("entry not updated, skipping")
         return None
 
     def get_entries_to_update(self, pairs: EntryPairs) -> Iterable[EntryUpdateIntent]:

@@ -11,6 +11,9 @@ Version 3.13
 
 Unreleased
 
+* Update entries whenever their :attr:`~Entry.updated` changes,
+  don't compare the values. (:issue:`332`)
+  
 * Fix bug introduced in `version 3.12 <Version 3.12_>`_ causing an assertion error
   when there are multiple entries with the same id in the same feed,
   or when parallel :meth:`~Reader.update_feeds` calls add the same entry.
