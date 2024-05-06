@@ -10,6 +10,7 @@ from itertools import chain
 from itertools import starmap
 from itertools import tee
 from typing import Any
+from typing import NamedTuple
 from typing import Optional
 from typing import TYPE_CHECKING
 
@@ -153,28 +154,28 @@ class Decider:
 
     def should_update_entry(
         self, new: EntryData, old: EntryForUpdate | None
-    ) -> tuple[EntryData | None, bool]:
+    ) -> UpdateReasons | None:
         def debug(msg: str, *args: Any) -> None:
             self.log.debug("entry %r: " + msg, new.id, *args)
 
         if self.stale:
             debug("feed marked as stale, updating")
-            return new, False
+            return UpdateReasons()
 
         if not old:
             debug("entry new, updating")
-            return new, False
+            return UpdateReasons()
 
         new_updated = new.updated or new.published
         old_updated = old.updated or old.published
 
         if not new_updated:
             debug("entry has no updated, updating")
-            return new, False
+            return UpdateReasons()
 
         if not (old_updated and new_updated <= old_updated):
             debug("entry updated, updating")
-            return new, False
+            return UpdateReasons()
 
         # Check if the entry content actually changed:
         # https://github.com/lemon24/reader/issues/179
@@ -187,13 +188,13 @@ class Decider:
         if not old.hash or new.hash != old.hash:
             if (old.hash_changed or 0) < HASH_CHANGED_LIMIT:
                 debug("entry hash changed, updating")
-                return new, True
+                return UpdateReasons((old.hash_changed or 0) + 1)
             else:
                 debug(
                     "entry hash changed, but exceeds the update limit (%i); skipping",
                     HASH_CHANGED_LIMIT,
                 )
-                return None, False
+                return None
 
         debug(
             "entry not updated, skipping (old updated %s, new updated %s)",
@@ -201,7 +202,7 @@ class Decider:
             new_updated,
         )
 
-        return None, False
+        return None
 
     def get_entries_to_update(self, pairs: EntryPairs) -> Iterable[EntryUpdateIntent]:
         for feed_order, (new, old) in reversed(list(enumerate(pairs))):
@@ -209,37 +210,27 @@ class Decider:
             # in response to a permanent redirect.
             assert new.feed_url == self.url, f'{new.feed_url!r}, {self.url!r}'
 
-            is_new = not old
-            processed_new, due_to_hash_changed = self.should_update_entry(new, old)
+            should_update = self.should_update_entry(new, old)
+            if not should_update:
+                continue
 
-            if processed_new:
-                if due_to_hash_changed:
-                    hash_changed = (old and old.hash_changed or 0) + 1
+            if not old:
+                if not self.old_feed.last_updated:
+                    recent_sort = new.published or new.updated or self.global_now
                 else:
-                    hash_changed = 0
+                    recent_sort = self.global_now
+            else:
+                recent_sort = None
 
-                recent_sort: datetime | None
-                if is_new:
-                    if not self.old_feed.last_updated:
-                        recent_sort = (
-                            processed_new.published
-                            or processed_new.updated
-                            or self.global_now
-                        )
-                    else:
-                        recent_sort = self.global_now
-                else:
-                    recent_sort = None
-
-                yield EntryUpdateIntent(
-                    processed_new,
-                    self.now,
-                    self.now if is_new else None,
-                    self.global_now if is_new else None,
-                    recent_sort,
-                    feed_order,
-                    hash_changed,
-                )
+            yield EntryUpdateIntent(
+                new,
+                self.now,
+                self.now if not old else None,
+                self.global_now if not old else None,
+                recent_sort,
+                feed_order,
+                should_update.hash_changed,
+            )
 
     def get_feed_to_update(
         self,
@@ -288,6 +279,10 @@ class Decider:
             feed_to_update = FeedUpdateIntent(self.url, self.old_feed.last_updated)
 
         return feed_to_update, entries_to_update
+
+
+class UpdateReasons(NamedTuple):
+    hash_changed: int = 0
 
 
 @dataclass(frozen=True)

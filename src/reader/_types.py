@@ -361,6 +361,7 @@ class EntryUpdateIntent(NamedTuple):
     first_updated_epoch: datetime | None
 
     #: Sort key for the :meth:`~.Reader.get_entries` ``recent`` sort order.
+    #: If :const:`None`, keep the previous value.
     recent_sort: datetime | None
 
     #: The index of the entry in the feed (zero-based).
