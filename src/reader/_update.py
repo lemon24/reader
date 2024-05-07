@@ -19,6 +19,7 @@ from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
 from ._types import FeedData
 from ._types import FeedForUpdate
+from ._types import FeedToUpdate
 from ._types import FeedUpdateIntent
 from ._types import ParsedFeed
 from ._types import UpdateHooks
@@ -90,7 +91,7 @@ class Decider:
         global_now: datetime,
         parsed_feed: ParsedFeed | None | ParseError,
         entry_pairs: EntryPairs,
-    ) -> tuple[FeedUpdateIntent | None, Iterable[EntryUpdateIntent]]:
+    ) -> tuple[FeedUpdateIntent, Iterable[EntryUpdateIntent]]:
         decider = cls(
             old_feed,
             now,
@@ -224,12 +225,11 @@ class Decider:
         self,
         parsed_feed: ParsedFeed,
         entries_to_update: bool,
-    ) -> FeedUpdateIntent | None:
+    ) -> FeedToUpdate | None:
         if self.should_update_feed(parsed_feed.feed, entries_to_update):
-            return FeedUpdateIntent(
-                self.url,
-                self.now,
+            return FeedToUpdate(
                 parsed_feed.feed,
+                self.now,
                 parsed_feed.http_etag,
                 parsed_feed.http_last_modified,
             )
@@ -239,32 +239,25 @@ class Decider:
         self,
         parsed_feed: ParsedFeed | None | ParseError,
         entry_pairs: EntryPairs,
-    ) -> tuple[FeedUpdateIntent | None, Iterable[EntryUpdateIntent]]:
-        # Not modified.
+    ) -> tuple[FeedUpdateIntent, Iterable[EntryUpdateIntent]]:
+
+        # TODO: move entries_to_update in FeedToUpdate, maybe?
+        entries_to_update: Iterable[EntryUpdateIntent] = ()
+        value: FeedToUpdate | None | ExceptionInfo
+
         if not parsed_feed:
-            # New feed shouldn't be considered new anymore.
-            if not self.old_feed.last_updated:
-                return FeedUpdateIntent(self.url, self.now), ()
+            value = None
+        elif isinstance(parsed_feed, ParseError):
+            value = ExceptionInfo.from_exception(parsed_feed)
+        else:
+            entries_to_update = list(self.get_entries_to_update(entry_pairs))
+            value = self.get_feed_to_update(parsed_feed, bool(entries_to_update))
 
-            # Clear last_exception.
-            if self.old_feed.last_exception:
-                return FeedUpdateIntent(self.url, self.old_feed.last_updated), ()
+        # We always return a FeedUpdateIntent because
+        # we always want to set last_retrieved and update_after (FIXME #332),
+        # and clear last_exception (if set before the update).
 
-            return None, ()
-
-        if isinstance(parsed_feed, ParseError):
-            exc_info = ExceptionInfo.from_exception(parsed_feed)
-            return FeedUpdateIntent(self.url, None, last_exception=exc_info), ()
-
-        entries_to_update = list(self.get_entries_to_update(entry_pairs))
-        feed_to_update = self.get_feed_to_update(parsed_feed, bool(entries_to_update))
-
-        if not feed_to_update and self.old_feed.last_exception:
-            # Clear last_exception.
-            # TODO: Maybe be more explicit about this? (i.e. have a storage method for it)
-            feed_to_update = FeedUpdateIntent(self.url, self.old_feed.last_updated)
-
-        return feed_to_update, entries_to_update
+        return FeedUpdateIntent(self.url, value), entries_to_update
 
 
 class UpdateReasons(NamedTuple):
@@ -392,7 +385,7 @@ class Pipeline:
                 get_total_count = lambda: 0  # noqa: E731
 
             intents = make_intents(entry_pairs)
-            counts = self.update_feed(feed.url, *intents)
+            counts = self.update_feed(*intents)
             total = get_total_count()
 
         except Exception as e:
@@ -416,16 +409,16 @@ class Pipeline:
 
     def update_feed(
         self,
-        url: str,
-        feed: FeedUpdateIntent | None,
+        feed: FeedUpdateIntent,
         entries: Iterable[EntryUpdateIntent],
     ) -> tuple[int, int]:
+        url = feed.url
+
         self.hooks.run('before_feed_update', (url,), url)
 
-        if feed:
-            if entries:
-                self.storage.add_or_update_entries(entries)
-            self.storage.update_feed(feed)
+        if entries:
+            self.storage.add_or_update_entries(entries)
+        self.storage.update_feed(feed)
 
         # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).

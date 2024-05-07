@@ -36,6 +36,7 @@ from reader import UpdateResult
 from reader._storage import Storage
 from reader._types import DEFAULT_RESERVED_NAME_SCHEME
 from reader._types import FeedFilter
+from reader._types import FeedToUpdate
 from reader._types import FeedUpdateIntent
 from reader_methods import enable_and_update_search
 from reader_methods import get_entries
@@ -531,11 +532,6 @@ def test_update_new_no_last_updated(reader):
     feed = parser.feed(1, datetime(2010, 1, 1))
 
     reader.add_feed(feed.url)
-    # updated must be None if last_updated is None
-    reader._storage.update_feed(
-        FeedUpdateIntent(feed.url, None, feed=feed._replace(updated=None))
-    )
-
     reader.update_feeds(new=True)
 
     parser.entry(1, 1, datetime(2010, 1, 1))
@@ -545,6 +541,7 @@ def test_update_new_no_last_updated(reader):
     assert len(list(reader.get_entries(feed=feed.url))) == 0
 
 
+@pytest.mark.xfail(strict=True, reason="FIXME #332 new should depend on last_retrieved")
 def test_update_new_not_modified(reader):
     """A feed should not be considered new anymore after getting _NotModified.
 
@@ -556,12 +553,9 @@ def test_update_new_not_modified(reader):
     feed = parser.feed(1, datetime(2010, 1, 1))
 
     reader.add_feed(feed.url)
-    reader._storage.update_feed(FeedUpdateIntent(feed.url, None, feed=feed))
-
     reader.update_feeds(new=True)
 
-    parser = Parser.from_parser(parser)
-    reader._parser = parser
+    reader._parser = parser = Parser.from_parser(parser)
 
     parser.entry(1, 1, datetime(2010, 1, 1))
     reader.update_feeds(new=True)

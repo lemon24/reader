@@ -307,16 +307,29 @@ class EntryForUpdate(NamedTuple):
 
 
 class FeedUpdateIntent(NamedTuple):
-    """Data to be passed to Storage when updating a feed."""
+    """Data passed to Storage to record a feed update attempt,
+    regardless of the outcome.
+
+    """
 
     #: The feed URL.
     url: str
 
-    #: The time at the start of updating this feed.
-    last_updated: datetime | None
+    #: One of:
+    #: feed data and metadata (the feed was updated),
+    #: None (the feed is unchanged)
+    #: the cause of :exc:`.UpdateError`, if one happened.
+    value: FeedToUpdate | None | ExceptionInfo
 
-    #: The feed data, if any.
-    feed: FeedData | None = None
+
+class FeedToUpdate(NamedTuple):
+    """Data passed to Storage when (successfully) updating a feed."""
+
+    #: The feed data.
+    feed: FeedData
+
+    #: The time at the start of updating this feed.
+    last_updated: datetime
 
     #: The feed's ``ETag`` header;
     #: see :attr:`ParsedFeed.http_etag` for details.
@@ -332,15 +345,9 @@ class FeedUpdateIntent(NamedTuple):
     #: see :attr:`ParsedFeed.http_last_modified` for details.
     http_last_modified: str | None = None
 
-    # TODO: Is there a better way of modeling/enforcing these? A sort of tagged union, maybe? (last_updated should be non-optional then)
-
-    #: Cause of :exc:`.UpdateError`, if any;
-    #: if set, everything else except :attr:`url` should be :const:`None`.
-    last_exception: ExceptionInfo | None = None
-
 
 class EntryUpdateIntent(NamedTuple):
-    """Data to be passed to Storage when updating a feed."""
+    """Data passed to Storage when updating an entry."""
 
     #: The entry data.
     entry: EntryData

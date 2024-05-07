@@ -202,6 +202,9 @@ Data objects
 .. autoclass:: FeedUpdateIntent
     :members:
 
+.. autoclass:: FeedToUpdate
+    :members:
+
 .. autoclass:: EntryUpdateIntent
     :members:
 

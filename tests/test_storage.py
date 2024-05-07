@@ -21,6 +21,7 @@ from reader._types import EntryFilter
 from reader._types import EntryForUpdate
 from reader._types import EntryUpdateIntent
 from reader._types import FeedData
+from reader._types import FeedToUpdate
 from reader._types import FeedUpdateIntent
 from utils import rename_argument
 from utils import utc_datetime as datetime
@@ -221,11 +222,7 @@ def set_entry_recent_sort(storage, feed, entry):
 
 
 def update_feed(storage, feed, entry):
-    storage.update_feed(FeedUpdateIntent(feed.url, entry.updated, feed=feed))
-
-
-def update_feed_last_updated(storage, feed, entry):
-    storage.update_feed(FeedUpdateIntent(feed.url, entry.updated))
+    storage.update_feed(FeedUpdateIntent(feed.url, FeedToUpdate(feed, entry.updated)))
 
 
 def add_or_update_entry(storage, feed, entry):
@@ -312,7 +309,6 @@ def get_entry_counts(storage, _, __):
         get_entry_recent_sort,
         set_entry_recent_sort,
         update_feed,
-        update_feed_last_updated,
         add_or_update_entry,
         add_or_update_entries,
         add_entry,
@@ -465,12 +461,6 @@ def check_iter_locked(db_path, pre_stuff, iter_stuff, chunk_size):
     storage.set_entry_read((feed.url, entry.id), 1, None)
     storage = Storage(db_path, timeout=0)
     storage.set_entry_read((feed.url, entry.id), 0, None)
-
-
-def test_update_feed_last_updated_not_found(db_path):
-    storage = Storage(db_path)
-    with pytest.raises(FeedNotFoundError):
-        storage.update_feed(FeedUpdateIntent('inexistent-feed', datetime(2010, 1, 2)))
 
 
 @pytest.fixture
