@@ -315,6 +315,9 @@ class FeedUpdateIntent(NamedTuple):
     #: The feed URL.
     url: str
 
+    #: The time at the start of updating this feed.
+    last_retrieved: datetime
+
     #: One of:
     #: feed data and metadata (the feed was updated),
     #: None (the feed is unchanged)

@@ -83,6 +83,8 @@ class FeedsMixin(StorageBase):
                     http_etag = NULL,
                     http_last_modified = NULL,
                     stale = 0,
+                    update_after = NULL,
+                    last_retrieved = NULL,
                     last_updated = NULL,
                     last_exception = NULL
                 WHERE url = ?;
@@ -227,9 +229,12 @@ class FeedsMixin(StorageBase):
 
     @wrap_exceptions()
     def update_feed(self, intent: FeedUpdateIntent) -> None:
-        url, value = intent
+        url, _, value = intent
 
-        context: dict[str, Any] = {'url': url}
+        context: dict[str, Any] = {
+            'url': url,
+            'last_retrieved': adapt_datetime(intent.last_retrieved),
+        }
         expressions: list[str] = []
 
         if isinstance(value, FeedToUpdate):
@@ -245,8 +250,9 @@ class FeedsMixin(StorageBase):
             )
             context.pop('hash', None)
 
-            expressions.extend(f"{n} = :{n}" for n in context if n != 'url')
             expressions.append("stale = 0")
+
+        expressions.extend(f"{n} = :{n}" for n in context if n != 'url')
 
         if isinstance(value, ExceptionInfo):
             context['last_exception'] = json.dumps(value._asdict())
@@ -342,6 +348,6 @@ def feed_filter(query: Query, filter: FeedFilter) -> dict[str, Any]:
     if updates_enabled is not None:
         query.WHERE(f"{'' if updates_enabled else 'NOT'} updates_enabled")
     if new is not None:
-        query.WHERE(f"last_updated is {'' if new else 'NOT'} NULL")
+        query.WHERE(f"last_retrieved is {'' if new else 'NOT'} NULL")
 
     return context

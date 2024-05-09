@@ -257,7 +257,7 @@ class Decider:
         # we always want to set last_retrieved and update_after (FIXME #332),
         # and clear last_exception (if set before the update).
 
-        return FeedUpdateIntent(self.url, value), entries_to_update
+        return FeedUpdateIntent(self.url, self.now, value), entries_to_update
 
 
 class UpdateReasons(NamedTuple):

@@ -222,7 +222,11 @@ def set_entry_recent_sort(storage, feed, entry):
 
 
 def update_feed(storage, feed, entry):
-    storage.update_feed(FeedUpdateIntent(feed.url, FeedToUpdate(feed, entry.updated)))
+    storage.update_feed(
+        FeedUpdateIntent(
+            feed.url, datetime(2010, 1, 1), FeedToUpdate(feed, entry.updated)
+        )
+    )
 
 
 def add_or_update_entry(storage, feed, entry):

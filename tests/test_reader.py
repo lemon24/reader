@@ -541,7 +541,6 @@ def test_update_new_no_last_updated(reader):
     assert len(list(reader.get_entries(feed=feed.url))) == 0
 
 
-@pytest.mark.xfail(strict=True, reason="FIXME #332 new should depend on last_retrieved")
 def test_update_new_not_modified(reader):
     """A feed should not be considered new anymore after getting _NotModified.
 
@@ -555,7 +554,7 @@ def test_update_new_not_modified(reader):
     reader.add_feed(feed.url)
     reader.update_feeds(new=True)
 
-    reader._parser = parser = Parser.from_parser(parser)
+    parser.reset_mode()
 
     parser.entry(1, 1, datetime(2010, 1, 1))
     reader.update_feeds(new=True)
@@ -670,7 +669,7 @@ def test_update_feeds_parse_error_on_retriever_enter(reader, workers):
 
     reader.update_feeds(workers=workers)
 
-    assert {f.url for f in reader.get_feeds(new=True)} == {'1', '2', '3'}
+    assert {f.url for f in reader.get_feeds(new=True)} == set()
     assert {f.url for f in reader.get_feeds(broken=True)} == {'1', '2', '3'}
 
 
