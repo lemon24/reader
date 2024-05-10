@@ -415,6 +415,8 @@ def get_entries_query(
             feeds.last_updated
             feeds.last_exception
             feeds.updates_enabled
+            feeds.update_after
+            feeds.last_retrieved
             entries.id
             entries.updated
             entries.title
@@ -444,7 +446,7 @@ def get_entries_query(
 
 
 def entry_factory(row: tuple[Any, ...]) -> Entry:
-    feed = feed_factory(row[0:12])
+    feed = feed_factory(row[0:14])
     (
         id,
         updated,
@@ -464,7 +466,7 @@ def entry_factory(row: tuple[Any, ...]) -> Entry:
         last_updated,
         original_feed,
         sequence,
-    ) = row[12:30]
+    ) = row[14:32]
     return Entry(
         id,
         convert_timestamp(updated) if updated else None,

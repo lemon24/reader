@@ -285,6 +285,8 @@ def get_feeds_query(filter: FeedFilter, sort: FeedSort) -> tuple[Query, dict[str
             'last_updated',
             'last_exception',
             'updates_enabled',
+            'update_after',
+            'last_retrieved',
         )
         .FROM("feeds")
         .scrolling_window_sort_key(FEED_SORT_KEYS[sort])
@@ -307,7 +309,9 @@ def feed_factory(row: tuple[Any, ...]) -> Feed:
         last_updated,
         last_exception,
         updates_enabled,
-    ) = row[:12]
+        update_after,
+        last_retrieved,
+    ) = row[:14]
     return Feed(
         url,
         convert_timestamp(updated) if updated else None,
@@ -321,6 +325,8 @@ def feed_factory(row: tuple[Any, ...]) -> Feed:
         convert_timestamp(last_updated) if last_updated else None,
         ExceptionInfo(**json.loads(last_exception)) if last_exception else None,
         updates_enabled == 1,
+        convert_timestamp(update_after) if update_after else None,
+        convert_timestamp(last_retrieved) if last_retrieved else None,
     )
 
 

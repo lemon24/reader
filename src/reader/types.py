@@ -119,7 +119,7 @@ class Feed(_namedtuple_compat):
     #: .. versionadded:: 1.3
     added: datetime = cast(datetime, None)
 
-    #: The date when the feed was last retrieved by reader.
+    #: The date when the feed was last (successfully) updated by reader.
     #:
     #: .. versionadded:: 1.3
     last_updated: datetime | None = None
@@ -138,6 +138,18 @@ class Feed(_namedtuple_compat):
     #:
     #: .. versionadded:: 1.11
     updates_enabled: bool = True
+
+    #: The earliest time the feed will next be updated
+    #: (when using scheduled updates).
+    #:
+    #: .. versionadded:: 3.13
+    update_after: datetime | None = None
+
+    #: The date when the feed was last retrieved by reader,
+    #: regardless of the outcome.
+    #:
+    #: .. versionadded:: 3.13
+    last_retrieved: datetime | None = None
 
     @property
     def resource_id(self) -> tuple[str]:
