@@ -979,7 +979,7 @@ class Reader:
             self._update_hooks.run('before_feeds_update', None)
 
         with make_map as map:
-            yield from Pipeline.from_reader(self, map).update(filter)
+            yield from Pipeline(self, map).update(filter)
 
         if _call_feeds_update_hooks:
             hook_errors = self._update_hooks.group(
