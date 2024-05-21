@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import random
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
@@ -12,6 +13,7 @@ from typing import Any
 from typing import NamedTuple
 from typing import Optional
 from typing import TYPE_CHECKING
+from typing import TypedDict
 
 from ._types import EntryData
 from ._types import EntryForUpdate
@@ -59,6 +61,7 @@ class Decider:
     old_feed: FeedForUpdate
     now: datetime
     global_now: datetime
+    config: Config
     log: Any = log
 
     @classmethod
@@ -85,6 +88,7 @@ class Decider:
         old_feed: FeedForUpdate,
         now: datetime,
         global_now: datetime,
+        config: Config,
         parsed_feed: ParsedFeed | None | ParseError,
         entry_pairs: EntryPairs,
     ) -> tuple[FeedUpdateIntent, Iterable[EntryUpdateIntent]]:
@@ -92,6 +96,7 @@ class Decider:
             old_feed,
             now,
             global_now,
+            config,
             PrefixLogger(log, ["update feed %r" % old_feed.url]),
         )
         return decider.update(parsed_feed, entry_pairs)
@@ -250,14 +255,78 @@ class Decider:
             value = self.get_feed_to_update(parsed_feed, bool(entries_to_update))
 
         # We always return a FeedUpdateIntent because
-        # we always want to set last_retrieved and update_after (FIXME #332),
+        # we always want to set last_retrieved and update_after,
         # and clear last_exception (if set before the update).
 
-        return FeedUpdateIntent(self.url, self.now, value), entries_to_update
+        update_after = next_update_after(self.global_now, **self.config)
+        return (
+            FeedUpdateIntent(self.url, self.now, update_after, value),
+            entries_to_update,
+        )
 
 
 class UpdateReasons(NamedTuple):
     hash_changed: int = 0
+
+
+class Config(TypedDict):
+    interval: int
+    jitter: float
+
+
+DEFAULT_CONFIG = Config(interval=3600, jitter=0)
+CONFIG_KEY = 'update'
+
+
+def flatten_config(config: Any, default: Config) -> Config:
+    rv = default.copy()
+
+    if not isinstance(config, dict):
+        log.warning(
+            "invalid update config, expected dict, got %s", type(config).__name__
+        )
+        return rv
+
+    set_number('inteval', config, rv, int)  # type: ignore
+    set_number('jitter', config, rv, float, max=1)  # type: ignore
+    return rv
+
+
+def set_number(name, src, dst, type, min=0, max=float('inf')):  # type: ignore
+    try:
+        value = src[name]
+    except KeyError:
+        return
+
+    try:
+        value = type(value)
+    except (TypeError, ValueError) as e:
+        log.warning("invalid update config .%s: %s", name, e)
+        return
+
+    if not (min <= value <= max):
+        log.warning(
+            "invalid update config .%s: must be between %s and %s: %s",
+            name,
+            min,
+            max,
+            value,
+        )
+        return
+
+    dst[name] = value
+
+
+# start on a Monday, so weekly amounts of seconds line up
+UPDATE_AFTER_START = datetime(1970, 1, 5)
+EPOCH_OFFSET = (UPDATE_AFTER_START - datetime(1970, 1, 1)).total_seconds()
+
+
+def next_update_after(now: datetime, interval: int, jitter: float = 0) -> datetime:
+    now_s = (now.replace(tzinfo=None) - UPDATE_AFTER_START).total_seconds()
+    rv_s = int((now_s // interval + 1 + random.random() * jitter) * interval)
+    rv = datetime.utcfromtimestamp(rv_s + EPOCH_OFFSET).replace(tzinfo=now.tzinfo)
+    return rv
 
 
 @dataclass(frozen=True)
@@ -303,8 +372,12 @@ class Pipeline:
         #
         global_now = self.reader._now()
 
+        config_key = self.reader.make_reader_reserved_name(CONFIG_KEY)
+        config = flatten_config(self.reader.get_tag((), config_key, {}), DEFAULT_CONFIG)
+
+        process_parse_result = partial(self.process_parse_result, global_now, config)
+
         is_parallel = self.map is not map
-        process_parse_result = partial(self.process_parse_result, global_now)
 
         # ಠ_ಠ
         # The pipeline is not equipped to handle ParseErrors
@@ -350,11 +423,22 @@ class Pipeline:
     def process_parse_result(
         self,
         global_now: datetime,
+        config: Config,
         feed: FeedForUpdate,
         result: ParsedFeed | None | ParseError,
     ) -> tuple[str, UpdatedFeed | None | Exception]:
+        # TODO: don't duplicate code from update()
+        # TODO: the feed tag value should come from get_feeds_for_update()
+        config_key = self.reader.make_reader_reserved_name(CONFIG_KEY)
+        config = flatten_config(self.reader.get_tag(feed, config_key, {}), config)
+
         make_intents = partial(
-            self.decider.make_intents, feed, self.reader._now(), global_now, result
+            self.decider.make_intents,
+            feed,
+            self.reader._now(),
+            global_now,
+            config,
+            result,
         )
 
         try:

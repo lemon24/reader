@@ -229,11 +229,12 @@ class FeedsMixin(StorageBase):
 
     @wrap_exceptions()
     def update_feed(self, intent: FeedUpdateIntent) -> None:
-        url, _, value = intent
+        url, _, _, value = intent
 
         context: dict[str, Any] = {
             'url': url,
             'last_retrieved': adapt_datetime(intent.last_retrieved),
+            'update_after': adapt_datetime(intent.update_after),
         }
         expressions: list[str] = []
 
