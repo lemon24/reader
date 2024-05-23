@@ -120,3 +120,29 @@ def _mark_as_read_backfill(reader, feed, *, dry_run=False):
 def init_reader(reader):
     reader.before_feed_update_hooks.append(_mark_as_read_backfill)
     reader.after_entry_update_hooks.append(_mark_as_read)
+
+
+if __name__ == '__main__':  # pragma: no cover
+    import logging
+    import sys
+
+    from reader import make_reader
+
+    db = sys.argv[1]
+    logging.basicConfig(format="%(message)s")
+    logging.getLogger('reader').setLevel(logging.INFO)
+    reader = make_reader(db)
+
+    if len(sys.argv) > 2:
+        feeds = [sys.argv[2]]
+    else:
+        feeds = reader.get_feeds()
+
+    key = '.reader.mark-as-read'
+    value = {'title': ['^Two']}
+
+    for feed in feeds:
+        # if 'n-gate' not in feed.url: continue
+        reader.set_tag(feed, reader.make_reader_reserved_name('mark-as-read.once'))
+        reader.set_tag(feed, key, value)
+        _mark_as_read_backfill(reader, feed.url)
