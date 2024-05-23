@@ -1,10 +1,73 @@
 import json
 import os
+from dataclasses import _MISSING_TYPE
 
 import pytest
 
 from fakeparser import Parser
 from utils import utc_datetime as datetime
+
+
+def test_regex_mark_as_read_backfill(make_reader):
+    key = '.reader.mark-as-read'
+    value = {'title': ['^match']}
+
+    reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
+
+    def get_entry_data(**kwargs):
+        return {
+            (e.id, e.read, e.read_modified, e.important, e.important_modified)
+            for e in reader.get_entries(**kwargs)
+        }
+
+    parser = Parser()
+    reader._parser = parser
+
+    one = parser.feed(1)
+    reader.add_feed(one)
+
+    match_1 = parser.entry(1, 1, title='match 1')
+    match_2 = parser.entry(1, 2, title='match 2')
+    match_3 = parser.entry(1, 3, title='match 3')
+    no_match_4 = parser.entry(1, 4, title='no match 4')
+    no_match_5 = parser.entry(1, 5, title='no match 5')
+
+    # an entry that has been touched by the user and marked as read and importand -- this entry will not be modified after reader.update_feeds()
+    match_existing = parser.entry(
+        1, 6, title='match: existing entry already touched by the user'
+    )
+
+    # call reader.update_feeds() once to get the feed/entries into reader
+    reader.update_feeds()
+
+    assert len(list(reader.get_entries())) == 6
+
+    reader.set_entry_read(match_existing, True, None)
+    reader.set_entry_important(match_existing, True, None)
+
+    assert len(list(reader.get_entries(read=False))) == 5
+    # existing entry already touched by the user
+    assert len(list(reader.get_entries(read=True))) == 1
+
+    reader.set_tag(one, '.reader.mark-as-read.once')
+    reader.set_tag(one, key, value)
+    # call reader.update_feeds() again to test the .reader.mark-as-read.once flag
+    reader.update_feeds()
+
+    assert len(list(reader.get_entries(read=True))) == 4
+    # assert that only matching entries that were not touched by the user are modified
+    assert len(list(reader.get_entries(read=True, important=False))) == 3
+    assert len(list(reader.get_entries(read=False))) == 2
+
+    assert get_entry_data(read=True) == {
+        (match_1.id, True, None, False, None),
+        (match_2.id, True, None, False, None),
+        (match_3.id, True, None, False, None),
+        (match_existing.id, True, None, True, None),
+    }
+
+    # assert that .reader.mark-as-read.once tag is not set anymore
+    assert reader.get_tag(one, '.reader.mark-as-read.once', "no value") == "no value"
 
 
 def test_regex_mark_as_read(make_reader):
