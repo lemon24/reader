@@ -50,6 +50,7 @@ import logging
 import re
 
 from reader.exceptions import EntryNotFoundError
+from reader.plugins.entry_dedupe import _normalize
 from reader.types import EntryUpdateStatus
 
 
@@ -75,6 +76,7 @@ def _get_config(reader, feed_url, key, patterns_key):
 
 
 _CONFIG_TAG = 'mark-as-read'
+_ONCE_TAG_SUFFIX = 'once'
 
 
 def _mark_as_read(reader, entry, status):
@@ -96,5 +98,25 @@ def _mark_as_read(reader, entry, status):
         log.info("entry %r was deleted, skipping", entry.resource_id)
 
 
+def _mark_as_read_backfill(reader, feed, *, dry_run=False):
+    def by_title(e):
+        return _normalize(e.title)
+
+    suffix = _ONCE_TAG_SUFFIX
+
+    # assume there will only be exactly one "once" tag
+    mark_as_read_once_tag = reader.make_reader_reserved_name(f'{_CONFIG_TAG}.{suffix}')
+    if reader.get_tag(feed, mark_as_read_once_tag, "no value") == "no value":
+        return
+
+    log.info("_mark_as_read_backfill: tag: %r for feed %r", mark_as_read_once_tag, feed)
+
+    for entry in reader.get_entries(feed=feed, read=False, important='notset'):
+        _mark_as_read(reader, entry, EntryUpdateStatus.NEW)
+
+    reader.delete_tag(feed, mark_as_read_once_tag, missing_ok=True)
+
+
 def init_reader(reader):
+    reader.before_feed_update_hooks.append(_mark_as_read_backfill)
     reader.after_entry_update_hooks.append(_mark_as_read)
