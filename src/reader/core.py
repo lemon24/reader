@@ -812,8 +812,11 @@ class Reader:
             Previously, entries would be updated only if the
             entry :attr:`~Entry.updated` was *newer* than the stored one.
 
+        .. versionadded:: 1.19
+            The ``new`` parameter. ``new_only`` is now deprecated.
+
         .. versionchanged:: 2.0
-            Removed the ``new_only`` parameter.
+            Remove the deprecated ``new_only`` parameter.
 
         .. versionchanged:: 2.0
             All parameters are keyword-only.
@@ -941,8 +944,11 @@ class Reader:
             Update entries whenever their content changes.
             See :meth:`~Reader.update_feeds` for details.
 
+        .. versionadded:: 1.19
+            The ``new`` parameter. ``new_only`` is now deprecated.
+
         .. versionchanged:: 2.0
-            Removed the ``new_only`` parameter.
+            Remove the deprecated ``new_only`` parameter.
 
         .. versionchanged:: 2.0
             All parameters are keyword-only.

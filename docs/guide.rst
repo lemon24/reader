@@ -234,10 +234,10 @@ and potentially getting banned;
 every 30 minutes seems reasonable.
 
 To support updating newly-added feeds off the regular update schedule,
-you can use the ``new_only`` flag;
+you can use the ``new`` flag;
 you can call this more often (e.g. every minute)::
 
-    >>> reader.update_feeds(new_only=True)
+    >>> reader.update_feeds(new=True)
 
 
 If you need the status of each feed as it gets updated

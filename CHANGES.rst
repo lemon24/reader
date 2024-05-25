@@ -15,6 +15,9 @@ Unreleased
   for existing entries.
   Thanks to `Michael Han`_ for the pull request.
   (:issue:`317`)
+* Rename ``update --new-only`` CLI flag to ``--new``;
+  ``--new-only`` remains available as an alias.
+  (:issue:`334`)
 
 .. _Michael Han: https://github.com/Sakunam
 

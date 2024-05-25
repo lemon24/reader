@@ -1,7 +1,7 @@
 """
 Extract query timings from (stderr) log output of:
 
-    reader --debug-storage [update | update --new-only | search update] --vv
+    reader --debug-storage [update | update --new | search update] --vv
 
 Note that the timings are not entirely accurate:
 

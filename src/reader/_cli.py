@@ -291,7 +291,10 @@ def iter_update_status(it, length):
 @cli.command()
 @click.argument('url', required=False)
 @click.option(
-    '--new-only/--no-new-only', help="Only update new (never updated before) feeds."
+    '--new/--no-new',
+    '--new-only',
+    default=None,
+    help="Only update new (never updated before) feeds.",
 )
 @click.option(
     '--workers',
@@ -303,7 +306,7 @@ def iter_update_status(it, length):
 @make_log_verbose(True, -2)
 @log_command
 @pass_reader
-def update(reader, url, new_only, workers, verbose):
+def update(reader, url, new, workers, verbose):
     """Update one or all feeds.
 
     If URL is not given, update all the feeds.
@@ -318,7 +321,6 @@ def update(reader, url, new_only, workers, verbose):
         -vvvv: + debug
 
     """
-    new = True if new_only else None
     it = reader.update_feeds_iter(feed=url, new=new, workers=workers)
     length = reader.get_feed_counts(feed=url, new=new, updates_enabled=True).total
 
