@@ -16,6 +16,11 @@ tag to something like::
         "title": ["first-regex", "second-regex"]
     }
 
+By default, this plugin runs only for newly-added entries.
+To run it for the existing entries of a feed,
+add the ``.reader.mark-as-read.once`` tag to the feed;
+the plugin will run on the next feed update, and remove the tag afterwards.
+
 
 .. versionchanged:: 2.4
     Explicitly mark matching entries as unimportant.
@@ -31,6 +36,9 @@ tag to something like::
     because :attr:`~reader.Entry.important` is now optional,
     ``important = False`` is enough to mark an entry as unimportant.
     Old unimportant entries will be migrated automatically.
+
+.. versionchanged:: 3.13
+    Make it possible to re-run the plugin for existing entries.
 
 
 .. todo::

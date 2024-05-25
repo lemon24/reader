@@ -11,6 +11,13 @@ Version 3.13
 
 Unreleased
 
+* Make it possible to re-run the :mod:`~reader.plugins.mark_as_read` plugin
+  for existing entries.
+  Thanks to `Michael Han`_ for the pull request.
+  (:issue:`317`)
+
+.. _Michael Han: https://github.com/Sakunam
+
 
 Version 3.12
 ------------
