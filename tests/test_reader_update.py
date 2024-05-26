@@ -43,7 +43,8 @@ def test_duplicate_ids(reader):
 
 
 @pytest.mark.slow
-def test_concurrent_update(monkeypatch, db_path, make_reader):
+@pytest.mark.parametrize('new', [True, False])
+def test_concurrent_update(monkeypatch, db_path, make_reader, new):
     """If a feed is updated in parallel, the last writer wins.
 
     This is the temporal equivalent of test_duplicate_ids().
@@ -57,6 +58,9 @@ def test_concurrent_update(monkeypatch, db_path, make_reader):
     reader._parser = parser = Parser()
 
     reader.add_feed(parser.feed(1))
+    if not new:
+        entry = parser.entry(1, 1, title='zero')
+        reader.update_feeds()
     entry = parser.entry(1, 1, title='one')
 
     in_make_intents = threading.Event()

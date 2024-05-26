@@ -11,6 +11,12 @@ Version 3.13
 
 Unreleased
 
+* Fix bug introduced in `version 3.12 <Version 3.12_>`_ causing an assertion error
+  when there are multiple entries with the same id in the same feed,
+  or when parallel :meth:`~Reader.update_feeds` calls add the same entry.
+  The fix restores the pre-3.12 first-entry-wins / last-write-wins behavior.
+  Thanks to `Joakim Hellsén`_ for reporting and helping debug this issue.
+  (:issue:`335`)
 * Make it possible to re-run the :mod:`~reader.plugins.mark_as_read` plugin
   for existing entries.
   Thanks to `Michael Han`_ for the pull request.
@@ -19,6 +25,7 @@ Unreleased
   ``--new-only`` remains available as an alias.
   (:issue:`334`)
 
+.. _Joakim Hellsén: https://github.com/TheLovinator1
 .. _Michael Han: https://github.com/Sakunam
 
 

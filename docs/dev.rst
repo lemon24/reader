@@ -713,10 +713,18 @@ OPML support
 Thoughts on dynamic lists of feeds: :issue:`165#issuecomment-905893420`.
 
 
-entry_dedupe
-~~~~~~~~~~~~
+Duplicate entries
+~~~~~~~~~~~~~~~~~
 
-Using MinHash to speed up similarity checks (maybe): https://gist.github.com/lemon24/b9af5ade919713406bda9603847d32e5
+Duplicate entries are mainly handled by the :mod:`reader.entry_dedupe` plugin.
+
+* Using MinHash to speed up similarity checks (maybe): https://gist.github.com/lemon24/b9af5ade919713406bda9603847d32e5
+
+However, it is also possible for a feed to have two entries with the same id
+– yes, even though in most (if not all) formats,
+the id is meant to be *universally unique*!
+As of 3.13, we do not support multiple entries with the same id
+(the first entry wins); see :issue:`335` for thoughts on this.
 
 
 REST API

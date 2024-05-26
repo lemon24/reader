@@ -209,13 +209,23 @@ class EntriesMixin(StorageBase):
         with self.get_db() as db:
             try:
                 for intent in intents:
+                    # we cannot rely on the EntryForUpdate the updater got,
+                    # the entry may have been added by different update since then
                     new = not list(
                         db.execute(
                             "SELECT 1 FROM entries WHERE (feed, id) = (?, ?)",
                             intent.entry.resource_id,
                         )
                     )
+                    # if the entry is new, it must have been new for the updater too;
+                    # there's still a race condition when the entry was not new
+                    # to the updater, but was deleted before we got here;
+                    # this can be fixed by not making first_updated{_epoch} modal
+                    # (return on EntryForUpdate, make required on intent)
+                    # TODO: round-trip first_updated{_epoch} after #332 is merged
                     if new:
+                        assert intent.first_updated is not None, intent
+                        assert intent.first_updated_epoch is not None, intent
                         self._insert_entry(db, intent)
                     else:
                         self._update_entry(db, intent)
@@ -272,8 +282,6 @@ class EntriesMixin(StorageBase):
         db.execute(query, entry_update_intent_to_dict(intent))
 
     def _update_entry(self, db: sqlite3.Connection, intent: EntryUpdateIntent) -> None:
-        assert intent.first_updated is None, intent.first_updated
-        assert intent.first_updated_epoch is None, intent.first_updated_epoch
         query = """
             UPDATE entries
             SET
