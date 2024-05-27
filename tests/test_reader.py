@@ -857,47 +857,27 @@ def test_update_feeds_unexpected_error(reader, monkeypatch):
     assert excinfo.value is exc
 
 
-def test_last_retrieved(reader):
+@pytest.mark.parametrize('action', ['', 'not_modified', 'raise_exc'])
+def test_last_retrieved_update_after_basic(reader, action):
     reader._parser = parser = Parser()
     feed = parser.feed(1)
-    reader.add_feed(feed.url)
+    reader.add_feed(feed)
+
+    feed = reader.get_feed(feed)
+    assert feed.last_retrieved is None
+    assert feed.update_after is None
+    assert feed.last_updated is None
+
+    if action:
+        getattr(parser, action)()
 
     reader._now = lambda: datetime(2010, 1, 1)
     reader.update_feeds()
     feed = reader.get_feed(feed)
 
     assert feed.last_retrieved == datetime(2010, 1, 1)
-    assert feed.last_updated == datetime(2010, 1, 1)
-
-
-def test_last_retrieved_not_modified(reader):
-    reader._parser = parser = Parser()
-    feed = parser.feed(1)
-    reader.add_feed(feed.url)
-
-    parser.not_modified()
-
-    reader._now = lambda: datetime(2010, 1, 1)
-    reader.update_feeds()
-    feed = reader.get_feed(feed)
-
-    assert feed.last_retrieved == datetime(2010, 1, 1)
-    assert feed.last_updated == None
-
-
-def test_last_retrieved_error(reader):
-    reader._parser = parser = Parser()
-    feed = parser.feed(1)
-    reader.add_feed(feed.url)
-
-    parser.raise_exc()
-
-    reader._now = lambda: datetime(2010, 1, 1)
-    reader.update_feeds()
-    feed = reader.get_feed(feed)
-
-    assert feed.last_retrieved == datetime(2010, 1, 1)
-    assert feed.last_updated == None
+    assert feed.update_after == datetime(2010, 1, 1, 1)
+    assert feed.last_updated == (datetime(2010, 1, 1) if not action else None)
 
 
 class FeedAction(Enum):
