@@ -287,7 +287,7 @@ def flatten_config(config: Any, default: Config) -> Config:
         )
         return rv
 
-    set_number('inteval', config, rv, int)  # type: ignore
+    set_number('interval', config, rv, int, min=60)  # type: ignore
     set_number('jitter', config, rv, float, max=1)  # type: ignore
     return rv
 

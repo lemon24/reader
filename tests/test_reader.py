@@ -38,6 +38,7 @@ from reader._types import DEFAULT_RESERVED_NAME_SCHEME
 from reader._types import FeedFilter
 from reader._types import FeedToUpdate
 from reader._types import FeedUpdateIntent
+from reader._update import next_update_after
 from reader_methods import enable_and_update_search
 from reader_methods import get_entries
 from reader_methods import get_entries_random
@@ -53,7 +54,7 @@ from utils import utc_datetime
 from utils import utc_datetime as datetime
 
 
-# TODO: testing added/last_updated everywhere is kinda ugly
+# TODO: testing added/last_updated/last_retrieved/update_after everywhere is kinda ugly
 
 
 def test_update_feed_updated(reader, update_feed, caplog):
@@ -878,6 +879,151 @@ def test_last_retrieved_update_after_basic(reader, action):
     assert feed.last_retrieved == datetime(2010, 1, 1)
     assert feed.update_after == datetime(2010, 1, 1, 1)
     assert feed.last_updated == (datetime(2010, 1, 1) if not action else None)
+
+    reader._now = lambda: datetime(2010, 1, 1, 0, 59, 59)
+    reader.update_feeds()
+    feed = reader.get_feed(feed)
+
+    assert feed.last_retrieved == datetime(2010, 1, 1, 0, 59, 59)
+    assert feed.update_after == datetime(2010, 1, 1, 1)
+
+    reader._now = lambda: datetime(2010, 1, 1, 1)
+    reader.update_feeds()
+    feed = reader.get_feed(feed)
+
+    assert feed.last_retrieved == datetime(2010, 1, 1, 1)
+    assert feed.update_after == datetime(2010, 1, 1, 2)
+
+
+@pytest.mark.parametrize(
+    'global_config, feed_config',
+    [
+        ({'interval': 7200}, Ellipsis),
+        (Ellipsis, {'interval': 7200}),
+        ({'interval': 3600 * 24 * 1000}, {'interval': 7200}),
+    ],
+)
+def test_update_after_interval(reader, global_config, feed_config):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    if global_config is not Ellipsis:
+        reader.set_tag((), '.reader.update', global_config)
+    if feed_config is not Ellipsis:
+        reader.set_tag(feed, '.reader.update', feed_config)
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+    feed = reader.get_feed(feed)
+
+    assert feed.update_after == datetime(2010, 1, 1, 2)
+
+
+@pytest.mark.parametrize(
+    'global_config, feed_config',
+    [
+        ({'interval': 3600 * 24, 'jitter': 1 / 12}, Ellipsis),
+        (Ellipsis, {'interval': 3600 * 24, 'jitter': 1 / 12}),
+        ({'interval': 3600 * 24}, {'jitter': 1 / 12}),
+        ({'jitter': 1 / 12}, {'interval': 3600 * 24}),
+        ({'interval': 3600 * 24, 'jitter': 1}, {'jitter': 1 / 12}),
+    ],
+)
+def test_update_after_jitter(reader, global_config, feed_config, monkeypatch):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    if global_config is not Ellipsis:
+        reader.set_tag((), '.reader.update', global_config)
+    if feed_config is not Ellipsis:
+        reader.set_tag(feed, '.reader.update', feed_config)
+
+    monkeypatch.setattr('random.random', lambda: 0.1)
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+    feed = reader.get_feed(feed)
+
+    # 0.1 * 120 minutes = 12 minutes
+    assert feed.update_after == datetime(2010, 1, 2, 0, 12)
+
+
+@pytest.mark.parametrize(
+    'config',
+    [
+        {},
+        None,
+        'not-a-dict',
+        {'interval': None, 'jitter': None},
+        {'interval': '1.0', 'jitter': 'not-a-float'},
+        {'interval': 'inf', 'jitter': 'inf'},
+        {'interval': 0, 'jitter': 'nan'},
+        {'interval': 59, 'jitter': -1},
+        {'jitter': 100},
+    ],
+)
+@pytest.mark.parametrize('config_is_global', [True, False])
+def test_update_after_invalid_config(reader, config, config_is_global):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    reader.set_tag(() if config_is_global else feed, '.reader.update', config)
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+    feed = reader.get_feed(feed)
+
+    assert feed.update_after == datetime(2010, 1, 1, 1)
+
+
+@pytest.mark.parametrize(
+    'now, interval, jitter, random, expected',
+    [
+        # hours
+        (datetime(2010, 1, 1), 3600 * 8, 0, 0, datetime(2010, 1, 1, 8)),
+        (datetime(2010, 1, 1, 7, 59, 59), 3600 * 8, 0, 0, datetime(2010, 1, 1, 8)),
+        (datetime(2010, 1, 1, 8), 3600 * 8, 0, 0, datetime(2010, 1, 1, 16)),
+        (datetime(2010, 1, 1, 20), 3600 * 8, 0, 0, datetime(2010, 1, 2)),
+        # days
+        # if the interval is 7 days, the next value is a Monday
+        (datetime(2010, 1, 1), 3600 * 24 * 7, 0, 0, datetime(2010, 1, 4)),
+        (datetime(2010, 1, 3, 23, 59, 59), 3600 * 24 * 7, 0, 0, datetime(2010, 1, 4)),
+        (datetime(2010, 1, 4), 3600 * 24 * 7, 0, 0, datetime(2010, 1, 11)),
+        (datetime(2024, 5, 30), 3600 * 24 * 7, 0, 0, datetime(2024, 6, 3)),
+        # otherwise, it's somewhat arbitrary (but next values are interval apart)
+        (datetime(2010, 1, 1), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 2)),
+        (datetime(2010, 1, 1, 23), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 2)),
+        (datetime(2010, 1, 2), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 5)),
+        (datetime(2010, 1, 4, 23), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 5)),
+        (datetime(2010, 1, 5), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 8)),
+        # an arbitrary interval; acknowledging the start date is 1970-01-05
+        (datetime(1970, 1, 5), 1234, 0, 0, datetime(1970, 1, 5, 0, 20, 34)),
+        (datetime(1970, 1, 5, 0, 20, 33), 1234, 0, 0, datetime(1970, 1, 5, 0, 20, 34)),
+        (datetime(1970, 1, 5, 0, 20, 34), 1234, 0, 0, datetime(1970, 1, 5, 0, 41, 8)),
+        # >>> (datetime(1970, 1, 5) - datetime(2010, 1, 1)) % timedelta(seconds=1234)
+        # datetime.timedelta(seconds=338)
+        (datetime(2010, 1, 1), 1234, 0, 0, datetime(2010, 1, 1, 0, 5, 38)),
+        # jitter
+        (datetime(2010, 1, 1), 3600 * 8, 1, 0, datetime(2010, 1, 1, 8)),
+        (datetime(2010, 1, 1), 3600 * 8, 1, 0.5, datetime(2010, 1, 1, 12)),
+        (datetime(2010, 1, 1), 3600 * 8, 1, 1, datetime(2010, 1, 1, 16)),
+        (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.5, datetime(2010, 1, 1, 10)),
+        (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.1, datetime(2010, 1, 1, 8, 24)),
+        (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.12, datetime(2010, 1, 1, 8, 28, 48)),
+        (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.123, datetime(2010, 1, 1, 8, 29, 31)),
+        # FIXME: round to whole minutes
+    ],
+)
+def test_next_update_after(monkeypatch, now, interval, jitter, random, expected):
+    monkeypatch.setattr('random.random', lambda: random)
+    assert next_update_after(now, interval, jitter) == expected
+
+
+# FIXME: test_set_interval_up/_down
+# FIXME: scheduled: test_update / test_no_update
 
 
 class FeedAction(Enum):
