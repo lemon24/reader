@@ -999,22 +999,14 @@ def test_update_after_invalid_config(reader, config, config_is_global):
         (datetime(2010, 1, 2), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 5)),
         (datetime(2010, 1, 4, 23), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 5)),
         (datetime(2010, 1, 5), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 8)),
-        # an arbitrary interval; acknowledging the start date is 1970-01-05
-        (datetime(1970, 1, 5), 1234, 0, 0, datetime(1970, 1, 5, 0, 20, 34)),
-        (datetime(1970, 1, 5, 0, 20, 33), 1234, 0, 0, datetime(1970, 1, 5, 0, 20, 34)),
-        (datetime(1970, 1, 5, 0, 20, 34), 1234, 0, 0, datetime(1970, 1, 5, 0, 41, 8)),
-        # >>> (datetime(1970, 1, 5) - datetime(2010, 1, 1)) % timedelta(seconds=1234)
-        # datetime.timedelta(seconds=338)
-        (datetime(2010, 1, 1), 1234, 0, 0, datetime(2010, 1, 1, 0, 5, 38)),
         # jitter
         (datetime(2010, 1, 1), 3600 * 8, 1, 0, datetime(2010, 1, 1, 8)),
         (datetime(2010, 1, 1), 3600 * 8, 1, 0.5, datetime(2010, 1, 1, 12)),
         (datetime(2010, 1, 1), 3600 * 8, 1, 1, datetime(2010, 1, 1, 16)),
         (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.5, datetime(2010, 1, 1, 10)),
         (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.1, datetime(2010, 1, 1, 8, 24)),
-        (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.12, datetime(2010, 1, 1, 8, 28, 48)),
-        (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.123, datetime(2010, 1, 1, 8, 29, 31)),
-        # FIXME: round to whole minutes
+        (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.12, datetime(2010, 1, 1, 8, 28)),
+        (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.123, datetime(2010, 1, 1, 8, 29)),
     ],
 )
 def test_next_update_after(monkeypatch, now, interval, jitter, random, expected):

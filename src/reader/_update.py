@@ -325,6 +325,7 @@ EPOCH_OFFSET = (UPDATE_AFTER_START - datetime(1970, 1, 1)).total_seconds()
 def next_update_after(now: datetime, interval: int, jitter: float = 0) -> datetime:
     now_s = (now.replace(tzinfo=None) - UPDATE_AFTER_START).total_seconds()
     rv_s = int((now_s // interval + 1 + random.random() * jitter) * interval)
+    rv_s = rv_s // 60 * 60
     rv = datetime.utcfromtimestamp(rv_s + EPOCH_OFFSET).replace(tzinfo=now.tzinfo)
     return rv
 
