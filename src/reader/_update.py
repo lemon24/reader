@@ -13,7 +13,6 @@ from typing import Any
 from typing import NamedTuple
 from typing import Optional
 from typing import TYPE_CHECKING
-from typing import TypedDict
 
 from ._types import EntryData
 from ._types import EntryForUpdate
@@ -30,6 +29,7 @@ from .exceptions import ParseError
 from .exceptions import UpdateError
 from .types import EntryUpdateStatus
 from .types import ExceptionInfo
+from .types import UpdateConfig
 from .types import UpdatedFeed
 from .types import UpdateResult
 
@@ -61,7 +61,7 @@ class Decider:
     old_feed: FeedForUpdate
     now: datetime
     global_now: datetime
-    config: Config
+    config: UpdateConfig
     log: Any = log
 
     @classmethod
@@ -88,7 +88,7 @@ class Decider:
         old_feed: FeedForUpdate,
         now: datetime,
         global_now: datetime,
-        config: Config,
+        config: UpdateConfig,
         parsed_feed: ParsedFeed | None | ParseError,
         entry_pairs: EntryPairs,
     ) -> tuple[FeedUpdateIntent, Iterable[EntryUpdateIntent]]:
@@ -269,16 +269,11 @@ class UpdateReasons(NamedTuple):
     hash_changed: int = 0
 
 
-class Config(TypedDict):
-    interval: int
-    jitter: float
-
-
-DEFAULT_CONFIG = Config(interval=60, jitter=0)
+DEFAULT_CONFIG = UpdateConfig(interval=60, jitter=0)
 CONFIG_KEY = 'update'
 
 
-def flatten_config(config: Any, default: Config) -> Config:
+def flatten_config(config: Any, default: UpdateConfig) -> UpdateConfig:
     rv = default.copy()
 
     if not isinstance(config, dict):
@@ -425,7 +420,7 @@ class Pipeline:
 
     def process_parse_result(
         self,
-        config: Config,
+        config: UpdateConfig,
         feed: FeedForUpdate,
         result: ParsedFeed | None | ParseError,
     ) -> tuple[str, UpdatedFeed | None | Exception]:
