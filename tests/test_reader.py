@@ -896,14 +896,16 @@ def test_last_retrieved_update_after_basic(reader, action):
 
 
 @pytest.mark.parametrize(
-    'global_config, feed_config',
+    'global_config, feed_config, expected',
     [
-        ({'interval': 7200}, Ellipsis),
-        (Ellipsis, {'interval': 7200}),
-        ({'interval': 3600 * 24 * 1000}, {'interval': 7200}),
+        ({'interval': 120}, Ellipsis, datetime(2010, 1, 1, 2)),
+        (Ellipsis, {'interval': 120}, datetime(2010, 1, 1, 2)),
+        ({'interval': 60 * 24 * 1000}, {'interval': 120}, datetime(2010, 1, 1, 2)),
+        # minimum value
+        ({'interval': 1}, Ellipsis, datetime(2010, 1, 1, 0, 1)),
     ],
 )
-def test_update_after_interval(reader, global_config, feed_config):
+def test_update_after_interval(reader, global_config, feed_config, expected):
     reader._parser = parser = Parser()
     feed = parser.feed(1)
     reader.add_feed(feed)
@@ -917,17 +919,17 @@ def test_update_after_interval(reader, global_config, feed_config):
     reader.update_feeds()
     feed = reader.get_feed(feed)
 
-    assert feed.update_after == datetime(2010, 1, 1, 2)
+    assert feed.update_after == expected
 
 
 @pytest.mark.parametrize(
     'global_config, feed_config',
     [
-        ({'interval': 3600 * 24, 'jitter': 1 / 12}, Ellipsis),
-        (Ellipsis, {'interval': 3600 * 24, 'jitter': 1 / 12}),
-        ({'interval': 3600 * 24}, {'jitter': 1 / 12}),
-        ({'jitter': 1 / 12}, {'interval': 3600 * 24}),
-        ({'interval': 3600 * 24, 'jitter': 1}, {'jitter': 1 / 12}),
+        ({'interval': 60 * 24, 'jitter': 1 / 12}, Ellipsis),
+        (Ellipsis, {'interval': 60 * 24, 'jitter': 1 / 12}),
+        ({'interval': 60 * 24}, {'jitter': 1 / 12}),
+        ({'jitter': 1 / 12}, {'interval': 60 * 24}),
+        ({'interval': 60 * 24, 'jitter': 1}, {'jitter': 1 / 12}),
     ],
 )
 def test_update_after_jitter(reader, global_config, feed_config, monkeypatch):
@@ -960,7 +962,7 @@ def test_update_after_jitter(reader, global_config, feed_config, monkeypatch):
         {'interval': '1.0', 'jitter': 'not-a-float'},
         {'interval': 'inf', 'jitter': 'inf'},
         {'interval': 0, 'jitter': 'nan'},
-        {'interval': 59, 'jitter': -1},
+        {'jitter': -1},
         {'jitter': 100},
     ],
 )
@@ -983,30 +985,30 @@ def test_update_after_invalid_config(reader, config, config_is_global):
     'now, interval, jitter, random, expected',
     [
         # hours
-        (datetime(2010, 1, 1), 3600 * 8, 0, 0, datetime(2010, 1, 1, 8)),
-        (datetime(2010, 1, 1, 7, 59, 59), 3600 * 8, 0, 0, datetime(2010, 1, 1, 8)),
-        (datetime(2010, 1, 1, 8), 3600 * 8, 0, 0, datetime(2010, 1, 1, 16)),
-        (datetime(2010, 1, 1, 20), 3600 * 8, 0, 0, datetime(2010, 1, 2)),
+        (datetime(2010, 1, 1), 60 * 8, 0, 0, datetime(2010, 1, 1, 8)),
+        (datetime(2010, 1, 1, 7, 59, 59), 60 * 8, 0, 0, datetime(2010, 1, 1, 8)),
+        (datetime(2010, 1, 1, 8), 60 * 8, 0, 0, datetime(2010, 1, 1, 16)),
+        (datetime(2010, 1, 1, 20), 60 * 8, 0, 0, datetime(2010, 1, 2)),
         # days
         # if the interval is 7 days, the next value is a Monday
-        (datetime(2010, 1, 1), 3600 * 24 * 7, 0, 0, datetime(2010, 1, 4)),
-        (datetime(2010, 1, 3, 23, 59, 59), 3600 * 24 * 7, 0, 0, datetime(2010, 1, 4)),
-        (datetime(2010, 1, 4), 3600 * 24 * 7, 0, 0, datetime(2010, 1, 11)),
-        (datetime(2024, 5, 30), 3600 * 24 * 7, 0, 0, datetime(2024, 6, 3)),
+        (datetime(2010, 1, 1), 60 * 24 * 7, 0, 0, datetime(2010, 1, 4)),
+        (datetime(2010, 1, 3, 23, 59, 59), 60 * 24 * 7, 0, 0, datetime(2010, 1, 4)),
+        (datetime(2010, 1, 4), 60 * 24 * 7, 0, 0, datetime(2010, 1, 11)),
+        (datetime(2024, 5, 30), 60 * 24 * 7, 0, 0, datetime(2024, 6, 3)),
         # otherwise, it's somewhat arbitrary (but next values are interval apart)
-        (datetime(2010, 1, 1), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 2)),
-        (datetime(2010, 1, 1, 23), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 2)),
-        (datetime(2010, 1, 2), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 5)),
-        (datetime(2010, 1, 4, 23), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 5)),
-        (datetime(2010, 1, 5), 3600 * 24 * 3, 0, 0, datetime(2010, 1, 8)),
+        (datetime(2010, 1, 1), 60 * 24 * 3, 0, 0, datetime(2010, 1, 2)),
+        (datetime(2010, 1, 1, 23), 60 * 24 * 3, 0, 0, datetime(2010, 1, 2)),
+        (datetime(2010, 1, 2), 60 * 24 * 3, 0, 0, datetime(2010, 1, 5)),
+        (datetime(2010, 1, 4, 23), 60 * 24 * 3, 0, 0, datetime(2010, 1, 5)),
+        (datetime(2010, 1, 5), 60 * 24 * 3, 0, 0, datetime(2010, 1, 8)),
         # jitter
-        (datetime(2010, 1, 1), 3600 * 8, 1, 0, datetime(2010, 1, 1, 8)),
-        (datetime(2010, 1, 1), 3600 * 8, 1, 0.5, datetime(2010, 1, 1, 12)),
-        (datetime(2010, 1, 1), 3600 * 8, 1, 1, datetime(2010, 1, 1, 16)),
-        (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.5, datetime(2010, 1, 1, 10)),
-        (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.1, datetime(2010, 1, 1, 8, 24)),
-        (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.12, datetime(2010, 1, 1, 8, 28)),
-        (datetime(2010, 1, 1), 3600 * 8, 0.5, 0.123, datetime(2010, 1, 1, 8, 29)),
+        (datetime(2010, 1, 1), 60 * 8, 1, 0, datetime(2010, 1, 1, 8)),
+        (datetime(2010, 1, 1), 60 * 8, 1, 0.5, datetime(2010, 1, 1, 12)),
+        (datetime(2010, 1, 1), 60 * 8, 1, 1, datetime(2010, 1, 1, 16)),
+        (datetime(2010, 1, 1), 60 * 8, 0.5, 0.5, datetime(2010, 1, 1, 10)),
+        (datetime(2010, 1, 1), 60 * 8, 0.5, 0.1, datetime(2010, 1, 1, 8, 24)),
+        (datetime(2010, 1, 1), 60 * 8, 0.5, 0.12, datetime(2010, 1, 1, 8, 28)),
+        (datetime(2010, 1, 1), 60 * 8, 0.5, 0.123, datetime(2010, 1, 1, 8, 29)),
     ],
 )
 def test_next_update_after(monkeypatch, now, interval, jitter, random, expected):
