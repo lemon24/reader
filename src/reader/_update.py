@@ -355,28 +355,29 @@ class Pipeline:
     """
 
     reader: Reader
+
+    # global now, is used as first_updated_epoch for all new entries,
+    # so that the subset of new entries from an update appears before
+    # all others and the entries in it are sorted by published/updated;
+    # if we used last_updated (now) for this, they would be sorted
+    # by feed order first (due to now increasing for each feed).
+    #
+    # A side effect of relying first_updated_epoch for ordering is that
+    # for the second of two new feeds updated in the same update_feeds()
+    # call, first_updated_epoch != last_updated.
+    #
+    # However, added == last_updated for the first update.
+    #
+    global_now: datetime
+
     map: MapFunction[Any, Any]
     decider = Decider
 
     def update(self, filter: FeedFilter) -> Iterable[UpdateResult]:
-        # global_now is used as first_updated_epoch for all new entries,
-        # so that the subset of new entries from an update appears before
-        # all others and the entries in it are sorted by published/updated;
-        # if we used last_updated (now) for this, they would be sorted
-        # by feed order first (due to now increasing for each feed).
-        #
-        # A side effect of relying first_updated_epoch for ordering is that
-        # for the second of two new feeds updated in the same update_feeds()
-        # call, first_updated_epoch != last_updated.
-        #
-        # However, added == last_updated for the first update.
-        #
-        global_now = self.reader._now()
-
         config_key = self.reader.make_reader_reserved_name(CONFIG_KEY)
         config = flatten_config(self.reader.get_tag((), config_key, {}), DEFAULT_CONFIG)
 
-        process_parse_result = partial(self.process_parse_result, global_now, config)
+        process_parse_result = partial(self.process_parse_result, config)
 
         is_parallel = self.map is not map
 
@@ -423,7 +424,6 @@ class Pipeline:
 
     def process_parse_result(
         self,
-        global_now: datetime,
         config: Config,
         feed: FeedForUpdate,
         result: ParsedFeed | None | ParseError,
@@ -437,7 +437,7 @@ class Pipeline:
             self.decider.make_intents,
             feed,
             self.reader._now(),
-            global_now,
+            self.global_now,
             config,
             result,
         )
