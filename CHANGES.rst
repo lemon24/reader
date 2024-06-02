@@ -17,6 +17,9 @@ Unreleased
 * The ``new`` filter of :meth:`~Reader.update_feeds()` etc. considers
   a feed as new if it was never retrieved (:attr:`~Feed.last_retrieved`),
   not if it was never updated successfully (:attr:`~Feed.last_updated`). (:issue:`332`)
+* Add :meth:`~Reader.update_feeds()`, :meth:`~Reader.get_feeds()`, etc.
+  argument ``scheduled`` to allow updating only feeds scheduled to be updated.
+  (:issue:`332`)
 
   .. FIXME: versionchanged on update_feeds() etc.
 

@@ -575,15 +575,18 @@ class FeedFilter(NamedTuple):
     broken: bool | None = None
     updates_enabled: bool | None = None
     new: bool | None = None
+    update_after: datetime | None = None
 
     @classmethod
     def from_args(
         cls,
+        now: datetime,
         feed: FeedInput | None = None,
         tags: TagFilterInput = None,
         broken: bool | None = None,
         updates_enabled: bool | None = None,
         new: bool | None = None,
+        scheduled: bool = False,
     ) -> Self:
         feed_url = _feed_argument(feed) if feed is not None else None
         tag_filter = tag_filter_argument(tags)
@@ -594,8 +597,12 @@ class FeedFilter(NamedTuple):
             raise ValueError("updates_enabled should be one of (None, False, True)")
         if new not in (None, False, True):
             raise ValueError("new should be one of (None, False, True)")
+        if scheduled not in (False, True):
+            raise ValueError("scheduled should be one of (False, True)")
 
-        return cls(feed_url, tag_filter, broken, updates_enabled, new)
+        update_after = now if scheduled else None
+
+        return cls(feed_url, tag_filter, broken, updates_enabled, new, update_after)
 
 
 @dataclass(frozen=True)

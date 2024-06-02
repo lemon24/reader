@@ -340,7 +340,7 @@ FEED_SORT_KEYS = {
 
 
 def feed_filter(query: Query, filter: FeedFilter) -> dict[str, Any]:
-    url, tags, broken, updates_enabled, new = filter
+    url, tags, broken, updates_enabled, new, update_after = filter
 
     context: dict[str, object] = {}
 
@@ -356,5 +356,8 @@ def feed_filter(query: Query, filter: FeedFilter) -> dict[str, Any]:
         query.WHERE(f"{'' if updates_enabled else 'NOT'} updates_enabled")
     if new is not None:
         query.WHERE(f"last_retrieved is {'' if new else 'NOT'} NULL")
+    if update_after is not None:
+        query.WHERE("update_after is NULL or update_after <= :update_after")
+        context.update(update_after=adapt_datetime(update_after))
 
     return context

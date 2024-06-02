@@ -619,11 +619,6 @@ def test_update_new_not_modified(reader):
     assert len(list(reader.get_entries(feed=feed.url))) == 0
 
 
-def test_update_new_error(reader):
-    with pytest.raises(ValueError):
-        reader.update_feeds(new='x')
-
-
 @pytest.mark.parametrize('workers', [-1, 0])
 def test_update_workers(reader, workers):
     parser = Parser()
@@ -760,7 +755,7 @@ def test_last_exception_failed(reader, update_feed):
     old_parser = reader._parser
 
     def get_feed_last_updated(feed):
-        options = FeedFilter.from_args(feed)
+        options = FeedFilter.from_args(None, feed)
         (rv,) = reader._storage.get_feeds_for_update(options)
         return rv.last_updated
 
@@ -1017,7 +1012,86 @@ def test_next_update_after(monkeypatch, now, interval, jitter, random, expected)
 
 
 # FIXME: test_set_interval_up/_down
-# FIXME: scheduled: test_update / test_no_update
+
+
+def test_update_scheduled(reader, call_update_iter_method):
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1)
+    two = parser.feed(2)
+    three = parser.feed(3)
+    for feed in one, two, three:
+        reader.add_feed(feed)
+
+    reader.set_tag(two, '.reader.update', {'interval': 1})
+    reader.set_tag(three, '.reader.update', {'interval': 120, 'jitter': 0.5})
+
+    def update():
+        return set(dict(call_update_iter_method(reader, scheduled=True)))
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    assert update() == {'1', '2', '3'}
+    assert update() == set()
+
+    reader._now = lambda: datetime(2010, 1, 1, 0, 0, 1)
+    assert update() == set()
+    reader._now = lambda: datetime(2010, 1, 1, 0, 0, 59)
+    assert update() == set()
+
+    reader._now = lambda: datetime(2010, 1, 1, 0, 1)
+    assert update() == {'2'}
+    reader._now = lambda: datetime(2010, 1, 1, 0, 59)
+    assert update() == {'2'}
+
+    reader._now = lambda: datetime(2010, 1, 1, 1)
+    assert update() == {'1', '2'}
+    assert update() == set()
+
+    reader._now = lambda: datetime(2010, 1, 1, 1, 1)
+    assert update() == {'2'}
+    reader._now = lambda: datetime(2010, 1, 1, 1, 59)
+    assert update() == {'2'}
+
+    reader._now = lambda: datetime(2010, 1, 1, 3)
+    assert update() == {'1', '2', '3'}
+    assert update() == set()
+
+    reader._now = lambda: datetime(2010, 1, 31)
+    assert update() == {'1', '2', '3'}
+    assert update() == set()
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    'scheduled, end, expected_counts',
+    [
+        (False, datetime(2010, 1, 1, 2), dict.fromkeys('1234', 60 * 2)),
+        (True, datetime(2010, 1, 1, 8), {'1': 4, '2': 60 * 8, '3': 2, '4': 1}),
+    ],
+)
+def test_update_scheduled_sweep(reader, scheduled, end, expected_counts):
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1)
+    two = parser.feed(2)
+    three = parser.feed(3)
+    four = parser.feed(4)
+    for feed in one, two, three, four:
+        reader.add_feed(feed)
+
+    reader.set_tag((), '.reader.update', {'interval': 60 * 2})
+    reader.set_tag(two, '.reader.update', {'interval': 1})
+    reader.set_tag(three, '.reader.update', {'interval': 60 * 4, 'jitter': 0.5})
+    reader.set_tag(four, '.reader.update', {'interval': 60 * 8, 'jitter': 1})
+
+    now = datetime(2010, 1, 1)
+    reader._now = lambda: now
+    counts = Counter()
+    while now < end:
+        counts.update(r.url for r in reader.update_feeds_iter(scheduled=scheduled))
+        now += timedelta(seconds=60)
+
+    assert dict(counts) == expected_counts
 
 
 class FeedAction(Enum):
@@ -1174,12 +1248,12 @@ def test_update_feed(reader, feed_arg):
         reader.update_feed(feed_arg(one))
 
 
-def call_update_feeds_iter(reader):
-    yield from reader.update_feeds_iter()
+def call_update_feeds_iter(reader, **kwargs):
+    yield from reader.update_feeds_iter(**kwargs)
 
 
-def call_update_feed_iter(reader):
-    for feed in reader.get_feeds(updates_enabled=True):
+def call_update_feed_iter(reader, **kwargs):
+    for feed in reader.get_feeds(updates_enabled=True, **kwargs):
         try:
             yield feed.url, reader.update_feed(feed)
         except ParseError as e:
@@ -1911,7 +1985,7 @@ def test_change_feed_url_feeds_for_update(reader):
 
     def get_feed(feed):
         return next(
-            reader._storage.get_feeds_for_update(FeedFilter.from_args(feed)),
+            reader._storage.get_feeds_for_update(FeedFilter.from_args(None, feed)),
             None,
         )
 

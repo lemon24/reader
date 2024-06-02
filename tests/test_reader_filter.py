@@ -315,6 +315,9 @@ def test_feeds(reader, kwargs, expected):
         dict(feed=object()),
         dict(broken=object()),
         dict(updates_enabled=object()),
+        dict(new=object()),
+        dict(scheduled=object()),
+        dict(scheduled=None),
     ],
 )
 @rename_argument('reader', 'reader_feeds')
