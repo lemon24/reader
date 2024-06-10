@@ -6,9 +6,7 @@ Name: reader
 
 URL: https://github.com/lemon24/reader?tab=BSD-3-Clause-1-ov-file
 
-Number of lines of code and the tool used to count it: 
-  KLOC: 29.511
-  URL: https://codetabs.com/count-loc/count-loc-online.html
+Number of lines of code and the tool used to count it: KLOC: 27.236 | tool: lizard
 
 Programming language: python
 
@@ -17,6 +15,10 @@ Programming language: python
 ### Existing tool
 
 <Inform the name of the existing tool that was executed and how it was executed>
+#### Tool
+  tox + coverage.py
+#### Usage
+  The tool was used by following the guide on the contribute page of the project. We set up the development environment and run "tox" command, which run the full test suite using coverage.py. We found the result under "htmlcov/index.html" file name, which generated a file with the coverage (it can also be found in the terminal, however the html file is easier to read).
 
 <Show the coverage results provided by the existing tool with a screenshot>
 
