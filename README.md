@@ -2,13 +2,15 @@
 
 ## Project chosen
 
-Name: <reader>
+Name: reader
 
-URL: <https://github.com/lemon24/reader?tab=BSD-3-Clause-1-ov-file>
+URL: https://github.com/lemon24/reader?tab=BSD-3-Clause-1-ov-file
 
-Number of lines of code and the tool used to count it: <KLOC: 29.511, URL: https://codetabs.com/count-loc/count-loc-online.html>
+Number of lines of code and the tool used to count it: 
+  KLOC: 29.511
+  URL: https://codetabs.com/count-loc/count-loc-online.html
 
-Programming language: <python>
+Programming language: python
 
 ## Coverage measurement
 
