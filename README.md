@@ -15,17 +15,16 @@ Programming language: python
 ### Existing tool
 
 <Inform the name of the existing tool that was executed and how it was executed>
-### Tool
-  tox + coverage.py
-### Usage
-  The tool was used by following the guide on the contribute page of the project. We set up the development environment and run "tox" command, which run the full test suite using coverage.py. We found the result under "htmlcov/index.html" file name, which generated a file with the coverage (it can also be found in the terminal, however the html file is easier to read).
+Tool: tox + coverage.py \
+Usage: The tool was used by following the guide on the contribute page of the project. We set up the development environment and run "tox" command, which run the full test suite using coverage.py. We found the result under "htmlcov/index.html" file name, which generated a file with the coverage (it can also be found in the terminal, however the html file is easier to read).
 
 <Show the coverage results provided by the existing tool with a screenshot>
   <img src="readme_imgs/coverage_tool_run_1.png"
-     alt="Coverage 1"
+     alt="Coverage 1 before"
      style="float: left; margin-right: 10px;" />
-![Coverage_1](readme_imgs/coverage_tool_run_1.png)
-![Coverage_2](readme_imgs/coverage_tool_run_2.png)
+  <img src="readme_imgs/coverage_tool_run_2.png"
+   alt="Coverage 2 before"
+   style="float: left; margin-right: 10px;" />
 
 ### Your own coverage tool
 
