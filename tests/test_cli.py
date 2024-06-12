@@ -1,6 +1,7 @@
 import logging
 import os
 import pathlib
+from datetime import timedelta
 
 import click
 import pytest
@@ -43,7 +44,7 @@ def reset_logging(pytestconfig):
 
 
 @pytest.mark.slow
-def test_cli(db_path, data_dir):
+def test_cli(db_path, data_dir, monkeypatch):
     feed_filename = 'full.atom'
     feed_path = str(data_dir.joinpath(feed_filename))
 
@@ -75,6 +76,21 @@ def test_cli(db_path, data_dir):
     result = invoke('update')
     assert result.exit_code == 0
     assert "1 ok, 0 error, 0 not modified; entries: 2 new, 0 modified" in result.output
+
+    result = invoke('update')
+    assert result.exit_code == 0
+    assert "0 ok, 0 error, 1 not modified; entries: 0 new, 0 modified" in result.output
+
+    result = invoke('update', '--scheduled')
+    assert result.exit_code == 0
+    assert "0 ok, 0 error, 0 not modified; entries: 0 new, 0 modified" in result.output
+
+    now = Reader._now()
+    monkeypatch.setattr(Reader, '_now', staticmethod(lambda: now + timedelta(hours=1)))
+
+    result = invoke('update', '--scheduled')
+    assert result.exit_code == 0
+    assert "0 ok, 0 error, 1 not modified; entries: 0 new, 0 modified" in result.output
 
     result = invoke('list', 'feeds')
     assert result.exit_code == 0

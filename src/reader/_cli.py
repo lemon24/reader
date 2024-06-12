@@ -297,6 +297,9 @@ def iter_update_status(it, length):
     help="Only update new (never updated before) feeds.",
 )
 @click.option(
+    '--scheduled/--no-scheduled', help="Only update feeds scheduled to be updated."
+)
+@click.option(
     '--workers',
     type=click.IntRange(min=1),
     default=1,
@@ -306,7 +309,7 @@ def iter_update_status(it, length):
 @make_log_verbose(True, -2)
 @log_command
 @pass_reader
-def update(reader, url, new, workers, verbose):
+def update(reader, url, new, scheduled, workers, verbose):
     """Update one or all feeds.
 
     If URL is not given, update all the feeds.
@@ -321,8 +324,12 @@ def update(reader, url, new, workers, verbose):
         -vvvv: + debug
 
     """
-    it = reader.update_feeds_iter(feed=url, new=new, workers=workers)
-    length = reader.get_feed_counts(feed=url, new=new, updates_enabled=True).total
+    it = reader.update_feeds_iter(
+        feed=url, new=new, scheduled=scheduled, workers=workers
+    )
+    length = reader.get_feed_counts(
+        feed=url, new=new, scheduled=scheduled, updates_enabled=True
+    ).total
 
     ok_count = 0
     not_modified_count = 0
