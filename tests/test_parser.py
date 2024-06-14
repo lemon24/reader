@@ -18,6 +18,12 @@ from reader._parser.jsonfeed import JSONFeedParser
 from reader._parser.requests import SessionWrapper
 from reader._types import FeedData
 from reader._vendor import feedparser
+from reader._vendor.feedparser.datetimes.asctime import _parse_date_asctime
+from reader._vendor.feedparser.datetimes.asctime import branch_coverage_print_asctime
+from reader._vendor.feedparser.datetimes.hungarian import _parse_date_hungarian
+from reader._vendor.feedparser.datetimes.hungarian import (
+    branch_coverage_print_hungarian,
+)
 from reader.exceptions import ParseError
 from utils import make_url_base
 
@@ -1054,3 +1060,68 @@ def test_retriever_selection():
         parse('file:unknown')
     assert excinfo.value.url == 'file:unknown'
     assert 'no retriever' in excinfo.value.message
+
+
+def test_hungarian():
+    def sametime(time, year, month, day, hour, minute):
+        if (
+            time.tm_year == year
+            and time.tm_mon == month
+            and time.tm_mday == day
+            and time.tm_hour == hour
+            and time.tm_min == minute
+        ):
+            return True
+        else:
+            return False
+
+    assert _parse_date_hungarian("INVALID") == None
+    branch_coverage_print_hungarian()
+
+    assert (
+        sametime(
+            _parse_date_hungarian("1999-november-2T02:10+01:10"), 1999, 11, 2, 1, 0
+        )
+        == True
+    )
+    branch_coverage_print_hungarian()
+
+    assert (
+        sametime(
+            _parse_date_hungarian("1999-november-02T2:10+01:10"), 1999, 11, 2, 1, 0
+        )
+        == True
+    )
+    branch_coverage_print_hungarian()
+
+
+def test_asctime():
+    def sametime(time, year, month, day, hour, minute, second):
+        if (
+            time.tm_year == year
+            and time.tm_mon == month
+            and time.tm_mday == day
+            and time.tm_hour == hour
+            and time.tm_min == minute
+            and time.tm_sec == second
+        ):
+            return True
+        else:
+            return False
+
+    assert _parse_date_asctime("INVALID") == None
+    branch_coverage_print_asctime()
+
+    assert (
+        sametime(
+            _parse_date_asctime("thursday may 13 18:55:30 2024"),
+            2024,
+            5,
+            13,
+            18,
+            55,
+            30,
+        )
+        == True
+    )
+    branch_coverage_print_asctime()
