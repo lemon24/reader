@@ -292,11 +292,17 @@ class FeedForUpdate(NamedTuple):
 class EntryForUpdate(NamedTuple):
     """Update-relevant information about an existing entry, from Storage."""
 
+    #: From the last :attr:`EntryUpdateIntent.first_updated`.
+    first_updated: datetime
+
+    #: From the last :attr:`EntryUpdateIntent.first_updated_epoch`.
+    first_updated_epoch: datetime
+
+    #: From the last :attr:`EntryUpdateIntent.recent_sort`.
+    recent_sort: datetime
+
     #: The date the entry was last updated, according to the entry.
     updated: datetime | None
-
-    #: The date the entry was published, according to the entry.
-    published: datetime | None
 
     #: The :attr:`~EntryData.hash` of the corresponding EntryData.
     hash: bytes | None
@@ -364,18 +370,18 @@ class EntryUpdateIntent(NamedTuple):
     last_updated: datetime
 
     #: First :attr:`last_updated` (sets :attr:`.Entry.added`).
-    #: :const:`None` if the entry already exists.
-    first_updated: datetime | None
+    #: The value from :class:`EntryForUpdate` if the entry already exists.
+    first_updated: datetime
 
     #: The time at the start of updating this batch of feeds
     #: (start of :meth:`~.Reader.update_feed` in :meth:`~.Reader.update_feed`,
     #: start of :meth:`~.Reader.update_feeds` in :meth:`~.Reader.update_feeds`).
-    #: :const:`None` if the entry already exists.
-    first_updated_epoch: datetime | None
+    #: The value from :class:`EntryForUpdate` if the entry already exists.
+    first_updated_epoch: datetime
 
     #: Sort key for the :meth:`~.Reader.get_entries` ``recent`` sort order.
-    #: If :const:`None`, keep the previous value.
-    recent_sort: datetime | None
+    #: The value from :class:`EntryForUpdate` if the entry already exists.
+    recent_sort: datetime
 
     #: The index of the entry in the feed (zero-based).
     feed_order: int = 0
@@ -386,10 +392,14 @@ class EntryUpdateIntent(NamedTuple):
     #: Same as :attr:`.Entry.added_by`.
     added_by: EntryAddedBy = 'feed'
 
-    @property
-    def new(self) -> bool:
-        """Whether the entry is new or not."""
-        return self.first_updated_epoch is not None
+    # using a proxy like `first_updated == last_updated` instead of new
+    # doesn't work because it can be true for modified entries sometimes
+    # (e.g. repeated updates on platforms with low-precision time,
+    # like update_feeds_iter() tests on Windows on GitHub Actions)
+
+    #: Whether the entry is new.
+    #: Used for hooks and UpdatedFeed counts, should not be used by storage.
+    new: bool = True
 
 
 #: Like the ``tags`` argument of :meth:`.Reader.get_feeds`, except:

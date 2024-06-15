@@ -33,6 +33,9 @@ Unreleased
   The fix restores the pre-3.12 first-entry-wins / last-write-wins behavior.
   Thanks to `Joakim Hellsén`_ for reporting and helping debug this issue.
   (:issue:`335`)
+
+  * Fix assertion error when an entry is deleted while being updated.
+
 * Make it possible to re-run the :mod:`~reader.plugins.mark_as_read` plugin
   for existing entries.
   Thanks to `Michael Han`_ for the pull request.

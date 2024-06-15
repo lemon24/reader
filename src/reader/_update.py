@@ -210,16 +210,17 @@ class Decider:
                 else:
                     recent_sort = self.global_now
             else:
-                recent_sort = None
+                recent_sort = old.recent_sort
 
             yield EntryUpdateIntent(
                 new,
                 self.now,
-                self.now if not old else None,
-                self.global_now if not old else None,
+                self.now if not old else old.first_updated,
+                self.global_now if not old else old.first_updated_epoch,
                 recent_sort,
                 feed_order,
                 should_update.hash_changed,
+                new=not old,
             )
 
     def get_feed_to_update(
