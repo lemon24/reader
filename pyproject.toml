@@ -156,7 +156,7 @@ markers = [
     "noautoclose: skip 'autoclose' autouse fixture for a test."
 ]
 filterwarnings = [
-    "ignore:No parser was explicitly specified::reader._html_utils",
+    "ignore:No parser was explicitly specified::reader._storage._html_utils",
 ]
 testpaths = ["tests"]
 
