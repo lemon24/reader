@@ -111,7 +111,7 @@ def get_output(config, output, exc):
     if tb:
         parts.extend(['\n# traceback', tb.rstrip()])
 
-    parts.append('')
+    parts.append('\n')
     return '\n\n'.join(parts)
 
 
