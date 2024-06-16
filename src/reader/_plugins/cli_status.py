@@ -52,10 +52,12 @@ FEED = 'reader:status'
 
 
 def save_output(reader, config, command_path, output):
+    now = reader._now()
+
     feed_url = FEED
     entry_id = f"command: {' '.join(command_path)}"
 
-    content = get_output(config, output, sys.exc_info()[1])
+    content = get_output(config, now, output, sys.exc_info()[1])
 
     try:
         reader.add_feed(feed_url, allow_invalid_url=True)
@@ -79,7 +81,7 @@ def save_output(reader, config, command_path, output):
     reader.mark_entry_as_read((feed_url, entry_id))
 
 
-def get_output(config, output, exc):
+def get_output(config, now, output, exc):
     code = 0
     tb = ''
     if not exc:
@@ -93,17 +95,18 @@ def get_output(config, output, exc):
         tb = format_tb(exc)
 
     parts = [
+        '# ' + now.replace(tzinfo=None).isoformat(' ', 'seconds'),
         'OK' if code == 0 else f'fail ({code})',
-        '\n# output',
+        '\n## output',
     ]
     output = output.rstrip()
     if output:
         parts.append(output)
     parts.extend(
         [
-            '\n# argv',
+            '\n## argv',
             '\n'.join(map(shlex.quote, sys.argv[1:])),
-            '\n# config',
+            '\n## config',
             dump_config(config.merge_all().data.get('cli')).rstrip(),
         ]
     )

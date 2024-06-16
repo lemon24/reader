@@ -2,6 +2,7 @@ import pytest
 from click.testing import CliRunner
 
 from reader._cli import cli
+from utils import utc_datetime as datetime
 
 
 @pytest.mark.slow
@@ -19,6 +20,10 @@ def test_cli_status(db_path, data_dir, make_reader, monkeypatch):
 
     reader = make_reader(db_path, feed_root=str(data_dir))
     reader.add_feed('full.rss')
+
+    monkeypatch.setattr(
+        'reader.Reader._now', staticmethod(lambda: datetime(2010, 1, 1, 0, 2))
+    )
 
     result = invoke(
         '--cli-plugin', 'reader._plugins.cli_status.init_cli', 'update', '-v'
@@ -40,21 +45,23 @@ def test_cli_status(db_path, data_dir, make_reader, monkeypatch):
 
 
 OUTPUT = """\
+# 2010-01-01 00:02:00
+
 OK
 
 
-# output
+## output
 
 <OUTPUT>
 
 
-# argv
+## argv
 
 one
 two
 
 
-# config
+## config
 
 reader:
   url: <DB>
