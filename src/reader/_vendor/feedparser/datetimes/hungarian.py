@@ -33,9 +33,7 @@ branch_coverage = {
     "parse_date_hungarian_1": False, 
     "parse_date_hungarian_2": False, 
     "parse_date_hungarian_3": False, 
-    "parse_date_hungarian_4": False, 
-    "parse_date_hungarian_5": False, 
-    "parse_date_hungarian_6": False 
+    "parse_date_hungarian_4": False
 } 
 
 # Unicode strings for Hungarian date strings
@@ -63,21 +61,16 @@ def _parse_date_hungarian(date_string):
     if not m or m.group(2) not in _hungarian_months:
         branch_coverage["parse_date_hungarian_1"] = True 
         return None
-    else:
-        branch_coverage["parse_date_hungarian_2"] = True 
+    branch_coverage["parse_date_hungarian_2"] = True 
     month = _hungarian_months[m.group(2)]
     day = m.group(3)
     if len(day) == 1:
         branch_coverage["parse_date_hungarian_3"] = True 
         day = '0' + day
-    else:
-        branch_coverage["parse_date_hungarian_4"] = True 
     hour = m.group(4)
     if len(hour) == 1:
-        branch_coverage["parse_date_hungarian_5"] = True 
+        branch_coverage["parse_date_hungarian_4"] = True 
         hour = '0' + hour
-    else:
-        branch_coverage["parse_date_hungarian_6"] = True 
     w3dtfdate = '%(year)s-%(month)s-%(day)sT%(hour)s:%(minute)s%(zonediff)s' % \
                 {
                     'year': m.group(1),
@@ -97,7 +90,7 @@ def branch_coverage_print_hungarian():
             print(branch + " was hit")
         else:
             print(branch + " was not hit")
-    print("Branch coverage percentage: " + str((hitItems/6) * 100) + "%")
+    print("Branch coverage percentage: " + str((hitItems/4) * 100) + "%")
 
 if __name__ == '__main__':
     _parse_date_hungarian("INVALID")
