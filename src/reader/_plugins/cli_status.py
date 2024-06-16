@@ -71,7 +71,7 @@ def save_output(reader, now, config, command_path, output):
         pass
 
     try:
-        old_content = '\n' + reader.get_entry((feed_url, entry_id)).content[0].value
+        old_content = reader.get_entry((feed_url, entry_id)).content[0].value
         reader.delete_entry((feed_url, entry_id))
     except EntryNotFoundError:
         old_content = ''
@@ -82,7 +82,7 @@ def save_output(reader, now, config, command_path, output):
             id=entry_id,
             title=title,
             updated=now,
-            content=[dict(type='text/plain', value=content + old_content)],
+            content=[dict(type='text/plain', value=old_content + content)],
         )
     )
     reader.mark_entry_as_read((feed_url, entry_id))
