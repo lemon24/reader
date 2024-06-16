@@ -5,6 +5,7 @@ import random
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
+from datetime import timezone
 from functools import partial
 from itertools import chain
 from itertools import starmap
@@ -323,7 +324,9 @@ def next_update_after(now: datetime, interval: int, jitter: float = 0) -> dateti
     now_s = (now.replace(tzinfo=None) - UPDATE_AFTER_START).total_seconds()
     rv_s = int((now_s // interval_s + 1 + random.random() * jitter) * interval_s)
     rv_s = rv_s // 60 * 60
-    rv = datetime.utcfromtimestamp(rv_s + EPOCH_OFFSET).replace(tzinfo=now.tzinfo)
+    rv = datetime.fromtimestamp(rv_s + EPOCH_OFFSET, timezone.utc).replace(
+        tzinfo=now.tzinfo
+    )
     return rv
 
 
