@@ -132,7 +132,10 @@ def test_local(reader, feed_type, data_dir, monkeypatch):
     exec(data_dir.joinpath(feed_filename + '.py').read_text(), expected)
 
     expected_feed = expected['feed'].as_feed(
-        added=utc_datetime(2010, 1, 1), last_updated=utc_datetime(2010, 1, 2)
+        added=utc_datetime(2010, 1, 1),
+        last_updated=utc_datetime(2010, 1, 2),
+        last_retrieved=utc_datetime(2010, 1, 2),
+        update_after=utc_datetime(2010, 1, 2, 1),
     )
 
     assert feed == expected_feed

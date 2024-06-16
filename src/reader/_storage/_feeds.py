@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from .._types import FeedFilter
 from .._types import FeedForUpdate
+from .._types import FeedToUpdate
 from .._types import FeedUpdateIntent
 from .._utils import exactly_one
 from .._utils import zero_or_one
@@ -82,6 +83,8 @@ class FeedsMixin(StorageBase):
                     http_etag = NULL,
                     http_last_modified = NULL,
                     stale = 0,
+                    update_after = NULL,
+                    last_retrieved = NULL,
                     last_updated = NULL,
                     last_exception = NULL
                 WHERE url = ?;
@@ -226,98 +229,44 @@ class FeedsMixin(StorageBase):
 
     @wrap_exceptions()
     def update_feed(self, intent: FeedUpdateIntent) -> None:
-        url, last_updated, feed, http_etag, http_last_modified, last_exception = intent
+        url, _, _, value = intent
 
-        if feed:
-            # TODO support updating feed URL
-            # https://github.com/lemon24/reader/issues/149
-            assert url == feed.url, "updating feed URL not supported"
+        context: dict[str, Any] = {
+            'url': url,
+            'last_retrieved': adapt_datetime(intent.last_retrieved),
+            'update_after': adapt_datetime(intent.update_after),
+        }
+        expressions: list[str] = []
 
-            assert last_exception is None, "last_exception must be none if feed is set"
+        if isinstance(value, FeedToUpdate):
+            assert url == value.feed.url, "updating feed URL not supported"
 
-            self._update_feed_full(intent)
-            return
+            context.update(value._asdict())
+            feed = context.pop('feed')
+            context.update(
+                feed._asdict(),
+                updated=adapt_datetime(feed.updated) if feed.updated else None,
+                last_updated=adapt_datetime(value.last_updated),
+                data_hash=feed.hash,
+            )
+            context.pop('hash', None)
 
-        assert http_etag is None, "http_etag must be none if feed is none"
-        assert (
-            http_last_modified is None
-        ), "http_last_modified must be none if feed is none"
+            expressions.append("stale = 0")
 
-        if not last_exception:
-            assert last_updated, "last_updated must be set if last_exception is none"
-            self._update_feed_last_updated(url, last_updated)
+        expressions.extend(f"{n} = :{n}" for n in context if n != 'url')
+
+        if isinstance(value, ExceptionInfo):
+            context['last_exception'] = json.dumps(value._asdict())
+            expressions.append("last_exception = :last_exception")
         else:
-            assert (
-                not last_updated
-            ), "last_updated must not be set if last_exception is not none"
-            self._update_feed_last_exception(url, last_exception)
+            assert isinstance(value, FeedToUpdate | None)
+            expressions.append("last_exception = NULL")
 
-    def _update_feed_full(self, intent: FeedUpdateIntent) -> None:
-        context = intent._asdict()
-        feed = context.pop('feed')
-        assert feed is not None
-        context.pop('last_exception')
-
-        context.update(
-            feed._asdict(),
-            updated=adapt_datetime(feed.updated) if feed.updated else None,
-            last_updated=(
-                adapt_datetime(intent.last_updated) if intent.last_updated else None
-            ),
-            data_hash=feed.hash,
-        )
+        query = f"UPDATE feeds SET {', '.join(expressions)} WHERE url = :url;"
 
         with self.get_db() as db:
-            cursor = db.execute(
-                """
-                UPDATE feeds
-                SET
-                    title = :title,
-                    link = :link,
-                    updated = :updated,
-                    author = :author,
-                    subtitle = :subtitle,
-                    version = :version,
-                    http_etag = :http_etag,
-                    http_last_modified = :http_last_modified,
-                    data_hash = :data_hash,
-                    stale = 0,
-                    last_updated = :last_updated,
-                    last_exception = NULL
-                WHERE url = :url;
-                """,
-                context,
-            )
+            cursor = db.execute(query, context)
 
-        rowcount_exactly_one(cursor, lambda: FeedNotFoundError(intent.url))
-
-    def _update_feed_last_updated(self, url: str, last_updated: datetime) -> None:
-        with self.get_db() as db:
-            cursor = db.execute(
-                """
-                UPDATE feeds
-                SET
-                    last_updated = :last_updated,
-                    last_exception = NULL
-                WHERE url = :url;
-                """,
-                dict(url=url, last_updated=adapt_datetime(last_updated)),
-            )
-        rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
-
-    def _update_feed_last_exception(
-        self, url: str, last_exception: ExceptionInfo
-    ) -> None:
-        with self.get_db() as db:
-            cursor = db.execute(
-                """
-                UPDATE feeds
-                SET
-                    last_exception = :last_exception
-                WHERE url = :url;
-                """,
-                dict(url=url, last_exception=json.dumps(last_exception._asdict())),
-            )
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
 
@@ -337,6 +286,8 @@ def get_feeds_query(filter: FeedFilter, sort: FeedSort) -> tuple[Query, dict[str
             'last_updated',
             'last_exception',
             'updates_enabled',
+            'update_after',
+            'last_retrieved',
         )
         .FROM("feeds")
         .scrolling_window_sort_key(FEED_SORT_KEYS[sort])
@@ -359,7 +310,9 @@ def feed_factory(row: tuple[Any, ...]) -> Feed:
         last_updated,
         last_exception,
         updates_enabled,
-    ) = row[:12]
+        update_after,
+        last_retrieved,
+    ) = row[:14]
     return Feed(
         url,
         convert_timestamp(updated) if updated else None,
@@ -373,6 +326,8 @@ def feed_factory(row: tuple[Any, ...]) -> Feed:
         convert_timestamp(last_updated) if last_updated else None,
         ExceptionInfo(**json.loads(last_exception)) if last_exception else None,
         updates_enabled == 1,
+        convert_timestamp(update_after) if update_after else None,
+        convert_timestamp(last_retrieved) if last_retrieved else None,
     )
 
 
@@ -385,7 +340,7 @@ FEED_SORT_KEYS = {
 
 
 def feed_filter(query: Query, filter: FeedFilter) -> dict[str, Any]:
-    url, tags, broken, updates_enabled, new = filter
+    url, tags, broken, updates_enabled, new, update_after = filter
 
     context: dict[str, object] = {}
 
@@ -400,6 +355,9 @@ def feed_filter(query: Query, filter: FeedFilter) -> dict[str, Any]:
     if updates_enabled is not None:
         query.WHERE(f"{'' if updates_enabled else 'NOT'} updates_enabled")
     if new is not None:
-        query.WHERE(f"last_updated is {'' if new else 'NOT'} NULL")
+        query.WHERE(f"last_retrieved is {'' if new else 'NOT'} NULL")
+    if update_after is not None:
+        query.WHERE("update_after is NULL or update_after <= :update_after")
+        context.update(update_after=adapt_datetime(update_after))
 
     return context

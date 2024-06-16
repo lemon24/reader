@@ -292,11 +292,17 @@ class FeedForUpdate(NamedTuple):
 class EntryForUpdate(NamedTuple):
     """Update-relevant information about an existing entry, from Storage."""
 
+    #: From the last :attr:`EntryUpdateIntent.first_updated`.
+    first_updated: datetime
+
+    #: From the last :attr:`EntryUpdateIntent.first_updated_epoch`.
+    first_updated_epoch: datetime
+
+    #: From the last :attr:`EntryUpdateIntent.recent_sort`.
+    recent_sort: datetime
+
     #: The date the entry was last updated, according to the entry.
     updated: datetime | None
-
-    #: The date the entry was published, according to the entry.
-    published: datetime | None
 
     #: The :attr:`~EntryData.hash` of the corresponding EntryData.
     hash: bytes | None
@@ -307,16 +313,35 @@ class EntryForUpdate(NamedTuple):
 
 
 class FeedUpdateIntent(NamedTuple):
-    """Data to be passed to Storage when updating a feed."""
+    """Data passed to Storage to record a feed update attempt,
+    regardless of the outcome.
+
+    """
 
     #: The feed URL.
     url: str
 
     #: The time at the start of updating this feed.
-    last_updated: datetime | None
+    last_retrieved: datetime
 
-    #: The feed data, if any.
-    feed: FeedData | None = None
+    #: The earliest time the feed will next be updated.
+    update_after: datetime
+
+    #: One of:
+    #: feed data and metadata (the feed was updated),
+    #: None (the feed is unchanged)
+    #: the cause of :exc:`.UpdateError`, if one happened.
+    value: FeedToUpdate | None | ExceptionInfo
+
+
+class FeedToUpdate(NamedTuple):
+    """Data passed to Storage when (successfully) updating a feed."""
+
+    #: The feed data.
+    feed: FeedData
+
+    #: The time at the start of updating this feed.
+    last_updated: datetime
 
     #: The feed's ``ETag`` header;
     #: see :attr:`ParsedFeed.http_etag` for details.
@@ -332,15 +357,9 @@ class FeedUpdateIntent(NamedTuple):
     #: see :attr:`ParsedFeed.http_last_modified` for details.
     http_last_modified: str | None = None
 
-    # TODO: Is there a better way of modeling/enforcing these? A sort of tagged union, maybe? (last_updated should be non-optional then)
-
-    #: Cause of :exc:`.UpdateError`, if any;
-    #: if set, everything else except :attr:`url` should be :const:`None`.
-    last_exception: ExceptionInfo | None = None
-
 
 class EntryUpdateIntent(NamedTuple):
-    """Data to be passed to Storage when updating a feed."""
+    """Data passed to Storage when updating an entry."""
 
     #: The entry data.
     entry: EntryData
@@ -351,17 +370,18 @@ class EntryUpdateIntent(NamedTuple):
     last_updated: datetime
 
     #: First :attr:`last_updated` (sets :attr:`.Entry.added`).
-    #: :const:`None` if the entry already exists.
-    first_updated: datetime | None
+    #: The value from :class:`EntryForUpdate` if the entry already exists.
+    first_updated: datetime
 
     #: The time at the start of updating this batch of feeds
     #: (start of :meth:`~.Reader.update_feed` in :meth:`~.Reader.update_feed`,
     #: start of :meth:`~.Reader.update_feeds` in :meth:`~.Reader.update_feeds`).
-    #: :const:`None` if the entry already exists.
-    first_updated_epoch: datetime | None
+    #: The value from :class:`EntryForUpdate` if the entry already exists.
+    first_updated_epoch: datetime
 
     #: Sort key for the :meth:`~.Reader.get_entries` ``recent`` sort order.
-    recent_sort: datetime | None
+    #: The value from :class:`EntryForUpdate` if the entry already exists.
+    recent_sort: datetime
 
     #: The index of the entry in the feed (zero-based).
     feed_order: int = 0
@@ -372,10 +392,14 @@ class EntryUpdateIntent(NamedTuple):
     #: Same as :attr:`.Entry.added_by`.
     added_by: EntryAddedBy = 'feed'
 
-    @property
-    def new(self) -> bool:
-        """Whether the entry is new or not."""
-        return self.first_updated_epoch is not None
+    # using a proxy like `first_updated == last_updated` instead of new
+    # doesn't work because it can be true for modified entries sometimes
+    # (e.g. repeated updates on platforms with low-precision time,
+    # like update_feeds_iter() tests on Windows on GitHub Actions)
+
+    #: Whether the entry is new.
+    #: Used for hooks and UpdatedFeed counts, should not be used by storage.
+    new: bool = True
 
 
 #: Like the ``tags`` argument of :meth:`.Reader.get_feeds`, except:
@@ -561,15 +585,18 @@ class FeedFilter(NamedTuple):
     broken: bool | None = None
     updates_enabled: bool | None = None
     new: bool | None = None
+    update_after: datetime | None = None
 
     @classmethod
     def from_args(
         cls,
+        now: datetime,
         feed: FeedInput | None = None,
         tags: TagFilterInput = None,
         broken: bool | None = None,
         updates_enabled: bool | None = None,
         new: bool | None = None,
+        scheduled: bool = False,
     ) -> Self:
         feed_url = _feed_argument(feed) if feed is not None else None
         tag_filter = tag_filter_argument(tags)
@@ -580,8 +607,12 @@ class FeedFilter(NamedTuple):
             raise ValueError("updates_enabled should be one of (None, False, True)")
         if new not in (None, False, True):
             raise ValueError("new should be one of (None, False, True)")
+        if scheduled not in (False, True):
+            raise ValueError("scheduled should be one of (False, True)")
 
-        return cls(feed_url, tag_filter, broken, updates_enabled, new)
+        update_after = now if scheduled else None
+
+        return cls(feed_url, tag_filter, broken, updates_enabled, new, update_after)
 
 
 @dataclass(frozen=True)

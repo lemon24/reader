@@ -25,6 +25,8 @@ CREATE TABLE feeds (
     -- reader data
     stale INTEGER NOT NULL DEFAULT 0,
     updates_enabled INTEGER NOT NULL DEFAULT 1,
+    update_after TIMESTAMP,  -- null if the feed was never retrieved
+    last_retrieved TIMESTAMP,  -- null if the feed was never retrieved
     last_updated TIMESTAMP,  -- null if the feed was never updated
     added TIMESTAMP NOT NULL,
     last_exception TEXT
@@ -265,7 +267,13 @@ def update_from_38_to_39(db: sqlite3.Connection, /) -> None:  # pragma: no cover
         search_db.close()
 
 
-VERSION = 39
+def update_from_39_to_40(db: sqlite3.Connection, /) -> None:  # pragma: no cover
+    # https://github.com/lemon24/reader/issues/332
+    db.execute("ALTER TABLE feeds ADD COLUMN update_after TIMESTAMP;")
+    db.execute("ALTER TABLE feeds ADD COLUMN last_retrieved TIMESTAMP;")
+
+
+VERSION = 40
 
 MIGRATIONS = {
     # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
@@ -275,6 +283,7 @@ MIGRATIONS = {
     36: update_from_36_to_37,
     37: update_from_37_to_38,
     38: update_from_38_to_39,
+    39: update_from_39_to_40,
 }
 MISSING_SUFFIX = (
     "; you may have skipped some required migrations, see "

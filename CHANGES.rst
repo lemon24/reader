@@ -11,12 +11,36 @@ Version 3.13
 
 Unreleased
 
+* Update entries whenever their :attr:`~Entry.updated` changes,
+  don't compare the values. (:issue:`332`)
+* Add :attr:`Feed.update_after` and :attr:`Feed.last_retrieved`. (:issue:`332`)
+* The ``new`` filter of :meth:`~Reader.update_feeds()` etc. considers
+  a feed as new if it was never retrieved (:attr:`~Feed.last_retrieved`),
+  not if it was never updated successfully (:attr:`~Feed.last_updated`). (:issue:`332`)
+* Add :meth:`~Reader.update_feeds()`, :meth:`~Reader.get_feeds()`, etc.
+  argument ``scheduled`` to allow updating only feeds scheduled to be updated.
+  (:issue:`332`)
+
+  .. FIXME: versionchanged on update_feeds() etc.
+
+* Add ``--scheduled`` flag to the ``update`` command. (:issue:`332`)
+* Group mutually-exclusive attributes of :class:`~.FeedUpdateIntent`
+  into its :attr:`~.FeedUpdateIntent.value` union attribute. (:issue:`332`)
+
+* The :mod:`~reader._plugins.cli_status` plugin now
+  records the output of multiple runs instead of just the last one,
+  with output from the same hour grouped in a single entry,
+  up to 24 entries (hours). (:issue:`332`)
+
 * Fix bug introduced in `version 3.12 <Version 3.12_>`_ causing an assertion error
   when there are multiple entries with the same id in the same feed,
   or when parallel :meth:`~Reader.update_feeds` calls add the same entry.
   The fix restores the pre-3.12 first-entry-wins / last-write-wins behavior.
   Thanks to `Joakim Hellsén`_ for reporting and helping debug this issue.
   (:issue:`335`)
+
+  * Fix assertion error when an entry is deleted while being updated.
+
 * Make it possible to re-run the :mod:`~reader.plugins.mark_as_read` plugin
   for existing entries.
   Thanks to `Michael Han`_ for the pull request.

@@ -19,6 +19,7 @@ from typing import NamedTuple
 from typing import overload
 from typing import Protocol
 from typing import TYPE_CHECKING
+from typing import TypedDict
 from typing import Union
 
 from reader.exceptions import UpdateError
@@ -119,7 +120,7 @@ class Feed(_namedtuple_compat):
     #: .. versionadded:: 1.3
     added: datetime = cast(datetime, None)
 
-    #: The date when the feed was last retrieved by reader.
+    #: The date when the feed was last (successfully) updated by reader.
     #:
     #: .. versionadded:: 1.3
     last_updated: datetime | None = None
@@ -138,6 +139,18 @@ class Feed(_namedtuple_compat):
     #:
     #: .. versionadded:: 1.11
     updates_enabled: bool = True
+
+    #: The earliest time the feed will next be updated
+    #: (when using scheduled updates).
+    #:
+    #: .. versionadded:: 3.13
+    update_after: datetime | None = None
+
+    #: The date when the feed was last retrieved by reader,
+    #: regardless of the outcome.
+    #:
+    #: .. versionadded:: 3.13
+    last_retrieved: datetime | None = None
 
     @property
     def resource_id(self) -> tuple[str]:
@@ -1046,3 +1059,43 @@ class UpdateResult(NamedTuple):
         if not self.updated_feed:
             return True
         return not (self.updated_feed.new or self.updated_feed.modified)
+
+
+class UpdateConfig(TypedDict, total=False):
+    """Schema for the ``.reader.update`` config tag
+    (see :ref:`reserved names` for details on the key prefix).
+
+    ``.reader.update`` controls whether a feed should be updated when
+    :meth:`~.update_feeds` is called with ``scheduled=True``.
+
+    Individual config keys may be missing;
+    per-feed values override global values override default values.
+    Invalid values are silently treated as missing.
+    The default config is::
+
+        {'interval': 60, 'jitter': 0}
+
+    For example, given::
+
+        >>> reader.set_tag((), '.reader.update', {'interval': 120})
+        >>> reader.set_tag('http://example.com/feed', '.reader.update', {'jitter': 100})
+
+    ...the config for ``http://example.com/feed`` ends up being::
+
+        {
+            # no per-feed value; fall back to global value
+            'interval' 120,
+            # invalid feed value (100 is not between 0.0 and 1.0);
+            # no global value; fall back to default value
+            'jitter': 0,
+        }
+
+    .. versionadded:: 3.13
+
+    """
+
+    #: Update interval, in minutes.
+    interval: int
+
+    #: Update jitter, as a ratio of :attr:`interval`, between 0.0 and 1.0.
+    jitter: float

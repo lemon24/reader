@@ -36,7 +36,9 @@ from reader import UpdateResult
 from reader._storage import Storage
 from reader._types import DEFAULT_RESERVED_NAME_SCHEME
 from reader._types import FeedFilter
+from reader._types import FeedToUpdate
 from reader._types import FeedUpdateIntent
+from reader._update import next_update_after
 from reader_methods import enable_and_update_search
 from reader_methods import get_entries
 from reader_methods import get_entries_random
@@ -52,7 +54,7 @@ from utils import utc_datetime
 from utils import utc_datetime as datetime
 
 
-# TODO: testing added/last_updated everywhere is kinda ugly
+# TODO: testing added/last_updated/last_retrieved/update_after everywhere is kinda ugly
 
 
 def test_update_feed_updated(reader, update_feed, caplog):
@@ -79,7 +81,10 @@ def test_update_feed_updated(reader, update_feed, caplog):
         update_feed(reader, old_feed.url)
 
     feed = old_feed.as_feed(
-        added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2)
+        added=datetime(2010, 1, 1),
+        last_updated=datetime(2010, 1, 2),
+        last_retrieved=datetime(2010, 1, 2),
+        update_after=datetime(2010, 1, 2, 1),
     )
     assert set(reader.get_entries()) == {
         entry_one.as_entry(
@@ -99,7 +104,10 @@ def test_update_feed_updated(reader, update_feed, caplog):
         update_feed(reader, old_feed.url)
 
     feed = old_feed.as_feed(
-        added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 3)
+        added=datetime(2010, 1, 1),
+        last_updated=datetime(2010, 1, 3),
+        last_retrieved=datetime(2010, 1, 3),
+        update_after=datetime(2010, 1, 3, 1),
     )
     assert set(reader.get_entries()) == {
         entry_one.as_entry(
@@ -113,7 +121,7 @@ def test_update_feed_updated(reader, update_feed, caplog):
             last_updated=datetime(2010, 1, 3),
         ),
     }
-    assert "feed not updated, updating entries anyway" in caplog.text
+    assert "feed has entries to update, treating as updated" in caplog.text
     caplog.clear()
 
     # Feed gets updated because content (hash) changed.
@@ -124,13 +132,16 @@ def test_update_feed_updated(reader, update_feed, caplog):
         update_feed(reader, old_feed.url)
 
     feed = old_feed.as_feed(
-        added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 3, 12)
+        added=datetime(2010, 1, 1),
+        last_updated=datetime(2010, 1, 3, 12),
+        last_retrieved=datetime(2010, 1, 3, 12),
+        update_after=datetime(2010, 1, 3, 13),
     )
     assert reader.get_feed(feed) == feed
     assert "feed hash changed, treating as updated" in caplog.text
     caplog.clear()
 
-    # The feed doesn't change, because .updated is older.
+    # The feed changes if entries changed, regardless of .updated being older.
     # Entries get updated regardless.
     old_feed = parser.feed(1, datetime(2009, 1, 1), title='old-different-title')
     entry_three = parser.entry(1, 3, datetime(2010, 2, 1))
@@ -141,10 +152,10 @@ def test_update_feed_updated(reader, update_feed, caplog):
 
     feed = old_feed.as_feed(
         added=datetime(2010, 1, 1),
-        # doesn't change because it's not newer
-        updated=datetime(2010, 1, 1),
-        # changes because entries changed
+        updated=datetime(2009, 1, 1),
         last_updated=datetime(2010, 1, 4),
+        last_retrieved=datetime(2010, 1, 4),
+        update_after=datetime(2010, 1, 4, 1),
     )
     assert set(reader.get_entries()) == {
         entry_one.as_entry(
@@ -163,10 +174,10 @@ def test_update_feed_updated(reader, update_feed, caplog):
             last_updated=datetime(2010, 1, 4),
         ),
     }
-    assert "feed not updated, updating entries anyway" in caplog.text
+    assert "feed has entries to update, treating as updated" in caplog.text
     caplog.clear()
 
-    # The feed doesn't change; despite being newer, no entries have changed.
+    # The feed doesn't change if only .updated changes (and there are no updated entries).
     old_feed = parser.feed(1, datetime(2010, 1, 2), title='old-different-title')
     reader._now = lambda: datetime(2010, 1, 4, 12)
 
@@ -175,10 +186,13 @@ def test_update_feed_updated(reader, update_feed, caplog):
 
     feed = old_feed.as_feed(
         added=datetime(2010, 1, 1),
-        # doesn't change because no entries have changed
-        updated=datetime(2010, 1, 1),
+        # doesn't change because nothing except .updated changed
+        updated=datetime(2009, 1, 1),
         # doesn't change because nothing changed
         last_updated=datetime(2010, 1, 4),
+        # changes always
+        last_retrieved=datetime(2010, 1, 4, 12),
+        update_after=datetime(2010, 1, 4, 13),
     )
     assert set(reader.get_entries()) == {
         entry_one.as_entry(
@@ -197,15 +211,19 @@ def test_update_feed_updated(reader, update_feed, caplog):
             last_updated=datetime(2010, 1, 4),
         ),
     }
-    assert "feed not updated, updating entries anyway" in caplog.text
+    assert "only feed updated changed, skipping" in caplog.text
     caplog.clear()
 
-    # The feeds changes because it is newer *and* entries get updated.
+    # The feeds changes because ~~it is newer *and*~~ entries get updated.
+    # TODO: same as "The feed changes if entries changed, regardless ...", remove?
     new_feed = parser.feed(1, datetime(2010, 1, 2), title='new')
     entry_four = parser.entry(1, 4, datetime(2010, 2, 1))
     reader._now = lambda: datetime(2010, 1, 5)
     feed = new_feed.as_feed(
-        added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 5)
+        added=datetime(2010, 1, 1),
+        last_updated=datetime(2010, 1, 5),
+        last_retrieved=datetime(2010, 1, 5),
+        update_after=datetime(2010, 1, 5, 1),
     )
 
     with caplog.at_level(logging.DEBUG, logger='reader'):
@@ -233,7 +251,7 @@ def test_update_feed_updated(reader, update_feed, caplog):
             last_updated=datetime(2010, 1, 5),
         ),
     }
-    assert "feed updated" in caplog.text
+    assert "feed has entries to update, treating as updated" in caplog.text
     caplog.clear()
 
 
@@ -256,7 +274,12 @@ def test_update_entry_updated(reader, update_feed, caplog, monkeypatch):
     with caplog.at_level(logging.DEBUG, logger='reader'):
         update_feed(reader, feed.url)
 
-    feed = feed.as_feed(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 2))
+    feed = feed.as_feed(
+        added=datetime(2010, 2, 1),
+        last_updated=datetime(2010, 2, 2),
+        last_retrieved=datetime(2010, 2, 2),
+        update_after=datetime(2010, 2, 2, 1),
+    )
 
     assert set(reader.get_entries()) == {
         old_entry.as_entry(
@@ -279,6 +302,8 @@ def test_update_entry_updated(reader, update_feed, caplog, monkeypatch):
         added=datetime(2010, 2, 1),
         updated=datetime(2010, 1, 1),
         last_updated=datetime(2010, 2, 2),
+        last_retrieved=datetime(2010, 2, 3),
+        update_after=datetime(2010, 2, 3, 1),
     )
     assert set(reader.get_entries()) == {
         old_entry.as_entry(
@@ -301,7 +326,10 @@ def test_update_entry_updated(reader, update_feed, caplog, monkeypatch):
         update_feed(reader, feed.url)
 
     feed = feed.as_feed(
-        added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 3, 12)
+        added=datetime(2010, 2, 1),
+        last_updated=datetime(2010, 2, 3, 12),
+        last_retrieved=datetime(2010, 2, 3, 12),
+        update_after=datetime(2010, 2, 3, 13),
     )
     assert set(reader.get_entries()) == {
         new_entry.as_entry(
@@ -322,7 +350,12 @@ def test_update_entry_updated(reader, update_feed, caplog, monkeypatch):
     with caplog.at_level(logging.DEBUG, logger='reader'):
         update_feed(reader, feed.url)
 
-    feed = feed.as_feed(added=datetime(2010, 2, 1), last_updated=datetime(2010, 2, 4))
+    feed = feed.as_feed(
+        added=datetime(2010, 2, 1),
+        last_updated=datetime(2010, 2, 4),
+        last_retrieved=datetime(2010, 2, 4),
+        update_after=datetime(2010, 2, 4, 1),
+    )
     assert set(reader.get_entries()) == {
         new_entry.as_entry(
             feed=feed,
@@ -366,7 +399,12 @@ def test_update_no_updated(reader, chunk_size, update_feed):
     reader._now = lambda: datetime(2010, 1, 1)
     reader.add_feed(feed.url)
     update_feed(reader, feed)
-    feed = feed.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 1))
+    feed = feed.as_feed(
+        added=datetime(2010, 1, 1),
+        last_updated=datetime(2010, 1, 1),
+        last_retrieved=datetime(2010, 1, 1),
+        update_after=datetime(2010, 1, 1, 1),
+    )
 
     assert set(reader.get_feeds()) == {feed}
     assert set(reader.get_entries()) == {
@@ -383,7 +421,12 @@ def test_update_no_updated(reader, chunk_size, update_feed):
     entry_two = parser.entry(1, 2, None)
     reader._now = lambda: datetime(2010, 1, 2)
     update_feed(reader, feed)
-    feed = feed.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2))
+    feed = feed.as_feed(
+        added=datetime(2010, 1, 1),
+        last_updated=datetime(2010, 1, 2),
+        last_retrieved=datetime(2010, 1, 2),
+        update_after=datetime(2010, 1, 2, 1),
+    )
 
     assert set(reader.get_feeds()) == {feed}
     assert set(reader.get_entries()) == {
@@ -491,7 +534,12 @@ def test_update_new(reader):
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
     reader.update_feeds(new=True)
 
-    two = two.as_feed(added=datetime(2010, 1, 1, 12), last_updated=datetime(2010, 1, 2))
+    two = two.as_feed(
+        added=datetime(2010, 1, 1, 12),
+        last_updated=datetime(2010, 1, 2),
+        last_retrieved=datetime(2010, 1, 2),
+        update_after=datetime(2010, 1, 2, 1),
+    )
     assert len(set(reader.get_feeds())) == 2
     assert set(reader.get_entries()) == {
         entry_two.as_entry(
@@ -504,7 +552,12 @@ def test_update_new(reader):
     reader._now = lambda: datetime(2010, 1, 3)
     reader.update_feeds()
 
-    one = one.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 3))
+    one = one.as_feed(
+        added=datetime(2010, 1, 1),
+        last_updated=datetime(2010, 1, 3),
+        last_retrieved=datetime(2010, 1, 3),
+        update_after=datetime(2010, 1, 3, 1),
+    )
     assert len(set(reader.get_feeds())) == 2
     assert set(reader.get_entries()) == {
         entry_one.as_entry(
@@ -513,7 +566,10 @@ def test_update_new(reader):
             last_updated=datetime(2010, 1, 3),
         ),
         entry_two.as_entry(
-            feed=two,
+            feed=two._replace(
+                last_retrieved=datetime(2010, 1, 3),
+                update_after=datetime(2010, 1, 3, 1),
+            ),
             added=datetime(2010, 1, 2),
             last_updated=datetime(2010, 1, 2),
         ),
@@ -532,11 +588,6 @@ def test_update_new_no_last_updated(reader):
     feed = parser.feed(1, datetime(2010, 1, 1))
 
     reader.add_feed(feed.url)
-    # updated must be None if last_updated is None
-    reader._storage.update_feed(
-        FeedUpdateIntent(feed.url, None, feed=feed._replace(updated=None))
-    )
-
     reader.update_feeds(new=True)
 
     parser.entry(1, 1, datetime(2010, 1, 1))
@@ -557,23 +608,15 @@ def test_update_new_not_modified(reader):
     feed = parser.feed(1, datetime(2010, 1, 1))
 
     reader.add_feed(feed.url)
-    reader._storage.update_feed(FeedUpdateIntent(feed.url, None, feed=feed))
-
     reader.update_feeds(new=True)
 
-    parser = Parser.from_parser(parser)
-    reader._parser = parser
+    parser.reset_mode()
 
     parser.entry(1, 1, datetime(2010, 1, 1))
     reader.update_feeds(new=True)
 
     # the entry isn't added because feed is not new on the second update_feeds
     assert len(list(reader.get_entries(feed=feed.url))) == 0
-
-
-def test_update_new_error(reader):
-    with pytest.raises(ValueError):
-        reader.update_feeds(new='x')
 
 
 @pytest.mark.parametrize('workers', [-1, 0])
@@ -677,7 +720,7 @@ def test_update_feeds_parse_error_on_retriever_enter(reader, workers):
 
     reader.update_feeds(workers=workers)
 
-    assert {f.url for f in reader.get_feeds(new=True)} == {'1', '2', '3'}
+    assert {f.url for f in reader.get_feeds(new=True)} == set()
     assert {f.url for f in reader.get_feeds(broken=True)} == {'1', '2', '3'}
 
 
@@ -712,7 +755,7 @@ def test_last_exception_failed(reader, update_feed):
     old_parser = reader._parser
 
     def get_feed_last_updated(feed):
-        options = FeedFilter.from_args(feed)
+        options = FeedFilter.from_args(None, feed)
         (rv,) = reader._storage.get_feeds_for_update(options)
         return rv.last_updated
 
@@ -808,6 +851,247 @@ def test_update_feeds_unexpected_error(reader, monkeypatch):
         reader.update_feeds()
 
     assert excinfo.value is exc
+
+
+@pytest.mark.parametrize('action', ['', 'not_modified', 'raise_exc'])
+def test_last_retrieved_update_after_basic(reader, action):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    feed = reader.get_feed(feed)
+    assert feed.last_retrieved is None
+    assert feed.update_after is None
+    assert feed.last_updated is None
+
+    if action:
+        getattr(parser, action)()
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+    feed = reader.get_feed(feed)
+
+    assert feed.last_retrieved == datetime(2010, 1, 1)
+    assert feed.update_after == datetime(2010, 1, 1, 1)
+    assert feed.last_updated == (datetime(2010, 1, 1) if not action else None)
+
+    reader._now = lambda: datetime(2010, 1, 1, 0, 59, 59)
+    reader.update_feeds()
+    feed = reader.get_feed(feed)
+
+    assert feed.last_retrieved == datetime(2010, 1, 1, 0, 59, 59)
+    assert feed.update_after == datetime(2010, 1, 1, 1)
+
+    reader._now = lambda: datetime(2010, 1, 1, 1)
+    reader.update_feeds()
+    feed = reader.get_feed(feed)
+
+    assert feed.last_retrieved == datetime(2010, 1, 1, 1)
+    assert feed.update_after == datetime(2010, 1, 1, 2)
+
+
+@pytest.mark.parametrize(
+    'global_config, feed_config, expected',
+    [
+        ({'interval': 120}, Ellipsis, datetime(2010, 1, 1, 2)),
+        (Ellipsis, {'interval': 120}, datetime(2010, 1, 1, 2)),
+        ({'interval': 60 * 24 * 1000}, {'interval': 120}, datetime(2010, 1, 1, 2)),
+        # minimum value
+        ({'interval': 1}, Ellipsis, datetime(2010, 1, 1, 0, 1)),
+    ],
+)
+def test_update_after_interval(reader, global_config, feed_config, expected):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    if global_config is not Ellipsis:
+        reader.set_tag((), '.reader.update', global_config)
+    if feed_config is not Ellipsis:
+        reader.set_tag(feed, '.reader.update', feed_config)
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+    feed = reader.get_feed(feed)
+
+    assert feed.update_after == expected
+
+
+@pytest.mark.parametrize(
+    'global_config, feed_config',
+    [
+        ({'interval': 60 * 24, 'jitter': 1 / 12}, Ellipsis),
+        (Ellipsis, {'interval': 60 * 24, 'jitter': 1 / 12}),
+        ({'interval': 60 * 24}, {'jitter': 1 / 12}),
+        ({'jitter': 1 / 12}, {'interval': 60 * 24}),
+        ({'interval': 60 * 24, 'jitter': 1}, {'jitter': 1 / 12}),
+    ],
+)
+def test_update_after_jitter(reader, global_config, feed_config, monkeypatch):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    if global_config is not Ellipsis:
+        reader.set_tag((), '.reader.update', global_config)
+    if feed_config is not Ellipsis:
+        reader.set_tag(feed, '.reader.update', feed_config)
+
+    monkeypatch.setattr('random.random', lambda: 0.1)
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+    feed = reader.get_feed(feed)
+
+    # 0.1 * 120 minutes = 12 minutes
+    assert feed.update_after == datetime(2010, 1, 2, 0, 12)
+
+
+@pytest.mark.parametrize(
+    'config',
+    [
+        {},
+        None,
+        'not-a-dict',
+        {'interval': None, 'jitter': None},
+        {'interval': '1.0', 'jitter': 'not-a-float'},
+        {'interval': 'inf', 'jitter': 'inf'},
+        {'interval': 0, 'jitter': 'nan'},
+        {'jitter': -1},
+        {'jitter': 100},
+    ],
+)
+@pytest.mark.parametrize('config_is_global', [True, False])
+def test_update_after_invalid_config(reader, config, config_is_global):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    reader.set_tag(() if config_is_global else feed, '.reader.update', config)
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+    feed = reader.get_feed(feed)
+
+    assert feed.update_after == datetime(2010, 1, 1, 1)
+
+
+@pytest.mark.parametrize(
+    'now, interval, jitter, random, expected',
+    [
+        # hours
+        (datetime(2010, 1, 1), 60 * 8, 0, 0, datetime(2010, 1, 1, 8)),
+        (datetime(2010, 1, 1, 7, 59, 59), 60 * 8, 0, 0, datetime(2010, 1, 1, 8)),
+        (datetime(2010, 1, 1, 8), 60 * 8, 0, 0, datetime(2010, 1, 1, 16)),
+        (datetime(2010, 1, 1, 20), 60 * 8, 0, 0, datetime(2010, 1, 2)),
+        # days
+        # if the interval is 7 days, the next value is a Monday
+        (datetime(2010, 1, 1), 60 * 24 * 7, 0, 0, datetime(2010, 1, 4)),
+        (datetime(2010, 1, 3, 23, 59, 59), 60 * 24 * 7, 0, 0, datetime(2010, 1, 4)),
+        (datetime(2010, 1, 4), 60 * 24 * 7, 0, 0, datetime(2010, 1, 11)),
+        (datetime(2024, 5, 30), 60 * 24 * 7, 0, 0, datetime(2024, 6, 3)),
+        # otherwise, it's somewhat arbitrary (but next values are interval apart)
+        (datetime(2010, 1, 1), 60 * 24 * 3, 0, 0, datetime(2010, 1, 2)),
+        (datetime(2010, 1, 1, 23), 60 * 24 * 3, 0, 0, datetime(2010, 1, 2)),
+        (datetime(2010, 1, 2), 60 * 24 * 3, 0, 0, datetime(2010, 1, 5)),
+        (datetime(2010, 1, 4, 23), 60 * 24 * 3, 0, 0, datetime(2010, 1, 5)),
+        (datetime(2010, 1, 5), 60 * 24 * 3, 0, 0, datetime(2010, 1, 8)),
+        # jitter
+        (datetime(2010, 1, 1), 60 * 8, 1, 0, datetime(2010, 1, 1, 8)),
+        (datetime(2010, 1, 1), 60 * 8, 1, 0.5, datetime(2010, 1, 1, 12)),
+        (datetime(2010, 1, 1), 60 * 8, 1, 1, datetime(2010, 1, 1, 16)),
+        (datetime(2010, 1, 1), 60 * 8, 0.5, 0.5, datetime(2010, 1, 1, 10)),
+        (datetime(2010, 1, 1), 60 * 8, 0.5, 0.1, datetime(2010, 1, 1, 8, 24)),
+        (datetime(2010, 1, 1), 60 * 8, 0.5, 0.12, datetime(2010, 1, 1, 8, 28)),
+        (datetime(2010, 1, 1), 60 * 8, 0.5, 0.123, datetime(2010, 1, 1, 8, 29)),
+    ],
+)
+def test_next_update_after(monkeypatch, now, interval, jitter, random, expected):
+    monkeypatch.setattr('random.random', lambda: random)
+    assert next_update_after(now, interval, jitter) == expected
+
+
+# FIXME: test_set_interval_up/_down
+
+
+def test_update_scheduled(reader, call_update_iter_method):
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1)
+    two = parser.feed(2)
+    three = parser.feed(3)
+    for feed in one, two, three:
+        reader.add_feed(feed)
+
+    reader.set_tag(two, '.reader.update', {'interval': 1})
+    reader.set_tag(three, '.reader.update', {'interval': 120, 'jitter': 0.5})
+
+    def update():
+        return set(dict(call_update_iter_method(reader, scheduled=True)))
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    assert update() == {'1', '2', '3'}
+    assert update() == set()
+
+    reader._now = lambda: datetime(2010, 1, 1, 0, 0, 1)
+    assert update() == set()
+    reader._now = lambda: datetime(2010, 1, 1, 0, 0, 59)
+    assert update() == set()
+
+    reader._now = lambda: datetime(2010, 1, 1, 0, 1)
+    assert update() == {'2'}
+    reader._now = lambda: datetime(2010, 1, 1, 0, 59)
+    assert update() == {'2'}
+
+    reader._now = lambda: datetime(2010, 1, 1, 1)
+    assert update() == {'1', '2'}
+    assert update() == set()
+
+    reader._now = lambda: datetime(2010, 1, 1, 1, 1)
+    assert update() == {'2'}
+    reader._now = lambda: datetime(2010, 1, 1, 1, 59)
+    assert update() == {'2'}
+
+    reader._now = lambda: datetime(2010, 1, 1, 3)
+    assert update() == {'1', '2', '3'}
+    assert update() == set()
+
+    reader._now = lambda: datetime(2010, 1, 31)
+    assert update() == {'1', '2', '3'}
+    assert update() == set()
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    'scheduled, end, expected_counts',
+    [
+        (False, datetime(2010, 1, 1, 2), dict.fromkeys('1234', 60 * 2)),
+        (True, datetime(2010, 1, 1, 8), {'1': 4, '2': 60 * 8, '3': 2, '4': 1}),
+    ],
+)
+def test_update_scheduled_sweep(reader, scheduled, end, expected_counts):
+    reader._parser = parser = Parser()
+
+    one = parser.feed(1)
+    two = parser.feed(2)
+    three = parser.feed(3)
+    four = parser.feed(4)
+    for feed in one, two, three, four:
+        reader.add_feed(feed)
+
+    reader.set_tag((), '.reader.update', {'interval': 60 * 2})
+    reader.set_tag(two, '.reader.update', {'interval': 1})
+    reader.set_tag(three, '.reader.update', {'interval': 60 * 4, 'jitter': 0.5})
+    reader.set_tag(four, '.reader.update', {'interval': 60 * 8, 'jitter': 1})
+
+    now = datetime(2010, 1, 1)
+    reader._now = lambda: now
+    counts = Counter()
+    while now < end:
+        counts.update(r.url for r in reader.update_feeds_iter(scheduled=scheduled))
+        now += timedelta(seconds=60)
+
+    assert dict(counts) == expected_counts
 
 
 class FeedAction(Enum):
@@ -912,8 +1196,18 @@ def test_update_feed(reader, feed_arg):
         reader.update_feed(feed_arg(one))
 
     reader._now = lambda: datetime(2010, 1, 1)
-    one = one.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 1))
-    two = two.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 1))
+    one = one.as_feed(
+        added=datetime(2010, 1, 1),
+        last_updated=datetime(2010, 1, 1),
+        last_retrieved=datetime(2010, 1, 1),
+        update_after=datetime(2010, 1, 1, 1),
+    )
+    two = two.as_feed(
+        added=datetime(2010, 1, 1),
+        last_updated=datetime(2010, 1, 1),
+        last_retrieved=datetime(2010, 1, 1),
+        update_after=datetime(2010, 1, 1, 1),
+    )
 
     reader.add_feed(one.url)
     reader.add_feed(two.url)
@@ -954,12 +1248,12 @@ def test_update_feed(reader, feed_arg):
         reader.update_feed(feed_arg(one))
 
 
-def call_update_feeds_iter(reader):
-    yield from reader.update_feeds_iter()
+def call_update_feeds_iter(reader, **kwargs):
+    yield from reader.update_feeds_iter(**kwargs)
 
 
-def call_update_feed_iter(reader):
-    for feed in reader.get_feeds(updates_enabled=True):
+def call_update_feed_iter(reader, **kwargs):
+    for feed in reader.get_feeds(updates_enabled=True, **kwargs):
         try:
             yield feed.url, reader.update_feed(feed)
         except ParseError as e:
@@ -1231,8 +1525,18 @@ def test_add_remove_get_feeds(reader, feed_arg):
     reader._now = lambda: datetime(2010, 1, 2)
     reader.update_feeds()
 
-    one = one.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2))
-    two = two.as_feed(added=datetime(2010, 1, 1), last_updated=datetime(2010, 1, 2))
+    one = one.as_feed(
+        added=datetime(2010, 1, 1),
+        last_updated=datetime(2010, 1, 2),
+        last_retrieved=datetime(2010, 1, 2),
+        update_after=datetime(2010, 1, 2, 1),
+    )
+    two = two.as_feed(
+        added=datetime(2010, 1, 1),
+        last_updated=datetime(2010, 1, 2),
+        last_retrieved=datetime(2010, 1, 2),
+        update_after=datetime(2010, 1, 2, 1),
+    )
     entry_one = entry_one.as_entry(
         feed=one, added=datetime(2010, 1, 2), last_updated=datetime(2010, 1, 2)
     )
@@ -1409,7 +1713,10 @@ def test_data_roundtrip(reader):
     assert list(reader.get_entries()) == [
         entry.as_entry(
             feed=feed.as_feed(
-                added=datetime(2010, 1, 2), last_updated=datetime(2010, 1, 3)
+                added=datetime(2010, 1, 2),
+                last_updated=datetime(2010, 1, 3),
+                last_retrieved=datetime(2010, 1, 3),
+                update_after=datetime(2010, 1, 3, 1),
             ),
             added=datetime(2010, 1, 3),
             last_updated=datetime(2010, 1, 3),
@@ -1482,7 +1789,10 @@ def test_get_entry(reader, entry_arg):
 
     entry = entry.as_entry(
         feed=feed.as_feed(
-            added=datetime(2010, 1, 2), last_updated=datetime(2010, 1, 3)
+            added=datetime(2010, 1, 2),
+            last_updated=datetime(2010, 1, 3),
+            last_retrieved=datetime(2010, 1, 3),
+            update_after=datetime(2010, 1, 3, 1),
         ),
         added=datetime(2010, 1, 3),
         last_updated=datetime(2010, 1, 3),
@@ -1655,6 +1965,8 @@ def test_change_feed_url_feed(reader):
         updated=None,
         last_updated=None,
         last_exception=None,
+        last_retrieved=None,
+        update_after=None,
     )
 
 
@@ -1673,7 +1985,7 @@ def test_change_feed_url_feeds_for_update(reader):
 
     def get_feed(feed):
         return next(
-            reader._storage.get_feeds_for_update(FeedFilter.from_args(feed)),
+            reader._storage.get_feeds_for_update(FeedFilter.from_args(None, feed)),
             None,
         )
 
@@ -1735,6 +2047,8 @@ def test_change_feed_url_second_update(reader, new_feed_url):
         url=new_feed_url,
         updated=None,
         last_updated=None,
+        last_retrieved=None,
+        update_after=None,
     )
 
     reader._parser.feed(
@@ -1754,6 +2068,8 @@ def test_change_feed_url_second_update(reader, new_feed_url):
         url=new_feed_url,
         updated=datetime(2010, 1, 2),
         last_updated=datetime(2010, 1, 3),
+        last_retrieved=datetime(2010, 1, 3),
+        update_after=datetime(2010, 1, 3, 1),
         title='new title',
         author='new author',
         link='new link',
@@ -2395,6 +2711,8 @@ def test_add_entry(reader):
         feed=feed.as_feed(
             added=datetime(2010, 1, 1),
             last_updated=datetime(2010, 1, 3),
+            last_retrieved=datetime(2010, 1, 3),
+            update_after=datetime(2010, 1, 3, 1),
         ),
     )
 

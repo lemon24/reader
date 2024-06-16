@@ -166,18 +166,22 @@ class EntriesMixin(StorageBase):
         # See e39b0134cb3a2fe2bb346d42355a764181926a82 for a single query version.
 
         def row_factory(_: sqlite3.Cursor, row: sqlite3.Row) -> EntryForUpdate:
-            updated, published, data_hash, data_hash_changed = row
+            fu, fu_epoch, recent_sort, updated, data_hash, data_hash_changed = row
             return EntryForUpdate(
+                convert_timestamp(fu),
+                convert_timestamp(fu_epoch),
+                convert_timestamp(recent_sort),
                 convert_timestamp(updated) if updated else None,
-                convert_timestamp(published) if published else None,
                 data_hash,
                 data_hash_changed,
             )
 
         query = """
             SELECT
+                first_updated,
+                first_updated_epoch,
+                recent_sort,
                 updated,
-                published,
                 data_hash,
                 data_hash_changed
             FROM entries
@@ -209,26 +213,26 @@ class EntriesMixin(StorageBase):
         with self.get_db() as db:
             try:
                 for intent in intents:
-                    # we cannot rely on the EntryForUpdate the updater got,
-                    # the entry may have been added by different update since then
+                    # we cannot rely on the updater getting an EntryForUpdate
+                    # to tell if the entry is new at *this* point in time,
+                    # the entry may have been added/deleted by a parallel update
+                    #
+                    # as a consequence, EntryUpdateIntent must set all fields,
+                    # including the ones which have a single value
+                    # for the entire lifetime of the entry (like first_updated)
+
                     new = not list(
                         db.execute(
                             "SELECT 1 FROM entries WHERE (feed, id) = (?, ?)",
                             intent.entry.resource_id,
                         )
                     )
-                    # if the entry is new, it must have been new for the updater too;
-                    # there's still a race condition when the entry was not new
-                    # to the updater, but was deleted before we got here;
-                    # this can be fixed by not making first_updated{_epoch} modal
-                    # (return on EntryForUpdate, make required on intent)
-                    # TODO: round-trip first_updated{_epoch} after #332 is merged
+
                     if new:
-                        assert intent.first_updated is not None, intent
-                        assert intent.first_updated_epoch is not None, intent
                         self._insert_entry(db, intent)
                     else:
                         self._update_entry(db, intent)
+
             except sqlite3.IntegrityError as e:
                 e_msg = str(e).lower()
                 if "foreign key constraint failed" in e_msg:
@@ -295,11 +299,7 @@ class EntriesMixin(StorageBase):
                 enclosures = :enclosures,
                 last_updated = :last_updated,
                 feed_order = :feed_order,
-                recent_sort = coalesce(:recent_sort, (
-                    SELECT recent_sort
-                    FROM entries
-                    WHERE id = :id AND feed = :feed_url
-                )),
+                recent_sort = :recent_sort,
                 original_feed = NULL,
                 data_hash = :data_hash,
                 data_hash_changed = :data_hash_changed,
@@ -415,6 +415,8 @@ def get_entries_query(
             feeds.last_updated
             feeds.last_exception
             feeds.updates_enabled
+            feeds.update_after
+            feeds.last_retrieved
             entries.id
             entries.updated
             entries.title
@@ -444,7 +446,7 @@ def get_entries_query(
 
 
 def entry_factory(row: tuple[Any, ...]) -> Entry:
-    feed = feed_factory(row[0:12])
+    feed = feed_factory(row[0:14])
     (
         id,
         updated,
@@ -464,7 +466,7 @@ def entry_factory(row: tuple[Any, ...]) -> Entry:
         last_updated,
         original_feed,
         sequence,
-    ) = row[12:30]
+    ) = row[14:32]
     return Entry(
         id,
         convert_timestamp(updated) if updated else None,

@@ -551,6 +551,7 @@ class Reader:
         broken: bool | None = None,
         updates_enabled: bool | None = None,
         new: bool | None = None,
+        scheduled: bool = False,
         sort: FeedSort = 'title',
         limit: int | None = None,
         starting_after: FeedInput | None = None,
@@ -568,6 +569,8 @@ class Reader:
             new (bool or None):
                 Only return feeds that have never been updated
                 / have been updated before.
+            scheduled (bool):
+                Only return feeds scheduled to be updated.
             sort (str): How to order feeds; one of ``'title'`` (by
                 :attr:`~Feed.user_title` or :attr:`~Feed.title`, case
                 insensitive; default), or ``'added'`` (last added first).
@@ -598,8 +601,13 @@ class Reader:
         .. versionadded:: 2.6
             The ``new`` keyword argument.
 
+        .. versionadded:: 3.13
+            The ``scheduled`` keyword argument.
+
         """
-        filter = FeedFilter.from_args(feed, tags, broken, updates_enabled, new)
+        filter = FeedFilter.from_args(
+            self._now(), feed, tags, broken, updates_enabled, new, scheduled
+        )
 
         if sort not in ('title', 'added'):
             raise ValueError("sort should be one of ('title', 'added')")
@@ -664,6 +672,7 @@ class Reader:
         broken: bool | None = None,
         updates_enabled: bool | None = None,
         new: bool | None = None,
+        scheduled: bool = False,
     ) -> FeedCounts:
         """Count all or some of the feeds.
 
@@ -678,6 +687,8 @@ class Reader:
             new (bool or None):
                 Only count feeds that have never been updated
                 / have been updated before.
+            scheduled (bool):
+                Only count feeds scheduled to be updated.
 
         Returns:
             FeedCounts:
@@ -690,8 +701,13 @@ class Reader:
         .. versionadded:: 2.6
             The ``new`` keyword argument.
 
+        .. versionadded:: 3.13
+            The ``scheduled`` keyword argument.
+
         """
-        filter = FeedFilter.from_args(feed, tags, broken, updates_enabled, new)
+        filter = FeedFilter.from_args(
+            self._now(), feed, tags, broken, updates_enabled, new, scheduled
+        )
         return self._storage.get_feed_counts(filter)
 
     def set_feed_user_title(self, feed: FeedInput, title: str | None, /) -> None:
@@ -762,6 +778,7 @@ class Reader:
         broken: bool | None = None,
         updates_enabled: bool | None = True,
         new: bool | None = None,
+        scheduled: bool = False,
         workers: int = 1,
     ) -> None:
         r"""Update all or some of the feeds.
@@ -790,6 +807,8 @@ class Reader:
             new (bool or None):
                 Only update feeds that have never been updated
                 / have been updated before. Defaults to None.
+            scheduled (bool):
+                Only update feeds scheduled to be updated.
             workers (int): Number of threads to use when getting the feeds.
 
         Raises:
@@ -833,6 +852,9 @@ class Reader:
             Document this method can raise non-feed-related :exc:`UpdateError`\s
             (other than :exc:`UpdateHookError`).
 
+        .. versionadded:: 3.13
+            The ``scheduled`` keyword argument.
+
         """
         hook_errors = self._update_hooks.group("some hooks failed")
         try:
@@ -842,6 +864,7 @@ class Reader:
                 broken=broken,
                 updates_enabled=updates_enabled,
                 new=new,
+                scheduled=scheduled,
                 workers=workers,
             )
 
@@ -882,6 +905,7 @@ class Reader:
         broken: bool | None = None,
         updates_enabled: bool | None = True,
         new: bool | None = None,
+        scheduled: bool = False,
         workers: int = 1,
         _call_feeds_update_hooks: bool = True,
     ) -> Iterable[UpdateResult]:
@@ -909,6 +933,8 @@ class Reader:
             new (bool or None):
                 Only update feeds that have never been updated
                 / have been updated before. Defaults to None.
+            scheduled (bool):
+                Only update feeds scheduled to be updated.
             workers (int): Number of threads to use when getting the feeds.
 
         Yields:
@@ -965,8 +991,14 @@ class Reader:
             Document this method can raise non-feed-related :exc:`UpdateError`\s
             (other than :exc:`UpdateHookError`).
 
+        .. versionadded:: 3.13
+            The ``scheduled`` keyword argument.
+
         """
-        filter = FeedFilter.from_args(feed, tags, broken, updates_enabled, new)
+        now = self._now()
+        filter = FeedFilter.from_args(
+            now, feed, tags, broken, updates_enabled, new, scheduled
+        )
 
         if workers < 1:
             raise ValueError("workers must be a positive integer")
@@ -979,7 +1011,7 @@ class Reader:
             self._update_hooks.run('before_feeds_update', None)
 
         with make_map as map:
-            yield from Pipeline.from_reader(self, map).update(filter)
+            yield from Pipeline(self, now, map).update(filter)
 
         if _call_feeds_update_hooks:
             hook_errors = self._update_hooks.group(
@@ -991,7 +1023,8 @@ class Reader:
     def update_feed(self, feed: FeedInput, /) -> UpdatedFeed | None:
         r"""Update a single feed.
 
-        The feed will be updated even if updates are disabled for it.
+        The feed will be updated even if updates are disabled for it,
+        or if it is not scheduled to be updated.
 
         Like ``next(iter(reader.update_feeds_iter(feed=feed, updates_enabled=None)))[1]``,
         but raises the :exc:`UpdateError`, if any.
