@@ -32,6 +32,7 @@ import click
 
 from reader import EntryNotFoundError
 from reader import FeedExistsError
+from reader import Reader
 from reader._cli import dump_config
 from reader._cli import format_tb
 from reader._cli import pass_reader
@@ -54,8 +55,7 @@ FEED = 'reader:status'
 MAX_HOURS = 24
 
 
-def save_output(reader, config, command_path, output):
-    now = reader._now()
+def save_output(reader, now, config, command_path, output):
     now_naive = now.replace(tzinfo=None)
 
     feed_url = FEED
@@ -133,6 +133,8 @@ def get_output(config, now, output, exc):
 
 
 def init_cli(config):
+    now = Reader._now()
+
     ctx = click.get_current_context()
     command = ctx.command
 
@@ -159,6 +161,6 @@ def init_cli(config):
 
     @pass_reader
     def callback(reader):
-        save_output(reader, config, command_path, output.getvalue())
+        save_output(reader, now, config, command_path, output.getvalue())
 
     ctx.call_on_close(callback)
