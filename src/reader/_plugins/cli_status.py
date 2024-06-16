@@ -111,7 +111,6 @@ def get_output(config, now, output, exc):
     parts = [
         '# ' + now.replace(tzinfo=None).isoformat(' ', 'seconds'),
         'OK' if code == 0 else f'fail ({code})',
-        '\n## output',
     ]
     output = output.rstrip()
     if output:

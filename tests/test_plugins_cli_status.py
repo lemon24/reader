@@ -44,9 +44,6 @@ OUTPUT = """\
 
 OK
 
-
-## output
-
 <OUTPUT>
 
 
