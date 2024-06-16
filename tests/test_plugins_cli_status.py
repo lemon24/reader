@@ -36,14 +36,7 @@ def test_cli_status(db_path, data_dir, make_reader, monkeypatch):
     assert entry.title == 'command: update'
     assert result.output in entry.content[0].value
 
-    def clean_value(value, output):
-        return (
-            value.replace(output, '<OUTPUT>\n')
-            .replace(db_path, '<DB>')
-            .replace(str(data_dir), '<DATA>')
-        )
-
-    assert clean_value(entry.content[0].value, result.output) == OUTPUT
+    assert entry.content[0].value.replace(result.output, '<OUTPUT>\n') == OUTPUT
 
 
 OUTPUT = """\
@@ -55,21 +48,6 @@ OK
 ## output
 
 <OUTPUT>
-
-
-## argv
-
-one
-two
-
-
-## config
-
-reader:
-  url: <DB>
-  feed_root: <DATA>
-plugins:
-  reader._plugins.cli_status.init_cli: null
 
 
 """

@@ -116,17 +116,18 @@ def get_output(config, now, output, exc):
     output = output.rstrip()
     if output:
         parts.append(output)
-    parts.extend(
-        [
-            '\n## argv',
-            '\n'.join(map(shlex.quote, sys.argv[1:])),
-            '\n## config',
-            dump_config(config.merge_all().data.get('cli')).rstrip(),
-        ]
-    )
 
     if tb:
-        parts.extend(['\n# traceback', tb.rstrip()])
+        parts.extend(
+            [
+                '\n## traceback',
+                tb.rstrip(),
+                '\n## argv',
+                '\n'.join(map(shlex.quote, sys.argv[1:])),
+                '\n## config',
+                dump_config(config.merge_all().data.get('cli')).rstrip(),
+            ]
+        )
 
     parts.append('\n')
     return '\n\n'.join(parts)
