@@ -30,6 +30,20 @@ import re
 import time
 
 
+# for coverage test
+branch_coverage = {
+    "parse_data_nate_1": False,
+    "parse_data_nate_2": False,
+    "parse_data_nate_3": False,
+    "parse_data_nate_4": False
+}
+
+def print_coverage():
+    for branch, hit in branch_coverage.items():
+        print(f"{branch} was {'hit' if hit else 'not hit'}")
+    print("\n")
+
+
 def _parse_date_perforce(date_string):
     """parse a date in yyyy/mm/dd hh:mm:ss TTT format"""
     # Fri, 2006/09/15 08:19:53 EDT
@@ -37,10 +51,33 @@ def _parse_date_perforce(date_string):
 
     m = _my_date_pattern.search(date_string)
     if m is None:
+        branch_coverage['parse_data_nate_1'] = True
         return None
+    
+    branch_coverage['parse_data_nate_2'] = True
     dow, year, month, day, hour, minute, second, tz = m.groups()
     months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     new_date_string = "%s, %s %s %s %s:%s:%s %s" % (dow, day, months[int(month) - 1], year, hour, minute, second, tz)
     tm = email.utils.parsedate_tz(new_date_string)
+
     if tm:
+        branch_coverage['parse_data_nate_3'] = True
         return time.gmtime(email.utils.mktime_tz(tm))
+    
+    branch_coverage['parse_data_nate_4'] = True
+    
+
+
+# if __name__ == '__main__':
+#     print("...Staring the parse_date_perforce TEST...")
+
+#     # proper date in yyyy/mm/dd hh:mm:ss TTT format
+#     result = _parse_date_perforce("Fri, 2006/09/15 08:19:53 EDT")
+#     print(result)
+#     print_coverage()
+
+
+#     # proper Korean onblog format
+#     result = _parse_date_perforce("2023년 06월 11일 09:15:00")
+#     print(result)
+#     print_coverage()
