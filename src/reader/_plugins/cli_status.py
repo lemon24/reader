@@ -25,7 +25,6 @@ To load::
 import io
 import shlex
 import sys
-from contextlib import redirect_stderr
 from contextlib import redirect_stdout
 from datetime import timedelta
 
@@ -157,7 +156,6 @@ def init_cli(config):
 
     output = io.StringIO()
     ctx.with_resource(redirect_stdout(Tee(sys.stdout, output)))
-    ctx.with_resource(redirect_stderr(Tee(sys.stderr, output)))
 
     @pass_reader
     def callback(reader):
