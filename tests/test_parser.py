@@ -21,6 +21,15 @@ from reader._vendor import feedparser
 from reader.exceptions import ParseError
 from utils import make_url_base
 
+# Korean nate test
+import re
+from reader._vendor.feedparser.datetimes.w3dtf import _parse_date_w3dtf
+from reader._vendor.feedparser.datetimes.korean import _parse_date_nate, return_w3dtf
+
+# Parse perforce test
+import time
+from reader._vendor.feedparser.datetimes.perforce import _parse_date_perforce
+
 
 @pytest.fixture(params=[True, False])
 def parse(request):
@@ -1054,3 +1063,33 @@ def test_retriever_selection():
         parse('file:unknown')
     assert excinfo.value.url == 'file:unknown'
     assert 'no retriever' in excinfo.value.message
+
+
+# TESTING FOR KOREAN NATE FORMAT
+def test_korean_nate_format():
+    w3dtf_regex = re.compile(r'^\d{4}-\d{1,2}-\d{1,2}T\d{1,2}:\d{1,2}:\d{1,2}([+-]\d{2}:\d{2}|Z)$')
+
+    # proper Korean nate format
+    result = _parse_date_nate("2023-06-11 오전 09:15:00")
+    assert w3dtf_regex.match(return_w3dtf(result))
+    result = _parse_date_nate("2021-06-15 오후 14:45:30")
+    assert w3dtf_regex.match(return_w3dtf(result))
+
+    # completely different format
+    result = _parse_date_nate("Hello I'm Edwin")
+    assert w3dtf_regex.match(return_w3dtf(result))
+    result = _parse_date_nate("")
+    assert w3dtf_regex.match(return_w3dtf(result))
+
+# TESTING FOR PARSE DATE PERFORCE FORMAT 
+def test_parse_date_perforce():
+
+    # proper date in yyyy/mm/dd hh:mm:ss TTT format
+    result = _parse_date_perforce("Fri, 2006/09/15 08:19:53 EDT")
+    compare_1 = time.struct_time((2006, 9, 15, 12, 19, 53, 4, 258, 0))
+    assert result == compare_1
+
+    # proper Korean onblog format
+    result = _parse_date_perforce("2023년 06월 11일 09:15:00")
+    compare_2 = time.struct_time((2023, 6, 11, 9, 15, 0, 6, 162, -1))
+    assert result == compare_2
