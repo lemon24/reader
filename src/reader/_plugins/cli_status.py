@@ -23,6 +23,7 @@ To load::
 import io
 import shlex
 import sys
+from contextlib import redirect_stderr
 from contextlib import redirect_stdout
 
 import click
@@ -50,44 +51,11 @@ class Tee:
 FEED = 'reader:status'
 
 
-def save_output(reader, config, command_path, stdout_str):
+def save_output(reader, config, command_path, output):
     feed_url = FEED
     entry_id = f"command: {' '.join(command_path)}"
 
-    code = 0
-    tb = ''
-    exc = sys.exc_info()[1]
-    if not exc:
-        pass
-    elif isinstance(exc, click.exceptions.Exit):
-        code = exc.exit_code
-    elif isinstance(exc, SystemExit):
-        code = exc.code
-    else:
-        code = 1
-        tb = format_tb(exc)
-
-    parts = [
-        'OK' if code == 0 else f'fail ({code})',
-        '\n# stdout',
-    ]
-    stdout = stdout_str.rstrip()
-    if stdout:
-        parts.append(stdout)
-    parts.extend(
-        [
-            '\n# argv',
-            '\n'.join(map(shlex.quote, sys.argv[1:])),
-            '\n# config',
-            dump_config(config.merge_all().data.get('cli')).rstrip(),
-        ]
-    )
-
-    if tb:
-        parts.extend(['\n# traceback', tb.rstrip()])
-
-    parts.append('')
-    content = '\n\n'.join(parts)
+    content = get_output(config, output, sys.exc_info()[1])
 
     try:
         reader.add_feed(feed_url, allow_invalid_url=True)
@@ -109,6 +77,42 @@ def save_output(reader, config, command_path, stdout_str):
         )
     )
     reader.mark_entry_as_read((feed_url, entry_id))
+
+
+def get_output(config, output, exc):
+    code = 0
+    tb = ''
+    if not exc:
+        pass
+    elif isinstance(exc, click.exceptions.Exit):
+        code = exc.exit_code
+    elif isinstance(exc, SystemExit):
+        code = exc.code
+    else:
+        code = 1
+        tb = format_tb(exc)
+
+    parts = [
+        'OK' if code == 0 else f'fail ({code})',
+        '\n# output',
+    ]
+    output = output.rstrip()
+    if output:
+        parts.append(output)
+    parts.extend(
+        [
+            '\n# argv',
+            '\n'.join(map(shlex.quote, sys.argv[1:])),
+            '\n# config',
+            dump_config(config.merge_all().data.get('cli')).rstrip(),
+        ]
+    )
+
+    if tb:
+        parts.extend(['\n# traceback', tb.rstrip()])
+
+    parts.append('')
+    return '\n\n'.join(parts)
 
 
 def init_cli(config):
@@ -133,11 +137,12 @@ def init_cli(config):
 
     add_trace(command)
 
-    stdout = io.StringIO()
-    ctx.with_resource(redirect_stdout(Tee(sys.stdout, stdout)))
+    output = io.StringIO()
+    ctx.with_resource(redirect_stdout(Tee(sys.stdout, output)))
+    ctx.with_resource(redirect_stderr(Tee(sys.stderr, output)))
 
     @pass_reader
     def callback(reader):
-        save_output(reader, config, command_path, stdout.getvalue())
+        save_output(reader, config, command_path, output.getvalue())
 
     ctx.call_on_close(callback)
