@@ -2,15 +2,17 @@
 cli_status
 ~~~~~~~~~~
 
-Capture the stdout of a CLI command and add it as an entry to a special feed.
+Capture the output of a CLI command and add it as an entry to a special feed.
 
 The feed URL is ``reader:status``; if it does not exist, it is created.
 
-The entry id is the command, without options or arguments::
+The entry id is the command, without options or arguments, and the hour::
 
-    ('reader:status', 'command: update')
-    ('reader:status', 'command: search update')
+    ('reader:status', 'command: update @ YYYY-MM-DD HH')
+    ('reader:status', 'command: search update @ YYYY-MM-DD HH')
 
+Output of repeated runs from the same hour is grouped in a single entry.
+Entries older than 24 hours are deleted.
 Entries are marked as read.
 
 To load::
@@ -25,6 +27,7 @@ import shlex
 import sys
 from contextlib import redirect_stderr
 from contextlib import redirect_stdout
+from datetime import timedelta
 
 import click
 
@@ -49,13 +52,16 @@ class Tee:
 
 
 FEED = 'reader:status'
+MAX_HOURS = 24
 
 
 def save_output(reader, config, command_path, output):
     now = reader._now()
+    now_naive = now.replace(tzinfo=None)
 
     feed_url = FEED
-    entry_id = f"command: {' '.join(command_path)}"
+    title = f"command: {' '.join(command_path)}"
+    entry_id = f"{title} @ {now_naive.isoformat(' ', 'hours')}"
 
     content = get_output(config, now, output, sys.exc_info()[1])
 
@@ -66,19 +72,28 @@ def save_output(reader, config, command_path, output):
         pass
 
     try:
+        old_content = '\n' + reader.get_entry((feed_url, entry_id)).content[0].value
         reader.delete_entry((feed_url, entry_id))
     except EntryNotFoundError:
-        pass
+        old_content = ''
 
     reader.add_entry(
         dict(
             feed_url=feed_url,
             id=entry_id,
-            title=entry_id,
-            content=[dict(type='text/plain', value=content)],
+            title=title,
+            updated=now,
+            content=[dict(type='text/plain', value=content + old_content)],
         )
     )
     reader.mark_entry_as_read((feed_url, entry_id))
+
+    # TODO: use retention period to delete stuff when #96 is done
+    for entry in reader.get_entries(feed=feed_url):
+        if entry.title != title:
+            continue
+        if entry.added < now - timedelta(hours=MAX_HOURS):
+            reader.delete_entry(entry, missing_ok=True)
 
 
 def get_output(config, now, output, exc):

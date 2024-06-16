@@ -27,6 +27,11 @@ Unreleased
 * Group mutually-exclusive attributes of :class:`~.FeedUpdateIntent`
   into its :attr:`~.FeedUpdateIntent.value` union attribute. (:issue:`332`)
 
+* The :mod:`~reader._plugins.cli_status` plugin now
+  records the output of multiple runs instead of just the last one,
+  with output from the same hour grouped in a single entry,
+  up to 24 entries (hours). (:issue:`332`)
+
 * Fix bug introduced in `version 3.12 <Version 3.12_>`_ causing an assertion error
   when there are multiple entries with the same id in the same feed,
   or when parallel :meth:`~Reader.update_feeds` calls add the same entry.
