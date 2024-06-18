@@ -19,6 +19,7 @@ Unreleased
   not if it was never updated successfully (:attr:`~Feed.last_updated`). (:issue:`332`)
 * Add :meth:`~Reader.update_feeds()`, :meth:`~Reader.get_feeds()`, etc.
   argument ``scheduled`` to allow updating only feeds scheduled to be updated.
+  See :ref:`scheduled` for details.
   (:issue:`332`)
 
   .. FIXME: versionchanged on update_feeds() etc.
@@ -26,6 +27,7 @@ Unreleased
 * Add ``--scheduled`` flag to the ``update`` command. (:issue:`332`)
 * Group mutually-exclusive attributes of :class:`~.FeedUpdateIntent`
   into its :attr:`~.FeedUpdateIntent.value` union attribute. (:issue:`332`)
+* New and improved :ref:`update` user guide section.
 
 * The :mod:`~reader._plugins.cli_status` plugin now
   records the output of multiple runs instead of just the last one,

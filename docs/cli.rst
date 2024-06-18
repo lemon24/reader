@@ -45,6 +45,8 @@ Serve the web application locally (at http://localhost:8080/):
     python -m reader serve
 
 
+.. _cli-update:
+
 Updating feeds
 --------------
 

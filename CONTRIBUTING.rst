@@ -5,6 +5,8 @@ Thank you for considering contributing to *reader*!
 
 
 
+.. _issues:
+
 Reporting issues
 ----------------
 

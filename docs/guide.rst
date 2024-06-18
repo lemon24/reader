@@ -36,8 +36,7 @@ The default (and currently only) storage uses SQLite,
 so the path behaves like the ``database`` argument of :func:`sqlite3.connect`:
 
 * If the database does not exist, it will be created automatically.
-* You can pass ``":memory:"`` to use a temporary in-memory database;
-  the data will disappear when the reader is closed.
+* You can pass ``':memory:'`` to use a :ref:`temporary database <temp>`.
 
 
 .. _lifecycle:
@@ -93,11 +92,18 @@ or if the thread was not created through the :mod:`threading` module
 when garbage-collected).
 
 
+.. _temp:
+
 Temporary databases
 ~~~~~~~~~~~~~~~~~~~
 
+With the default SQLite storage,
+you can use an `in-memory`_ (or `temporary`_) database
+by using ``':memory:'`` (or ``''``) as the database path;
+the data will disappear when the reader is closed.
+
 To maximize the usefulness of temporary databases,
-the database connection is closed (and the data discarded)
+the connection is closed (and the data discarded)
 only when calling :meth:`~Reader.close`,
 not when using the reader as a context manager.
 The reader cannot be reused after calling :meth:`~Reader.close`.
@@ -125,6 +131,10 @@ since each connection would be to a *different* database::
     Traceback (most recent call last):
       ...
     reader.exceptions.StorageError: usage error: cannot use a private database from threads other than the creating thread
+
+
+.. _in-memory: https://sqlite.org/inmemorydb.html
+.. _temporary: https://sqlite.org/inmemorydb.html#temp_db
 
 
 .. _backups:
@@ -207,42 +217,97 @@ use :meth:`~Reader.delete_feed`::
 Updating feeds
 --------------
 
-To retrieve the latest version of a feed, along with any new entries,
-it must be updated.
 You can update all the feeds by using the :meth:`~Reader.update_feeds` method::
 
     >>> reader.update_feeds()
     >>> reader.get_feed(feed)
     Feed(url='http://www.hellointernet.fm/podcast?format=rss', updated=datetime.datetime(2020, 2, 28, 9, 34, 2, tzinfo=datetime.timezone.utc), title='Hello Internet', ...)
 
-
 To retrive feeds in parallel, use the ``workers`` flag::
 
     >>> reader.update_feeds(workers=10)
 
-
-You can also update a specific feed using :meth:`~Reader.update_feed`::
+You can update a single feed using :meth:`~Reader.update_feed`::
 
     >>> reader.update_feed("http://www.hellointernet.fm/podcast?format=rss")
+    UpdatedFeed(url='http://www.hellointernet.fm/podcast?format=rss', new=100, modified=0, unmodified=0)
 
-If supported by the server, *reader* uses the ETag and Last-Modified headers
-to only retrieve feeds if they changed
-(`details <https://feedparser.readthedocs.io/en/latest/http-etag.html>`_).
-Even so, you should not update feeds *too* often,
-to avoid wasting the feed publisher's resources,
-and potentially getting banned;
-every 30 minutes seems reasonable.
 
-To support updating newly-added feeds off the regular update schedule,
-you can use the ``new`` flag;
-you can call this more often (e.g. every minute)::
+Saving bandwidth
+~~~~~~~~~~~~~~~~
 
-    >>> reader.update_feeds(new=True)
+If supported by the server,
+*reader* uses the `ETag and Last-Modified headers`_
+to get the entire content of a feed only if it changed.
 
+.. important::
+
+    If you prevent *reader* from saving feed state between updates
+    (e.g. by using a :ref:`temporary database <temp>`,
+    or by deleting the database or feeds every time),
+    you will repeatedly download feeds that have not changed.
+    This wastes your bandwidth and the publisher's bandwidth,
+    and the publisher may ban you from accessing their server.
+
+Even so, you should not update feeds *too* often;
+every hour seems reasonable.
+To update newly-added feeds as soon as they are added,
+you can call :meth:`update_feeds(new=True) <Reader.update_feeds>`
+more often (e.g. every minute).
+
+.. seealso::
+
+    The :ref:`cli-update` section of :doc:`cli`
+    for an example of how to do this using cron.
+
+
+.. _ETag and Last-Modified headers: https://feedparser.readthedocs.io/en/latest/http-etag.html
+
+
+.. _scheduled:
+
+Scheduled updates
+~~~~~~~~~~~~~~~~~
+
+Because different feeds need to be updated at different rates,
+*reader* also provides a mechanism for scheduling updates.
+
+Each feed has an update interval that, on every update,
+determines when the feed should be updated next.
+Running :meth:`update_feeds(scheduled=True) <Reader.update_feeds>`
+updates only the feeds that should be updated at or before the current time.
+
+The global and per-feed update interval can be **configured by the user**
+via the ``.reader.update`` global/feed tag;
+the default interval is of one hour;
+see :data:`~reader.types.UpdateConfig` for the schema.
+In addition to the interval, the user can specify a jitter;
+for an interval of 24 hours, a jitter of 0.25 means
+the update will occur any time in the first 6 hours of the interval.
+
+.. note::
+
+    As of |version|, there is no way to specify a minimum update interval.
+    If you want feeds to be updated no more often than e.g. every hour,
+    you have to run :meth:`update_feeds(scheduled=True) <Reader.update_feeds>`
+    no more often than every hour.
+
+    Please :ref:`open an issue <issues>` if you need a minimum update interval.
+
+In a future version of *reader*,
+the same mechanism will be used to handle
+HTTP 429 Too Many Requests; see :issue:`307` for details.
+
+
+.. versionadded:: 3.13
+
+
+Update status
+~~~~~~~~~~~~~
 
 If you need the status of each feed as it gets updated
 (for instance, to update a progress bar),
-you can use :meth:`~Reader.update_feeds_iter` instead,
+you can use :meth:`~Reader.update_feeds_iter` instead of :meth:`~Reader.update_feeds`,
 and get a (url, updated feed or none or exception) pair for each feed::
 
     >>> for url, value in reader.update_feeds_iter():
@@ -257,9 +322,14 @@ and get a (url, updated feed or none or exception) pair for each feed::
     https://www.relay.fm/cortex/feed not modified
 
 
+Regardless of the update method used,
+:attr:`Feed.last_retrieved`, :attr:`~Feed.last_updated`,
+and :attr:`~Feed.last_exception` will be set accordingly
+(also see :ref:`errors`).
 
-Disabling feed updates
-----------------------
+
+Disabling updates
+~~~~~~~~~~~~~~~~~
 
 Sometimes, it is useful to skip a feed when using :meth:`~Reader.update_feeds`;
 for example, the feed does not exist anymore,
@@ -759,7 +829,8 @@ This applies to the following names:
 * tag keys
 * the top-level keys of dict tag values
 
-Currently, there are no *reader*-reserved names;
+Currently, the only *reader*-reserved names
+are used by `Scheduled updates`_ and by :ref:`built-in plugins`;
 new ones will be documented here.
 
 The prefixes can be changed using
@@ -886,6 +957,8 @@ depending on their type attribute or feedparser defaults:
 * :attr:`Feed.title`
 
 
+
+.. _errors:
 
 Errors and exceptions
 ---------------------

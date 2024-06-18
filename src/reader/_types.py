@@ -1196,7 +1196,7 @@ class SearchType(Protocol):  # pragma: no cover
 
         In the future, search may receive object lifecycle methods (context manager + ``close()``),
         to support implementations that do not share state with the storage.
-        If you need support for this, please open a issue.
+        If you need support for this, please :ref:`open an issue <issues>`.
 
     """
 
