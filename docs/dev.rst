@@ -600,6 +600,8 @@ Updating entries based on a hash of their content (regardless of ``updated``):
 
 Decision to ignore feed.updated when updating feeds: :issue:`231`.
 
+:ref:`scheduled` (initial design + postponed features): :issue:`322`.
+
 
 .. _deleting entries:
 

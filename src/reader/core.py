@@ -604,6 +604,10 @@ class Reader:
         .. versionadded:: 3.13
             The ``scheduled`` keyword argument.
 
+        .. versionchanged:: 3.13
+            ``new`` uses :attr:`~Feed.last_retrieved`
+            instead of :attr:`~Feed.last_updated`.
+
         """
         filter = FeedFilter.from_args(
             self._now(), feed, tags, broken, updates_enabled, new, scheduled
@@ -703,6 +707,10 @@ class Reader:
 
         .. versionadded:: 3.13
             The ``scheduled`` keyword argument.
+
+        .. versionchanged:: 3.13
+            ``new`` uses :attr:`~Feed.last_retrieved`
+            instead of :attr:`~Feed.last_updated`.
 
         """
         filter = FeedFilter.from_args(
@@ -855,6 +863,10 @@ class Reader:
         .. versionadded:: 3.13
             The ``scheduled`` keyword argument.
 
+        .. versionchanged:: 3.13
+            ``new`` uses :attr:`~Feed.last_retrieved`
+            instead of :attr:`~Feed.last_updated`.
+
         """
         hook_errors = self._update_hooks.group("some hooks failed")
         try:
@@ -993,6 +1005,10 @@ class Reader:
 
         .. versionadded:: 3.13
             The ``scheduled`` keyword argument.
+
+        .. versionchanged:: 3.13
+            ``new`` uses :attr:`~Feed.last_retrieved`
+            instead of :attr:`~Feed.last_updated`.
 
         """
         now = self._now()

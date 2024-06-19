@@ -291,7 +291,6 @@ the update will occur any time in the first 6 hours of the interval.
     If you want feeds to be updated no more often than e.g. every hour,
     you have to run :meth:`update_feeds(scheduled=True) <Reader.update_feeds>`
     no more often than every hour.
-
     Please :ref:`open an issue <issues>` if you need a minimum update interval.
 
 In a future version of *reader*,
