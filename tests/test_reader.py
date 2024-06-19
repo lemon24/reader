@@ -1011,9 +1011,6 @@ def test_next_update_after(monkeypatch, now, interval, jitter, random, expected)
     assert next_update_after(now, interval, jitter) == expected
 
 
-# FIXME: test_set_interval_up/_down
-
-
 def test_update_scheduled(reader, call_update_iter_method):
     reader._parser = parser = Parser()
 
@@ -1092,6 +1089,56 @@ def test_update_scheduled_sweep(reader, scheduled, end, expected_counts):
         now += timedelta(seconds=60)
 
     assert dict(counts) == expected_counts
+
+
+def test_set_update_interval_up(reader):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    reader.set_tag(feed, '.reader.update', {'interval': 60})
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    reader.set_tag(feed, '.reader.update', {'interval': 240})
+
+    reader._now = lambda: datetime(2010, 1, 1, 0, 59)
+    assert len(list(reader.update_feeds_iter(scheduled=True))) == 0
+
+    reader._now = lambda: datetime(2010, 1, 1, 1)
+    assert len(list(reader.update_feeds_iter(scheduled=True))) == 1
+
+    reader._now = lambda: datetime(2010, 1, 1, 3, 59)
+    assert len(list(reader.update_feeds_iter(scheduled=True))) == 0
+
+    reader._now = lambda: datetime(2010, 1, 1, 4)
+    assert len(list(reader.update_feeds_iter(scheduled=True))) == 1
+
+
+def test_set_update_interval_down(reader):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    reader.set_tag(feed, '.reader.update', {'interval': 240})
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    reader.set_tag(feed, '.reader.update', {'interval': 60})
+
+    reader._now = lambda: datetime(2010, 1, 1, 3, 59)
+    assert len(list(reader.update_feeds_iter(scheduled=True))) == 0
+
+    reader._now = lambda: datetime(2010, 1, 1, 4)
+    assert len(list(reader.update_feeds_iter(scheduled=True))) == 1
+
+    reader._now = lambda: datetime(2010, 1, 1, 4, 59)
+    assert len(list(reader.update_feeds_iter(scheduled=True))) == 0
+
+    reader._now = lambda: datetime(2010, 1, 1, 5)
+    assert len(list(reader.update_feeds_iter(scheduled=True))) == 1
 
 
 class FeedAction(Enum):
