@@ -9,7 +9,7 @@ Changelog
 Version 3.13
 ------------
 
-Unreleased
+Released 2024-06-19
 
 * Allow different feed update intervals; see :ref:`scheduled` for details.
   (:issue:`332`)
