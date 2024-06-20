@@ -72,7 +72,7 @@ class Parser:
         self.parsers_by_mime_type: dict[str, list[tuple[float, ParserType[Any]]]] = {}
         self.parsers_by_url: dict[str, ParserType[Any]] = {}
 
-        #: :class:`~reader._requests_utils.SessionFactory`
+        #: :class:`~reader._parser.requests.SessionFactory`
         #: used to create Requests sessions for retrieving feeds.
         #:
         #: Plugins may add request or response hooks to this.

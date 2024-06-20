@@ -219,9 +219,14 @@ Type aliases
 Recipes
 -------
 
+.. include:: ../examples/custom_headers.py
+    :start-after: """
+    :end-before: """
+.. literalinclude:: ../examples/custom_headers.py
+    :start-at: import
+
 .. include:: ../examples/parser_only.py
     :start-after: """
-    :end-before: """  # docstring-end
-
+    :end-before: """
 .. literalinclude:: ../examples/parser_only.py
-    :start-after: """  # docstring-end
+    :start-at: import
