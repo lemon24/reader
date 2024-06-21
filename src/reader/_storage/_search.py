@@ -486,7 +486,7 @@ class Search:
 
         context = dict(query=query, **query_context)
         row = exactly_one(self.get_db().execute(str(sql_query), context))
-        return EntrySearchCounts(*row[:4], row[4:7])  # type: ignore[call-arg]
+        return EntrySearchCounts(*row[:5], row[5:8])  # type: ignore[call-arg]
 
 
 def make_search_entries_query(

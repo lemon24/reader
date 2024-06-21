@@ -101,8 +101,9 @@ class EntriesMixin(StorageBase):
         context.update(new_context)
 
         row = exactly_one(self.get_db().execute(str(query), context))
-
-        return EntryCounts(*row[:4], row[4:7])  # type: ignore[call-arg]
+        print(row)
+        print(*row[:5], row[5:8])
+        return EntryCounts(*row[:5], row[5:8])  # type: ignore[call-arg]
 
     @wrap_exceptions()
     def set_entry_read(
@@ -593,6 +594,7 @@ def get_entry_counts_query(
             'count(*)',
             'coalesce(sum(read == 1), 0)',
             'coalesce(sum(important == 1), 0)',
+            'coalesce(sum(important == 0), 0)',
             """
             coalesce(
                 sum(
@@ -606,7 +608,6 @@ def get_entry_counts_query(
         .FROM("entries_filtered")
         .JOIN("entries USING (id, feed)")
     )
-
     # one CTE / period + HAVING in the CTE is a tiny bit faster than
     # one CTE + WHERE in the SELECT
 
