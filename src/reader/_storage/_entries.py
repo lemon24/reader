@@ -101,8 +101,6 @@ class EntriesMixin(StorageBase):
         context.update(new_context)
 
         row = exactly_one(self.get_db().execute(str(query), context))
-        print(row)
-        print(*row[:5], row[5:8])
         return EntryCounts(*row[:5], row[5:8])  # type: ignore[call-arg]
 
     @wrap_exceptions()
