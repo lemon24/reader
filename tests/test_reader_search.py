@@ -600,7 +600,7 @@ def test_search_entries_basic(reader, sort):
     # TODO: the asserts below look parametrizable
 
     assert list(search('zero')) == []
-    assert search_counts('zero') == EntrySearchCounts(0, 0, 0, 0, (0, 0, 0))
+    assert search_counts('zero') == EntrySearchCounts(0, 0, 0, 0, 0, (0, 0, 0))
     assert list(search('one')) == [
         EntrySearchResult(
             feed.url,
@@ -611,7 +611,7 @@ def test_search_entries_basic(reader, sort):
             },
         )
     ]
-    assert search_counts('one') == EntrySearchCounts(1, 0, 0, 0, (0, 0, 0))
+    assert search_counts('one') == EntrySearchCounts(1, 0, 0, 0,0,(0, 0, 0))
     assert list(search('two')) == [
         EntrySearchResult(
             feed.url,
@@ -684,7 +684,7 @@ def test_search_entries_basic(reader, sort):
             ),
         ]
     }
-    assert search_counts('summary') == EntrySearchCounts(3, 0, 0, 0, (0, 0, 0))
+    assert search_counts('summary') == EntrySearchCounts(3, 0, 0, 0, 0,(0, 0, 0))
 
 
 # search_entries() filtering is tested in test_reader.py::test_entries_filtering{,_error}

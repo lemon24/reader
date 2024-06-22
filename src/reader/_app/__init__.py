@@ -418,7 +418,7 @@ def add_entry():
 FEED_SORT_NATIVE = {'title', 'added'}
 FEED_SORT_FANCY = {
     'important': lambda counts: counts.important,
-    # TODO: an unread/unimportant property would be nice
+    'unimportant':lambda counts: counts.unimportant,
     'unread': lambda counts: counts.total - counts.read,
     # TODO: if we keep these average intervals, properties for them might be nice too
     'avg1m': lambda counts: counts.averages[0],
@@ -435,7 +435,6 @@ def feeds():
 
     updates_enabled = request.args.get('updates-enabled')
     updates_enabled = {None: None, 'no': False, 'yes': True}[updates_enabled]
-
     sort = request.args.get('sort', 'title')
     assert sort in FEED_SORT_ALL
 
