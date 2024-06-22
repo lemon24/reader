@@ -12,6 +12,11 @@ from utils import rename_argument
 from utils import utc_datetime as datetime
 
 
+def kwargs_ids(val):
+    if isinstance(val, dict):
+        return ','.join(f'{k}={v!r}' for k, v in val.items())
+
+
 KWARGS_AND_EXPECTED_FEED_COUNTS = [
     (dict(), FeedCounts(3, broken=1, updates_enabled=2)),
     (dict(feed='1'), FeedCounts(1, 0, 1)),
@@ -46,7 +51,9 @@ def reader_feed_counts():
         yield reader
 
 
-@pytest.mark.parametrize('kwargs, expected', KWARGS_AND_EXPECTED_FEED_COUNTS)
+@pytest.mark.parametrize(
+    'kwargs, expected', KWARGS_AND_EXPECTED_FEED_COUNTS, ids=kwargs_ids
+)
 @rename_argument('reader', 'reader_feed_counts')
 def test_feed(reader, kwargs, expected):
     assert reader.get_feed_counts(**kwargs) == expected
@@ -66,7 +73,7 @@ KWARGS_AND_EXPECTED_ENTRY_COUNTS = [
             9,
             read=2,
             important=4,
-            unimportant=0,
+            unimportant=1,
             has_enclosures=8,
             averages=entries_per_day(2, 3, 7),
         ),
@@ -88,7 +95,7 @@ KWARGS_AND_EXPECTED_ENTRY_COUNTS = [
             8,
             read=2,
             important=4,
-            unimportant=0,
+            unimportant=1,
             has_enclosures=8,
             averages=entries_per_day(2, 3, 6),
         ),
@@ -154,7 +161,7 @@ KWARGS_AND_EXPECTED_ENTRY_COUNTS = [
             7,
             read=0,
             important=2,
-            unimportant=0,
+            unimportant=1,
             has_enclosures=6,
             averages=entries_per_day(1, 2, 6),
         ),
@@ -176,9 +183,20 @@ KWARGS_AND_EXPECTED_ENTRY_COUNTS = [
             5,
             read=0,
             important=0,
-            unimportant=0,
+            unimportant=1,
             has_enclosures=4,
             averages=entries_per_day(1, 2, 5),
+        ),
+    ),
+    (
+        dict(important='isfalse'),
+        EntryCounts(
+            1,
+            read=0,
+            important=0,
+            unimportant=1,
+            has_enclosures=1,
+            averages=entries_per_day(1, 1, 1),
         ),
     ),
     (
@@ -187,7 +205,7 @@ KWARGS_AND_EXPECTED_ENTRY_COUNTS = [
             8,
             read=2,
             important=4,
-            unimportant=0,
+            unimportant=1,
             has_enclosures=8,
             averages=entries_per_day(2, 3, 6),
         ),
@@ -219,6 +237,9 @@ KWARGS_AND_EXPECTED_ENTRY_COUNTS = [
 
 @pytest.fixture(scope='module')
 def reader_entry_counts():
+    # TODO: testing everything all at once like this is kinda brittle
+    # https://github.com/lemon24/reader/pull/342#discussion_r1649614984
+
     with make_reader(':memory:') as reader:
         reader._parser = parser = Parser()
 
@@ -253,7 +274,7 @@ def reader_entry_counts():
                 published=datetime(2011, 8, 15),
             ),
             parser.entry(2, 6, datetime(2011, 11, 15), enclosures=[]),
-            # gets updated / added 2011-12-16 (_now() during update_feeds())
+            # unimportant, gets updated / added 2011-12-16 (_now() during update_feeds())
             parser.entry(2, 7, None, enclosures=[]),
             # important, read
             parser.entry(2, 8, datetime(2011, 12, 15), enclosures=[]),
@@ -283,13 +304,16 @@ def reader_entry_counts():
         for entry in two_entries[:3]:
             reader.mark_entry_as_important(entry)
         reader.mark_entry_as_important(two_entries[-1])
+        reader.mark_entry_as_unimportant(two_entries[-2])
 
         reader._now = lambda: datetime(2011, 12, 31)
 
         yield reader
 
 
-@pytest.mark.parametrize('kwargs, expected', KWARGS_AND_EXPECTED_ENTRY_COUNTS)
+@pytest.mark.parametrize(
+    'kwargs, expected', KWARGS_AND_EXPECTED_ENTRY_COUNTS, ids=kwargs_ids
+)
 @rename_argument('reader', 'reader_entry_counts')
 def test_entry(reader, get_entry_counts, kwargs, expected):
     actual = get_entry_counts(reader, **kwargs)

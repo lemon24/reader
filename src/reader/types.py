@@ -899,6 +899,9 @@ class EntryCounts(_namedtuple_compat):
     important: int | None = None
 
     #: Number of unimportant entries.
+    #:
+    #: .. versionadded:: 3.14
+    #:
     unimportant: int | None = None
 
     #: Number of entries that have enclosures.
@@ -939,6 +942,9 @@ class EntrySearchCounts(_namedtuple_compat):
     important: int | None = None
 
     #: Number of unimportant entries.
+    #:
+    #: .. versionadded:: 3.14
+    #:
     unimportant: int | None = None
 
     #: Number of entries that have enclosures.

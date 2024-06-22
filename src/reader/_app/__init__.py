@@ -418,7 +418,7 @@ def add_entry():
 FEED_SORT_NATIVE = {'title', 'added'}
 FEED_SORT_FANCY = {
     'important': lambda counts: counts.important,
-    'unimportant':lambda counts: counts.unimportant,
+    'unimportant': lambda counts: counts.unimportant,
     'unread': lambda counts: counts.total - counts.read,
     # TODO: if we keep these average intervals, properties for them might be nice too
     'avg1m': lambda counts: counts.averages[0],

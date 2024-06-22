@@ -11,6 +11,13 @@ Version 3.14
 
 Unreleased
 
+* Add :attr:`~EntryCounts.unimportant` attribute to
+  :class:`EntryCounts` and :class:`EntrySearchCounts`.
+  Thanks to `chenthur`_ for the pull request.
+  (:issue:`283`)
+
+.. _chenthur: https://github.com/chenthur
+
 
 Version 3.13
 ------------
