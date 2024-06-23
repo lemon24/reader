@@ -513,7 +513,12 @@ def _make_actions(reader, entry, duplicates):
     yield partial(
         reader._storage.set_entry_recent_sort,
         entry.resource_id,
-        min(map(reader._storage.get_entry_recent_sort, duplicate_ids)),
+        min(
+            map(
+                reader._storage.get_entry_recent_sort,
+                [entry.resource_id] + duplicate_ids,
+            )
+        ),
     )
 
     # WARNING: any changes to the duplicates must happen at the end

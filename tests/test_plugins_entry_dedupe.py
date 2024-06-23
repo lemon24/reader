@@ -761,9 +761,12 @@ def test_duplicates_in_feed(make_reader, update_after_one, with_dates, expected_
     reader._parser = parser = Parser()
 
     reader.add_feed(parser.feed(1))
-    one = parser.entry(1, '1', title='title', summary='summary')
+    # force recent_sort logic to use current times, not updated/published
+    reader.update_feeds()
 
+    one = parser.entry(1, '1', title='title', summary='summary')
     if update_after_one:
+        reader._now = lambda: datetime(2009, 12, 1)
         reader.update_feeds()
         parser.entries[1].clear()
         reader.mark_entry_as_read(one)
@@ -785,17 +788,25 @@ def test_duplicates_in_feed(make_reader, update_after_one, with_dates, expected_
         published=datetime(2010, 1, 1) if with_dates else None,
     )
 
+    reader._now = lambda: datetime(2010, 1, 2, 12)
+
     # shouldn't fail
     reader.update_feeds()
     assert {e.id for e in reader.get_entries()} == {expected_id}
+
+    reader._now = lambda: datetime(2010, 1, 2, 18)
 
     # shouldn't flip flop
     # https://github.com/lemon24/reader/issues/340
     reader.update_feeds()
     assert {e.id for e in reader.get_entries()} == {expected_id}
 
+    entry = reader.get_entry(('1', expected_id))
+    rs = reader._storage.get_entry_recent_sort(entry.resource_id)
     if update_after_one:
-        entry = reader.get_entry(('1', expected_id))
         assert entry.read
         assert entry.important
         assert dict(reader.get_tags(entry)) == {'key': 'value'}
+        assert rs == datetime(2009, 12, 1)
+    else:
+        assert rs == datetime(2010, 1, 2, 12)
