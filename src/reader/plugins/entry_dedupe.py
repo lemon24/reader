@@ -113,6 +113,8 @@ import string
 from collections import Counter
 from collections import defaultdict
 from collections import deque
+from datetime import datetime
+from datetime import timezone
 from itertools import groupby
 from typing import NamedTuple
 
@@ -120,7 +122,6 @@ from reader._utils import BetterStrPartial as partial
 from reader.exceptions import EntryNotFoundError
 from reader.exceptions import TagNotFoundError
 from reader.types import EntryUpdateStatus
-from reader.types import Feed
 
 
 log = logging.getLogger('reader.plugins.entry_dedupe')
@@ -260,9 +261,39 @@ def _after_entry_update(reader, entry, status, *, dry_run=False):
         if _is_duplicate_full(entry, e)
     ]
     if not duplicates:
+        log.debug("entry_dedupe: no duplicates for %s", entry.resource_id)
         return
 
+    try:
+        entry = reader.get_entry(entry)
+    except EntryNotFoundError:
+        log.info("entry_dedupe: entry %r was deleted, aborting", entry.resource_id)
+        return
+
+    def group_key(e):
+        # unlike _get_entry_groups, we cannot rely on e.last_updated,
+        # because for duplicates in the feed, we'd end up flip-flopping
+        # (on the first update, entry 1 is deleted and entry 2 remains;
+        # on the second update, entry 1 remains because it's new,
+        # and entry 2 is deleted because it's not modified,
+        # has lower last_updated, and no update hook runs for it; repeat).
+        #
+        # it would be more correct to sort by (is in new feed, last_retrieved),
+        # but as of 3.14, we don't know about existing but not modified entries
+        # (the hook isn't called), and entries don't have last_retrieved.
+        #
+        # also see test_duplicates_in_feed / #340.
+        #
+        return e.updated or e.published or DEFAULT_UPDATED, e.id
+
+    group = [entry] + duplicates
+    group.sort(key=group_key, reverse=True)
+    entry, *duplicates = group
+
     _dedupe_entries(reader, entry, duplicates, dry_run=dry_run)
+
+
+DEFAULT_UPDATED = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 def _get_same_group_entries(reader, entry):
@@ -347,6 +378,7 @@ def _get_entry_groups(reader, feed, is_duplicate):
             continue
 
         while group:
+            # keep the latest entry, consider the rest duplicates
             group.sort(key=lambda e: e.last_updated, reverse=True)
             entry, *rest = group
 
@@ -496,10 +528,6 @@ def _dedupe_entries(reader, entry, duplicates, *, dry_run):
         [e.id for e in duplicates],
     )
 
-    # in case entry is EntryData, not Entry
-    if hasattr(entry, 'as_entry'):
-        entry = entry.as_entry(feed=Feed(entry.feed_url))
-
     # don't do anything until we know all actions were generated successfully
     actions = list(_make_actions(reader, entry, duplicates))
     # FIXME: what if this fails with EntryNotFoundError?
@@ -510,8 +538,8 @@ def _dedupe_entries(reader, entry, duplicates, *, dry_run):
         for action in actions:
             action()
             log.info("entry_dedupe: %s", action)
-    except EntryNotFoundError as e:
-        if entry.resource_id != e.resource_id:  # pragma: no cover
+    except EntryNotFoundError as e:  # pragma: no cover
+        if entry.resource_id != e.resource_id:
             raise
         log.info("entry_dedupe: entry %r was deleted, aborting", entry.resource_id)
 

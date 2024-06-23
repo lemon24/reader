@@ -755,12 +755,13 @@ def test_recent_sort_copying(make_reader, db_path):
 
 
 @pytest.mark.parametrize('update_after_one', [False, True])
-def test_duplicates_in_new_feed(make_reader, update_after_one):
+@pytest.mark.parametrize('with_dates, expected_id', [(False, '3'), (True, '2')])
+def test_duplicates_in_feed(make_reader, update_after_one, with_dates, expected_id):
     reader = make_reader(':memory:', plugins=['reader.entry_dedupe'])
     reader._parser = parser = Parser()
 
     reader.add_feed(parser.feed(1))
-    one = parser.entry(1, 1, title='title', summary='summary')
+    one = parser.entry(1, '1', title='title', summary='summary')
 
     if update_after_one:
         reader.update_feeds()
@@ -769,10 +770,32 @@ def test_duplicates_in_new_feed(make_reader, update_after_one):
         reader.mark_entry_as_important(one)
         reader.set_tag(one, 'key', 'value')
 
-    parser.entry(1, 2, title='title', summary='summary')
-    parser.entry(1, 3, title='title', summary='summary')
+    parser.entry(
+        1,
+        '2',
+        title='title',
+        summary='summary',
+        updated=datetime(2010, 1, 2) if with_dates else None,
+    )
+    parser.entry(
+        1,
+        '3',
+        title='title',
+        summary='summary',
+        published=datetime(2010, 1, 1) if with_dates else None,
+    )
 
     # shouldn't fail
     reader.update_feeds()
+    assert {e.id for e in reader.get_entries()} == {expected_id}
 
-    assert [eval(e.id)[1] for e in reader.get_entries()] == [3]
+    # shouldn't flip flop
+    # https://github.com/lemon24/reader/issues/340
+    reader.update_feeds()
+    assert {e.id for e in reader.get_entries()} == {expected_id}
+
+    if update_after_one:
+        entry = reader.get_entry(('1', expected_id))
+        assert entry.read
+        assert entry.important
+        assert dict(reader.get_tags(entry)) == {'key': 'value'}
