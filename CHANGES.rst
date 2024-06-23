@@ -15,6 +15,11 @@ Unreleased
   :class:`EntryCounts` and :class:`EntrySearchCounts`.
   Thanks to `chenthur`_ for the pull request.
   (:issue:`283`)
+* Fix bug in :mod:`~reader.plugins.entry_dedupe` causing entries to flip-flop
+  if there were multiple *new* duplicates of the same issue
+  (on the first update, one entry remains, on the second update, the other);
+  related to the bug fixed in `version 3.2 <Version 3.2_>`_.
+  (:issue:`340`)
 
 .. _chenthur: https://github.com/chenthur
 
@@ -354,7 +359,7 @@ Released 2022-09-14
   became optional.
   (:issue:`96`)
 * Fix bug in :mod:`~reader.plugins.entry_dedupe` causing updates to fail
-  if there were multiple *new* duplicates of the same issue.
+  if there were multiple *new* duplicates of the same entry.
   (:issue:`292`)
 * Fix bug in :mod:`~reader.plugins.readtime`
   and :mod:`~reader.plugins.mark_as_read` causing updates to fail
