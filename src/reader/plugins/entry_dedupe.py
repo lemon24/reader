@@ -286,8 +286,6 @@ def _after_entry_update(reader, entry, status, *, dry_run=False):
         #
         return e.updated or e.published or DEFAULT_UPDATED, e.id
 
-
-
     group = [entry] + duplicates
     group.sort(key=group_key, reverse=True)
     entry, *duplicates = group
