@@ -41,6 +41,5 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
-      - uses: pre-commit/action@v3.0.1
       - uses: pre-commit-ci/lite-action@v1.0.2
         if: always()
