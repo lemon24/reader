@@ -139,7 +139,7 @@ def update_tags(file, tags):
     return prefix, out.getvalue() + prefix[offset:]
 
 
-def enclosure_tags_filter(enclosure, entry):
+def enclosure_tags_filter(enclosure, entry, feed_tags):
     filename = urlparse(enclosure.href).path.split('/')[-1]
     if not filename.endswith('.mp3'):
         return []
@@ -151,6 +151,11 @@ def enclosure_tags_filter(enclosure, entry):
         args['album'] = entry.feed.title
     if entry.author or entry.feed.author:
         args['artist'] = entry.author or entry.feed.author
+
+    for tag in feed_tags:
+        if 'podcast' in tag.lower():
+            args['genre'] = 'Podcast'
+            break
 
     return [('with tags', url_for('enclosure_tags.enclosure_tags', **args))]
 

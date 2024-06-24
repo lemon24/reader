@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from functools import lru_cache
 
 import flask.signals
 import humanize
@@ -800,12 +801,28 @@ def delete_entry(data):
     get_reader().delete_entry((feed_url, entry_id))
 
 
+def get_feed_tag_keys(url):
+    assert isinstance(url, str), url
+
+    if not hasattr(g, 'reader_get_feed_tag_keys'):
+
+        @lru_cache(128)
+        def get(url):
+            return list(current_app.reader.get_tag_keys(url))
+
+        g.reader_get_feed_tag_keys = get
+
+    return g.reader_get_feed_tag_keys(url)
+
+
 # for some reason, @blueprint.app_template_global does not work
 @blueprint.app_template_global()
 def additional_enclosure_links(enclosure, entry):
     funcs = getattr(current_app, 'reader_additional_enclosure_links', ())
+    # TODO: this would not be needed if entry.feed could have tags on it
+    feed_tags = get_feed_tag_keys(entry.feed.url)
     for func in funcs:
-        yield from func(enclosure, entry)
+        yield from func(enclosure, entry, feed_tags)
 
 
 @blueprint.app_template_global()
