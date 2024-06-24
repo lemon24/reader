@@ -15,11 +15,20 @@ Unreleased
   :class:`EntryCounts` and :class:`EntrySearchCounts`.
   Thanks to `chenthur`_ for the pull request.
   (:issue:`283`)
-* Fix bug in :mod:`~reader.plugins.entry_dedupe` causing entries to flip-flop
-  if there were multiple *new* duplicates of the same issue
+* Fix bug in the :mod:`~reader.plugins.entry_dedupe` plugin causing entries
+  to flip-flop if there were multiple *new* duplicates of the same issue
   (on the first update, one entry remains, on the second update, the other);
   related to the bug fixed in `version 3.2 <Version 3.2_>`_.
   (:issue:`340`)
+
+* :mod:`~reader._plugins.enclosure_tags` plugin improvements. (:issue:`344`)
+
+  * Set genre to `Podcast` if the feed has any tag containing "podcast".
+  * Rewrite tags on the fly,
+    instead of downloading the entire file before sending it to the user;
+    allows browsers to display accurate download progress.
+  * Prefer feed user title to feed title if available.
+  * Use feed title as artist, instead of author.
 
 .. _chenthur: https://github.com/chenthur
 

@@ -7,8 +7,8 @@ Fix tags for MP3 enclosures (e.g. podcasts).
 Adds a "with tags" link to a version of the file with tags set as follows:
 
 * the entry title as title
-* the feed title as album
-* the entry/feed author as author
+* the feed (user) title as album and artist
+* `Podcast` as genre, if the feed has any tag containing "podcast"
 
 This plugin needs additional dependencies, use the ``unstable-plugins`` extra
 to install them:
@@ -24,7 +24,7 @@ To load::
 
 Implemented for :issue:`50`.
 Became a plugin in :issue:`52`.
-Streaming added in :issue:`344.
+Streaming added in :issue:`344`.
 
 """
 
