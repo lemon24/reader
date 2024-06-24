@@ -147,10 +147,10 @@ def enclosure_tags_filter(enclosure, entry, feed_tags):
     args = {'url': enclosure.href, 'filename': filename}
     if entry.title:
         args['title'] = entry.title
-    if entry.feed.title:
-        args['album'] = entry.feed.title
-    if entry.author or entry.feed.author:
-        args['artist'] = entry.author or entry.feed.author
+    if album := (entry.feed.user_title or entry.feed.title):
+        args['album'] = album
+    if artist := (entry.author or entry.feed.author):
+        args['artist'] = artist
 
     for tag in feed_tags:
         if 'podcast' in tag.lower():
