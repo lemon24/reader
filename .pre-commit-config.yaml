@@ -31,3 +31,6 @@ repos:
       - id: check-byte-order-marker
       - id: trailing-whitespace
       - id: end-of-file-fixer
+
+ci:
+  autoupdate_schedule: quarterly
