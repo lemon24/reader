@@ -149,7 +149,8 @@ def enclosure_tags_filter(enclosure, entry, feed_tags):
         args['title'] = entry.title
     if album := (entry.feed.user_title or entry.feed.title):
         args['album'] = album
-    if artist := (entry.author or entry.feed.author):
+        args['artist'] = album
+    elif artist := (entry.author or entry.feed.author):
         args['artist'] = artist
 
     for tag in feed_tags:
