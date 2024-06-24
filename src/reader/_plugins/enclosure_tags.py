@@ -22,12 +22,13 @@ To load::
     READER_APP_PLUGIN='reader._plugins.enclosure_tags:init' \\
     python -m reader serve
 
-Implemented for https://github.com/lemon24/reader/issues/50.
-Became a plugin in https://github.com/lemon24/reader/issues/52.
+Implemented for :issue:`50`.
+Became a plugin in :issue:`52`.
+Streaming added in :issue:`344.
 
 """
 
-import tempfile
+import io
 from urllib.parse import urlparse
 
 import mutagen.mp3
@@ -42,60 +43,100 @@ from flask import url_for
 blueprint = Blueprint('enclosure_tags', __name__)
 
 
-ALL_TAGS = ('album', 'title', 'artist')
-SET_ONLY_IF_MISSING_TAGS = {'artist'}
+ALL_TAGS = ('album', 'title', 'artist', 'genre')
 
 
 @blueprint.route('/enclosure-tags', defaults={'filename': None})
 @blueprint.route('/enclosure-tags/<filename>')
 def enclosure_tags(filename):
-    def update_tags(file):
-        emp3 = mutagen.mp3.EasyMP3(file)
-        changed = False
+    tags = {}
+    for tag in ALL_TAGS:
+        if value := request.args.get(tag):
+            tags[tag] = value
 
-        for key in ALL_TAGS:
-            if key in SET_ONLY_IF_MISSING_TAGS and emp3.get(key):
-                continue
-            value = request.args.get(key)
-            if not value:
-                continue
-            emp3[key] = [value]
-            changed = True
+    # TODO: handle raise_for_status() exceptions nicely
+    headers, chunks = update_tags_requests(request.args['url'], tags)
 
-        if changed:
-            emp3.save(file)
-        file.seek(0)
-
-    def chunks(req):
+    def iter_chunks():
         # Send the headers as soon as possible.
         # Some browsers wait for the headers before showing the "Save As" dialog.
         yield ''
+        yield from chunks
 
-        tmp = tempfile.TemporaryFile()
-        for chunk in req.iter_content(chunk_size=2**20):
-            tmp.write(chunk)
-        tmp.seek(0)
+    return Response(stream_with_context(iter_chunks()), headers=headers)
 
-        update_tags(tmp)
 
-        try:
-            while True:
-                data = tmp.read(2**20)
-                if not data:
-                    break
-                yield data
-        finally:
-            tmp.close()
+def update_tags_requests(url, tags, *, session=requests):
+    """update_tags_requests(url, ...) -> (headers, iter_chunks())"""
 
-    url = request.args['url']
-    req = requests.get(url, stream=True)
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
 
     headers = {}
-    for name in ('Content-Type', 'Content-Disposition'):
-        if name in req.headers:
-            headers[name] = req.headers[name]
 
-    return Response(stream_with_context(chunks(req)), headers=headers)
+    if content_disposition := response.headers.get('content-disposition'):
+        headers['content_disposition'] = content_disposition
+        response.raw.name = content_disposition
+    else:
+        response.raw.name = urlparse(url).path.split('/')[-1]
+
+    old_prefix, new_prefix = update_tags(response.raw, tags)
+
+    try:
+        content_length = int(response.headers.get('content-length', ''))
+    except ValueError:
+        pass
+    else:
+        content_length = content_length - len(old_prefix) + len(new_prefix)
+        headers['content-length'] = str(content_length)
+
+    if content_type := response.headers.get('content-type'):
+        headers['content-type'] = content_type
+
+    def iter_chunks():
+        with response:
+            yield new_prefix
+            yield from response.iter_content(2**18)
+
+    return headers, iter_chunks()
+
+
+def update_tags(file, tags):
+    """update_tags(file, ...) -> (old_prefix, new_prefix)
+
+    Rewrite the prefix of file to update ID3v2 tags.
+
+    """
+    prefix = b''
+    easy = None
+    for size in [2**17, 2**17, 2**18, 2**19, 2**19, 2**19]:
+        chunk = file.read(size)
+        if not chunk:
+            break
+        prefix += chunk
+        try:
+            easy = mutagen.mp3.EasyMP3(io.BytesIO(prefix))
+        except mutagen.MutagenError:
+            # TODO: debug logging
+            pass
+        else:
+            break
+
+    if easy is None:
+        return prefix, prefix
+
+    if easy.info.sketchy:
+        return prefix, prefix
+
+    offset = easy.info.frame_offset
+
+    for tag, value in tags.items():
+        easy[tag] = value
+
+    out = io.BytesIO()
+    easy.save(out)
+
+    return prefix, out.getvalue() + prefix[offset:]
 
 
 def enclosure_tags_filter(enclosure, entry):
