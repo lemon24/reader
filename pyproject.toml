@@ -115,7 +115,7 @@ tests = [
     'lxml; (implementation_name != "pypy" and python_version <= "3.12")',
     "html5lib",
     # for bench.py
-    'numpy; (implementation_name != "pypy" and os_name == "posix")',
+    'numpy; (implementation_name != "pypy" and os_name == "posix" and python_version <= "3.12")',
     # mypy does not work on pypy (yet).
     'mypy; implementation_name != "pypy"',
     "types-requests",

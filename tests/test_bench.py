@@ -14,12 +14,8 @@ import bench
 from bench import cli
 
 
-pytestmark = [
-    pytest.mark.slow,
-    pytest.mark.skipif("os.name != 'posix'"),
-    # risks triggering sqlite3.InterfaceError: Error binding parameter ...
-    pytest.mark.skipif("sys.implementation.name == 'pypy'"),
-]
+pytestmark = pytest.mark.slow
+pytest.importorskip("numpy")
 
 
 @pytest.fixture(scope='module')
