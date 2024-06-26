@@ -1,20 +1,21 @@
 """
-Vendored fork of feedparser:
-https://github.com/lemon24/feedparser/tree/a29c54b7e83f7397c0c9f15c7ee73b537abac957
+Vendored kurtmckee/feedparser:develop as of 2024-06-26:
+https://github.com/kurtmckee/feedparser/tree/efcb89b51b6f7443ecea508a7a572e3f16e7cd4c
 
-Includes pull requests:
+Vendored because:
 
-* memory usage reduction: https://github.com/kurtmckee/feedparser/pull/302
+* latest release (6.0.11) does not include memory usage reduction PR
+  https://github.com/kurtmckee/feedparser/pull/302
 
 Changes from the commit above:
 
 * this comment
-* api.py: fix "import feedparser" absolute imports
+* api.py: fix "import feedparser" absolute import
 
 TODO: Use feedparser once the pull requests are merged/released.
 
 """
-# Copyright 2010-2021 Kurt McKee <contactme@kurtmckee.org>
+# Copyright 2010-2023 Kurt McKee <contactme@kurtmckee.org>
 # Copyright 2002-2008 Mark Pilgrim
 # All rights reserved.
 #
@@ -43,12 +44,18 @@ TODO: Use feedparser once the pull requests are merged/released.
 
 from .api import parse
 from .datetimes import registerDateHandler
-from .exceptions import *
+from .exceptions import (
+    CharacterEncodingOverride,
+    CharacterEncodingUnknown,
+    FeedparserError,
+    NonXMLContentType,
+    UndeclaredNamespace,
+)
 from .util import FeedParserDict
 
-__author__ = 'Kurt McKee <contactme@kurtmckee.org>'
-__license__ = 'BSD 2-clause'
-__version__ = '6.0.8'
+__author__ = "Kurt McKee <contactme@kurtmckee.org>"
+__license__ = "BSD 2-clause"
+__version__ = "6.0.11"
 
 # HTTP "User-Agent" header to send to servers when downloading feeds.
 # If you are embedding feedparser in a larger application, you should
@@ -67,3 +74,15 @@ SANITIZE_HTML = 1
 # If you want feedparser to use only a prefix of the feed to detect encodings
 # (uses less memory), set this to 1.
 OPTIMISTIC_ENCODING_DETECTION = 1
+
+
+__all__ = (
+    "parse",
+    "registerDateHandler",
+    "FeedParserDict",
+    "FeedparserError",
+    "CharacterEncodingOverride",
+    "CharacterEncodingUnknown",
+    "NonXMLContentType",
+    "UndeclaredNamespace",
+)

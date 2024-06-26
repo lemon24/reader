@@ -30,7 +30,14 @@ Unreleased
   * Prefer feed user title to feed title if available.
   * Use feed title as artist, instead of author.
 
+* Update vendored `feedparser`_ to the ``develop`` branch as of 2024-06-26.
+  Needed because upstream removed dependency on stdlib module ``cgi``
+  (removed in Python 3.13), but the `version 2.9 <Version 2.9_>`_
+  memory usage reduction was not released upstream yet.
+  (:issue:`341`)
+
 .. _chenthur: https://github.com/chenthur
+.. _feedparser: https://feedparser.readthedocs.io/en/latest/
 
 
 Version 3.13

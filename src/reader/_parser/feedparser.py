@@ -51,7 +51,7 @@ class FeedparserParser:
         # feedparser content sanitization and relative link resolution should be ON.
         # https://github.com/lemon24/reader/issues/125
         # https://github.com/lemon24/reader/issues/157
-        result = feedparser.parse(  # type: ignore[attr-defined]
+        result = feedparser.parse(
             resource,
             resolve_relative_uris=True,
             sanitize_html=True,
