@@ -36,12 +36,11 @@ def apply_runslow(config, items):  # pragma: no cover
 
 def pytest_runtest_setup(item):
     # lxml fails to build in various places,
-    # see the comments in setup.cfg for details.
+    # see the comments in pyproject.toml for details.
     for mark in item.iter_markers(name="requires_lxml"):
-        no_lxml = [
-            sys.implementation.name == 'pypy' and sys.version_info[:2] > (3, 9),
-        ]
-        if any(no_lxml):
+        try:
+            import lxml
+        except ImportError:
             pytest.skip("test requires lxml")
 
     # getting intermittent Flask-context-related errors on pypy:
