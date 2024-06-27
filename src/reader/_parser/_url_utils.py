@@ -93,6 +93,8 @@ def resolve_root(root: str, path: str) -> str:
 
     # we normalize the path **before** symlinks are resolved;
     # i.e. it behaves as realpath -L (logical), not realpath -P (physical).
+    # we could probably use pathlib resolve() here, but it is not pure,
+    # and we can't mock the Windows version on POSIX.
     # https://docs.python.org/3/library/os.path.html#os.path.normpath
     # https://stackoverflow.com/questions/34865153/os-path-normpath-and-symbolic-links
     path = os.path.normcase(os.path.normpath(os.path.join(root, path)))
@@ -112,8 +114,8 @@ def resolve_root(root: str, path: str) -> str:
 def is_abs_path(path: str) -> bool:
     """Return True if path is an absolute pathname.
 
-    Unlike os.path.isabs(), return False on Windows if there's no drive
-    (e.g. "\\path").
+    Unlike os.path.isabs(), return False on Windows
+    if there's no drive (e.g. "\\path").
 
     """
     is_abs = os.path.isabs(path)
@@ -124,10 +126,19 @@ def is_abs_path(path: str) -> bool:
 def is_rel_path(path: str) -> bool:
     """Return True if path is a relative pathname.
 
-    Unlike "not os.path.isabs()", return False on windows if there's a drive
-    (e.g. "C:path").
+    Unlike "not os.path.isabs()", return False on Windows
+    if there's a drive (e.g. "C:path").
 
     """
+    # starting with Python 3.13, os.path.isabs('/a') is False on Windows.
+    # pathlib is_absolute() doesn't need this.
+    path = os.path.normpath(path)
+
     is_abs = os.path.isabs(path)
+
+    # starting with Python 3.13, os.path.isabs('\\a') is False on Windows.
+    if os.name == 'nt' and path.startswith('\\'):
+        is_abs = True
+
     has_drive = os.name == 'nt' and os.path.splitdrive(path)[0]
     return not any([is_abs, has_drive])
