@@ -58,15 +58,20 @@ class Reloader:
         self.monkeypatch = monkeypatch
 
     def __call__(self, module):
-        self.modules.append(module)
+        self.modules.append((module, module.__dict__.copy()))
         return importlib.reload(module)
 
     def undo(self):
-        # undo monkeypatches before reloading again,
-        # to ensure modules are reloaded from a "clean" environment
         self.monkeypatch.undo()
+
+        # previously, this would reload the module again,
+        # creating *new* versions of the old classes,
+        # which breaks some modules (e.g. pathlib).
+        # restoring the original attributes seems to work better.
         while self.modules:
-            importlib.reload(self.modules.pop())
+            module, module_dict = self.modules.pop()
+            module.__dict__.clear()
+            module.__dict__.update(module_dict)
 
 
 @pytest.fixture
