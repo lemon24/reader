@@ -30,6 +30,7 @@ Unreleased
   * Prefer feed user title to feed title if available.
   * Use feed title as artist, instead of author.
 
+* Support Python 3.13. (:issue:`341`)
 * Update vendored `feedparser`_ to the ``develop`` branch as of 2024-06-26.
   Needed because upstream removed dependency on stdlib module ``cgi``
   (removed in Python 3.13), but the `version 2.9 <Version 2.9_>`_

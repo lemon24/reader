@@ -21,7 +21,7 @@ jobs:
 
       matrix:
         python-version: [
-          "3.10", "3.11", "3.12",
+          "3.10", "3.11", "3.12", "3.13",
           "pypy-3.10"
         ]
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -33,6 +33,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
 
       - run: ./run.sh ci-install
       - run: ./run.sh ci-run
