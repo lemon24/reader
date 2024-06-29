@@ -158,7 +158,7 @@ def test_etag_last_modified(reader, data_dir, server):
     Ensures https://rachelbythebay.com/w/2023/01/18/http/ cannot happen.
 
     """
-    etag = b'"12345-67890abcdef12"'
+    etag = b'"00000-67890abcdef12"'
     last_modified = b'Thu, 1 Jan 2020 00:00:00 GMT'
 
     server.set_response(data_dir.joinpath('full.atom').read_text(), etag, last_modified)
@@ -166,6 +166,7 @@ def test_etag_last_modified(reader, data_dir, server):
 
     reader.add_feed(url)
 
+    # server response with caching headers
     assert reader.update_feed(url).new == 2
     request_line, headers, body = server.request
     assert request_line == b'GET / HTTP/1.1'
@@ -173,6 +174,7 @@ def test_etag_last_modified(reader, data_dir, server):
     assert b'If-None-Match' not in headers
     assert b'If-Modified-Since' not in headers
 
+    # assert caching headers are used
     server.set_response(status_line='304 Not Modified')
     assert reader.update_feed(url) is None
     request_line, headers, body = server.request
@@ -187,3 +189,21 @@ def test_etag_last_modified(reader, data_dir, server):
     assert ua.endswith(b' (+https://github.com/lemon24/reader)')
 
     # TODO: since we're here, assert accept, and a-im too; subtests, ideally
+
+    # server responds with new caching headers
+    server.set_response(
+        data_dir.joinpath('empty.atom').read_text(),
+        b'"11111-67890abcdef12"',
+        b'Thu, 1 Jan 2020 11:11:11 GMT',
+    )
+    assert reader.update_feed(url).new == 0
+    request_line, headers, body = server.request
+    assert headers[b'If-None-Match'] == etag
+    assert headers[b'If-Modified-Since'] == last_modified
+
+    # assert new caching headers are used
+    server.set_response(status_line='304 Not Modified')
+    assert reader.update_feed(url) is None
+    request_line, headers, body = server.request
+    assert headers[b'If-None-Match'] == b'"11111-67890abcdef12"'
+    assert headers[b'If-Modified-Since'] == b'Thu, 1 Jan 2020 11:11:11 GMT'
