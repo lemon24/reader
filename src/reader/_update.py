@@ -444,14 +444,14 @@ class Pipeline:
 
         try:
             # assemble pipeline
-            entry_pairs = self.get_entry_pairs(result)
-
             if result and not isinstance(result, Exception):
+                entry_pairs = self.get_entry_pairs(result)
                 entry_pairs = self.reader._parser.process_entry_pairs(
                     feed.url, result.mime_type, entry_pairs
                 )
                 entry_pairs, get_total_count = count_consumed(entry_pairs)
             else:
+                entry_pairs = ()
                 get_total_count = lambda: 0  # noqa: E731
 
             intents = make_intents(entry_pairs)
@@ -466,10 +466,7 @@ class Pipeline:
 
         return feed.url, UpdatedFeed(feed.url, *counts, total - sum(counts))
 
-    def get_entry_pairs(self, result: ParsedFeed | None | ParseError) -> EntryPairs:
-        if not result or isinstance(result, Exception):
-            return ()
-
+    def get_entry_pairs(self, result: ParsedFeed) -> EntryPairs:
         # give storage a chance to consume entries in a streaming fashion
         entries1, entries2 = tee(result.entries)
         entries_for_update = self.reader._storage.get_entries_for_update(
