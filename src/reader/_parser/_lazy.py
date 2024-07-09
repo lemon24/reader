@@ -314,25 +314,25 @@ class Parser:
             ParseError: No parser matches.
 
         """
-        parser = self.get_parser_by_url(url)
-        if not parser:
-            if not mime_type:
-                mime_type, _ = mimetypes.guess_type(url)
+        if parser := self.get_parser_by_url(url):
+            return parser, mime_type
 
-            # https://tools.ietf.org/html/rfc7231#section-3.1.1.5
-            #
-            # > If a Content-Type header field is not present, the recipient
-            # > MAY either assume a media type of "application/octet-stream"
-            # > ([RFC2046], Section 4.5.1) or examine the data to determine its type.
-            #
-            if not mime_type:
-                mime_type = 'application/octet-stream'
+        if not mime_type:
+            mime_type, _ = mimetypes.guess_type(url)
 
-            parser = self.get_parser_by_mime_type(mime_type)
-            if not parser:
-                raise ParseError(url, message=f"no parser for MIME type {mime_type!r}")
+        # https://tools.ietf.org/html/rfc7231#section-3.1.1.5
+        #
+        # > If a Content-Type header field is not present, the recipient
+        # > MAY either assume a media type of "application/octet-stream"
+        # > ([RFC2046], Section 4.5.1) or examine the data to determine its type.
+        #
+        if not mime_type:
+            mime_type = 'application/octet-stream'
 
-        return parser, mime_type
+        if parser := self.get_parser_by_mime_type(mime_type):
+            return parser, mime_type
+
+        raise ParseError(url, message=f"no parser for MIME type {mime_type!r}")
 
     def validate_url(self, url: str) -> None:
         """Check if ``url`` is valid without actually retrieving it.
