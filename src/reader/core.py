@@ -103,6 +103,7 @@ def make_reader(
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
     search_enabled: bool | None | Literal['auto'] = 'auto',
     _storage: StorageType | None = None,
+    read_only: bool = True,
 ) -> Reader:
     """Create a new :class:`Reader`.
 
