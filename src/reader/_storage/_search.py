@@ -409,7 +409,7 @@ class Search:
         def pq(
             limit: int | None, last: tuple[Any, ...] | None = None
         ) -> Iterable[EntrySearchResult]:
-            with wrap_exceptions(ENABLED_EXC | QUERY_EXC):
+            with wrap_exceptions(ENABLED_EXC | QUERY_EXC):  # type: ignore[operator]
                 yield from paginated_query(
                     self.get_db(),
                     make_query,
@@ -455,7 +455,7 @@ class Search:
             lambda: EntryNotFoundError(feed_url, entry_id),
         )
 
-    @wrap_exceptions(ENABLED_EXC | QUERY_EXC)
+    @wrap_exceptions(ENABLED_EXC | QUERY_EXC)  # type: ignore[operator]
     def search_entry_counts(
         self,
         query: str,

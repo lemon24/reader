@@ -14,6 +14,7 @@ import traceback
 import weakref
 from collections.abc import Callable
 from collections.abc import Iterator
+from collections.abc import Mapping
 from collections.abc import Sequence
 from contextlib import closing
 from contextlib import contextmanager
@@ -85,7 +86,7 @@ def ddl_transaction(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
 @contextmanager
 def wrap_exceptions(
     exc_type: Callable[[str], Exception],
-    op_exc_types: dict[str, Callable[[str], Exception]] = {},  # noqa: B006
+    op_exc_types: Mapping[str, Callable[[str], Exception]] = {},  # noqa: B006
     message: str = "unexpected error",
 ) -> Iterator[None]:
     """Wrap sqlite3 exceptions in a custom exception.

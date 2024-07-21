@@ -89,8 +89,10 @@ def count_consumed(it: Iterable[_T]) -> tuple[Iterable[_T], Callable[[], int]]:
 MapFunction = Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
 MapContextManager = AbstractContextManager[MapFunction[_T, _U]]
 
+# type ignore because of https://github.com/python/mypy/issues/17551
 
-@contextmanager
+
+@contextmanager  # type: ignore[arg-type]
 def make_pool_map(workers: int) -> Iterator[MapFunction[_T, _U]]:
     # We are using concurrent.futures instead of multiprocessing.dummy
     # because the latter doesn't work on some environments (e.g. AWS Lambda).

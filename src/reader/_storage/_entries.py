@@ -62,7 +62,7 @@ class EntriesMixin(StorageBase):
             self.paginated_query,
             partial(get_entries_query, filter, sort),
             row_factory=entry_factory,
-        )  # type: ignore[var-annotated]
+        )
         if sort != 'random':
             last = self.get_entry_last(sort, starting_after) if starting_after else None
             return paginated_query(limit, last)
