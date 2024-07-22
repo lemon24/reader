@@ -349,7 +349,7 @@ class Search:
                     (change.sequence, *change.resource_id),
                 )
                 if cursor.rowcount:  # pragma: no cover
-                    log.warn(
+                    log.warning(
                         "during insert, found and deleted %d rows for %r",
                         cursor.rowcount,
                         change,
