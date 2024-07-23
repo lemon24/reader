@@ -9,7 +9,7 @@ Changelog
 Version 3.14
 ------------
 
-Unreleased
+Released 2024-07-23
 
 * Add :attr:`~EntryCounts.unimportant` attribute to
   :class:`EntryCounts` and :class:`EntrySearchCounts`.
