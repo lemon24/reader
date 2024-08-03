@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# back up a SQLite database not owned by the current user
+# back up a SQLite database
 #
 # usage:
-#   backup.sh src dst
-#   backup.sh src
+#   ./backup.sh src dst
+#   ./backup.sh src
 #
 # example:
-#   "backup.sh /src/db.sqlite" -> ./db.sqlite.2023-01-28
+#   "./backup.sh /src/db.sqlite" -> ./db.sqlite.2023-01-28.gz
 #
 
 set -o nounset
@@ -29,5 +29,8 @@ trap 'rm -rf '"$tmpdir" EXIT
 
 tmp=$tmpdir/$( basename "$src" )
 
-time sudo sqlite3 "$src" "VACUUM INTO '$tmp'"
-time cp "$tmp" "$dst"
+du -sh "$src"
+sqlite3 "$src" "VACUUM INTO '$tmp'"
+du -sh "$tmp"
+gzip -c "$tmp" > "$dst.gz"
+du -sh "$dst.gz"
