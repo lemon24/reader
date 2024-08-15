@@ -3,7 +3,7 @@ reader.mark_as_read
 ~~~~~~~~~~~~~~~~~~~
 
 .. module:: reader
-  :noindex:
+  :no-index:
 
 Mark added entries of specific feeds as read + unimportant
 if their title matches a regex.

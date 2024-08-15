@@ -3,7 +3,7 @@ Plugins
 =======
 
 .. module:: reader
-  :noindex:
+  :no-index:
 
 
 .. _built-in plugins:

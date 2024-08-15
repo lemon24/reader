@@ -3,7 +3,7 @@ User guide
 ==========
 
 .. module:: reader
-  :noindex:
+  :no-index:
 
 
 This page gives a tour of *reader*'s features,

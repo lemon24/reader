@@ -3,7 +3,7 @@ reader.readtime
 ~~~~~~~~~~~~~~~
 
 .. module:: reader
-  :noindex:
+  :no-index:
 
 Calculate the read time for new/updated entries,
 and store it as the ``.reader.readtime`` entry tag, with the format::

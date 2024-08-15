@@ -2,7 +2,7 @@ Tutorial
 ========
 
 .. module:: reader
-    :noindex:
+    :no-index:
 
 
 In this tutorial we'll use *reader* to download all the episodes of a podcast,

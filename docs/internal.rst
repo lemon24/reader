@@ -45,7 +45,7 @@ Protocols
 ~~~~~~~~~
 
 .. module:: reader._parser
-    :noindex:
+    :no-index:
 
 .. autoclass:: FeedArgument
     :members:
@@ -72,7 +72,7 @@ Protocols
 
 
 .. module:: reader._parser.requests
-    :noindex:
+    :no-index:
 
 .. autoclass:: RequestHook
     :members:
@@ -87,7 +87,7 @@ Data objects
 ~~~~~~~~~~~~
 
 .. module:: reader._parser
-    :noindex:
+    :no-index:
 
 .. autoclass:: RetrieveResult
     :members:
@@ -155,7 +155,7 @@ but at least one other implementation needs to exists before that.
 .. autoattribute:: reader.Reader._search
 
 .. module:: reader._types
-    :noindex:
+    :no-index:
 
 .. autoclass:: StorageType()
     :members:

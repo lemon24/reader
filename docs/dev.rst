@@ -3,7 +3,7 @@ Development
 ===========
 
 .. module:: reader
-  :noindex:
+  :no-index:
 
 
 Development should follow a problem-solution_ approach.

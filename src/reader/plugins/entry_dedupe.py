@@ -3,7 +3,7 @@ reader.entry_dedupe
 ~~~~~~~~~~~~~~~~~~~
 
 .. module:: reader
-  :noindex:
+  :no-index:
 
 Deduplicate the entries of a feed.
 

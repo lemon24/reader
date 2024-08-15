@@ -3,7 +3,7 @@ Changelog
 =========
 
 .. module:: reader
-  :noindex:
+  :no-index:
 
 
 Version 3.15
