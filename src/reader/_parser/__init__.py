@@ -34,12 +34,8 @@ from .requests import TimeoutType
 if TYPE_CHECKING:  # pragma: no cover
     from ._lazy import Parser as Parser
 
+
 __getattr__ = lazy_import(__name__, ['Parser'])
-
-
-T = TypeVar('T')
-T_co = TypeVar('T_co', covariant=True)
-T_cv = TypeVar('T_cv', contravariant=True)
 
 
 def default_parser(
@@ -158,19 +154,94 @@ class LazyParser:
         self._lazy_call('mount_parser_by_url', url, parser)
 
 
+class FeedArgument(Protocol):  # pragma: no cover
+    """Any :class:`~reader._types.FeedForUpdate`-like object."""
+
+    @property
+    def url(self) -> str:
+        """The feed URL."""
+
+    @property
+    def http_etag(self) -> str | None:
+        """The HTTP ``ETag`` header from the last update."""
+
+    @property
+    def http_last_modified(self) -> str | None:
+        """The the HTTP ``Last-Modified`` header from the last update."""
+
+
+T = TypeVar('T')
+T_co = TypeVar('T_co', covariant=True)
+T_cv = TypeVar('T_cv', contravariant=True)
+F = TypeVar('F', bound=FeedArgument)
+E = TypeVar('E', bound=Exception)
+
+
 @dataclass(frozen=True)
-class RetrieveResult(_namedtuple_compat, Generic[T_co]):
-    """The result of retrieving a feed, plus metadata."""
+class HTTPInfo(_namedtuple_compat):
+    """Details about an HTTP response."""
+
+    #: The HTTP status code.
+    status: int
+
+    #: The HTTP response headers.
+    headers: Headers
+
+
+class RetrieveError(ParseError):
+    """An error occurred while retrieving the feed.
+
+    Can be used by retrievers to pass additional information to the parser.
+
+    """
+
+    def __init__(
+        self,
+        url: str,
+        /,
+        message: str = '',
+        http_info: HTTPInfo | None = None,
+    ) -> None:
+        super().__init__(url, message=message)
+
+        #: Details about the HTTP response.
+        self.http_info = http_info
+
+
+class NotModified(RetrieveError):
+    """Raised by retrievers to tell the parser that the feed was not modified."""
+
+    _default_message = "not modified"
+
+
+@dataclass(frozen=True)
+class RetrieveResult(_namedtuple_compat, Generic[F, T, E]):
+    """The result of retrieving a feed, regardless of the outcome."""
 
     # should be a NamedTuple, but the typing one became generic only in 3.11,
     # and we don't want to depend on typing_extensions at runtime
 
+    #: The feed (a :class:`FeedArgument`, usually a :class:`FeedForUpdate`).
+    feed: F
+
+    #: One of:
+    #:
+    #: * a context manager with the :class:`RetrievedFeed` as target
+    #: * an exception
+    #:
+    value: ContextManager[RetrievedFeed[T]] | E
+
+
+@dataclass(frozen=True)
+class RetrievedFeed(_namedtuple_compat, Generic[T]):
+    """A (successfully) retrieved feed, plus metadata."""
+
     # TODO: coalesce http_etag and http_last_modified into a single thing?
 
-    #: The result of retrieving a feed.
+    #: The retrieved resource.
     #: Usually, a readable binary file.
     #: Passed to the parser.
-    resource: T_co
+    resource: T
     #: The MIME type of the resource.
     #: Used to select an appropriate parser.
     mime_type: str | None = None
@@ -180,9 +251,8 @@ class RetrieveResult(_namedtuple_compat, Generic[T_co]):
     #: The HTTP ``Last-Modified`` header associated with the resource.
     #: Passed back to the retriever on the next update.
     http_last_modified: str | None = None
-    #: The HTTP response headers associated with the resource.
-    #: Passed to the parser.
-    headers: Headers | None = None
+    #: Details about the HTTP response.
+    http_info: HTTPInfo | None = None
 
 
 class RetrieverType(Protocol[T_co]):  # pragma: no cover
@@ -200,7 +270,7 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
         http_etag: str | None,
         http_last_modified: str | None,
         http_accept: str | None,
-    ) -> ContextManager[RetrieveResult[T_co] | None]:
+    ) -> ContextManager[RetrievedFeed[T_co] | T_co]:
         """Retrieve a feed.
 
         Args:
@@ -213,12 +283,15 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
                 Content types to be retrieved, as an HTTP ``Accept`` header.
 
         Returns:
-            contextmanager(RetrieveResult or None):
-            A context manager that has as target either the result
-            or :const:`None`, if the feed didn't change.
+            contextmanager(RetrievedFeed or None):
+            A context manager that has as target either
+            a :class:`RetrievedFeed` wrapping the retrieved resource,
+            or the bare resource.
 
         Raises:
             ParseError
+            RetrieveError: To pass additional information to the parser.
+            NotModified: To tell the parser that the feed was not modified.
 
         """
 
@@ -247,6 +320,27 @@ class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no c
             The passed-in feed information, possibly modified.
 
         """
+
+
+@dataclass(frozen=True)
+class ParseResult(_namedtuple_compat, Generic[F, E]):
+    """The result of retrieving and parsing a feed, regardless of the outcome."""
+
+    # FIXME: either move to _types with ParsedFeed, or move ParsedFeed here
+
+    #: The feed (a :class:`FeedArgument`, usually a :class:`FeedForUpdate`).
+    feed: F
+
+    #: One of:
+    #:
+    #: * the parsed feed
+    #: * :const:`None`, if the feed didn't change
+    #: * an exception
+    #:
+    value: ParsedFeed | None | E
+
+    #: Details about the HTTP response.
+    http_info: HTTPInfo | None = None
 
 
 FeedAndEntries = tuple[FeedData, Collection[EntryData]]
@@ -308,28 +402,6 @@ class EntryPairsParserType(ParserType[T_cv], Protocol):  # pragma: no cover
         """
 
 
-class FeedArgument(Protocol):  # pragma: no cover
-    """Any :class:`~reader._types.FeedForUpdate`-like object."""
-
-    @property
-    def url(self) -> str:
-        """The feed URL."""
-
-    @property
-    def http_etag(self) -> str | None:
-        """The HTTP ``ETag`` header from the last update."""
-
-    @property
-    def http_last_modified(self) -> str | None:
-        """The the HTTP ``Last-Modified`` header from the last update."""
-
-
-class FeedArgumentTuple(NamedTuple):
-    url: str
-    http_etag: str | None = None
-    http_last_modified: str | None = None
-
-
 @contextmanager
 def wrap_exceptions(url: str, when: str) -> Iterator[None]:
     try:
@@ -342,9 +414,3 @@ def wrap_exceptions(url: str, when: str) -> Iterator[None]:
         raise ParseError(url, message=f"error {when}") from e
     except Exception as e:
         raise ParseError(url, message=f"unexpected error {when}") from e
-
-
-@contextmanager
-def wrap_cm_exceptions(cm: ContextManager[T], url: str, when: str) -> Iterator[T]:
-    with wrap_exceptions(url, when), cm as target:
-        yield target

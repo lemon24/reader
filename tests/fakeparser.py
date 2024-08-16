@@ -8,7 +8,8 @@ from io import BytesIO
 
 import reader._parser
 from reader import ParseError
-from reader._parser import RetrieveResult
+from reader._parser import NotModified
+from reader._parser import RetrievedFeed
 from reader._types import EntryData
 from reader._types import FeedData
 from reader._types import ParsedFeed
@@ -93,6 +94,8 @@ class Parser:
         raise NotImplementedError
 
     parallel = reader._parser.Parser.parallel
+    retrieve_fn = reader._parser.Parser.retrieve_fn
+    parse_fn = reader._parser.Parser.parse_fn
 
     class session_factory:
         persistent = staticmethod(nullcontext)
@@ -105,11 +108,11 @@ class Parser:
             except Exception as e:
                 raise ParseError(url) from e
         if self.is_not_modified:
-            return nullcontext(None)
-        return nullcontext(RetrieveResult(BytesIO(b'opaque')))
+            raise NotModified(url)
+        return nullcontext(RetrievedFeed(BytesIO(b'opaque')))
 
-    def parse(self, url, result):
-        assert result.resource.read() == b'opaque', result
+    def parse(self, url, retrieved):
+        assert retrieved.resource.read() == b'opaque', retrieved
 
         for feed_number, feed in self.feeds.items():
             if feed.url == url:

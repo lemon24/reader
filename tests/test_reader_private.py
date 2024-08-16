@@ -12,7 +12,7 @@ from reader import Feed
 from reader import FeedNotFoundError
 from reader import make_reader
 from reader import ParseError
-from reader._parser import RetrieveResult
+from reader._parser import RetrievedFeed
 from reader._types import EntryData
 from reader._types import FeedData
 from reader._types import FeedFilter
@@ -160,7 +160,7 @@ class CustomRetriever:
     @contextmanager
     def _make_cm(self, url, http_etag):
         self.after_enter(url)
-        yield RetrieveResult(
+        yield RetrievedFeed(
             io.BytesIO(b'file'),
             'x.test',
             http_etag=http_etag.upper() if http_etag else http_etag,

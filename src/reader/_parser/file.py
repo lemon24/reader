@@ -8,7 +8,6 @@ from typing import Any
 from typing import IO
 
 from ..exceptions import ParseError
-from . import RetrieveResult
 from . import wrap_exceptions
 from ._url_utils import extract_path
 from ._url_utils import resolve_root
@@ -31,9 +30,7 @@ class FileRetriever:
         self._normalize_url('known-good-feed-url')
 
     @contextmanager
-    def __call__(
-        self, url: str, *args: Any, **kwargs: Any
-    ) -> Iterator[RetrieveResult[IO[bytes]]]:
+    def __call__(self, url: str, *args: Any, **kwargs: Any) -> Iterator[IO[bytes]]:
         try:
             normalized_url = self._normalize_url(url)
         except ValueError as e:
@@ -41,7 +38,7 @@ class FileRetriever:
 
         with wrap_exceptions(url, "while reading feed"):
             with open(normalized_url, 'rb') as file:
-                yield RetrieveResult(file)
+                yield file
 
     def validate_url(self, url: str) -> None:
         self._normalize_url(url)

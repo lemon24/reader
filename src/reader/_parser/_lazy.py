@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 import logging
 import mimetypes
 import shutil
@@ -7,8 +8,9 @@ import tempfile
 from collections.abc import Iterable
 from collections.abc import Iterator
 from contextlib import contextmanager
-from contextlib import nullcontext
+from functools import partial
 from typing import Any
+from typing import cast
 from typing import ContextManager
 
 from .._types import FeedForUpdate
@@ -18,14 +20,16 @@ from ..exceptions import InvalidFeedURLError
 from ..exceptions import ParseError
 from . import EntryPair
 from . import EntryPairsParserType
-from . import FeedArgument
-from . import FeedArgumentTuple
+from . import F
 from . import FeedForUpdateRetrieverType
 from . import HTTPAcceptParserType
+from . import NotModified
+from . import ParseResult
 from . import ParserType
+from . import RetrievedFeed
+from . import RetrieveError
 from . import RetrieveResult
 from . import RetrieverType
-from . import wrap_cm_exceptions
 from . import wrap_exceptions
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
@@ -81,10 +85,10 @@ class Parser:
 
     def parallel(
         self,
-        feeds: Iterable[FeedArgument],
+        feeds: Iterable[F],
         map: MapFunction[Any, Any] = map,
         is_parallel: bool = True,
-    ) -> Iterable[tuple[FeedArgument, ParsedFeed | None | ParseError]]:
+    ) -> Iterable[ParseResult[F, ParseError]]:
         """Retrieve and parse many feeds, possibly in parallel.
 
         Yields the parsed feeds, as soon as they are ready.
@@ -97,31 +101,13 @@ class Parser:
             is_parallel (bool): Whether ``map`` runs the tasks in parallel.
 
         Yields:
-            tuple(:class:`FeedArgument`, :class:`~reader._types.ParsedFeed` or :const:`None` or :class:`~reader.ParseError`):
-
-                A (feed, result) pair, where result is either:
-
-                * the parsed feed
-                * :const:`None`, if the feed didn't change
-                * an exception instance
+            ParseResult:
+                The result of retrieving and parsing a feed;
+                the :attr:`~ParseResult.feed` is the object passed in ``feeds``.
 
         """
-
-        def retrieve(
-            feed: FeedArgument,
-        ) -> tuple[
-            FeedArgument, ContextManager[RetrieveResult[Any] | None] | Exception
-        ]:
-            try:
-                context = self.retrieve(
-                    feed.url, feed.http_etag, feed.http_last_modified, is_parallel
-                )
-                return feed, context
-            except Exception as e:
-                # pass around *all* exception types,
-                # unhandled exceptions get swallowed by the thread otherwise
-                log.debug("retrieve() exception, traceback follows", exc_info=True)
-                return feed, e
+        # FIXME: just assume is_parallel is always true?
+        retrieve = partial(self.retrieve_fn, is_parallel=is_parallel)
 
         with self.session_factory.persistent():
             # if stuff hangs weirdly during debugging, change this to builtins.map
@@ -131,26 +117,16 @@ class Parser:
             # however, most of the time is spent in pure-Python code,
             # which doesn't benefit from the threads on CPython:
             # https://github.com/lemon24/reader/issues/261#issuecomment-956412131
+            parse_results = builtins.map(self.parse_fn, retrieve_results)
 
-            for feed, context in retrieve_results:
-                if isinstance(context, ParseError):
-                    yield feed, context
-                    continue
-
-                if isinstance(context, Exception):  # pragma: no cover
-                    raise context
-
-                try:
-                    with context as result:
-                        if not result or isinstance(result, ParseError):
-                            yield feed, result
-                            continue
-
-                        yield feed, self.parse(feed.url, result)
-
-                except ParseError as e:
-                    log.debug("parse() exception, traceback follows", exc_info=True)
-                    yield feed, e
+            # interestingly, if we "yield from ..." instead of
+            # "for x in ...: yield x", mypy 1.11 does not complain
+            # about yielding ParseResult[Exception]
+            for result in parse_results:
+                if isinstance(result.value, Exception):
+                    if not isinstance(result.value, ParseError):
+                        raise result.value
+                yield cast(ParseResult[F, ParseError], result)
 
     def __call__(
         self,
@@ -177,14 +153,38 @@ class Parser:
             ParseError
 
         """
-        feed = FeedArgumentTuple(url, http_etag, http_last_modified)
+        feed = FeedForUpdate(
+            url, http_etag=http_etag, http_last_modified=http_last_modified
+        )
 
         # is_parallel=True ensures the parser tests cover more code
-        ((_, result),) = self.parallel([feed], is_parallel=True)
+        (result,) = self.parallel([feed], is_parallel=True)
+        value = result.value
 
-        if isinstance(result, Exception):
-            raise result
-        return result
+        if isinstance(value, Exception):
+            raise value
+        return value
+
+    def retrieve_fn(
+        self, feed: F, is_parallel: bool
+    ) -> RetrieveResult[F, Any, Exception]:
+        """:meth:`retrieve` wrapper used by :meth:`parallel`.
+
+        Takes one argument and does not raise exceptions.
+
+        """
+        try:
+            return RetrieveResult(
+                feed,
+                self.retrieve(
+                    feed.url, feed.http_etag, feed.http_last_modified, is_parallel
+                ),
+            )
+        except Exception as e:
+            # pass around *all* exception types,
+            # unhandled exceptions get swallowed by the thread otherwise
+            log.debug("retrieve() exception, traceback follows", exc_info=True)
+            return RetrieveResult(feed, e)
 
     def retrieve(
         self,
@@ -192,7 +192,7 @@ class Parser:
         http_etag: str | None = None,
         http_last_modified: str | None = None,
         is_parallel: bool = False,
-    ) -> ContextManager[RetrieveResult[Any] | None]:
+    ) -> ContextManager[RetrievedFeed[Any]]:
         """Retrieve a feed.
 
         Args:
@@ -207,8 +207,7 @@ class Parser:
 
         Returns:
             contextmanager(RetrieveResult or None):
-            A context manager that has as target either the result
-            or :const:`None`, if the feed didn't change.
+            A context manager with the retrieved feed as target.
 
         Raises:
             ParseError
@@ -230,48 +229,99 @@ class Parser:
 
         retriever = self.get_retriever(url)
 
+        return self._retrieve(
+            retriever, url, http_etag, http_last_modified, http_accept, is_parallel
+        )
+
+    @contextmanager
+    def _retrieve(
+        self,
+        retriever: RetrieverType[Any],
+        url: str,
+        http_etag: str | None,
+        http_last_modified: str | None,
+        http_accept: str | None,
+        is_parallel: bool,
+    ) -> Iterator[RetrievedFeed[Any]]:
         with wrap_exceptions(url, 'during retriever'):
             context = retriever(url, http_etag, http_last_modified, http_accept)
-        context = wrap_cm_exceptions(context, url, 'during retriever')
+            with context as feed:
+                if not isinstance(feed, RetrievedFeed):
+                    feed = RetrievedFeed(feed)
 
-        if not (is_parallel and retriever.slow_to_read):
-            return context
+                # FIXME: move slow_to_read on RetrievedFeed
 
-        # Ensure we read everything *before* yielding the response,
-        # i.e. __enter__() does most of the work.
-        #
-        # Gives a ~20% speed improvement over yielding response.raw
-        # when updating many feeds in parallel,
-        # with a 2-8% increase in memory usage:
-        # https://github.com/lemon24/reader/issues/261#issuecomment-956303210
-        #
-        # SpooledTemporaryFile() is just as fast as TemporaryFile():
-        # https://github.com/lemon24/reader/issues/261#issuecomment-957469041
+                if not (is_parallel and retriever.slow_to_read):
+                    yield feed
+                    return
 
-        with context as result:
-            if not result:
-                return nullcontext()
+                # Ensure we read everything *before* yielding the response,
+                # i.e. __enter__() does most of the work.
+                #
+                # Gives a ~20% speed improvement over yielding response.raw
+                # when updating many feeds in parallel,
+                # with a 2-8% increase in memory usage:
+                # https://github.com/lemon24/reader/issues/261#issuecomment-956303210
+                #
+                # SpooledTemporaryFile() is just as fast as TemporaryFile():
+                # https://github.com/lemon24/reader/issues/261#issuecomment-957469041
 
-            temp = tempfile.TemporaryFile()
-            shutil.copyfileobj(result.resource, temp)
-            temp.seek(0)
+                with tempfile.TemporaryFile() as temp:
+                    shutil.copyfileobj(feed.resource, temp)
+                    temp.seek(0)
+                    yield feed._replace(resource=temp)
 
-            result = result._replace(resource=temp)
+    def parse_fn(
+        self, result: RetrieveResult[F, Any, Exception]
+    ) -> ParseResult[F, Exception]:
+        """:meth:`parse` wrapper used by :meth:`parallel`.
 
-        @contextmanager
-        def make_context() -> Iterator[RetrieveResult[Any]]:
-            assert result is not None, result  # for mypy
-            with wrap_exceptions(url, "while reading feed"), temp:
-                yield result
+        Takes one argument and does not raise exceptions.
 
-        return make_context()
+        """
+        feed = result.feed
+        context = result.value
 
-    def parse(self, url: str, result: RetrieveResult[Any]) -> ParsedFeed:
+        http_info = None
+
+        value: ParsedFeed | None | Exception
+        try:
+            if isinstance(context, Exception):
+                raise context
+
+            with context as retrieved:
+                http_info = retrieved.http_info
+                value = self.parse(feed.url, retrieved)
+
+        except ParseError as e:
+            if isinstance(e, NotModified):
+                value = None
+            else:
+                log.debug("parse() exception, traceback follows", exc_info=True)
+                value = e
+
+            if isinstance(e, RetrieveError):
+                if not http_info:
+                    http_info = e.http_info
+
+        except Exception as e:
+            # pass around *all* exception types,
+            # unhandled exceptions get swallowed by the thread otherwise
+            # (not needed now, but for symmetry with retrieve_fn())
+            log.debug("parse() exception, traceback follows", exc_info=True)
+            value = e
+
+        return ParseResult(feed, value, http_info)
+
+        # FIXME: tests for this error handling
+        # FIXME: tests for http_info getting set
+
+    def parse(self, url: str, retrieved: RetrievedFeed[Any]) -> ParsedFeed:
         """Parse a retrieved feed.
 
         Args:
             url (str): The feed URL.
-            result (RetrieveResult): A retrieve result.
+            retrieved (RetrievedFeed): The retrieved feed.
 
         Returns:
             ParsedFeed: The feed and entry data.
@@ -280,12 +330,13 @@ class Parser:
             ParseError
 
         """
-        parser, mime_type = self.get_parser(url, result.mime_type)
+        parser, mime_type = self.get_parser(url, retrieved.mime_type)
+        headers = retrieved.http_info.headers if retrieved.http_info else None
         with wrap_exceptions(url, 'during parser'):
-            feed, entries = parser(url, result.resource, result.headers)
+            feed, entries = parser(url, retrieved.resource, headers)
             entries = list(entries)
         return ParsedFeed(
-            feed, entries, result.http_etag, result.http_last_modified, mime_type
+            feed, entries, retrieved.http_etag, retrieved.http_last_modified, mime_type
         )
 
     def get_parser(

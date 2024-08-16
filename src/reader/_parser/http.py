@@ -9,8 +9,10 @@ from typing import IO
 
 import requests
 
-from ..exceptions import ParseError
-from . import RetrieveResult
+from . import HTTPInfo
+from . import NotModified
+from . import RetrievedFeed
+from . import RetrieveError
 from . import wrap_exceptions
 from ._http_utils import parse_options_header
 from .requests import SessionWrapper
@@ -42,7 +44,7 @@ class HTTPRetriever:
         http_etag: str | None = None,
         http_last_modified: str | None = None,
         http_accept: str | None = None,
-    ) -> Iterator[RetrieveResult[IO[bytes]] | None]:
+    ) -> Iterator[RetrievedFeed[IO[bytes]]]:
         request_headers = {
             # https://tools.ietf.org/html/rfc3229#section-10.5.3
             # "Accept-Instance-Manipulation"
@@ -63,17 +65,23 @@ class HTTPRetriever:
                     stream=True,
                 )
 
+            response_headers = response.headers.copy()
+            http_info = HTTPInfo(response.status_code, response_headers)
+
             try:
                 response.raise_for_status()
             except Exception as e:
-                raise ParseError(url, message="bad HTTP status code") from e
+                response.close()
+                raise RetrieveError(
+                    url,
+                    message="bad HTTP status code",
+                    http_info=http_info,
+                ) from e
 
             if response.status_code == 304:
                 response.close()
-                yield None
-                return
+                raise NotModified(url, http_info=http_info)
 
-            response_headers = response.headers.copy()
             response_headers.setdefault('content-location', response.url)
 
             # https://datatracker.ietf.org/doc/html/rfc9110#name-content-encoding
@@ -93,12 +101,13 @@ class HTTPRetriever:
                 mime_type = None
 
             with wrap_exceptions(url, "while reading feed"), response:
-                yield RetrieveResult(
+                # FIXME: should be wrapped in RetrieveError
+                yield RetrievedFeed(
                     response.raw,
                     mime_type,
                     http_etag,
                     http_last_modified,
-                    response_headers,
+                    http_info,
                 )
 
     def validate_url(self, url: str) -> None:

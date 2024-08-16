@@ -8,13 +8,13 @@ from datetime import datetime
 from datetime import timezone
 from functools import partial
 from itertools import chain
-from itertools import starmap
 from itertools import tee
 from typing import Any
 from typing import NamedTuple
 from typing import Optional
 from typing import TYPE_CHECKING
 
+from ._parser import ParseResult
 from ._types import EntryData
 from ._types import EntryForUpdate
 from ._types import EntryUpdateIntent
@@ -398,7 +398,7 @@ class Pipeline:
                 try:
                     yield self.reader._parser.process_feed_for_update(feed)
                 except ParseError as e:
-                    parser_process_feeds_for_update_errors.append((feed, e))
+                    parser_process_feeds_for_update_errors.append(ParseResult(feed, e))
 
         # assemble pipeline
         feeds_for_update = self.reader._storage.get_feeds_for_update(filter)
@@ -409,7 +409,7 @@ class Pipeline:
             feeds_for_update, self.map, is_parallel
         )
         parse_results = chain(parse_results, parser_process_feeds_for_update_errors)
-        update_results = starmap(process_parse_result, parse_results)
+        update_results = map(process_parse_result, parse_results)
 
         for url, value in update_results:
             if isinstance(value, FeedNotFoundError):
@@ -425,9 +425,11 @@ class Pipeline:
     def process_parse_result(
         self,
         config: UpdateConfig,
-        feed: FeedForUpdate,
-        result: ParsedFeed | None | ParseError,
+        result: ParseResult[FeedForUpdate, ParseError],
     ) -> tuple[str, UpdatedFeed | None | Exception]:
+        feed = result.feed
+        value = result.value
+
         # TODO: don't duplicate code from update()
         # TODO: the feed tag value should come from get_feeds_for_update()
         config_key = self.reader.make_reader_reserved_name(CONFIG_KEY)
@@ -439,15 +441,15 @@ class Pipeline:
             self.reader._now(),
             self.global_now,
             config,
-            result,
+            value,
         )
 
         try:
             # assemble pipeline
-            if result and not isinstance(result, Exception):
-                entry_pairs = self.get_entry_pairs(result)
+            if value and not isinstance(value, Exception):
+                entry_pairs = self.get_entry_pairs(value)
                 entry_pairs = self.reader._parser.process_entry_pairs(
-                    feed.url, result.mime_type, entry_pairs
+                    feed.url, value.mime_type, entry_pairs
                 )
                 entry_pairs, get_total_count = count_consumed(entry_pairs)
             else:
@@ -461,8 +463,8 @@ class Pipeline:
         except Exception as e:
             return feed.url, e
 
-        if not result or isinstance(result, Exception):
-            return feed.url, result
+        if not value or isinstance(value, Exception):
+            return feed.url, value
 
         return feed.url, UpdatedFeed(feed.url, *counts, total - sum(counts))
 
