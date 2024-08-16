@@ -267,26 +267,26 @@ class FeedForUpdate(NamedTuple):
     url: str
 
     #: The date the feed was last updated, according to the feed.
-    updated: datetime | None
+    updated: datetime | None = None
 
     #: The HTTP ``ETag`` header from the last update.
-    http_etag: str | None
+    http_etag: str | None = None
 
     #: The HTTP ``Last-Modified`` header from the last update.
-    http_last_modified: str | None
+    http_last_modified: str | None = None
 
     #: Whether the next update should update *all* entries,
     #: regardless of their :attr:`hash` or :attr:`updated`.
-    stale: bool
+    stale: bool = False
 
     #: The date the feed was last updated, according to reader; none if never.
-    last_updated: datetime | None
+    last_updated: datetime | None = None
 
     #: Whether the feed had an exception at the last update.
-    last_exception: bool
+    last_exception: bool = False
 
     #: The :attr:`~FeedData.hash` of the corresponding FeedData.
-    hash: bytes | None
+    hash: bytes | None = None
 
 
 class EntryForUpdate(NamedTuple):

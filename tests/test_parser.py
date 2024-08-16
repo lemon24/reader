@@ -9,9 +9,10 @@ import requests
 
 from reader import Feed
 from reader._parser import default_parser
-from reader._parser import FeedArgumentTuple
+from reader._parser import FeedForUpdate
+from reader._parser import HTTPInfo
 from reader._parser import Parser
-from reader._parser import RetrieveResult
+from reader._parser import RetrievedFeed
 from reader._parser.feedparser import FeedparserParser
 from reader._parser.file import FileRetriever
 from reader._parser.jsonfeed import JSONFeedParser
@@ -466,7 +467,7 @@ def test_parallel_persistent_session(parse, make_http_url, data_dir):
     parse.session_factory.request_hooks.append(req_plugin)
 
     feeds = [
-        FeedArgumentTuple(make_http_url(data_dir.joinpath(name)))
+        FeedForUpdate(make_http_url(data_dir.joinpath(name)))
         for name in ('empty.atom', 'empty.rss')
     ]
     list(parse.parallel(feeds))
@@ -921,7 +922,8 @@ def make_dummy_retriever(name, mime_type='type/subtype', headers=None):
     @contextmanager
     def retriever(url, http_etag, http_last_modified, http_accept):
         retriever.last_http_accept = http_accept
-        yield RetrieveResult(name, mime_type, http_etag, http_last_modified, headers)
+        http_info = HTTPInfo(200, headers)
+        yield RetrievedFeed(name, mime_type, http_etag, http_last_modified, http_info)
 
     retriever.slow_to_read = False
     return retriever
