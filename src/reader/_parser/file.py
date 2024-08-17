@@ -23,7 +23,6 @@ class FileRetriever:
     """
 
     feed_root: str
-    slow_to_read = False
 
     def __post_init__(self) -> None:
         # give feed_root checks a chance to fail early

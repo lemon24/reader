@@ -242,27 +242,31 @@ class RetrievedFeed(_namedtuple_compat, Generic[T]):
     #: Usually, a readable binary file.
     #: Passed to the parser.
     resource: T
+
     #: The MIME type of the resource.
     #: Used to select an appropriate parser.
     mime_type: str | None = None
+
     #: The HTTP ``ETag`` header associated with the resource.
     #: Passed back to the retriever on the next update.
     http_etag: str | None = None
+
     #: The HTTP ``Last-Modified`` header associated with the resource.
     #: Passed back to the retriever on the next update.
     http_last_modified: str | None = None
+
     #: Details about the HTTP response.
     http_info: HTTPInfo | None = None
+
+    #: Allow :class:`Parser` to :meth:`~io.BufferedIOBase.read`
+    #: the resource into a temporary file,
+    #: and pass that to the parser (as an optimization).
+    #: Implies the resource is a readable binary file.
+    slow_to_read: bool = False
 
 
 class RetrieverType(Protocol[T_co]):  # pragma: no cover
     """A callable that knows how to retrieve a feed."""
-
-    #: Allow :class:`Parser` to :meth:`~io.BufferedIOBase.read`
-    #: the result :attr:`~RetrieveResult.resource` into a temporary file,
-    #: and pass that to the parser (as an optimization).
-    #: Implies the :attr:`~RetrieveResult.resource` is a readable binary file.
-    slow_to_read: bool
 
     def __call__(
         self,

@@ -35,7 +35,6 @@ class HTTPRetriever:
     """
 
     get_session: Callable[[], ContextManager[SessionWrapper]]
-    slow_to_read = True
 
     @contextmanager
     def __call__(
@@ -108,6 +107,7 @@ class HTTPRetriever:
                     http_etag,
                     http_last_modified,
                     http_info,
+                    slow_to_read=True,
                 )
 
     def validate_url(self, url: str) -> None:
