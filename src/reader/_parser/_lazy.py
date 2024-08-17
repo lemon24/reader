@@ -231,9 +231,7 @@ class Parser:
                 if not isinstance(feed, RetrievedFeed):
                     feed = RetrievedFeed(feed)
 
-                # FIXME: move slow_to_read on RetrievedFeed
-
-                if not retriever.slow_to_read:
+                if not feed.slow_to_read:
                     yield feed
                     return
 
