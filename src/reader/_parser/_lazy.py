@@ -8,7 +8,6 @@ import tempfile
 from collections.abc import Iterable
 from collections.abc import Iterator
 from contextlib import contextmanager
-from functools import partial
 from typing import Any
 from typing import cast
 from typing import ContextManager
@@ -87,7 +86,6 @@ class Parser:
         self,
         feeds: Iterable[F],
         map: MapFunction[Any, Any] = map,
-        is_parallel: bool = True,
     ) -> Iterable[ParseResult[F, ParseError]]:
         """Retrieve and parse many feeds, possibly in parallel.
 
@@ -98,7 +96,6 @@ class Parser:
             map (function):
                 A :func:`map`-like function;
                 the results can be in any order.
-            is_parallel (bool): Whether ``map`` runs the tasks in parallel.
 
         Yields:
             ParseResult:
@@ -106,12 +103,9 @@ class Parser:
                 the :attr:`~ParseResult.feed` is the object passed in ``feeds``.
 
         """
-        # FIXME: just assume is_parallel is always true?
-        retrieve = partial(self.retrieve_fn, is_parallel=is_parallel)
-
         with self.session_factory.persistent():
             # if stuff hangs weirdly during debugging, change this to builtins.map
-            retrieve_results = map(retrieve, feeds)
+            retrieve_results = map(self.retrieve_fn, feeds)
 
             # we could parallelize parse() as well;
             # however, most of the time is spent in pure-Python code,
@@ -157,29 +151,22 @@ class Parser:
             url, http_etag=http_etag, http_last_modified=http_last_modified
         )
 
-        # is_parallel=True ensures the parser tests cover more code
-        (result,) = self.parallel([feed], is_parallel=True)
+        (result,) = self.parallel([feed])
         value = result.value
 
         if isinstance(value, Exception):
             raise value
         return value
 
-    def retrieve_fn(
-        self, feed: F, is_parallel: bool
-    ) -> RetrieveResult[F, Any, Exception]:
+    def retrieve_fn(self, feed: F) -> RetrieveResult[F, Any, Exception]:
         """:meth:`retrieve` wrapper used by :meth:`parallel`.
 
         Takes one argument and does not raise exceptions.
 
         """
         try:
-            return RetrieveResult(
-                feed,
-                self.retrieve(
-                    feed.url, feed.http_etag, feed.http_last_modified, is_parallel
-                ),
-            )
+            context = self.retrieve(feed.url, feed.http_etag, feed.http_last_modified)
+            return RetrieveResult(feed, context)
         except Exception as e:
             # pass around *all* exception types,
             # unhandled exceptions get swallowed by the thread otherwise
@@ -191,7 +178,6 @@ class Parser:
         url: str,
         http_etag: str | None = None,
         http_last_modified: str | None = None,
-        is_parallel: bool = False,
     ) -> ContextManager[RetrievedFeed[Any]]:
         """Retrieve a feed.
 
@@ -201,9 +187,6 @@ class Parser:
                 The HTTP ``ETag`` header from the last update.
             http_last_modified (str or None):
                 The the HTTP ``Last-Modified`` header from the last update.
-            is_parallel (bool):
-                Whether this was called from :meth:`parallel`
-                (writes the contents to a temporary file, if possible).
 
         Returns:
             contextmanager(RetrieveResult or None):
@@ -230,7 +213,7 @@ class Parser:
         retriever = self.get_retriever(url)
 
         return self._retrieve(
-            retriever, url, http_etag, http_last_modified, http_accept, is_parallel
+            retriever, url, http_etag, http_last_modified, http_accept
         )
 
     @contextmanager
@@ -241,7 +224,6 @@ class Parser:
         http_etag: str | None,
         http_last_modified: str | None,
         http_accept: str | None,
-        is_parallel: bool,
     ) -> Iterator[RetrievedFeed[Any]]:
         with wrap_exceptions(url, 'during retriever'):
             context = retriever(url, http_etag, http_last_modified, http_accept)
@@ -251,7 +233,7 @@ class Parser:
 
                 # FIXME: move slow_to_read on RetrievedFeed
 
-                if not (is_parallel and retriever.slow_to_read):
+                if not retriever.slow_to_read:
                     yield feed
                     return
 

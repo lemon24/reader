@@ -379,8 +379,6 @@ class Pipeline:
 
         process_parse_result = partial(self.process_parse_result, config)
 
-        is_parallel = self.map is not map
-
         # ಠ_ಠ
         # The pipeline is not equipped to handle ParseErrors
         # as early as parser.process_feed_for_update().
@@ -405,9 +403,7 @@ class Pipeline:
         # feeds_for_update = map(self.parser.process_feed_for_update, feeds_for_update)
         feeds_for_update = parser_process_feeds_for_update(feeds_for_update)
         feeds_for_update = map(self.decider.process_feed_for_update, feeds_for_update)
-        parse_results = self.reader._parser.parallel(
-            feeds_for_update, self.map, is_parallel
-        )
+        parse_results = self.reader._parser.parallel(feeds_for_update, self.map)
         parse_results = chain(parse_results, parser_process_feeds_for_update_errors)
         update_results = map(process_parse_result, parse_results)
 

@@ -100,7 +100,7 @@ class Parser:
     class session_factory:
         persistent = staticmethod(nullcontext)
 
-    def retrieve(self, url, http_etag, http_last_modified, is_parallel):
+    def retrieve(self, url, http_etag, http_last_modified):
         if self.should_raise and self.should_raise(url):
             try:
                 # We raise so the exception has a traceback set.
