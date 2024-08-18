@@ -99,8 +99,12 @@ class HTTPRetriever:
             else:
                 mime_type = None
 
-            with wrap_exceptions(url, "while reading feed"), response:
-                # FIXME: should be wrapped in RetrieveError
+            with (
+                wrap_exceptions(
+                    url, "while reading feed", RetrieveError, http_info=http_info
+                ),
+                response,
+            ):
                 yield RetrievedFeed(
                     response.raw,
                     mime_type,

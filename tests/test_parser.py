@@ -26,6 +26,11 @@ from utils import make_url_base
 @pytest.fixture(params=[True, False])
 def parse(request):
     parse = default_parser('', _lazy=request.param)
+
+    # using the convenience __call__() API instead of parallel(),
+    # but we still need access to the ParseResult sometimes
+    parse.set_last_result = True
+
     yield parse
 
 
@@ -64,7 +69,7 @@ def _make_absolute_path_url(**_):
 def _make_http_url(requests_mock, **_):
     def make_url(feed_path):
         url = 'http://example.com/' + feed_path.name
-        headers = {}
+        headers = {'Hello': 'World'}
         if feed_path.suffix == '.rss':
             headers['Content-Type'] = 'application/rss+xml'
         elif feed_path.suffix == '.atom':
@@ -85,7 +90,7 @@ make_http_url = pytest.fixture(_make_http_url)
 def _make_https_url(requests_mock, **_):
     def make_url(feed_path):
         url = 'https://example.com/' + feed_path.name
-        headers = {}
+        headers = {'Hello': 'World'}
         if feed_path.suffix == '.rss':
             headers['Content-Type'] = 'application/rss+xml'
         elif feed_path.suffix == '.atom':
@@ -103,7 +108,7 @@ def _make_https_url(requests_mock, **_):
 def _make_http_gzip_url(requests_mock, **_):
     def make_url(feed_path):
         url = 'http://example.com/' + feed_path.name
-        headers = {}
+        headers = {'Hello': 'World'}
         if feed_path.suffix == '.rss':
             headers['Content-Type'] = 'application/rss+xml'
         elif feed_path.suffix == '.atom':
@@ -131,9 +136,10 @@ def _make_http_gzip_url(requests_mock, **_):
 def _make_http_url_missing_content_type(requests_mock, **_):
     def make_url(feed_path):
         url = 'http://example.com/' + feed_path.name
+        headers = {'Hello': 'World'}
         with open(str(feed_path), 'rb') as f:
             body = f.read()
-        requests_mock.get(url, content=body)
+        requests_mock.get(url, content=body, headers=headers)
         return url
 
     return make_url
@@ -179,6 +185,14 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
 
     assert feed == expected['feed']
     assert entries == expected['entries']
+
+    info = parse.last_result.http_info
+    if not feed_url.startswith('http'):
+        assert info is None
+    else:
+        assert info.status == 200
+        # note the lowercase key
+        assert info.headers['hello'] == 'World'
 
 
 def test_no_mime_type(monkeypatch, parse, make_url, data_dir):
@@ -260,7 +274,8 @@ def test_parse_survivable_feedparser_exceptions(
 def make_http_url_bad_status(requests_mock):
     def make_url(feed_path, status):
         url = 'http://example.com/' + feed_path.name
-        requests_mock.get(url, status_code=status)
+        headers = {'Hello': 'World'}
+        requests_mock.get(url, status_code=status, headers=headers)
         return url
 
     yield make_url
@@ -269,7 +284,13 @@ def make_http_url_bad_status(requests_mock):
 def test_parse_not_modified(monkeypatch, parse, make_http_url_bad_status, data_dir):
     """parse() should return None for unchanged feeds."""
     feed_url = make_http_url_bad_status(data_dir.joinpath('full.atom'), 304)
+
     assert parse(feed_url) is None
+
+    info = parse.last_result.http_info
+    assert info.status == 304
+    # note the lowercase key
+    assert info.headers['hello'] == 'World'
 
 
 @pytest.mark.parametrize('status', [404, 503])
@@ -287,6 +308,11 @@ def test_parse_bad_status(
     assert isinstance(excinfo.value.__cause__, requests.HTTPError)
     assert excinfo.value.url == feed_url
     assert 'bad HTTP status code' in excinfo.value.message
+
+    info = parse.last_result.http_info
+    assert info.status == status
+    # note the lowercase key
+    assert info.headers['hello'] == 'World'
 
 
 @pytest.fixture
@@ -424,21 +450,53 @@ def test_parse_response_plugins(monkeypatch, make_http_url, data_dir):
 
 
 @pytest.mark.parametrize('exc_cls', [Exception, OSError])
-def test_parse_requests_exception(monkeypatch, exc_cls):
+def test_parse_requests_get_exception(
+    monkeypatch, parse, make_http_url, data_dir, exc_cls
+):
+    feed_url = make_http_url(data_dir.joinpath('full.atom'))
     exc = exc_cls('exc')
 
-    class BadWrapper(SessionWrapper):
-        def get(self, *args, **kwargs):
-            raise exc
+    def do_raise(*args, **kwargs):
+        raise exc
 
-    monkeypatch.setattr('reader._parser.requests.SessionFactory.__call__', BadWrapper)
+    monkeypatch.setattr('reader._parser.requests._lazy.SessionWrapper.get', do_raise)
 
     with pytest.raises(ParseError) as excinfo:
-        default_parser('')('http://example.com')
+        parse(feed_url)
 
     assert excinfo.value.__cause__ is exc
-    assert excinfo.value.url == 'http://example.com'
+    assert excinfo.value.url == feed_url
     assert 'while getting feed' in excinfo.value.message
+
+    assert getattr(excinfo.value, 'http_info', None) is None
+    assert parse.last_result.http_info is None
+
+
+@pytest.mark.parametrize('exc_cls', [Exception, OSError])
+def test_parse_requests_read_exception(
+    monkeypatch, parse, make_http_url, data_dir, exc_cls
+):
+    feed_url = make_http_url(data_dir.joinpath('full.atom'))
+    exc = exc_cls('exc')
+
+    def do_raise(*args, **kwargs):
+        raise exc
+
+    monkeypatch.setattr('urllib3.response.HTTPResponse.read', do_raise)
+
+    with pytest.raises(ParseError) as excinfo:
+        parse(feed_url)
+
+    assert excinfo.value.__cause__ is exc
+    assert excinfo.value.url == feed_url
+    assert 'while reading feed' in excinfo.value.message
+
+    assert excinfo.value.http_info is parse.last_result.http_info
+
+    info = parse.last_result.http_info
+    assert info.status == 200
+    # note the lowercase key
+    assert info.headers['hello'] == 'World'
 
 
 def test_user_agent_default(parse, make_http_get_headers_url, data_dir):

@@ -105,6 +105,13 @@ class LazyParser:
         self._lazy_init()
         return getattr(self._parser, name)
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name.startswith('_'):
+            object.__setattr__(self, name, value)
+        else:
+            self._lazy_init()
+            object.__setattr__(self._parser, name, value)
+
     def __call__(
         self,
         url: str,
@@ -407,7 +414,9 @@ class EntryPairsParserType(ParserType[T_cv], Protocol):  # pragma: no cover
 
 
 @contextmanager
-def wrap_exceptions(url: str, when: str) -> Iterator[None]:
+def wrap_exceptions(
+    url: str, when: str, cls: type[ParseError] = ParseError, **kwargs: Any
+) -> Iterator[None]:
     try:
         yield
     except ParseError:
@@ -415,6 +424,6 @@ def wrap_exceptions(url: str, when: str) -> Iterator[None]:
         raise
     except OSError as e:
         # requests.RequestException is also a subclass of OSError
-        raise ParseError(url, message=f"error {when}") from e
+        raise cls(url, message=f"error {when}", **kwargs) from e
     except Exception as e:
-        raise ParseError(url, message=f"unexpected error {when}") from e
+        raise cls(url, message=f"unexpected error {when}", **kwargs) from e
