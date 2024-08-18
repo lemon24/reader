@@ -152,8 +152,12 @@ class Parser:
         )
 
         (result,) = self.parallel([feed])
-        value = result.value
 
+        # make whole result available for testing
+        if getattr(self, 'set_last_result', False):
+            self.last_result = result
+
+        value = result.value
         if isinstance(value, Exception):
             raise value
         return value
@@ -294,7 +298,6 @@ class Parser:
         return ParseResult(feed, value, http_info)
 
         # FIXME: tests for this error handling
-        # FIXME: tests for http_info getting set
 
     def parse(self, url: str, retrieved: RetrievedFeed[Any]) -> ParsedFeed:
         """Parse a retrieved feed.
