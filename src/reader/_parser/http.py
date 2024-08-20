@@ -54,57 +54,46 @@ class HTTPRetriever:
         if http_accept:
             request_headers['Accept'] = http_accept
 
-        with self.get_session() as session:
-            with wrap_exceptions(url, "while getting feed"):
-                response, http_etag, http_last_modified = session.caching_get(
-                    url,
-                    http_etag,
-                    http_last_modified,
-                    headers=request_headers,
-                    stream=True,
-                )
+        error = RetrieveError(url)
 
-            response_headers = response.headers.copy()
-            http_info = HTTPInfo(response.status_code, response_headers)
+        with self.get_session() as session, wrap_exceptions(error):
+            error._message = "while getting feed"
+            response, http_etag, http_last_modified = session.caching_get(
+                url,
+                http_etag,
+                http_last_modified,
+                headers=request_headers,
+                stream=True,
+            )
 
-            try:
+            with response:
+                http_info = HTTPInfo(response.status_code, response.headers)
+                error.http_info = http_info
+
+                if response.status_code == 304:
+                    raise NotModified(url, http_info=http_info)
+
+                error._message = "bad HTTP status code"
                 response.raise_for_status()
-            except Exception as e:
-                response.close()
-                raise RetrieveError(
-                    url,
-                    message="bad HTTP status code",
-                    http_info=http_info,
-                ) from e
 
-            if response.status_code == 304:
-                response.close()
-                raise NotModified(url, http_info=http_info)
+                response.headers.setdefault('content-location', response.url)
 
-            response_headers.setdefault('content-location', response.url)
+                # https://datatracker.ietf.org/doc/html/rfc9110#name-content-encoding
+                # Content-Encoding is the counterpart of Accept-Encoding;
+                # it is about binary transformations (mainly compression),
+                # not text encoding (Content-Type charset does that).
+                # We let Requests/urllib3 take care of it and remove the header,
+                # so parsers (like feedparser) don't do it a second time.
+                response.headers.pop('content-encoding', None)
+                response.raw.decode_content = True
 
-            # https://datatracker.ietf.org/doc/html/rfc9110#name-content-encoding
-            # Content-Encoding is the counterpart of Accept-Encoding;
-            # it is about binary transformations (mainly compression),
-            # not text encoding (Content-Type charset does that).
-            # We let Requests/urllib3 take care of it and remove the header,
-            # so parsers (like feedparser) don't do it a second time.
-            response_headers.pop('content-encoding', None)
-            response.raw.decode_content = True
+                content_type = response.headers.get('content-type')
+                if content_type:
+                    mime_type, _ = parse_options_header(content_type)
+                else:
+                    mime_type = None
 
-            content_type = response_headers.get('content-type')
-            mime_type: str | None
-            if content_type:
-                mime_type, _ = parse_options_header(content_type)
-            else:
-                mime_type = None
-
-            with (
-                wrap_exceptions(
-                    url, "while reading feed", RetrieveError, http_info=http_info
-                ),
-                response,
-            ):
+                error._message = "while reading feed"
                 yield RetrievedFeed(
                     response.raw,
                     mime_type,

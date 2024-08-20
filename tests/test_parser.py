@@ -557,7 +557,7 @@ def test_feedparser_parse_call(monkeypatch, parse, make_url, data_dir, exc_cls):
         parse(feed_url)
     assert excinfo.value.__cause__ is exc
     assert excinfo.value.url == feed_url
-    assert 'error during parser' in excinfo.value.message
+    assert 'during parser' in excinfo.value.message
 
     assert feedparser_parse.kwargs['resolve_relative_uris'] == True
     assert feedparser_parse.kwargs['sanitize_html'] == True

@@ -414,16 +414,21 @@ class EntryPairsParserType(ParserType[T_cv], Protocol):  # pragma: no cover
 
 
 @contextmanager
-def wrap_exceptions(
-    url: str, when: str, cls: type[ParseError] = ParseError, **kwargs: Any
-) -> Iterator[None]:
+def wrap_exceptions(url: str | ParseError, message: str = '') -> Iterator[None]:
     try:
         yield
+
     except ParseError:
         # reader exceptions are pass-through
         raise
-    except OSError as e:
-        # requests.RequestException is also a subclass of OSError
-        raise cls(url, message=f"error {when}", **kwargs) from e
+
     except Exception as e:
-        raise cls(url, message=f"unexpected error {when}", **kwargs) from e
+        exc = ParseError(url, message=message) if isinstance(url, str) else url
+
+        if isinstance(e, OSError):
+            # expected exception raised for various I/O errors;
+            # requests.RequestException is a subclass of OSError
+            raise exc from e
+
+        exc._message = f"unexpected error {exc._message}".rstrip()
+        raise exc from e
