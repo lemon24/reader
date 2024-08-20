@@ -29,7 +29,7 @@ class _FancyExceptionBase(Exception):
     _default_message: str = ''
 
     def __init__(self, message: str = ''):
-        self._message = message
+        self._message = message or self._default_message
 
     @property
     def _str(self) -> str:
@@ -44,7 +44,8 @@ class _FancyExceptionBase(Exception):
             Became read-only.
 
         """
-        return self._message or self._default_message
+        # read-only for compatibility with ExceptionGroup
+        return self._message
 
     @cached_property
     def _cause_name(self) -> str:
