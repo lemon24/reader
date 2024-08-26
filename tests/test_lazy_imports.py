@@ -124,6 +124,12 @@ SNIPPETS = {k: v for k, v in locals().items() if k.startswith('S_')}
 def test_only_expected_modules_are_imported(code, expected_modules):
     modules = set(get_imported_modules(code))
     actual_modules = LAZY_MODULES & modules
+
     # sanity check
     assert 'reader' in modules
-    assert actual_modules == expected_modules, expected_modules
+
+    # not using == because imports can vary based on library versions,
+    # and we care more about slow stuff being imported accidentally
+    # than the other way around
+    # https://github.com/lemon24/reader/issues/349
+    assert actual_modules <= expected_modules, expected_modules
