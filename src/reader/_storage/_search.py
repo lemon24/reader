@@ -186,6 +186,18 @@ class Search:
         # However, we at least minimize the space they take using VACUUM.
 
         if self.path:
+            # Delete any internal tables that may have been created with
+            # ANALYZE or indirectly via PRAGMA OPTIMIZE.
+            #
+            # For more information, see:
+            #  - https://github.com/lemon24/reader/issues/348
+            #  - https://sqlite.org/forum/forumpost/5414ca8f89389f8a
+            db.execute("DROP TABLE IF EXISTS search.sqlite_stat1;")
+            db.execute("DROP TABLE IF EXISTS search.sqlite_stat2;")
+            db.execute("DROP TABLE IF EXISTS search.sqlite_stat3;")
+            db.execute("DROP TABLE IF EXISTS search.sqlite_stat4;")
+
+            # Now the database should be empty. VACUUM to reclaim space.
             db.execute("VACUUM search;")
 
     @classmethod
