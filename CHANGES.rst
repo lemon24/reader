@@ -11,6 +11,12 @@ Version 3.15
 
 Unreleased
 
+* Update the parser API to expose HTTP information to the updater. (:issue:`307`)
+
+  .. note::
+
+    The (unstable) :class:`.RetrieverType` protocol used by custom retrievers changed.
+
 
 Version 3.14
 ------------
