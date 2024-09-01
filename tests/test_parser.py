@@ -469,7 +469,8 @@ def test_parse_requests_get_exception(
     assert excinfo.value.url == feed_url
     assert 'while getting feed' in excinfo.value.message
 
-    assert getattr(excinfo.value, 'http_info', None) is None
+    assert not hasattr(excinfo.value, 'http_info')
+
     assert parse.last_result.http_info is None
 
 
@@ -492,7 +493,7 @@ def test_parse_requests_read_exception(
     assert excinfo.value.url == feed_url
     assert 'while reading feed' in excinfo.value.message
 
-    assert excinfo.value.http_info is parse.last_result.http_info
+    assert not hasattr(excinfo.value, 'http_info')
 
     info = parse.last_result.http_info
     assert info.status == 200
@@ -1132,10 +1133,11 @@ def test_retrieve_bug_bubbles_up_to_caller(parse):
 
 def test_retrieved_feed_http_info_not_shadowed_by_retrieve_error(parse):
     exc = RetrieveError('x', http_info=HTTPInfo(333, {}))
+    cause = ValueError('whatever')
 
     class file:
         def read(*_):
-            raise exc
+            raise exc from cause
 
     @contextmanager
     def retrieve(*_, **__):
@@ -1143,8 +1145,13 @@ def test_retrieved_feed_http_info_not_shadowed_by_retrieve_error(parse):
 
     parse.retrieve = retrieve
 
-    with pytest.raises(RetrieveError) as exc_info:
+    with pytest.raises(ParseError) as exc_info:
         parse('http://example.com')
-    assert exc_info.value is exc
+
+    assert type(exc_info.value) is ParseError
+    assert exc_info.value.url is exc.url
+    assert exc_info.value.message is exc.message
+    # not sure how to check the traceback was preserved
+    assert exc_info.value.__cause__ is cause
 
     assert parse.last_result.http_info == HTTPInfo(200, {})
