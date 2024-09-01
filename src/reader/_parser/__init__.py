@@ -336,7 +336,7 @@ class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no c
 class ParseResult(_namedtuple_compat, Generic[F, E]):
     """The result of retrieving and parsing a feed, regardless of the outcome."""
 
-    #: The feed (a :class:`FeedArgument`, usually a :class:`FeedForUpdate`).
+    #: The feed (a :class:`FeedArgument`, usually a :class:`.FeedForUpdate`).
     feed: F
 
     #: One of:

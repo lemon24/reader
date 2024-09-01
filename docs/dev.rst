@@ -378,8 +378,14 @@ Requests session plugins:
 Retriever / parser split:
 
 * :issue:`205#issuecomment-766321855`
-* split exception hierarchy (not implemented as of 3.9): :issue:`218#issuecomment-1687094315`
+* split exception hierarchy (not implemented as of 3.15): :issue:`218#issuecomment-1687094315`
+* API overview as of 3.14, meant to show the dataflow: :issue:`307#issuecomment-2266647310`
+* ~ideal API (mostly implemented in 3.15): :issue:`307#issuecomment-2281797898`
 
+  * exposes HTTP information (so it can be used by the updater)
+  * introduces ~internal RetrieveError and NotModified :exc:`ParseError` subclasses;
+    notably, this doesn't really follow the split exception hierarchy mentioned above,
+    and is only meant to surface HTTP information in error cases
 
 Alternative feed parsers:
 

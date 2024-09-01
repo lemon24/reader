@@ -54,6 +54,14 @@ Protocols
     :members:
     :special-members: __call__
 
+.. autoexception:: RetrieveError
+    :show-inheritance:
+    :members:
+
+.. autoexception:: NotModified
+    :show-inheritance:
+    :members:
+
 .. autoclass:: FeedForUpdateRetrieverType
     :members:
     :show-inheritance:
@@ -92,25 +100,16 @@ Data objects
 .. autoclass:: RetrieveResult
     :members:
 
+.. autoclass:: RetrievedFeed
+    :members:
+
+.. autoclass:: ParseResult
+    :members:
+
 .. autoclass:: ParsedFeed
     :members:
 
-.. module:: reader._types
-
-.. autoclass:: FeedData
-    :members:
-    :undoc-members:
-
-.. autoclass:: EntryData
-    :members:
-    :undoc-members:
-
-.. todo:: the following should be in the storage section, when we get one
-
-.. autoclass:: FeedForUpdate
-    :members:
-
-.. autoclass:: EntryForUpdate
+.. autoclass:: HTTPInfo
     :members:
 
 
@@ -171,6 +170,9 @@ but at least one other implementation needs to exists before that.
 
 .. _changes:
 
+Change tracking
+~~~~~~~~~~~~~~~
+
 .. autoclass:: ChangeTrackingStorageType()
     :members:
     :show-inheritance:
@@ -193,10 +195,24 @@ but at least one other implementation needs to exists before that.
 Data objects
 ~~~~~~~~~~~~
 
+.. autoclass:: FeedData
+    :members:
+    :undoc-members:
+
+.. autoclass:: EntryData
+    :members:
+    :undoc-members:
+
 .. autoclass:: FeedFilter
     :members:
 
 .. autoclass:: EntryFilter
+    :members:
+
+.. autoclass:: FeedForUpdate
+    :members:
+
+.. autoclass:: EntryForUpdate
     :members:
 
 .. autoclass:: FeedUpdateIntent
