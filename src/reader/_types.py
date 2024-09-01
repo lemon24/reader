@@ -239,27 +239,6 @@ def _getattr_optional_datetime(obj: object, name: str) -> datetime | None:
     return value.astimezone(timezone.utc)
 
 
-class ParsedFeed(NamedTuple):
-    """A parsed feed."""
-
-    #: The feed.
-    feed: FeedData
-    # TODO: wrap entries in iter(entries) to ensure stuff doesn't rely on it being a list
-    # TODO: make entries a list (may simplify _update code)
-    #: Iterable of entries.
-    entries: Iterable[EntryData]
-    #: The HTTP ``ETag`` header associated with the feed resource.
-    #: Passed back to the retriever on the next update.
-    http_etag: str | None = None
-    #: The HTTP ``Last-Modified`` header associated with the feed resource.
-    #: Passed back to the retriever on the next update.
-    http_last_modified: str | None = None
-    #: The MIME type of the feed resource.
-    #: Used by :meth:`~reader._parser.Parser.process_entry_pairs`
-    #: to select an appropriate parser.
-    mime_type: str | None = None
-
-
 class FeedForUpdate(NamedTuple):
     """Update-relevant information about an existing feed, from Storage."""
 

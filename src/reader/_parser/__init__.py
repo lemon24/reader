@@ -21,7 +21,6 @@ from .._types import EntryData
 from .._types import EntryForUpdate
 from .._types import FeedData
 from .._types import FeedForUpdate
-from .._types import ParsedFeed
 from .._utils import lazy_import
 from ..exceptions import ParseError
 from ..types import _namedtuple_compat
@@ -337,8 +336,6 @@ class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no c
 class ParseResult(_namedtuple_compat, Generic[F, E]):
     """The result of retrieving and parsing a feed, regardless of the outcome."""
 
-    # FIXME: either move to _types with ParsedFeed, or move ParsedFeed here
-
     #: The feed (a :class:`FeedArgument`, usually a :class:`FeedForUpdate`).
     feed: F
 
@@ -352,6 +349,25 @@ class ParseResult(_namedtuple_compat, Generic[F, E]):
 
     #: Details about the HTTP response.
     http_info: HTTPInfo | None = None
+
+
+class ParsedFeed(NamedTuple):
+    """A parsed feed."""
+
+    #: The feed.
+    feed: FeedData
+    #: The entries.
+    entries: Collection[EntryData]
+    #: The HTTP ``ETag`` header associated with the feed resource.
+    #: Passed back to the retriever on the next update.
+    http_etag: str | None = None
+    #: The HTTP ``Last-Modified`` header associated with the feed resource.
+    #: Passed back to the retriever on the next update.
+    http_last_modified: str | None = None
+    #: The MIME type of the feed resource.
+    #: Used by :meth:`~reader._parser.Parser.process_entry_pairs`
+    #: to select an appropriate parser.
+    mime_type: str | None = None
 
 
 FeedAndEntries = tuple[FeedData, Collection[EntryData]]

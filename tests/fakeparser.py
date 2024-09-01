@@ -9,10 +9,10 @@ from io import BytesIO
 import reader._parser
 from reader import ParseError
 from reader._parser import NotModified
+from reader._parser import ParsedFeed
 from reader._parser import RetrievedFeed
 from reader._types import EntryData
 from reader._types import FeedData
-from reader._types import ParsedFeed
 from reader.types import _entry_argument
 
 

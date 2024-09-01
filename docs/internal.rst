@@ -92,10 +92,10 @@ Data objects
 .. autoclass:: RetrieveResult
     :members:
 
-.. module:: reader._types
-
 .. autoclass:: ParsedFeed
     :members:
+
+.. module:: reader._types
 
 .. autoclass:: FeedData
     :members:

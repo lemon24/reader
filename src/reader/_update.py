@@ -22,7 +22,6 @@ from ._types import FeedData
 from ._types import FeedForUpdate
 from ._types import FeedToUpdate
 from ._types import FeedUpdateIntent
-from ._types import ParsedFeed
 from ._utils import count_consumed
 from ._utils import PrefixLogger
 from .exceptions import FeedNotFoundError
@@ -36,6 +35,7 @@ from .types import UpdateResult
 
 
 if TYPE_CHECKING:  # pragma: no cover
+    from ._parser import ParsedFeed
     from ._types import FeedFilter
     from ._utils import MapFunction
     from .core import Reader
