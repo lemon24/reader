@@ -120,6 +120,16 @@ class Parser:
                 if isinstance(result.value, Exception):
                     if not isinstance(result.value, ParseError):
                         raise result.value
+
+                    # don't expose parser-internal RetrieveError to callers
+                    # TODO: not needed once RetrieveError is public API
+                    if isinstance(result.value, RetrieveError):
+                        e = result.value
+                        value = ParseError(e.url, message=e.message)
+                        value.__traceback__ = e.__traceback__
+                        value.__cause__ = e.__cause__
+                        result = result._replace(value=value)
+
                 yield cast(ParseResult[F, ParseError], result)
 
     def __call__(
