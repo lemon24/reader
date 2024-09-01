@@ -267,7 +267,6 @@ class Parser:
         context = result.value
 
         http_info = None
-
         value: ParsedFeed | None | Exception
         try:
             if isinstance(context, Exception):
@@ -279,9 +278,13 @@ class Parser:
 
         except ParseError as e:
             if isinstance(e, NotModified):
+                log.debug("parse_fn(): got not modified")
                 value = None
+            elif e is context:
+                log.debug("parse_fn(): got retrieve error: %s: %s", type(e).__name__, e)
+                value = e
             else:
-                log.debug("parse() exception, traceback follows", exc_info=True)
+                log.debug("parse_fn(): got parse error: %s: %s", type(e).__name__, e)
                 value = e
 
             if isinstance(e, RetrieveError):
@@ -292,12 +295,10 @@ class Parser:
             # pass around *all* exception types,
             # unhandled exceptions get swallowed by the thread otherwise
             # (not needed now, but for symmetry with retrieve_fn())
-            log.debug("parse() exception, traceback follows", exc_info=True)
+            log.debug("parse_fn(): got unexpected error: %s: %s", type(e).__name__, e)
             value = e
 
         return ParseResult(feed, value, http_info)
-
-        # FIXME: tests for this error handling
 
     def parse(self, url: str, retrieved: RetrievedFeed[Any]) -> ParsedFeed:
         """Parse a retrieved feed.

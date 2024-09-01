@@ -164,6 +164,7 @@ class CustomRetriever:
             io.BytesIO(b'file'),
             'x.test',
             http_etag=http_etag.upper() if http_etag else http_etag,
+            slow_to_read=self.slow_to_read,
         )
 
     def before_enter(self, url):
@@ -285,7 +286,7 @@ RETRIEVER_PARSER_METHOD_PARAMS = [
 @pytest.mark.parametrize(
     'target, method, slow_to_read, message', RETRIEVER_PARSER_METHOD_PARAMS
 )
-def test_retriever_parser_error(
+def test_retriever_parser_unexpected_error(
     reader, update_feeds_iter, target, method, slow_to_read, message
 ):
     retriever, parser, raise_exc = setup_custom(reader, target, method, slow_to_read)
@@ -296,7 +297,11 @@ def test_retriever_parser_error(
     assert isinstance(rv[1].error, ParseError)
     assert rv[1].error.message == message
     assert rv[1].error.__cause__ is exc
+    if rv[2].error:
+        raise rv[2].error
     assert rv[2].updated_feed
+    if rv[3].error:
+        raise rv[3].error
     assert rv[3].updated_feed
 
 
@@ -313,5 +318,9 @@ def test_retriever_parser_parse_error(
 
     assert isinstance(rv[1].error, ParseError)
     assert rv[1].error is exc
+    if rv[2].error:
+        raise rv[2].error
     assert rv[2].updated_feed
+    if rv[3].error:
+        raise rv[3].error
     assert rv[3].updated_feed
