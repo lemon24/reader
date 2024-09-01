@@ -13,6 +13,7 @@ from reader._parser import FeedForUpdate
 from reader._parser import HTTPInfo
 from reader._parser import Parser
 from reader._parser import RetrievedFeed
+from reader._parser import RetrieveError
 from reader._parser.feedparser import FeedparserParser
 from reader._parser.file import FileRetriever
 from reader._parser.jsonfeed import JSONFeedParser
@@ -1114,3 +1115,36 @@ def test_retriever_selection():
         parse('file:unknown')
     assert excinfo.value.url == 'file:unknown'
     assert 'no retriever' in excinfo.value.message
+
+
+def test_retrieve_bug_bubbles_up_to_caller(parse):
+    exc = RuntimeError('whatever')
+
+    def retrieve(*_, **__):
+        raise exc
+
+    parse.retrieve = retrieve
+
+    with pytest.raises(RuntimeError) as exc_info:
+        parse('http://example.com')
+    assert exc_info.value is exc
+
+
+def test_retrieved_feed_http_info_not_shadowed_by_retrieve_error(parse):
+    exc = RetrieveError('x', http_info=HTTPInfo(333, {}))
+
+    class file:
+        def read(*_):
+            raise exc
+
+    @contextmanager
+    def retrieve(*_, **__):
+        yield RetrievedFeed(file, http_info=HTTPInfo(200, {}), slow_to_read=True)
+
+    parse.retrieve = retrieve
+
+    with pytest.raises(RetrieveError) as exc_info:
+        parse('http://example.com')
+    assert exc_info.value is exc
+
+    assert parse.last_result.http_info == HTTPInfo(200, {})
