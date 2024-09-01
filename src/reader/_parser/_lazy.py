@@ -13,7 +13,6 @@ from typing import cast
 from typing import ContextManager
 
 from .._types import FeedForUpdate
-from .._types import ParsedFeed
 from .._utils import MapFunction
 from ..exceptions import InvalidFeedURLError
 from ..exceptions import ParseError
@@ -23,6 +22,7 @@ from . import F
 from . import FeedForUpdateRetrieverType
 from . import HTTPAcceptParserType
 from . import NotModified
+from . import ParsedFeed
 from . import ParseResult
 from . import ParserType
 from . import RetrievedFeed
