@@ -1084,7 +1084,21 @@ def test_parser_selection():
 
     assert parse('file:o') == ('urlp-file', ['file:o'], 'type/file', None)
     assert file_retriever.last_http_accept is None
-    assert parse('file:///o') == ('urlp-file', ['file:///o'], 'type/file', None)
+
+    # this assert is commented because the selected retriever
+    # depends on urlunparse() behavior, which in turn depends
+    # on the python version (also varies for other major versions):
+    #
+    # * before 3.12.6:        urlunparse(urlparse('file:o')) -> 'file:///o'
+    # * starting with 3.12.6: urlunparse(urlparse('file:o')) -> 'file:o'
+    #
+    # changed in https://github.com/python/cpython/issues/85110
+    #
+    # https://github.com/pypa/pip/pull/12964
+    # says file:whatever is not a valid file: url,
+    # TODO: maybe we should check (and fail) for invalid file: urls
+
+    # assert parse('file:///o') == ('urlp-file', ['file:///o'], 'type/file', None)
 
 
 def test_retriever_selection():
