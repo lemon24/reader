@@ -9,6 +9,7 @@ from typing import TypeVar
 
 import requests
 
+from . import CachingInfo
 from . import TimeoutType
 
 
@@ -114,31 +115,50 @@ class SessionWrapper:
     def caching_get(
         self,
         url: str,
-        etag: str | None = None,
-        last_modified: str | None = None,
+        caching_info: Any = None,
         headers: Headers | None = None,
         **kwargs: Any,
-    ) -> tuple[requests.Response, str | None, str | None]:
+    ) -> tuple[requests.Response, CachingInfo | None]:
         """Like :meth:`get()`, but set and return caching headers.
 
-        caching_get(url, etag, last_modified) -> response, etag, last_modified
+        caching_get(url, old_caching_info) -> response, new_caching_info
 
         """
         headers = dict(headers or ())
+
+        etag = _str_value(caching_info, 'etag')
+        last_modified = _str_value(caching_info, 'last-modified')
         if etag:
             headers.setdefault('If-None-Match', etag)
         if last_modified:
             headers.setdefault('If-Modified-Since', last_modified)
 
         response = self.get(url, headers=headers, **kwargs)
-        if response.ok:
-            etag = response.headers.get('ETag', etag)
-            last_modified = response.headers.get('Last-Modified', last_modified)
 
-        return response, etag, last_modified
+        response_caching_info: CachingInfo = {}
+        if response.ok:
+            etag = response.headers.get('ETag')
+            if etag:
+                response_caching_info['etag'] = etag
+            last_modified = response.headers.get('Last-Modified', last_modified)
+            if last_modified:
+                response_caching_info['last-modified'] = last_modified
+
+        return response, response_caching_info or None
 
     def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *args: Any) -> None:
         self.session.close()
+
+
+def _str_value(d: Any | None, key: str) -> str | None:
+    if not d:
+        return None
+    assert isinstance(d, dict), d
+    rv = d.get(key)
+    if rv is None:
+        return None
+    assert isinstance(rv, str), rv
+    return rv

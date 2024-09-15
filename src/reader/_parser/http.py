@@ -4,6 +4,8 @@ from collections.abc import Callable
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from typing import Any
+from typing import cast
 from typing import ContextManager
 from typing import IO
 
@@ -40,8 +42,7 @@ class HTTPRetriever:
     def __call__(
         self,
         url: str,
-        http_etag: str | None = None,
-        http_last_modified: str | None = None,
+        caching_info: Any = None,
         http_accept: str | None = None,
     ) -> Iterator[RetrievedFeed[IO[bytes]]]:
         request_headers = {
@@ -58,12 +59,8 @@ class HTTPRetriever:
 
         with self.get_session() as session, wrap_exceptions(error):
             error._message = "while getting feed"
-            response, http_etag, http_last_modified = session.caching_get(
-                url,
-                http_etag,
-                http_last_modified,
-                headers=request_headers,
-                stream=True,
+            response, response_caching_info = session.caching_get(
+                url, caching_info, request_headers, stream=True
             )
 
             with response:
@@ -97,8 +94,8 @@ class HTTPRetriever:
                 yield RetrievedFeed(
                     response.raw,
                     mime_type,
-                    http_etag,
-                    http_last_modified,
+                    # https://github.com/python/mypy/issues/4976
+                    cast(dict[str, Any] | None, response_caching_info),
                     http_info,
                     slow_to_read=True,
                 )

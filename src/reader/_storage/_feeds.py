@@ -80,8 +80,7 @@ class FeedsMixin(StorageBase):
                 SET
                     updated = NULL,
                     version = NULL,
-                    http_etag = NULL,
-                    http_last_modified = NULL,
+                    caching_info = NULL,
                     stale = 0,
                     update_after = NULL,
                     last_retrieved = NULL,
@@ -179,8 +178,7 @@ class FeedsMixin(StorageBase):
             (
                 url,
                 updated,
-                http_etag,
-                http_last_modified,
+                caching_info,
                 stale,
                 last_updated,
                 last_exception,
@@ -189,8 +187,7 @@ class FeedsMixin(StorageBase):
             return FeedForUpdate(
                 url,
                 convert_timestamp(updated) if updated else None,
-                http_etag,
-                http_last_modified,
+                json.loads(caching_info) if caching_info else None,
                 stale == 1,
                 convert_timestamp(last_updated) if last_updated else None,
                 last_exception == 1,
@@ -203,8 +200,7 @@ class FeedsMixin(StorageBase):
                 .SELECT(
                     'url',
                     'updated',
-                    'http_etag',
-                    'http_last_modified',
+                    'caching_info',
                     'stale',
                     'last_updated',
                     ('last_exception', 'last_exception IS NOT NULL'),
@@ -241,7 +237,12 @@ class FeedsMixin(StorageBase):
         if isinstance(value, FeedToUpdate):
             assert url == value.feed.url, "updating feed URL not supported"
 
-            context.update(value._asdict())
+            context.update(
+                value._asdict(),
+                caching_info=(
+                    json.dumps(value.caching_info) if value.caching_info else None
+                ),
+            )
             feed = context.pop('feed')
             context.update(
                 feed._asdict(),

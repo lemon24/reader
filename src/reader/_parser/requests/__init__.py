@@ -16,6 +16,7 @@ from typing import Any
 from typing import ContextManager
 from typing import Protocol
 from typing import TYPE_CHECKING
+from typing import TypedDict
 from typing import TypeVar
 from typing import Union
 
@@ -86,6 +87,7 @@ class ResponseHook(Protocol):
 
 Headers = Mapping[str, str]
 TimeoutType = Union[None, float, tuple[float, float], tuple[float, None]]
+CachingInfo = TypedDict('CachingInfo', {'etag': str, 'last-modified': str}, total=False)
 
 DEFAULT_TIMEOUT = (3.05, 60)
 

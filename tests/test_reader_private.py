@@ -26,10 +26,8 @@ def test_update_stale(reader, update_feed, entry_updated):
     regardless of their .updated or caching headers.
 
     """
-    parser = ParserThatRemembers()
-    parser.http_etag = 'etag'
-    parser.http_last_modified = 'last-modified'
-    reader._parser = parser
+    reader._parser = parser = ParserThatRemembers()
+    parser.caching_info = 'caching'
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, entry_updated)
@@ -74,7 +72,7 @@ def test_update_stale(reader, update_feed, entry_updated):
     reader._storage.set_feed_stale(feed.url, True)
     reader._now = lambda: datetime(2010, 1, 3)
     update_feed(reader, feed.url)
-    assert parser.calls == [(feed.url, None, None)]
+    assert parser.calls == [(feed.url, None)]
     assert {(f.url, f.title, f.last_updated) for f in reader.get_feeds()} == {
         (feed.url, feed.title, datetime(2010, 1, 3))
     }
@@ -86,8 +84,7 @@ def test_update_stale(reader, update_feed, entry_updated):
 def test_update_parse(reader, update_feed):
     """Updated feeds should pass caching headers back to ._parser()."""
     parser = ParserThatRemembers()
-    parser.http_etag = 'etag'
-    parser.http_last_modified = 'last-modified'
+    parser.caching_info = 'caching'
     reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
@@ -96,11 +93,11 @@ def test_update_parse(reader, update_feed):
     reader.add_feed(feed.url)
 
     update_feed(reader, feed.url)
-    assert parser.calls == [(feed.url, None, None)]
+    assert parser.calls == [(feed.url, None)]
 
     parser.calls[:] = []
     update_feed(reader, feed.url)
-    assert parser.calls == [(feed.url, 'etag', 'last-modified')]
+    assert parser.calls == [(feed.url, 'caching')]
 
 
 def test_make_reader_storage(storage):
@@ -153,17 +150,17 @@ def test_delete_entries(reader):
 class CustomRetriever:
     slow_to_read = False
 
-    def __call__(self, url, http_etag, *_):
+    def __call__(self, url, caching_info, *_):
         self.before_enter(url)
-        return self._make_cm(url, http_etag)
+        return self._make_cm(url, caching_info)
 
     @contextmanager
-    def _make_cm(self, url, http_etag):
+    def _make_cm(self, url, caching_info):
         self.after_enter(url)
         yield RetrievedFeed(
             io.BytesIO(b'file'),
             'x.test',
-            http_etag=http_etag.upper() if http_etag else http_etag,
+            caching_info.upper() if caching_info else None,
             slow_to_read=self.slow_to_read,
         )
 
@@ -177,8 +174,8 @@ class CustomRetriever:
         pass
 
     def process_feed_for_update(self, feed):
-        assert feed.http_etag is None
-        return feed._replace(http_etag='etag')
+        assert feed.caching_info is None
+        return feed._replace(caching_info='etag')
 
 
 class CustomParser:
@@ -222,7 +219,7 @@ def test_retriever_parser_process_hooks(reader):
     reader.update_feeds()
 
     (feed_for_update,) = reader._storage.get_feeds_for_update(FeedFilter('test:one'))
-    assert feed_for_update.http_etag == 'ETAG'
+    assert feed_for_update.caching_info == 'ETAG'
 
     (entry,) = reader.get_entries()
     assert entry.title == 'ENTRY'

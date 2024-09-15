@@ -18,8 +18,7 @@ CREATE TABLE feeds (
     subtitle TEXT,
     version TEXT,
     user_title TEXT,  -- except this one, which comes from reader
-    http_etag TEXT,
-    http_last_modified TEXT,
+    caching_info TEXT,
     data_hash BLOB,  -- derived from feed data
 
     -- reader data
@@ -273,7 +272,38 @@ def update_from_39_to_40(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     db.execute("ALTER TABLE feeds ADD COLUMN last_retrieved TIMESTAMP;")
 
 
-VERSION = 40
+def update_from_40_to_41(db: sqlite3.Connection, /) -> None:  # pragma: no cover
+    # https://github.com/lemon24/reader/issues/307
+
+    import json
+
+    db.execute("ALTER TABLE feeds ADD COLUMN caching_info TEXT;")
+
+    feeds = db.execute("SELECT url, http_etag, http_last_modified FROM feeds;")
+    for url, etag, last_modified in feeds:
+        caching_info = {}
+        if etag:
+            caching_info['etag'] = etag
+        if last_modified:
+            caching_info['last-modified'] = last_modified
+
+        db.execute(
+            """
+            UPDATE feeds
+            SET caching_info = :caching_info
+            WHERE url = :url;
+            """,
+            {
+                'url': url,
+                'caching_info': json.dumps(caching_info) if caching_info else None,
+            },
+        )
+
+    db.execute("ALTER TABLE feeds DROP COLUMN http_etag;")
+    db.execute("ALTER TABLE feeds DROP COLUMN http_last_modified;")
+
+
+VERSION = 41
 
 MIGRATIONS = {
     # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
@@ -284,6 +314,7 @@ MIGRATIONS = {
     37: update_from_37_to_38,
     38: update_from_38_to_39,
     39: update_from_39_to_40,
+    40: update_from_40_to_41,
 }
 MISSING_SUFFIX = (
     "; you may have skipped some required migrations, see "
