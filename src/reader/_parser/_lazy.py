@@ -16,6 +16,7 @@ from .._types import FeedForUpdate
 from .._utils import MapFunction
 from ..exceptions import InvalidFeedURLError
 from ..exceptions import ParseError
+from ..types import JSONType
 from . import EntryPair
 from . import EntryPairsParserType
 from . import F
@@ -133,10 +134,7 @@ class Parser:
                 yield cast(ParseResult[F, ParseError], result)
 
     def __call__(
-        self,
-        url: str,
-        http_etag: str | None = None,
-        http_last_modified: str | None = None,
+        self, url: str, caching_info: JSONType | None = None
     ) -> ParsedFeed | None:
         """Retrieve and parse one feed.
 
@@ -144,10 +142,8 @@ class Parser:
 
         Args:
             feed (str): The feed URL.
-            http_etag (str or None):
-                The HTTP ``ETag`` header from the last update.
-            http_last_modified (str or None):
-                The the HTTP ``Last-Modified`` header from the last update.
+            caching_info (JSONType or None):
+                :attr:`~RetrievedFeed.caching_info` from the last update.
 
         Returns:
             ParsedFeed or None:
@@ -157,9 +153,7 @@ class Parser:
             ParseError
 
         """
-        feed = FeedForUpdate(
-            url, http_etag=http_etag, http_last_modified=http_last_modified
-        )
+        feed = FeedForUpdate(url, caching_info=caching_info)
 
         (result,) = self.parallel([feed])
 
@@ -179,7 +173,7 @@ class Parser:
 
         """
         try:
-            context = self.retrieve(feed.url, feed.http_etag, feed.http_last_modified)
+            context = self.retrieve(feed.url, feed.caching_info)
             return RetrieveResult(feed, context)
         except Exception as e:
             # pass around *all* exception types,
@@ -188,19 +182,14 @@ class Parser:
             return RetrieveResult(feed, e)
 
     def retrieve(
-        self,
-        url: str,
-        http_etag: str | None = None,
-        http_last_modified: str | None = None,
+        self, url: str, caching_info: JSONType | None = None
     ) -> ContextManager[RetrievedFeed[Any]]:
         """Retrieve a feed.
 
         Args:
             url (str): The feed URL.
-            http_etag (str or None):
-                The HTTP ``ETag`` header from the last update.
-            http_last_modified (str or None):
-                The the HTTP ``Last-Modified`` header from the last update.
+            caching_info (JSONType or None):
+                :attr:`~RetrievedFeed.caching_info` from the last update.
 
         Returns:
             contextmanager(RetrieveResult or None):
@@ -226,21 +215,18 @@ class Parser:
 
         retriever = self.get_retriever(url)
 
-        return self._retrieve(
-            retriever, url, http_etag, http_last_modified, http_accept
-        )
+        return self._retrieve(retriever, url, caching_info, http_accept)
 
     @contextmanager
     def _retrieve(
         self,
         retriever: RetrieverType[Any],
         url: str,
-        http_etag: str | None,
-        http_last_modified: str | None,
+        caching_info: JSONType | None,
         http_accept: str | None,
     ) -> Iterator[RetrievedFeed[Any]]:
         with wrap_exceptions(url, 'during retriever'):
-            context = retriever(url, http_etag, http_last_modified, http_accept)
+            context = retriever(url, caching_info, http_accept)
             with context as feed:
                 if not isinstance(feed, RetrievedFeed):
                     feed = RetrievedFeed(feed)
@@ -329,9 +315,7 @@ class Parser:
         with wrap_exceptions(url, 'during parser'):
             feed, entries = parser(url, retrieved.resource, headers)
             entries = list(entries)
-        return ParsedFeed(
-            feed, entries, retrieved.http_etag, retrieved.http_last_modified, mime_type
-        )
+        return ParsedFeed(feed, entries, mime_type, retrieved.caching_info)
 
     def get_parser(
         self, url: str, mime_type: str | None

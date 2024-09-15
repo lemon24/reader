@@ -15,7 +15,10 @@ Unreleased
 
   .. note::
 
-    The (unstable) :class:`.RetrieverType` protocol used by custom retrievers changed.
+    The (unstable) :class:`.RetrieverType` protocol used by retrievers changed.
+
+  * Allow retrievers to store arbitrary caching data via
+    :attr:`.RetrievedFeed.caching_info`.
 
 
 Version 3.14

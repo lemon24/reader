@@ -75,10 +75,9 @@ class Decider:
             # (last_updated is always set if the feed was updated at least
             # once, unless the database predates last_updated).
             #
-            feed = feed._replace(updated=None, http_etag=None, http_last_modified=None)
+            feed = feed._replace(updated=None, caching_info=None)
             log.info(
-                "update feed %r: feed marked as stale, "
-                "ignoring updated, http_etag and http_last_modified",
+                "update feed %r: stale feed, ignoring updated and caching_info",
                 feed.url,
             )
         return feed
@@ -230,12 +229,7 @@ class Decider:
         entries_to_update: bool,
     ) -> FeedToUpdate | None:
         if self.should_update_feed(parsed_feed.feed, entries_to_update):
-            return FeedToUpdate(
-                parsed_feed.feed,
-                self.now,
-                parsed_feed.http_etag,
-                parsed_feed.http_last_modified,
-            )
+            return FeedToUpdate(parsed_feed.feed, self.now, parsed_feed.caching_info)
         return None
 
     def update(

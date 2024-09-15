@@ -46,8 +46,7 @@ def _make_entry(feed_number, number, updated=None, **kwargs):
 class Parser:
     feeds: dict = field(default_factory=dict)
     entries: dict = field(default_factory=dict)
-    http_etag: str = None
-    http_last_modified: str = None
+    caching_info: dict | None = None
 
     should_raise: callable or None = None
     exc: Exception = None
@@ -90,7 +89,7 @@ class Parser:
 
     # parser API
 
-    def __call__(self, url, http_etag, http_last_modified):
+    def __call__(self, url, caching_info):
         raise NotImplementedError
 
     parallel = reader._parser.Parser.parallel
@@ -100,7 +99,7 @@ class Parser:
     class session_factory:
         persistent = staticmethod(nullcontext)
 
-    def retrieve(self, url, http_etag, http_last_modified):
+    def retrieve(self, url, caching_info):
         if self.should_raise and self.should_raise(url):
             try:
                 # We raise so the exception has a traceback set.
@@ -122,12 +121,7 @@ class Parser:
 
         entries = list(self.entries[feed_number].values())
 
-        return ParsedFeed(
-            feed,
-            entries,
-            self.http_etag,
-            self.http_last_modified,
-        )
+        return ParsedFeed(feed, entries, None, self.caching_info)
 
     def validate_url(self, url):
         pass

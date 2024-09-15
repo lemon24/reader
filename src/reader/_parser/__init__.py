@@ -24,6 +24,7 @@ from .._types import FeedForUpdate
 from .._utils import lazy_import
 from ..exceptions import ParseError
 from ..types import _namedtuple_compat
+from ..types import JSONType
 from .requests import DEFAULT_TIMEOUT
 from .requests import Headers
 from .requests import SessionFactory
@@ -112,14 +113,11 @@ class LazyParser:
             object.__setattr__(self._parser, name, value)
 
     def __call__(
-        self,
-        url: str,
-        http_etag: str | None = None,
-        http_last_modified: str | None = None,
+        self, url: str, caching_info: JSONType | None = None
     ) -> ParsedFeed | None:
         self._lazy_init()
         assert self._parser is not None
-        return self._parser(url, http_etag, http_last_modified)
+        return self._parser(url, caching_info)
 
     def _lazy_init(self) -> None:
         if self._parser:
@@ -168,12 +166,8 @@ class FeedArgument(Protocol):  # pragma: no cover
         """The feed URL."""
 
     @property
-    def http_etag(self) -> str | None:
-        """The HTTP ``ETag`` header from the last update."""
-
-    @property
-    def http_last_modified(self) -> str | None:
-        """The the HTTP ``Last-Modified`` header from the last update."""
+    def caching_info(self) -> JSONType | None:
+        """:attr:`~RetrievedFeed.caching_info` from the last update."""
 
 
 T = TypeVar('T')
@@ -242,8 +236,6 @@ class RetrieveResult(_namedtuple_compat, Generic[F, T, E]):
 class RetrievedFeed(_namedtuple_compat, Generic[T]):
     """A (successfully) retrieved feed, plus metadata."""
 
-    # TODO: coalesce http_etag and http_last_modified into a single thing?
-
     #: The retrieved resource.
     #: Usually, a readable binary file.
     #: Passed to the parser.
@@ -253,13 +245,9 @@ class RetrievedFeed(_namedtuple_compat, Generic[T]):
     #: Used to select an appropriate parser.
     mime_type: str | None = None
 
-    #: The HTTP ``ETag`` header associated with the resource.
-    #: Passed back to the retriever on the next update.
-    http_etag: str | None = None
-
-    #: The HTTP ``Last-Modified`` header associated with the resource.
-    #: Passed back to the retriever on the next update.
-    http_last_modified: str | None = None
+    #: Caching info passed back to the retriever on the next update.
+    #: Usually, the ``ETag`` and ``Last-Modified`` headers.
+    caching_info: JSONType | None = None
 
     #: Details about the HTTP response.
     http_info: HTTPInfo | None = None
@@ -277,18 +265,16 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
     def __call__(
         self,
         url: str,
-        http_etag: str | None,
-        http_last_modified: str | None,
+        caching_info: JSONType | None,
+        # FIXME also s/http_accept/accept/
         http_accept: str | None,
     ) -> ContextManager[RetrievedFeed[T_co] | T_co]:
         """Retrieve a feed.
 
         Args:
             feed (str): The feed URL.
-            http_etag (str or None):
-                The HTTP ``ETag`` header from the last update.
-            http_last_modified (str or None):
-                The the HTTP ``Last-Modified`` header from the last update.
+            caching_info (JSONType or None):
+                :attr:`~RetrievedFeed.caching_info` from the last update.
             http_accept (str or None):
                 Content types to be retrieved, as an HTTP ``Accept`` header.
 
@@ -358,16 +344,13 @@ class ParsedFeed(NamedTuple):
     feed: FeedData
     #: The entries.
     entries: Collection[EntryData]
-    #: The HTTP ``ETag`` header associated with the feed resource.
-    #: Passed back to the retriever on the next update.
-    http_etag: str | None = None
-    #: The HTTP ``Last-Modified`` header associated with the feed resource.
-    #: Passed back to the retriever on the next update.
-    http_last_modified: str | None = None
     #: The MIME type of the feed resource.
     #: Used by :meth:`~reader._parser.Parser.process_entry_pairs`
     #: to select an appropriate parser.
     mime_type: str | None = None
+    #: Caching info passed back to the retriever on the next update.
+    #: Usually, the ``ETag`` and ``Last-Modified`` headers.
+    caching_info: JSONType | None = None
 
 
 FeedAndEntries = tuple[FeedData, Collection[EntryData]]

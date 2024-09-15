@@ -2021,8 +2021,7 @@ def test_change_feed_url_feed(reader):
 def test_change_feed_url_feeds_for_update(reader):
     # TODO: this should probably be tested in test_storage.py
 
-    reader._parser.http_etag = 'etag'
-    reader._parser.http_last_modified = 'last-modified'
+    reader._parser.caching_info = 'caching'
     reader.update_feeds()
 
     reader._parser.condition = lambda url: url == '1'
@@ -2037,8 +2036,7 @@ def test_change_feed_url_feeds_for_update(reader):
         )
 
     old_one = get_feed('1')
-    assert old_one.http_etag == 'etag'
-    assert old_one.http_last_modified == 'last-modified'
+    assert old_one.caching_info == 'caching'
     assert old_one.stale
 
     reader.change_feed_url('1', '3')
@@ -2047,11 +2045,10 @@ def test_change_feed_url_feeds_for_update(reader):
     assert get_feed('3') == old_one._replace(
         url='3',
         updated=None,
+        caching_info=None,
         last_updated=None,
         last_exception=False,
         stale=False,
-        http_etag=None,
-        http_last_modified=None,
     )
 
 

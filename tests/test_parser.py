@@ -181,7 +181,7 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(data_dir.joinpath(feed_filename + '.py').read_text(), expected)
 
-    feed, entries, _, _, mime_type = parse(feed_url)
+    feed, entries, _, _ = parse(feed_url)
     entries = list(entries)
 
     assert feed == expected['feed']
@@ -209,7 +209,7 @@ def test_no_mime_type(monkeypatch, parse, make_url, data_dir):
 
     parse.mount_parser_by_url(feed_url, custom_parser)
 
-    feed, entries, _, _, mime_type = parse(feed_url)
+    feed, entries, _, _ = parse(feed_url)
 
     with open(str(feed_path), encoding='utf-8') as f:
         expected_feed = FeedData(url=feed_url, title=f.read())
@@ -337,66 +337,72 @@ def make_http_get_headers_url(requests_mock):
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom', 'json'])
+@pytest.mark.parametrize(
+    'caching_info, expected_headers',
+    [
+        (None, {}),
+        ({'etag': 'e'}, {'If-None-Match': 'e'}),
+        ({'last-modified': 'lm'}, {'If-Modified-Since': 'lm'}),
+        (
+            {'etag': 'e', 'last-modified': 'lm'},
+            {'If-None-Match': 'e', 'If-Modified-Since': 'lm'},
+        ),
+    ],
+)
 def test_parse_sends_etag_last_modified(
     parse,
     make_http_get_headers_url,
     data_dir,
     feed_type,
+    caching_info,
+    expected_headers,
 ):
     feed_url = make_http_get_headers_url(data_dir.joinpath('full.' + feed_type))
-    parse(feed_url, 'etag', 'last_modified')
+
+    parse(feed_url, caching_info)
 
     headers = make_http_get_headers_url.request_headers
-
-    assert headers.get('If-None-Match') == 'etag'
-    assert headers.get('If-Modified-Since') == 'last_modified'
-
-
-@pytest.fixture
-def make_http_etag_last_modified_url(requests_mock):
-    def make_url(feed_path):
-        url = 'http://example.com/' + feed_path.name
-        headers = {'ETag': make_url.etag, 'Last-Modified': make_url.last_modified}
-        if feed_path.suffix == '.rss':
-            headers['Content-Type'] = 'application/rss+xml'
-        elif feed_path.suffix == '.atom':
-            headers['Content-Type'] = 'application/atom+xml'
-        requests_mock.get(url, text=feed_path.read_text(), headers=headers)
-        return url
-
-    yield make_url
+    assert expected_headers.items() <= headers.items()
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom', 'json'])
+@pytest.mark.parametrize(
+    'headers, expected_caching_info',
+    [
+        ({}, None),
+        ({'ETag': 'e'}, {'etag': 'e'}),
+        ({'Last-Modified': 'lm'}, {'last-modified': 'lm'}),
+        ({'ETag': 'e', 'Last-Modified': 'lm'}, {'etag': 'e', 'last-modified': 'lm'}),
+    ],
+)
 def test_parse_returns_etag_last_modified(
     monkeypatch,
     parse,
-    make_http_etag_last_modified_url,
-    make_http_url,
-    make_relative_path_url,
+    make_http_set_headers_url,
     data_dir,
     feed_type,
+    headers,
+    expected_caching_info,
 ):
     monkeypatch.chdir(data_dir.parent)
 
-    make_http_etag_last_modified_url.etag = 'etag'
-    make_http_etag_last_modified_url.last_modified = 'last_modified'
+    feed_url = make_http_set_headers_url(
+        data_dir.joinpath('full.' + feed_type), headers
+    )
+    _, _, _, caching_info = parse(feed_url)
 
-    feed_url = make_http_etag_last_modified_url(data_dir.joinpath('full.' + feed_type))
-    _, _, etag, last_modified, _ = parse(feed_url)
+    assert caching_info == expected_caching_info
 
-    assert etag == 'etag'
-    assert last_modified == 'last_modified'
 
-    feed_url = make_http_url(data_dir.joinpath('full.atom'))
-    _, _, etag, last_modified, _ = parse(feed_url)
+def test_parse_file_returns_etag_last_modified(
+    monkeypatch, parse, make_relative_path_url, data_dir
+):
+    monkeypatch.chdir(data_dir.parent)
 
-    assert etag == last_modified == None
+    feed_url = make_relative_path_url(data_dir.joinpath('full.atom'))
+    _, _, _, caching_info = parse(feed_url)
 
-    feed_url = make_relative_path_url(data_dir.joinpath('full.' + feed_type))
-    _, _, etag, last_modified, _ = parse(feed_url)
-
-    assert etag == last_modified == None
+    assert caching_info == None
 
 
 @pytest.mark.parametrize('tz', ['UTC', 'Europe/Helsinki'])
@@ -412,7 +418,7 @@ def test_parse_local_timezone(monkeypatch_tz, request, parse, tz, data_dir):
     exec(feed_path.with_suffix('.atom.py').read_text(), expected)
 
     monkeypatch_tz(tz)
-    feed, _, _, _, _ = parse(str(feed_path))
+    feed, _, _, _ = parse(str(feed_path))
     assert feed.updated == expected['feed'].updated
 
 
@@ -443,7 +449,7 @@ def test_parse_response_plugins(monkeypatch, make_http_url, data_dir):
     parse.session_factory.response_hooks.append(do_nothing_plugin)
     parse.session_factory.response_hooks.append(rewrite_to_empty_plugin)
 
-    feed, _, _, _, _ = parse(feed_url)
+    feed, _, _, _ = parse(feed_url)
     assert req_plugin.called
     assert do_nothing_plugin.called
     assert rewrite_to_empty_plugin.called
@@ -980,10 +986,10 @@ def test_parser_mount_order():
 
 def make_dummy_retriever(name, mime_type='type/subtype', headers=None):
     @contextmanager
-    def retriever(url, http_etag, http_last_modified, http_accept):
+    def retriever(url, caching_info, http_accept):
         retriever.last_http_accept = http_accept
         http_info = HTTPInfo(200, headers)
-        yield RetrievedFeed(name, mime_type, http_etag, http_last_modified, http_info)
+        yield RetrievedFeed(name, mime_type, caching_info, http_info)
 
     retriever.slow_to_read = False
     return retriever
@@ -1013,12 +1019,11 @@ def test_parser_selection():
 
     http_parser = make_dummy_parser('httpp-', 'type/http')
     parse.mount_parser_by_mime_type(http_parser)
-    assert parse('http:one', 'etag', None) == (
+    assert parse('http:one', 'caching') == (
         'httpp-http',
         ['http:one'],
-        'etag',
-        None,
         'type/http',
+        'caching',
     )
     assert http_retriever.last_http_accept == 'type/http'
     assert http_parser.last_headers == 'headers'
@@ -1029,19 +1034,18 @@ def test_parser_selection():
     parse.mount_parser_by_url('file:o', url_parser)
 
     with pytest.raises(ParseError) as excinfo:
-        parse('file:one', None, 'last-modified')
+        parse('file:one', 'caching')
     assert excinfo.value.url == 'file:one'
     assert 'no parser for MIME type' in excinfo.value.message
     assert 'type/file' in excinfo.value.message
 
     file_parser = make_dummy_parser('filep-')
     parse.mount_parser_by_mime_type(file_parser, 'type/file, text/plain;q=0.8')
-    assert parse('file:one', None, 'last-modified') == (
+    assert parse('file:one', 'caching') == (
         'filep-file',
         ['file:one'],
-        None,
-        'last-modified',
         'type/file',
+        'caching',
     )
     assert file_retriever.last_http_accept == 'type/http,type/file,text/plain;q=0.8'
     assert file_parser.last_headers is None
@@ -1072,22 +1076,15 @@ def test_parser_selection():
     assert parse('nomt:one') == (
         'fallbackp-nomt',
         ['nomt:one'],
-        None,
-        None,
         'application/octet-stream',
-    )
-    assert parse('unkn:one') == (
-        'fallbackp-unkn',
-        ['unkn:one'],
         None,
-        None,
-        'type/unknown',
     )
+    assert parse('unkn:one') == ('fallbackp-unkn', ['unkn:one'], 'type/unknown', None)
     assert nomt_retriever.last_http_accept == 'type/http,type/file,text/plain;q=0.8,*/*'
 
-    assert parse('file:o') == ('urlp-file', ['file:o'], None, None, 'type/file')
+    assert parse('file:o') == ('urlp-file', ['file:o'], 'type/file', None)
     assert file_retriever.last_http_accept is None
-    assert parse('file:///o') == ('urlp-file', ['file:///o'], None, None, 'type/file')
+    assert parse('file:///o') == ('urlp-file', ['file:///o'], 'type/file', None)
 
 
 def test_retriever_selection():
@@ -1097,19 +1094,17 @@ def test_retriever_selection():
     parse.mount_retriever('http://specific.com', make_dummy_retriever('specific'))
     parse.mount_parser_by_mime_type(make_dummy_parser(), '*/*')
 
-    assert parse('http://generic.com/', 'etag', None) == (
+    assert parse('http://generic.com/', None) == (
         'generic',
         ['http://generic.com/'],
-        'etag',
-        None,
         'type/subtype',
+        None,
     )
-    assert parse('http://specific.com/', None, 'last-modified') == (
+    assert parse('http://specific.com/', 'caching') == (
         'specific',
         ['http://specific.com/'],
-        None,
-        'last-modified',
         'type/subtype',
+        'caching',
     )
 
     with pytest.raises(ParseError) as excinfo:

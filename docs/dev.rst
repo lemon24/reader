@@ -404,17 +404,13 @@ Lessons learned from the :ref:`Twitter` plugin:
   :meth:`~reader._parser.ParserType` being generic.
 
 * It is useful for a Retriever to store arbitrary caching data;
-  the plugin (mis)used
-  :attr:`~reader._parser.RetrieveResult.http_etag`
+  the plugin (mis)used ``RetrieveResult.http_etag``
   to store the (integer) id of the newest tweet in the thread.
 
-  It would be nice to formalize this into a single
-  "arbitrary caching data" attribute;
-  also see `this comment <https://github.com/lemon24/reader/blob/0ada24bf4e65c69c3028641bada8eaeabbe02754/src/reader/_parser.py#L569>`_.
+  Update: This was formalized as :attr:`.RetrievedFeed.caching_info` in 3.15.
 
 * It is useful for a Retriever to pass arbitrary data to itself;
-  the plugin (mis)used
-  :attr:`~reader._types.FeedForUpdate.http_etag` to pass from
+  the plugin (mis)used ``FeedForUpdate.http_etag`` to pass from
   :meth:`~reader._parser.FeedForUpdateRetrieverType.process_feed_for_update`
   to :meth:`~reader._parser.RetrieverType.__call__`:
 

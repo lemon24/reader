@@ -248,11 +248,8 @@ class FeedForUpdate(NamedTuple):
     #: The date the feed was last updated, according to the feed.
     updated: datetime | None = None
 
-    #: The HTTP ``ETag`` header from the last update.
-    http_etag: str | None = None
-
-    #: The HTTP ``Last-Modified`` header from the last update.
-    http_last_modified: str | None = None
+    #: Caching info from the last update.
+    caching_info: JSONType | None = None
 
     #: Whether the next update should update *all* entries,
     #: regardless of their :attr:`hash` or :attr:`updated`.
@@ -322,19 +319,9 @@ class FeedToUpdate(NamedTuple):
     #: The time at the start of updating this feed.
     last_updated: datetime
 
-    #: The feed's ``ETag`` header;
-    #: see :attr:`ParsedFeed.http_etag` for details.
-    #:
-    #: .. admonition:: Unstable
-    #:
-    #:  :attr:`http_etag` and :attr:`http_last_modified`
-    #:  may be grouped in a single attribute in the future.
-    #:
-    http_etag: str | None = None
-
-    #: The feed's ``Last-Modified`` header;
-    #: see :attr:`ParsedFeed.http_last_modified` for details.
-    http_last_modified: str | None = None
+    #: Caching info passed back to the retriever on the next update.
+    #: See :attr:`ParsedFeed.caching_info` for details.
+    caching_info: JSONType | None = None
 
 
 class EntryUpdateIntent(NamedTuple):
