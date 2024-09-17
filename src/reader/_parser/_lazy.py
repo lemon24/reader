@@ -17,11 +17,11 @@ from .._utils import MapFunction
 from ..exceptions import InvalidFeedURLError
 from ..exceptions import ParseError
 from ..types import JSONType
+from . import AcceptParserType
 from . import EntryPair
 from . import EntryPairsParserType
 from . import F
 from . import FeedForUpdateRetrieverType
-from . import HTTPAcceptParserType
 from . import NotModified
 from . import ParsedFeed
 from . import ParseResult
@@ -201,21 +201,21 @@ class Parser:
         """
         parser = self.get_parser_by_url(url)
 
-        http_accept: str | None
+        accept: str | None
         if not parser:
-            http_accept = unparse_accept_header(
+            accept = unparse_accept_header(
                 (mime_type, quality)
                 for mime_type, parsers in self.parsers_by_mime_type.items()
                 for quality, _ in parsers
             )
         else:
             # URL parsers get the default session / requests Accept (*/*);
-            # later, we may use parser.http_accept, if it exists, but YAGNI
-            http_accept = None
+            # later, we may use parser.accept, if it exists, but YAGNI
+            accept = None
 
         retriever = self.get_retriever(url)
 
-        return self._retrieve(retriever, url, caching_info, http_accept)
+        return self._retrieve(retriever, url, caching_info, accept)
 
     @contextmanager
     def _retrieve(
@@ -223,10 +223,10 @@ class Parser:
         retriever: RetrieverType[Any],
         url: str,
         caching_info: JSONType | None,
-        http_accept: str | None,
+        accept: str | None,
     ) -> Iterator[RetrievedFeed[Any]]:
         with wrap_exceptions(url, 'during retriever'):
-            context = retriever(url, caching_info, http_accept)
+            context = retriever(url, caching_info, accept)
             with context as feed:
                 if not isinstance(feed, RetrievedFeed):
                     feed = RetrievedFeed(feed)
@@ -413,31 +413,31 @@ class Parser:
         raise ParseError(url, message="no retriever for URL")
 
     def mount_parser_by_mime_type(
-        self, parser: ParserType[Any], http_accept: str | None = None
+        self, parser: ParserType[Any], accept: str | None = None
     ) -> None:
         """Register a parser to one or more MIME types.
 
         Args:
             parser (ParserType): The parser.
-            http_accept (str or None):
+            accept (str or None):
                 The content types the parser supports,
-                as an ``Accept`` HTTP header value.
+                as an HTTP ``Accept`` header.
                 If not given, use the parser's
-                :attr:`~HTTPAcceptParserType.http_accept` attribute,
+                :attr:`~AcceptParserType.accept` attribute,
                 if it has one.
 
         Raises:
             TypeError: The parser does not have an
-                :attr:`~HTTPAcceptParserType.http_accept` attribute,
-                and no ``http_accept`` was given.
+                :attr:`~AcceptParserType.accept` attribute,
+                and no ``accept`` was given.
 
         """
-        if not http_accept:
-            if not isinstance(parser, HTTPAcceptParserType):
-                raise TypeError("unaware parser type with no http_accept given")
-            http_accept = parser.http_accept
+        if not accept:
+            if not isinstance(parser, AcceptParserType):
+                raise TypeError("unaware parser type with no accept given")
+            accept = parser.accept
 
-        for mime_type, quality in parse_accept_header(http_accept):
+        for mime_type, quality in parse_accept_header(accept):
             if not quality:
                 continue
 

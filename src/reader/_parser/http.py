@@ -43,7 +43,7 @@ class HTTPRetriever:
         self,
         url: str,
         caching_info: Any = None,
-        http_accept: str | None = None,
+        accept: str | None = None,
     ) -> Iterator[RetrievedFeed[IO[bytes]]]:
         request_headers = {
             # https://tools.ietf.org/html/rfc3229#section-10.5.3
@@ -52,8 +52,8 @@ class HTTPRetriever:
             # https://www.ctrl.blog/entry/feed-caching.html
             'A-IM': 'feed',
         }
-        if http_accept:
-            request_headers['Accept'] = http_accept
+        if accept:
+            request_headers['Accept'] = accept
 
         error = RetrieveError(url)
 

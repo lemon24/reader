@@ -146,13 +146,13 @@ class LazyParser:
         self._lazy_call('mount_retriever', prefix, retriever)
 
     def mount_parser_by_mime_type(
-        self, parser: ParserType[Any], http_accept: str | None = None
+        self, parser: ParserType[Any], accept: str | None = None
     ) -> None:
         # duplicate Parser check (fail early)
-        if not http_accept:  # pragma: no cover
-            if not isinstance(parser, HTTPAcceptParserType):
-                raise TypeError("unaware parser type with no http_accept given")
-        self._lazy_call('mount_parser_by_mime_type', parser, http_accept)
+        if not accept:  # pragma: no cover
+            if not isinstance(parser, AcceptParserType):
+                raise TypeError("unaware parser type with no accept given")
+        self._lazy_call('mount_parser_by_mime_type', parser, accept)
 
     def mount_parser_by_url(self, url: str, parser: ParserType[Any]) -> None:
         self._lazy_call('mount_parser_by_url', url, parser)
@@ -263,11 +263,7 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
     """A callable that knows how to retrieve a feed."""
 
     def __call__(
-        self,
-        url: str,
-        caching_info: JSONType | None,
-        # FIXME also s/http_accept/accept/
-        http_accept: str | None,
+        self, url: str, caching_info: JSONType | None, accept: str | None
     ) -> ContextManager[RetrievedFeed[T_co] | T_co]:
         """Retrieve a feed.
 
@@ -275,7 +271,7 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
             feed (str): The feed URL.
             caching_info (JSONType or None):
                 :attr:`~RetrievedFeed.caching_info` from the last update.
-            http_accept (str or None):
+            accept (str or None):
                 Content types to be retrieved, as an HTTP ``Accept`` header.
 
         Returns:
@@ -380,11 +376,11 @@ class ParserType(Protocol[T_cv]):  # pragma: no cover
 
 
 @runtime_checkable
-class HTTPAcceptParserType(ParserType[T_cv], Protocol):  # pragma: no cover
-    """A :class:`ParserType` that knows what content it can handle."""
+class AcceptParserType(ParserType[T_cv], Protocol):  # pragma: no cover
+    """A :class:`ParserType` that knows what content types it can handle."""
 
     @property
-    def http_accept(self) -> str:
+    def accept(self) -> str:
         """The content types this parser supports,
         as an ``Accept`` HTTP header value.
 

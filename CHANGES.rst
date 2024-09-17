@@ -11,14 +11,13 @@ Version 3.15
 
 Unreleased
 
-* Update the parser API to expose HTTP information to the updater. (:issue:`307`)
+* Update the (unstable) parser API to expose HTTP information to the updater,
+  plus additional clean-ups. (:issue:`307`)
 
-  .. note::
-
-    The (unstable) :class:`.RetrieverType` protocol used by retrievers changed.
-
-  * Allow retrievers to store arbitrary caching data via
-    :attr:`.RetrievedFeed.caching_info`.
+  * The :class:`.RetrieverType` protocol used by retrievers changed
+    (new return type, allow storing arbitrary caching data via
+    :attr:`~.RetrievedFeed.caching_info`).
+  * The ``HTTPAcceptParserType`` was renamed to :class:`.AcceptParserType`.
 
 
 Version 3.14

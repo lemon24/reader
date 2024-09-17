@@ -986,8 +986,8 @@ def test_parser_mount_order():
 
 def make_dummy_retriever(name, mime_type='type/subtype', headers=None):
     @contextmanager
-    def retriever(url, caching_info, http_accept):
-        retriever.last_http_accept = http_accept
+    def retriever(url, caching_info, accept):
+        retriever.last_accept = accept
         http_info = HTTPInfo(200, headers)
         yield RetrievedFeed(name, mime_type, caching_info, http_info)
 
@@ -995,13 +995,13 @@ def make_dummy_retriever(name, mime_type='type/subtype', headers=None):
     return retriever
 
 
-def make_dummy_parser(prefix='', http_accept=None):
+def make_dummy_parser(prefix='', accept=None):
     def parser(url, file, headers):
         parser.last_headers = headers
         return prefix + file, [url]
 
-    if http_accept:
-        parser.http_accept = http_accept
+    if accept:
+        parser.accept = accept
 
     return parser
 
@@ -1025,7 +1025,7 @@ def test_parser_selection():
         'type/http',
         'caching',
     )
-    assert http_retriever.last_http_accept == 'type/http'
+    assert http_retriever.last_accept == 'type/http'
     assert http_parser.last_headers == 'headers'
 
     # this should not get in the way of anything else;
@@ -1047,7 +1047,7 @@ def test_parser_selection():
         'type/file',
         'caching',
     )
-    assert file_retriever.last_http_accept == 'type/http,type/file,text/plain;q=0.8'
+    assert file_retriever.last_accept == 'type/http,type/file,text/plain;q=0.8'
     assert file_parser.last_headers is None
 
     with pytest.raises(ParseError) as excinfo:
@@ -1080,10 +1080,10 @@ def test_parser_selection():
         None,
     )
     assert parse('unkn:one') == ('fallbackp-unkn', ['unkn:one'], 'type/unknown', None)
-    assert nomt_retriever.last_http_accept == 'type/http,type/file,text/plain;q=0.8,*/*'
+    assert nomt_retriever.last_accept == 'type/http,type/file,text/plain;q=0.8,*/*'
 
     assert parse('file:o') == ('urlp-file', ['file:o'], 'type/file', None)
-    assert file_retriever.last_http_accept is None
+    assert file_retriever.last_accept is None
 
     # this assert is commented because the selected retriever
     # depends on urlunparse() behavior, which in turn depends

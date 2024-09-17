@@ -27,7 +27,7 @@ if TYPE_CHECKING:  # pragma: no cover
 class JSONFeedParser:
     """https://jsonfeed.org/version/1.1"""
 
-    http_accept = 'application/feed+json,application/json;q=0.9'
+    accept = 'application/feed+json,application/json;q=0.9'
 
     def __call__(
         self,
