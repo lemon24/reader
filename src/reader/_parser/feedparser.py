@@ -30,7 +30,7 @@ log = logging.getLogger('reader')
 
 class FeedparserParser:
     # The wildcard gets added back explicitly later on.
-    http_accept = unparse_accept_header(
+    accept = unparse_accept_header(
         (v, q)
         for v, q in parse_accept_header(feedparser.http.ACCEPT_HEADER)
         if v != '*/*'

@@ -179,7 +179,7 @@ class CustomRetriever:
 
 
 class CustomParser:
-    http_accept = 'x.test'
+    accept = 'x.test'
 
     def __call__(self, url, file, headers):
         self.in_call(url)

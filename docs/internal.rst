@@ -70,7 +70,7 @@ Protocols
     :members:
     :special-members: __call__
 
-.. autoclass:: HTTPAcceptParserType
+.. autoclass:: AcceptParserType
     :members:
     :show-inheritance:
 
