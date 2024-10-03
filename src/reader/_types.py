@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Mapping
@@ -13,7 +14,6 @@ from functools import cached_property
 from types import MappingProxyType
 from types import SimpleNamespace
 from typing import Any
-from typing import Generic
 from typing import get_args
 from typing import Literal
 from typing import NamedTuple
@@ -614,39 +614,36 @@ DEFAULT_RESERVED_NAME_SCHEME = MappingProxyType(
 )
 
 
-UpdateHook = Callable[..., None]
-UpdateHookType = Literal[
-    'before_feeds_update',
-    'before_feed_update',
-    'after_entry_update',
-    'after_feed_update',
-    'after_feeds_update',
-]
-
-
-class UpdateHooks(dict[UpdateHookType, list[UpdateHook]], Generic[_T]):
-    def __init__(self, target: _T):
-        super().__init__()
+class UpdateHooks:
+    def __init__(self, target: Any):
         self.target = target
-
-    def __missing__(self, key: UpdateHookType) -> list[UpdateHook]:
-        return self.setdefault(key, [])
+        self.hooks: dict[str, list[Callable[..., None]]] = defaultdict(list)
 
     def run(
-        self, when: UpdateHookType, resource_id: tuple[str, ...] | None, *args: Any
-    ) -> None:
-        for hook in self[when]:
+        self,
+        when: str,
+        resource_id: tuple[str, ...] | None,
+        *args: Any,
+        return_exceptions: bool = False,
+    ) -> list[SingleUpdateHookError]:
+        rv = []
+        for hook in self.hooks[when]:
             try:
                 hook(self.target, *args)
             except Exception as e:
-                raise SingleUpdateHookError(when, hook, resource_id) from e
+                wrapper = SingleUpdateHookError(when, hook, resource_id)
+                wrapper.__cause__ = e
+                if not return_exceptions:
+                    raise wrapper
+                rv.append(wrapper)
+        return rv
 
     def group(self, message: str) -> _UpdateHookErrorGrouper:
         return _UpdateHookErrorGrouper(self, message)
 
 
 class _UpdateHookErrorGrouper:
-    def __init__(self, hooks: UpdateHooks[Any], message: str):
+    def __init__(self, hooks: UpdateHooks, message: str):
         self.hooks = hooks
         self.message = message
         self.exceptions: list[UpdateHookError] = []
@@ -654,20 +651,16 @@ class _UpdateHookErrorGrouper:
 
     def run(
         self,
-        when: UpdateHookType,
+        when: str,
         resource_id: tuple[str, ...] | None,
         *args: Any,
         limit: int = 0,
     ) -> None:
-        for hook in self.hooks[when]:
-            try:
-                hook(self.hooks.target, *args)
-            except Exception as e:
-                exc = SingleUpdateHookError(when, hook, resource_id)
-                exc.__cause__ = e
-                self.add(exc, resource_id, limit)
+        for exc in self.hooks.run(when, resource_id, *args, return_exceptions=True):
+            self.add(exc, resource_id, limit)
 
     def add(self, exc: UpdateHookError, dedupe_key: Any = None, limit: int = 0) -> None:
+        # TODO: test error deduping; also, the logic may not be correct?
         if limit and dedupe_key not in self.seen_dedupe_keys:  # pragma: no cover
             if len(self.seen_dedupe_keys) >= limit:
                 log.error("too many hook errors; discarding exception", exc_info=exc)
@@ -678,6 +671,15 @@ class _UpdateHookErrorGrouper:
     def close(self) -> None:
         if self.exceptions:
             raise UpdateHookErrorGroup(self.message, self.exceptions)
+
+    def __enter__(self) -> _UpdateHookErrorGrouper:
+        return self
+
+    def __exit__(self, _: Any, exc: BaseException, __: Any) -> None:
+        # bare SingleUpdateHookError was intended to raise, don't catch it
+        if isinstance(exc, UpdateHookErrorGroup):
+            self.add(exc)
+        self.close()
 
 
 class StorageType(Protocol):  # pragma: no cover

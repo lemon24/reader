@@ -4,12 +4,7 @@ from collections.abc import Iterable
 from collections.abc import Sequence
 from functools import cached_property
 from traceback import format_exception
-from typing import TYPE_CHECKING
-
-
-if TYPE_CHECKING:  # pragma: no cover
-    from ._types import UpdateHook
-    from ._types import UpdateHookType
+from typing import Any
 
 
 class _FancyExceptionBase(Exception):
@@ -323,8 +318,8 @@ class SingleUpdateHookError(UpdateHookError):
 
     def __init__(
         self,
-        when: UpdateHookType,
-        hook: UpdateHook,
+        when: str,
+        hook: Any,
         resource_id: tuple[str, ...] | None = None,
     ) -> None:
         super().__init__()

@@ -43,10 +43,8 @@ from .exceptions import FeedNotFoundError
 from .exceptions import ParseError
 from .exceptions import PluginInitError
 from .exceptions import SearchNotEnabledError
-from .exceptions import SingleUpdateHookError
 from .exceptions import TagNotFoundError
 from .exceptions import UpdateHookError
-from .exceptions import UpdateHookErrorGroup
 from .plugins import _load_plugins
 from .plugins import DEFAULT_PLUGINS
 from .plugins import PluginInput
@@ -868,8 +866,7 @@ class Reader:
             instead of :attr:`~Feed.last_updated`.
 
         """
-        hook_errors = self._update_hooks.group("some hooks failed")
-        try:
+        with self._update_hooks.group("some hooks failed") as hook_errors:
             results = self.update_feeds_iter(
                 feed=feed,
                 tags=tags,
@@ -896,18 +893,6 @@ class Reader:
                     continue
 
                 assert not isinstance(value, Exception), value
-
-        except SingleUpdateHookError as e:
-            assert e.when == 'before_feeds_update', e
-            raise
-
-        except UpdateHookErrorGroup as e:
-            for exc in e.exceptions:
-                assert isinstance(exc, SingleUpdateHookError), exc
-                assert exc.when == 'after_feeds_update', exc
-            hook_errors.add(e)
-
-        hook_errors.close()
 
     def update_feeds_iter(
         self,
@@ -1030,11 +1015,10 @@ class Reader:
             yield from Pipeline(self, now, map).update(filter)
 
         if _call_feeds_update_hooks:
-            hook_errors = self._update_hooks.group(
+            with self._update_hooks.group(
                 "got unexpected after-update hook errors"
-            )
-            hook_errors.run('after_feeds_update', None)
-            hook_errors.close()
+            ) as hook_errors:
+                hook_errors.run('after_feeds_update', None)
 
     def update_feed(self, feed: FeedInput, /) -> UpdatedFeed | None:
         r"""Update a single feed.
@@ -2223,7 +2207,7 @@ class Reader:
             Wrap unexpected exceptions in :exc:`UpdateHookError`.
 
         """
-        return self._update_hooks['before_feeds_update']
+        return self._update_hooks.hooks['before_feeds_update']
 
     @property
     def before_feed_update_hooks(self) -> MutableSequence[FeedUpdateHook]:
@@ -2247,7 +2231,7 @@ class Reader:
             Wrap unexpected exceptions in :exc:`UpdateHookError`.
 
         """
-        return self._update_hooks['before_feed_update']
+        return self._update_hooks.hooks['before_feed_update']
 
     @property
     def after_entry_update_hooks(self) -> MutableSequence[AfterEntryUpdateHook]:
@@ -2284,7 +2268,7 @@ class Reader:
             Try to run all hooks, don't stop after one fails.
 
         """
-        return self._update_hooks['after_entry_update']
+        return self._update_hooks.hooks['after_entry_update']
 
     @property
     def after_feed_update_hooks(self) -> MutableSequence[FeedUpdateHook]:
@@ -2310,7 +2294,7 @@ class Reader:
             Try to run all hooks, don't stop after one fails.
 
         """
-        return self._update_hooks['after_feed_update']
+        return self._update_hooks.hooks['after_feed_update']
 
     @property
     def after_feeds_update_hooks(self) -> MutableSequence[FeedsUpdateHook]:
@@ -2336,4 +2320,4 @@ class Reader:
             Try to run all hooks, don't stop after one fails.
 
         """
-        return self._update_hooks['after_feeds_update']
+        return self._update_hooks.hooks['after_feeds_update']

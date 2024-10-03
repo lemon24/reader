@@ -483,27 +483,25 @@ class Pipeline:
         # if feed_for_update.url != parsed_feed.feed.url, the feed was redirected.
         # TODO: Maybe handle redirects somehow else (e.g. change URL if permanent).
 
-        hook_errors = hooks.group("got unexpected after-update hook errors")
+        with hooks.group("got unexpected after-update hook errors") as hook_errors:
+            new_count = 0
+            updated_count = 0
+            for entry in entries:
+                if entry.new:
+                    new_count += 1
+                    entry_status = EntryUpdateStatus.NEW
+                else:
+                    updated_count += 1
+                    entry_status = EntryUpdateStatus.MODIFIED
 
-        new_count = 0
-        updated_count = 0
-        for entry in entries:
-            if entry.new:
-                new_count += 1
-                entry_status = EntryUpdateStatus.NEW
-            else:
-                updated_count += 1
-                entry_status = EntryUpdateStatus.MODIFIED
+                hook_errors.run(
+                    'after_entry_update',
+                    entry.entry.resource_id,
+                    entry.entry,
+                    entry_status,
+                    limit=5,
+                )
 
-            hook_errors.run(
-                'after_entry_update',
-                entry.entry.resource_id,
-                entry.entry,
-                entry_status,
-                limit=5,
-            )
-
-        hook_errors.run('after_feed_update', (url,), url)
-        hook_errors.close()
+            hook_errors.run('after_feed_update', (url,), url)
 
         return new_count, updated_count
