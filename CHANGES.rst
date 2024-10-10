@@ -19,6 +19,12 @@ Unreleased
     :attr:`~.RetrievedFeed.caching_info`).
   * The ``HTTPAcceptParserType`` was renamed to :class:`.AcceptParserType`.
 
+* Fix a number of brittle / broken tests.
+  Thanks to `Maks Verver`_ for the issues and fixes.
+  (:issue:`348`, :issue:`349`, :issue:`355`)
+
+.. _Maks Verver: https://github.com/maksverver
+
 
 Version 3.14
 ------------
