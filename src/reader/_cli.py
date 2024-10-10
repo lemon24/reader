@@ -122,13 +122,12 @@ def log_command(fn):
 
 def config_option(*args, **kwargs):
     def callback(ctx, param, value):
-        # TODO: the default file is allowed to not exist, a user specified file must exist
+        config_path = value if value is not None else get_default_config_path()
         try:
-            with open(value) as file:
+            with open(config_path) as file:
                 config = make_reader_config(yaml.safe_load(file))
-        except FileNotFoundError as e:
-            if value != param.default:
-                raise click.BadParameter(str(e), ctx=ctx, param=param) from None
+        except FileNotFoundError:
+            assert value is None
             config = make_reader_config({})
 
         ctx.default_map = config['cli'].get('defaults', {})
@@ -136,17 +135,14 @@ def config_option(*args, **kwargs):
         ctx.obj = config
         return config
 
-    def inner(fn):
-        return click.option(
-            *args,
-            type=click.Path(dir_okay=False),
-            callback=callback,
-            is_eager=True,
-            expose_value=False,
-            **kwargs,
-        )(fn)
-
-    return inner
+    return click.option(
+        *args,
+        type=click.Path(exists=True, dir_okay=False),
+        callback=callback,
+        is_eager=True,
+        expose_value=False,
+        **kwargs,
+    )
 
 
 def pass_reader(fn):
@@ -166,7 +162,6 @@ def pass_reader(fn):
     '--db',
     type=click.Path(dir_okay=False),
     envvar=reader._DB_ENVVAR,
-    show_default=True,
     help=f"Path to the reader database. [default: {get_default_db_path()}]",
 )
 @click.option(
@@ -184,9 +179,7 @@ def pass_reader(fn):
 @config_option(
     '--config',
     envvar=reader._CONFIG_ENVVAR,
-    help="Path to the reader config.",
-    default=get_default_config_path(),
-    show_default=True,
+    help=f"Path to the reader config. [default: {get_default_config_path()}]",
 )
 @click.option(
     '--feed-root',
