@@ -43,6 +43,20 @@ def reset_logging(pytestconfig):
         pytestconfig.pluginmanager.register(logging_plugin, "logging-plugin")
 
 
+@pytest.fixture(autouse=True)
+def patch_app_dir(monkeypatch, tmp_path):
+    """Ignore local config while running tests.
+
+    https://github.com/lemon24/reader/issues/355
+
+    """
+
+    def get_app_dir(app_name):
+        return str(tmp_path.joinpath('app_dir', app_name))
+
+    monkeypatch.setattr('click.get_app_dir', get_app_dir)
+
+
 @pytest.mark.slow
 def test_cli(db_path, data_dir, monkeypatch):
     feed_filename = 'full.atom'
