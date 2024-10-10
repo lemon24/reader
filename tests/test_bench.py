@@ -5,6 +5,7 @@ import pytest
 from click.testing import CliRunner
 
 from reader import make_reader
+from test_cli import patch_app_dir
 from test_reader_filter import setup_reader_for_tags
 
 
