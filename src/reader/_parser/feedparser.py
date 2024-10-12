@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import calendar
 import logging
+import os
 import time
 import warnings
 from datetime import datetime
@@ -12,12 +13,17 @@ from typing import TYPE_CHECKING
 
 from .._types import EntryData
 from .._types import FeedData
-from .._vendor import feedparser
 from ..exceptions import ParseError
 from ..types import Content
 from ..types import Enclosure
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
+
+
+if os.environ.get('READER_USE_SYSTEM_FEEDPARSER', '') not in ('', '0'):
+    import feedparser  # type: ignore
+else:
+    from .._vendor import feedparser
 
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -55,7 +61,7 @@ class FeedparserParser:
             resource,
             resolve_relative_uris=True,
             sanitize_html=True,
-            response_headers=headers or {},  # type: ignore[arg-type]
+            response_headers=headers or {},
         )
         return _process_feed(url, result)
 

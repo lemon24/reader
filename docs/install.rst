@@ -27,6 +27,20 @@ These packages will be installed automatically when installing *reader*:
 (at least SQLite 3.18 with the `JSON1`_ and `FTS5`_ extensions).
 
 
+.. _use-system-feedparser:
+
+.. note::
+
+  Because `feedparser`_ makes PyPI releases at a lower cadence,
+  *reader* uses a vendored version of feedparser's `develop`_ branch
+  by default since :ref:`version 2.9`.
+  To opt out of this behavior, and make *reader* use
+  the system-installed ``feedparser`` package,
+  set the ``READER_USE_SYSTEM_FEEDPARSER`` environment variable to ``1``.
+
+.. _develop: https://github.com/kurtmckee/feedparser
+
+
 .. _optional dependencies:
 
 Optional dependencies

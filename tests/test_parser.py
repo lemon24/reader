@@ -14,12 +14,12 @@ from reader._parser import HTTPInfo
 from reader._parser import Parser
 from reader._parser import RetrievedFeed
 from reader._parser import RetrieveError
+from reader._parser.feedparser import feedparser
 from reader._parser.feedparser import FeedparserParser
 from reader._parser.file import FileRetriever
 from reader._parser.jsonfeed import JSONFeedParser
 from reader._parser.requests import SessionWrapper
 from reader._types import FeedData
-from reader._vendor import feedparser
 from reader.exceptions import ParseError
 from utils import make_url_base
 
@@ -1164,3 +1164,24 @@ def test_retrieved_feed_http_info_not_shadowed_by_retrieve_error(parse):
     assert exc_info.value.__cause__ is cause
 
     assert parse.last_result.http_info == HTTPInfo(200, {})
+
+
+def test_reader_use_system_feedparser(monkeypatch, reload_module):
+    import feedparser
+
+    import reader._parser.feedparser
+    import reader._vendor.feedparser
+
+    name = 'READER_USE_SYSTEM_FEEDPARSER'
+
+    monkeypatch.delenv(name, raising=False)
+    reload_module(reader._parser.feedparser)
+    assert reader._parser.feedparser.feedparser is reader._vendor.feedparser
+
+    monkeypatch.setenv(name, '0')
+    reload_module(reader._parser.feedparser)
+    assert reader._parser.feedparser.feedparser is reader._vendor.feedparser
+
+    monkeypatch.setenv(name, '1')
+    reload_module(reader._parser.feedparser)
+    assert reader._parser.feedparser.feedparser is feedparser

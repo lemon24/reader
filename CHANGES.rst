@@ -19,6 +19,13 @@ Unreleased
     :attr:`~.RetrievedFeed.caching_info`).
   * The ``HTTPAcceptParserType`` was renamed to :class:`.AcceptParserType`.
 
+* Allow :ref:`using the system-installed feedparser <use-system-feedparser>`
+  instead of the one vendored by *reader*.
+  This is useful for working around issues in the vendored feedparser,
+  like the libxml2 <=2.13.3 incompatibility reported in :issue:`350`;
+  thanks to `Maks Verver`_  for reporting,
+  root causing, and following up with both dependencies.
+
 * Fix a number of brittle / broken tests.
   Thanks to `Maks Verver`_ for the issues and fixes.
   (:issue:`348`, :issue:`349`, :issue:`355`)
@@ -669,6 +676,8 @@ Released 2022-03-12
   Fix broken delete metadata button.
   Fix broken error flashing.
 
+
+.. _version 2.9:
 
 Version 2.9
 -----------
