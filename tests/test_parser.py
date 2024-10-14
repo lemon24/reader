@@ -1172,7 +1172,7 @@ def test_reader_use_system_feedparser(monkeypatch, reload_module):
     import reader._parser.feedparser
     import reader._vendor.feedparser
 
-    name = 'READER_USE_SYSTEM_FEEDPARSER'
+    name = 'READER_NO_VENDORED_FEEDPARSER'
 
     monkeypatch.delenv(name, raising=False)
     reload_module(reader._parser.feedparser)

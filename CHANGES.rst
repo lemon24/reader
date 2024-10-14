@@ -21,7 +21,7 @@ Unreleased
     :attr:`~.RetrievedFeed.caching_info`).
   * The ``HTTPAcceptParserType`` was renamed to :class:`.AcceptParserType`.
 
-* Allow :ref:`using the system-installed feedparser <use-system-feedparser>`
+* Allow :ref:`using the installed feedparser <no-vendored-feedparser>`
   instead of the one vendored by *reader*.
   This is useful for working around issues in the vendored feedparser,
   like the libxml2 <=2.13.3 incompatibility reported in :issue:`350`;

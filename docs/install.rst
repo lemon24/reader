@@ -27,7 +27,7 @@ These packages will be installed automatically when installing *reader*:
 (at least SQLite 3.18 with the `JSON1`_ and `FTS5`_ extensions).
 
 
-.. _use-system-feedparser:
+.. _no-vendored-feedparser:
 
 .. note::
 
@@ -35,8 +35,8 @@ These packages will be installed automatically when installing *reader*:
   *reader* uses a vendored version of feedparser's `develop`_ branch
   by default since :ref:`version 2.9`.
   To opt out of this behavior, and make *reader* use
-  the system-installed ``feedparser`` package,
-  set the ``READER_USE_SYSTEM_FEEDPARSER`` environment variable to ``1``.
+  the installed ``feedparser`` package,
+  set the ``READER_NO_VENDORED_FEEDPARSER`` environment variable to ``1``.
 
 .. _develop: https://github.com/kurtmckee/feedparser
 
