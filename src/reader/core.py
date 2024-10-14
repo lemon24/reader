@@ -23,7 +23,6 @@ from ._parser.requests import DEFAULT_TIMEOUT
 from ._parser.requests import TimeoutType
 from ._storage import Storage
 from ._types import BoundSearchStorageType
-from ._types import DEFAULT_RESERVED_NAME_SCHEME
 from ._types import entry_data_from_obj
 from ._types import EntryData
 from ._types import EntryFilter
@@ -90,6 +89,14 @@ _U = TypeVar('_U')
 AfterEntryUpdateHook = Callable[['Reader', EntryData, EntryUpdateStatus], None]
 FeedUpdateHook = Callable[['Reader', str], None]
 FeedsUpdateHook = Callable[['Reader'], None]
+
+
+#: The :func:`.make_reader` default :ref:`reserved name scheme <reserved names>`.
+DEFAULT_RESERVED_NAME_SCHEME = {
+    'reader_prefix': '.reader.',
+    'plugin_prefix': '.plugin.',
+    'separator': '.',
+}
 
 
 def make_reader(
@@ -175,8 +182,7 @@ def make_reader(
 
         reserved_name_scheme (dict(str, str)):
             Value for :attr:`~Reader.reserved_name_scheme`.
-            The prefixes default to ``.reader.``/``.plugin.``,
-            and the separator to ``.``
+            Defaults to :data:`.DEFAULT_RESERVED_NAME_SCHEME`.
 
         search_enabled (bool or None or ``'auto'``):
             Whether to enable search. One of
@@ -2162,14 +2168,12 @@ class Reader:
 
     @property
     def reserved_name_scheme(self) -> Mapping[str, str]:
-        """dict(str, str): Mapping used to build reserved names.
+        """dict(str, str): Mapping used to build :ref:`reserved names`.
         See :meth:`~Reader.make_reader_reserved_name`
         and :meth:`~Reader.make_plugin_reserved_name`
         for details on how this is used.
 
-        The default scheme (these keys are required)::
-
-            {'reader_prefix': '.reader.', 'plugin_prefix': '.plugin.', 'separator': '.'}
+        The default scheme is :data:`.DEFAULT_RESERVED_NAME_SCHEME`.
 
         The returned mapping is immutable; assign a new mapping to change the scheme.
 

@@ -16,7 +16,7 @@ Most of *reader*'s functionality can be accessed through a :class:`Reader` insta
 
     Split this into sub-sections.
 
-.. autofunction:: make_reader(url, *, feed_root=None, plugins=..., session_timeout=(3.05, 60), reserved_name_scheme=..., search_enabled='auto')
+.. autofunction:: make_reader
 
 .. autoclass:: Reader(...)
     :members:
@@ -183,5 +183,7 @@ Type aliases
 
 Constants
 ---------
+
+.. autodata:: reader.core.DEFAULT_RESERVED_NAME_SCHEME
 
 .. autodata:: reader.plugins.DEFAULT_PLUGINS

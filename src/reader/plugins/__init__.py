@@ -18,7 +18,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from . import Reader
 
 
-#: The list of plugins :func:`~reader.make_reader` uses by default.
+#: The :func:`~reader.make_reader` default list of :ref:`plugins <plugins>`.
 DEFAULT_PLUGINS = [
     'reader.ua_fallback',
 ]

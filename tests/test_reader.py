@@ -34,11 +34,11 @@ from reader import TagNotFoundError
 from reader import UpdatedFeed
 from reader import UpdateResult
 from reader._storage import Storage
-from reader._types import DEFAULT_RESERVED_NAME_SCHEME
 from reader._types import FeedFilter
 from reader._types import FeedToUpdate
 from reader._types import FeedUpdateIntent
 from reader._update import next_update_after
+from reader.core import DEFAULT_RESERVED_NAME_SCHEME
 from reader_methods import enable_and_update_search
 from reader_methods import get_entries
 from reader_methods import get_entries_random

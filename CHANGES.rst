@@ -11,6 +11,8 @@ Version 3.15
 
 Unreleased
 
+* Expose :data:`reader.core.DEFAULT_RESERVED_NAME_SCHEME`. (:issue:`287`)
+
 * Update the (unstable) parser API to expose HTTP information to the updater,
   plus additional clean-ups. (:issue:`307`)
 

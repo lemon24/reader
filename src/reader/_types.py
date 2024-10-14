@@ -11,7 +11,6 @@ from datetime import datetime
 from datetime import timezone
 from enum import Enum
 from functools import cached_property
-from types import MappingProxyType
 from types import SimpleNamespace
 from typing import Any
 from typing import get_args
@@ -603,15 +602,6 @@ class NameScheme(_namedtuple_compat):
         if key is not None:
             rv += self.separator + key
         return rv
-
-
-DEFAULT_RESERVED_NAME_SCHEME = MappingProxyType(
-    {
-        'reader_prefix': '.reader.',
-        'plugin_prefix': '.plugin.',
-        'separator': '.',
-    }
-)
 
 
 class UpdateHooks:
