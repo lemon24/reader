@@ -686,6 +686,14 @@ Update hook error handling:
 * expected behavior: :issue:`218#issuecomment-1595691410`, :issue:`218#issuecomment-1666823222`
 * update hook pseudocode + exception hierarchy: :issue:`218#issuecomment-1666869215`
 
+Considerations on using pluggy: :issue:`329`,
+`how adapting reader use cases to the pluggy model may work <https://github.com/pytest-dev/pluggy/issues/151#issuecomment-2421648901>`_.
+Conclusions:
+
+    even if using pluggy would require some work-arounds for calling, I think the collection / discovery functionality is still more than worth it
+
+    long-term and/or if reader becomes really popular, pluggy is definitely the way to go
+
 
 Reserved names
 ~~~~~~~~~~~~~~
