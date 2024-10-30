@@ -168,16 +168,16 @@ SCHEMA_INFO = {
 def feed_tags_filter(
     query: Query, tags: TagFilter, url_column: str, keyword: str = 'WHERE'
 ) -> dict[str, str]:
-    context, tags_cte, tags_count_cte = tags_filter(query, tags, keyword, 'feed_tags')
+    if not tags:
+        return {}
 
-    if tags_cte:
-        query.with_(tags_cte, f"SELECT key FROM feed_tags WHERE feed = {url_column}")
+    ctes = {
+        '__feed_tags': f"SELECT key FROM feed_tags WHERE feed = {url_column}",
+        '__feed_tags_count': f"SELECT count(key) FROM feed_tags WHERE feed = {url_column}",
+    }
+    context, filters = tags_filter(tags, *ctes)
 
-    if tags_count_cte:
-        query.with_(
-            tags_count_cte,
-            f"SELECT count(key) FROM feed_tags WHERE feed = {url_column}",
-        )
+    apply_tags_filter(query, keyword, ctes, filters)
 
     return context
 
@@ -185,67 +185,61 @@ def feed_tags_filter(
 def entry_tags_filter(
     query: Query, tags: TagFilter, keyword: str = 'WHERE'
 ) -> dict[str, str]:
-    context, tags_cte, tags_count_cte = tags_filter(query, tags, keyword, 'entry_tags')
+    if not tags:
+        return {}
 
-    if tags_cte:
-        query.with_(
-            tags_cte,
-            """
+    ctes = {
+        '__entry_tags': """
             SELECT key FROM entry_tags
             WHERE (id, feed) = (entries.id, entries.feed)
             """,
-        )
-
-    if tags_count_cte:
-        query.with_(
-            tags_count_cte,
-            """
+        '__entry_tags_count': """
             SELECT count(key) FROM entry_tags
             WHERE (id, feed) = (entries.id, entries.feed)
             """,
-        )
+    }
+    context, filters = tags_filter(tags, *ctes)
+
+    apply_tags_filter(query, keyword, ctes, filters)
 
     return context
 
 
-def tags_filter(
-    query: Query, tags: TagFilter, keyword: str, base_table: str
-) -> tuple[dict[str, str], str | None, str | None]:
+def apply_tags_filter(
+    query: Query, keyword: str, ctes: dict[str, str], filters: list[str]
+) -> None:
+    for cte_name, cte in ctes.items():
+        query.with_(cte_name, cte)
     add = getattr(query, keyword)
+    for filter in filters:
+        add(filter)
 
+
+def tags_filter(
+    tags: TagFilter, tags_cte: str, tags_count_cte: str
+) -> tuple[dict[str, str], list[str]]:
     context = {}
-
-    tags_cte = f'__{base_table}'
-    tags_count_cte = f'__{base_table}_count'
-
-    add_tags_cte = False
-    add_tags_count_cte = False
-
+    filters = []
     next_tag_id = 0
 
-    for subtags in tags:
-        tag_query = BaseQuery({'(': [], ')': ['']}, {'(': 'OR'})
-        tag_add = partial(tag_query.add, '(')
+    for or_tags in tags:
+        query = BaseQuery({'(': [], ')': ['']}, {'(': 'OR'})
+        add = partial(query.add, '(')
 
-        for maybe_tag in subtags:
+        for maybe_tag in or_tags:
             if isinstance(maybe_tag, bool):
-                tag_add(
-                    f"{'NOT' if not maybe_tag else ''} (SELECT * FROM {tags_count_cte})"
-                )
-                add_tags_count_cte = True
+                cond = f"(SELECT * FROM {tags_count_cte})"
+                if not maybe_tag:
+                    cond = f"NOT {cond}"
+                add(cond)
                 continue
 
             is_negation, tag = maybe_tag
-            tag_name = f'__{base_table}_{next_tag_id}'
+            tag_name = f'{tags_cte}_{next_tag_id}'
             next_tag_id += 1
             context[tag_name] = tag
-            tag_add(f":{tag_name} {'NOT' if is_negation else ''} IN {tags_cte}")
-            add_tags_cte = True
+            add(f":{tag_name} {'NOT' if is_negation else ''} IN {tags_cte}")
 
-        add(str(tag_query))
+        filters.append(str(query))
 
-    return (
-        context,
-        tags_cte if add_tags_cte else None,
-        tags_count_cte if add_tags_count_cte else None,
-    )
+    return context, filters
