@@ -11,6 +11,8 @@ Version 3.15
 
 Unreleased
 
+* Optimize OR-only :meth:`~Reader.get_feeds()` and :meth:`~Reader.get_entries()`
+  tag filters (e.g. ``[['one', ...]]``). (:issue:`359`)
 * Expose :data:`reader.core.DEFAULT_RESERVED_NAME_SCHEME`. (:issue:`287`)
 
 * Update the (unstable) parser API to expose HTTP information to the updater,
