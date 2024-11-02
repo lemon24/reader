@@ -114,6 +114,11 @@ CREATE INDEX entries_by_recent ON entries (
 -- speed up get_entry_counts(feed=...)
 CREATE INDEX entries_by_feed ON entries (feed);
 
+-- speed up simple get_feeds(tags=...) and get_entries(tags=...) forms
+-- (see reader._storage._tags.by_key_filter docstring for details)
+CREATE INDEX feed_tags_by_key ON feed_tags(key);
+CREATE INDEX entry_tags_by_key ON entry_tags(key);
+
 """)  # fmt: skip
 
 feeds_table = SCHEMA['table']['feeds']
@@ -124,6 +129,8 @@ entry_tags_table = SCHEMA['table']['entry_tags']
 
 entries_by_recent_index = SCHEMA['index']['entries_by_recent']
 entries_by_feed_index = SCHEMA['index']['entries_by_feed']
+feed_tags_by_key_index = SCHEMA['index']['feed_tags_by_key']
+entry_tags_by_key_index = SCHEMA['index']['entry_tags_by_key']
 
 
 def create_all(db: sqlite3.Connection) -> None:
@@ -138,6 +145,8 @@ def create_all(db: sqlite3.Connection) -> None:
 def create_indexes(db: sqlite3.Connection) -> None:
     entries_by_recent_index.create(db)
     entries_by_feed_index.create(db)
+    feed_tags_by_key_index.create(db)
+    entry_tags_by_key_index.create(db)
 
 
 def update_from_36_to_37(db: sqlite3.Connection, /) -> None:  # pragma: no cover
@@ -303,7 +312,13 @@ def update_from_40_to_41(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     db.execute("ALTER TABLE feeds DROP COLUMN http_last_modified;")
 
 
-VERSION = 41
+def update_from_41_to_42(db: sqlite3.Connection, /) -> None:  # pragma: no cover
+    # https://github.com/lemon24/reader/issues/359
+    feed_tags_by_key_index.create(db)
+    entry_tags_by_key_index.create(db)
+
+
+VERSION = 42
 
 MIGRATIONS = {
     # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
@@ -315,6 +330,7 @@ MIGRATIONS = {
     38: update_from_38_to_39,
     39: update_from_39_to_40,
     40: update_from_40_to_41,
+    41: update_from_41_to_42,
 }
 MISSING_SUFFIX = (
     "; you may have skipped some required migrations, see "
