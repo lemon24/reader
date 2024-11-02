@@ -796,6 +796,9 @@ class StorageType(Protocol):  # pragma: no cover
     ) -> Iterable[Feed]:
         """Called by :meth:`.Reader.get_feeds`.
 
+        For tag filters, implementations should optimize the single-tag case
+        such that listing by tag does not have to go through all the feeds.
+
         Args:
             filter
             sort
@@ -886,6 +889,13 @@ class StorageType(Protocol):  # pragma: no cover
         starting_after: tuple[str, str] | None,
     ) -> Iterable[Entry]:
         """Called by :meth:`.Reader.get_entries`.
+
+        For tag filters, implementations should optimize the single-tag case
+        such that listing by tag does not have to go through all the entries.
+
+        Additionally, implementations may choose to not implement tag filters
+        more complicated than flat OR (``[['one', 'two', ...]]``) or flat AND
+        (``[['one'], ['two'], ...]``), and raise StorageError instead.
 
         Args:
             filter
