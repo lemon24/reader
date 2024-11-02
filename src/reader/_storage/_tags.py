@@ -171,11 +171,15 @@ def feed_tags_filter(
     if not tags:
         return {}
 
-    ctes = {
-        '__feed_tags': f"SELECT key FROM feed_tags WHERE feed = {url_column}",
-        '__feed_tags_count': f"SELECT count(key) FROM feed_tags WHERE feed = {url_column}",
-    }
-    context, filters = tags_filter(tags, *ctes)
+    if can_use_by_key_filter(tags):
+        cte = Query().SELECT("feed").FROM("feed_tags")
+        context, ctes, filters = by_key_filter(cte, tags, url_column)
+    else:
+        ctes = {
+            '__feed_tags': f"SELECT key FROM feed_tags WHERE feed = {url_column}",
+            '__feed_tags_count': f"SELECT count(key) FROM feed_tags WHERE feed = {url_column}",
+        }
+        context, filters = generic_tag_filter(tags, *ctes)
 
     apply_tags_filter(query, keyword, ctes, filters)
 
@@ -188,17 +192,21 @@ def entry_tags_filter(
     if not tags:
         return {}
 
-    ctes = {
-        '__entry_tags': """
-            SELECT key FROM entry_tags
-            WHERE (id, feed) = (entries.id, entries.feed)
-            """,
-        '__entry_tags_count': """
-            SELECT count(key) FROM entry_tags
-            WHERE (id, feed) = (entries.id, entries.feed)
-            """,
-    }
-    context, filters = tags_filter(tags, *ctes)
+    if can_use_by_key_filter(tags):
+        cte = Query().SELECT("id", "feed").FROM("entry_tags")
+        context, ctes, filters = by_key_filter(cte, tags, "entries.id, entries.feed")
+    else:
+        ctes = {
+            '__entry_tags': """
+                SELECT key FROM entry_tags
+                WHERE (id, feed) = (entries.id, entries.feed)
+                """,
+            '__entry_tags_count': """
+                SELECT count(key) FROM entry_tags
+                WHERE (id, feed) = (entries.id, entries.feed)
+                """,
+        }
+        context, filters = generic_tag_filter(tags, *ctes)
 
     apply_tags_filter(query, keyword, ctes, filters)
 
@@ -215,9 +223,34 @@ def apply_tags_filter(
         add(filter)
 
 
-def tags_filter(
+def generic_tag_filter(
     tags: TagFilter, tags_cte: str, tags_count_cte: str
 ) -> tuple[dict[str, str], list[str]]:
+    """Tag filter: for each feed/entry, get its tags and see if they match.
+
+    Ends up scanning feeds/entries, but works with all tags.
+
+    With this filter, get_feeds(tags=[['one', 'two']]) results in::
+
+        WITH __feed_tags AS (
+            SELECT key FROM feed_tags
+            WHERE feed = feeds.url
+        )
+        SELECT url FROM feeds
+        WHERE (
+            'one' IN __feed_tags OR
+            'two' IN __feed_tags
+        )
+
+    Args:
+        tags: tags
+        tags_cte: name of CTE returning the tags for a feed/entry
+        tags_count_cte: name of CTE returning the tag count for a feed/entry
+
+    Returns:
+        (context, filters) tuple.
+
+    """
     context = {}
     filters = []
     next_tag_id = 0
@@ -238,8 +271,87 @@ def tags_filter(
             tag_name = f'{tags_cte}_{next_tag_id}'
             next_tag_id += 1
             context[tag_name] = tag
-            add(f":{tag_name} {'NOT' if is_negation else ''} IN {tags_cte}")
+            add(f":{tag_name} {'NOT ' if is_negation else ''}IN {tags_cte}")
 
         filters.append(str(query))
 
     return context, filters
+
+
+def by_key_filter(
+    query: Query, tags: TagFilter, fk_columns: str
+) -> tuple[dict[str, str], dict[str, str], list[str]]:
+    """Tag filter: get feeds/entries with matching tags.
+
+    Can take advantage of an index on the key column of the tags table.
+
+    This filter works with OR queries (`[['one', 'two']]`),
+    but not with AND queries (`[['one'], ['two']]`),
+    and not with negative queries (`['-one']`).
+    https://github.com/lemon24/reader/issues/359#issuecomment-2446102455
+
+    With this filter, get_feeds(tags=[['one', 'two']]) results in::
+
+        WITH __feed_tags_fks AS (
+            SELECT feed FROM feed_tags
+            WHERE key IN ('one', 'two')
+        )
+        SELECT url FROM feeds
+        WHERE (feeds.url) IN __feed_tags_fks
+
+    Args:
+        query: query returning the foreign keys with matching tags
+            from the tags table (used as CTE in main query)
+        tags: tags
+        fk_columns: columns used as foreign keys in the tags table
+
+    Returns:
+        (context, ctes, filters) tuple.
+
+    """
+    base_table = query.data['FROM'][0].value
+    cte_name = f'__{base_table}_fks'
+
+    assert len(tags) == 1, tags
+    or_tags = tags[0]
+
+    wildcard_tags = []
+    actual_tags = []
+    for maybe_tag in or_tags:
+        if isinstance(maybe_tag, bool):
+            wildcard_tags.append(maybe_tag)
+        else:
+            actual_tags.append(maybe_tag)
+
+    context: dict[str, str] = {}
+
+    if wildcard_tags:
+        assert all(wildcard_tags), wildcard_tags
+
+    else:
+        for next_tag_id, (is_negation, tag) in enumerate(actual_tags):
+            assert not is_negation, tag
+            tag_name = f'__{base_table}_{next_tag_id}'
+            context[tag_name] = tag
+
+        query.WHERE(f"key IN ({', '.join(f':{t}' for t in context)})")
+
+    # we could also optimize single [False] filters ("has no tags")
+    # by using e.g. `feeds.url not in __feed_tags_fks` here, but YAGNI
+    filter = f"({fk_columns}) IN {cte_name}"
+
+    return context, {cte_name: str(query)}, [filter]
+
+
+def can_use_by_key_filter(tags: TagFilter) -> bool:
+    if len(tags) != 1:
+        return False
+    for maybe_tag in tags[0]:
+        if isinstance(maybe_tag, bool):
+            if maybe_tag is False:
+                return False
+            continue
+        is_negation, _ = maybe_tag
+        if is_negation:
+            return False
+    return True
