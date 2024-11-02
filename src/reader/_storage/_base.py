@@ -25,18 +25,23 @@ _T = TypeVar('_T')
 CONNECTION_CLS = sqlite3.Connection
 
 debug = os.environ.get('READER_DEBUG_STORAGE', '')
-assert set(debug) <= {'m', 't', 'i'}, f"invalid READER_DEBUG_STORAGE={debug}"
+assert set(debug) <= {'m', 't', 'T', 'i'}, f"invalid READER_DEBUG_STORAGE={debug}"
 
 if debug:  # pragma: no cover
 
     class CONNECTION_CLS(_sqlite_utils.DebugConnection):  # type: ignore # noqa: F811
-        _set_trace = 't' in debug
+        _set_trace = 't' or 'T' in debug
         _io_counters = 'i' in debug
         _pid = os.getpid()
 
         def _log_method(self, data):  # type: ignore
             data['pid'] = self._pid
+            stmt = None
+            if 'T' in debug:
+                stmt = data.pop('stmt', None)
             print('STORAGE_DEBUG', json.dumps(data), file=sys.stderr)
+            if stmt:
+                print(stmt)
 
 
 wrap_exceptions = partial(_sqlite_utils.wrap_exceptions, StorageError)
