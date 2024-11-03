@@ -116,3 +116,20 @@ For `built-in plugins`_, it is enough to use the plugin name (``reader.XYZ``).
 To load web application plugins, set the ``READER_APP_PLUGIN`` environment variable.
 To load CLI plugins (that customize the CLI),
 set the ``READER_CLI_PLUGIN`` environment variable.
+
+
+
+Recipes
+-------
+
+I currently don't need this functionality,
+but if you'd be interested in maintaining any of these
+as an experimental or even built-in plugin,
+please :doc:`submit a pull request <contributing>`.
+
+.. include:: ../examples/feed_slugs.py
+    :start-after: """
+    :end-before: """
+.. literalinclude:: ../examples/feed_slugs.py
+    :start-at: def init_reader
+    :end-before: if __name__
