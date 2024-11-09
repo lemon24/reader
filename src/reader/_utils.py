@@ -5,6 +5,7 @@ import inspect
 import itertools
 import logging
 import pkgutil
+import sys
 import warnings
 from collections.abc import Callable
 from collections.abc import Iterable
@@ -249,10 +250,15 @@ class BetterStrPartial(functools.partial[_T]):
         return f"{name}({', '.join(parts)})"
 
 
-def lazy_import(module: str, names: list[str]) -> Callable[[str], Any]:
+def lazy_import(module_name: str, names: list[str]) -> Callable[[str], Any]:
+    # YAGNI: use sys._getframe(1).f_globals['__name__'] to infer module_name
+    module = sys.modules[module_name]
+
     def __getattr__(name: str) -> Any:
         if name not in names:  # pragma: no cover
-            raise AttributeError(f"module {module!r} has no attribute {name!r}")
-        return pkgutil.resolve_name(f'{module}._lazy:{name}')
+            raise AttributeError(f"module {module_name!r} has no attribute {name!r}")
+        rv = pkgutil.resolve_name(f'{module_name}._lazy:{name}')
+        setattr(module, name, rv)
+        return rv
 
     return __getattr__
