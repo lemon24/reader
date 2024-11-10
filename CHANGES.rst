@@ -9,7 +9,7 @@ Changelog
 Version 3.15
 ------------
 
-Unreleased
+Released 2024-11-11
 
 * During :ref:`scheduled updates <scheduled>`,
   honor the Retry-After HTTP header sent with
