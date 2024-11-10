@@ -1075,10 +1075,8 @@ class UpdateResult(NamedTuple):
 
 class UpdateConfig(TypedDict, total=False):
     """Schema for the ``.reader.update`` config tag
+    that controls :ref:`scheduled updates <scheduled>`
     (see :ref:`reserved names` for details on the key prefix).
-
-    ``.reader.update`` controls whether a feed should be updated when
-    :meth:`~.update_feeds` is called with ``scheduled=True``.
 
     Individual config keys may be missing;
     per-feed values override global values override default values.
@@ -1097,7 +1095,7 @@ class UpdateConfig(TypedDict, total=False):
         {
             # no per-feed value; fall back to global value
             'interval' 120,
-            # invalid feed value (100 is not between 0.0 and 1.0);
+            # invalid feed value (100 not between 0.0 and 1.0);
             # no global value; fall back to default value
             'jitter': 0,
         }

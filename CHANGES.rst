@@ -11,12 +11,16 @@ Version 3.15
 
 Unreleased
 
+* During :ref:`scheduled updates <scheduled>`,
+  honor the Retry-After HTTP header sent with
+  429 Too Many Requests or 503 Service Unavailable responses.
+  (:issue:`307`)
 * Optimize OR-only :meth:`~Reader.get_feeds()` and :meth:`~Reader.get_entries()`
   tag filters (e.g. ``[['one', ...]]``). (:issue:`359`)
 * Expose :data:`reader.core.DEFAULT_RESERVED_NAME_SCHEME`. (:issue:`287`)
 
-* Update the (unstable) parser API to expose HTTP information to the updater,
-  plus additional clean-ups. (:issue:`307`)
+* Update the (unstable) parser API to expose HTTP information to the updater.
+  (:issue:`307`)
 
   * The :class:`.RetrieverType` protocol used by retrievers changed
     (new return type, allow storing arbitrary caching data via

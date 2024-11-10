@@ -38,6 +38,8 @@ Please use `Github Discussions`_ for support or general questions.
 
 
 
+.. _prs:
+
 Submitting patches
 ------------------
 

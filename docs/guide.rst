@@ -272,33 +272,41 @@ Scheduled updates
 Because different feeds need to be updated at different rates,
 *reader* also provides a mechanism for scheduling updates.
 
-Each feed has an update interval that, on every update,
-determines when the feed should be updated next.
-Running :meth:`update_feeds(scheduled=True) <Reader.update_feeds>`
+On every update, *reader* determines when a feed should be updated next
+based on a configurable update interval;
+:meth:`update_feeds(scheduled=True) <Reader.update_feeds>`
 updates only the feeds that should be updated at or before the current time.
 
-The global and per-feed update interval can be **configured by the user**
-via the ``.reader.update`` global/feed tag;
-the default interval is of one hour;
-see :data:`~reader.types.UpdateConfig` for the schema.
-In addition to the interval, the user can specify a jitter;
-for an interval of 24 hours, a jitter of 0.25 means
-the update will occur any time in the first 6 hours of the interval.
+The interval can be **configured by the user**
+through the ``.reader.update`` global tag,
+and overridden for individual feeds through the matching feed tag;
+if no configuration is provided, the default interval is one hour.
+See :data:`~reader.types.UpdateConfig` for the config format.
+
+In addition, the user can specify a jitter,
+a random amount of time added to the interval
+such that updates don't happen exactly at the the same time;
+for example, with a one-hour interval, a jitter of 0.25 means
+updates will occur any time in the first 15 minutes of each hour.
+
+If the server sends the Retry-After HTTP header with
+429 Too Many Requests or 503 Service Unavailable responses,
+:meth:`update_feeds(scheduled=True) <Reader.update_feeds>` will honor it.
+
 
 .. note::
 
-    As of |version|, there is no way to specify a minimum update interval.
-    If you want feeds to be updated no more often than e.g. every hour,
-    you have to run :meth:`update_feeds(scheduled=True) <Reader.update_feeds>`
-    no more often than every hour.
-    Please :ref:`open an issue <issues>` if you need a minimum update interval.
-
-In a future version of *reader*,
-the same mechanism will be used to handle
-HTTP 429 Too Many Requests; see :issue:`307` for details.
+    As of |version|, there is no way to enforce a minimum update interval;
+    if you want feeds to be updated no more often than e.g. every hour,
+    you have to run :meth:`~Reader.update_feeds` no more often than every hour.
+    Please :ref:`open an issue <issues>` or :ref:`submit a pull request <prs>`
+    if you need a minimum update interval.
 
 
 .. versionadded:: 3.13
+
+.. versionchanged:: 3.15
+    Honor the Retry-After HTTP header.
 
 
 Update status
