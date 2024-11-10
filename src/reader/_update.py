@@ -89,7 +89,7 @@ class Decider:
         now: datetime,
         global_now: datetime,
         config: UpdateConfig,
-        parsed_feed: ParsedFeed | None | ParseError,
+        result: ParseResult[FeedForUpdate, ParseError],
         entry_pairs: EntryPairs,
     ) -> tuple[FeedUpdateIntent, Iterable[EntryUpdateIntent]]:
         decider = cls(
@@ -99,7 +99,7 @@ class Decider:
             config,
             PrefixLogger(log, ["update feed %r" % old_feed.url]),
         )
-        return decider.update(parsed_feed, entry_pairs)
+        return decider.update(result, entry_pairs)
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -234,7 +234,7 @@ class Decider:
 
     def update(
         self,
-        parsed_feed: ParsedFeed | None | ParseError,
+        result: ParseResult[FeedForUpdate, ParseError],
         entry_pairs: EntryPairs,
     ) -> tuple[FeedUpdateIntent, Iterable[EntryUpdateIntent]]:
 
@@ -242,19 +242,31 @@ class Decider:
         entries_to_update: Iterable[EntryUpdateIntent] = ()
         value: FeedToUpdate | None | ExceptionInfo
 
-        if not parsed_feed:
+        if not result.value:
             value = None
-        elif isinstance(parsed_feed, ParseError):
-            value = ExceptionInfo.from_exception(parsed_feed)
+        elif isinstance(result.value, ParseError):
+            value = ExceptionInfo.from_exception(result.value)
         else:
             entries_to_update = list(self.get_entries_to_update(entry_pairs))
-            value = self.get_feed_to_update(parsed_feed, bool(entries_to_update))
+            value = self.get_feed_to_update(result.value, bool(entries_to_update))
+
+        update_after = next_update_after(self.global_now, **self.config)
+
+        http_info = result.http_info
+        if http_info and http_info.status in (429, 503) and http_info.retry_after:
+            if isinstance(http_info.retry_after, datetime):
+                retry_after = http_info.retry_after.astimezone(timezone.utc)
+            else:
+                retry_after = self.global_now + http_info.retry_after
+            # also accounts for retry_after being in the past / negative
+            if retry_after > update_after:
+                # round up to the next interval
+                update_after = next_update_after(retry_after, **self.config)
 
         # We always return a FeedUpdateIntent because
         # we always want to set last_retrieved and update_after,
         # and clear last_exception (if set before the update).
 
-        update_after = next_update_after(self.global_now, **self.config)
         return (
             FeedUpdateIntent(self.url, self.now, update_after, value),
             entries_to_update,
@@ -431,7 +443,7 @@ class Pipeline:
             self.reader._now(),
             self.global_now,
             config,
-            value,
+            result,
         )
 
         try:

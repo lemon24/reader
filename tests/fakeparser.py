@@ -104,6 +104,8 @@ class Parser:
             try:
                 # We raise so the exception has a traceback set.
                 raise self.exc
+            except ParseError as e:
+                raise
             except Exception as e:
                 raise ParseError(url) from e
         if self.is_not_modified:

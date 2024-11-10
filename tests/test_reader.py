@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 import sys
 import threading
 from collections import Counter
@@ -33,6 +34,8 @@ from reader import StorageError
 from reader import TagNotFoundError
 from reader import UpdatedFeed
 from reader import UpdateResult
+from reader._parser import HTTPInfo
+from reader._parser import RetrieveError
 from reader._storage import Storage
 from reader._types import FeedFilter
 from reader._types import FeedToUpdate
@@ -974,6 +977,42 @@ def test_update_after_invalid_config(reader, config, config_is_global):
     feed = reader.get_feed(feed)
 
     assert feed.update_after == datetime(2010, 1, 1, 1)
+
+
+@pytest.mark.parametrize(
+    'interval, retry_after, update_after',
+    [
+        (60, 3600, datetime(2010, 1, 1, 1)),
+        (60, 6000, datetime(2010, 1, 1, 2)),
+        (60, 'Fri, 01 Jan 2010 01:40:00 GMT', datetime(2010, 1, 1, 2)),
+        (60, 'Fri, 01 Jan 2010 01:40:00', datetime(2010, 1, 1, 2)),
+        (60, 'Fri, 01 Jan 2010 02:40:00 +0100', datetime(2010, 1, 1, 2)),
+        (60, 2000, datetime(2010, 1, 1, 1)),
+        (15, 6000, datetime(2010, 1, 1, 1, 45)),
+        (15, 2000, datetime(2010, 1, 1, 0, 45)),
+        (60, None, datetime(2010, 1, 1, 1)),
+        (60, -2000, datetime(2010, 1, 1, 1)),
+        (60, 'Fri, 01 Jan 2010 00:40:00 GMT', datetime(2010, 1, 1, 1)),
+        (60, 'Thu, 31 Dec 2009 23:40:00 GMT', datetime(2010, 1, 1, 1)),
+        (60, "not a date, not an int", datetime(2010, 1, 1, 1)),
+    ],
+)
+def test_update_retry_after(reader, interval, retry_after, update_after):
+    reader._parser = parser = Parser()
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    reader.set_tag(feed, '.reader.update', {'interval': interval})
+
+    status = random.choice([429, 503])
+    headers = {'retry-after': retry_after} if retry_after is not None else {}
+    parser.raise_exc(RetrieveError('', http_info=HTTPInfo(status, headers)))
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+    feed = reader.get_feed(feed)
+
+    assert feed.update_after == update_after
 
 
 @pytest.mark.parametrize(

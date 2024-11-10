@@ -6,6 +6,8 @@ from collections.abc import Iterable
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime
+from datetime import timedelta
 from typing import Any
 from typing import cast
 from typing import ContextManager
@@ -186,6 +188,29 @@ class HTTPInfo(_namedtuple_compat):
 
     #: The HTTP response headers.
     headers: Headers
+
+    @property
+    def retry_after(self) -> datetime | timedelta | None:
+        """Parsed Retry-After header.
+
+        None if parsing fails (instead of raising an exception).
+        Always a timezone-aware datetime object;
+        if timezone information is missing, UTC is assumed.
+
+        """
+        # lazy import
+        from ._http_utils import parse_date
+
+        value = self.headers.get('retry-after')
+        if not value:
+            return None
+
+        try:
+            seconds = int(value)
+        except ValueError:
+            return parse_date(value)
+
+        return timedelta(seconds=seconds)
 
 
 class RetrieveError(ParseError):
