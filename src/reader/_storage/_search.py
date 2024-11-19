@@ -211,11 +211,11 @@ class Search:
     def is_enabled(self) -> bool:
         return self._is_enabled(self.get_db())
 
-    @staticmethod
-    def _is_enabled(db: sqlite3.Connection) -> bool:
+    @classmethod
+    def _is_enabled(cls, db: sqlite3.Connection) -> bool:
         # Private API, may be called from migrations.
         try:
-            list(db.execute("SELECT * FROM entries_search LIMIT 0;"))
+            cls._enabled_check(db)
         except sqlite3.OperationalError as e:
             if "no such table: entries_search" in str(e):
                 return False
@@ -224,6 +224,10 @@ class Search:
         else:
             return True
 
+    @staticmethod
+    def _enabled_check(db: sqlite3.Connection) -> None:
+        list(db.execute("SELECT * FROM entries_search LIMIT 0;"))
+
     @wrap_exceptions(ENABLED_EXC)
     def update(self) -> None:
         try:
@@ -231,6 +235,10 @@ class Search:
             self._insert_into_search()
         except ChangeTrackingNotEnabledError as e:
             raise SearchNotEnabledError() from e
+
+        # if changes is enabled but search is not (e.g. restoring from backup),
+        # make sure we get a SearchNotEnabledError even if there are no changes
+        self._enabled_check(self.get_db())
 
     def _delete_from_search(self) -> None:
         # The loop is done outside of the chunk logic to help testing.

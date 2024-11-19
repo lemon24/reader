@@ -105,6 +105,19 @@ def test_update_search_fails_if_not_enabled(reader):
 
 
 @rename_argument('reader', 'reader_without_and_with_entries')
+def test_update_search_fails_if_changes_enabled_search_disabled(reader):
+    """update_search() should raise if changes is enabled but search is not
+    (can happen when restoring from backup).
+
+    https://github.com/lemon24/reader/issues/362
+
+    """
+    reader._storage.changes.enable()
+    with pytest.raises(SearchNotEnabledError) as excinfo:
+        reader.update_search()
+
+
+@rename_argument('reader', 'reader_without_and_with_entries')
 @with_sort
 def test_search_entries_fails_if_not_enabled(reader, sort):
     with pytest.raises(SearchNotEnabledError) as excinfo:
