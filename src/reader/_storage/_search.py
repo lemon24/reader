@@ -108,15 +108,18 @@ class Search:
 
     @wrap_exceptions()
     def enable(self) -> None:
-        self.storage.changes.enable()
         try:
             with ddl_transaction(self.get_db()) as db:
                 self._enable(db, self.schema)
         except sqlite3.OperationalError as e:
-            if "table entries_search already exists" in str(e).lower():
-                return
-            else:  # pragma: no cover
+            if "table entries_search already exists" not in str(e):  # pragma: no cover
                 raise
+        else:
+            # if search was not already enabled, make sure changes.enable()
+            # is not a no-op and we backfill all the resources
+            # (changes can be enabled and search not when restoring from backup)
+            self.storage.changes.disable()
+        self.storage.changes.enable()
 
     @classmethod
     def _enable(cls, db: sqlite3.Connection, schema: str = 'main') -> None:
@@ -217,10 +220,9 @@ class Search:
         try:
             cls._enabled_check(db)
         except sqlite3.OperationalError as e:
-            if "no such table: entries_search" in str(e):
-                return False
-            else:  # pragma: no cover
+            if "no such table: entries_search" not in str(e):  # pragma: no cover
                 raise
+            return False
         else:
             return True
 

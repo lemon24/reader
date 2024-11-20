@@ -11,6 +11,11 @@ Version 3.16
 
 Unreleased
 
+* Fix :meth:`~Reader.enable_search` / :meth:`~Reader.update_search`
+  not working when the search database is missing but change tracking is enabled
+  (e.g. when restoring the main database from backup).
+  (:issue:`362`)
+
 
 Version 3.15
 ------------

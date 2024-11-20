@@ -522,6 +522,35 @@ def test_update_unknown_changes_are_marked_as_done(reader, changes_limit):
     assert set(changes) == done_changes
 
 
+@pytest.mark.parametrize('enable_before_update', [False, True])
+def test_search_database_is_missing(db_path, make_reader, enable_before_update):
+    """update_search() should work after search database goes missing
+    (can happen when restoring from backup).
+
+    https://github.com/lemon24/reader/issues/362
+
+    """
+    reader = make_reader(db_path)
+    reader._parser = parser = Parser()
+
+    reader.add_feed(parser.feed(1))
+    parser.entry(1, '1', title='one')
+
+    reader.update_feeds()
+    reader.update_search()
+
+    assert [e.resource_id for e in reader.search_entries('one')] == [('1', '1')]
+
+    reader.close()
+    os.remove(db_path + '.search')
+
+    if enable_before_update:
+        reader.enable_search()
+    reader.update_search()
+
+    assert [e.resource_id for e in reader.search_entries('one')] == [('1', '1')]
+
+
 def test_update_actually_deletes_from_database(reader):
     # TODO: this is implementation-dependent, move to test_search.py?
     reader._parser = parser = Parser()
