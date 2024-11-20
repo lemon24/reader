@@ -34,6 +34,9 @@ but I will prioritize supporting :doc:`contributors <contributing>`
 
 * OPML support, :issue:`165`
 * :ref:`deleting entries <deleting entries>`
+
+  * archiving important entries of deleted feeds, :issue:`290`
+
 * :ref:`feed interaction statistics <counts api>`
 
 * security
@@ -512,6 +515,16 @@ From the initial issue:
 * use cases: :issue:`149#issuecomment-700066794`
 * initial requirements: :issue:`149#issuecomment-700532183`
 
+Splitting a feed into two feeds is discussed in :issue:`221`.
+The main takeaway at the time (2021) was that
+not all entry data can be retrieved through the storage API,
+so it's not fully possible to round-trip an entry.
+Based on a quick 2024 survey,
+the only affected attributes
+are :attr:`~.EntryUpdateIntent.feed_order` (can't get; not critical)
+and :attr:`~Entry.original_feed_url` (can't set; will be required for
+archiving important entries of deleted feeds, :issue:`290`).
+
 
 Resource tags / metadata
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -708,15 +721,15 @@ Wrapping underlying storage exceptions
 
 Which exception to wrap, and which not: :issue:`21#issuecomment-365442439`.
 
-In version 3.10 (November 2023), all internal APIs were changed
-to use timezone-aware datetimes, with the timezone set to UTC,
-in preparation for support for any timezone.
-
 
 Timezone handling
 ~~~~~~~~~~~~~~~~~
 
 Aware vs. naive, and what's needed to go fully aware: :issue:`233#issuecomment-881618002`.
+
+In version 3.10 (November 2023), all internal APIs were changed
+to use timezone-aware datetimes, with the timezone set to UTC,
+in preparation for support for any timezone.
 
 
 OPML support
