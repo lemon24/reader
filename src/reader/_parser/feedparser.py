@@ -16,6 +16,7 @@ from .._types import FeedData
 from ..exceptions import ParseError
 from ..types import Content
 from ..types import Enclosure
+from ..types import EntrySource
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
 
@@ -166,6 +167,24 @@ def _process_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
                 del data['length']
         enclosures.append(Enclosure(**data))
 
+    source = None
+    if data := entry.get('source'):
+        links_by_rel: dict[str, list[Any]] = {}
+        for link in data.get('links', ()):
+            links_by_rel.setdefault(link.get('rel'), []).append(link)
+        source_url = data.get('url') or links_by_rel.get('self', [{}])[0].get('href')
+        source_title = data.get('title')
+        # choice of the set of required attributes is somewhat arbitrary...
+        if source_url or source_title:
+            source = EntrySource(
+                source_url,
+                _get_datetime_attr(data, 'updated_parsed'),
+                source_title,
+                data.get('link'),
+                data.get('author'),
+                data.get('subtitle'),
+            )
+
     return EntryData(
         feed_url,
         id,
@@ -177,4 +196,5 @@ def _process_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
         entry.get('summary'),
         tuple(content),
         tuple(enclosures),
+        source,
     )

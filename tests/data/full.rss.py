@@ -2,6 +2,7 @@ import datetime
 
 from reader import Content
 from reader import Enclosure
+from reader import EntrySource
 from reader._types import EntryData
 from reader._types import FeedData
 
@@ -36,6 +37,7 @@ entries = [
             Enclosure(href='http://example.com/enclosure-with-length', length=100000),
             Enclosure(href='http://example.com/enclosure-with-bad-length'),
         ),
+        source=EntrySource(url='http://example.com/source.xml', title='Source Title'),
     ),
     EntryData(
         feed_url=feed.url,
@@ -43,5 +45,19 @@ entries = [
         updated=None,
         published=datetime.datetime(2009, 9, 6, 0, 0, 0, tzinfo=datetime.timezone.utc),
         title='Example entry, again',
+    ),
+    EntryData(
+        feed_url=feed.url,
+        id='source:only-url',
+        source=EntrySource(url='only-url'),
+    ),
+    EntryData(
+        feed_url=feed.url,
+        id='source:only-title',
+        source=EntrySource(title='only-title'),
+    ),
+    EntryData(
+        feed_url=feed.url,
+        id='source:empty',
     ),
 ]

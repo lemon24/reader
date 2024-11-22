@@ -2,6 +2,7 @@ import datetime
 
 from reader import Content
 from reader import Enclosure
+from reader import EntrySource
 from reader._types import EntryData
 from reader._types import FeedData
 
@@ -59,6 +60,16 @@ entries = [
             if feed.url.startswith('http')
             else ()
         ),
+        source=EntrySource(
+            url='http://example.org/source.xml',
+            updated=datetime.datetime(
+                2003, 12, 13, 18, 30, 2, tzinfo=datetime.timezone.utc
+            ),
+            title='Source Title',
+            link='http://example.org/source',
+            author='Source Author',
+            subtitle='source subtitle',
+        ),
     ),
     EntryData(
         feed_url=feed.url,
@@ -67,5 +78,25 @@ entries = [
         title='Atom-Powered Robots Run Amok Again',
         # link comes from feedparser
         link='urn:uuid:00000000-cfb8-4ebb-aaaa-00000000000',
+    ),
+    EntryData(
+        feed_url=feed.url,
+        id='source:only-url',
+        # link comes from feedparser
+        link='source:only-url',
+        source=EntrySource(url='only:url'),
+    ),
+    EntryData(
+        feed_url=feed.url,
+        id='source:only-title',
+        # link comes from feedparser
+        link='source:only-title',
+        source=EntrySource(title='only-title'),
+    ),
+    EntryData(
+        feed_url=feed.url,
+        id='source:empty',
+        # link comes from feedparser
+        link='source:empty',
     ),
 ]

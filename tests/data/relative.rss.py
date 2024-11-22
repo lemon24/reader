@@ -15,7 +15,7 @@ feed = FeedData(
 entries = [
     EntryData(
         feed_url=feed.url,
-        id='7bd204c6-1655-4c27-aeee-53f933c5395f',
+        id=f'{rel_base}7bd204c6-1655-4c27-aeee-53f933c5395f',
         updated=None,
         link=f'{rel_base}blog/post/1',
         summary=f'one <a href="{rel_base}target">two</a> three',

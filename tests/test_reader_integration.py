@@ -167,7 +167,7 @@ def test_etag_last_modified(reader, data_dir, server):
     reader.add_feed(url)
 
     # server response with caching headers
-    assert reader.update_feed(url).new == 2
+    assert reader.update_feed(url).new == 5
     request_line, headers, body = server.request
     assert request_line == b'GET / HTTP/1.1'
     assert body == b''

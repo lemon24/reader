@@ -89,7 +89,7 @@ def test_cli(db_path, data_dir, monkeypatch):
 
     result = invoke('update')
     assert result.exit_code == 0
-    assert "1 ok, 0 error, 0 not modified; entries: 2 new, 0 modified" in result.output
+    assert "1 ok, 0 error, 0 not modified; entries: 5 new, 0 modified" in result.output
 
     result = invoke('update')
     assert result.exit_code == 0
@@ -112,10 +112,9 @@ def test_cli(db_path, data_dir, monkeypatch):
 
     result = invoke('list', 'entries')
     assert result.exit_code == 0
-    assert [l.split() for l in result.output.splitlines()] == [
-        [feed_path, e.link or e.id]
-        for e in sorted(expected['entries'], key=lambda e: e.updated, reverse=True)
-    ]
+    assert {tuple(l.split()) for l in result.output.splitlines()} == {
+        (feed_path, e.link or e.id) for e in expected['entries']
+    }
 
     result = invoke('search', 'status')
     assert result.exit_code == 0
@@ -140,7 +139,9 @@ def test_cli(db_path, data_dir, monkeypatch):
     result = invoke('search', 'entries', 'amok')
     assert result.exit_code == 0
     assert {tuple(l.split()) for l in result.output.splitlines()} == {
-        (feed_path, e.link or e.id) for e in expected['entries']
+        (feed_path, e.link or e.id)
+        for e in expected['entries']
+        if e.title and 'amok' in e.title.lower()
     }
 
     result = invoke('search', 'entries', 'again')
@@ -148,7 +149,7 @@ def test_cli(db_path, data_dir, monkeypatch):
     assert {tuple(l.split()) for l in result.output.splitlines()} == {
         (feed_path, e.link or e.id)
         for e in expected['entries']
-        if 'again' in e.title.lower()
+        if e.title and 'again' in e.title.lower()
     }
 
     result = invoke('search', 'entries', 'nope')
@@ -236,7 +237,7 @@ def test_cli_plugin_update_exception(db_path, data_dir, tests_dir, monkeypatch):
 
     result = invoke('--plugin', 'test_cli:raise_after_feeds_update', 'update', '-v')
     assert result.exit_code != 0, result.output
-    assert "2 ok, 0 error, 0 not modified; entries: 4 new, 0 modified" in result.output
+    assert "2 ok, 0 error, 0 not modified; entries: 10 new, 0 modified" in result.output
     assert isinstance(result.exception, UpdateHookError)
 
 

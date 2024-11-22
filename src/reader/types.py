@@ -69,6 +69,8 @@ class Feed(_namedtuple_compat):
 
     """
 
+    # WARNING: When changing attributes, keep Feed, FeedData and EntrySource in sync.
+
     #: The URL of the feed.
     url: str
 
@@ -431,6 +433,39 @@ class Enclosure(_namedtuple_compat):
 
     #: The file length.
     length: int | None = None
+
+
+@dataclass(frozen=True)
+class EntrySource:
+    """Metadata of a source feed (used with :attr:`Entry.source`).
+
+    .. versionadded:: 3.16
+
+    """
+
+    # WARNING: When changing attributes, keep Feed, FeedData and EntrySource in sync.
+
+    # url is optional because we can't trust feeds to have it;
+    # RSS url is required, but Atom link[rel=self] is not:
+    # "a feed SHOULD contain a link back to the feed itself".
+
+    #: The URL of the feed.
+    url: str | None = None
+
+    #: The date the feed was last updated, according to the feed.
+    updated: datetime | None = None
+
+    #: The title of the feed.
+    title: str | None = None
+
+    #: The URL of a page associated with the feed.
+    link: str | None = None
+
+    #: The author of the feed.
+    author: str | None = None
+
+    #: A description or subtitle for the feed.
+    subtitle: str | None = None
 
 
 @dataclass(frozen=True)

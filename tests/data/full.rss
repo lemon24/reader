@@ -22,12 +22,26 @@
         <enclosure url="http://example.com/enclosure-with-type" type="image/jpeg" />
         <enclosure url="http://example.com/enclosure-with-length" length="100000" />
         <enclosure url="http://example.com/enclosure-with-bad-length" length="xyz" />
+        <source url="http://example.com/source.xml">Source Title</source>
     </item>
 
     <item>
         <title>Example entry, again</title>
         <guid isPermaLink="false">00000000-1655-4c27-aeee-00000000</guid>
         <pubDate>Sun, 06 Sep 2009 00:00:00 +0000</pubDate>
+    </item>
+
+    <item>
+        <guid isPermaLink="false">source:only-url</guid>
+        <source url="only-url"></source>
+    </item>
+    <item>
+        <guid isPermaLink="false">source:only-title</guid>
+        <source>only-title</source>
+    </item>
+    <item>
+        <guid isPermaLink="false">source:empty</guid>
+        <source url="" unknown="unknown"></source>
     </item>
 
 </channel>

@@ -40,6 +40,9 @@ Data objects
 .. autoclass:: Enclosure
     :members:
 
+.. autoclass:: EntrySource
+    :members:
+
 .. autoclass:: EntrySearchResult
     :members:
 

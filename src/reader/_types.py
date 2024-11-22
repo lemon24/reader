@@ -40,6 +40,7 @@ from .types import EntryInput
 from .types import EntrySearchCounts
 from .types import EntrySearchResult
 from .types import EntrySort
+from .types import EntrySource
 from .types import ExceptionInfo
 from .types import Feed
 from .types import FeedCounts
@@ -77,6 +78,8 @@ class FeedData(_namedtuple_compat):
     Attributes are a subset of those of :class:`~reader.Feed`.
 
     """
+
+    # WARNING: When changing attributes, keep Feed, FeedData and EntrySource in sync.
 
     url: str
     updated: datetime | None = None
@@ -140,6 +143,7 @@ class EntryData(_namedtuple_compat):
     summary: str | None = None
     content: Sequence[Content] = ()
     enclosures: Sequence[Enclosure] = ()
+    source: EntrySource | None = None
 
     def as_entry(self, **kwargs: object) -> Entry:
         """Convert this to an entry; kwargs override attributes.
@@ -154,6 +158,8 @@ class EntryData(_namedtuple_compat):
         attrs.update(kwargs)
         attrs.setdefault('original_feed_url', feed_url)
         attrs.setdefault('added_by', 'feed')
+        # FIXME: temporary during #276 development
+        attrs.pop('source')
         return Entry(**attrs)
 
     @property

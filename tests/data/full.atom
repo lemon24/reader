@@ -30,12 +30,50 @@
         <link rel="enclosure" href="http://example.org/enclosure-with-length" length="1000" />
         <link rel="enclosure" href="http://example.org/enclosure-with-bad-length" length="xyz" />
         <link rel="enclosure" href="" />
+
+        <source>
+            <title>Source Title</title>
+            <link href="http://example.org/source"/>
+            <link rel="self" href="http://example.org/source.xml"/>
+            <author>
+                <name>Source Author</name>
+            </author>
+            <updated>2003-12-13T18:30:02Z</updated>
+            <id>1234567890</id>
+            <subtitle>source subtitle</subtitle>
+        </source>
     </entry>
 
     <entry>
         <title>Atom-Powered Robots Run Amok Again</title>
         <id>urn:uuid:00000000-cfb8-4ebb-aaaa-00000000000</id>
         <updated>2003-12-13T00:00:00Z</updated>
+    </entry>
+
+    <entry>
+        <id>source:only-url</id>
+        <source>
+            <link rel="self" href="only:url"/>
+        </source>
+    </entry>
+    <entry>
+        <id>source:only-title</id>
+        <source>
+            <title>only-title</title>
+        </source>
+    </entry>
+    <entry>
+        <id>source:empty</id>
+        <source>
+            <unknown/>
+            <link href="http://example.org/source"/>
+            <author>
+                <name>Source Author</name>
+            </author>
+            <updated>2003-12-13T18:30:02Z</updated>
+            <id>1234567890</id>
+            <subtitle>source subtitle</subtitle>
+        </source>
     </entry>
 
 </feed>

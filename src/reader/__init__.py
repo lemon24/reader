@@ -52,6 +52,7 @@ from .types import (
     Entry as Entry,
     Content as Content,
     Enclosure as Enclosure,
+    EntrySource as EntrySource,
     EntrySearchResult as EntrySearchResult,
     HighlightedString as HighlightedString,
     FeedCounts as FeedCounts,
