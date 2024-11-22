@@ -88,15 +88,13 @@ def test_tristate_filter_argument_error(input):
     assert 'name' in str(excinfo.value)
 
 
+@pytest.mark.parametrize('feed_type', ['rss', 'atom'])
 @pytest.mark.parametrize('data_file', ['full', 'empty'])
-def test_entry_data_from_obj(data_dir, data_file):
+def test_entry_data_from_obj(data_dir, feed_type, data_file):
     expected = {'url_base': '', 'rel_base': ''}
-    exec(data_dir.joinpath(f'{data_file}.rss.py').read_bytes(), expected)
+    exec(data_dir.joinpath(f'{data_file}.{feed_type}.py').read_bytes(), expected)
 
     for i, entry in enumerate(expected['entries']):
-        # FIXME: temporary during #276 development
-        entry = entry._replace(source=None)
-
         assert entry == entry_data_from_obj(entry), i
 
         entry_dict = entry._asdict()
@@ -104,6 +102,8 @@ def test_entry_data_from_obj(data_dir, data_file):
             entry_dict['content'] = [c._asdict() for c in entry_dict['content']]
         if 'enclosures' in entry_dict:
             entry_dict['enclosures'] = [e._asdict() for e in entry_dict['enclosures']]
+        if entry_dict.get('source'):
+            entry_dict['source'] = entry_dict['source']._asdict()
 
         assert entry == entry_data_from_obj(entry_dict), i
 

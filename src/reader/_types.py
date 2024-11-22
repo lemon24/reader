@@ -180,6 +180,7 @@ def entry_data_from_obj(obj: object) -> EntryData:
     """
     if isinstance(obj, Mapping):
         obj = SimpleNamespace(**obj)
+    source_obj = getattr(obj, 'source', None)
     return EntryData(
         feed_url=_getattr(obj, 'feed_url', str),
         id=_getattr(obj, 'id', str),
@@ -191,6 +192,7 @@ def entry_data_from_obj(obj: object) -> EntryData:
         summary=_getattr_optional(obj, 'summary', str),
         content=tuple(content_from_obj(o) for o in getattr(obj, 'content', ())),
         enclosures=tuple(enclosure_from_obj(o) for o in getattr(obj, 'enclosures', ())),
+        source=source_from_obj(source_obj) if source_obj else None,
     )
 
 
@@ -211,6 +213,19 @@ def enclosure_from_obj(obj: object) -> Enclosure:
         href=_getattr(obj, 'href', str),
         type=_getattr_optional(obj, 'type', str),
         length=_getattr_optional(obj, 'length', int),
+    )
+
+
+def source_from_obj(obj: object) -> EntrySource:
+    if isinstance(obj, Mapping):
+        obj = SimpleNamespace(**obj)
+    return EntrySource(
+        url=_getattr_optional(obj, 'url', str),
+        updated=_getattr_optional_datetime(obj, 'updated'),
+        title=_getattr_optional(obj, 'title', str),
+        link=_getattr_optional(obj, 'link', str),
+        author=_getattr_optional(obj, 'author', str),
+        subtitle=_getattr_optional(obj, 'subtitle', str),
     )
 
 

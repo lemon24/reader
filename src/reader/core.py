@@ -1513,6 +1513,7 @@ class Reader:
         * :attr:`~Entry.summary`
         * :attr:`~Entry.content`
         * :attr:`~Entry.enclosures`
+        * :attr:`~Entry.source`
 
         Naive datetimes are normalized by passing them to
         :meth:`~datetime.datetime.astimezone`.
@@ -1531,6 +1532,9 @@ class Reader:
 
         .. versionchanged:: 3.0
             The ``entry`` argument is now positional-only.
+
+        .. versionchanged:: 3.16
+            Allow setting :attr:`~Entry.source`.
 
         """
 
