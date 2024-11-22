@@ -158,8 +158,6 @@ class EntryData(_namedtuple_compat):
         attrs.update(kwargs)
         attrs.setdefault('original_feed_url', feed_url)
         attrs.setdefault('added_by', 'feed')
-        # FIXME: temporary during #276 development
-        attrs.pop('source')
         return Entry(**attrs)
 
     @property

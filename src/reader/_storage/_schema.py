@@ -48,6 +48,7 @@ CREATE TABLE entries (
     summary TEXT,
     content TEXT,
     enclosures TEXT,
+    source TEXT,
     original_feed TEXT,  -- null if the feed was never moved
     data_hash BLOB,  -- derived from entry data
     data_hash_changed INTEGER,  -- metadata about data_hash
@@ -318,7 +319,12 @@ def update_from_41_to_42(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     entry_tags_by_key_index.create(db)
 
 
-VERSION = 42
+def update_from_42_to_43(db: sqlite3.Connection, /) -> None:  # pragma: no cover
+    # https://github.com/lemon24/reader/issues/276
+    db.execute("ALTER TABLE entries ADD COLUMN source TEXT;")
+
+
+VERSION = 43
 
 MIGRATIONS = {
     # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
@@ -331,6 +337,7 @@ MIGRATIONS = {
     39: update_from_39_to_40,
     40: update_from_40_to_41,
     41: update_from_41_to_42,
+    42: update_from_42_to_43,
 }
 MISSING_SUFFIX = (
     "; you may have skipped some required migrations, see "

@@ -257,6 +257,11 @@ class Entry(_namedtuple_compat):
     #: A sequence of :class:`Enclosure` objects.
     enclosures: Sequence[Enclosure] = ()
 
+    #: Metadata of the source feed if the entry is a copy.
+    #:
+    #: .. versionadded:: 3.16
+    source: EntrySource | None = None
+
     #: Whether the entry was read or not.
     read: bool = False
 
@@ -436,7 +441,7 @@ class Enclosure(_namedtuple_compat):
 
 
 @dataclass(frozen=True)
-class EntrySource:
+class EntrySource(_namedtuple_compat):
     """Metadata of a source feed (used with :attr:`Entry.source`).
 
     .. versionadded:: 3.16

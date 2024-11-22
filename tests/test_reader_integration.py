@@ -125,7 +125,7 @@ def test_local(reader, feed_type, data_dir, monkeypatch):
     monkeypatch.undo()
 
     (feed,) = reader.get_feeds()
-    entries = set(reader.get_entries())
+    entries = sorted(reader.get_entries(), key=lambda e: e.id)
 
     url_base, rel_base = make_url_base(feed_url)
     expected = {'url_base': url_base, 'rel_base': rel_base}
@@ -139,14 +139,14 @@ def test_local(reader, feed_type, data_dir, monkeypatch):
     )
 
     assert feed == expected_feed
-    assert entries == {
+    assert entries == [
         e.as_entry(
             feed=feed,
             added=utc_datetime(2010, 1, 2),
             last_updated=utc_datetime(2010, 1, 2),
         )
-        for e in expected['entries']
-    }
+        for e in sorted(expected['entries'], key=lambda e: e.id)
+    ]
 
     # TODO: same tests, but with http server
 

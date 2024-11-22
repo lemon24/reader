@@ -26,6 +26,7 @@ from ..types import Enclosure
 from ..types import Entry
 from ..types import EntryCounts
 from ..types import EntrySort
+from ..types import EntrySource
 from ._base import wrap_exceptions
 from ._feeds import feed_factory
 from ._sql_utils import Query
@@ -251,6 +252,7 @@ class EntriesMixin(StorageBase):
                 summary,
                 content,
                 enclosures,
+                source,
                 read,
                 last_updated,
                 first_updated,
@@ -271,6 +273,7 @@ class EntriesMixin(StorageBase):
                 :summary,
                 :content,
                 :enclosures,
+                :source,
                 0,  -- read (should be not null in the schema, but isn't)
                 :last_updated,
                 :first_updated,
@@ -296,6 +299,7 @@ class EntriesMixin(StorageBase):
                 summary = :summary,
                 content = :content,
                 enclosures = :enclosures,
+                source = :source,
                 last_updated = :last_updated,
                 feed_order = :feed_order,
                 recent_sort = :recent_sort,
@@ -425,6 +429,7 @@ def get_entries_query(
             entries.summary
             entries.content
             entries.enclosures
+            entries.source
             entries.read
             entries.read_modified
             entries.important
@@ -456,6 +461,7 @@ def entry_factory(row: tuple[Any, ...]) -> Entry:
         summary,
         content,
         enclosures,
+        source,
         read,
         read_modified,
         important,
@@ -465,7 +471,15 @@ def entry_factory(row: tuple[Any, ...]) -> Entry:
         last_updated,
         original_feed,
         sequence,
-    ) = row[14:32]
+    ) = row[14:33]
+
+    source_obj = None
+    if source:
+        source_dict = json.loads(source)
+        if source_dict['updated']:
+            source_dict['updated'] = convert_timestamp(source_dict['updated'])
+        source_obj = EntrySource(**source_dict)
+
     return Entry(
         id,
         convert_timestamp(updated) if updated else None,
@@ -476,6 +490,7 @@ def entry_factory(row: tuple[Any, ...]) -> Entry:
         summary,
         tuple(Content(**d) for d in json.loads(content)) if content else (),
         tuple(Enclosure(**d) for d in json.loads(enclosures)) if enclosures else (),
+        source_obj,
         read == 1,
         convert_timestamp(read_modified) if read_modified else None,
         important == 1 if important is not None else None,
@@ -663,4 +678,11 @@ def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> dict[str, Any]:
         data_hash=entry.hash,
         data_hash_changed=context.pop('hash_changed'),
     )
+
+    if entry.source:
+        source_dict = entry.source._asdict()
+        if entry.source.updated:
+            source_dict['updated'] = adapt_datetime(entry.source.updated)
+        context['source'] = json.dumps(source_dict)
+
     return context
