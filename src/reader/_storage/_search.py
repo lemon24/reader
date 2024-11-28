@@ -19,6 +19,7 @@ from .._types import Action
 from .._types import Change
 from .._types import EntryFilter
 from .._utils import exactly_one
+from .._utils import resolve_path
 from .._utils import zero_or_one
 from ..exceptions import ChangeTrackingNotEnabledError
 from ..exceptions import EntryNotFoundError
@@ -63,6 +64,13 @@ QUERY_EXC = dict.fromkeys(
 
 # 255 letters / 4.7 letters per word (average in English)
 TOKENS = 54
+
+FEED_TITLE_PATHS = [
+    '.feed.title',
+    '.feed.user_title',
+    '.source.title',
+    '.feed_resolved_title',
+]
 
 
 class Search:
@@ -337,8 +345,15 @@ class Search:
                 final.append((None, None))
 
             stripped_title = self.strip_html(entry.title)
-            feed_title = entry.feed.user_title or entry.feed.title
-            is_feed_user_title = bool(entry.feed.user_title)
+
+            feed_resolved_title = entry.feed_resolved_title
+            for is_feed_user_title, path in enumerate(FEED_TITLE_PATHS):  # noqa: B007
+                if feed_title := resolve_path(entry, path):
+                    if feed_title == feed_resolved_title:
+                        break
+            else:
+                feed_title = None
+                is_feed_user_title = 0
             stripped_feed_title = self.strip_html(feed_title)
 
             stripped[change] = [
@@ -589,7 +604,7 @@ def entry_search_result_factory(
     if title:
         metadata['.title'] = extract(title)
     if feed_title:
-        path = '.feed.title' if not is_feed_user_title else '.feed.user_title'
+        path = FEED_TITLE_PATHS[is_feed_user_title]
         metadata[path] = extract(feed_title)
 
     rv_content = {c['path']: extract(c['value']) for c in content if c['path']}

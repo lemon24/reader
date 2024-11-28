@@ -9,6 +9,7 @@ from reader import Content
 from reader import Enclosure
 from reader import EntrySearchCounts
 from reader import EntrySearchResult
+from reader import EntrySource
 from reader import FeedNotFoundError
 from reader import HighlightedString
 from reader import Reader
@@ -967,3 +968,50 @@ def test_add_entry_basic(reader):
     assert result.resource_id == ('1', '1')
     assert result.metadata['.title'].apply('*', '*') == 'my entry'
     assert result.content['.summary'].apply('*', '*') == 'I am a *summary*'
+
+
+def test_feed_resolved_title(reader):
+    reader._parser = parser = Parser()
+
+    def add_feed(url, title=None, user_title=None, source_title=None):
+        feed = parser.feed(url, title=title)
+        source = EntrySource(title=source_title) if source_title else None
+        parser.entry(int(feed.url), '1', title=None, source=source)
+        reader.add_feed(feed)
+        reader.set_feed_user_title(feed, user_title)
+
+    add_feed(0, title='no match')
+    add_feed(1)
+    add_feed(2, title='title')
+    add_feed(3, title='title', user_title='user title')
+    add_feed(4, title='no match', source_title='source title')
+    add_feed(5, source_title='source title')
+    add_feed(6, title='title', source_title='source title')
+    add_feed(7, title='title', user_title='user title', source_title='source title')
+
+    reader.update_feeds()
+    reader.update_search()
+
+    assert {
+        e.feed_url: {k: v.apply('>', '<') for k, v in e.metadata.items()}
+        for e in reader.search_entries('title')
+    } == {
+        '2': {
+            '.feed.title': '>title<',
+        },
+        '3': {
+            '.feed.user_title': 'user >title<',
+        },
+        '4': {
+            '.feed_resolved_title': 'source >title< (no match)',
+        },
+        '5': {
+            '.source.title': 'source >title<',
+        },
+        '6': {
+            '.feed_resolved_title': 'source >title< (>title<)',
+        },
+        '7': {
+            '.feed_resolved_title': 'source >title< (user >title<)',
+        },
+    }

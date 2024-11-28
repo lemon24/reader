@@ -163,6 +163,15 @@ class Feed(_namedtuple_compat):
         """
         return (self.url,)
 
+    @property
+    def resolved_title(self) -> str | None:
+        """:attr:`user_title` or :attr:`title`.
+
+        .. versionadded:: 3.16
+
+        """
+        return self.user_title or self.title
+
 
 @dataclass(frozen=True)
 class ExceptionInfo(_namedtuple_compat):
@@ -371,6 +380,23 @@ class Entry(_namedtuple_compat):
 
         """
         return _get_entry_content(self, prefer_summary)
+
+    @property
+    def feed_resolved_title(self) -> str | None:
+        """Feed :attr:`~Feed.resolved_title`, source :attr:`~EntrySource.title`,
+        or ``"{source} ({feed})"`` if both are present.
+
+        .. versionadded:: 3.16
+
+        """
+        title = self.feed.resolved_title
+        source = self.source
+        source_title = source.title if source else None
+        if not source_title:
+            return title
+        if not title:
+            return source_title
+        return f"{source_title} ({title})"
 
 
 @dataclass(frozen=True)
@@ -654,7 +680,8 @@ class EntrySearchResult(_namedtuple_compat):
     id: str
 
     #: Matching entry metadata, in arbitrary order.
-    #: Currently entry.title and entry.feed.user_title/.title.
+    #: Currently entry.title and entry.feed.user_title/.title /
+    #: entry.source.title / entry.feed_resolved_title.
     metadata: Mapping[str, HighlightedString] = field(
         default_factory=lambda: MappingProxyType({}),
     )

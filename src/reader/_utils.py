@@ -262,3 +262,10 @@ def lazy_import(module_name: str, names: list[str]) -> Callable[[str], Any]:
         return rv
 
     return __getattr__
+
+
+def resolve_path(o: object, path: str) -> Any | None:
+    try:
+        return eval('o' + path, {'o': o})
+    except AttributeError:
+        return None
