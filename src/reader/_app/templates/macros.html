@@ -6,7 +6,7 @@
 {%- endmacro %}
 
 {% macro feed_title(feed) %}
-{{ feed.resolved_title or feed.url }}
+{{- feed.resolved_title or feed.url -}}
 {% endmacro %}
 
 {% macro feed_title_secondary(feed) %}
