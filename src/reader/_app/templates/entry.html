@@ -19,7 +19,7 @@
 
 <li>
     {% if entry.author %} by {{ entry.author }}{% endif %}
-    in <a href="{{ url_for('.entries', feed=entry.feed.url) }}">{{ macros.feed_title(entry.feed) }}</a>
+    in <a href="{{ url_for('.entries', feed=entry.feed.url) }}">{{ entry.feed_resolved_title or feed.url }}</a>
 <li>
     {%- set published = entry.published or entry.updated_not_none -%}
     <span title="{{ published }}">{{ published | humanize_naturaltime }}</span>

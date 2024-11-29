@@ -157,12 +157,8 @@ class EntryProxy:
     def title(self):
         highlight = self._search_result.metadata.get('.title')
         if highlight:
-            return str(highlight)
-        return None
-
-    @property
-    def feed(self):
-        return FeedProxy(self._search_result, self._entry)
+            return highlighted(highlight)
+        return self._entry.title
 
     @property
     def summary(self):
@@ -184,21 +180,12 @@ class EntryProxy:
     def get_content(self, prefer_summary=False):
         return _get_entry_content(self, prefer_summary)
 
-
-@dataclass(frozen=True)
-class FeedProxy:
-    _search_result: EntrySearchResult
-    _entry: Entry
-
-    def __getattr__(self, name):
-        return getattr(self._entry.feed, name)
-
     @property
-    def title(self):
-        highlight = self._search_result.metadata.get('.feed.title')
+    def feed_resolved_title(self):
+        highlight = self._search_result.metadata.get('.feed_resolved_title')
         if highlight:
-            return str(highlight)
-        return self._entry.feed.title
+            return highlighted(highlight)
+        return self._entry.feed_resolved_url
 
 
 @dataclass

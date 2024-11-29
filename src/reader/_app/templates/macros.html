@@ -6,17 +6,11 @@
 {%- endmacro %}
 
 {% macro feed_title(feed) %}
-{%- if feed.user_title and feed.user_title.strip() -%}
-    {{ feed.user_title }}
-{%- elif feed.title and feed.title.strip() -%}
-    {{ feed.title }}
-{%- else -%}
-    {{ feed.url }}
-{%- endif -%}
+{{ feed.resolved_title or feed.url }}
 {% endmacro %}
 
 {% macro feed_title_secondary(feed) %}
-{%- if feed.user_title and feed.user_title.strip() and feed.title and feed.title.strip() -%}
+{%- if feed.title and feed.resolved_title != feed.title -%}
     {{ feed.title }}
 {%- endif -%}
 {% endmacro %}
