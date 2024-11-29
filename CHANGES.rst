@@ -11,6 +11,12 @@ Version 3.16
 
 Unreleased
 
+* Parse and store :attr:`Entry.source` for Atom and RSS feeds. (:issue:`267`)
+
+  * Add :attr:`Entry.feed_resolved_title` and :attr:`Feed.resolved_title` properties.
+  * The ``feed`` search column now indexes :attr:`Entry.feed_resolved_title`,
+    instead of feed :attr:`~Feed.user_title` or :attr:`~Feed.title`.
+
 * Fix :meth:`~Reader.enable_search` / :meth:`~Reader.update_search`
   not working when the search database is missing but change tracking is enabled
   (e.g. when restoring the main database from backup).

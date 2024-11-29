@@ -1700,7 +1700,7 @@ class Reader:
             The columns available in queries are:
 
             * ``title``: the entry title
-            * ``feed``: the feed title
+            * ``feed``: the feed or source title (:attr:`~Entry.feed_resolved_title`)
             * ``content``: the entry main text content;
               this includes the summary and the value of contents that have
               text/(x)html, text/plain or missing content types
@@ -1714,6 +1714,10 @@ class Reader:
               and their feed title matches "cortex"
             * ``hello NOT feed: internet``: entries that match "hello" anywhere,
               and their feed title does not match "internet"
+
+            .. versionchanged:: 3.16
+                The ``feed`` column now indexes :attr:`~Entry.feed_resolved_title`,
+                instead of feed :attr:`~Feed.user_title` or :attr:`~Feed.title`.
 
         Search must be enabled to call this method.
 

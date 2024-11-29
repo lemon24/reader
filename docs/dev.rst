@@ -72,7 +72,6 @@ but I will prioritize supporting :doc:`contributors <contributing>`
 
 * add more fields to data objects
 
-  * entry source, :issue:`276`
   * extra data, as an escape hatch, :issue:`277`
 
 * :ref:`multiple storage implementations <multiple storage implementations>`
