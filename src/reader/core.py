@@ -1091,6 +1091,7 @@ class Reader:
         read: bool | None = None,
         important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
+        source: FeedInput | None = None,
         tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
         sort: EntrySort = 'recent',
@@ -1131,7 +1132,8 @@ class Reader:
             .. versionadded:: 1.2
 
         Args:
-            feed (str or tuple(str) or Feed or None): Only return the entries for this feed.
+            feed (str or tuple(str) or Feed or None):
+                Only return the entries for this feed.
             entry (tuple(str, str) or Entry or None):
                 Only return the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only return (un)read entries.
@@ -1141,6 +1143,8 @@ class Reader:
                 :data:`~reader.types.TristateFilterInput` string filters.
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
+            source (str or tuple(str) or Feed or None):
+                Only return the entries for this source.
             tags (None or bool or list(str or bool or list(str or bool))):
                 Only return entries matching these tags;
                 see :data:`~reader.types.TagFilterInput` for details.
@@ -1177,13 +1181,16 @@ class Reader:
         .. versionadded:: 3.11
             The ``tags`` keyword argument.
 
+        .. versionadded:: 3.16
+            The ``source`` keyword argument.
+
         """
 
         # If we ever implement pagination, consider following the guidance in
         # https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
 
         filter = EntryFilter.from_args(
-            feed, entry, read, important, has_enclosures, tags, feed_tags
+            feed, entry, read, important, has_enclosures, source, tags, feed_tags
         )
 
         if sort not in ('recent', 'random'):
@@ -1252,13 +1259,15 @@ class Reader:
         read: bool | None = None,
         important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
+        source: FeedInput | None = None,
         tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
     ) -> EntryCounts:
         """Count all or some of the entries.
 
         Args:
-            feed (str or tuple(str) or Feed or None): Only count the entries for this feed.
+            feed (str or tuple(str) or Feed or None):
+                Only count the entries for this feed.
             entry (tuple(str, str) or Entry or None):
                 Only count the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only count (un)read entries.
@@ -1268,6 +1277,8 @@ class Reader:
                 :data:`~reader.types.TristateFilterInput` string filters.
             has_enclosures (bool or None): Only count entries that (don't)
                 have enclosures.
+            source (str or tuple(str) or Feed or None):
+                Only count the entries for this source.
             tags (None or bool or list(str or bool or list(str or bool))):
                 Only count entries matching these tags;
                 see :data:`~reader.types.TagFilterInput` for details.
@@ -1289,10 +1300,13 @@ class Reader:
         .. versionadded:: 3.11
             The ``tags`` keyword argument.
 
+        .. versionadded:: 3.16
+            The ``source`` keyword argument.
+
         """
 
         filter = EntryFilter.from_args(
-            feed, entry, read, important, has_enclosures, tags, feed_tags
+            feed, entry, read, important, has_enclosures, source, tags, feed_tags
         )
         now = self._now()
         return self._storage.get_entry_counts(now, filter)
@@ -1657,6 +1671,7 @@ class Reader:
         read: bool | None = None,
         important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
+        source: FeedInput | None = None,
         tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
         sort: SearchSortOrder = 'relevant',
@@ -1723,7 +1738,8 @@ class Reader:
 
         Args:
             query (str): The search query.
-            feed (str or tuple(str) or Feed or None): Only search the entries for this feed.
+            feed (str or tuple(str) or Feed or None):
+                Only search the entries for this feed.
             entry (tuple(str, str) or Entry or None):
                 Only search for the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only search (un)read entries.
@@ -1733,6 +1749,8 @@ class Reader:
                 :data:`~reader.types.TristateFilterInput` string filters.
             has_enclosures (bool or None): Only search entries that (don't)
                 have enclosures.
+            source (str or tuple(str) or Feed or None):
+                Only search the entries for this source.
             tags (None or bool or list(str or bool or list(str or bool))):
                 Only search entries matching these tags;
                 see :data:`~reader.types.TagFilterInput` for details.
@@ -1775,9 +1793,12 @@ class Reader:
         .. versionadded:: 3.11
             The ``tags`` keyword argument.
 
+        .. versionadded:: 3.16
+            The ``source`` keyword argument.
+
         """
         filter = EntryFilter.from_args(
-            feed, entry, read, important, has_enclosures, tags, feed_tags
+            feed, entry, read, important, has_enclosures, source, tags, feed_tags
         )
 
         if sort not in ('relevant', 'recent', 'random'):
@@ -1803,6 +1824,7 @@ class Reader:
         read: bool | None = None,
         important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
+        source: FeedInput | None = None,
         tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
     ) -> EntrySearchCounts:
@@ -1814,7 +1836,8 @@ class Reader:
 
         Args:
             query (str): The search query.
-            feed (str or tuple(str) or Feed or None): Only count the entries for this feed.
+            feed (str or tuple(str) or Feed or None):
+                Only count the entries for this feed.
             entry (tuple(str, str) or Entry or None):
                 Only count the entry with this (feed URL, entry id) tuple.
             read (bool or None or str):
@@ -1824,6 +1847,8 @@ class Reader:
             important (bool or None): Only count (un)important entries.
             has_enclosures (bool or None): Only count entries that (don't)
                 have enclosures.
+            source (str or tuple(str) or Feed or None):
+                Only count the entries for this source.
             tags (None or bool or list(str or bool or list(str or bool))):
                 Only count entries matching these tags;
                 see :data:`~reader.types.TagFilterInput` for details.
@@ -1851,10 +1876,13 @@ class Reader:
         .. versionadded:: 3.11
             The ``tags`` keyword argument.
 
+        .. versionadded:: 3.16
+            The ``source`` keyword argument.
+
         """
 
         filter = EntryFilter.from_args(
-            feed, entry, read, important, has_enclosures, tags, feed_tags
+            feed, entry, read, important, has_enclosures, source, tags, feed_tags
         )
         now = self._now()
         return self._search.search_entry_counts(query, now, filter)

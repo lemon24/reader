@@ -518,7 +518,9 @@ def entry_filter(
     query: Query, filter: EntryFilter, keyword: str = 'WHERE'
 ) -> dict[str, Any]:
     add = getattr(query, keyword)
-    feed_url, entry_id, read, important, has_enclosures, tags, feed_tags = filter
+    feed_url, entry_id, read, important, has_enclosures, source_url, tags, feed_tags = (
+        filter
+    )
 
     context = {}
 
@@ -543,6 +545,10 @@ def entry_filter(
                     OR json_array_length(entries.enclosures) = 0)
             """
         )
+
+    if source_url:
+        add("json_extract(entries.source, '$.url') = :source_url")
+        context['source_url'] = source_url
 
     context.update(entry_tags_filter(query, tags, keyword=keyword))
     context.update(feed_tags_filter(query, feed_tags, 'entries.feed', keyword=keyword))

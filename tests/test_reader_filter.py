@@ -3,6 +3,7 @@ import pytest
 from fakeparser import Parser
 from reader import Enclosure
 from reader import Entry
+from reader import EntrySource
 from reader import Feed
 from reader import make_reader
 from reader_methods import get_feeds
@@ -152,7 +153,7 @@ def reader_entries():
         one_three = parser.entry(1, 3)  # important
         one_four = parser.entry(1, 4, enclosures=[Enclosure('http://e2')])
         two = parser.feed(2)
-        two_one = parser.entry(2, 1)
+        two_one = parser.entry(2, 1, source=EntrySource(url='source'))
 
         reader.add_feed(one.url)
         reader.add_feed(two.url)
@@ -188,6 +189,8 @@ def reader_entries():
         (dict(entry=('1', '1, 2')), {(1, 2)}),
         (dict(entry=Entry('1, 2', feed=Feed('1'))), {(1, 2)}),
         (dict(entry=('inexistent', 'also-inexistent')), set()),
+        (dict(source='source'), {(2, 1)}),
+        (dict(source=Feed('source')), {(2, 1)}),
     ],
 )
 @rename_argument('reader', 'reader_entries')
@@ -205,6 +208,7 @@ def test_entries(reader, get_entries, kwargs, expected):
         dict(has_enclosures=object()),
         dict(feed=object()),
         dict(entry=object()),
+        dict(source=object()),
     ],
 )
 @rename_argument('reader', 'reader_entries')

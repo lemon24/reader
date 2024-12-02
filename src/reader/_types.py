@@ -514,6 +514,7 @@ class EntryFilter(NamedTuple):
     read: bool | None = None
     important: TristateFilter = 'any'
     has_enclosures: bool | None = None
+    source: str | None = None
     tags: TagFilter = ()
     feed_tags: TagFilter = ()
 
@@ -525,6 +526,7 @@ class EntryFilter(NamedTuple):
         read: bool | None = None,
         important: TristateFilterInput = None,
         has_enclosures: bool | None = None,
+        source: FeedInput | None = None,
         tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
     ) -> Self:
@@ -543,6 +545,8 @@ class EntryFilter(NamedTuple):
         if has_enclosures not in (None, False, True):
             raise ValueError("has_enclosures should be one of (None, False, True)")
 
+        source_url = _feed_argument(source) if source is not None else None
+
         tag_filter = tag_filter_argument(tags)
         feed_tag_filter = tag_filter_argument(feed_tags, 'feed_tags')
 
@@ -552,6 +556,7 @@ class EntryFilter(NamedTuple):
             read,
             important_filter,
             has_enclosures,
+            source_url,
             tag_filter,
             feed_tag_filter,
         )
