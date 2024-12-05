@@ -1639,11 +1639,14 @@ class Reader:
 
         attrs = dict(src_entry.__dict__)
         attrs['feed_url'], attrs['id'] = dst_resource_id
-        if not src_entry.source:
-            feed = src_entry.feed
-            attrs['source'] = dict(feed.__dict__)
-            if feed.user_title:
-                attrs['source']['title'] = feed.user_title
+
+        if src_entry.source:
+            attrs['source'] = dict(src_entry.source.__dict__)
+        else:
+            attrs['source'] = dict(src_entry.feed.__dict__)
+        if not src_entry.source or not src_entry.source.title:
+            attrs['source']['title'] = src_entry.feed.resolved_title
+
         attrs['recent_sort'] = recent_sort
         attrs['added_by'] = 'user'
 
