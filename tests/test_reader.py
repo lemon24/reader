@@ -2847,6 +2847,8 @@ def test_copy_entry(reader, data_dir, data_file):
         reader._now = lambda: datetime(2010, 1, 2)
         reader.mark_entry_as_read(src_id)
         reader.mark_entry_as_unimportant(src_id)
+        reader.set_tag(src_id, 'empty')
+        reader.set_tag(src_id, 'key', 'value')
 
     reader._now = lambda: datetime(2010, 2, 1)
     dst_url = 'dst'
@@ -2864,10 +2866,14 @@ def test_copy_entry(reader, data_dir, data_file):
             feed=None,
         )
 
+    def get_tags(entry):
+        return dict(reader.get_tags(entry))
+
     src = reader.get_entry(src_id)
     dst = reader.get_entry(dst_id)
 
     assert clean(src) == clean(dst)
+    assert get_tags(src) == get_tags(dst)
 
     assert dst.id == 'id'
     assert dst.added_by == 'user'

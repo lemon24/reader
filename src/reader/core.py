@@ -1611,7 +1611,7 @@ class Reader:
         """Copy an entry from one feed to another.
 
         All :class:`Entry` attributes that belong to the entry are copied,
-        including timestamps like :attr:`~Entry.added`,
+        including timestamps like :attr:`~Entry.added`, entry tags,
         and hidden attributes that affect behavior (e.g. sorting).
 
         If the original does not already have a :attr:`~Entry.source`,
@@ -1654,6 +1654,8 @@ class Reader:
         # TODO: not atomic, maybe add to intent later on
         self.set_entry_read(dst, src_entry.read, src_entry.read_modified)
         self.set_entry_important(dst, src_entry.important, src_entry.important_modified)
+        for key, value in self.get_tags(src_entry):
+            self.set_tag(dst, key, value)
 
     def enable_search(self) -> None:
         """Enable full-text search.
