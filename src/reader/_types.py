@@ -13,6 +13,7 @@ from enum import Enum
 from functools import cached_property
 from types import SimpleNamespace
 from typing import Any
+from typing import cast
 from typing import get_args
 from typing import Literal
 from typing import NamedTuple
@@ -196,6 +197,20 @@ def entry_data_from_obj(obj: object) -> EntryData:
     )
 
 
+def entry_update_intent_from_obj(obj: object) -> EntryUpdateIntent:
+    if isinstance(obj, Mapping):  # pragma: no cover
+        obj = SimpleNamespace(**obj)
+    return EntryUpdateIntent(
+        entry=entry_data_from_obj(obj),
+        last_updated=_getattr_datetime(obj, 'last_updated'),
+        first_updated=_getattr_datetime(obj, 'added'),
+        first_updated_epoch=_getattr_datetime(obj, 'added'),
+        recent_sort=_getattr_datetime(obj, 'recent_sort'),
+        added_by=_getattr_entry_added_by(obj, 'added_by'),
+        original_feed_url=_getattr_optional(obj, 'original_feed_url', str),
+    )
+
+
 def content_from_obj(obj: object) -> Content:
     if isinstance(obj, Mapping):
         obj = SimpleNamespace(**obj)
@@ -250,11 +265,26 @@ def _getattr_optional(obj: object, name: str, type: type[_T]) -> _T | None:
     return value
 
 
+def _getattr_datetime(obj: object, name: str) -> datetime:
+    value = _getattr(obj, name, datetime)
+    return value.astimezone(timezone.utc)
+
+
 def _getattr_optional_datetime(obj: object, name: str) -> datetime | None:
     value = _getattr_optional(obj, name, datetime)
     if value is None:
         return value
     return value.astimezone(timezone.utc)
+
+
+def _getattr_entry_added_by(obj: object, name: str) -> EntryAddedBy:
+    value = _getattr(obj, name, str)
+    values = get_args(EntryAddedBy)
+    if value not in values:  # pragma: no cover
+        raise ValueError(
+            f"bad value for {name}; expected one of {values!r}, got {value!r}"
+        )
+    return cast(EntryAddedBy, value)
 
 
 class FeedForUpdate(NamedTuple):
@@ -375,6 +405,10 @@ class EntryUpdateIntent(NamedTuple):
 
     #: Same as :attr:`.Entry.added_by`.
     added_by: EntryAddedBy = 'feed'
+
+    #: Same as :attr:`.Entry.original_feed_url`.
+    #: Usually does not need to be set.
+    original_feed_url: str | None = None
 
     # using a proxy like `first_updated == last_updated` instead of new
     # doesn't work because it can be true for modified entries sometimes

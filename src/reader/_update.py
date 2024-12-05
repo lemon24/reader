@@ -206,6 +206,7 @@ class Decider:
 
             if not old:
                 if not self.old_feed.last_updated:
+                    # WARNING: keep in sync _update and add_entry
                     recent_sort = new.published or new.updated or self.global_now
                 else:
                     recent_sort = self.global_now

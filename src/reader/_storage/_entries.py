@@ -259,6 +259,7 @@ class EntriesMixin(StorageBase):
                 first_updated_epoch,
                 feed_order,
                 recent_sort,
+                original_feed,
                 data_hash,
                 data_hash_changed,
                 added_by
@@ -280,6 +281,7 @@ class EntriesMixin(StorageBase):
                 :first_updated_epoch,
                 :feed_order,
                 :recent_sort,
+                :original_feed,
                 :data_hash,
                 :data_hash_changed,
                 :added_by
@@ -303,7 +305,7 @@ class EntriesMixin(StorageBase):
                 last_updated = :last_updated,
                 feed_order = :feed_order,
                 recent_sort = :recent_sort,
-                original_feed = NULL,
+                original_feed = :original_feed,
                 data_hash = :data_hash,
                 data_hash_changed = :data_hash_changed,
                 added_by = :added_by
@@ -681,6 +683,7 @@ def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> dict[str, Any]:
             else None
         ),
         recent_sort=adapt_datetime(intent.recent_sort) if intent.recent_sort else None,
+        original_feed=intent.original_feed_url,
         data_hash=entry.hash,
         data_hash_changed=context.pop('hash_changed'),
     )

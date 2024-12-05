@@ -18,6 +18,8 @@ Unreleased
     instead of feed :attr:`~Feed.user_title` or :attr:`~Feed.title`.
   * Allow filtering entries by the entry source.
 
+* Add :meth:`~Reader.copy_entry`. (:issue:`290`)
+
 * Fix :meth:`~Reader.enable_search` / :meth:`~Reader.update_search`
   not working when the search database is missing but change tracking is enabled
   (e.g. when restoring the main database from backup).

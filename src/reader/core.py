@@ -24,6 +24,7 @@ from ._parser.requests import TimeoutType
 from ._storage import Storage
 from ._types import BoundSearchStorageType
 from ._types import entry_data_from_obj
+from ._types import entry_update_intent_from_obj
 from ._types import EntryData
 from ._types import EntryFilter
 from ._types import EntryUpdateIntent
@@ -1564,6 +1565,7 @@ class Reader:
             last_updated=now,
             first_updated=now,
             first_updated_epoch=now,
+            # WARNING: keep in sync _update and add_entry
             recent_sort=entry_data.published or entry_data.updated or now,
             added_by='user',
         )
@@ -1575,8 +1577,9 @@ class Reader:
     def delete_entry(self, entry: EntryInput, /, missing_ok: bool = False) -> None:
         """Delete an entry.
 
-        Currently, only entries added by :meth:`~Reader.add_entry`
-        (:attr:`~Entry.added_by` ``'user'``) can be deleted.
+        Currently, only entries added by :meth:`add_entry`
+        and :meth:`copy_entry` (:attr:`~Entry.added_by` ``'user'``)
+        can be deleted.
 
         Args:
             entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
@@ -1603,6 +1606,54 @@ class Reader:
         except EntryNotFoundError:
             if not missing_ok:
                 raise
+
+    def copy_entry(self, src: EntryInput, dst: EntryInput, /) -> None:
+        """Copy an entry from one feed to another.
+
+        All :class:`Entry` attributes that belong to the entry are copied,
+        including timestamps like :attr:`~Entry.added`,
+        and hidden attributes that affect behavior (e.g. sorting).
+
+        If the original does not already have a :attr:`~Entry.source`,
+        the copy's source will be set to the original's :attr:`~Entry.feed`,
+        with the feed's :attr:`~Feed.user_title` taking precedence
+        over :attr:`~Feed.title` as the source title.
+
+        The copy entry will be :attr:`~Entry.added_by` ``'user'``.
+
+        Args:
+            src (tuple(str, str) or Entry): Source (feed URL, entry id) tuple.
+            dst (tuple(str, str) or Entry): Destination (feed URL, entry id) tuple.
+
+        Raises:
+            EntryExistsError: If an entry with the same id as dst already exists.
+            FeedNotFoundError
+            StorageError
+
+        .. versionadded:: 3.16
+
+        """
+        src_entry = self.get_entry(src)
+        recent_sort = self._storage.get_entry_recent_sort(src_entry.resource_id)
+        dst_resource_id = _entry_argument(dst)
+
+        attrs = dict(src_entry.__dict__)
+        attrs['feed_url'], attrs['id'] = dst_resource_id
+        if not src_entry.source:
+            feed = src_entry.feed
+            attrs['source'] = dict(feed.__dict__)
+            if feed.user_title:
+                attrs['source']['title'] = feed.user_title
+        attrs['recent_sort'] = recent_sort
+        attrs['added_by'] = 'user'
+
+        intent = entry_update_intent_from_obj(attrs)
+
+        self._storage.add_entry(intent)
+
+        # TODO: not atomic, maybe add to intent later on
+        self.set_entry_read(dst, src_entry.read, src_entry.read_modified)
+        self.set_entry_important(dst, src_entry.important, src_entry.important_modified)
 
     def enable_search(self) -> None:
         """Enable full-text search.

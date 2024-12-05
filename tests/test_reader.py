@@ -2779,6 +2779,7 @@ def test_add_entry(reader):
         last_updated=datetime(2010, 1, 2),
         added=datetime(2010, 1, 2),
     )
+    assert reader._storage.get_entry_recent_sort(('1', '1, 1')) == datetime(2010, 1, 2)
 
     # add it by feed (update)
 
@@ -2832,3 +2833,75 @@ def test_delete_entry(reader):
     assert {(e.id, e.added_by) for e in reader.get_entries()} == {
         ('1, 2', 'feed'),
     }
+
+
+@pytest.mark.parametrize('data_file', ['full', 'empty'])
+def test_copy_entry(reader, data_dir, data_file):
+    reader._now = lambda: datetime(2010, 1, 1)
+    src_url = str(data_dir.joinpath(f'{data_file}.atom'))
+    src_id = (src_url, 'urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a')
+    reader.add_feed(src_url)
+    reader.update_feeds()
+
+    if data_file == 'full':
+        reader._now = lambda: datetime(2010, 1, 2)
+        reader.mark_entry_as_read(src_id)
+        reader.mark_entry_as_unimportant(src_id)
+
+    reader._now = lambda: datetime(2010, 2, 1)
+    dst_url = 'dst'
+    dst_id = (dst_url, 'id')
+    reader.add_feed(dst_url)
+    reader.copy_entry(src_id, dst_id)
+
+    def clean(entry):
+        return entry._replace(
+            id=None,
+            source=None,
+            added_by=None,
+            original_feed_url=None,
+            _sequence=None,
+            feed=None,
+        )
+
+    src = reader.get_entry(src_id)
+    dst = reader.get_entry(dst_id)
+
+    assert clean(src) == clean(dst)
+
+    assert dst.id == 'id'
+    assert dst.added_by == 'user'
+    assert dst.original_feed_url == src_url
+
+    if src.source:
+        src_source = src.source.__dict__
+    else:
+        src_source = {k: getattr(src.feed, k) for k in dst.source.__dict__}
+    assert src_source == dst.source.__dict__
+
+    get_recent_sort = reader._storage.get_entry_recent_sort
+    assert get_recent_sort(src_id) == get_recent_sort(dst_id)
+
+    # src does not exist
+    with pytest.raises(EntryNotFoundError) as excinfo:
+        reader.copy_entry((src_url, 'inexistent'), dst_id)
+    assert excinfo.value.resource_id == (src_url, 'inexistent')
+
+    # dst exists
+    with pytest.raises(EntryExistsError) as excinfo:
+        reader.copy_entry(src_id, dst_id)
+    assert excinfo.value.resource_id == dst_id
+
+    # dst feed does not exist
+    with pytest.raises(FeedNotFoundError) as excinfo:
+        reader.copy_entry(src_id, ('inexistent', 'id'))
+    assert excinfo.value.resource_id == ('inexistent',)
+
+    # delete
+    reader.delete_entry(dst_id)
+
+    # user title has priority in source if original entry does not have source
+    reader.set_feed_user_title(src_url, 'user')
+    reader.copy_entry(src_id, dst_id)
+    dst = reader.get_entry(dst_id)
+    assert dst.source.title == 'user' if not src.source else src.source.title
