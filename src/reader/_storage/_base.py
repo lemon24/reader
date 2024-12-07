@@ -57,16 +57,12 @@ class StorageBase:
         if timeout is not None:
             kwargs['timeout'] = timeout
 
-        self.factory = _sqlite_utils.LocalConnectionFactory(path, **kwargs)
-        db = self.factory()
-        try:
-            self.setup_db(db)
-        except BaseException:
-            db.close()
-            raise
-
-        self.path = path
-        self.timeout = timeout
+        # at least the "PRAGMA foreign_keys = ON" part of setup_db
+        # has to run for every connection (in every thread),
+        # since it's not persisted across connections
+        self.factory = _sqlite_utils.LocalConnectionFactory(
+            path, self.setup_db, **kwargs
+        )
 
     def get_db(self) -> sqlite3.Connection:
         return self.factory()

@@ -2911,3 +2911,42 @@ def test_copy_entry(reader, data_dir, data_file):
     reader.copy_entry(src_id, dst_id)
     dst = reader.get_entry(dst_id)
     assert dst.source.title == 'user' if not src.source else src.source.title
+
+
+@pytest.mark.parametrize('same_thread', [True, False])
+def test_delete_feed(make_reader, db_path, same_thread):
+    reader = make_reader(db_path)
+    reader._parser = parser = Parser()
+    feed = parser.feed(1)
+    entry = parser.entry(1, 'feed')
+
+    reader.add_feed(feed)
+    reader.update_feeds()
+    reader.add_entry(dict(feed_url='1', id='user'))
+    reader.copy_entry(entry, ('1', 'copy'))
+    reader.set_tag(feed, 'tag', 'feed')
+    reader.set_tag(entry, 'tag', 'entry')
+
+    assert {e.resource_id for e in reader.get_entries()} == {
+        ('1', 'feed'),
+        ('1', 'user'),
+        ('1', 'copy'),
+    }
+    assert dict(reader.get_tags(feed)) == {'tag': 'feed'}
+    assert dict(reader.get_tags(entry)) == {'tag': 'entry'}
+
+    if same_thread:
+        reader.delete_feed(feed)
+    else:
+        # would cause the test to fail if foreign key enforcement
+        # was not enabled in other threads (like prior to 3.16)
+        thread = threading.Thread(target=reader.delete_feed, args=(feed,))
+        thread.start()
+        thread.join()
+
+    reader.add_feed(feed)
+    assert {e.resource_id for e in reader.get_entries()} == set()
+    assert dict(reader.get_tags(feed)) == {}
+
+    reader.update_feeds()
+    assert dict(reader.get_tags(entry)) == {}

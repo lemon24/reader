@@ -20,10 +20,39 @@ Unreleased
 
 * Add :meth:`~Reader.copy_entry`. (:issue:`290`)
 
+* Fix bug causing :class:`Reader` operations
+  from a thread other than the one that created the instance
+  to happen with foreign key constraint enforcement disabled
+  (e.g. deleting a feed from another thread would not delete its entries).
+
+  This bug exists since using :class:`Reader` instances from other threads
+  became allowed in `2.15 <Version 2.15_>`_.
+
+  Serving the web application with ``python -m reader serve``
+  is known to be affected.
+  Serving it with uWSGI without threads (the default)
+  should not be affected.
+
+  .. attention::
+
+    **Your database may be in an inconsistent state because of this bug.**
+
+    It is recommended you run `PRAGMA foreign_key_check`_ on your database.
+
+    If you are upgrading from a version prior to 3.16
+    (i.e. were not using a pre-release version of *reader*),
+    the migration will do so for you.
+    If there are inconsistencies, you will get this error::
+
+      StorageError: integrity error: after migrating to version 43:
+        integrity error: FOREIGN KEY constraint failed
+
 * Fix :meth:`~Reader.enable_search` / :meth:`~Reader.update_search`
   not working when the search database is missing but change tracking is enabled
   (e.g. when restoring the main database from backup).
   (:issue:`362`)
+
+.. _PRAGMA foreign_key_check: https://www.sqlite.org/pragma.html#pragma_foreign_key_check
 
 
 Version 3.15

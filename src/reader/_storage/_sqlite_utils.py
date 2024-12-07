@@ -426,8 +426,11 @@ class LocalConnectionFactory:
 
     INLINE_OPTIMIZE_TIMEOUT = 0.1
 
-    def __init__(self, path: str, **kwargs: Any):
+    def __init__(
+        self, path: str, setup_db: _DBFunction = lambda _: None, **kwargs: Any
+    ):
         self.path = path
+        self.setup_db = setup_db
         self.kwargs = kwargs
         if kwargs.get('uri'):  # pragma: no cover
             raise NotImplementedError("is_private() does not work for uri=True")
@@ -462,6 +465,12 @@ class LocalConnectionFactory:
         self._local.db = db = sqlite3.connect(self.path, **self.kwargs)
         assert db is not None, "for mypy"
         self._local.call_count = 0
+
+        try:
+            self.setup_db(db)
+        except BaseException:
+            db.close()
+            raise
 
         # http://threebean.org/blog/atexit-for-threads/
         # works on cpython (finalizer runs in thread),

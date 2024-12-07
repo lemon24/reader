@@ -111,11 +111,6 @@ def test_database_error_permissions(db_path):
         Storage(db_path)
 
 
-def test_path(db_path):
-    storage = Storage(db_path)
-    assert storage.path == db_path
-
-
 def test_timeout(db_path, monkeypatch):
     """Storage.__init__ must pass timeout= to connect."""
 
@@ -170,7 +165,7 @@ def test_close_error(monkeypatch):
 
 
 def init(storage, _, __):
-    Storage(storage.path, timeout=0)
+    Storage(storage.factory.path, timeout=0)
 
 
 def add_feed(storage, feed, __):
