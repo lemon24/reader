@@ -18,7 +18,12 @@ Unreleased
     instead of feed :attr:`~Feed.user_title` or :attr:`~Feed.title`.
   * Allow filtering entries by the entry source.
 
-* Add :meth:`~Reader.copy_entry`. (:issue:`290`)
+* Add :func:`reader.utils.archive_entries` for
+  copying entries to an "archived" feed.
+  (:issue:`290`)
+
+  * Add :meth:`~Reader.copy_entry`.
+  * Allow archiving entries from the web app.
 
 * Fix bug causing :class:`Reader` operations
   from a thread other than the one that created the instance

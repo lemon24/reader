@@ -1540,7 +1540,7 @@ class Reader:
 
         Raises:
             EntryExistsError: If an entry with the same id already exists.
-            FeedNotFoundError
+            FeedNotFoundError: If the feed does not exist.
             StorageError
 
         .. versionadded:: 2.5
@@ -1627,7 +1627,7 @@ class Reader:
 
         Raises:
             EntryExistsError: If an entry with the same id as dst already exists.
-            FeedNotFoundError
+            FeedNotFoundError: If the dst feed does not exist.
             StorageError
 
         .. versionadded:: 3.16
@@ -1636,6 +1636,8 @@ class Reader:
         src_entry = self.get_entry(src)
         recent_sort = self._storage.get_entry_recent_sort(src_entry.resource_id)
         dst_resource_id = _entry_argument(dst)
+
+        # FIXME: do not allow copy to the same feed (or at least entry)
 
         attrs = dict(src_entry.__dict__)
         attrs['feed_url'], attrs['id'] = dst_resource_id

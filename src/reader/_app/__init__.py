@@ -38,6 +38,7 @@ from reader import ReaderError
 from reader._plugins import Loader
 from reader.types import _get_entry_content
 from reader.types import TristateFilterInput
+from reader.utils import archive_entries
 
 from .api_thing import APIError
 from .api_thing import APIThing
@@ -628,6 +629,14 @@ def mark_all_as_unread(data):
     entry_ids = json.loads(data['entry-id'])
     for entry_id in entry_ids:
         get_reader().mark_entry_as_unread((feed_url, entry_id))
+
+
+@form_api(really=True)
+@readererror_to_apierror()
+def archive_all(data):
+    feed_url = data['feed-url']
+    entry_ids = json.loads(data['entry-id'])
+    archive_entries(get_reader(), [(feed_url, eid) for eid in entry_ids])
 
 
 @form_api

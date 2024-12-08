@@ -172,6 +172,9 @@
             {{- macros.confirm_button('.form_api', 'mark-all-as-unread', 'all unread', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
         {% endif %}
 
+        {{- macros.confirm_button('.form_api', 'archive-all', 'archive all', leave_disabled=true, next=url_for('.entries', feed='reader:archived'), context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
+        {# TODO: should redirect to archived # entry #}
+
         {{ macros.confirm_button('.form_api', 'delete-feed', 'delete feed', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
 
         {{ macros.text_input_button('.form_api', 'update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true, next=next, context={'feed-url': feed.url}, value=feed.user_title) }}

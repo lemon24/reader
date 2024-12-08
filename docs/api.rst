@@ -190,3 +190,10 @@ Constants
 .. autodata:: reader.core.DEFAULT_RESERVED_NAME_SCHEME
 
 .. autodata:: reader.plugins.DEFAULT_PLUGINS
+
+
+
+Utilities
+---------
+
+.. autofunction:: reader.utils.archive_entries
