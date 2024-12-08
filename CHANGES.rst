@@ -9,7 +9,7 @@ Changelog
 Version 3.16
 ------------
 
-Unreleased
+Released 2024-12-08
 
 * Parse and store :attr:`Entry.source` for Atom and RSS feeds. (:issue:`267`)
 
