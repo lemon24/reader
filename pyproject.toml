@@ -77,6 +77,8 @@ app = [
     "humanize>=4,!=4.7.*",
     # for config
     "PyYAML",
+    # for v2
+    "WTForms",
 ]
 
 # UNSTABLE PLUGINS

@@ -1,0 +1,19 @@
+
+/* knock back heading sizes by 2 steps */
+.h1, h1 { font-size: calc(1.3rem + .6vw); }
+.h2, h2 { font-size: calc(1.275rem + .3vw); }
+/* TODO: rest of them */
+@media (min-width: 1200px) {
+  .h1, h1 { font-size: 1.75rem; }
+  .h2, h2 { font-size: 1.5rem; }
+  /* TODO: rest of them */
+}
+
+.nav.controls {
+  --bs-nav-link-padding-x: 0;
+  --bs-nav-link-padding-y: 0;
+  gap: 1rem;
+}
+.nav.controls .nav-link.active {
+  color: var(--bs-navbar-active-color);
+}

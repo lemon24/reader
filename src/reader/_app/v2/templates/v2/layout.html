@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en" data-bs-theme="auto">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{% block page_title %}{% endblock %}</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <link rel="stylesheet" href="{{ url_for('v2.static', filename='style.css') }}">
+
+    <!-- styles flash if this is at the end and not in head -->
+    <script src="{{ url_for('v2.static', filename='theme.js') }}"></script>
+
+  </head>
+  <body>
+
+
+<nav class="navbar navbar-expand-md bg-body-tertiary">
+  <div class="container-fluid">
+
+    <ul class="navbar-nav me-auto  flex-row">
+      <li class="nav-item">
+        <a class="nav-link px-2 active" href="{{ url_for('v2.entries') }}" aria-current="page">entries</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link px-2" href="{{ url_for('reader.feeds') }}">feeds</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link px-2" href="{{ url_for('reader.tags') }}">tags</a>
+      </li>
+    </ul>
+
+    <button
+      class="navbar-toggler" type="button"
+      data-bs-toggle="collapse" data-bs-target="#navbar-toggler"
+      aria-controls="navbar-toggler" aria-expanded="false" aria-label="toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbar-toggler">
+      <ul class="navbar-nav me-auto mb-2 mb-md-0">
+        <!-- left hidden navbar -->
+
+      </ul>
+
+      <form class="d-flex nav-item" action="{{ url_for('reader.preview') }}">
+        <input
+          class="form-control me-0 me-md-2 mb-2 mb-md-0"
+          type="url" name="url" autocomplete="off"
+          placeholder="add" aria-label="URL of feed to add">
+      </form>
+
+      <ul class="navbar-nav mb-0">
+        <!-- right hidden navbar -->
+
+        <li class="nav-item dropdown">
+          <button
+            class="btn btn-link nav-link dropdown-toggle d-flex align-items-center"
+            type="button" id="theme"
+            data-bs-toggle="dropdown" data-bs-display="static"
+            aria-expanded="false"  aria-label="toggle theme (auto)">
+            <i class="bi bi-circle-half theme-icon-active"></i>
+            <span class="d-md-none ms-2" id="theme-text">toggle theme</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end mb-2" aria-labelledby="theme-text">
+            <li>
+              <button type="button" class="dropdown-item d-flex align-items-center"
+                data-bs-theme-value="light" aria-pressed="false">
+                <i class="bi bi-sun-fill me-2 opacity-50"></i>
+                light
+                <i class="bi bi-check2 ms-auto d-none"></i>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="dropdown-item d-flex align-items-center"
+                data-bs-theme-value="dark" aria-pressed="false">
+                <i class="bi bi-moon-stars-fill me-2 opacity-50"></i>
+                dark
+                <i class="bi bi-check2 ms-auto d-none"></i>
+              </button>
+            </li>
+            <li>
+              <button type="button" class="dropdown-item d-flex align-items-center active"
+                data-bs-theme-value="auto" aria-pressed="true">
+                <i class="bi bi-circle-half me-2 opacity-50"></i>
+                auto
+                <i class="bi bi-check2 ms-auto d-none"></i>
+              </button>
+            </li>
+          </ul>
+        </li>
+
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+<div class="container ms-0 py-3 px-3">
+
+  <h1>{% block main_title %}{% endblock %}</h1>
+
+  {% block body %}{% endblock %}
+
+</div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+  </body>
+</html>

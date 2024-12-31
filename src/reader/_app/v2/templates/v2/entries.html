@@ -1,0 +1,130 @@
+{% extends "v2/layout.html" %}
+
+{% import "v2/macros.html" as macros %}
+
+
+{% block page_title %}Entries{% endblock %}
+
+{% block main_title %}Entries{% endblock %}
+
+{% block body %}
+
+
+<ul class="nav controls mb-3">
+  <!--
+  <li class="nav-item">
+    <a class="nav-link active" aria-current="page">unread</a>
+  </li>
+  -->
+  {% for name, preset in presets.items() %}
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('.entries', **preset) }}">{{ name }}</a>
+  </li>
+  {%- endfor %}
+  <li class="nav-item">
+    <a class="nav-link dropdown-toggle" href="#nav-more" data-bs-toggle="collapse"
+      role="button" aria-expanded="false" aria-controls="nav-more">
+      more
+    </a>
+  </li>
+</ul>
+
+
+<form>
+  <div class="collapse mb-3" id="nav-more">
+    {{ macros.input(form.search, 'search') }}
+    {{ macros.input(form.feed_tags, 'tag') }}
+    <div class="mb-3">
+    {{ macros.radio(form.read) }}
+    {{ macros.radio(form.important) }}
+    {{ macros.radio(form.has_enclosures) }}
+    {{ macros.radio(form.sort) }}
+    </div>
+    <button type="submit" class="btn btn-primary">go</button>
+  </div>
+</form>
+
+
+{% for entry in entries %}
+  <ul class="list-inline mb-2">
+
+    <h2 class="list-inline-item d-inline">
+      {# TODO: entry.link or url for entry view #}
+      <a class="text-decoration-none" href="{{ url_for('reader.entry', feed=entry.feed.url, entry=entry.id) }}">
+        {{ (entry.title or 'untitled') | striptags | truncate(95) }}
+      </a>
+    </h2>
+
+    <li class="list-inline-item">
+      <a class="text-decoration-none" href="{{ url_for('reader.entries', feed=entry.feed.url) }}">
+        {{ entry.feed_resolved_title or 'untitled feed' }}
+      </a>
+    </li>
+
+    {% set published = entry.published or entry.updated_not_none -%}
+    {# TODO: published should be a tooltip #}
+    <li class="list-inline-item text-secondary" title="{{ published }}">
+      <small>
+        {{ published | humanize_naturaltime }}
+      </small>
+    </li>
+
+    <!--
+    <li class="list-inline-item text-secondary"><small>12 minute read</small></li>
+    -->
+
+  </ul>
+
+  <form class="mb-2">
+    {# TODO: aria stuff #}
+
+    <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 5rem">
+      <i class="bi bi-check-lg"></i>
+    </button>
+
+    <div class="btn-group" role="group" aria-label="importance">
+      <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 3rem">
+        <i class="bi bi-star"></i>
+      </button>
+
+      <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 3rem">
+        <i class="bi bi-arrow-down"></i>
+      </button>
+
+    </div>
+
+    {% if entry.link %}
+    <a class="btn text-secondary btn-sm" style="width: 3rem" href="{{ entry.link }}">
+      <i class="bi bi-link-45deg"></i>
+    </a>
+    {% endif %}
+
+  </form>
+
+  <p>{{ entry.get_content(prefer_summary=True).value | striptags | truncate }}</p>
+
+
+{% else %}
+  <p>no entries found</p>
+{% endfor %}
+
+
+<!--
+<nav aria-label="page navigation">
+  <ul class="pagination">
+    <li class="page-item">
+      <a class="page-link" href="#">
+        <span aria-hidden="true" class="me-2">&lsaquo;</span>previous
+      </a>
+    </li>
+    <li class="page-item">
+      <a class="page-link" href="#">
+        next<span aria-hidden="true" class="ms-2">&rsaquo;</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+-->
+
+
+{% endblock %}

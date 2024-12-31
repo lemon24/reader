@@ -105,6 +105,7 @@ def get_reader():
 def stream_template(template_name_or_list, **kwargs):
     template = current_app.jinja_env.get_template(template_name_or_list)
     stream = template.stream(**kwargs)
+    # TODO: increase to at least 1-2k, like this we have 50% overhead
     stream.enable_buffering(50)
     return Response(stream_with_context(stream))
 
@@ -835,6 +836,10 @@ def create_app(config):
     app.config['READER_CONFIG'] = config
 
     app.register_blueprint(blueprint)
+
+    from . import v2
+
+    app.register_blueprint(v2.blueprint, url_prefix='/v2')
 
     # NOTE: this is part of the app extension API
     app.reader_additional_enclosure_links = []

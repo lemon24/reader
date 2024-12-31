@@ -21,6 +21,7 @@ window.onload = function () {
 <a href="{{ url_for('reader.feeds') }}">feeds</a>
 <a href="{{ url_for('reader.tags') }}">tags</a>
 <a href="{{ url_for('reader.metadata') }}">metadata</a>
+<a href="{{ url_for('v2.entries') }}">v2</a>
 
 {{ macros.text_input_button_get(
     'reader.preview', 'add feed', 'url', 'url',
