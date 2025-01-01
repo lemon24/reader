@@ -50,47 +50,43 @@
 
   <ul class="list-inline mb-1">
 
-    <h2 class="list-inline-item d-inline title">
-      {# TODO: entry.link or url for entry view #}
-      <a class="text-decoration-none" href="{{ url_for('reader.entry', feed=entry.feed.url, entry=entry.id) }}">
-        {{ (entry.title or 'untitled') | striptags | truncate(95) }}
+    <li class="list-inline-item">
+      <a class="text-decoration-none" href="{{ url_for('reader.entries', feed=entry.feed.url) }}">
+        <small>
+          {{ entry.feed_resolved_title or 'untitled feed' }}
+        </small>
       </a>
+    </li>
 
-      {% if entry.link %}
-      {# TODO: aria stuff #}
-      <a class="text-decoration-none mx-1 small" href="{{ entry.link }}">
-        <i class="bi bi-box-arrow-up-right"></i>
+    {% set published = entry.published or entry.updated_not_none -%}
+    {# TODO: published should be a tooltip #}
+    {# TODO: babel.format_timedelta(..., format='narrow') -> 3h #}
+    <li class="list-inline-item text-secondary" title="{{ published }}">
+      <small>
+        {{ published | humanize_naturaltime }}
+      </small>
+    </li>
+
+    <!--
+    <li class="list-inline-item text-secondary"><small>12 minute read</small></li>
+    -->
+
+  </ul>
+
+  <h2 class="h5">
+    <a class="text-decoration-none" href="{{ url_for('reader.entry', feed=entry.feed.url, entry=entry.id) }}">
+      {{ (entry.title or 'untitled') | striptags | truncate(95) }}
+
+      {#- NOTE: there must be no whitespace between the last word and the icon -#}
+      {#- TODO: aria stuff -#}
+      {%- if entry.link -%}
+      <a class="mx-2 small text-nowrap" href="{{ entry.link }}">{#
+        #}<i class="bi bi-box-arrow-up-right small"></i>
       </a>
       {% endif %}
 
-    </h2>
-
-    <div class="d-inline-block">
-
-      <li class="list-inline-item">
-        <a class="text-decoration-none" href="{{ url_for('reader.entries', feed=entry.feed.url) }}">
-          <small>
-            {{ entry.feed_resolved_title or 'untitled feed' }}
-          </small>
-        </a>
-      </li>
-
-      {% set published = entry.published or entry.updated_not_none -%}
-      {# TODO: published should be a tooltip #}
-      {# TODO: babel.format_timedelta(..., format='narrow') -> 3h #}
-      <li class="list-inline-item text-secondary" title="{{ published }}">
-        <small>
-          {{ published | humanize_naturaltime }}
-        </small>
-      </li>
-
-      <!--
-      <li class="list-inline-item text-secondary"><small>12 minute read</small></li>
-      -->
-
-    </div>
-
-  </ul>
+    </a>
+  </h2>
 
   {% set summary = entry.get_content(prefer_summary=True).value | striptags | trim %}
   {% if summary %}
@@ -99,7 +95,7 @@
   </p>
   {% endif %}
 
-  <form class="my-2">
+  <form class="my-3">
     {# TODO: aria stuff #}
 
     <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 4rem">

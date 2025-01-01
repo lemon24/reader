@@ -7,7 +7,3 @@
 .nav.controls .nav-link.active {
   color: var(--bs-navbar-active-color);
 }
-
-.list-inline-item.title {
-  font-size: 1.125rem;
-}
