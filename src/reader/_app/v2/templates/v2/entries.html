@@ -46,9 +46,11 @@
 
 
 {% for entry in entries %}
-  <ul class="list-inline mb-2">
+<div class="mb-4">
 
-    <h2 class="list-inline-item d-inline link">
+  <ul class="list-inline mb-1">
+
+    <h2 class="list-inline-item d-inline title">
       {# TODO: entry.link or url for entry view #}
       <a class="text-decoration-none" href="{{ url_for('reader.entry', feed=entry.feed.url, entry=entry.id) }}">
         {{ (entry.title or 'untitled') | striptags | truncate(95) }}
@@ -56,7 +58,7 @@
 
       {% if entry.link %}
       {# TODO: aria stuff #}
-      <a class="text-decoration-none mx-1 external" href="{{ entry.link }}">
+      <a class="text-decoration-none mx-1 small" href="{{ entry.link }}">
         <i class="bi bi-box-arrow-up-right"></i>
       </a>
       {% endif %}
@@ -90,19 +92,26 @@
 
   </ul>
 
-  <form class="mb-2 mark-as">
+  {% set summary = entry.get_content(prefer_summary=True).value | striptags | trim %}
+  {% if summary %}
+  <p class="small">
+    {{ summary | truncate(223) }}
+  </p>
+  {% endif %}
+
+  <form class="my-2">
     {# TODO: aria stuff #}
 
-    <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 5rem">
+    <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 4rem">
       <i class="bi bi-check-lg"></i>
     </button>
 
     <div class="btn-group" role="group" aria-label="importance">
-      <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 3rem">
+      <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 2rem">
         <i class="bi bi-star"></i>
       </button>
 
-      <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 3rem">
+      <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 2rem">
         <i class="bi bi-arrow-down"></i>
       </button>
 
@@ -110,10 +119,7 @@
 
   </form>
 
-  <p class="small">
-    {{ entry.get_content(prefer_summary=True).value | striptags | truncate(223) }}
-  </p>
-
+</div>
 
 {% else %}
   <p>no entries found</p>

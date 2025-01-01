@@ -8,14 +8,6 @@
   color: var(--bs-navbar-active-color);
 }
 
-.mark-as .btn-sm {
-  --bs-btn-padding-x: 0.125rem;
-  --bs-btn-padding-y: 0.125rem;
-}
-
-.list-inline-item.link {
+.list-inline-item.title {
   font-size: 1.125rem;
-}
-.list-inline-item.link .external {
-  font-size: 0.875rem;
 }
