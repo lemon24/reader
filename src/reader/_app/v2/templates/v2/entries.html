@@ -10,7 +10,7 @@
 {% block body %}
 
 
-<ul class="nav controls mb-3">
+<ul class="nav controls mb-3 small">
   <!--
   <li class="nav-item">
     <a class="nav-link active" aria-current="page">unread</a>
@@ -48,34 +48,49 @@
 {% for entry in entries %}
   <ul class="list-inline mb-2">
 
-    <h2 class="list-inline-item d-inline">
+    <h2 class="list-inline-item d-inline link">
       {# TODO: entry.link or url for entry view #}
       <a class="text-decoration-none" href="{{ url_for('reader.entry', feed=entry.feed.url, entry=entry.id) }}">
         {{ (entry.title or 'untitled') | striptags | truncate(95) }}
       </a>
+
+      {% if entry.link %}
+      {# TODO: aria stuff #}
+      <a class="text-decoration-none mx-1 external" href="{{ entry.link }}">
+        <i class="bi bi-box-arrow-up-right"></i>
+      </a>
+      {% endif %}
+
     </h2>
 
-    <li class="list-inline-item">
-      <a class="text-decoration-none" href="{{ url_for('reader.entries', feed=entry.feed.url) }}">
-        {{ entry.feed_resolved_title or 'untitled feed' }}
-      </a>
-    </li>
+    <div class="d-inline-block">
 
-    {% set published = entry.published or entry.updated_not_none -%}
-    {# TODO: published should be a tooltip #}
-    <li class="list-inline-item text-secondary" title="{{ published }}">
-      <small>
-        {{ published | humanize_naturaltime }}
-      </small>
-    </li>
+      <li class="list-inline-item">
+        <a class="text-decoration-none" href="{{ url_for('reader.entries', feed=entry.feed.url) }}">
+          <small>
+            {{ entry.feed_resolved_title or 'untitled feed' }}
+          </small>
+        </a>
+      </li>
 
-    <!--
-    <li class="list-inline-item text-secondary"><small>12 minute read</small></li>
-    -->
+      {% set published = entry.published or entry.updated_not_none -%}
+      {# TODO: published should be a tooltip #}
+      {# TODO: babel.format_timedelta(..., format='narrow') -> 3h #}
+      <li class="list-inline-item text-secondary" title="{{ published }}">
+        <small>
+          {{ published | humanize_naturaltime }}
+        </small>
+      </li>
+
+      <!--
+      <li class="list-inline-item text-secondary"><small>12 minute read</small></li>
+      -->
+
+    </div>
 
   </ul>
 
-  <form class="mb-2">
+  <form class="mb-2 mark-as">
     {# TODO: aria stuff #}
 
     <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 5rem">
@@ -93,15 +108,11 @@
 
     </div>
 
-    {% if entry.link %}
-    <a class="btn text-secondary btn-sm" style="width: 3rem" href="{{ entry.link }}">
-      <i class="bi bi-link-45deg"></i>
-    </a>
-    {% endif %}
-
   </form>
 
-  <p>{{ entry.get_content(prefer_summary=True).value | striptags | truncate }}</p>
+  <p class="small">
+    {{ entry.get_content(prefer_summary=True).value | striptags | truncate(223) }}
+  </p>
 
 
 {% else %}
