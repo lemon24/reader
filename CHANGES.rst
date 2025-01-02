@@ -11,6 +11,9 @@ Version 3.17
 
 Unreleased
 
+* Return the ``source (feed)`` form of :attr:`Entry.feed_resolved_title`
+  only if the source and feed titles are different.
+
 
 Version 3.16
 ------------

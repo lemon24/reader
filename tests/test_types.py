@@ -281,6 +281,9 @@ def entry_with_feed_title(feed=None, user=None, source=None):
             entry_with_feed_title(feed='feed', user='user', source='source'),
             'source (user)',
         ),
+        (entry_with_feed_title(feed='feed', source='feed'), 'feed'),
+        (entry_with_feed_title(feed='feed', user='user', source='user'), 'user'),
+        (entry_with_feed_title(feed='feed', user='user', source='feed'), 'user'),
     ],
 )
 def test_entry_feed_resolved_title(entry, title):

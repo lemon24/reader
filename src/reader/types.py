@@ -384,14 +384,21 @@ class Entry(_namedtuple_compat):
     @property
     def feed_resolved_title(self) -> str | None:
         """Feed :attr:`~Feed.resolved_title`, source :attr:`~EntrySource.title`,
-        or ``"{source} ({feed})"`` if both are present.
+        or ``"{source} ({feed})"`` if both are present and different.
 
         .. versionadded:: 3.16
+
+        .. versionchanged:: 3.17
+            Return both the source and feed titles only if they are different.
 
         """
         title = self.feed.resolved_title
         source = self.source
         source_title = source.title if source else None
+        if self.feed.title == source_title:
+            source_title = None
+        if title == source_title:
+            source_title = None
         if not source_title:
             return title
         if not title:
