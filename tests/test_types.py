@@ -9,6 +9,7 @@ from reader import Content
 from reader import Entry
 from reader import EntryError
 from reader import EntrySearchResult
+from reader import EntrySource
 from reader import ExceptionInfo
 from reader import Feed
 from reader import FeedError
@@ -257,6 +258,33 @@ def test_entry_updated_not_none():
 
     # will be entry.updated or entry.first_updated at some point
     assert entry.updated_not_none == entry.updated
+
+
+def entry_with_feed_title(feed=None, user=None, source=None):
+    return Entry(
+        'entry',
+        feed=Feed('feed', title=feed, user_title=user),
+        source=EntrySource(title=source) if source else None,
+    )
+
+
+@pytest.mark.parametrize(
+    'entry, title',
+    [
+        (entry_with_feed_title(), None),
+        (entry_with_feed_title(feed='feed'), 'feed'),
+        (entry_with_feed_title(user='user'), 'user'),
+        (entry_with_feed_title(source='source'), 'source'),
+        (entry_with_feed_title(feed='feed', user='user'), 'user'),
+        (entry_with_feed_title(feed='feed', source='source'), 'source (feed)'),
+        (
+            entry_with_feed_title(feed='feed', user='user', source='source'),
+            'source (user)',
+        ),
+    ],
+)
+def test_entry_feed_resolved_title(entry, title):
+    assert entry.feed_resolved_title == title
 
 
 @pytest.mark.parametrize(
