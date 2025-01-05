@@ -48,7 +48,7 @@
 {% for entry in entries %}
 <div class="mb-4">
 
-  <ul class="list-inline mb-1">
+  <ul class="list-inline" style="margin-bottom: 0.125rem">
 
     <li class="list-inline-item">
       <a class="text-decoration-none" href="{{ url_for('reader.entries', feed=entry.feed.url) }}">
@@ -73,7 +73,7 @@
 
   </ul>
 
-  <h2 class="h5">
+  <h2 class="h5 mb-1" style="font-size: 1.125rem">
     <a class="text-decoration-none" href="{{ url_for('reader.entry', feed=entry.feed.url, entry=entry.id) }}">
       {{ (entry.title or 'untitled') | striptags | truncate(95) }}
 
@@ -90,12 +90,12 @@
 
   {% set summary = entry.get_content(prefer_summary=True).value | striptags | trim %}
   {% if summary %}
-  <p class="small">
+  <p class="small mb-2">
     {{ summary | truncate(223) }}
   </p>
   {% endif %}
 
-  <form class="my-3">
+  <form class="my-2">
     {# TODO: aria stuff #}
 
     <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 4rem">
