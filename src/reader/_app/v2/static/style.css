@@ -1,4 +1,12 @@
 
+.navbar {
+  --bs-navbar-padding-y: 0.25rem;
+  --bs-navbar-toggler-padding-y: 0.25rem;
+  --bs-navbar-toggler-padding-x: 0.25rem;
+  --bs-navbar-toggler-font-size: 1rem;
+  --bs-navbar-toggler-border-color: rgba(0, 0, 0, 0);
+}
+
 .nav.controls {
   --bs-nav-link-padding-x: 0;
   --bs-nav-link-padding-y: 0;
