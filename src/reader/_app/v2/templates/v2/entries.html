@@ -46,7 +46,7 @@
 
 
 {% for entry in entries %}
-<div class="mb-4">
+<div class="mb-4" id="entry-{{ loop.index }}">
 
   <ul class="list-inline" style="margin-bottom: 0.125rem">
 
@@ -95,19 +95,37 @@
   </p>
   {% endif %}
 
-  <form class="my-2">
-    {# TODO: aria stuff #}
+  <form action="{{ url_for('.mark_as') }}" method="post" class="my-2">
+    {#- TODO: aria stuff #}
 
-    <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 4rem">
+    <button type="submit" name="read"
+      value="{{ 'false' if entry.read else 'true' }}"
+      class="btn btn-outline-secondary btn-sm{% if entry.read %} active{% endif %}"
+      {% if entry.read -%}
+      aria-pressed="true"
+      {% endif -%}
+      style="width: 4rem">
       <i class="bi bi-check-lg"></i>
     </button>
 
     <div class="btn-group" role="group" aria-label="importance">
-      <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 2rem">
-        <i class="bi bi-star"></i>
+      <button type="submit" name="important"
+        value="{{ 'none' if entry.important is true else 'true' }}"
+        class="btn btn-outline-secondary btn-sm {% if entry.important is true %} active{% endif %}"
+        {% if entry.important is true -%}
+        aria-pressed="true"
+        {% endif -%}
+        style="width: 2rem">
+        <i class="bi {{ 'bi-star-fill' if entry.important is true else 'bi-star' }}"></i>
       </button>
 
-      <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 2rem">
+      <button type="submit" name="important"
+        value="{{ 'none' if entry.important is false else 'false' }}"
+        class="btn btn-outline-secondary btn-sm {% if entry.important is false %} active{% endif %}"
+        {% if entry.important is false -%}
+        aria-pressed="true"
+        {% endif -%}
+        style="width: 2rem">
         <i class="bi bi-arrow-down"></i>
       </button>
     </div>
@@ -121,6 +139,13 @@
       <i class="bi bi-{{ macros.bs_file_icon(enclosure.type) }}"></i>
     </a>
     {%- endfor %}
+
+    <input type="hidden" name="feed-url" value="{{ entry.feed_url }}">
+    <input type="hidden" name="entry-id" value="{{ entry.id }}">
+
+    {% set next = loop.index if not loop.last else loop.index - 1 -%}
+    <input type="hidden" name="next"
+      value="{{ url_for('.entries', **request.args) }}#entry-{{ next }}">
 
   </form>
 
