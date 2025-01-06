@@ -34,3 +34,14 @@
   </div>
 </fieldset>
 {%- endmacro %}
+
+
+{%- macro bs_file_icon(mimetype) -%}
+{%- set type = (mimetype or '').partition('/')[0] -%}
+{%- if type == 'audio' -%} file-earmark-music
+{%- elif type == 'image' -%} file-earmark-image
+{%- elif type == 'video' -%} file-earmark-play
+{%- elif type == 'text' -%} file-earmark-text
+{%- else -%} file-earmark
+{%- endif -%}
+{%- endmacro -%}

@@ -110,8 +110,17 @@
       <button type="submit" class="btn btn-outline-secondary btn-sm" style="width: 2rem">
         <i class="bi bi-arrow-down"></i>
       </button>
-
     </div>
+
+    {% for enclosure in entry.enclosures[:1] -%}
+    {%- set links = additional_enclosure_links(enclosure, entry) | list -%}
+    {%- set _ = links.append(('', enclosure.href)) -%}
+    {%- set link = links[0][1] -%}
+    <a class="btn text-secondary btn-sm" role="button" target="_blank"
+      title="{{ enclosure.type }}" href="{{ link }}">
+      <i class="bi bi-{{ macros.bs_file_icon(enclosure.type) }}"></i>
+    </a>
+    {%- endfor %}
 
   </form>
 

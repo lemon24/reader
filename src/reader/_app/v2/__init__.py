@@ -25,7 +25,6 @@ def entries():
     # TODO: pagination
     # TODO: read time
     # TODO: mark as ...
-    # TODO: enclosures
 
     form = EntryFilter(request.args)
     kwargs = dict(form.data)
