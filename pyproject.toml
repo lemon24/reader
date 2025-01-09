@@ -79,6 +79,7 @@ app = [
     "PyYAML",
     # for v2
     "WTForms",
+    "jinja2-fragments",
 ]
 
 # UNSTABLE PLUGINS

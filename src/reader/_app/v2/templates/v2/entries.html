@@ -95,8 +95,12 @@
   </p>
   {% endif %}
 
-  <form action="{{ url_for('.mark_as') }}" method="post" class="my-2">
+  {% set next = loop.index if not loop.last else loop.index - 1 -%}
+  <form action="{{ url_for('.mark_as') }}" method="post"
+    hx-post="{{ url_for('.mark_as') }}"
+    class="my-2">
     {#- TODO: aria stuff #}
+    {% block entry_form scoped %}
 
     <button type="submit" name="read"
       value="{{ 'false' if entry.read else 'true' }}"
@@ -105,7 +109,9 @@
       aria-pressed="true"
       {% endif -%}
       style="width: 4rem">
-      <i class="bi bi-check-lg"></i>
+      <i class="bi {{
+        'bi-check-circle-fill' if entry.read is true else 'bi-check-lg'
+      }}"></i>
     </button>
 
     <div class="btn-group" role="group" aria-label="importance">
@@ -116,7 +122,9 @@
         aria-pressed="true"
         {% endif -%}
         style="width: 2rem">
-        <i class="bi {{ 'bi-star-fill' if entry.important is true else 'bi-star' }}"></i>
+        <i class="bi {{
+          'bi-star-fill' if entry.important is true else 'bi-star'
+        }}"></i>
       </button>
 
       <button type="submit" name="important"
@@ -126,7 +134,9 @@
         aria-pressed="true"
         {% endif -%}
         style="width: 2rem">
-        <i class="bi bi-arrow-down"></i>
+        <i class="bi {{
+          'bi-arrow-down-circle-fill' if entry.important is false else 'bi-arrow-down'
+        }}"></i>
       </button>
     </div>
 
@@ -143,10 +153,12 @@
     <input type="hidden" name="feed-url" value="{{ entry.feed_url }}">
     <input type="hidden" name="entry-id" value="{{ entry.id }}">
 
-    {% set next = loop.index if not loop.last else loop.index - 1 -%}
+    {% if next -%}
     <input type="hidden" name="next"
       value="{{ url_for('.entries', **request.args) }}#entry-{{ next }}">
+    {%- endif %}
 
+  {% endblock %}
   </form>
 
 </div>

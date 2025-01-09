@@ -4,6 +4,7 @@ from flask import abort
 from flask import Blueprint
 from flask import redirect
 from flask import request
+from jinja2_fragments.flask import render_block
 
 from .. import get_reader
 from .. import stream_template
@@ -69,6 +70,11 @@ def mark_as():
                 reader.set_entry_important(entry, None)
             case _:
                 abort(422)
+
+    if request.headers.get('hx-request') == 'true':
+        return render_block(
+            'v2/entries.html', 'entry_form', entry=reader.get_entry(entry)
+        )
 
     print(request.form['next'])
     return redirect(request.form['next'], code=303)
