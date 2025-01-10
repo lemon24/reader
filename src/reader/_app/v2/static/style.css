@@ -15,3 +15,13 @@
 .nav.controls .nav-link.active {
   color: var(--bs-navbar-active-color);
 }
+
+.htmx-indicator {
+  display: none;
+}
+.htmx-request .htmx-indicator, .htmx-request.htmx-indicator {
+  display: inline-block;
+}
+.htmx-request .label, .htmx-request.label {
+  display: none;
+}

@@ -95,48 +95,74 @@
   </p>
   {% endif %}
 
-  {% set next = loop.index if not loop.last else loop.index - 1 -%}
+  {% set next_index = loop.index if not loop.last else loop.index - 1 -%}
+  {% set next = url_for('.entries', **request.args) + '#entry-' + (next_index|string) %}
   <form action="{{ url_for('.mark_as') }}" method="post"
-    hx-post="{{ url_for('.mark_as') }}"
+    hx-target="closest form"
+
     class="my-2">
     {#- TODO: aria stuff #}
     {% block entry_form scoped %}
 
     <button type="submit" name="read"
       value="{{ 'false' if entry.read else 'true' }}"
+      hx-post="{{ url_for('.mark_as') }}"
+      hx-disabled-elt="this"
       class="btn btn-outline-secondary btn-sm{% if entry.read %} active{% endif %}"
       {% if entry.read -%}
       aria-pressed="true"
       {% endif -%}
       style="width: 4rem">
-      <i class="bi {{
+
+      <i class="label bi {{
         'bi-check-circle-fill' if entry.read is true else 'bi-check-lg'
       }}"></i>
+
+      <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
+        <span class="visually-hidden">loading...</span>
+      </div>
+
     </button>
 
     <div class="btn-group" role="group" aria-label="importance">
       <button type="submit" name="important"
         value="{{ 'none' if entry.important is true else 'true' }}"
+        hx-post="{{ url_for('.mark_as') }}"
+        hx-disabled-elt="this, next button"
         class="btn btn-outline-secondary btn-sm {% if entry.important is true %} active{% endif %}"
         {% if entry.important is true -%}
         aria-pressed="true"
         {% endif -%}
         style="width: 2rem">
-        <i class="bi {{
+
+        <i class="label bi {{
           'bi-star-fill' if entry.important is true else 'bi-star'
         }}"></i>
+
+        <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
+          <span class="visually-hidden">loading...</span>
+        </div>
+
       </button>
 
       <button type="submit" name="important"
         value="{{ 'none' if entry.important is false else 'false' }}"
+        hx-post="{{ url_for('.mark_as') }}"
+        hx-disabled-elt="this, previous button"
         class="btn btn-outline-secondary btn-sm {% if entry.important is false %} active{% endif %}"
         {% if entry.important is false -%}
         aria-pressed="true"
         {% endif -%}
         style="width: 2rem">
-        <i class="bi {{
+
+        <i class="label bi {{
           'bi-arrow-down-circle-fill' if entry.important is false else 'bi-arrow-down'
         }}"></i>
+
+        <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
+          <span class="visually-hidden">loading...</span>
+        </div>
+
       </button>
     </div>
 
@@ -152,11 +178,7 @@
 
     <input type="hidden" name="feed-url" value="{{ entry.feed_url }}">
     <input type="hidden" name="entry-id" value="{{ entry.id }}">
-
-    {% if next -%}
-    <input type="hidden" name="next"
-      value="{{ url_for('.entries', **request.args) }}#entry-{{ next }}">
-    {%- endif %}
+    <input type="hidden" name="next" value="{{ next }}">
 
   {% endblock %}
   </form>

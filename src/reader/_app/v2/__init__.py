@@ -73,8 +73,10 @@ def mark_as():
 
     if request.headers.get('hx-request') == 'true':
         return render_block(
-            'v2/entries.html', 'entry_form', entry=reader.get_entry(entry)
+            'v2/entries.html',
+            'entry_form',
+            entry=reader.get_entry(entry),
+            next=request.form['next'],
         )
 
-    print(request.form['next'])
     return redirect(request.form['next'], code=303)
