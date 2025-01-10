@@ -2,6 +2,7 @@ from functools import partial
 
 from flask import abort
 from flask import Blueprint
+from flask import current_app
 from flask import redirect
 from flask import request
 from jinja2_fragments.flask import render_block
@@ -27,7 +28,6 @@ def entries():
     # TODO: feed filter
     # TODO: paqgination
     # TODO: read time
-    # TODO: htmx mark as ...
 
     form = EntryFilter(request.args)
     kwargs = dict(form.data)
@@ -77,6 +77,8 @@ def mark_as():
             'entry_form',
             entry=reader.get_entry(entry),
             next=request.form['next'],
+            # equivalent to {% import "v2/macros.html" as macros %}
+            macros=current_app.jinja_env.get_template('v2/macros.html').module,
         )
 
     return redirect(request.form['next'], code=303)
