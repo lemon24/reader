@@ -1,5 +1,6 @@
 import yaml
 from wtforms import Form
+from wtforms import HiddenField
 from wtforms import RadioField
 from wtforms import SearchField
 from wtforms import StringField
@@ -73,6 +74,7 @@ ENTRY_SORT_CHOICES = ['recent', 'random']
 
 
 class EntryFilter(ToFormdataMixin, Form):
+    feed = HiddenField("feed")
     search = SearchField("search", name='q')
     feed_tags = TagFilterField("tags", name='tags')
     read = radio_field("read", choices=BOOL_CHOICES, default='no')

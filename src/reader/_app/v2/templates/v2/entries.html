@@ -3,9 +3,27 @@
 {% import "v2/macros.html" as macros %}
 
 
-{% block page_title %}Entries{% endblock %}
+{% block page_title %}
+  {% if not feed %}
+    Entries
+  {% else %}
+   {{ feed.resolved_title or feed.url }}
+  {% endif %}
+  - reader
+{% endblock %}
 
-{% block main_title %}Entries{% endblock %}
+{% block main_title %}
+  {% if not feed %}
+    Entries
+  {% else %}
+    <span {% if feed.title and feed.resolved_title != feed.title -%}
+      title="{{ feed.title }}"
+      {%- endif %}>
+      {{ feed.resolved_title or feed.url }}
+    </span>
+  {% endif %}
+{% endblock %}
+
 
 {% block body %}
 
@@ -51,7 +69,7 @@
   <ul class="list-inline" style="margin-bottom: 0.125rem">
 
     <li class="list-inline-item">
-      <a class="text-decoration-none" href="{{ url_for('reader.entries', feed=entry.feed.url) }}">
+      <a class="text-decoration-none" href="{{ url_for('.entries', feed=entry.feed.url) }}">
         <small>
           {{ entry.feed_resolved_title or 'untitled feed' }}
         </small>

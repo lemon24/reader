@@ -25,13 +25,18 @@ def entries():
     # TODO: search
     # TODO: if search/tags is active, search/tags box should not be hidden
     # TODO: highlight active filter preset + uncollapse more
-    # TODO: feed filter
     # TODO: paqgination
     # TODO: read time
 
     form = EntryFilter(request.args)
     kwargs = dict(form.data)
     del kwargs['search']
+
+    feed = None
+    if form.feed.data:
+        feed = reader.get_feed(form.feed.data, None)
+        if not feed:
+            abort(404)
 
     get_entries = reader.get_entries
 
@@ -41,7 +46,11 @@ def entries():
         entries = []
 
     return stream_template(
-        'v2/entries.html', presets=ENTRY_FILTER_PRESETS, form=form, entries=entries
+        'v2/entries.html',
+        presets=ENTRY_FILTER_PRESETS,
+        form=form,
+        entries=entries,
+        feed=feed,
     )
 
 
