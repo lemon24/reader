@@ -35,8 +35,12 @@
   </li>
   -->
   {% for name, preset in presets.items() %}
+  {%- set args = preset.copy() -%}
+  {%- if feed %}{% set _ = args.update(feed=feed.url) %}{% endif %}
   <li class="nav-item">
-    <a class="nav-link" href="{{ url_for('.entries', **preset) }}">{{ name }}</a>
+    <a class="nav-link" href="{{ url_for('.entries', **args) }}">
+      {{ name }}
+    </a>
   </li>
   {%- endfor %}
   <li class="nav-item">
@@ -50,14 +54,15 @@
 
 <form>
   <div class="collapse mb-3" id="nav-more">
-    {{ macros.input(form.search, 'search') }}
-    {{ macros.input(form.feed_tags, 'tag') }}
+    {% if form.search.data %}{{ macros.input(form.search, 'search') }}{% endif %}
+    {% if form.feed_tags.data %}{{ macros.input(form.feed_tags, 'tag') }}{% endif %}
     <div class="mb-3">
     {{ macros.radio(form.read) }}
     {{ macros.radio(form.important) }}
     {{ macros.radio(form.has_enclosures) }}
     {{ macros.radio(form.sort) }}
     </div>
+    {% if form.feed.data %}{{ form.feed }}{% endif %}
     <button type="submit" class="btn btn-primary">go</button>
   </div>
 </form>
