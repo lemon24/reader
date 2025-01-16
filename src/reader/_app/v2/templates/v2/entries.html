@@ -75,17 +75,15 @@
 
   <h2 class="h5 mb-1" style="font-size: 1.125rem">
     <a class="text-decoration-none" href="{{ url_for('reader.entry', feed=entry.feed.url, entry=entry.id) }}">
-      {{ (entry.title or 'untitled') | striptags | truncate(95) }}
-
-      {#- NOTE: there must be no whitespace between the last word and the icon -#}
-      {#- TODO: aria stuff -#}
-      {%- if entry.link -%}
-      <a class="mx-2 small text-nowrap" href="{{ entry.link }}">{#
-        #}<i class="bi bi-box-arrow-up-right small"></i>
-      </a>
-      {% endif %}
-
+      {{- (entry.title or 'untitled') | striptags | truncate(95) -}}
     </a>
+    {#- NOTE: there must be no whitespace between the last word and the icon -#}
+    {#- TODO: aria stuff -#}
+    {%- if entry.link -%}
+    <a class="mx-2 small text-nowrap" href="{{ entry.link }}" target="_blank">{#
+      #}<i class="bi bi-box-arrow-up-right small"></i>{#
+    #}</a>
+    {%- endif %}
   </h2>
 
   {% set summary = entry.get_content(prefer_summary=True).value | striptags | trim %}
