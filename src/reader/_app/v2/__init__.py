@@ -23,7 +23,6 @@ def entries():
     reader = get_reader()
 
     # TODO: search
-    # TODO: if search/tags is active, search/tags box should not be hidden
     # TODO: highlight active filter preset + uncollapse more
     # TODO: paqgination
     # TODO: read time

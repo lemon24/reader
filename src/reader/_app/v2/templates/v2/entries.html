@@ -35,8 +35,18 @@
   </li>
   -->
   {% for name, preset in presets.items() %}
+
   {%- set args = preset.copy() -%}
-  {%- if feed %}{% set _ = args.update(feed=feed.url) %}{% endif %}
+  {%- if form.feed.data %}
+    {% set _ = args.setdefault(form.feed.name, form.feed.raw_data) %}
+  {% endif %}
+  {%- if form.search.data %}
+    {% set _ = args.setdefault(form.search.name, form.search.raw_data) %}
+  {% endif %}
+  {%- if form.feed_tags.data %}
+    {% set _ = args.setdefault(form.feed_tags.name, form.feed_tags.raw_data) %}
+  {% endif %}
+
   <li class="nav-item">
     <a class="nav-link" href="{{ url_for('.entries', **args) }}">
       {{ name }}
@@ -53,9 +63,11 @@
 
 
 <form>
+  {% if form.search.data %}{{ macros.input(form.search, 'search') }}{% endif %}
+  {% if form.feed_tags.data %}{{ macros.input(form.feed_tags, 'tag') }}{% endif %}
   <div class="collapse mb-3" id="nav-more">
-    {% if form.search.data %}{{ macros.input(form.search, 'search') }}{% endif %}
-    {% if form.feed_tags.data %}{{ macros.input(form.feed_tags, 'tag') }}{% endif %}
+    {% if not form.search.data %}{{ macros.input(form.search, 'search') }}{% endif %}
+    {% if not form.feed_tags.data %}{{ macros.input(form.feed_tags, 'tag') }}{% endif %}
     <div class="mb-3">
     {{ macros.radio(form.read) }}
     {{ macros.radio(form.important) }}
