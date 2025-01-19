@@ -1,7 +1,7 @@
 
 
-{%- macro input(field, icon=none) %}
-<div class="row mb-3">
+{%- macro input(field, icon=none, class=none) %}
+<div class="row mb-3{% if class %} {{ class }}{% endif %}">
   <div class="col-md-12 input-group{% if field.errors %} has-validation{% endif %}">
     {% if icon -%}
     <span class="input-group-text"><i class="bi bi-{{icon}}"></i></span>

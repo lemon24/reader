@@ -54,7 +54,7 @@
   </li>
   {%- endfor %}
   <li class="nav-item">
-    <a class="nav-link dropdown-toggle" href="#nav-more" data-bs-toggle="collapse"
+    <a class="nav-link dropdown-toggle" href=".nav-more" data-bs-toggle="collapse"
       role="button" aria-expanded="false" aria-controls="nav-more">
       more
     </a>
@@ -63,11 +63,9 @@
 
 
 <form>
-  {% if form.search.data %}{{ macros.input(form.search, 'search') }}{% endif %}
-  {% if form.feed_tags.data %}{{ macros.input(form.feed_tags, 'tag') }}{% endif %}
-  <div class="collapse mb-3" id="nav-more">
-    {% if not form.search.data %}{{ macros.input(form.search, 'search') }}{% endif %}
-    {% if not form.feed_tags.data %}{{ macros.input(form.feed_tags, 'tag') }}{% endif %}
+  {{ macros.input(form.search, 'search', none if form.search.data else 'collapse nav-more') }}
+  {{ macros.input(form.feed_tags, 'tag', none if form.feed_tags.data else 'collapse nav-more') }}
+  <div class="collapse mb-3 nav-more">
     <div class="mb-3">
     {{ macros.radio(form.read) }}
     {{ macros.radio(form.important) }}
