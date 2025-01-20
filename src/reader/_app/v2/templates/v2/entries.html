@@ -29,27 +29,12 @@
 
 
 <ul class="nav controls mb-3 small">
-  <!--
+  {% for preset in form.presets %}
   <li class="nav-item">
-    <a class="nav-link active" aria-current="page">unread</a>
-  </li>
-  -->
-  {% for name, preset in presets.items() %}
-
-  {%- set args = preset.copy() -%}
-  {%- if form.feed.data %}
-    {% set _ = args.setdefault(form.feed.name, form.feed.raw_data) %}
-  {% endif %}
-  {%- if form.search.data %}
-    {% set _ = args.setdefault(form.search.name, form.search.raw_data) %}
-  {% endif %}
-  {%- if form.feed_tags.data %}
-    {% set _ = args.setdefault(form.feed_tags.name, form.feed_tags.raw_data) %}
-  {% endif %}
-
-  <li class="nav-item">
-    <a class="nav-link" href="{{ url_for('.entries', **args) }}">
-      {{ name }}
+    <a class="nav-link{% if preset.active %} active{% endif %}"
+      {%- if preset.active %} aria-current="page"{% endif %}
+      href="{{ url_for('.entries', **preset.args) }}">
+      {{ preset.name }}
     </a>
   </li>
   {%- endfor %}

@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import yaml
 from wtforms import Form
 from wtforms import HiddenField
@@ -31,28 +33,53 @@ class TagFilterField(StringField):
         return yaml.safe_dump(self.data, default_flow_style=True).rstrip()
 
 
-class ToFormdataMixin:
-    def to_formdata(self):
-        rv = {}
+class PresetsMixin:
 
+    @property
+    def presets(self):
+        form_args = {}
+        form_preset_args = {}
         for field in self:
-            try:
-                value = field._value()
-            except AttributeError:
-                values = [option._value() for option in field if option.checked]
-                if values:
-                    value, *rest = values
-                    if rest:
-                        raise NotImplementedError(
-                            "multiple choices not supported"
-                        ) from None
+            value = get_formdata(field)
+            form_args[field.name] = value
+            if field.name in self.PRESET_FIELDS:
+                form_preset_args[field.name] = value
+
+        for name, args_raw in self.PRESETS.items():
+            args = {}
+            preset_args = {}
+            for field in self:
+
+                if field.name in self.PRESET_FIELDS:
+                    value = args_raw.get(field.name, field.default)
+                    preset_args[field.name] = value
                 else:
-                    value = field.default
+                    value = form_args[field.name]
 
-            if value and value != field.default:
-                rv[field.name] = value
+                if value and (not field.default or value != field.default):
+                    args[field.name] = value
 
-        return rv
+            yield Preset(name, args, preset_args == form_preset_args)
+
+
+@dataclass
+class Preset:
+    name: str
+    args: dict[str, str]
+    active: bool = False
+
+
+def get_formdata(field):
+    try:
+        return field._value()
+    except AttributeError:
+        values = [option._value() for option in field if option.checked]
+        if values:
+            value, *rest = values
+            if rest:
+                raise NotImplementedError("multiple choices not supported") from None
+            return value
+        return field.default
 
 
 def radio_field(*args, choices, **kwargs):
@@ -73,7 +100,7 @@ TRISTATE_CHOICES = [('notfalse', 'maybe')] + BOOL_CHOICES
 ENTRY_SORT_CHOICES = ['recent', 'random']
 
 
-class EntryFilter(ToFormdataMixin, Form):
+class EntryFilter(PresetsMixin, Form):
     feed = HiddenField("feed")
     search = SearchField("search", name='q')
     feed_tags = TagFilterField("tags", name='tags')
@@ -84,19 +111,19 @@ class EntryFilter(ToFormdataMixin, Form):
     )
     sort = RadioField("sort", choices=ENTRY_SORT_CHOICES, default='recent')
 
+    PRESET_FIELDS = {'read', 'important', 'enclosures', 'sort'}
+    PRESETS = {
+        'unread': {},
+        'important': {'read': 'all', 'important': 'yes'},
+        'podcast': {'enclosures': 'yes'},
+        'random': {'sort': 'random'},
+    }
+
 
 class SearchEntryFilter(EntryFilter):
     sort = RadioField(
         "sort", choices=ENTRY_SORT_CHOICES + ['relevant'], default='relevant'
     )
-
-
-ENTRY_FILTER_PRESETS = {
-    'unread': {},
-    'important': {'read': 'all', 'important': 'yes'},
-    'podcast': {'enclosures': 'yes'},
-    'random': {'sort': 'random'},
-}
 
 
 if __name__ == '__main__':

@@ -9,7 +9,6 @@ from jinja2_fragments.flask import render_block
 
 from .. import get_reader
 from .. import stream_template
-from .forms import ENTRY_FILTER_PRESETS
 from .forms import EntryFilter
 
 
@@ -23,7 +22,7 @@ def entries():
     reader = get_reader()
 
     # TODO: search
-    # TODO: highlight active filter preset + uncollapse more
+    # TODO: highlight + uncollapse more
     # TODO: paqgination
     # TODO: read time
 
@@ -46,7 +45,6 @@ def entries():
 
     return stream_template(
         'v2/entries.html',
-        presets=ENTRY_FILTER_PRESETS,
         form=form,
         entries=entries,
         feed=feed,
