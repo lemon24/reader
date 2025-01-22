@@ -22,7 +22,6 @@ def entries():
     reader = get_reader()
 
     # TODO: search
-    # TODO: highlight + uncollapse more
     # TODO: paqgination
     # TODO: read time
 

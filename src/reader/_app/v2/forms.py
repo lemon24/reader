@@ -61,6 +61,10 @@ class PresetsMixin:
 
             yield Preset(name, args, preset_args == form_preset_args)
 
+    @property
+    def active_presets(self):
+        return [p for p in self.presets if p.active]
+
 
 @dataclass
 class Preset:

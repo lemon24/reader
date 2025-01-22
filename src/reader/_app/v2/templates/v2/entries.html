@@ -39,7 +39,8 @@
   </li>
   {%- endfor %}
   <li class="nav-item">
-    <a class="nav-link dropdown-toggle" href=".nav-more" data-bs-toggle="collapse"
+    <a class="nav-link dropdown-toggle{% if not form.active_presets %} active{% endif %}"
+      href=".nav-more" data-bs-toggle="collapse"
       role="button" aria-expanded="false" aria-controls="nav-more">
       more
     </a>
