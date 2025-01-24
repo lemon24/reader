@@ -6,7 +6,7 @@ be directly unioned with sets.'''
 '''TO fix this combine the keys of the dictionary
 (FEED_SORT_FANCY.keys()) with the set
 (FEED_SORT_NATIVE)'''
-#line 429 to 442 
+# line 429 to 442
 
 import contextlib
 import itertools
@@ -426,7 +426,7 @@ FEED_SORT_FANCY = {
     'avg1y': lambda counts: counts.averages[2],
 }
 FEED_SORT_ALL = FEED_SORT_NATIVE.union(FEED_SORT_FANCY)'''
-# from line 408 to 418 i made so change 
+# from line 408 to 418 i made so change
 FEED_SORT_NATIVE = {'title', 'added'}
 
 FEED_SORT_FANCY = {
