@@ -1,3 +1,13 @@
+# here its showing there some change need from line 402 to 408
+'''FEED_SORT_NATIVE is a set, but FEED_SORT_FANCY is a dictionary.the union()
+method for sets requires both operands to be sets and dictionaries cannot
+be directly unioned with sets.'''
+
+'''TO fix this combine the keys of the dictionary
+(FEED_SORT_FANCY.keys()) with the set
+(FEED_SORT_NATIVE)'''
+#line 429 to 442 
+
 import contextlib
 import itertools
 import json
@@ -405,7 +415,7 @@ def add_entry():
     )
 
 
-FEED_SORT_NATIVE = {'title', 'added'}
+'''FEED_SORT_NATIVE = {'title', 'added'}
 FEED_SORT_FANCY = {
     'important': lambda counts: counts.important,
     'unimportant': lambda counts: counts.unimportant,
@@ -415,7 +425,22 @@ FEED_SORT_FANCY = {
     'avg3m': lambda counts: counts.averages[1],
     'avg1y': lambda counts: counts.averages[2],
 }
-FEED_SORT_ALL = FEED_SORT_NATIVE.union(FEED_SORT_FANCY)
+FEED_SORT_ALL = FEED_SORT_NATIVE.union(FEED_SORT_FANCY)'''
+# from line 408 to 418 i made so change 
+FEED_SORT_NATIVE = {'title', 'added'}
+
+FEED_SORT_FANCY = {
+    'important': lambda counts: counts.important,
+    'unimportant': lambda counts: counts.unimportant,
+    'unread': lambda counts: counts.total - counts.read,
+    # TODO: if we keep these average intervals, properties for them might be nice too
+    'avg1m': lambda counts: counts.averages[0],
+    'avg3m': lambda counts: counts.averages[1],
+    'avg1y': lambda counts: counts.averages[2],
+}
+
+# Corrected line
+FEED_SORT_ALL = FEED_SORT_NATIVE.union(FEED_SORT_FANCY.keys())
 
 
 @blueprint.route('/feeds')
