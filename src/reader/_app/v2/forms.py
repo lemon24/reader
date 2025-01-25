@@ -65,6 +65,15 @@ class PresetsMixin:
     def active_presets(self):
         return [p for p in self.presets if p.active]
 
+    @property
+    def args(self):
+        rv = {}
+        for field in self:
+            value = get_formdata(field)
+            if value and (not field.default or value != field.default):
+                rv[field.name] = value
+        return rv
+
 
 @dataclass
 class Preset:

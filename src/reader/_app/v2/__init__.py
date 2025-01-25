@@ -5,6 +5,7 @@ from flask import Blueprint
 from flask import current_app
 from flask import redirect
 from flask import request
+from flask import url_for
 from jinja2_fragments.flask import render_block
 
 from .. import get_reader
@@ -26,6 +27,10 @@ def entries():
     # TODO: read time
 
     form = EntryFilter(request.args)
+
+    if form.args != request.args.to_dict():
+        return redirect(url_for('.entries', **form.args))
+
     kwargs = dict(form.data)
     del kwargs['search']
 
