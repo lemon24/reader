@@ -1,3 +1,4 @@
+import itertools
 from functools import partial
 
 from flask import abort
@@ -8,9 +9,13 @@ from flask import request
 from flask import url_for
 from jinja2_fragments.flask import render_block
 
+from reader import InvalidSearchQueryError
+
+from .. import EntryProxy
 from .. import get_reader
 from .. import stream_template
 from .forms import EntryFilter
+from .forms import SearchEntryFilter
 
 
 blueprint = Blueprint(
@@ -22,17 +27,18 @@ blueprint = Blueprint(
 def entries():
     reader = get_reader()
 
-    # TODO: search
+    # TODO: search improvements
+    # TODO: search bug: first search uses recent
     # TODO: paqgination
     # TODO: read time
 
-    form = EntryFilter(request.args)
+    if request.args.get('q', '').strip():
+        form = SearchEntryFilter(request.args)
+    else:
+        form = EntryFilter(request.args)
 
     if form.args != request.args.to_dict():
         return redirect(url_for('.entries', **form.args))
-
-    kwargs = dict(form.data)
-    del kwargs['search']
 
     feed = None
     if form.feed.data:
@@ -40,12 +46,24 @@ def entries():
         if not feed:
             abort(404)
 
-    get_entries = reader.get_entries
+    kwargs = dict(form.data)
+    if query := kwargs.pop('search', None):
 
-    if form.validate():
-        entries = get_entries(**kwargs, limit=64)
+        def get_entries(**kwargs):
+            for sr in reader.search_entries(query, **kwargs):
+                yield EntryProxy(sr, reader.get_entry(sr))
+
     else:
-        entries = []
+        get_entries = reader.get_entries
+
+    entries = []
+    if form.validate():
+        try:
+            entries = eager_iterator(get_entries(**kwargs, limit=64))
+        except StopIteration:
+            pass
+        except InvalidSearchQueryError as e:
+            form.search.errors.append(f"invalid query: {e}")
 
     return stream_template(
         'v2/entries.html',
@@ -53,6 +71,14 @@ def entries():
         entries=entries,
         feed=feed,
     )
+
+
+def eager_iterator(it):
+    it = iter(it)
+    try:
+        return itertools.chain([next(it)], it)
+    except StopIteration:
+        return it
 
 
 @blueprint.route('/mark-as', methods=['POST'])

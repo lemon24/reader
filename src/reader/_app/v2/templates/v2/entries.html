@@ -49,6 +49,7 @@
 
 
 <form>
+  {# TODO: if data or error #}
   {% if form.search.data %}{{ macros.input(form.search, 'search') }}{% endif %}
   {% if form.feed_tags.data %}{{ macros.input(form.feed_tags, 'tag') }}{% endif %}
   <div class="collapse mb-3" id="nav-more">
@@ -107,6 +108,7 @@
     {%- endif %}
   </h2>
 
+  {# TODO: show marked search results; title too! #}
   {% set summary = entry.get_content(prefer_summary=True).value | striptags | trim %}
   {% if summary %}
   <p class="small mb-2">

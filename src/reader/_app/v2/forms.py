@@ -135,7 +135,7 @@ class EntryFilter(PresetsMixin, Form):
 
 class SearchEntryFilter(EntryFilter):
     sort = RadioField(
-        "sort", choices=ENTRY_SORT_CHOICES + ['relevant'], default='relevant'
+        "sort", choices=['relevant'] + ENTRY_SORT_CHOICES, default='relevant'
     )
 
 
