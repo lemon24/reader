@@ -663,6 +663,8 @@ Why I want to postpone batch update/set methods:
 tl:dr: Performance is likely a non-issue with SQLite,
 convenience can be added on top as a plugin.
 
+(2025) Why it may be worth adding batch interfaces anyway (even if underneath the storage implementation doesn't actually batch) – it allows for future optimization: https://blog.glyph.im/2022/12/potato-programming.html
+
 See the 2.12 reader._app.ResourceTags class for an idea of how to
 represent a bunch of tags in a reserved-name-scheme-agnostic way
 (useful e.g. for when get_entries() should return tags x, y, z of each entry).
