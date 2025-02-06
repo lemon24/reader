@@ -362,6 +362,8 @@ Speeding up ``get_entry_counts(feed=...)``:
 * having an index on entries(feed) yielded a 4x improvement: :issue:`251`
 * even better, we should cache commonly-used counts: :issue:`306#issuecomment-1694655504`
 
+Official guidance: https://www.sqlite.org/queryplanner-ng.html#howtofix
+
 
 Parser
 ~~~~~~
