@@ -598,7 +598,9 @@ class LocalConnectionFactory:
 class _LocalConnectionFactoryState(threading.local):
     def __init__(self) -> None:
         self.db: sqlite3.Connection | None = None
-        self.finalizer: weakref.finalize | None = None
+        self.finalizer: (
+            weakref.finalize[[sqlite3.Connection], threading.Thread] | None
+        ) = None
         self.is_creating_thread: bool = False
         self.context_stack: list[None] = []
         self.call_count: int = 0

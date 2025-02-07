@@ -103,9 +103,9 @@ def _process_feed(url: str, d: Any) -> tuple[FeedData, list[EntryData]]:
     entries = []
     first_parse_error = None
 
-    for e in d.entries:
+    for d_e in d.entries:
         try:
-            entry = _process_entry(url, e, is_rss)
+            entry = _process_entry(url, d_e, is_rss)
         except ParseError as e:
             # Skip entries that raise ParseError with a warning.
             # https://github.com/lemon24/reader/issues/281
