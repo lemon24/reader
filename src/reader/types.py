@@ -18,7 +18,7 @@ from typing import Literal
 from typing import NamedTuple
 from typing import overload
 from typing import Protocol
-from typing import TYPE_CHECKING
+from typing import Self
 from typing import TypedDict
 from typing import Union
 
@@ -28,9 +28,6 @@ from reader.exceptions import UpdateError
 # can't be defined here because of circular imports
 from reader._utils import MISSING as MISSING  # isort: skip # noqa: F401
 from reader._utils import MissingType as MissingType  # isort: skip # noqa: F401
-
-if TYPE_CHECKING:  # pragma: no cover
-    from typing_extensions import Self
 
 
 class _namedtuple_compat:

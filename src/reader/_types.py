@@ -20,7 +20,7 @@ from typing import NamedTuple
 from typing import overload
 from typing import Protocol
 from typing import runtime_checkable
-from typing import TYPE_CHECKING
+from typing import Self
 from typing import TypeVar
 from typing import Union
 
@@ -54,10 +54,6 @@ from .types import ResourceId
 from .types import SearchSortOrder
 from .types import TagFilterInput
 from .types import TristateFilterInput
-
-
-if TYPE_CHECKING:  # pragma: no cover
-    from typing_extensions import Self
 
 
 log = logging.getLogger("reader")

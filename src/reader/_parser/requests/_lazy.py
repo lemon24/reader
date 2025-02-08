@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
+from typing import Self
 from typing import TYPE_CHECKING
 from typing import TypeVar
 
@@ -14,8 +15,6 @@ from . import TimeoutType
 
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing_extensions import Self
-
     from . import Headers
     from . import RequestHook
     from . import ResponseHook

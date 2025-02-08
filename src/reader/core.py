@@ -15,6 +15,7 @@ from types import MappingProxyType
 from typing import Any
 from typing import Literal
 from typing import overload
+from typing import Self
 from typing import TYPE_CHECKING
 from typing import TypeVar
 
@@ -76,8 +77,6 @@ from .types import UpdateResult
 
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing_extensions import Self
-
     from ._parser import Parser
 
 
