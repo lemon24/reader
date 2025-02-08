@@ -34,6 +34,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 from typing import NamedTuple
+from typing import Self
 from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
@@ -41,8 +42,6 @@ from typing import Union
 
 if TYPE_CHECKING:  # pragma: no cover
     import sqlite3
-
-    from typing_extensions import Self
 
 
 _T = TypeVar('_T')
