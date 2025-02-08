@@ -18,7 +18,7 @@ ignore =
     # bare except, handled by bugbear B001
     E722
     # bin op line break, invalid
-    W503
+    W503 W504
     # string formatting opinion
     B907
     # multiple statements on one line, handled by black

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from collections.abc import Sequence
 from functools import cached_property
-from traceback import format_exception
 from typing import Any
+from typing import TypeVar
 
 
 class _FancyExceptionBase(Exception):
@@ -61,79 +60,6 @@ class _FancyExceptionBase(Exception):
     def __str__(self) -> str:
         parts = [self.message, self._str, self._cause_name, self._cause_str]
         return ': '.join(filter(None, parts))
-
-
-class _ExceptionGroup(Exception):  # pragma: no cover
-    """ExceptionGroup shim for Python 3.10.
-
-    Always includes a traceback in str(exc),
-    so no traceback.* monkeypatching is needed,
-    at the expense of the traceback not being in the right place,
-    and a slightly non-standard traceback.
-
-    Avoids dependency on https://pypi.org/project/exceptiongroup/
-
-    >>> raise _ExceptionGroup('message', [
-    ...     NameError('one'),
-    ...     _ExceptionGroup('another', [
-    ...         AttributeError('two'),
-    ...     ]),
-    ... ])
-    Traceback (most recent call last):
-      File "<stdin>", line 1, in <module>
-    reader.exceptions._ExceptionGroup: message (2 sub-exceptions)
-    +---------------- 1 -----------------
-    | NameError: one
-    +---------------- 2 -----------------
-    | reader.exceptions._ExceptionGroup: another (1 sub-exception)
-    | +---------------- 1 -----------------
-    | | AttributeError: two
-    | +------------------------------------
-    +------------------------------------
-
-    TODO: Remove this once we drop Python 3.10.
-
-    """
-
-    def __init__(self, msg: str, excs: Sequence[Exception], /):
-        if not isinstance(msg, str):  # pragma: no cover
-            raise TypeError(f"first argument must be str, not {type(msg).__name__}")
-        excs = tuple(excs)
-        if not excs:  # pragma: no cover
-            raise ValueError("second argument must be a non-empty sequence")
-        for i, e in enumerate(excs):  # pragma: no cover
-            if not isinstance(e, Exception):
-                raise ValueError(f"item {i} of second argument is not an exception")
-        self._message = msg
-        self._exceptions = excs
-
-    @property
-    def message(self) -> str:
-        return self._message
-
-    @property
-    def exceptions(self) -> tuple[Exception, ...]:
-        return self._exceptions
-
-    def _format_lines(self) -> Iterable[str]:
-        count = len(self.exceptions)
-        s = 's' if count != 1 else ''
-        yield f"{self.message} ({count} sub-exception{s})\n"
-        for i, exc in enumerate(self.exceptions, 1):
-            yield f"+{f' {i} '.center(36, '-')}\n"
-            for line in format_exception(exc):
-                for subline in line.rstrip().splitlines():
-                    yield f"| {subline}\n"
-        yield f"+{'-' * 36}\n"
-
-    def __str__(self) -> str:
-        return ''.join(self._format_lines()).rstrip()
-
-
-try:
-    ExceptionGroup  # type: ignore[used-before-def,unused-ignore]
-except NameError:  # pragma: no cover
-    ExceptionGroup = _ExceptionGroup
 
 
 class ReaderError(_FancyExceptionBase):
@@ -351,21 +277,29 @@ class SingleUpdateHookError(UpdateHookError):
         return ': '.join(parts)
 
 
-class UpdateHookErrorGroup(ExceptionGroup, UpdateHookError):
+_UpdateHookErrorT = TypeVar('_UpdateHookErrorT', bound=UpdateHookError)
+
+
+class UpdateHookErrorGroup(ExceptionGroup[_UpdateHookErrorT], UpdateHookError):
     r"""A (possibly nested) :exc:`ExceptionGroup` of :exc:`UpdateHookError`\s.
 
     .. versionadded:: 3.8
 
     """
 
-    def __init__(self, msg: str, excs: Sequence[Exception], /):
+    def __init__(self, msg: str, excs: Sequence[_UpdateHookErrorT], /):
         super().__init__(msg, excs)
         for e in self.exceptions:
             if not isinstance(e, UpdateHookError):
-                msg = f"cannot nest {type(e).__name__} in an UpdateHookErrorGroup"
-                raise TypeError(msg)
+                raise TypeError(
+                    "UpdateHookErrorGroup can only contain UpdateHookError; "
+                    f"got {type(e).__name__}"
+                )
 
-    def derive(self, excs: Sequence[Exception]) -> UpdateHookErrorGroup:
+    # https://github.com/python/typeshed/issues/9922
+    def derive(  # type: ignore[override]
+        self, excs: Sequence[_UpdateHookErrorT], /
+    ) -> ExceptionGroup[_UpdateHookErrorT]:
         return UpdateHookErrorGroup(self.message, excs)
 
 
