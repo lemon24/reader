@@ -95,8 +95,17 @@ def wrap_exceptions(
     can only be fixed by the user (e.g. access permission denied), and aren't
     domain-related (those should have other custom exceptions).
 
-    This is an imprecise science, since the DB-API exceptions are somewhat
-    fuzzy in their meaning and we can't access the SQLite result code.
+    We intentionally rely on the error message, because:
+
+    * the DB-API exceptions are somewhat fuzzy in their meaning
+    * we can't access the SQLite result code prior to Python 3.11
+    * even having the primary result code (added in 3.11):
+      * it's generic SQLITE_ERROR for a lot of errors we care about
+        ("no such ...", "... already exists", invalid FTS5 queries)
+      * we need the table name so we don't accidentally shadow bugs
+      * we need the extended result code for the same reason
+        (e.g. SQLITE_CONSTRAINT vs SQLITE_CONSTRAINT_FOREIGNKEY)
+      * ProgrammingError usually does not have an error code
 
     Full discussion at https://github.com/lemon24/reader/issues/21
 
