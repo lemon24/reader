@@ -11,6 +11,13 @@ Version 3.17
 
 Unreleased
 
+.. attention::
+
+    This is the last release to support Python 3.10;
+    see :issue:`354` for details.
+
+* Support PyPy 3.11. (:issue:`354`)
+
 * Return the ``source (feed)`` form of :attr:`Entry.feed_resolved_title`
   only if the source and feed titles are different.
 
