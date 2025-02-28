@@ -13,7 +13,7 @@ from fakeparser import Parser
 from utils import utc_datetime as datetime
 
 
-def test_duplicate_ids(reader):
+def test_duplicate_ids(reader, parser):
     """If a feed has two entries with the same id, the first entry wins.
 
     This passes before (and after) 3.12, but not in 3.12.
@@ -21,7 +21,6 @@ def test_duplicate_ids(reader):
     https://github.com/lemon24/reader/issues/335
 
     """
-    reader._parser = parser = Parser()
     old_parse = parser.parse
 
     reader.add_feed(parser.feed(1))

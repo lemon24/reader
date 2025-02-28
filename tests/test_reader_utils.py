@@ -2,13 +2,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from fakeparser import Parser
 from reader import EntryNotFoundError
 from reader.utils import archive_entries
 
 
-def test_archive_entries(reader):
-    reader._parser = parser = Parser()
+def test_archive_entries(reader, parser):
     reader.copy_entry = Mock(wraps=reader.copy_entry)
 
     feed = parser.feed(1)

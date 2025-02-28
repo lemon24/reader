@@ -366,12 +366,11 @@ UPDATE_TRIGGERS_DATA = {
 @pytest.mark.parametrize(
     'data', list(UPDATE_TRIGGERS_DATA.values()), ids=list(UPDATE_TRIGGERS_DATA)
 )
-def test_update_triggers(reader, data):
+def test_update_triggers(reader, parser, data):
     """update_search() should update the search index
     if the indexed fields change.
 
     """
-    reader._parser = parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
     reader.enable_search()
@@ -421,7 +420,6 @@ def test_update_triggers_no_change(db_path, make_reader, monkeypatch, set_user_t
     reader = make_reader(db_path)
     reader._parser = parser = Parser()
 
-    reader._parser = parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1), title='feed')
     entry = parser.entry(
         1,
@@ -477,8 +475,7 @@ def test_update_triggers_no_change(db_path, make_reader, monkeypatch, set_user_t
 
 
 @pytest.mark.parametrize('changes_limit', [None, 2])
-def test_update_unknown_changes_are_marked_as_done(reader, changes_limit):
-    reader._parser = parser = Parser()
+def test_update_unknown_changes_are_marked_as_done(reader, parser, changes_limit):
     reader.add_feed(parser.feed(1))
     one = parser.entry(1, '1')
     two = parser.entry(1, '2')
@@ -552,9 +549,8 @@ def test_search_database_is_missing(db_path, make_reader, enable_before_update):
     assert [e.resource_id for e in reader.search_entries('one')] == [('1', '1')]
 
 
-def test_update_actually_deletes_from_database(reader):
+def test_update_actually_deletes_from_database(reader, parser):
     # TODO: this is implementation-dependent, move to test_search.py?
-    reader._parser = parser = Parser()
     reader.add_feed(parser.feed(1))
     parser.entry(1, '1')
     parser.entry(1, '2', summary='summary', content=[Content('content')])
@@ -605,9 +601,7 @@ def test_update_actually_deletes_from_database(reader):
 
 
 @with_sort
-def test_search_entries_basic(reader, sort):
-    parser = Parser()
-    reader._parser = parser
+def test_search_entries_basic(reader, parser, sort):
     # we're far intro the future, there are no recent entries
     reader._now = lambda: datetime(2020, 1, 1)
 
@@ -747,11 +741,8 @@ def test_search_entries_basic(reader, sort):
         ('four', (0, 0, 0)),
     ],
 )
-def test_search_entry_counts_basic(reader, query, expected):
+def test_search_entry_counts_basic(reader, parser, query, expected):
     # search_entry_counts() filtering is tested in test_reader.py::test_entry_counts
-
-    parser = Parser()
-    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     parser.entry(1, 1, datetime(2010, 2, 15), title='one')
@@ -773,10 +764,7 @@ def test_search_entry_counts_basic(reader, query, expected):
 # BEGIN order tests
 
 
-def test_search_entries_order_title_summary_beats_title(reader):
-    parser = Parser()
-    reader._parser = parser
-
+def test_search_entries_order_title_summary_beats_title(reader, parser):
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
     two = parser.entry(1, 2, datetime(2010, 1, 1), title='two')
@@ -793,10 +781,7 @@ def test_search_entries_order_title_summary_beats_title(reader):
     ]
 
 
-def test_search_entries_order_title_content_beats_title(reader):
-    parser = Parser()
-    reader._parser = parser
-
+def test_search_entries_order_title_content_beats_title(reader, parser):
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
     two = parser.entry(1, 2, datetime(2010, 1, 1), title='two')
@@ -815,15 +800,12 @@ def test_search_entries_order_title_content_beats_title(reader):
     ]
 
 
-def test_search_entries_order_weights(reader, chunk_size):
+def test_search_entries_order_weights(reader, parser, chunk_size):
     """Entry title beats feed title beats entry content/summary."""
 
     # TODO: may need fixing once we finish tuning the weights (it should fail)
 
     reader._search.storage.chunk_size = chunk_size
-
-    parser = Parser()
-    reader._parser = parser
 
     feed_one = parser.feed(1, datetime(2010, 1, 1), title='one')
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -856,10 +838,7 @@ def test_search_entries_order_weights(reader, chunk_size):
     ]
 
 
-def test_search_entries_order_content(reader):
-    parser = Parser()
-    reader._parser = parser
-
+def test_search_entries_order_content(reader, parser):
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(
         1,
@@ -889,14 +868,11 @@ def test_search_entries_order_content(reader):
     ]
 
 
-def test_search_entries_order_content_recent(reader):
+def test_search_entries_order_content_recent(reader, parser):
     """When sort='recent' is used, the .content of any individual result
     should still be sorted by relevance.
 
     """
-    parser = Parser()
-    reader._parser = parser
-
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(
         1,
@@ -970,8 +946,7 @@ def test_add_entry_basic(reader):
     assert result.content['.summary'].apply('*', '*') == 'I am a *summary*'
 
 
-def test_feed_resolved_title(reader):
-    reader._parser = parser = Parser()
+def test_feed_resolved_title(reader, parser):
 
     def add_feed(url, title=None, user_title=None, source_title=None):
         feed = parser.feed(url, title=title)

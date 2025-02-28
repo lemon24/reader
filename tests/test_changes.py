@@ -9,8 +9,7 @@ from reader.exceptions import ChangeTrackingNotEnabledError
 
 
 @pytest.fixture
-def reader(reader):
-    parser = reader._parser = Parser()
+def reader(reader, parser):
     feed = parser.feed('1', title='one')
     parser.entry('1', 'a', title='aaa')
     reader.add_feed(feed)
@@ -159,9 +158,8 @@ def set_feed_user_title(reader, value):
         set_feed_user_title,
     ],
 )
-def test_update_one_field(reader, storage, clear, do_change):
+def test_update_one_field(reader, parser, storage, clear, do_change):
     reader.patch_randomblob()
-    parser = reader._parser
 
     # all fields start with None
     parser.feed('1', title=None)
@@ -219,9 +217,9 @@ def test_update_one_field(reader, storage, clear, do_change):
 
 
 @pytest.mark.parametrize('do_change', [set_feed_title, set_feed_user_title])
-def test_update_feed(reader, storage, do_change):
+def test_update_feed(reader, parser, storage, do_change):
     reader.patch_randomblob()
-    reader._parser.entry('1', 'b', title='bbb')
+    parser.entry('1', 'b', title='bbb')
     reader.update_feeds()
     storage.changes.enable()
 
@@ -264,7 +262,7 @@ def test_update_feed(reader, storage, do_change):
     }
 
 
-def test_change_feed_url(reader, storage):
+def test_change_feed_url(reader, parser, storage):
     reader.patch_randomblob()
     reader.update_feeds()
     storage.changes.enable()
@@ -280,8 +278,8 @@ def test_change_feed_url(reader, storage):
         Change(Action.INSERT, b'seq2', ('2', 'a')),
     ]
 
-    reader._parser.feed('2', title='one')
-    reader._parser.entry('2', 'b', title='bbb')
+    parser.feed('2', title='one')
+    parser.entry('2', 'b', title='bbb')
     reader.update_feeds()
 
     assert get_entries(reader) == {('2', 'a', b'seq2'), ('2', 'b', b'seq3')}
@@ -303,10 +301,10 @@ def test_change_feed_url(reader, storage):
 
 
 @pytest.mark.parametrize('clear', [False, True])
-def test_delete_feed_or_entry(reader, storage, clear):
+def test_delete_feed_or_entry(reader, parser, storage, clear):
     reader.patch_randomblob()
-    reader._parser.entry('1', 'b', title='bbb')
-    reader._parser.entry('1', 'c', title='ccc')
+    parser.entry('1', 'b', title='bbb')
+    parser.entry('1', 'c', title='ccc')
     reader.update_feeds()
     storage.changes.enable()
     if clear:
@@ -331,9 +329,9 @@ def test_delete_feed_or_entry(reader, storage, clear):
     }
 
 
-def test_get_filtering(reader, storage):
-    reader._parser.entry('1', 'b', title='bbb')
-    reader._parser.entry('1', 'c', title='ccc')
+def test_get_filtering(reader, parser, storage):
+    parser.entry('1', 'b', title='bbb')
+    parser.entry('1', 'c', title='ccc')
     reader.update_feeds()
     storage.changes.enable()
     storage.delete_entries([('1', 'a')])
@@ -402,8 +400,8 @@ def test_done_unknown(reader, storage):
     assert storage.changes.get() == [Change(Action.INSERT, b'seq1', ('1', 'a'))]
 
 
-def test_chunk_size(reader, storage):
-    reader._parser.entry('1', 'b', title='bbb')
+def test_chunk_size(reader, parser, storage):
+    parser.entry('1', 'b', title='bbb')
     reader.update_feeds()
     storage.changes.enable()
 

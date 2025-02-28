@@ -8,6 +8,7 @@ from functools import wraps
 import pytest
 
 import reader_methods
+from fakeparser import Parser
 from reader import make_reader as original_make_reader
 from reader._storage import Storage
 from utils import monkeypatch_tz
@@ -83,6 +84,12 @@ def reader():
 def storage():
     with closing(Storage(':memory:')) as storage:
         yield storage
+
+
+@pytest.fixture
+def parser(reader):
+    reader._parser = Parser()
+    return reader._parser
 
 
 def slow(*args, **kwargs):

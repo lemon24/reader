@@ -3,7 +3,6 @@ from functools import partial
 
 import pytest
 
-from fakeparser import Parser
 from utils import rename_argument
 from utils import utc_datetime as datetime
 
@@ -28,10 +27,11 @@ with_maybe_published_or_updated = pytest.mark.parametrize(
 
 @rename_argument('get_entries', 'get_entries_recent')
 @with_maybe_published_or_updated
-def test_entries_recent_first_updated(reader, chunk_size, get_entries, entry_kwargs):
+def test_entries_recent_first_updated(
+    reader, parser, chunk_size, get_entries, entry_kwargs
+):
     """All other things being equal, entries should be sorted by first updated."""
     reader._storage.chunk_size = chunk_size
-    reader._parser = parser = Parser()
     reader.add_feed(parser.feed(1))
 
     for id, day in [(3, 2), (2, 4), (4, 1), (1, 3)]:
@@ -46,14 +46,15 @@ def test_entries_recent_first_updated(reader, chunk_size, get_entries, entry_kwa
 
 @rename_argument('get_entries', 'get_entries_recent')
 @with_maybe_published_or_updated
-def test_entries_recent_feed_order(reader, chunk_size, get_entries, entry_kwargs):
+def test_entries_recent_feed_order(
+    reader, parser, chunk_size, get_entries, entry_kwargs
+):
     """All other things being equal, entries should be sorted by feed order.
 
     https://github.com/lemon24/reader/issues/87
 
     """
     reader._storage.chunk_size = chunk_size
-    reader._parser = parser = Parser()
     reader.add_feed(parser.feed(1))
 
     for id in [3, 2, 4, 1]:
@@ -68,7 +69,7 @@ def test_entries_recent_feed_order(reader, chunk_size, get_entries, entry_kwargs
 
 @rename_argument('get_entries', 'get_entries_recent')
 @pytest.mark.parametrize('reverse', [False, True], ids=['forward', 'reverse'])
-def test_entries_recent_all(reader, chunk_size, get_entries, reverse):
+def test_entries_recent_all(reader, parser, chunk_size, get_entries, reverse):
     """Entries should be sorted descending by (with decreasing priority):
 
     * entry first updated epoch
@@ -88,7 +89,6 @@ def test_entries_recent_all(reader, chunk_size, get_entries, reverse):
     """
 
     reader._storage.chunk_size = chunk_size
-    reader._parser = parser = Parser()
 
     for feed in [1, 2, 3]:
         reader.add_feed(parser.feed(feed))
@@ -211,10 +211,8 @@ def test_entries_recent_all(reader, chunk_size, get_entries, reverse):
 
 
 @rename_argument('get_entries', 'get_entries_recent')
-def test_entries_recent_new_feed(reader, get_entries):
+def test_entries_recent_new_feed(reader, parser, get_entries):
     """Entries from the first update should be sorted by published/updated."""
-
-    reader._parser = parser = Parser()
 
     one = parser.feed(1)
     reader.add_feed(one)

@@ -105,13 +105,12 @@ def test_make_reader_storage(storage):
     assert reader._storage is storage
 
 
-def test_delete_entries(reader):
+def test_delete_entries(reader, parser):
     """While Storage.delete_entries() is a storage method,
     we care how it interacts with updates etc.,
     and it will be called by plugins.
 
     """
-    reader._parser = parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)

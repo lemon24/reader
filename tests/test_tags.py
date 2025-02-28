@@ -65,8 +65,7 @@ def test_inexistent_resource(reader, subtests, resource, not_found_exc):
         'global': (),
     },
 )
-def test_as_metadata(reader, subtests, resource):
-    reader._parser = parser = Parser()
+def test_as_metadata(reader, parser, subtests, resource):
     parser.feed(1)
     parser.entry(1, 1)
     reader.add_feed('1')
@@ -131,9 +130,8 @@ def test_as_metadata(reader, subtests, resource):
         'entry': (('1', '1, 1'), ('2', '2, 1'), (None, None)),
     },
 )
-def test_as_tags(reader, subtests, chunk_size, one, two, wildcard):
+def test_as_tags(reader, parser, subtests, chunk_size, one, two, wildcard):
     reader._storage.chunk_size = chunk_size
-    reader._parser = parser = Parser()
     parser.feed(1)
     parser.entry(1, 1)
     parser.feed(2)
@@ -261,9 +259,8 @@ def test_as_tags_global(reader, subtests, chunk_size):
         assert list(reader.get_tag_keys()) == ['tag-0', 'tag-1', 'tag-3']
 
 
-def test_wildcard_interaction(reader, chunk_size):
+def test_wildcard_interaction(reader, parser, chunk_size):
     reader._storage.chunk_size = chunk_size
-    reader._parser = parser = Parser()
     parser.feed(1)
     parser.entry(1, 1)
     parser.feed(2)
@@ -309,8 +306,7 @@ def test_wildcard_interaction(reader, chunk_size):
     },
 )
 @pytest.mark.parametrize('value', [0, 1, 'value', {}, False, None, {'complex': [1]}])
-def test_set_no_value(reader, resource, value):
-    reader._parser = parser = Parser()
+def test_set_no_value(reader, parser, resource, value):
     feed = parser.feed(1)
     entry = parser.entry(1, 1)
     reader.add_feed(feed)
@@ -334,8 +330,7 @@ def test_set_no_value(reader, resource, value):
         'entry_id': lambda _, e: e.resource_id,
     },
 )
-def test_resource_argument(reader, make_resource_arg):
-    reader._parser = parser = Parser()
+def test_resource_argument(reader, parser, make_resource_arg):
     feed = parser.feed(1)
     entry = parser.entry(1, 1)
     reader.add_feed(feed)

@@ -13,9 +13,7 @@ from test_reader_private import CustomRetriever
 from utils import utc_datetime as datetime
 
 
-def test_after_entry_update_hooks(reader):
-    reader._parser = parser = Parser()
-
+def test_after_entry_update_hooks(reader, parser):
     plugin_calls = []
 
     def first_plugin(r, e, s):
@@ -76,9 +74,7 @@ def test_after_entry_update_hooks_add_entry(reader):
     ]
 
 
-def test_feed_update_hooks(reader):
-    reader._parser = parser = Parser()
-
+def test_feed_update_hooks(reader, parser):
     plugin_calls = []
 
     def before_plugin(r, f):
@@ -159,9 +155,7 @@ def test_feed_update_hooks(reader):
     ]
 
 
-def test_feeds_update_hooks(reader):
-    reader._parser = parser = Parser()
-
+def test_feeds_update_hooks(reader, parser):
     plugin_calls = []
 
     def before_feed_plugin(r, f):
