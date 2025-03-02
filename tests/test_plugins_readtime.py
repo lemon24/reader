@@ -1,6 +1,5 @@
 import pytest
 
-from fakeparser import Parser
 from reader import Content
 from reader import Entry
 from utils import rename_argument
@@ -23,9 +22,8 @@ def get_readtimes(reader):
         (dict(summary='summary ' * 20, content=[Content('content ' * 5)]), 2),
     ],
 )
-def test_basic(make_reader, kwargs, expected):
+def test_basic(make_reader, parser, kwargs, expected):
     reader = make_reader(':memory:', plugins=['reader.readtime'])
-    reader._parser = parser = Parser()
     feed = parser.feed(1)
     entry = parser.entry(1, 1, **kwargs)
     reader.add_feed(feed)
@@ -33,7 +31,7 @@ def test_basic(make_reader, kwargs, expected):
     assert reader.get_tag(entry, '.reader.readtime') == {'seconds': expected}
 
 
-def test_normal_workflow(make_reader, db_path, monkeypatch):
+def test_normal_workflow(make_reader, db_path, parser, monkeypatch):
     def fake_readtime(entry):
         fake_readtime.call_count += 1
         return {'seconds': len(entry.summary.split())}
@@ -41,10 +39,7 @@ def test_normal_workflow(make_reader, db_path, monkeypatch):
     fake_readtime.call_count = 0
     monkeypatch.setattr('reader.plugins.readtime._readtime_of_entry', fake_readtime)
 
-    parser = Parser()
-
     reader = make_reader(db_path)
-    reader._parser = parser
     feed = parser.feed(1)
     reader.add_feed(feed)
 
@@ -57,7 +52,6 @@ def test_normal_workflow(make_reader, db_path, monkeypatch):
     assert get_readtimes(reader) == {'1, 1': None, '1, 2': None}
 
     reader = make_reader(db_path, plugins=['reader.readtime'])
-    reader._parser = parser
 
     three = parser.entry(
         1, 3, datetime(2010, 1, 1), title='title', summary='summary ' * 3
@@ -79,13 +73,12 @@ def test_normal_workflow(make_reader, db_path, monkeypatch):
 
 
 @pytest.fixture
-def backfill_reader(make_reader, db_path, monkeypatch):
+def backfill_reader(make_reader, db_path, parser, monkeypatch):
     monkeypatch.setattr(
         'reader.plugins.readtime._readtime_of_entry', lambda _: {'seconds': 1}
     )
 
     reader = make_reader(db_path)
-    reader._parser = parser = Parser()
 
     for i in (1, 2):
         feed = parser.feed(i)
@@ -95,7 +88,6 @@ def backfill_reader(make_reader, db_path, monkeypatch):
     reader.update_feeds()
 
     reader = make_reader(db_path, plugins=['reader.readtime'])
-    reader._parser = parser
 
     return reader
 
@@ -186,7 +178,7 @@ def test_readtime(text, is_html, expected_seconds):
     assert readtime(entry) == {'seconds': expected_seconds}
 
 
-def test_entry_deleted(make_reader):
+def test_entry_deleted(make_reader, parser):
     def delete_entry_plugin(reader):
         def hook(reader, entry, _):
             if entry.resource_id == ('1', '1, 1'):
@@ -195,7 +187,6 @@ def test_entry_deleted(make_reader):
         reader.after_entry_update_hooks.append(hook)
 
     reader = make_reader(':memory:', plugins=[delete_entry_plugin, 'reader.readtime'])
-    reader._parser = parser = Parser()
     reader.add_feed(parser.feed(1))
     parser.entry(1, 1)
     parser.entry(1, 2)

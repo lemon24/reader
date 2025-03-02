@@ -56,6 +56,10 @@ class Parser:
     def from_parser(cls, other):
         return cls(other.feeds, other.entries)
 
+    def reset(self):
+        self.feeds.clear()
+        self.entries.clear()
+
     def feed(self, number, updated=None, **kwargs):
         feed = _make_feed(number, updated, **kwargs)
         self.feeds[number] = feed

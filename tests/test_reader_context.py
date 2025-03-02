@@ -17,7 +17,6 @@ import time
 
 import pytest
 
-from fakeparser import Parser
 from reader import SearchError
 from reader import StorageError
 from utils import rename_argument
@@ -47,14 +46,13 @@ class MyConnection(sqlite3.Connection):
 
 
 @pytest.fixture
-def make_reader(make_reader, monkeypatch, tmp_path):
+def make_reader(make_reader, parser, monkeypatch, tmp_path):
     monkeypatch.setattr('reader._storage._base.CONNECTION_CLS', MyConnection)
 
     monkeypatch.chdir(tmp_path)
 
     def make_reader_with_data(path):
         reader = make_reader(path)
-        reader._parser = parser = Parser()
         feed = parser.feed(1)
         parser.entry(1, 1, title='entry')
         reader.add_feed(feed)

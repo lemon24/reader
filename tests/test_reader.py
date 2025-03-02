@@ -438,16 +438,14 @@ def test_update_no_updated(reader, parser, chunk_size, update_feed):
 
 
 @pytest.mark.slow
-def test_update_blocking(db_path, make_reader, update_feed):
+def test_update_blocking(db_path, make_reader, parser, update_feed):
     """Calls to reader._parser() shouldn't block the underlying storage."""
 
-    parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
     feed2 = parser.feed(2, datetime(2010, 1, 1))
 
     reader = make_reader(db_path)
-    reader._parser = parser
 
     reader.add_feed(feed.url)
     reader.add_feed(feed2.url)
@@ -1162,7 +1160,7 @@ class EntryAction(Enum):
     ],
 )
 def test_update_feed_deleted(
-    db_path, make_reader, update_feed, feed_action, entry_action
+    db_path, make_reader, parser, update_feed, feed_action, entry_action
 ):
     """reader.update_feed should raise FeedNotFoundError if the feed is
     deleted during parsing.
@@ -1170,10 +1168,7 @@ def test_update_feed_deleted(
     reader.update_feeds shouldn't (but should log).
 
     """
-
-    parser = Parser()
     reader = make_reader(db_path)
-    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
@@ -1749,10 +1744,9 @@ def test_data_roundtrip(reader, parser):
     assert entry.hash == entry_for_update.hash
 
 
-def test_data_hashes_remain_stable():
+def test_data_hashes_remain_stable(parser):
     # TODO: note the duplication from test_data_roundtrip()
 
-    parser = Parser()
     feed = parser.feed(1, datetime(2010, 1, 1), author='feed author')
     entry = parser.entry(
         1,
@@ -2568,9 +2562,7 @@ def test_entry_read_important_modified_argument(reader, flag, monkeypatch_tz):
 
 
 @pytest.mark.parametrize('flag', ['read', 'important'])
-def test_entry_read_important_modified_remains_set_after_update(reader, flag):
-    reader._parser = parser = Parser()
-
+def test_entry_read_important_modified_remains_set_after_update(reader, parser, flag):
     feed = parser.feed(1)
     entry = parser.entry(1, 1)
     reader.add_feed(feed)
@@ -2828,9 +2820,8 @@ def test_copy_entry(reader, data_dir, data_file):
 
 
 @pytest.mark.parametrize('same_thread', [True, False])
-def test_delete_feed(make_reader, db_path, same_thread):
+def test_delete_feed(make_reader, db_path, parser, same_thread):
     reader = make_reader(db_path)
-    reader._parser = parser = Parser()
     feed = parser.feed(1)
     entry = parser.entry(1, 'feed')
 

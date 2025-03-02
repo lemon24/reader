@@ -69,14 +69,22 @@ def make_reader(request):
     def make_reader(*args, **kwargs):
         reader = original_make_reader(*args, **kwargs)
         request.addfinalizer(reader.close)
+
+        if 'parser' in request.fixturenames:
+            reader._parser = request.getfixturevalue('parser')
+
         return reader
 
     return make_reader
 
 
 @pytest.fixture
-def reader():
+def reader(request):
     with closing(original_make_reader(':memory:', feed_root='')) as reader:
+
+        if 'parser' in request.fixturenames:
+            reader._parser = request.getfixturevalue('parser')
+
         yield reader
 
 
@@ -87,9 +95,8 @@ def storage():
 
 
 @pytest.fixture
-def parser(reader):
-    reader._parser = Parser()
-    return reader._parser
+def parser():
+    return Parser()
 
 
 def slow(*args, **kwargs):

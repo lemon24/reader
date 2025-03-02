@@ -3,18 +3,14 @@ import os
 
 import pytest
 
-from fakeparser import Parser
 from utils import utc_datetime as datetime
 
 
-def test_regex_mark_as_read_backfill(make_reader):
-    key = '.reader.mark-as-read'
-    value = {'title': ['^match']}
-
+def test_regex_mark_as_read_backfill(make_reader, parser):
     reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
 
-    parser = Parser()
-    reader._parser = parser
+    key = '.reader.mark-as-read'
+    value = {'title': ['^match']}
 
     feed = parser.feed(1)
     reader.add_feed(feed)
@@ -53,20 +49,17 @@ def test_regex_mark_as_read_backfill(make_reader):
     assert reader.get_tag(feed, '.reader.mark-as-read.once', Ellipsis) is Ellipsis
 
 
-def test_regex_mark_as_read(make_reader):
+def test_regex_mark_as_read(make_reader, parser):
+    reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
+
     key = '.reader.mark-as-read'
     value = {'title': ['^match']}
-
-    reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
 
     def get_entry_data(**kwargs):
         return {
             (e.id, e.read, e.read_modified, e.important, e.important_modified)
             for e in reader.get_entries(**kwargs)
         }
-
-    parser = Parser()
-    reader._parser = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
     parser.entry(1, 1, datetime(2010, 1, 1), title='match old')
@@ -105,11 +98,8 @@ def test_regex_mark_as_read(make_reader):
 
 
 @pytest.mark.parametrize('value', ['x', {'title': 'x'}, {'title': [1]}])
-def test_regex_mark_as_read_bad_metadata(make_reader, value):
+def test_regex_mark_as_read_bad_metadata(make_reader, parser, value):
     reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
-
-    parser = Parser()
-    reader._parser = parser
 
     one = parser.feed(1, datetime(2010, 1, 1))
     parser.entry(1, 1, datetime(2010, 1, 1), title='match')
@@ -122,7 +112,7 @@ def test_regex_mark_as_read_bad_metadata(make_reader, value):
     assert [e.read for e in reader.get_entries()] == [False]
 
 
-def test_entry_deleted(make_reader):
+def test_entry_deleted(make_reader, parser):
     def delete_entry_plugin(reader):
         def hook(reader, entry, _):
             if entry.resource_id == ('1', '1, 1'):
@@ -133,7 +123,6 @@ def test_entry_deleted(make_reader):
     reader = make_reader(
         ':memory:', plugins=[delete_entry_plugin, 'reader.mark_as_read']
     )
-    reader._parser = parser = Parser()
     one = parser.feed(1)
     reader.add_feed(one)
     reader.set_tag(one, '.reader.mark-as-read', {'title': ['one']})
@@ -146,9 +135,8 @@ def test_entry_deleted(make_reader):
     assert {eval(e.id)[1] for e in reader.get_entries()} == {2}
 
 
-def test_missing_title(make_reader):
+def test_missing_title(make_reader, parser):
     reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
-    reader._parser = parser = Parser()
     one = parser.feed(1)
     reader.add_feed(one)
     parser.entry(1, 1, title=None)

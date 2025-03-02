@@ -4,7 +4,6 @@ from datetime import timezone
 
 import pytest
 
-from fakeparser import Parser
 from reader import Content
 from reader import Enclosure
 from reader import EntrySearchCounts
@@ -29,14 +28,11 @@ from utils import utc_datetime as datetime
 
 
 @pytest.fixture(params=[False, True], ids=['without_entries', 'with_entries'])
-def reader_without_and_with_entries(request, make_reader):
+def reader_without_and_with_entries(request, make_reader, parser):
     reader = make_reader(':memory:', search_enabled=None)
 
     if not request.param:
         return reader
-
-    parser = Parser()
-    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     parser.entry(
@@ -178,7 +174,7 @@ def test_search_enabled_value_error(make_reader, search_enabled):
 
 @rename_argument('reader', 'reader_without_and_with_entries')
 @with_sort
-def test_update_search_feeds_change_after_enable(reader, sort, chunk_size):
+def test_update_search_feeds_change_after_enable(reader, parser, sort, chunk_size):
     reader._search.storage.chunk_size = chunk_size
     reader.enable_search()
     reader.update_search()
@@ -188,9 +184,7 @@ def test_update_search_feeds_change_after_enable(reader, sort, chunk_size):
     except FeedNotFoundError:
         pass
 
-    parser = Parser()
-    reader._parser = parser
-
+    parser.reset()
     parser.feed(1, datetime(2010, 1, 2))
     parser.entry(1, 2, datetime(2010, 1, 2), title='feed one changed')
     parser.entry(1, 6, datetime(2010, 1, 2), title='feed one new')
@@ -396,7 +390,9 @@ def test_update_triggers(reader, parser, data):
 
 
 @pytest.mark.parametrize('set_user_title', [False, True])
-def test_update_triggers_no_change(db_path, make_reader, monkeypatch, set_user_title):
+def test_update_triggers_no_change(
+    db_path, make_reader, parser, monkeypatch, set_user_title
+):
     """update_search() should *not* update the search index
     if anything else except the indexed fields changes.
 
@@ -418,7 +414,6 @@ def test_update_triggers_no_change(db_path, make_reader, monkeypatch, set_user_t
     monkeypatch.setattr('reader.core.Storage.make_search', lambda s: MySearch(s))
 
     reader = make_reader(db_path)
-    reader._parser = parser = Parser()
 
     feed = parser.feed(1, datetime(2010, 1, 1), title='feed')
     entry = parser.entry(
@@ -521,7 +516,7 @@ def test_update_unknown_changes_are_marked_as_done(reader, parser, changes_limit
 
 
 @pytest.mark.parametrize('enable_before_update', [False, True])
-def test_search_database_is_missing(db_path, make_reader, enable_before_update):
+def test_search_database_is_missing(db_path, make_reader, parser, enable_before_update):
     """update_search() should work after search database goes missing
     (can happen when restoring from backup).
 
@@ -529,7 +524,6 @@ def test_search_database_is_missing(db_path, make_reader, enable_before_update):
 
     """
     reader = make_reader(db_path)
-    reader._parser = parser = Parser()
 
     reader.add_feed(parser.feed(1))
     parser.entry(1, '1', title='one')

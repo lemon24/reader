@@ -4,7 +4,6 @@ import pytest
 import requests
 import wsgiadapter
 
-from fakeparser import Parser
 from reader._app import create_app
 from reader._config import make_reader_config
 from reader._config import make_reader_from_config
@@ -57,14 +56,11 @@ def browser(app):
 
 
 @pytest.mark.slow
-def test_mark_as_read_unread(db_path, make_reader, browser):
-    parser = Parser()
+def test_mark_as_read_unread(db_path, make_reader, parser, browser):
+    reader = make_reader(db_path)
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
-
-    reader = make_reader(db_path)
-    reader._parser = parser
 
     reader.add_feed(feed.url)
     reader.update_feeds()
@@ -93,14 +89,11 @@ def test_mark_as_read_unread(db_path, make_reader, browser):
 
 
 @pytest.mark.slow
-def test_mark_all_as_read_unread(db_path, make_reader, browser):
-    parser = Parser()
+def test_mark_all_as_read_unread(db_path, make_reader, parser, browser):
+    reader = make_reader(db_path)
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
-
-    reader = make_reader(db_path)
-    reader._parser = parser
 
     reader.add_feed(feed.url)
     reader.update_feeds()
@@ -134,9 +127,7 @@ def test_mark_all_as_read_unread(db_path, make_reader, browser):
 
 
 @pytest.mark.slow
-def test_add_delete_feed(db_path, browser, app, monkeypatch):
-    parser = Parser()
-
+def test_add_delete_feed(db_path, browser, parser, app, monkeypatch):
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
@@ -204,14 +195,11 @@ def test_add_delete_feed(db_path, browser, app, monkeypatch):
 
 
 @pytest.mark.slow
-def test_delete_feed_from_entries_page_redirects(db_path, make_reader, browser):
-    parser = Parser()
+def test_delete_feed_from_entries_page_redirects(db_path, make_reader, parser, browser):
+    reader = make_reader(db_path)
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
-
-    reader = make_reader(db_path)
-    reader._parser = parser
 
     reader.add_feed(feed.url)
     reader.update_feeds()
@@ -226,15 +214,12 @@ def test_delete_feed_from_entries_page_redirects(db_path, make_reader, browser):
 
 
 @pytest.mark.slow
-def test_limit(db_path, make_reader, browser):
-    parser = Parser()
+def test_limit(db_path, make_reader, parser, browser):
+    reader = make_reader(db_path)
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1))
     two = parser.entry(1, 2, datetime(2010, 1, 2))
-
-    reader = make_reader(db_path)
-    reader._parser = parser
 
     reader.add_feed(feed.url)
     reader.update_feeds()
@@ -252,15 +237,12 @@ def test_limit(db_path, make_reader, browser):
 
 
 @pytest.mark.slow
-def test_search(db_path, make_reader, browser):
-    parser = Parser()
+def test_search(db_path, make_reader, parser, browser):
+    reader = make_reader(db_path)
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
     two = parser.entry(1, 2, datetime(2010, 1, 2), title='two')
-
-    reader = make_reader(db_path)
-    reader._parser = parser
 
     reader.add_feed(feed.url)
     reader.update_feeds()

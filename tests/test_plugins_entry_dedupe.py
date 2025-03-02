@@ -2,7 +2,6 @@ from random import randrange
 
 import pytest
 
-from fakeparser import Parser
 from reader import Content
 from reader import Entry
 from reader.plugins.entry_dedupe import _is_duplicate_full
@@ -123,9 +122,8 @@ def test_is_duplicate(one, two, result):
     assert bool(_is_duplicate_full(one, two)) is bool(result)
 
 
-def test_plugin(make_reader):
+def test_plugin(make_reader, parser):
     reader = make_reader(':memory:', plugins=['reader.entry_dedupe'])
-    reader._parser = parser = Parser()
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed)
@@ -195,9 +193,8 @@ def test_plugin(make_reader):
         ['.reader.dedupe.once', '.reader.dedupe.once.title'],
     ],
 )
-def test_plugin_once(make_reader, db_path, monkeypatch, tags):
+def test_plugin_once(make_reader, parser, db_path, monkeypatch, tags):
     reader = make_reader(db_path)
-    reader._parser = parser = Parser()
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed)
@@ -257,7 +254,6 @@ def test_plugin_once(make_reader, db_path, monkeypatch, tags):
     reader.update_feeds()
 
     reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
-    reader._parser = parser
     reader._now = lambda: datetime(2010, 1, 12)
     reader.update_feeds()
 
@@ -398,9 +394,11 @@ def same_last_updated(request):
 
 
 @pytest.mark.parametrize('data, expected', READ_MODIFIED_COPYING_DATA)
-def test_read_modified_copying(make_reader, db_path, data, expected, same_last_updated):
+def test_read_modified_copying(
+    make_reader, db_path, parser, data, expected, same_last_updated
+):
     _test_modified_copying(
-        make_reader, db_path, data, expected, 'read', same_last_updated
+        make_reader, db_path, parser, data, expected, 'read', same_last_updated
     )
 
 
@@ -547,18 +545,17 @@ IMPORTANT_MODIFIED_COPYING_DATA = [
 
 @pytest.mark.parametrize('data, expected', IMPORTANT_MODIFIED_COPYING_DATA)
 def test_important_modified_copying(
-    make_reader, db_path, data, expected, same_last_updated
+    make_reader, db_path, parser, data, expected, same_last_updated
 ):
     _test_modified_copying(
-        make_reader, db_path, data, expected, 'important', same_last_updated
+        make_reader, db_path, parser, data, expected, 'important', same_last_updated
     )
 
 
 def _test_modified_copying(
-    make_reader, db_path, data, expected, name, same_last_updated
+    make_reader, db_path, parser, data, expected, name, same_last_updated
 ):
     reader = make_reader(db_path)
-    reader._parser = parser = Parser()
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed)
@@ -595,7 +592,6 @@ def _test_modified_copying(
         getattr(reader, f'set_entry_{name}')(('1', f'1, {id}'), flag, modified)
 
     reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
-    reader._parser = parser
     reader.set_tag(feed, '.reader.dedupe.once')
     reader.update_feeds()
 
@@ -698,11 +694,10 @@ ENTRY_TAGS_COPYING_DATA = [
 
 
 @pytest.mark.parametrize('tags', ENTRY_TAGS_COPYING_DATA)
-def test_entry_tags_copying(make_reader, db_path, tags):
+def test_entry_tags_copying(make_reader, db_path, parser, tags):
     *old_tags, new_tags, expected_tags = tags
 
     reader = make_reader(db_path)
-    reader._parser = parser = Parser()
     feed = parser.feed(1)
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='title', summary='summary')
     two = parser.entry(1, 2, datetime(2010, 1, 2), title='title', summary='summary')
@@ -715,7 +710,6 @@ def test_entry_tags_copying(make_reader, db_path, tags):
             reader.set_tag(entry, key, value)
 
     reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
-    reader._parser = parser
     reader.set_tag(feed, '.reader.dedupe.once')
     reader.update_feeds()
 
@@ -725,9 +719,8 @@ def test_entry_tags_copying(make_reader, db_path, tags):
 
 
 # TODO: with_maybe_published_or_updated
-def test_recent_sort_copying(make_reader, db_path):
+def test_recent_sort_copying(make_reader, db_path, parser):
     reader = make_reader(db_path)
-    reader._parser = parser = Parser()
     reader.add_feed(parser.feed(1))
 
     parser.entry(1, 1, title='title', summary='summary')
@@ -740,7 +733,6 @@ def test_recent_sort_copying(make_reader, db_path):
     reader.update_feeds()
 
     reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
-    reader._parser = parser
 
     del parser.entries[1][1]
     del parser.entries[1][2]
@@ -756,9 +748,10 @@ def test_recent_sort_copying(make_reader, db_path):
 
 @pytest.mark.parametrize('update_after_one', [False, True])
 @pytest.mark.parametrize('with_dates, expected_id', [(False, '3'), (True, '2')])
-def test_duplicates_in_feed(make_reader, update_after_one, with_dates, expected_id):
+def test_duplicates_in_feed(
+    make_reader, parser, update_after_one, with_dates, expected_id
+):
     reader = make_reader(':memory:', plugins=['reader.entry_dedupe'])
-    reader._parser = parser = Parser()
 
     reader.add_feed(parser.feed(1))
     # force recent_sort logic to use current times, not updated/published
