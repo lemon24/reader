@@ -2,6 +2,7 @@ import functools
 import importlib
 import inspect
 import os.path
+import threading
 import time
 from datetime import datetime
 from datetime import timezone
@@ -117,3 +118,36 @@ def utc_datetime(*args, **kwargs):
 
 def parametrize_dict(names, values, **kwargs):
     return pytest.mark.parametrize(names, values.values(), ids=values, **kwargs)
+
+
+class Blocking:
+    """Wrap a function in a blocking version of it.
+
+    When entered in the current thread, wait until called from another thread;
+    block the call in the other thread until exited in the current thread.
+
+    >>> blocking_print = Blocking(print)
+    >>> Thread(target=blocking_print, args=("other",)).start()
+    >>> with blocking_print:
+    ...     print("main")
+    ...
+    main
+    other
+
+    """
+
+    def __init__(self, fn=None):
+        self.fn = fn or (lambda: None)
+        self.in_call = threading.Event()
+        self.can_return = threading.Event()
+
+    def __call__(self, *args, **kwargs):
+        self.in_call.set()
+        self.can_return.wait()
+        return self.fn(*args, **kwargs)
+
+    def __enter__(self):
+        self.in_call.wait()
+
+    def __exit__(self, *_):
+        self.can_return.set()

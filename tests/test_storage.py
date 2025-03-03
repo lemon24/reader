@@ -23,6 +23,7 @@ from reader._types import EntryUpdateIntent
 from reader._types import FeedData
 from reader._types import FeedToUpdate
 from reader._types import FeedUpdateIntent
+from utils import Blocking
 from utils import rename_argument
 from utils import utc_datetime as datetime
 
@@ -354,16 +355,14 @@ def check_errors_locked(db_path, pre_stuff, do_stuff, exc_type):
         )
     )
 
-    in_transaction = threading.Event()
-    can_return_from_transaction = threading.Event()
+    block = Blocking()
 
     def target():
         storage = Storage(db_path)
         db = storage.get_db()
         db.isolation_level = None
         db.execute("BEGIN EXCLUSIVE;")
-        in_transaction.set()
-        can_return_from_transaction.wait()
+        block()
         db.execute("ROLLBACK;")
 
     if pre_stuff:
@@ -372,15 +371,12 @@ def check_errors_locked(db_path, pre_stuff, do_stuff, exc_type):
     thread = threading.Thread(target=target)
     thread.start()
 
-    in_transaction.wait()
-
-    try:
+    with block:
         with pytest.raises(exc_type) as excinfo:
             do_stuff(storage, feed, entry)
         assert 'locked' in str(excinfo.value.__cause__)
-    finally:
-        can_return_from_transaction.set()
-        thread.join()
+
+    thread.join()
 
 
 def iter_get_feeds(storage):

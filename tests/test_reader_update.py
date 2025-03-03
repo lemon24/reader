@@ -10,6 +10,7 @@ import threading
 import pytest
 
 from fakeparser import Parser
+from utils import Blocking
 from utils import utc_datetime as datetime
 
 
@@ -62,24 +63,21 @@ def test_concurrent_update(monkeypatch, db_path, make_reader, parser, new):
         reader.update_feeds()
     entry = parser.entry(1, 1, title='one')
 
-    in_make_intents = threading.Event()
-    can_return_from_make_intents = threading.Event()
+    block = Blocking()
 
     def target():
-        in_make_intents.wait()
-        reader = make_reader(db_path)
-        reader._parser = Parser.from_parser(parser)
-        reader._parser.entry(1, 1, title='two')
-        reader._now = lambda: datetime(2010, 1, 1, 1)
-        reader.update_feeds()
-        can_return_from_make_intents.set()
+        with block:
+            reader = make_reader(db_path)
+            reader._parser = parser.copy()
+            reader._parser.entry(1, 1, title='two')
+            reader._now = lambda: datetime(2010, 1, 1, 1)
+            reader.update_feeds()
 
     from reader._update import Pipeline
 
     def update_feed(*args, **kwargs):
         monkeypatch.undo()
-        in_make_intents.set()
-        can_return_from_make_intents.wait()
+        block()
         assert reader.get_entry(entry).title == 'two'
         return Pipeline.update_feed(*args, **kwargs)
 
@@ -118,21 +116,18 @@ def test_entry_deleted_during_update(monkeypatch, db_path, make_reader, parser):
 
     entry = parser.entry(1, 1, title='one')
 
-    in_make_intents = threading.Event()
-    can_return_from_make_intents = threading.Event()
+    block = Blocking()
 
     def target():
-        in_make_intents.wait()
-        reader = make_reader(db_path)
-        reader._storage.delete_entries([entry.resource_id])
-        can_return_from_make_intents.set()
+        with block:
+            reader = make_reader(db_path)
+            reader._storage.delete_entries([entry.resource_id])
 
     from reader._update import Pipeline
 
     def update_feed(*args, **kwargs):
         monkeypatch.undo()
-        in_make_intents.set()
-        can_return_from_make_intents.wait()
+        block()
         return Pipeline.update_feed(*args, **kwargs)
 
     # TODO: this would have been easier if Pipeline were a reader attribute

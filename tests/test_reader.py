@@ -13,7 +13,6 @@ from itertools import permutations
 import pytest
 
 import reader._parser
-from fakeparser import BlockingParser
 from fakeparser import Parser
 from reader import Content
 from reader import Enclosure
@@ -51,6 +50,7 @@ from reader_methods import search_entries
 from reader_methods import search_entries_random
 from reader_methods import search_entries_recent
 from reader_methods import search_entries_relevant
+from utils import Blocking
 from utils import make_url_base
 from utils import rename_argument
 from utils import utc_datetime
@@ -451,30 +451,20 @@ def test_update_blocking(db_path, make_reader, parser, update_feed):
     reader.add_feed(feed2.url)
     reader.update_feeds()
 
-    blocking_parser = BlockingParser.from_parser(parser)
+    parser.retrieve = blocking_retrieve = Blocking(parser.retrieve)
 
     def target():
-        # can't use fixture because it would run close() in a different thread
-        from reader import make_reader
-
-        reader = make_reader(db_path)
-        reader._parser = blocking_parser
-        try:
+        with reader:
             update_feed(reader, feed.url)
-        finally:
-            reader.close()
 
     t = threading.Thread(target=target)
     t.start()
 
-    blocking_parser.in_parser.wait()
-
-    try:
+    with blocking_retrieve:
         # shouldn't raise an exception
         reader.mark_entry_as_read((feed.url, entry.id))
-    finally:
-        blocking_parser.can_return_from_parser.set()
-        t.join()
+
+    t.join()
 
 
 def test_update_not_modified(reader, parser, update_feed):
@@ -1183,41 +1173,30 @@ def test_update_feed_deleted(
     if feed_action is FeedAction.update:
         feed = parser.feed(1, datetime(2010, 1, 2), title='new title')
 
-    blocking_parser = BlockingParser.from_parser(parser)
     if feed_action is FeedAction.fail:
-        blocking_parser.raise_exc()
+        parser.raise_exc()
+
+    parser.retrieve = blocking_retrieve = Blocking(parser.retrieve)
 
     def target():
-        blocking_parser.in_parser.wait()
-        try:
+        with reader, blocking_retrieve:
             reader.delete_feed(feed.url)
-        finally:
-            blocking_parser.can_return_from_parser.set()
-            try:
-                reader.close()
-            except StorageError as e:
-                if 'database is locked' in str(e):
-                    pass  # sometimes, it can be; we don't care
-                else:
-                    raise
 
     t = threading.Thread(target=target)
     t.start()
 
-    try:
-        reader._parser = blocking_parser
-        if update_feed.__name__ == 'update_feed':
-            with pytest.raises(FeedNotFoundError) as excinfo:
-                update_feed(reader, feed.url)
-            assert excinfo.value.url == feed.url
-            assert 'no such feed' in excinfo.value.message
-        elif update_feed.__name__.startswith('update_feeds'):
-            # shouldn't raise an exception
+    if update_feed.__name__ == 'update_feed':
+        with pytest.raises(FeedNotFoundError) as excinfo:
             update_feed(reader, feed.url)
-        else:
-            assert False, "shouldn't happen"
-    finally:
-        t.join()
+        assert excinfo.value.url == feed.url
+        assert 'no such feed' in excinfo.value.message
+    elif update_feed.__name__.startswith('update_feeds'):
+        # shouldn't raise an exception
+        update_feed(reader, feed.url)
+    else:
+        assert False, "shouldn't happen"
+
+    t.join()
 
 
 def test_update_feed(reader, parser, feed_arg):

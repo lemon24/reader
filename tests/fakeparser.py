@@ -1,6 +1,6 @@
-import threading
 from collections import OrderedDict
 from contextlib import nullcontext
+from copy import deepcopy
 from dataclasses import dataclass
 from dataclasses import field
 from datetime import timezone
@@ -52,9 +52,8 @@ class Parser:
     exc: Exception = None
     is_not_modified: bool = False
 
-    @classmethod
-    def from_parser(cls, other):
-        return cls(other.feeds, other.entries)
+    def copy(self):
+        return deepcopy(self)
 
     def reset(self):
         self.feeds.clear()
@@ -137,21 +136,6 @@ class Parser:
 
     def process_entry_pairs(self, url, mime_type, pairs):
         return pairs
-
-
-class BlockingParser(Parser):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.in_parser = threading.Event()
-        self.can_return_from_parser = threading.Event()
-
-    def wait(self):
-        self.in_parser.set()
-        self.can_return_from_parser.wait()
-
-    def retrieve(self, *args):
-        self.wait()
-        return super().retrieve(*args)
 
 
 class ParserThatRemembers(Parser):
