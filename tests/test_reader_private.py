@@ -1,11 +1,11 @@
 import io
 from contextlib import contextmanager
 from datetime import datetime
+from unittest.mock import Mock
 
 import pytest
 
 from fakeparser import Parser
-from fakeparser import ParserThatRemembers
 from reader import Entry
 from reader import EntryNotFoundError
 from reader import Feed
@@ -21,12 +21,12 @@ from utils import utc_datetime as datetime
 
 
 @pytest.mark.parametrize('entry_updated', [utc_datetime(2010, 1, 1), None])
-def test_update_stale(reader, update_feed, entry_updated):
+def test_update_stale(reader, parser, update_feed, entry_updated):
     """When a feed is marked as stale feeds/entries should be updated
     regardless of their .updated or caching headers.
 
     """
-    reader._parser = parser = ParserThatRemembers()
+    parser.retrieve = Mock(wraps=parser.retrieve)
     parser.caching_info = 'caching'
 
     feed = parser.feed(1, datetime(2010, 1, 1))
@@ -68,11 +68,11 @@ def test_update_stale(reader, update_feed, entry_updated):
         }
 
     # but it does if we mark the feed as stale
-    parser.calls[:] = []
+    parser.retrieve.reset_mock()
     reader._storage.set_feed_stale(feed.url, True)
     reader._now = lambda: datetime(2010, 1, 3)
     update_feed(reader, feed.url)
-    assert parser.calls == [(feed.url, None)]
+    parser.retrieve.assert_called_once_with(feed.url, None)
     assert {(f.url, f.title, f.last_updated) for f in reader.get_feeds()} == {
         (feed.url, feed.title, datetime(2010, 1, 3))
     }
@@ -81,11 +81,10 @@ def test_update_stale(reader, update_feed, entry_updated):
     }
 
 
-def test_update_parse(reader, update_feed):
+def test_update_parse(reader, parser, update_feed):
     """Updated feeds should pass caching headers back to ._parser()."""
-    parser = ParserThatRemembers()
+    parser.retrieve = Mock(wraps=parser.retrieve)
     parser.caching_info = 'caching'
-    reader._parser = parser
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -93,11 +92,11 @@ def test_update_parse(reader, update_feed):
     reader.add_feed(feed.url)
 
     update_feed(reader, feed.url)
-    assert parser.calls == [(feed.url, None)]
+    parser.retrieve.assert_called_once_with(feed.url, None)
 
-    parser.calls[:] = []
+    parser.retrieve.reset_mock()
     update_feed(reader, feed.url)
-    assert parser.calls == [(feed.url, 'caching')]
+    parser.retrieve.assert_called_once_with(feed.url, 'caching')
 
 
 def test_make_reader_storage(storage):

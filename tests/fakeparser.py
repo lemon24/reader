@@ -136,15 +136,3 @@ class Parser:
 
     def process_entry_pairs(self, url, mime_type, pairs):
         return pairs
-
-
-class ParserThatRemembers(Parser):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.calls = []
-
-    def retrieve(self, *args):
-        self.calls.append(args[:3])
-        return super().retrieve(*args)
-
-    # FIXME: remember parse() as well?
