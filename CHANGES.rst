@@ -9,7 +9,7 @@ Changelog
 Version 3.17
 ------------
 
-Unreleased
+Released 2025-03-08
 
 .. attention::
 
