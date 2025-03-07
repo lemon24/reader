@@ -28,7 +28,6 @@ def entries():
     reader = get_reader()
 
     # TODO: search improvements
-    # TODO: search bug: first search uses recent
     # TODO: paqgination
     # TODO: read time
 
@@ -37,8 +36,12 @@ def entries():
     else:
         form = EntryFilter(request.args)
 
-    if form.args != request.args.to_dict():
-        return redirect(url_for('.entries', **form.args))
+    form_args = form.args
+    if q := form_args.pop('Q', ''):
+        form_args['q'] = q
+        return redirect(url_for('.entries', **form_args))
+    if form_args != request.args.to_dict():
+        return redirect(url_for('.entries', **form_args))
 
     feed = None
     if form.feed.data:

@@ -115,7 +115,7 @@ ENTRY_SORT_CHOICES = ['recent', 'random']
 
 class EntryFilter(PresetsMixin, Form):
     feed = HiddenField("feed")
-    search = SearchField("search", name='q')
+    search = SearchField("search", name='Q')
     feed_tags = TagFilterField("tags", name='tags')
     read = radio_field("read", choices=BOOL_CHOICES, default='no')
     important = radio_field("important", choices=TRISTATE_CHOICES, default='maybe')
@@ -134,6 +134,7 @@ class EntryFilter(PresetsMixin, Form):
 
 
 class SearchEntryFilter(EntryFilter):
+    search = SearchField("search", name='q')
     sort = RadioField(
         "sort", choices=['relevant'] + ENTRY_SORT_CHOICES, default='relevant'
     )
