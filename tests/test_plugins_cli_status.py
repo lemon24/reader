@@ -32,7 +32,7 @@ def test_cli_status(db_path, data_dir, make_reader, monkeypatch):
     assert result.exit_code == 0, result.output
     assert 'full.rss' in result.output
 
-    entry = reader.get_entry(('reader:status', 'command: update @ 2010-01-01 00'))
+    entry = reader.get_entry(('reader:status', 'command: update'))
     assert entry.title == 'command: update'
     assert result.output in entry.content[0].value
 
@@ -52,7 +52,7 @@ OK
 
 @pytest.mark.slow
 def test_many_runs(db_path, make_reader, monkeypatch):
-    runner = CliRunner()
+    runner = CliRunner(mix_stderr=False)
 
     def invoke(*args):
         return runner.invoke(cli, ('--db', db_path) + args, catch_exceptions=False)
@@ -77,29 +77,38 @@ def test_many_runs(db_path, make_reader, monkeypatch):
         )
         assert result.exit_code == 0, result.output
 
-    actual = []
-    for e in reader.get_entries(feed='reader:status'):
-        actual.append((e.id, e.updated, re.findall('^# .*', e.content[0].value, re.M)))
+    (entry,) = reader.get_entries(feed='reader:status')
 
-    assert actual == [
-        (
-            'command: update @ 2010-01-01 23',
-            datetime(2010, 1, 1, 23),
-            ['# 2010-01-01 23:00:00'],
-        ),
-        (
-            'command: update @ 2010-01-01 00',
-            datetime(2010, 1, 1, 0, 59),
-            [
-                '# 2010-01-01 00:00:00',
-                '# 2010-01-01 00:02:00',
-                '# 2010-01-01 00:59:00',
-            ],
-        ),
-        (
-            'command: update @ 2009-12-31 23',
-            datetime(2009, 12, 31, 23),
-            ['# 2009-12-31 23:00:00'],
-        ),
-        # 'command: update 2009-12-31 22' gets deleted!
+    assert entry.id == "command: update"
+    assert entry.updated == datetime(2010, 1, 1, 23)
+
+    value = entry.content[0].value
+
+    assert re.findall('^# .*', value, re.M) == [
+        '# 2010-01-01 23:00:00',
+        '# 2010-01-01 00:59:00',
+        '# 2010-01-01 00:02:00',
+        '# 2010-01-01 00:00:00',
+        '# 2009-12-31 23:00:00',
     ]
+    # '# 2009-12-31 22:59:00' gets deleted!
+
+    assert value.replace(result.stdout, '<OUTPUT>\n').startswith(MANY_RUNS_PREFIX)
+
+
+MANY_RUNS_PREFIX = """\
+# 2010-01-01 23:00:00
+
+OK
+
+<OUTPUT>
+
+
+# 2010-01-01 00:59:00
+
+OK
+
+<OUTPUT>
+
+
+"""

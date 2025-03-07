@@ -21,6 +21,10 @@ Unreleased
 * Return the ``source (feed)`` form of :attr:`Entry.feed_resolved_title`
   only if the source and feed titles are different.
 
+* The :mod:`~reader._plugins.cli_status` plugin creates only one entry
+  per command, containing the output of all runs from the past day,
+  with the newest run first.
+
 
 Version 3.16
 ------------

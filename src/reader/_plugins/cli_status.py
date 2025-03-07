@@ -6,13 +6,12 @@ Capture the output of a CLI command and add it as an entry to a special feed.
 
 The feed URL is ``reader:status``; if it does not exist, it is created.
 
-The entry id is the command, without options or arguments, and the hour::
+The entry id is the command, without options or arguments::
 
-    ('reader:status', 'command: update @ YYYY-MM-DD HH')
-    ('reader:status', 'command: search update @ YYYY-MM-DD HH')
+    ('reader:status', 'command: update')
+    ('reader:status', 'command: search update')
 
-Output of repeated runs from the same hour is grouped in a single entry.
-Entries older than 24 hours are deleted.
+Entries contain the output of all the runs in the past 24 hours.
 Entries are marked as read.
 
 To load::
@@ -23,9 +22,11 @@ To load::
 """
 
 import io
+import re
 import shlex
 import sys
 from contextlib import redirect_stdout
+from datetime import datetime
 from datetime import timedelta
 
 import click
@@ -60,7 +61,7 @@ def save_output(reader, now, config, command_path, output):
 
     feed_url = FEED
     title = f"command: {' '.join(command_path)}"
-    entry_id = f"{title} @ {now_naive.isoformat(' ', 'hours')}"
+    entry_id = title
 
     content = get_output(config, now, output, sys.exc_info()[1])
 
@@ -76,23 +77,23 @@ def save_output(reader, now, config, command_path, output):
     except EntryNotFoundError:
         old_content = ''
 
+    parts = [content]
+    parts.extend(
+        output
+        for added, output in parse_output(old_content)
+        if added >= now_naive - timedelta(hours=MAX_HOURS)
+    )
+
     reader.add_entry(
         dict(
             feed_url=feed_url,
             id=entry_id,
             title=title,
             updated=now,
-            content=[dict(type='text/plain', value=old_content + content)],
+            content=[dict(type='text/plain', value=''.join(parts))],
         )
     )
     reader.mark_entry_as_read((feed_url, entry_id))
-
-    # TODO: use retention period to delete stuff when #96 is done
-    for entry in reader.get_entries(feed=feed_url):
-        if entry.title != title:
-            continue
-        if entry.added < now - timedelta(hours=MAX_HOURS):
-            reader.delete_entry(entry, missing_ok=True)
 
 
 def get_output(config, now, output, exc):
@@ -130,6 +131,16 @@ def get_output(config, now, output, exc):
 
     parts.append('\n')
     return '\n\n'.join(parts)
+
+
+HEADING = r'# (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\n'
+SECTION = rf'{HEADING}.*?(?=(?:{HEADING})|$)'
+SECTION_RE = re.compile(SECTION, re.DOTALL)
+
+
+def parse_output(output):
+    for match in SECTION_RE.finditer(output):
+        yield datetime.fromisoformat(match.group(1)), match.group(0)
 
 
 def init_cli(config):
