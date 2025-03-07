@@ -18,12 +18,22 @@ Unreleased
 
 * Support PyPy 3.11. (:issue:`354`)
 
-* Return the ``source (feed)`` form of :attr:`Entry.feed_resolved_title`
-  only if the source and feed titles are different.
+* Start working on a web app :ref:`re-design <app roadmap>`
+  based on `htmx`_ and `Bootstrap`_,
+  beginning with a new version of the main entries page,
+  and dark mode support;
+  some :ref:`screenshots <app screenshots>`.
+  (:issue:`318`)
 
-* The :mod:`~reader._plugins.cli_status` plugin creates only one entry
-  per command, containing the output of all runs from the past day,
+* :attr:`Entry.feed_resolved_title`:
+  return both the source and feed titles only if they are different.
+
+* The :mod:`~reader._plugins.cli_status` plugin
+  now creates only one entry per command,
   with the newest run first.
+
+.. _htmx: https://htmx.org/
+.. _Bootstrap: https://getbootstrap.com/
 
 
 Version 3.16

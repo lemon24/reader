@@ -67,8 +67,33 @@ If running on a personal computer, you can use cron to run ``serve`` at boot::
 .. _Werkzeug's development server: http://werkzeug.pocoo.org/docs/0.14/serving/#werkzeug.serving.run_simple
 
 
+.. _app screenshots:
+
 Screenshots
 -----------
+
+Following are screenshots of the web app re-design
+mentioned in the :ref:`roadmap <app roadmap>`.
+For the legacy web app, see `Screenshots (legacy)`_.
+
+Main page
+~~~~~~~~~
+
+.. figure:: screenshots/entries-v2-dark.png
+    :width: 240px
+
+    main page (dark mode)
+
+.. figure:: screenshots/entries-v2-filters-light.png
+    :width: 240px
+
+    main page – more filters (light mode)
+
+
+Screenshots (legacy)
+--------------------
+
+Following are screenshots of the original (legacy) web app.
 
 Main page
 ~~~~~~~~~

@@ -122,8 +122,14 @@ Long term, I'd like to:
 * switch to `htmx`_ instead of using a home-grown solution
 * spin it off into a separate package/project
 
-.. _htmx: https://htmx.org/
+**2025 update**:
+I've started working on a re-design based on `htmx`_ and `Bootstrap`_;
+some :ref:`screenshots <app screenshots>`.
+The new app will be available in parallel with the old one
+until it reaches feature parity.
 
+.. _htmx: https://htmx.org/
+.. _Bootstrap: https://getbootstrap.com/
 
 
 .. _compat:
