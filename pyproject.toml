@@ -188,7 +188,7 @@ ignore_errors = true
 
 [tool.isort]
 profile = "black"
-py_version = 310
+py_version = 311
 src_paths = ["src", "tests"]
 extend_skip = ["examples", "src/reader/_vendor"]
 skip_gitignore = true
