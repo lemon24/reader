@@ -11,6 +11,8 @@ Version 3.18
 
 Unreleased
 
+* Drop Python 3.10 support. (:issue:`354`)
+
 
 Version 3.17
 ------------
