@@ -41,7 +41,7 @@ if debug:  # pragma: no cover
                 stmt = data.pop('stmt', None)
             print('STORAGE_DEBUG', json.dumps(data), file=sys.stderr)
             if stmt:
-                print(stmt)
+                print(stmt, file=sys.stderr)
 
 
 wrap_exceptions = partial(_sqlite_utils.wrap_exceptions, StorageError)
