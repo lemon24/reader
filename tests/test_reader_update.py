@@ -153,3 +153,20 @@ def test_entry_deleted_during_update(monkeypatch, db_path, make_reader, parser):
     assert before_efu.first_updated == after_efu.first_updated
     assert before_efu.first_updated_epoch == after_efu.first_updated_epoch
     assert before_efu.recent_sort == after_efu.recent_sort
+
+
+def test_updates_enabled_scheduled(reader, parser):
+    """Bug: updates_enabled=True was not working when scheduled=True.
+
+    https://github.com/lemon24/reader/issues/365
+
+    """
+    reader._now = lambda: datetime(2010, 1, 1)
+    one = parser.feed(1)
+    reader.add_feed(one)
+    reader.update_feeds()
+
+    reader.disable_feed_updates(one)
+
+    reader._now = lambda: datetime(2010, 1, 2)
+    assert list(reader.update_feeds_iter(scheduled=True, updates_enabled=True)) == []

@@ -13,6 +13,10 @@ Unreleased
 
 * Drop Python 3.10 support. (:issue:`354`)
 
+* Fix bug causing :meth:`.Reader.update_feeds`
+  to not honor `updates_enabled=True` when `scheduled=True`.
+  (:issue:`365`)
+
 
 Version 3.17
 ------------

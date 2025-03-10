@@ -358,7 +358,7 @@ def feed_filter(query: Query, filter: FeedFilter) -> dict[str, Any]:
     if new is not None:
         query.WHERE(f"last_retrieved is {'' if new else 'NOT'} NULL")
     if update_after is not None:
-        query.WHERE("update_after is NULL or update_after <= :update_after")
+        query.WHERE("(update_after is NULL or update_after <= :update_after)")
         context.update(update_after=adapt_datetime(update_after))
 
     return context
