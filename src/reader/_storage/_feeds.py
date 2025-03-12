@@ -107,7 +107,7 @@ class FeedsMixin(StorageBase):
     def get_feeds(
         self,
         filter: FeedFilter = FeedFilter(),  # noqa: B008
-        sort: FeedSort = 'title',
+        sort: FeedSort = FeedSort.TITLE,
         limit: int | None = None,
         starting_after: str | None = None,
     ) -> Iterable[Feed]:
@@ -335,8 +335,10 @@ def feed_factory(row: tuple[Any, ...]) -> Feed:
 FEED_SORT_KEYS = {
     # values must be non-null, see #203 for details.
     # url at the end makes the order deterministic.
-    'title': SortKey(("kinda_title", "lower(coalesce(user_title, title, ''))"), "url"),
-    'added': SortKey("added", "url", desc=True),
+    FeedSort.TITLE: SortKey(
+        ("kinda_title", "lower(coalesce(user_title, title, ''))"), "url"
+    ),
+    FeedSort.ADDED: SortKey("added", "url", desc=True),
 }
 
 

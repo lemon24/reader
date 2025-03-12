@@ -28,8 +28,9 @@ from ..exceptions import SearchError
 from ..exceptions import SearchNotEnabledError
 from ..types import EntrySearchCounts
 from ..types import EntrySearchResult
+from ..types import EntrySearchSort
+from ..types import EntrySort
 from ..types import HighlightedString
-from ..types import SearchSortOrder
 from . import _entries
 from . import _html_utils
 from . import _sqlite_utils
@@ -425,7 +426,7 @@ class Search:
         self,
         query: str,
         filter: EntryFilter = EntryFilter(),  # noqa: B008
-        sort: SearchSortOrder = 'relevant',
+        sort: EntrySearchSort = EntrySearchSort.RELEVANT,
         limit: int | None = None,
         starting_after: tuple[str, str] | None = None,
     ) -> Iterable[EntrySearchResult]:
@@ -457,13 +458,13 @@ class Search:
                 )
 
         # TODO: dupe of at least Storage.get_entries(), maybe deduplicate
-        if sort != 'random':
+        if sort != EntrySearchSort.RANDOM:
             last = None
             if starting_after:
-                if sort == 'relevant':
+                if sort == EntrySearchSort.RELEVANT:
                     last = self.search_entry_last(query, starting_after)
-                elif sort == 'recent':
-                    last = self.storage.get_entry_last(sort, starting_after)
+                elif sort == EntrySearchSort.RECENT:
+                    last = self.storage.get_entry_last(EntrySort.RECENT, starting_after)
                 else:
                     assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
@@ -527,7 +528,7 @@ class Search:
 
 
 def make_search_entries_query(
-    filter: EntryFilter, sort: SearchSortOrder
+    filter: EntryFilter, sort: EntrySearchSort
 ) -> tuple[Query, dict[str, Any]]:
     search = (
         Query()
@@ -585,12 +586,12 @@ def relevant_sort(query: Query) -> None:
     )
 
 
-SEARCH_ENTRIES_SORT: dict[str, Callable[[Query], None]] = {
-    'relevant': relevant_sort,
-    'recent': partial(
+SEARCH_ENTRIES_SORT: dict[EntrySearchSort, Callable[[Query], None]] = {
+    EntrySearchSort.RELEVANT: relevant_sort,
+    EntrySearchSort.RECENT: partial(
         _entries.entries_recent_sort, keyword='HAVING', id_prefix='search._'
     ),
-    'random': _entries.entries_random_sort,
+    EntrySearchSort.RANDOM: _entries.entries_random_sort,
 }
 
 

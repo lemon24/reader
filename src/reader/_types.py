@@ -40,6 +40,7 @@ from .types import EntryCounts
 from .types import EntryInput
 from .types import EntrySearchCounts
 from .types import EntrySearchResult
+from .types import EntrySearchSort
 from .types import EntrySort
 from .types import EntrySource
 from .types import ExceptionInfo
@@ -51,7 +52,6 @@ from .types import JSONType
 from .types import MISSING
 from .types import MissingType
 from .types import ResourceId
-from .types import SearchSortOrder
 from .types import TagFilterInput
 from .types import TristateFilterInput
 
@@ -1264,7 +1264,7 @@ class SearchType(Protocol):  # pragma: no cover
         query: str,
         /,
         filter: EntryFilter,
-        sort: SearchSortOrder,
+        sort: EntrySearchSort,
         limit: int | None,
         starting_after: tuple[str, str] | None,
     ) -> Iterable[EntrySearchResult]:

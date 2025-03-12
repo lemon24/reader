@@ -59,6 +59,7 @@ from .types import EntryCounts
 from .types import EntryInput
 from .types import EntrySearchCounts
 from .types import EntrySearchResult
+from .types import EntrySearchSort
 from .types import EntrySort
 from .types import EntryUpdateStatus
 from .types import Feed
@@ -69,7 +70,6 @@ from .types import JSONType
 from .types import MISSING
 from .types import MissingType
 from .types import ResourceInput
-from .types import SearchSortOrder
 from .types import TagFilterInput
 from .types import TristateFilterInput
 from .types import UpdatedFeed
@@ -556,7 +556,7 @@ class Reader:
         updates_enabled: bool | None = None,
         new: bool | None = None,
         scheduled: bool = False,
-        sort: FeedSort = 'title',
+        sort: FeedSort = FeedSort.TITLE,
         limit: int | None = None,
         starting_after: FeedInput | None = None,
     ) -> Iterable[Feed]:
@@ -575,9 +575,8 @@ class Reader:
                 / have been updated before.
             scheduled (bool):
                 Only return feeds scheduled to be updated.
-            sort (str): How to order feeds; one of ``'title'`` (by
-                :attr:`~Feed.user_title` or :attr:`~Feed.title`, case
-                insensitive; default), or ``'added'`` (last added first).
+            sort (FeedSort):
+                How to order feeds; see :class:`FeedSort` for details.
             limit (int or None): A limit on the number of feeds to be returned;
                 by default, all feeds are returned.
             starting_after (str or tuple(str) or Feed or None):
@@ -616,9 +615,7 @@ class Reader:
         filter = FeedFilter.from_args(
             self._now(), feed, tags, broken, updates_enabled, new, scheduled
         )
-
-        if sort not in ('title', 'added'):
-            raise ValueError("sort should be one of ('title', 'added')")
+        sort = FeedSort(sort)
 
         if limit is not None:
             if not isinstance(limit, numbers.Integral) or limit < 1:
@@ -1094,42 +1091,11 @@ class Reader:
         source: FeedInput | None = None,
         tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
-        sort: EntrySort = 'recent',
+        sort: EntrySort = EntrySort.RECENT,
         limit: int | None = None,
         starting_after: EntryInput | None = None,
     ) -> Iterable[Entry]:
         """Get all or some of the entries.
-
-        Entries are sorted according to ``sort``. Possible values:
-
-        ``'recent'``
-
-            Most recent first. That is:
-
-            * by published date for entries imported on the first update
-              (if an entry does not have :attr:`~Entry.published`,
-              :attr:`~Entry.updated` is used)
-            * by added date for entries imported after that
-
-            This is to make sure newly imported entries appear at the top
-            regardless of when the feed says they were published,
-            while not having all the old entries at the top for new feeds.
-
-            .. note::
-
-                The algorithm for "recent" is a heuristic and may change over time.
-
-            .. versionchanged:: 3.1
-                Sort entries by added date most of the time,
-                with the exception of those imported on the first update.
-                Previously, entries would be sorted by added
-                only if they were published less than 7 days ago.
-
-        ``'random'``
-
-            Random order (shuffled). At at most 256 entries will be returned.
-
-            .. versionadded:: 1.2
 
         Args:
             feed (str or tuple(str) or Feed or None):
@@ -1151,8 +1117,8 @@ class Reader:
             feed_tags (None or bool or list(str or bool or list(str or bool))):
                 Only return entries from feeds matching these tags;
                 see :data:`~reader.types.TagFilterInput` for details.
-            sort (str): How to order entries; one of ``'recent'`` (default)
-                or ``'random'``.
+            sort (EntrySort):
+                How to order entries; see :class:`EntrySort` for details.
             limit (int or None): A limit on the number of entries to be returned;
                 by default, all entries are returned.
             starting_after (tuple(str, str) or Entry or None):
@@ -1192,17 +1158,15 @@ class Reader:
         filter = EntryFilter.from_args(
             feed, entry, read, important, has_enclosures, source, tags, feed_tags
         )
-
-        if sort not in ('recent', 'random'):
-            raise ValueError("sort should be one of ('recent', 'random')")
+        sort = EntrySort(sort)
 
         if limit is not None:
             if not isinstance(limit, numbers.Integral) or limit < 1:
                 raise ValueError("limit should be a positive integer")
         starting_after = _entry_argument(starting_after) if starting_after else None
 
-        if starting_after and sort == 'random':
-            raise ValueError("using starting_after with sort='random' not supported")
+        if starting_after and sort == EntrySort.RANDOM:
+            raise ValueError("using starting_after with sort=RANDOM not supported")
 
         return self._storage.get_entries(filter, sort, limit, starting_after)
 
@@ -1731,36 +1695,11 @@ class Reader:
         source: FeedInput | None = None,
         tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
-        sort: SearchSortOrder = 'relevant',
+        sort: EntrySearchSort = EntrySearchSort.RELEVANT,
         limit: int | None = None,
         starting_after: EntryInput | None = None,
     ) -> Iterable[EntrySearchResult]:
         """Get entries matching a full-text search query.
-
-        Entries are sorted according to ``sort``. Possible values:
-
-        ``'relevant'``
-
-            Most relevant first.
-
-        ``'recent'``
-
-            Most recent first. See :meth:`~Reader.get_entries()`
-            for details on what *recent* means.
-
-            .. versionadded:: 1.4
-
-            .. versionchanged:: 3.1
-                Sort entries by added date most of the time,
-                with the exception of those imported on the first update.
-                Previously, entries would be sorted by added
-                only if they were published less than 7 days ago.
-
-        ``'random'``
-
-            Random order (shuffled). At at most 256 entries will be returned.
-
-            .. versionadded:: 1.10
 
         Note:
             The query syntax is dependent on the search provider.
@@ -1814,8 +1753,8 @@ class Reader:
             feed_tags (None or bool or list(str or bool or list(str or bool))):
                 Only search entries from feeds matching these tags;
                 see :data:`~reader.types.TagFilterInput` for details.
-            sort (str): How to order results; one of ``'relevant'`` (default),
-                ``'recent'``, or ``'random'``.
+            sort (EntrySearchSort):
+                How to order results; see :class:`EntrySearchSort` for details.
             limit (int or None): A limit on the number of results to be returned;
                 by default, all results are returned.
             starting_after (tuple(str, str) or EntrySearchResult or None):
@@ -1857,17 +1796,15 @@ class Reader:
         filter = EntryFilter.from_args(
             feed, entry, read, important, has_enclosures, source, tags, feed_tags
         )
-
-        if sort not in ('relevant', 'recent', 'random'):
-            raise ValueError("sort should be one of ('relevant', 'recent', 'random')")
+        sort = EntrySearchSort(sort)
 
         if limit is not None:
             if not isinstance(limit, numbers.Integral) or limit < 1:
                 raise ValueError("limit should be a positive integer")
         starting_after = _entry_argument(starting_after) if starting_after else None
 
-        if starting_after and sort == 'random':
-            raise ValueError("using starting_after with sort='random' not supported")
+        if starting_after and sort == EntrySearchSort.RANDOM:
+            raise ValueError("using starting_after with sort=RANDOM not supported")
 
         return self._search.search_entries(query, filter, sort, limit, starting_after)
 

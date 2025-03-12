@@ -55,7 +55,7 @@ class EntriesMixin(StorageBase):
     def get_entries(
         self,
         filter: EntryFilter = EntryFilter(),  # noqa: B008
-        sort: EntrySort = 'recent',
+        sort: EntrySort = EntrySort.RECENT,
         limit: int | None = None,
         starting_after: tuple[str, str] | None = None,
     ) -> Iterable[Entry]:
@@ -64,7 +64,7 @@ class EntriesMixin(StorageBase):
             partial(get_entries_query, filter, sort),
             row_factory=entry_factory,
         )
-        if sort != 'random':
+        if sort != EntrySort.RANDOM:
             last = self.get_entry_last(sort, starting_after) if starting_after else None
             return paginated_query(limit, last)
         else:
@@ -571,7 +571,7 @@ RECENT_SORT_KEY = SortKey(
     desc=True,
 )
 
-ENTRY_SORT_KEYS = {'recent': RECENT_SORT_KEY}
+ENTRY_SORT_KEYS = {EntrySort.RECENT: RECENT_SORT_KEY}
 
 
 def entries_recent_sort(
@@ -597,9 +597,9 @@ def entries_random_sort(query: Query) -> None:
     query.ORDER_BY("random()")
 
 
-ENTRIES_SORT: dict[str, Callable[[Query], None]] = {
-    'recent': entries_recent_sort,
-    'random': entries_random_sort,
+ENTRIES_SORT: dict[EntrySort, Callable[[Query], None]] = {
+    EntrySort.RECENT: entries_recent_sort,
+    EntrySort.RANDOM: entries_random_sort,
 }
 
 

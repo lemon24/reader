@@ -171,6 +171,23 @@ The class hierarchy for :mod:`reader` exceptions is:
 
 
 
+Enumerations
+------------
+
+.. autoclass:: reader.FeedSort(value)
+    :show-inheritance:
+    :members:
+
+.. autoclass:: reader.EntrySort(value)
+    :show-inheritance:
+    :members:
+
+.. autoclass:: reader.EntrySearchSort(value)
+    :show-inheritance:
+    :members:
+
+
+
 .. _type aliases:
 
 Type aliases

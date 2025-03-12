@@ -723,26 +723,81 @@ class EntryUpdateStatus(enum.Enum):
     MODIFIED = 'modified'
 
 
+class FeedSort(enum.StrEnum):
+    """How to order feeds.
+
+    .. versionadded:: 3.18
+
+    """
+
+    #: By :attr:`~Feed.resolved_title`, case insensitive.
+    TITLE = 'title'
+
+    #: By :attr:`~Feed.added`, last added first.
+    ADDED = 'added'
+
+
+class EntrySort(enum.StrEnum):
+    """How to order entries.
+
+    .. versionadded:: 3.18
+
+    """
+
+    #: Most recent first. That is:
+    #:
+    #: * by published date for entries imported on the first update
+    #:   (if an entry does not have :attr:`~Entry.published`,
+    #:   :attr:`~Entry.updated` is used)
+    #: * by added date for entries imported after that
+    #:
+    #: This is to make sure newly imported entries appear at the top
+    #: regardless of when the feed says they were published,
+    #: while not having all the old entries at the top for new feeds.
+    #:
+    #: .. note::
+    #:
+    #: The algorithm for "recent" is a heuristic and may change over time.
+    #:
+    #: .. versionchanged:: 3.1
+    #:  Sort entries by added date most of the time,
+    #:  with the exception of those imported on the first update.
+    #:  Previously, entries would be sorted by added
+    #:  only if they were published less than 7 days ago.
+    #:
+    RECENT = 'recent'
+
+    #: Random (shuffle). Return at most 256 entries.
+    #:
+    #: .. versionadded:: 1.2
+    #:
+    RANDOM = 'random'
+
+
+class EntrySearchSort(enum.StrEnum):
+    """How to order entry search results.
+
+    .. versionadded:: 3.18
+
+    """
+
+    #: Most relevant first.
+    RELEVANT = 'relevant'
+
+    #: Most recent first. See :data:`EntrySort.RECENT` for details.
+    #:
+    #: .. versionadded:: 1.4
+    #:
+    RECENT = 'recent'
+
+    #: Random (shuffle). See :data:`EntrySort.RANDOM` for details.
+    #:
+    #: .. versionadded:: 1.10
+    #:
+    RANDOM = 'random'
+
+
 # Semi-public API (typing support)
-
-
-# TODO: Could we use some kind of str-compatible enum here?
-#
-# Yes:
-#
-# class Order(enum.Enum):
-#    TITLE = 'title'
-#    ADDED = 'added'
-#
-# The public methods should then take Union[str, Order],
-# and use the value _only_ as Order(arg) for validation.
-# Having the arguments typed as Literals is silly anyway,
-# because we sometimes get them dynamically, e.g.
-# https://github.com/lemon24/reader/blob/1.18/src/reader/_app/__init__.py#L151
-#
-FeedSort = Literal['title', 'added']
-EntrySort = Literal['recent', 'random']
-SearchSortOrder = Literal['relevant', 'recent', 'random']
 
 
 # https://github.com/python/typing/issues/182
