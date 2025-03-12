@@ -1123,7 +1123,7 @@ class Reader:
                 by default, all entries are returned.
             starting_after (tuple(str, str) or Entry or None):
                 Return entries after this entry; a cursor for use in pagination.
-                Using ``starting_after`` with ``sort='random'`` is not supported.
+                Using ``starting_after`` with ``sort=RANDOM`` is not supported.
 
         Yields:
             :class:`Entry`: Sorted according to ``sort``.
@@ -1759,7 +1759,7 @@ class Reader:
                 by default, all results are returned.
             starting_after (tuple(str, str) or EntrySearchResult or None):
                 Return results after this result; a cursor for use in pagination.
-                Using ``starting_after`` with ``sort='random'`` is not supported.
+                Using ``starting_after`` with ``sort=RANDOM`` is not supported.
 
         Yields:
             :class:`EntrySearchResult`: Sorted according to ``sort``.

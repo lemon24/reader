@@ -17,7 +17,7 @@ Unreleased
   (:issue:`354`)
 
 * Fix bug causing :meth:`.Reader.update_feeds`
-  to not honor `updates_enabled=True` when `scheduled=True`.
+  to not honor ``updates_enabled=True`` when ``scheduled=True``.
   (:issue:`365`)
 
 
