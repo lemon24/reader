@@ -239,12 +239,8 @@ class NotModified(RetrieveError):
     _default_message = "not modified"
 
 
-@dataclass(frozen=True)
-class RetrieveResult(_namedtuple_compat, Generic[F, T, E]):
+class RetrieveResult(NamedTuple, Generic[F, T, E]):
     """The result of retrieving a feed, regardless of the outcome."""
-
-    # should be a NamedTuple, but the typing one became generic only in 3.11,
-    # and we don't want to depend on typing_extensions at runtime
 
     #: The feed (a :class:`FeedArgument`, usually a :class:`FeedForUpdate`).
     feed: F
@@ -339,8 +335,7 @@ class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no c
         """
 
 
-@dataclass(frozen=True)
-class ParseResult(_namedtuple_compat, Generic[F, E]):
+class ParseResult(NamedTuple, Generic[F, E]):
     """The result of retrieving and parsing a feed, regardless of the outcome."""
 
     #: The feed (a :class:`FeedArgument`, usually a :class:`.FeedForUpdate`).

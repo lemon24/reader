@@ -430,8 +430,7 @@ class Pipeline:
         config: UpdateConfig,
         result: ParseResult[FeedForUpdate, ParseError],
     ) -> tuple[str, UpdatedFeed | None | Exception]:
-        feed = result.feed
-        value = result.value
+        feed, value, _ = result
 
         # TODO: don't duplicate code from update()
         # TODO: the feed tag value should come from get_feeds_for_update()

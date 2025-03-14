@@ -259,8 +259,7 @@ class Parser:
         Takes one argument and does not raise exceptions.
 
         """
-        feed = result.feed
-        context = result.value
+        feed, context = result
 
         http_info = None
         value: ParsedFeed | None | Exception
