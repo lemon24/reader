@@ -196,7 +196,7 @@ class BaseQuery:
 
             yield '\n'
 
-    _indent = functools.partial(textwrap.indent, prefix='    ')
+    _indent = staticmethod(functools.partial(textwrap.indent, prefix='    '))
 
 
 if TYPE_CHECKING:  # pragma: no cover
