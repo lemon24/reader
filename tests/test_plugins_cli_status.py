@@ -4,6 +4,7 @@ import pytest
 from click.testing import CliRunner
 
 from reader._cli import cli
+from test_cli import patch_app_dir
 from utils import utc_datetime as datetime
 
 
