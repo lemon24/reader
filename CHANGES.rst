@@ -21,6 +21,9 @@ Unreleased
   to not honor ``updates_enabled=True`` when ``scheduled=True``.
   (:issue:`365`)
 
+* In the :mod:`~reader._plugins.cli_status` plugin,
+  overwrite the entry so it doesn't appear briefly as unread.
+
 
 Version 3.17
 ------------

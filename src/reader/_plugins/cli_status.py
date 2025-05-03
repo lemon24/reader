@@ -73,7 +73,6 @@ def save_output(reader, now, config, command_path, output):
 
     try:
         old_content = reader.get_entry((feed_url, entry_id)).content[0].value
-        reader.delete_entry((feed_url, entry_id))
     except EntryNotFoundError:
         old_content = ''
 
@@ -91,7 +90,8 @@ def save_output(reader, now, config, command_path, output):
             title=title,
             updated=now,
             content=[dict(type='text/plain', value=''.join(parts))],
-        )
+        ),
+        overwrite=True,
     )
     reader.mark_entry_as_read((feed_url, entry_id))
 
