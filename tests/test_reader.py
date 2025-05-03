@@ -2656,6 +2656,11 @@ def test_add_entry(reader, parser):
         reader.add_entry(expected_entry)
     assert excinfo.value.resource_id == ('1', '1, 1')
 
+    # adding it again with overwrite=True works
+
+    reader.add_entry(dict(feed_url='1', id='1, 1', title='new'), overwrite=True)
+    assert reader.get_entry(('1', '1, 1')) == expected_entry._replace(title='new')
+
     # add it by user (from object)
 
     reader._storage.delete_entries([('1', '1, 1')])

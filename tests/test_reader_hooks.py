@@ -48,8 +48,18 @@ def test_after_entry_update_hooks(reader, parser):
     assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 2'}
 
 
-def test_after_entry_update_hooks_add_entry(reader):
+@pytest.mark.parametrize(
+    'exists, overwrite, status',
+    [
+        (False, False, EntryUpdateStatus.NEW),
+        (False, True, EntryUpdateStatus.NEW),
+        (True, True, EntryUpdateStatus.MODIFIED),
+    ],
+)
+def test_after_entry_update_hooks_add_entry(reader, exists, overwrite, status):
     reader.add_feed('1')
+    if exists:
+        reader.add_entry(EntryData('1', '1, 1'))
 
     plugin_calls = []
 
@@ -66,11 +76,11 @@ def test_after_entry_update_hooks_add_entry(reader):
 
     entry = EntryData('1', '1, 1', title='title')
 
-    reader.add_entry(entry)
+    reader.add_entry(entry, overwrite=overwrite)
 
     assert plugin_calls == [
-        (first_plugin, entry, EntryUpdateStatus.NEW),
-        (second_plugin, entry, EntryUpdateStatus.NEW),
+        (first_plugin, entry, status),
+        (second_plugin, entry, status),
     ]
 
 

@@ -13,6 +13,7 @@ Unreleased
 
 * Drop Python 3.10 support. (:issue:`354`)
 
+* Add the ``overwrite`` argument to :meth:`~Reader.add_entry`.
 * Add :class:`FeedSort`, :class:`EntrySort`, and :class:`EntrySearchSort` enums.
   (:issue:`354`)
 

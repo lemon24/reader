@@ -1458,7 +1458,7 @@ class Reader:
         """
         return self.set_entry_important(entry, False)
 
-    def add_entry(self, entry: Any, /) -> None:
+    def add_entry(self, entry: Any, /, *, overwrite: bool = False) -> None:
         """Add a new entry to an existing feed.
 
         ``entry`` can be any :class:`Entry`-like object,
@@ -1500,6 +1500,9 @@ class Reader:
 
         Args:
             entry (Entry or dict): An entry-like object or equivalent mapping.
+            overwrite (bool):
+                If true and the entry already exists,
+                overwrite it instead of raising :exc:`EntryExistsError`.
 
         Raises:
             EntryExistsError: If an entry with the same id already exists.
@@ -1513,6 +1516,9 @@ class Reader:
 
         .. versionchanged:: 3.16
             Allow setting :attr:`~Entry.source`.
+
+        .. versionadded:: 3.18
+            The ``overwrite`` argument.
 
         """
 
@@ -1533,9 +1539,19 @@ class Reader:
             added_by='user',
         )
 
-        self._storage.add_entry(intent)
+        status = EntryUpdateStatus.NEW
+        if overwrite:
+            (old_entry,) = self._storage.get_entries_for_update(
+                [entry_data.resource_id]
+            )
+            if old_entry:
+                status = EntryUpdateStatus.MODIFIED
+            self._storage.add_or_update_entries([intent])
+        else:
+            self._storage.add_entry(intent)
+
         for entry_hook in self.after_entry_update_hooks:
-            entry_hook(self, intent.entry, EntryUpdateStatus.NEW)
+            entry_hook(self, intent.entry, status)
 
     def delete_entry(self, entry: EntryInput, /, missing_ok: bool = False) -> None:
         """Delete an entry.
