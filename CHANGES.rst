@@ -9,7 +9,7 @@ Changelog
 Version 3.18
 ------------
 
-Unreleased
+Released 2025-05-04
 
 * Drop Python 3.10 support. (:issue:`354`)
 
