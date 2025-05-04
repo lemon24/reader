@@ -6,6 +6,12 @@ Changelog
   :no-index:
 
 
+Version 3.19
+------------
+
+Unreleased
+
+
 Version 3.18
 ------------
 
