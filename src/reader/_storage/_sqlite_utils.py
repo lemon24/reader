@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
 from typing import Any
+from typing import cast
 from typing import no_type_check
 from typing import TypeVar
 
@@ -471,8 +472,9 @@ class LocalConnectionFactory:
         if not self._local.is_creating_thread:
             self._other_threads = True
 
-        self._local.db = db = sqlite3.connect(self.path, **self.kwargs)
-        assert db is not None, "for mypy"
+        # TODO: remove needless cast (needed after mypy 1.16.0 update)
+        db = cast(sqlite3.Connection, sqlite3.connect(self.path, **self.kwargs))
+        self._local.db = db
         self._local.call_count = 0
 
         try:
