@@ -53,7 +53,7 @@ OK
 
 @pytest.mark.slow
 def test_many_runs(db_path, make_reader, monkeypatch):
-    runner = CliRunner(mix_stderr=False)
+    runner = CliRunner()
 
     def invoke(*args):
         return runner.invoke(cli, ('--db', db_path) + args, catch_exceptions=False)
