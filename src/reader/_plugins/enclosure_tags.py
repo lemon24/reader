@@ -38,6 +38,7 @@ from flask import request
 from flask import Response
 from flask import stream_with_context
 from flask import url_for
+from jinja2.filters import do_striptags as striptags
 
 
 blueprint = Blueprint('enclosure_tags', __name__)
@@ -146,12 +147,13 @@ def enclosure_tags_filter(enclosure, entry, feed_tags):
 
     args = {'url': enclosure.href, 'filename': filename}
     if entry.title:
-        args['title'] = entry.title
+        args['title'] = striptags(entry.title)
     if album := (entry.feed.user_title or entry.feed.title):
+        album = striptags(album)
         args['album'] = album
         args['artist'] = album
     elif artist := (entry.author or entry.feed.author):
-        args['artist'] = artist
+        args['artist'] = striptags(artist)
 
     for tag in feed_tags:
         if 'podcast' in tag.lower():

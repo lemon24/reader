@@ -11,6 +11,10 @@ Version 3.19
 
 Unreleased
 
+* :mod:`~reader._plugins.enclosure_tags` plugin:
+  strip HTML tags from values used as MP3 tags
+  (for example, ``<b>`` tags used to highlight search result matches).
+
 
 Version 3.18
 ------------
