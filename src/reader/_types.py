@@ -256,7 +256,7 @@ def _getattr_optional(obj: object, name: str, type: type[_T]) -> _T | None:
         return value
     if not isinstance(value, type):
         raise TypeError(
-            f"bad type for {name}; expected {type.__name__} instance, got {value!r}"
+            f"Bad type for {name}; expected {type.__name__} instance, got {value!r}"
         )
     return value
 
@@ -278,7 +278,7 @@ def _getattr_entry_added_by(obj: object, name: str) -> EntryAddedBy:
     values = get_args(EntryAddedBy)
     if value not in values:  # pragma: no cover
         raise ValueError(
-            f"bad value for {name}; expected one of {values!r}, got {value!r}"
+            f"Bad value for {name}; expected one of {values!r}, got {value!r}"
         )
     return cast(EntryAddedBy, value)
 
