@@ -52,9 +52,9 @@ dynamic = ["version"]
 
 [project.urls]
 Documentation = "https://reader.readthedocs.io/"
-Changes = "https://reader.readthedocs.io/en/latest/changelog.html"
-"Source Code" = "https://github.com/lemon24/reader"
-"Issue tracker" = "https://github.com/lemon24/reader/issues"
+Repository = "https://github.com/lemon24/reader"
+Issues = "https://github.com/lemon24/reader/issues"
+Changelog = "https://reader.readthedocs.io/en/latest/changelog.html"
 
 [project.optional-dependencies]
 
