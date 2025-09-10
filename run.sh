@@ -32,10 +32,7 @@ readonly SCRIPT="$PROJECT_ROOT/$( basename "$0" )"
 
 
 function install-dev {
-    pip install \
-        --editable '.[cli,app,unstable-plugins]' \
-        --group dev --group tests --group typing \
-        --upgrade --upgrade-strategy eager
+    pip install -e '.[all]' --group dev --upgrade --upgrade-strategy eager
     pre-commit install --install-hooks
 }
 
@@ -160,9 +157,7 @@ function clean-pyc {
 
 
 function ci-install {
-    pip install \
-        --editable '.[cli,app,unstable-plugins]' \
-        --group tests --group typing
+    pip install -e '.[all]' --group tests --group typing
 }
 
 function ci-run {

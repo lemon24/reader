@@ -56,6 +56,8 @@ Changelog = "https://reader.readthedocs.io/en/latest/changelog.html"
 
 # UNSTABLE
 
+all = ["reader[cli,app,unstable-plugins]"]
+
 cli = [
     "click>=7",
     # for config
@@ -129,6 +131,9 @@ docs = [
 ]
 
 dev = [
+    {include-group = "tests"},
+    {include-group = "typing"},
+    {include-group = "docs"},
     "tox",
     "pre-commit",
     "build",
