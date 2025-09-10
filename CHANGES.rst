@@ -15,6 +15,8 @@ Unreleased
   strip HTML tags from values used as MP3 tags
   (for example, ``<b>`` tags used to highlight search result matches).
 
+* Remove long-deprecated, empty ``search`` and ``readtime`` extras.
+
 
 Version 3.18
 ------------

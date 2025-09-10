@@ -87,11 +87,6 @@ unstable-plugins = [
     "tabulate",
 ]
 
-# DEPRECATED, kept until 4.0 to avoid breaking dependents
-
-search = []  # empty since 2.4
-readtime = []  # empty since 3.1
-
 [dependency-groups]
 
 tests = [
