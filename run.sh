@@ -36,28 +36,21 @@ function install-dev {
     pre-commit install --install-hooks
 }
 
-
 function test {
     pytest --runslow "$@"
 }
 
-
-function coverage-all {
-    clean-pyc
-    # TODO: do we need to --cov-context=test all the time?
-    coverage-run --cov-context=test "$@"
-    coverage-report --show-contexts
-}
-
-function coverage-run {
-    # TODO: is pytest-cov needed?
-    pytest --runslow --cov "$@"
+function coverage {
+    unset -f coverage
+    coverage run -m pytest --runslow "$@"
+    coverage html
+    coverage-report
 }
 
 function coverage-report {
-    coverage html "$@"
+    # library only "coverage report --fail-under 100"
+    unset -f coverage
     coverage report \
-        --include '*/reader/*' \
         --omit "$(
             echo "
                 */reader/_vendor/*
@@ -76,7 +69,7 @@ function coverage-report {
 
 
 function test-all {
-    tox -p
+    tox p "$@"
 }
 
 
@@ -147,21 +140,12 @@ function entr-project-files {
 }
 
 
-function clean-pyc {
-    local IFS=$'\n'
-    find \
-        $( ls-project-files | grep / | cut -d/ -f1 | uniq ) \
-        -name '*.pyc' -or -name '*.pyo' \
-        -exec rm -rf {} +
-}
-
-
 function ci-install {
     pip install -e '.[all]' --group tests --group typing
 }
 
 function ci-run {
-    coverage-run -v && coverage-report && typing
+    command coverage run -m pytest --runslow && coverage-report && typing
 }
 
 

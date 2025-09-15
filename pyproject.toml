@@ -97,7 +97,6 @@ tests = [
     "pytest-subtests",
     "pytest-rerunfailures",
     "coverage",
-    "pytest-cov",
     "requests-mock",
     # mechanicalsoup hard-depends on lxml (see below)
     'mechanicalsoup; (implementation_name != "pypy" and python_version <= "3.12")',
