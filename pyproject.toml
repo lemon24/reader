@@ -168,6 +168,11 @@ omit = [
 [tool.coverage.paths]
 source = ["src", "*/site-packages"]
 
+[tool.mypy]
+files = ["src"]
+show_error_codes = true
+pretty = true
+strict = true
 [[tool.mypy.overrides]]
 module = [
     "reader.__main__",

@@ -55,4 +55,4 @@ jobs:
           python-version-file: 'pyproject.toml'
 
       - run: pip install -e . --group typing
-      - run: ./run.sh typing
+      - run: mypy
