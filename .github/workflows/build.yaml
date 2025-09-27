@@ -28,16 +28,31 @@ jobs:
 
     steps:
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
 
-      - run: ./run.sh ci-install
-      - run: ./run.sh ci-run
+      - run: pip install -e '.[all]' --group tests
+      - run: coverage run -m pytest --runslow
+      - run: ./run.sh coverage-report
 
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  typing:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - run: pip install -e . --group typing
+      - run: ./run.sh typing

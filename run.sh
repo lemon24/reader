@@ -74,13 +74,6 @@ function test-all {
 
 
 function typing {
-    if on-pypy; then
-        # mypy does not work on pypy as of January 2020
-        # https://github.com/python/typed_ast/issues/97#issuecomment-484335190
-        echo "mypy does not work on pypy, doing nothing"
-        return
-    fi
-
     mypy --strict --show-error-codes src "$@"
 
     mkdir -p build
@@ -137,15 +130,6 @@ function entr-project-files {
             break
         fi
     done
-}
-
-
-function ci-install {
-    pip install -e '.[all]' --group tests --group typing
-}
-
-function ci-run {
-    command coverage run -m pytest --runslow && coverage-report && typing
 }
 
 
