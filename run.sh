@@ -79,7 +79,7 @@ function typing {
 
 
 function docs {
-    make -C docs html SPHINXOPTS="-W" "$@"
+    sphinx-build -E -W docs docs/_build/html "$@"
 }
 
 
@@ -93,8 +93,8 @@ function typing-dev {
 }
 
 function docs-dev {
-    make -C docs clean
-    entr-project-files -cdr "$SCRIPT" docs "$@"
+    rm -r docs/_build/html
+    entr-project-files -cdr sphinx-build -W docs docs/_build/html "$@"
 }
 
 function serve-dev {
