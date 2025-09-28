@@ -33,7 +33,6 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.extlinks',
     'sphinx_click.ext',
-    'hoverxref.extension',
     'sphinxcontrib.log_cabinet',
 ]
 
@@ -111,19 +110,6 @@ extlinks = {
     'gh': (f"https://github.com/lemon24/reader/tree/{branch}/%s", '%s'),
 }
 
-
-hoverxref_auto_ref = True
-hoverxref_domains = ["py"]
-hoverxref_role_types = {
-    'ref': 'tooltip',
-    'mod': 'tooltip',
-    'class': 'tooltip',
-    'meth': 'tooltip',
-    'attr': 'tooltip',
-    'exc': 'tooltip',
-    'func': 'tooltip',
-    'data': 'tooltip',
-}
 
 pygments_style = 'friendly'
 
