@@ -118,9 +118,7 @@ typing = [
 
 docs = [
     "sphinx",
-    # listing 1.3.0rc1 explicitly until 1.3 is released
-    # https://github.com/readthedocs/sphinx_rtd_theme/pull/1464#issuecomment-1664799982
-    "sphinx-rtd-theme>=1.3.0rc1",
+    "sphinx-rtd-theme",
     "click>=7",
     "sphinx-click",
     "sphinxcontrib-log-cabinet",
