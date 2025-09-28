@@ -757,7 +757,7 @@ class EntrySort(enum.StrEnum):
     #:
     #: .. note::
     #:
-    #: The algorithm for "recent" is a heuristic and may change over time.
+    #:  The algorithm for "recent" is a heuristic and may change over time.
     #:
     #: .. versionchanged:: 3.1
     #:  Sort entries by added date most of the time,
