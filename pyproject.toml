@@ -65,8 +65,7 @@ cli = [
 ]
 app = [
     "flask>=0.10",
-    # https://github.com/python-humanize/humanize/issues/122
-    "humanize>=4,!=4.7.*",
+    "humanize>=4",
     # for config
     "PyYAML",
     # for v2
