@@ -2,42 +2,38 @@
 #
 # usage: ./run.sh command [argument ...]
 #
-# Commands used during development / CI.
-# Also, executable documentation for project dev practices.
+# Executable documentation for the development workflow.
 #
-# See https://death.andgravity.com/run-sh
-# for an explanation of how it works and why it's useful.
+# See https://death.andgravity.com/run-sh for how this works.
 
 
-# First, set up the environment.
-# (Check the notes at the end when changing this.)
+# preamble
 
 set -o nounset
 set -o pipefail
 set -o errexit
 
-# Change the current directory to the project root.
 PROJECT_ROOT=${0%/*}
 if [[ $0 != $PROJECT_ROOT && $PROJECT_ROOT != "" ]]; then
     cd "$PROJECT_ROOT"
 fi
 readonly PROJECT_ROOT=$( pwd )
-
-# Store the absolute path to this script (useful for recursion).
 readonly SCRIPT="$PROJECT_ROOT/$( basename "$0" )"
 
 
+# main development workflow
 
-# Commands follow.
-
-
-function install-dev {
+function install {
     pip install -e '.[all]' --group dev --upgrade --upgrade-strategy eager
     pre-commit install --install-hooks
 }
 
 function test {
     pytest --runslow "$@"
+}
+
+function test-all {
+    tox p "$@"
 }
 
 function coverage {
@@ -47,8 +43,44 @@ function coverage {
     coverage-report
 }
 
+function typing {
+    mypy "$@"
+}
+
+function docs {
+    sphinx-build -E -W docs docs/_build/html "$@"
+}
+
+function release {
+    python scripts/release.py "$@"
+}
+
+
+# "watch" versions of the main commands
+
+function test-dev {
+    watch pytest "$@"
+}
+
+function typing-dev {
+    watch typing "$@"
+}
+
+function docs-dev {
+    rm -r docs/_build/html
+    entr-project-files -cdr sphinx-build -W docs docs/_build/html "$@"
+}
+
+function serve-dev {
+    export READER_DB=db.sqlite
+    flask -A reader._app.wsgi --debug run "$@"
+}
+
+
+# low level commands
+
 function coverage-report {
-    # library only "coverage report --fail-under 100"
+    # --fail-under only for the library, not the CLI or the web app
     unset -f coverage
     coverage report \
         --omit "$(
@@ -68,52 +100,14 @@ function coverage-report {
 }
 
 
-function test-all {
-    tox p "$@"
+# utilities
+
+function on-pypy {
+    [[ $( python -c 'import sys; print(sys.implementation.name)' ) == pypy ]]
 }
 
-
-function typing {
-    mypy "$@"
-}
-
-
-function docs {
-    sphinx-build -E -W docs docs/_build/html "$@"
-}
-
-
-function test-dev {
-    clean-pyc
-    entr-project-files -cdr pytest "$@"
-}
-
-function typing-dev {
-    entr-project-files -cdr "$SCRIPT" typing "$@"
-}
-
-function docs-dev {
-    rm -r docs/_build/html
-    entr-project-files -cdr sphinx-build -W docs docs/_build/html "$@"
-}
-
-function serve-dev {
-    export FLASK_DEBUG=1
-    export FLASK_TRAP_BAD_REQUEST_ERRORS=1
-    export FLASK_APP=src/reader/_app/wsgi.py
-    export READER_DB=db.sqlite
-    flask run -p 8000 "$@"
-}
-
-
-function release {
-    python scripts/release.py "$@"
-}
-
-
-function ls-project-files {
-    git ls-files "$@"
-    git ls-files --exclude-standard --others "$@"
+function watch {
+    entr-project-files -cdr "$SCRIPT" "$@"
 }
 
 function entr-project-files {
@@ -126,25 +120,10 @@ function entr-project-files {
     done
 }
 
-
-function on-pypy {
-    [[ $( python -c 'import sys; print(sys.implementation.name)' ) == pypy ]]
+function ls-project-files {
+    git ls-files "$@"
+    git ls-files --exclude-standard --others "$@"
 }
 
 
-
-# Commands end. Dispatch to command.
-
 "$@"
-
-
-
-# Some dev notes for this script.
-#
-# The commands *require*:
-#
-# * The current working directory is the project root.
-# * The shell options and globals are set as they are.
-#
-# Inspired by http://www.oilshell.org/blog/2020/02/good-parts-sketch.html
-#
