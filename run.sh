@@ -68,7 +68,7 @@ function typing-dev {
 
 function docs-dev {
     rm -r docs/_build/html
-    entr-project-files -cdr sphinx-build -W docs docs/_build/html "$@"
+    watch sphinx-build -W docs docs/_build/html "$@"
 }
 
 function serve-dev {
