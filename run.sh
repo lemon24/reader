@@ -33,7 +33,7 @@ function test {
 }
 
 function test-all {
-    tox p "$@"
+    tox run-parallel "$@"
 }
 
 function coverage {
@@ -49,10 +49,6 @@ function typing {
 
 function docs {
     sphinx-build -E -W docs docs/_build/html "$@"
-}
-
-function release {
-    python scripts/release.py "$@"
 }
 
 

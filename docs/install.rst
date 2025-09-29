@@ -109,11 +109,13 @@ Use the following command to update *reader*
     pip install --upgrade reader
 
 
+.. _install-pre-release:
+
 Living on the edge
 ~~~~~~~~~~~~~~~~~~
 
 If you want to use the latest *reader* code before it’s released,
-install or update from the master branch:
+install or update from the ``master`` branch:
 
 .. code-block:: bash
 
