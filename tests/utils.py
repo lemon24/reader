@@ -97,32 +97,17 @@ def monkeypatch_os(monkeypatch):
         yield monkeypatch_os
 
 
-class TZSetter:
-    def __init__(self, monkeypatch):
-        self.monkeypatch = monkeypatch
-
-    def __call__(self, tz):
-        self.monkeypatch.setenv('TZ', tz)
-        time.tzset()
-
-    def undo(self):
-        self.monkeypatch.undo()
-        time.tzset()
-
-
 @pytest.fixture
-def monkeypatch_tz(monkeypatch):
-    tzsetter = TZSetter(monkeypatch)
-    try:
-        yield tzsetter
-    finally:
-        try:
-            tzsetter.undo()
-        except AttributeError as e:
-            # on windows, we get "module 'time' has no attribute 'tzset'";
-            # it's ok to do nothing, since  __call__() didn't call it either
-            if 'tzset' not in str(e):
-                raise
+def monkeypatch_tz(monkeypatch, request):
+
+    def monkeypatch_tz(tz):
+        monkeypatch.setenv('TZ', tz)
+        time.tzset()
+
+    if hasattr(time, 'tzset'):
+        request.addfinalizer(time.tzset)
+    with monkeypatch.context() as monkeypatch:
+        yield monkeypatch_tz
 
 
 def utc_datetime(*args, **kwargs):
