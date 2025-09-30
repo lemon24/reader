@@ -55,35 +55,27 @@ def rename_argument(original, alias):
     return decorator
 
 
-class Reloader:
-    def __init__(self, monkeypatch):
-        self.modules = []
-        self.monkeypatch = monkeypatch
+@pytest.fixture
+def reload_module(monkeypatch, request):
+    modules = []
 
-    def __call__(self, module):
-        self.modules.append((module, module.__dict__.copy()))
+    def reload_module(module):
+        modules.append((module, module.__dict__.copy()))
         return importlib.reload(module)
 
-    def undo(self):
-        self.monkeypatch.undo()
-
-        # previously, this would reload the module again,
-        # creating *new* versions of the old classes,
-        # which breaks some modules (e.g. pathlib).
-        # restoring the original attributes seems to work better.
-        while self.modules:
-            module, module_dict = self.modules.pop()
+    def undo():
+        monkeypatch.undo()
+        # we don't reload the module again,
+        # because it creates *new* versions of the old classes,
+        # which breaks some modules (e.g. pathlib)
+        while modules:
+            module, module_dict = modules.pop()
             module.__dict__.clear()
             module.__dict__.update(module_dict)
 
-
-@pytest.fixture
-def reload_module(monkeypatch):
-    reloader = Reloader(monkeypatch)
-    try:
-        yield reloader
-    finally:
-        reloader.undo()
+    request.addfinalizer(undo)
+    with monkeypatch.context() as monkeypatch:
+        yield reload_module
 
 
 @pytest.fixture
