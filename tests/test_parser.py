@@ -1,6 +1,7 @@
 import io
 import json
 import logging
+import urllib.request
 from contextlib import contextmanager
 from unittest.mock import MagicMock
 
@@ -863,20 +864,10 @@ RELATIVE_ROOTS = [
 
 
 @pytest.mark.parametrize('os_name, root', RELATIVE_ROOTS)
-def test_feed_root_relative_root_error(monkeypatch, os_name, root):
-    import ntpath
-    import posixpath
-
-    monkeypatch.setattr('os.name', os_name)
-    monkeypatch.setattr('os.path', {'nt': ntpath, 'posix': posixpath}[os_name])
-
+def test_feed_root_relative_root_error(monkeypatch_os, os_name, root):
+    monkeypatch_os(os_name)
     with pytest.raises(ValueError) as excinfo:
-        try:
-            default_parser(root)
-        finally:
-            # pytest.raises() doesn't interact well with our monkeypatching
-            monkeypatch.undo()
-
+        default_parser(root)
     assert 'root must be absolute' in str(excinfo.value)
 
 
@@ -939,26 +930,13 @@ BAD_PATHS_WITH_OS = [
 
 
 @pytest.mark.parametrize('os_name, url, reason', BAD_PATHS_WITH_OS)
-def test_normalize_url_errors(monkeypatch, reload_module, os_name, url, reason):
-    import ntpath
-    import posixpath
-
+def test_normalize_url_errors(monkeypatch_os, reload_module, os_name, url, reason):
     data_dir = {'nt': 'C:\\feeds', 'posix': '/feeds'}[os_name]
-
-    monkeypatch.setattr('os.name', os_name)
-    monkeypatch.setattr('os.path', {'nt': ntpath, 'posix': posixpath}[os_name])
-
-    import urllib.request
-
-    # urllib.request differs based on os.name
+    monkeypatch_os(os_name)
     reload_module(urllib.request)
 
     with pytest.raises(ValueError) as excinfo:
-        try:
-            FileRetriever(data_dir)._normalize_url(url)
-        finally:
-            # pytest.raises() doesn't interact well with our monkeypatching
-            reload_module.undo()
+        FileRetriever(data_dir)._normalize_url(url)
 
     assert reason in str(excinfo.value)
 

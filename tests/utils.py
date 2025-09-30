@@ -1,7 +1,9 @@
 import functools
 import importlib
 import inspect
+import ntpath
 import os.path
+import posixpath
 import threading
 import time
 from datetime import datetime
@@ -82,6 +84,17 @@ def reload_module(monkeypatch):
         yield reloader
     finally:
         reloader.undo()
+
+
+@pytest.fixture
+def monkeypatch_os(monkeypatch):
+
+    def monkeypatch_os(os_name):
+        monkeypatch.setattr('os.name', os_name)
+        monkeypatch.setattr('os.path', {'nt': ntpath, 'posix': posixpath}[os_name])
+
+    with monkeypatch.context() as monkeypatch:
+        yield monkeypatch_os
 
 
 class TZSetter:
