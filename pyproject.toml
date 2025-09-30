@@ -162,6 +162,8 @@ source = ["reader", "tests"]
 omit = [
     "src/reader/_vendor/*",
 ]
+# TODO: remove when https://github.com/nedbat/coveragepy/issues/1987 is solved
+core = "ctrace"
 [tool.coverage.paths]
 source = ["src", "*/site-packages"]
 

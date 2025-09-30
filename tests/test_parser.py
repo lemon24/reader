@@ -796,7 +796,7 @@ def test_feed_root_empty(data_dir, scheme, relative):
     test_path = data_dir.joinpath('full.rss')
     if relative:
         test_path = test_path.relative_to(type(data_dir)().absolute())
-    if not relative:
+    if scheme.endswith('/') and str(test_path).startswith('/'):
         # urllib.url2pathname fails for file://...//... in Python 3.14
         scheme = scheme.removesuffix('/')
     test_url = scheme + str(test_path)
