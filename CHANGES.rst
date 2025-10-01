@@ -12,12 +12,20 @@ Version 3.19
 Unreleased
 
 * Support Python 3.14.
+* Remove deprecated empty ``search`` and ``readtime`` extras.
+* Remove undocumented development ``tests``, ``docs``, and ``dev`` extras.
 
 * :mod:`~reader._plugins.enclosure_tags` plugin:
   strip HTML tags from values used as MP3 tags
   (for example, ``<b>`` tags used to highlight search result matches).
 
-* Remove long-deprecated, empty ``search`` and ``readtime`` extras.
+* Project infrastructure improvements.
+
+  * Clean up :doc:`contributing` documentation and :gh:`run.sh <run.sh>` script.
+  * Use GitHub Actions to publish releases to PyPI.
+  * Split type checking and testing jobs in the ``build`` GHA workflow.
+  * Make tox runs slightly faster.
+  * Use dependency groups instead of extras for development dependencies.
 
 
 Version 3.18
