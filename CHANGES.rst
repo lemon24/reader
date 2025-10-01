@@ -9,7 +9,7 @@ Changelog
 Version 3.19
 ------------
 
-Unreleased
+Released 2025-10-01
 
 * Support Python 3.14.
 * Remove deprecated empty ``search`` and ``readtime`` extras.
