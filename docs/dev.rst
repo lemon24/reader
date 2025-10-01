@@ -226,25 +226,31 @@ Making a release
 
 .. note::
 
-    :gh:`scripts/release.py <scripts/release.py>` already does most of these.
+    The :gh:`release.py <scripts/release.py>` script together with
+    the :gh:`publish <.github/workflows/publish.yaml>`  GitHub Actions workflow
+    already do most of these.
 
 Making a release (from ``x`` to ``y`` == ``x + 1``):
 
 * (release.py) bump version in ``src/reader/__init__.py`` to ``y``
 * (release.py) update changelog with release version and date
 * (release.py) make sure tests pass / docs build
-* (release.py) clean up dist/: ``rm -rf dist/``
-* (release.py) build tarball and wheel: ``python -m build``
 * (release.py) push to GitHub
-* (release.py prompts) wait for GitHub Actions / Codecov / Read the Docs builds to pass
-* upload to test PyPI and check: ``twine upload --repository-url https://test.pypi.org/legacy/ dist/*``
-* (release.py) upload to PyPI: ``twine upload dist/*``
+* (release.py prompts) wait for GitHub Actions / Read the Docs builds to pass
 * (release.py) tag current commit with `<major>.<minor>` and `<major>.x`
-  (e.g. when releasing `1.20`: `1.20` and `1.x`)
-* (release.py prompts) create release in GitHub
-* build docs from latest and enable ``y`` docs version (should happen automatically after the first time)
+  (e.g. when releasing `1.20`: `1.20` and `1.x`) and push tags to GitHub
+* (release.py prompts) approve publish workflow
+* (publish workflow) build and upload to PyPI
+* alternatively, to make a manual release (should not be needed)
+
+  * clean up dist/: ``rm -rf dist/``
+  * build tarball and wheel: ``python -m build``
+  * upload to test PyPI and check: ``twine upload --repository-url https://test.pypi.org/legacy/ dist/*``
+  * upload to PyPI: ``twine upload dist/*``
+
+* (publish workflow) create draft release in GitHub
+* (release.py prompts) publish release in GitHub
 * (release.py) bump versions from ``y`` to ``(y + 1).dev0``, add ``(y + 1)`` changelog section
-* (release.py prompts) trigger Read the Docs build for `<major>.x` (doesn't happen automatically)
 
 
 

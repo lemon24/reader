@@ -34,11 +34,6 @@ def run_tox():
     run_no_venv('tox -p all', shell=True)
 
 
-def build():
-    run('rm -rf dist/', shell=True)
-    run('python -m build', shell=True)
-
-
 def path_sub(pattern, repl, path):
     with open(path) as f:
         text = f.read()
@@ -112,10 +107,6 @@ def check_unpushed():
         abort("unpushed changes\n\n{}\n", p.stdout.strip('\n'))
 
 
-def upload_to_pypi():
-    run('twine upload dist/*', shell=True)
-
-
 def add_and_push_tags(tags):
     for tag in tags:
         run(['git', 'tag', '--force', tag])
@@ -150,10 +141,6 @@ def main(version, new_version, date, tox, changelog):
 
     confirm("Wait for GitHub Actions / Read the Docs builds to pass.")
 
-    confirm("Upload to PyPI?")
-    build()
-    upload_to_pypi()
-
     tags = [version]
     version_x = version.partition('.')[0] + '.x'
     if new_version_is_final:
@@ -162,7 +149,15 @@ def main(version, new_version, date, tox, changelog):
     confirm(f"Add and push tags ({', '.join(tags)})?")
     add_and_push_tags(tags)
 
-    confirm("Create release {} in GitHub (doesn't happen automatically).", version)
+    confirm(
+        "Approve publish workflow to upload to PyPI.\n  {}\nDone?",
+        "https://github.com/lemon24/reader/actions/workflows/publish.yaml",
+    )
+    confirm(
+        "Publish draft release {} in GitHub.\n  {}\nDone?",
+        version,
+        "https://github.com/lemon24/reader/releases",
+    )
 
     new_version_full = f"{new_version}.dev0"
     update_init_version(new_version_full)
@@ -172,11 +167,6 @@ def main(version, new_version, date, tox, changelog):
 
     confirm("Push version {}?", new_version_full)
     push()
-
-    # TODO: I just enabled branch or tag creation/deletion for the RtD webhook in GitHub, this might not be needed next time.
-    confirm(
-        f"Trigger Read the Docs build for {version_x} (doesn't happen automatically)."
-    )
 
 
 if __name__ == '__main__':
