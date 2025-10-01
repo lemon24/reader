@@ -1,0 +1,62 @@
+
+name: publish
+
+on:
+  push:
+    tags: ['[0-9]+.[0-9]+']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: 'pyproject.toml'
+
+      - run: pip install build
+      - run: python3 -m build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: dist
+
+  create-release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+
+      - uses: actions/download-artifact@v4
+
+      - name: create release
+        run: >-
+          gh release create --draft
+          --repo ${{ github.repository }}
+          ${{ github.ref_name }}
+          artifact/*
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  publish-pypi:
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    environment:
+      name: pypi
+      url: https://pypi.org/project/${{ github.event.repository.name }}/${{ github.ref_name }}
+
+    steps:
+
+      - uses: actions/download-artifact@v4
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: artifact/
