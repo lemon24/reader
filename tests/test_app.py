@@ -69,21 +69,23 @@ def test_mark_as_read_unread(db_path, make_reader, parser, browser):
     assert len(browser.get_current_page().select('.entry')) == 1
 
     form = browser.select_form('.entry form.action-mark-as-read')
-    response = browser.submit_selected(form.form.find('button', text='mark as read'))
+    response = browser.submit_selected(form.form.find('button', string='mark as read'))
 
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.entry')) == 0
 
-    response = browser.follow_link(browser.find_link(text='read'))
+    response = browser.follow_link(browser.find_link(string='read'))
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.entry')) == 1
 
     form = browser.select_form('.entry form.action-mark-as-unread')
-    response = browser.submit_selected(form.form.find('button', text='mark as unread'))
+    response = browser.submit_selected(
+        form.form.find('button', string='mark as unread')
+    )
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.entry')) == 0
 
-    response = browser.follow_link(browser.find_link(text='unread'))
+    response = browser.follow_link(browser.find_link(string='unread'))
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.entry')) == 1
 
@@ -104,24 +106,24 @@ def test_mark_all_as_read_unread(db_path, make_reader, parser, browser):
     form = browser.select_form('#update-entries form.action-mark-all-as-read')
     form.set_checkbox({'really-mark-all-as-read': True})
     response = browser.submit_selected(
-        form.form.find('button', text='mark all as read')
+        form.form.find('button', string='mark all as read')
     )
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.entry')) == 0
 
-    response = browser.follow_link(browser.find_link(text='read'))
+    response = browser.follow_link(browser.find_link(string='read'))
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.entry')) == 1
 
     form = browser.select_form('#update-entries form.action-mark-all-as-unread')
     form.set_checkbox({'really-mark-all-as-unread': True})
     response = browser.submit_selected(
-        form.form.find('button', text='mark all as unread')
+        form.form.find('button', string='mark all as unread')
     )
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.entry')) == 0
 
-    response = browser.follow_link(browser.find_link(text='unread'))
+    response = browser.follow_link(browser.find_link(string='unread'))
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.entry')) == 1
 
@@ -144,14 +146,14 @@ def test_add_delete_feed(db_path, browser, parser, app, monkeypatch):
     reader = app_make_reader(url=db_path)
 
     browser.open('http://app/')
-    response = browser.follow_link(browser.find_link(text='feeds'))
+    response = browser.follow_link(browser.find_link(string='feeds'))
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.feed')) == 0
 
     # go to the preview page
     form = browser.select_form('#top-bar form')
     form.input({'url': feed.url})
-    response = browser.submit_selected(form.form.find('button', text='add feed'))
+    response = browser.submit_selected(form.form.find('button', string='add feed'))
     assert response.status_code == 200
     assert (
         browser.get_current_page().select('title')[0].text
@@ -161,7 +163,7 @@ def test_add_delete_feed(db_path, browser, parser, app, monkeypatch):
 
     # actually add the feed
     form = browser.select_form('form.action-add-feed')
-    response = browser.submit_selected(form.form.find('button', text='add feed'))
+    response = browser.submit_selected(form.form.find('button', string='add feed'))
 
     # we should be at the feed page, via a redirect
     assert response.status_code == 200
@@ -175,18 +177,18 @@ def test_add_delete_feed(db_path, browser, parser, app, monkeypatch):
     browser.refresh()
     assert len(browser.get_current_page().select('.entry')) == 1
 
-    response = browser.follow_link(browser.find_link(text='feeds'))
+    response = browser.follow_link(browser.find_link(string='feeds'))
     assert response.status_code == 200
 
-    feed_link = browser.find_link(text=feed.title)
+    feed_link = browser.find_link(string=feed.title)
 
     form = browser.select_form('.feed form.action-delete-feed')
     form.set_checkbox({'really-delete-feed': True})
-    response = browser.submit_selected(form.form.find('button', text='delete feed'))
+    response = browser.submit_selected(form.form.find('button', string='delete feed'))
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.feed')) == 0
 
-    response = browser.follow_link(browser.find_link(text='entries'))
+    response = browser.follow_link(browser.find_link(string='entries'))
     assert response.status_code == 200
     assert len(browser.get_current_page().select('.entry')) == 0
 
@@ -207,7 +209,7 @@ def test_delete_feed_from_entries_page_redirects(db_path, make_reader, parser, b
     browser.open('http://app/', params={'feed': feed.url})
     form = browser.select_form('#update-entries form.action-delete-feed')
     form.set_checkbox({'really-delete-feed': True})
-    response = browser.submit_selected(form.form.find('button', text='delete feed'))
+    response = browser.submit_selected(form.form.find('button', string='delete feed'))
     assert response.status_code == 200
     assert browser.get_url() == 'http://app/'
     assert len(browser.get_current_page().select('.entry')) == 0

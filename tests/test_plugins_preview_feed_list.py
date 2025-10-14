@@ -107,7 +107,7 @@ def test_plugin(db_path, requests_mock):
     browser.open('http://app/')
     form = browser.select_form('#top-bar form')
     form.input({'url': feed_url})
-    response = browser.submit_selected(form.form.find('button', text='add feed'))
+    response = browser.submit_selected(form.form.find('button', string='add feed'))
     assert response.status_code == 200
 
     page = browser.get_current_page()
