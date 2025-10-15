@@ -99,15 +99,15 @@ tests = [
     "coverage",
     "requests-mock",
     # mechanicalsoup hard-depends on lxml (see below)
-    'mechanicalsoup; (implementation_name != "pypy" and python_version <= "3.12")',
+    'mechanicalsoup; (implementation_name != "pypy" and python_version <= "3.14")',
     "requests-wsgi-adapter",
     # we want to test search with all known bs4 parsers.
     # lxml usually does not have recent PyPy wheels.
     # lxml usually does not have pre-relase CPython wheels.
-    'lxml; (implementation_name != "pypy" and python_version <= "3.12")',
+    'lxml; (implementation_name != "pypy" and python_version <= "3.14")',
     "html5lib",
     # for bench.py
-    'numpy; (implementation_name != "pypy" and os_name == "posix" and python_version <= "3.12")',
+    'numpy; (implementation_name != "pypy" and os_name == "posix" and python_version <= "3.14")',
 ]
 
 typing = [
