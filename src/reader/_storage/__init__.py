@@ -29,8 +29,10 @@ class Storage(FeedsMixin, EntriesMixin, TagsMixin, StorageBase):
 
     """
 
-    def __init__(self, path: str, timeout: float | None = None):
-        super().__init__(path, timeout)
+    def __init__(
+        self, path: str, read_only: bool = False, timeout: float | None = None
+    ):
+        super().__init__(path, read_only, timeout)
         self.changes: ChangeTrackerType = Changes(self)
 
     def make_search(self) -> SearchType:

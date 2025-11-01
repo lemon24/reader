@@ -20,7 +20,6 @@ APPLICATION_ID = b'read'
 
 _T = TypeVar('_T')
 
-
 # also used by tests
 CONNECTION_CLS = sqlite3.Connection
 
@@ -52,7 +51,7 @@ class StorageBase:
     chunk_size = 2**8
 
     @wrap_exceptions(message="while opening database")
-    def __init__(self, path: str, timeout: float | None = None):
+    def __init__(self, path: str, read_only: bool, timeout: float | None = None):
         kwargs: dict[str, Any] = {'factory': CONNECTION_CLS}
         if timeout is not None:
             kwargs['timeout'] = timeout
@@ -61,7 +60,7 @@ class StorageBase:
         # has to run for every connection (in every thread),
         # since it's not persisted across connections
         self.factory = _sqlite_utils.LocalConnectionFactory(
-            path, self.setup_db, **kwargs
+            path, self.setup_db, read_only, **kwargs
         )
 
     def get_db(self) -> sqlite3.Connection:

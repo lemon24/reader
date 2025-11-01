@@ -22,6 +22,7 @@ from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
+from pathlib import Path
 from typing import Any
 from typing import cast
 from typing import no_type_check
@@ -119,6 +120,7 @@ def wrap_exceptions(
         for fragment, op_exc_type in op_exc_types.items():
             if fragment.lower() in e_msg:
                 raise op_exc_type(str(e)) from None
+
         raise exc_type(message) from e
 
     except sqlite3.ProgrammingError as e:
@@ -209,7 +211,6 @@ class IdError(DBError):
 
 
 db_errors = [DBError, SchemaVersionError, IntegrityError, RequirementError]
-
 
 _DBFunction = Callable[[sqlite3.Connection], None]
 
@@ -437,13 +438,21 @@ class LocalConnectionFactory:
     INLINE_OPTIMIZE_TIMEOUT = 0.1
 
     def __init__(
-        self, path: str, setup_db: _DBFunction = lambda _: None, **kwargs: Any
+        self,
+        path: str,
+        setup_db: _DBFunction = lambda _: None,
+        read_only: bool = False,
+        **kwargs: Any,
     ):
         self.path = path
         self.setup_db = setup_db
+        self.read_only = read_only
         self.kwargs = kwargs
         if kwargs.get('uri'):  # pragma: no cover
             raise NotImplementedError("is_private() does not work for uri=True")
+        if path.startswith(':file:'):  # pragma: no cover
+            raise NotImplementedError("file: connections are not supported")
+        self.kwargs['uri'] = True
         self.attached: dict[str, str] = {}
         self._local = _LocalConnectionFactoryState()
         self._local.is_creating_thread = True
@@ -456,7 +465,7 @@ class LocalConnectionFactory:
         if db:
             if not self._local.context_stack:
                 if self._should_optimize(self._local.call_count):
-                    self._optimize(db, self.INLINE_OPTIMIZE_TIMEOUT)
+                    self._optimize(db, self.read_only, self.INLINE_OPTIMIZE_TIMEOUT)
                 self._local.call_count += 1
             return db
 
@@ -473,7 +482,11 @@ class LocalConnectionFactory:
             self._other_threads = True
 
         # TODO: remove needless cast (needed after mypy 1.16.0 update)
-        db = cast(sqlite3.Connection, sqlite3.connect(self.path, **self.kwargs))
+        db = cast(
+            sqlite3.Connection,
+            sqlite3.connect(self._make_uri(self.path), **self.kwargs),
+        )
+
         self._local.db = db
         self._local.call_count = 0
 
@@ -488,7 +501,7 @@ class LocalConnectionFactory:
         # but not on pypy (finalizer runs in main thread);
         # also see https://bugs.python.org/issue14073
         self._local.finalizer = weakref.finalize(
-            threading.current_thread(), self._close, db
+            threading.current_thread(), self._close, db, self.read_only
         )
 
         for name, path in self.attached.items():
@@ -514,10 +527,10 @@ class LocalConnectionFactory:
             self._local.closed = True
 
     @classmethod
-    def _close(cls, db: sqlite3.Connection) -> None:
+    def _close(cls, db: sqlite3.Connection, read_only: bool = False) -> None:
         try:
             try:
-                cls._optimize(db)
+                cls._optimize(db, read_only)
             finally:
                 db.close()
         except sqlite3.ProgrammingError as e:
@@ -532,7 +545,13 @@ class LocalConnectionFactory:
             raise
 
     @staticmethod
-    def _optimize(db: sqlite3.Connection, timeout: float = 0) -> None:
+    def _optimize(
+        db: sqlite3.Connection, read_only: bool = False, timeout: float = 0
+    ) -> None:
+        # don't optimize the database if it's in a read-only state
+        if read_only:
+            return
+
         # Don't wait too much for a lock, it means the database is busy,
         # and now is likely not a good time to run optimize.
         # Also prevents rare "database is locked" errors in certain conditions
@@ -552,6 +571,7 @@ class LocalConnectionFactory:
                 db.execute("PRAGMA optimize;")
         except sqlite3.OperationalError as e:  # pragma: no cover
             message = str(e).lower()
+
             if "database is locked" not in message:
                 raise
 
@@ -575,16 +595,30 @@ class LocalConnectionFactory:
         if name in self.attached:  # pragma: no cover
             raise ValueError(f"database already attached: {name!r}")
 
-        self.attached[name] = path
+        uri_path = self._make_uri(path)
+        self.attached[name] = uri_path
         db = self._local.db
         assert db is not None
-        self._attach(db, name, path)
+        self._attach(db, name, uri_path)
 
     def _attach(self, db: sqlite3.Connection, name: str, path: str) -> None:
         db.execute("ATTACH DATABASE ? AS ?;", (path, name))
 
     def is_private(self) -> bool:
         return self._is_private(self.path)
+
+    def _make_uri(self, path: str) -> str:
+        # keeping sqlite special names intact
+        if path in (':memory:', ''):
+            return path
+        # make the path full, otherwise it cannot be turned into URI
+        abs_path = Path(path).resolve(strict=False)
+        uri = abs_path.as_uri()
+
+        if self.read_only:
+            uri += "?mode=ro"
+
+        return uri
 
     @staticmethod
     def _is_private(path: str) -> bool:
