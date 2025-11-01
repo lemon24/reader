@@ -23,6 +23,8 @@ ignore =
     B907
     # multiple statements on one line, handled by black
     E704
+    # TODO: pending https://github.com/PyCQA/flake8-bugbear/issues/525
+    B042
 per-file-ignores =
     # __init__ modules export names
     **/__init__.py: F401
