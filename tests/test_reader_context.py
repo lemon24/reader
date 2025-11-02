@@ -348,7 +348,9 @@ PATHS_RELATIVE = [
     'db.sqlite',
     './db.sqlite',
     'file:db.sqlite',
-    'db.sqlite?mode=injection',
+    pytest.param(
+        'db.sqlite?mode=injection', marks=pytest.mark.skipif("os.name == 'nt'")
+    ),
 ]
 
 
