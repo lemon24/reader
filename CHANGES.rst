@@ -11,6 +11,12 @@ Version 3.20
 
 Unreleased
 
+* Add the ``read_only`` :func:`make_reader` argument.
+  Thanks to `Roman Milko`_ for the pull request.
+  (:issue:`319`)
+
+.. _Roman Milko: https://github.com/rastr-0
+
 
 Version 3.19
 ------------

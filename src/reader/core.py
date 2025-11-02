@@ -168,7 +168,7 @@ def make_reader(
             (an absolute path that feed paths are relative to).
 
         read_only (bool):
-            Allows only read-only operations.
+            Only allow read-only storage operations.
 
         plugins (iterable(str or callable(Reader)) or None):
             An iterable of built-in plugin names or
@@ -239,6 +239,9 @@ def make_reader(
     .. versionchanged:: 3.0
         Wrap exceptions raised during plugin initialization
         in :exc:`PluginInitError` instead of letting them bubble up.
+
+    .. versionadded:: 3.20
+        The ``read_only`` keyword argument.
 
     """
 
