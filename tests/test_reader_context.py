@@ -25,7 +25,7 @@ from utils import rename_argument
 # paths for which different connections see the same database
 PATHS_SHARED = ['db.sqlite']
 # paths for which different connections see a private database
-PATHS_PRIVATE = [':memory:']
+PATHS_PRIVATE = [':memory:', '']
 PATHS_ALL = PATHS_SHARED + PATHS_PRIVATE
 
 
@@ -46,19 +46,18 @@ class MyConnection(sqlite3.Connection):
 
 
 @pytest.fixture
-def make_reader(make_reader, parser, monkeypatch, tmp_path):
+def make_reader_with_data(make_reader, parser, monkeypatch, tmp_path):
     monkeypatch.setattr('reader._storage._base.CONNECTION_CLS', MyConnection)
 
     monkeypatch.chdir(tmp_path)
 
-    def make_reader_with_data(path, *, seed=True, **kwargs):
+    def make_reader_with_data(path, **kwargs):
         reader = make_reader(path, **kwargs)
-        if seed:
-            feed = parser.feed(1)
-            parser.entry(1, 1, title='entry')
-            reader.add_feed(feed)
-            reader.update_feeds()
-            reader.update_search()
+        feed = parser.feed(1)
+        parser.entry(1, 1, title='entry')
+        reader.add_feed(feed)
+        reader.update_feeds()
+        reader.update_search()
 
         return reader
 
@@ -66,18 +65,18 @@ def make_reader(make_reader, parser, monkeypatch, tmp_path):
 
 
 @pytest.fixture(params=PATHS_ALL)
-def reader_all(make_reader, request):
-    return make_reader(request.param)
+def reader_all(make_reader_with_data, request):
+    return make_reader_with_data(request.param)
 
 
 @pytest.fixture(params=PATHS_SHARED)
-def reader_shared(make_reader, request):
-    return make_reader(request.param)
+def reader_shared(make_reader_with_data, request):
+    return make_reader_with_data(request.param)
 
 
 @pytest.fixture(params=PATHS_PRIVATE)
-def reader_private(make_reader, request):
-    return make_reader(request.param)
+def reader_private(make_reader_with_data, request):
+    return make_reader_with_data(request.param)
 
 
 def check_usage(reader):
@@ -328,7 +327,7 @@ def test_read_only(make_reader, db_path, parser):
     parser.entry(3, 2, title='two')
     mutable_reader.update_feeds()
 
-    immutable_reader = make_reader(db_path, seed=False, read_only=True)
+    immutable_reader = make_reader(db_path, read_only=True)
 
     immutable_reader.get_feed(feed)
     assert len(list(immutable_reader.search_entries('one'))) >= 1
