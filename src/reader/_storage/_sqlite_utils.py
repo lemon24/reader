@@ -502,7 +502,7 @@ class LocalConnectionFactory:
         # also see https://bugs.python.org/issue14073
         self._local.finalizer = weakref.finalize(
             threading.current_thread(), self._close, db, self.read_only
-        )
+        )  # type: ignore[call-arg]
 
         for name, path in self.attached.items():
             self._attach(db, name, path)
