@@ -122,7 +122,7 @@ def test_timeout(db_path, monkeypatch):
         return original_connect(*args, **kwargs)
 
     monkeypatch.setattr('sqlite3.connect', connect)
-    Storage(db_path, 19)
+    Storage(db_path, timeout=19)
 
     assert connect.expected_timeout == 19
 

@@ -103,6 +103,7 @@ def make_reader(
     url: str,
     *,
     feed_root: str | None = None,
+    read_only: bool = False,
     plugins: Iterable[PluginInput] = DEFAULT_PLUGINS,
     session_timeout: TimeoutType = DEFAULT_TIMEOUT,
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
@@ -165,6 +166,9 @@ def make_reader(
             ``''`` (full filesystem access), or
             ``'/path/to/feed/root'``
             (an absolute path that feed paths are relative to).
+
+        read_only (bool):
+            Allows only read-only operations.
 
         plugins (iterable(str or callable(Reader)) or None):
             An iterable of built-in plugin names or
@@ -263,12 +267,13 @@ def make_reader(
     # See this comment for details on how it should evolve:
     # https://github.com/lemon24/reader/issues/168#issuecomment-642002049
 
-    storage: StorageType = _storage or Storage(url)
+    storage: StorageType = _storage or Storage(url, read_only=read_only)
 
     try:
         # For now, we're using a storage-bound search provider.
         if not isinstance(storage, BoundSearchStorageType):  # pragma: no cover
             raise TypeError("storage must have a make_search factory")
+
         search = storage.make_search()
 
         if search_enabled is True:

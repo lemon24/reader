@@ -51,13 +51,15 @@ def make_reader(make_reader, parser, monkeypatch, tmp_path):
 
     monkeypatch.chdir(tmp_path)
 
-    def make_reader_with_data(path):
-        reader = make_reader(path)
-        feed = parser.feed(1)
-        parser.entry(1, 1, title='entry')
-        reader.add_feed(feed)
-        reader.update_feeds()
-        reader.update_search()
+    def make_reader_with_data(path, *, seed=True, **kwargs):
+        reader = make_reader(path, **kwargs)
+        if seed:
+            feed = parser.feed(1)
+            parser.entry(1, 1, title='entry')
+            reader.add_feed(feed)
+            reader.update_feeds()
+            reader.update_search()
+
         return reader
 
     return make_reader_with_data
@@ -312,3 +314,30 @@ def test_optimize_thread_end(reader):
     # the finalizer is called atexit instead, and this test fails ...
 
     assert count_optimize_calls(statements) == 1
+
+
+def test_read_only(make_reader, db_path, parser):
+    mutable_reader = make_reader(db_path)
+
+    feed = parser.feed(3, title='feed example')
+    mutable_reader.add_feed(feed)
+
+    parser.entry(3, 1, title='one')
+    mutable_reader.update_feeds()
+    mutable_reader.update_search()
+    parser.entry(3, 2, title='two')
+    mutable_reader.update_feeds()
+
+    immutable_reader = make_reader(db_path, seed=False, read_only=True)
+
+    immutable_reader.get_feed(feed)
+    assert len(list(immutable_reader.search_entries('one'))) >= 1
+
+    with pytest.raises(StorageError):
+        immutable_reader.add_feed('http://another.feed')
+
+    list(immutable_reader.search_entries('one'))
+    with pytest.raises(SearchError):
+        immutable_reader.update_search()
+
+    assert len(list(immutable_reader.search_entries('two'))) == 0
