@@ -332,11 +332,57 @@ def test_read_only(make_reader, db_path, parser):
     immutable_reader.get_feed(feed)
     assert len(list(immutable_reader.search_entries('one'))) >= 1
 
-    with pytest.raises(StorageError):
+    with pytest.raises(StorageError) as excinfo:
         immutable_reader.add_feed('http://another.feed')
+    assert 'readonly' in str(excinfo.value)
 
     list(immutable_reader.search_entries('one'))
-    with pytest.raises(SearchError):
+    with pytest.raises(SearchError) as excinfo:
         immutable_reader.update_search()
+    assert 'readonly' in str(excinfo.value)
 
     assert len(list(immutable_reader.search_entries('two'))) == 0
+
+
+PATHS_RELATIVE = [
+    'db.sqlite',
+    './db.sqlite',
+    'file:db.sqlite',
+    'db.sqlite?mode=injection',
+]
+
+
+@pytest.mark.parametrize('path', PATHS_RELATIVE)
+@pytest.mark.parametrize('absolute', [False, True])
+def test_paths_shared(make_reader, monkeypatch, tmp_path, path, absolute):
+    monkeypatch.chdir(tmp_path)
+
+    # shouldn't fail
+    make_reader(str(tmp_path / path) if absolute else path)
+
+    # we created the right file
+    assert (tmp_path / path).exists()
+
+
+# test_paths_private covered by the other *_private tests
+
+
+@pytest.mark.parametrize('path', PATHS_RELATIVE)
+def test_paths_read_only_shared(make_reader, monkeypatch, tmp_path, path):
+    monkeypatch.chdir(tmp_path)
+
+    # can't open because database doesn't exist
+    with pytest.raises(StorageError):
+        make_reader(path, read_only=True)
+
+    make_reader(path)
+
+    # shouldn't fail if database already exists
+    reader = make_reader(path, read_only=True)
+
+
+@pytest.mark.parametrize('path', PATHS_PRIVATE)
+def test_paths_read_only_private(make_reader, path):
+    # can open, but can't create tables etc. because read only
+    with pytest.raises(StorageError):
+        make_reader(path, read_only=True)

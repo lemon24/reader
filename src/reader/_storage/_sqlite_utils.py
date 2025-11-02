@@ -412,6 +412,9 @@ class UsageError(DBError):
     display_name = "usage error"
 
 
+TEMPORARY_DB_PATHS = {':memory:', ''}
+
+
 class LocalConnectionFactory:
     """Maintain a set of connections to the same database, one per thread.
 
@@ -450,8 +453,6 @@ class LocalConnectionFactory:
         self.kwargs = kwargs
         if kwargs.get('uri'):  # pragma: no cover
             raise NotImplementedError("is_private() does not work for uri=True")
-        if path.startswith(':file:'):  # pragma: no cover
-            raise NotImplementedError("file: connections are not supported")
         self.kwargs['uri'] = True
         self.attached: dict[str, str] = {}
         self._local = _LocalConnectionFactoryState()
@@ -595,25 +596,27 @@ class LocalConnectionFactory:
         if name in self.attached:  # pragma: no cover
             raise ValueError(f"database already attached: {name!r}")
 
-        uri_path = self._make_uri(path)
-        self.attached[name] = uri_path
+        self.attached[name] = path
         db = self._local.db
         assert db is not None
-        self._attach(db, name, uri_path)
+        self._attach(db, name, path)
 
     def _attach(self, db: sqlite3.Connection, name: str, path: str) -> None:
-        db.execute("ATTACH DATABASE ? AS ?;", (path, name))
+        db.execute("ATTACH DATABASE ? AS ?;", (self._make_uri(path), name))
 
     def is_private(self) -> bool:
         return self._is_private(self.path)
 
     def _make_uri(self, path: str) -> str:
-        # keeping sqlite special names intact
-        if path in (':memory:', ''):
-            return path
-        # make the path full, otherwise it cannot be turned into URI
-        abs_path = Path(path).resolve(strict=False)
-        uri = abs_path.as_uri()
+        # SQLite allows relative paths by skipping the // after file:,
+        # but pathlib.Path.as_uri() does not support this;
+        # however, temporary databases *must* be relative
+        if path in TEMPORARY_DB_PATHS:
+            # arbitrary paths would need to quote ? to avoid qs injection
+            uri = f"file:{path}"
+        else:
+            # bypasses SQLite's resolution of relative paths, should be fine
+            uri = Path(path).absolute().as_uri()
 
         if self.read_only:
             uri += "?mode=ro"
@@ -637,7 +640,7 @@ class LocalConnectionFactory:
         https://www.sqlite.org/uri.html
 
         """
-        return path in [':memory:', '']
+        return path in TEMPORARY_DB_PATHS
 
 
 class _LocalConnectionFactoryState(threading.local):
