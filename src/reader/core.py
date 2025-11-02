@@ -267,11 +267,6 @@ def make_reader(
     # See this comment for details on how it should evolve:
     # https://github.com/lemon24/reader/issues/168#issuecomment-642002049
 
-    # Since StorageType protocol doesn't obligate
-    # to expose read_only property, cannot check
-    # whether passed custom _storage is read_only or not
-    # So if the user provides _storage AND read_only=True --> Exception
-
     storage: StorageType = _storage or Storage(url, read_only=read_only)
 
     try:
