@@ -41,6 +41,7 @@ warnings.filterwarnings(
 def strip_html(html: str, features: str | None = None) -> str:
     soup = get_soup(html)
     remove_nontext_elements(soup)
+    add_text_attrs_as_elements(soup)
     return soup.get_text(separator=' ')
 
 
@@ -60,3 +61,15 @@ def remove_nontext_elements(soup: bs4.BeautifulSoup) -> None:
     #
     for e in soup.select('script, noscript, style, title'):
         e.replace_with('\n')
+
+
+def add_text_attrs_as_elements(soup: bs4.BeautifulSoup) -> None:
+    for e in soup.select('img[alt], area[alt], [title]'):
+        strings = []
+        if e.name == 'img' or e.name == 'area':
+            if s := e.attrs.get('alt'):
+                strings.append(s)
+        if s := e.attrs.get('title'):
+            strings.append(s)
+        if strings:
+            e.insert_after(*[soup.new_tag('span', string=s) for s in strings])

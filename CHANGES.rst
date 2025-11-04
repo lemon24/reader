@@ -15,6 +15,15 @@ Unreleased
   Thanks to `Roman Milko`_ for the pull request.
   (:issue:`319`)
 
+* Include the ``alt`` and ``title`` HTML attributes
+  in the :ref:`full-text search <fts>` index.
+  (:issue:`371`)
+
+  .. note::
+
+    Old entries will **not** be re-indexed automatically;
+    to do so, disable then enable search.
+
 .. _Roman Milko: https://github.com/rastr-0
 
 

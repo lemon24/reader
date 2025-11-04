@@ -42,6 +42,12 @@ STRIP_HTML_DATA = [
         """,
         'aa\nbb\ncc\ndd\nee',
     ),
+    ('aa<img alt="a"/>bb', 'aa\na\nbb'),
+    ('aa<img alt="a" title="t"/>bb', 'aa\na\nt\nbb'),
+    ('<a alt="a" title="t">aa</a>', 'aa\nt'),
+    ('aa<img alt="" title=""/>bb', 'aa\nbb'),
+    ('&mdash;', '—'),
+    ('<img alt="&mdash;"/>', '—'),
 ]
 
 
