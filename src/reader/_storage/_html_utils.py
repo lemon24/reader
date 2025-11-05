@@ -42,7 +42,7 @@ def strip_html(html: str, features: str | None = None) -> str:
     soup = get_soup(html)
     remove_nontext_elements(soup)
     add_text_attrs_as_elements(soup)
-    return soup.get_text(separator=' ')
+    return soup.get_text()
 
 
 def get_soup(html: str, features: str | None = None) -> bs4.BeautifulSoup:
@@ -60,7 +60,7 @@ def remove_nontext_elements(soup: bs4.BeautifulSoup) -> None:
     # shows any free-floating text it contains, so we should keep it around.
     #
     for e in soup.select('script, noscript, style, title'):
-        e.replace_with('\n')
+        e.decompose()
 
 
 def add_text_attrs_as_elements(soup: bs4.BeautifulSoup) -> None:

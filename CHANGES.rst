@@ -17,6 +17,8 @@ Unreleased
 
 * Include the ``alt`` and ``title`` HTML attributes
   in the :ref:`full-text search <fts>` index.
+  Also, don't add extra whitespace between tags
+  (especially important for inline tags).
   (:issue:`371`)
 
   .. note::
