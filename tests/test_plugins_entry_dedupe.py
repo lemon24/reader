@@ -5,12 +5,9 @@ import pytest
 from reader import Content
 from reader import Entry
 from reader.plugins.entry_dedupe import _is_duplicate_full
-from reader.plugins.entry_dedupe import _normalize
+from reader.plugins.entry_dedupe import tokenize_content
+from reader.plugins.entry_dedupe import tokenize_title
 from utils import utc_datetime as datetime
-
-
-def test_normalize():
-    assert _normalize('\n\n<B>whatever</B>&nbsp; Blah </p>') == 'whatever blah'
 
 
 def make_entry(title=None, summary=None, content=None):
@@ -803,3 +800,19 @@ def test_duplicates_in_feed(
         assert rs == datetime(2009, 12, 1)
     else:
         assert rs == datetime(2010, 1, 2, 12)
+
+
+@pytest.mark.parametrize('tokenize', [tokenize_title, tokenize_content])
+@pytest.mark.parametrize(
+    'input, expected',
+    [
+        ('\n\n foo  Bar  ', ('foo', 'bar')),
+        ('<b>foo</B> &nbsp; bar</p>', ('foo', 'bar')),
+        ('Ará Orún', ('ara', 'orun')),
+        ('汉语 漢語', ('汉语', '漢語')),
+        ('1.0, 1.0.dev0; 2020-10-10', ('1.0', '1.0.dev0', '2020-10-10')),
+        ('1.2.3.4 11.22.33.44', ('1.2.3', '4', '11.22.33', '44')),
+    ],
+)
+def test_tokenize(tokenize, input, expected):
+    assert tokenize(input) == expected

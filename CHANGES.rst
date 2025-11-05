@@ -26,6 +26,12 @@ Unreleased
     Old entries will **not** be re-indexed automatically;
     to do so, disable then enable search.
 
+* :mod:`~reader.plugins.entry_dedupe` improvements. (:issue:`371`)
+
+  * When comparing entries,
+    include the ``alt`` and ``title`` HTML attributes,
+    strip accents, and treat dates and versions as single tokens.
+
 .. _Roman Milko: https://github.com/rastr-0
 
 

@@ -106,18 +106,22 @@ To reduce false positives when detecting duplicates:
 
 """
 
+import itertools
 import logging
 import random
 import re
 import string
+import unicodedata
 from collections import Counter
 from collections import defaultdict
 from collections import deque
 from datetime import datetime
 from datetime import timezone
+from functools import lru_cache
 from itertools import groupby
 from typing import NamedTuple
 
+from reader._storage._html_utils import strip_html
 from reader._utils import BetterStrPartial as partial
 from reader.exceptions import EntryNotFoundError
 from reader.exceptions import TagNotFoundError
@@ -127,29 +131,11 @@ from reader.types import EntryUpdateStatus
 log = logging.getLogger('reader.plugins.entry_dedupe')
 
 
-_XML_TAG_RE = re.compile(r'<[^<]+?>', re.I)
-_XML_ENTITY_RE = re.compile(r'&[^\s;]+?;', re.I)
-_NON_WORD_RE = re.compile(r'[\W-]+')
-_WHITESPACE_RE = re.compile(r'\s+')
-
-
-def _normalize(text):
-    if text is None:  # pragma: no cover
-        return ''
-    text = _XML_TAG_RE.sub(' ', text)
-    text = _XML_ENTITY_RE.sub(' ', text)
-    text = _NON_WORD_RE.sub(' ', text)
-    text = _WHITESPACE_RE.sub(' ', text).strip()
-    text = text.lower()
-    # TODO in a better version of this, we'd keep the title/alt of img
-    return text
-
-
 def _content_fields(entry):
     rv = [c.value for c in (entry.content or ())]
     if entry.summary:
         rv.append(entry.summary)
-    return [_normalize(s) for s in rv]
+    return [tokenize_content(s) for s in rv]
 
 
 class _Threshold(NamedTuple):
@@ -178,22 +164,20 @@ def _is_duplicate_full(one, two):
 
     if not one.title or not two.title:
         return False
-    if _normalize(one.title) != _normalize(two.title):
+    if tokenize_title(one.title) != tokenize_title(two.title):
         return False
 
     one_fields = _content_fields(one)
     two_fields = _content_fields(two)
 
-    for one_text in one_fields:
-        for two_text in two_fields:
-            if one_text == two_text:
+    for one_words in one_fields:
+        for two_words in two_fields:
+            if one_words == two_words:
                 return True
 
             # TODO: we should match content fields by length, preferring longer ones;
             # a summary is less likely to match, but the whole article might
 
-            one_words = one_text.split()
-            two_words = two_text.split()
             min_length = min(len(one_words), len(two_words))
 
             if min_length < min(t.length for t in _THRESHOLDS):
@@ -217,7 +201,7 @@ def _is_duplicate_full(one, two):
 def _is_duplicate_title(one, two):
     if not one.title or not two.title:  # pragma: no cover
         return False
-    return _normalize(one.title) == _normalize(two.title)
+    return tokenize_title(one.title) == tokenize_title(two.title)
 
 
 def _ngrams(iterable, n):
@@ -305,7 +289,7 @@ def _get_same_group_entries(reader, entry):
     for other in reader.get_entries(feed=entry.feed_url, read=None):
         if entry.resource_id == other.resource_id:
             continue
-        if _normalize(entry.title) != _normalize(other.title):
+        if tokenize_title(entry.title) != tokenize_title(other.title):
             continue
         yield other
 
@@ -350,7 +334,7 @@ _MAX_GROUP_SIZE = 16
 
 def _get_entry_groups(reader, feed, is_duplicate):
     def by_title(e):
-        return _normalize(e.title)
+        return tokenize_title(e.title)
 
     # this reads all the feed's entries in memory;
     # better would be to get all the (e.title, e.resource_id),
@@ -552,6 +536,57 @@ def _dedupe_entries(reader, entry, duplicates, *, dry_run):
 def init_reader(reader):
     reader.after_entry_update_hooks.append(_after_entry_update)
     reader.after_feed_update_hooks.append(_after_feed_update)
+
+
+# tokenization
+
+
+@lru_cache(1024)
+def tokenize_title(s):
+    return tokenize(s)
+
+
+@lru_cache(64)
+def tokenize_content(s):
+    return tokenize(s, strip_html)
+
+
+_HTML_TAG_OR_ENTITY_RE = re.compile(r"<[^<]+?>|&[^\s;]+?;", re.I)
+fast_strip_html = partial(_HTML_TAG_OR_ENTITY_RE.sub, '')
+
+_TOKEN_RE = re.compile(
+    r"""(?x)
+    \b  # word boundary
+    (?:
+        \d{1,4} (?: [/-] \d{1,4} ){1,2}  # dates
+        |
+        \d{1,4} (?: \. \d{1,3} ){1,2} (?: [\._-]? [a-z]{1,5} \d{1,2} )?  # versions
+        |
+        \w+  # other words
+    )
+    \b   # word boundary
+    """
+)
+
+
+def tokenize(s, strip_html=fast_strip_html):
+    if s is None:  # pragma: no cover
+        return ()
+    s = strip_html(s)
+    s = strip_accents(s)
+    s = s.lower()
+    return tuple(_TOKEN_RE.findall(s))
+
+
+def strip_accents(s):
+    # based on sklearn.feature_extraction.text.strip_accents_unicode
+    try:
+        s.encode('ascii', errors='strict')
+        return s
+    except UnicodeEncodeError:
+        normalized = unicodedata.normalize('NFKD', s)
+        noncombining = itertools.filterfalse(unicodedata.combining, normalized)
+        return ''.join(noncombining)
 
 
 if __name__ == '__main__':  # pragma: no cover
