@@ -117,6 +117,7 @@ from collections import defaultdict
 from collections import deque
 from datetime import datetime
 from datetime import timezone
+from functools import cached_property
 from functools import lru_cache
 from itertools import groupby
 from typing import NamedTuple
@@ -129,6 +130,46 @@ from reader.types import EntryUpdateStatus
 
 
 log = logging.getLogger('reader.plugins.entry_dedupe')
+
+
+class Deduplicator:
+
+    def __init__(self, reader, feed):
+        self.reader = reader
+        self.feed = feed
+
+    def deduplicate(self):
+        tag, is_duplicate = self.get_dedupe_request_tag()
+        if tag is None:
+            return
+
+        log.info("entry_dedupe: %r for feed %r", tag, self.feed)
+
+        for entry, duplicates in _get_entry_groups(
+            self.reader, self.feed, is_duplicate
+        ):
+            if not duplicates:
+                continue
+            _dedupe_entries(self.reader, entry, duplicates)
+
+        self.clear_dedupe_request_tags()
+
+    @cached_property
+    def feed_tags(self):
+        return frozenset(self.reader.get_tag_keys(self.feed))
+
+    def get_dedupe_request_tag(self):
+        for suffix, is_duplicate in _IS_DUPLICATE_BY_TAG.items():
+            tag = self.reader.make_reader_reserved_name(suffix)
+            if tag in self.feed_tags:
+                return tag, is_duplicate
+        return None, _is_duplicate_full
+
+    def clear_dedupe_request_tags(self):
+        for suffix in reversed(_IS_DUPLICATE_BY_TAG):
+            tag = self.reader.make_reader_reserved_name(suffix)
+            if tag in self.feed_tags:
+                self.reader.delete_tag(self.feed, tag, missing_ok=True)
 
 
 def _content_fields(entry):
@@ -294,39 +335,15 @@ def _get_same_group_entries(reader, entry):
         yield other
 
 
-_TAG_PREFIX = 'dedupe'
-
 # ordered by strictness (strictest first)
-_IS_DUPLICATE_BY_TAG_SUFFIX = {
-    'once': _is_duplicate_full,
-    'once.title': _is_duplicate_title,
+_IS_DUPLICATE_BY_TAG = {
+    'dedupe.once': _is_duplicate_full,
+    'dedupe.once.title': _is_duplicate_title,
 }
 
 
 def _after_feed_update(reader, feed):
-    all_tags = set(reader.get_tag_keys(feed))
-
-    dedupe_tags = []
-    for suffix in _IS_DUPLICATE_BY_TAG_SUFFIX:
-        tag = reader.make_reader_reserved_name(f'{_TAG_PREFIX}.{suffix}')
-        if tag in all_tags:
-            dedupe_tags.append((tag, suffix))
-
-    if not dedupe_tags:
-        return
-
-    suffix = dedupe_tags[0][1]
-    is_duplicate = _IS_DUPLICATE_BY_TAG_SUFFIX[suffix]
-
-    log.info("entry_dedupe: %r for feed %r", suffix, feed)
-
-    for entry, duplicates in _get_entry_groups(reader, feed, is_duplicate):
-        if not duplicates:
-            continue
-        _dedupe_entries(reader, entry, duplicates)
-
-    for tag, _ in dedupe_tags:
-        reader.delete_tag(feed, tag)
+    Deduplicator(reader, feed).deduplicate()
 
 
 _MAX_GROUP_SIZE = 16
