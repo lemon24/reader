@@ -235,7 +235,7 @@ def _jaccard_similarity(one, two, n):
         return 0
 
 
-def _after_entry_update(reader, entry, status, *, dry_run=False):
+def _after_entry_update(reader, entry, status):
     if status is EntryUpdateStatus.MODIFIED:
         return
 
@@ -274,7 +274,7 @@ def _after_entry_update(reader, entry, status, *, dry_run=False):
     group.sort(key=group_key, reverse=True)
     entry, *duplicates = group
 
-    _dedupe_entries(reader, entry, duplicates, dry_run=dry_run)
+    _dedupe_entries(reader, entry, duplicates)
 
 
 DEFAULT_UPDATED = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -303,7 +303,7 @@ _IS_DUPLICATE_BY_TAG_SUFFIX = {
 }
 
 
-def _after_feed_update(reader, feed, *, dry_run=False):
+def _after_feed_update(reader, feed):
     all_tags = set(reader.get_tag_keys(feed))
 
     dedupe_tags = []
@@ -323,7 +323,7 @@ def _after_feed_update(reader, feed, *, dry_run=False):
     for entry, duplicates in _get_entry_groups(reader, feed, is_duplicate):
         if not duplicates:
             continue
-        _dedupe_entries(reader, entry, duplicates, dry_run=dry_run)
+        _dedupe_entries(reader, entry, duplicates)
 
     for tag, _ in dedupe_tags:
         reader.delete_tag(feed, tag)
@@ -509,7 +509,7 @@ def _make_actions(reader, entry, duplicates):
     yield partial(reader._storage.delete_entries, duplicate_ids)
 
 
-def _dedupe_entries(reader, entry, duplicates, *, dry_run):
+def _dedupe_entries(reader, entry, duplicates):
     log.info(
         "entry_dedupe: %r (title: %r) duplicates: %r",
         entry.resource_id,
