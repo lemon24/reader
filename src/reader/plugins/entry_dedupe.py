@@ -129,7 +129,25 @@ from reader.exceptions import TagNotFoundError
 from reader.types import EntryUpdateStatus
 
 
-log = logging.getLogger('reader.plugins.entry_dedupe')
+log = logging.getLogger(__name__)
+
+
+ENTRY_TAG = 'dedupe'
+
+
+def init_reader(reader):
+    reader.after_entry_update_hooks.append(after_entry_update)
+    reader.after_feed_update_hooks.append(after_feed_update)
+
+
+def after_entry_update(reader, entry, status, *, dry_run=False):
+    if status is EntryUpdateStatus.MODIFIED:
+        return
+    reader.set_tag(entry, reader.make_reader_reserved_name(ENTRY_TAG))
+
+
+def after_feed_update(reader, feed):
+    Deduplicator(reader, feed).deduplicate()
 
 
 class Deduplicator:
@@ -139,37 +157,51 @@ class Deduplicator:
         self.feed = feed
 
     def deduplicate(self):
-        tag, is_duplicate = self.get_dedupe_request_tag()
-        if tag is None:
-            return
+        tag, is_duplicate = self.get_feed_request_tag()
 
-        log.info("entry_dedupe: %r for feed %r", tag, self.feed)
+        if tag is not None:
+            log.info("entry_dedupe: %r for feed %r", tag, self.feed)
+            groups = _get_entry_groups(self.reader, self.feed, is_duplicate)
+        else:
+            entries = self.reader.get_entries(
+                feed=self.feed, tags=[self.entry_request_tag]
+            )
+            groups = map(partial(_get_entry_group, self.reader), entries)
 
-        for entry, duplicates in _get_entry_groups(
-            self.reader, self.feed, is_duplicate
-        ):
+        for entry, duplicates in groups:
             if not duplicates:
                 continue
             _dedupe_entries(self.reader, entry, duplicates)
 
-        self.clear_dedupe_request_tags()
+            if tag is None:
+                self.clear_entry_request(entry)
+
+        if tag is not None:
+            self.clear_feed_request()
 
     @cached_property
     def feed_tags(self):
         return frozenset(self.reader.get_tag_keys(self.feed))
 
-    def get_dedupe_request_tag(self):
+    def get_feed_request_tag(self):
         for suffix, is_duplicate in _IS_DUPLICATE_BY_TAG.items():
             tag = self.reader.make_reader_reserved_name(suffix)
             if tag in self.feed_tags:
                 return tag, is_duplicate
         return None, _is_duplicate_full
 
-    def clear_dedupe_request_tags(self):
+    def clear_feed_request(self):
         for suffix in reversed(_IS_DUPLICATE_BY_TAG):
             tag = self.reader.make_reader_reserved_name(suffix)
             if tag in self.feed_tags:
                 self.reader.delete_tag(self.feed, tag, missing_ok=True)
+
+    @cached_property
+    def entry_request_tag(self):
+        return self.reader.make_reader_reserved_name(ENTRY_TAG)
+
+    def clear_entry_request(self, entry):
+        self.reader.delete_tag(entry, self.entry_request_tag, missing_ok=True)
 
 
 def _content_fields(entry):
@@ -276,10 +308,7 @@ def _jaccard_similarity(one, two, n):
         return 0
 
 
-def _after_entry_update(reader, entry, status):
-    if status is EntryUpdateStatus.MODIFIED:
-        return
-
+def _get_entry_group(reader, entry):
     duplicates = [
         e
         for e in _get_same_group_entries(reader, entry)
@@ -287,13 +316,13 @@ def _after_entry_update(reader, entry, status):
     ]
     if not duplicates:
         log.debug("entry_dedupe: no duplicates for %s", entry.resource_id)
-        return
+        return entry, []
 
     try:
         entry = reader.get_entry(entry)
     except EntryNotFoundError:
         log.info("entry_dedupe: entry %r was deleted, aborting", entry.resource_id)
-        return
+        return entry, []
 
     def group_key(e):
         # unlike _get_entry_groups, we cannot rely on e.last_updated,
@@ -315,7 +344,7 @@ def _after_entry_update(reader, entry, status):
     group.sort(key=group_key, reverse=True)
     entry, *duplicates = group
 
-    _dedupe_entries(reader, entry, duplicates)
+    return entry, duplicates
 
 
 DEFAULT_UPDATED = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -340,10 +369,6 @@ _IS_DUPLICATE_BY_TAG = {
     'dedupe.once': _is_duplicate_full,
     'dedupe.once.title': _is_duplicate_title,
 }
-
-
-def _after_feed_update(reader, feed):
-    Deduplicator(reader, feed).deduplicate()
 
 
 _MAX_GROUP_SIZE = 16
@@ -550,11 +575,6 @@ def _dedupe_entries(reader, entry, duplicates):
         log.info("entry_dedupe: entry %r was deleted, aborting", entry.resource_id)
 
 
-def init_reader(reader):
-    reader.after_entry_update_hooks.append(_after_entry_update)
-    reader.after_feed_update_hooks.append(_after_feed_update)
-
-
 # tokenization
 
 
@@ -619,7 +639,7 @@ if __name__ == '__main__':  # pragma: no cover
     for feed in feeds:
         # if 'n-gate' not in feed.url: continue
         reader.set_tag(feed, reader.make_reader_reserved_name('dedupe.once'))
-        _after_feed_update(reader, feed.url)
+        after_feed_update(reader, feed.url)
 
     import resource
 
