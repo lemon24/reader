@@ -541,19 +541,6 @@ def init_reader(reader):
 # tokenization
 
 
-@lru_cache(1024)
-def tokenize_title(s):
-    return tokenize(s)
-
-
-@lru_cache(64)
-def tokenize_content(s):
-    return tokenize(s, strip_html)
-
-
-_HTML_TAG_OR_ENTITY_RE = re.compile(r"<[^<]+?>|&[^\s;]+?;", re.I)
-fast_strip_html = partial(_HTML_TAG_OR_ENTITY_RE.sub, '')
-
 _TOKEN_RE = re.compile(
     r"""(?x)
     \b  # word boundary
@@ -569,13 +556,20 @@ _TOKEN_RE = re.compile(
 )
 
 
-def tokenize(s, strip_html=fast_strip_html):
+def tokenize(s, preprocessor=lambda x: x):
     if s is None:  # pragma: no cover
         return ()
-    s = strip_html(s)
+    s = preprocessor(s)
     s = strip_accents(s)
     s = s.lower()
     return tuple(_TOKEN_RE.findall(s))
+
+
+_HTML_TAG_OR_ENTITY_RE = re.compile(r"<[^<]+?>|&[^\s;]+?;", re.I)
+fast_strip_html = partial(_HTML_TAG_OR_ENTITY_RE.sub, '')
+
+tokenize_title = lru_cache(1024)(partial(tokenize, preprocessor=fast_strip_html))
+tokenize_content = lru_cache(64)(partial(tokenize, preprocessor=strip_html))
 
 
 def strip_accents(s):
