@@ -10,6 +10,123 @@ from reader.plugins.entry_dedupe import tokenize_title
 from utils import utc_datetime as datetime
 
 
+@pytest.fixture
+def reader(make_reader):
+    return make_reader(':memory:', plugins=['reader.entry_dedupe'])
+
+
+def test_duplicates_are_deleted(reader, parser):
+    # detailed matching in test_is_duplicate
+
+    reader.add_feed(parser.feed(1))
+
+    yesterday = datetime(2010, 1, 1)
+    parser.entry(1, 1, yesterday, title='title', summary='value')
+    reader.update_feeds()
+
+    today = datetime(2010, 1, 2)
+    parser.entry(1, 2, today, title='title', summary='value')
+    reader.update_feeds()
+
+    assert {e.id for e in reader.get_entries()} == {'1, 2'}
+
+
+def test_non_duplicates_are_ignored(reader, parser):
+    # detailed matching in test_is_duplicate
+
+    reader.add_feed(parser.feed(1))
+
+    yesterday = datetime(2010, 1, 1)
+    parser.entry(1, 1, None, title=None)
+    parser.entry(1, 2, yesterday, title='title')
+    parser.entry(1, 3, yesterday, summary='value')
+    parser.entry(1, 4, yesterday, title='title', summary='another')
+    parser.entry(1, 5, yesterday, title='another', summary='value')
+    reader.update_feeds()
+
+    today = datetime(2010, 1, 2)
+    parser.entry(1, 6, today, title='title', summary='value')
+    reader.update_feeds()
+
+    assert {eval(e.id)[1] for e in reader.get_entries()} == {1, 2, 3, 4, 5, 6}
+
+
+def test_duplicates_in_another_feed_are_ignored(reader, parser):
+    reader.add_feed(parser.feed(1))
+    reader.add_feed(parser.feed(2))
+
+    yesterday = datetime(2010, 1, 1)
+    parser.entry(1, 1, yesterday, title='title', summary='value')
+    reader.update_feeds()
+
+    today = datetime(2010, 1, 2)
+    parser.entry(2, 1, today, title='title', summary='value')
+    reader.update_feeds()
+
+    assert {e.id for e in reader.get_entries()} == {'1, 1', '2, 1'}
+
+
+def test_duplicates_change_during_update(reader, parser):
+    reader.add_feed(parser.feed(1))
+
+    yesterday = datetime(2010, 1, 1)
+    parser.entry(1, 1, yesterday, title='title', summary='value')
+    parser.entry(1, 2, yesterday, title='title', summary='old')
+    reader.update_feeds()
+
+    today = datetime(2010, 1, 2)
+    parser.entry(1, 1, yesterday, title='title', summary='new')
+    parser.entry(1, 2, yesterday, title='title', summary='value')
+    parser.entry(1, 3, today, title='title', summary='value')
+    reader.update_feeds()
+
+    assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 3'}
+
+
+@pytest.mark.parametrize('read', [False, True])
+@pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
+def test_read(reader, parser, read, modified):
+    reader.add_feed(parser.feed(1))
+
+    yesterday = datetime(2010, 1, 1)
+    one = parser.entry(1, 1, yesterday, title='title', summary='value')
+    reader.update_feeds()
+
+    reader.set_entry_read(one, read, modified)
+
+    today = datetime(2010, 1, 2)
+    two = parser.entry(1, 2, today, title='title', summary='value')
+    reader.update_feeds()
+
+    two = reader.get_entry(two)
+    assert two.read == read
+    assert two.read_modified == modified
+
+    # TODO: simplify test_read_modified_copying
+
+
+@pytest.mark.parametrize('important', [False, None, True])
+@pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
+def test_important(reader, parser, important, modified):
+    reader.add_feed(parser.feed(1))
+
+    yesterday = datetime(2010, 1, 1)
+    one = parser.entry(1, 1, yesterday, title='title', summary='value')
+    reader.update_feeds()
+
+    reader.set_entry_important(one, important, modified)
+
+    today = datetime(2010, 1, 3)
+    two = parser.entry(1, 2, today, title='title', summary='value')
+    reader.update_feeds()
+
+    two = reader.get_entry(two)
+    assert two.important == important
+    assert two.important_modified == modified
+
+    # TODO: simplify test_important_modified_copying
+
+
 def make_entry(title=None, summary=None, content=None):
     entry = Entry('id', None, title=title, summary=summary)
     if content:
@@ -117,69 +234,6 @@ IS_DUPLICATE_DATA = [
 @pytest.mark.parametrize('one, two, result', IS_DUPLICATE_DATA)
 def test_is_duplicate(one, two, result):
     assert bool(_is_duplicate_full(one, two)) is bool(result)
-
-
-def test_plugin(make_reader, parser):
-    reader = make_reader(':memory:', plugins=['reader.entry_dedupe'])
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    reader.add_feed(feed)
-
-    old = parser.entry(1, 1, datetime(2010, 1, 1), title='title', summary='old')
-    title_only_one = parser.entry(1, 2, datetime(2010, 1, 1), title='title only')
-    read_one = parser.entry(1, 3, datetime(2010, 1, 1), title='title', summary='read')
-    unread_one = parser.entry(
-        1, 4, datetime(2010, 1, 1), title='title', summary='unread'
-    )
-    important_one = parser.entry(
-        1, 5, datetime(2010, 1, 1), title='important', summary='also important'
-    )
-    modified_one = parser.entry(
-        1, 6, datetime(2010, 1, 1), title='title', summary='will be modified'
-    )
-
-    reader.update_feeds()
-    reader.mark_entry_as_read(read_one)
-    reader.mark_entry_as_important(important_one)
-
-    feed = parser.feed(1, datetime(2010, 1, 2))
-    new = parser.entry(1, 11, datetime(2010, 1, 2), title='title', summary='new')
-    title_only_two = parser.entry(1, 12, datetime(2010, 1, 2), title='title only')
-    read_two = parser.entry(1, 13, datetime(2010, 1, 2), title='title', summary='read')
-    unread_two = parser.entry(
-        1, 14, datetime(2010, 1, 2), title='title', summary='unread'
-    )
-    important_two = parser.entry(
-        1, 15, datetime(2010, 1, 2), title='important', summary='also important'
-    )
-    modified_two = parser.entry(
-        1, 6, datetime(2010, 1, 1), title='title', summary='was modified'
-    )
-
-    reader.update_feeds()
-
-    assert {(e.id, e.read, e.important) for e in reader.get_entries()} == {
-        t + (None,)
-        for t in {
-            # remain untouched
-            (old.id, False),
-            (new.id, False),
-            # also remain untouched
-            (title_only_one.id, False),
-            (title_only_two.id, False),
-            # the new one is marked as read because the old one was;
-            # the old one is deleted
-            (read_two.id, True),
-            # the old one is deleted in favor of the new one
-            (unread_two.id, False),
-            # modified entry is ignored by plugin
-            (modified_one.id, False),
-        }
-    } | {
-        # the new one is important because the old one was;
-        # the old one is deleted
-        (important_two.id, False, True),
-    }
 
 
 @pytest.mark.parametrize(
