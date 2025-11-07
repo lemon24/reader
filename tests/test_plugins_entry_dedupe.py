@@ -127,6 +127,54 @@ def test_important(reader, parser, important, modified):
     # TODO: simplify test_important_modified_copying
 
 
+@pytest.mark.parametrize(
+    'tags, expected',
+    [
+        ([], {3, 4}),
+        (['once'], {2, 4}),
+        (['once.title'], {2}),
+        (['once', 'once.title'], {2, 4}),
+    ],
+    ids=lambda p: ','.join(map(str, p)),
+)
+def test_dedupe_once(make_reader, db_path, parser, tags, expected):
+    reader = make_reader(db_path)
+
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+    reader.set_tag(feed, 'unrelated')
+
+    parser.entry(1, 1, datetime(2010, 1, 1), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 1, 1)
+    reader.update_feeds()
+
+    parser.entry(1, 3, datetime(2010, 1, 3), title='title', summary='value')
+    parser.entry(1, 4, datetime(2010, 1, 4), title='title')
+    reader._now = lambda: datetime(2010, 1, 3, 1)
+    reader.update_feeds()
+
+    parser.entry(1, 2, datetime(2010, 1, 2), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 4, 1)
+    reader.update_feeds()
+
+    assert {eval(e.id)[1] for e in reader.get_entries()} == {1, 2, 3, 4}
+
+    reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
+
+    # which entry is "latest" differs between .dedupe.once and normal duplicate
+    if tags:
+        for tag in tags:
+            reader.set_tag(feed, f".reader.dedupe.{tag}")
+    else:
+        parser.entry(1, 0, datetime(2010, 1, 1), title='title', summary='value')
+
+    reader._now = lambda: datetime(2010, 1, 5, 1)
+    reader.update_feeds()
+
+    assert {eval(e.id)[1] for e in reader.get_entries()} == expected
+    assert set(reader.get_tag_keys(feed)) == {'unrelated'}
+
+
 def make_entry(title=None, summary=None, content=None):
     entry = Entry('id', None, title=title, summary=summary)
     if content:
@@ -234,123 +282,6 @@ IS_DUPLICATE_DATA = [
 @pytest.mark.parametrize('one, two, result', IS_DUPLICATE_DATA)
 def test_is_duplicate(one, two, result):
     assert bool(_is_duplicate_full(one, two)) is bool(result)
-
-
-@pytest.mark.parametrize(
-    'tags',
-    [
-        ['.reader.dedupe.once'],
-        ['.reader.dedupe.once.title'],
-        ['.reader.dedupe.once', '.reader.dedupe.once.title'],
-    ],
-)
-def test_plugin_once(make_reader, parser, db_path, monkeypatch, tags):
-    reader = make_reader(db_path)
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    reader.add_feed(feed)
-
-    different_title = parser.entry(
-        1, 1, datetime(2010, 1, 5), title='different title', summary='summary'
-    )
-    no_content_match = parser.entry(
-        1, 2, datetime(2010, 1, 10), title='title', summary='does not match'
-    )
-
-    read_one = parser.entry(1, 4, datetime(2010, 1, 1), title='title', summary='read')
-    read_two = parser.entry(
-        1,
-        6,
-        datetime(2010, 1, 3),
-        title='title',
-        content=[Content('read', type='text/html')],
-    )
-
-    important_one = parser.entry(
-        1, 9, datetime(2010, 1, 3), title='title', summary='important'
-    )
-    important_two = parser.entry(
-        1,
-        8,
-        datetime(2010, 1, 1),
-        title='title',
-        content=[Content('important', type='text/plain')],
-    )
-
-    unread_one = parser.entry(
-        1, 10, datetime(2010, 1, 1), title='title', content=[Content('unread')]
-    )
-    unread_two = parser.entry(
-        1, 11, datetime(2010, 1, 1), title='title', summary='unread'
-    )
-
-    reader._now = lambda: datetime(2010, 1, 10)
-    reader.update_feeds()
-    reader.mark_entry_as_read(read_one)
-
-    read_three = parser.entry(1, 5, datetime(2010, 1, 2), title='title', summary='read')
-    important_three = parser.entry(
-        1, 7, datetime(2010, 1, 2), title='title', summary='important'
-    )
-
-    reader._now = lambda: datetime(2010, 1, 11)
-    reader.update_feeds()
-    reader.mark_entry_as_important(important_two)
-
-    unread_three = parser.entry(
-        1, 12, datetime(2010, 1, 1), title='title', summary='unread'
-    )
-
-    reader._now = lambda: datetime(2010, 1, 12)
-    reader.update_feeds()
-
-    reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
-    reader._now = lambda: datetime(2010, 1, 12)
-    reader.update_feeds()
-
-    # nothing changes without tag
-    assert {(e.id, e.read, e.important) for e in reader.get_entries()} == {
-        (different_title.id, False, None),
-        (no_content_match.id, False, None),
-        (read_one.id, True, None),
-        (read_two.id, False, None),
-        (read_three.id, False, None),
-        (important_one.id, False, None),
-        (important_two.id, False, True),
-        (important_three.id, False, None),
-        (unread_one.id, False, None),
-        (unread_two.id, False, None),
-        (unread_three.id, False, None),
-    }
-
-    for tag in tags:
-        reader.set_tag(feed, tag)
-    reader.set_tag(feed, 'unrelated')
-    reader.update_feeds()
-
-    assert set(reader.get_tag_keys(feed)) == {'unrelated'}
-
-    # if both 'once' and 'once.title' are in tags,
-    # 'once' (the strictest) has priority
-    if '.reader.dedupe.once' in tags:
-        expected = {
-            (different_title.id, False, None),
-            (no_content_match.id, False, None),
-            # delete read_one, read_two (older last_updated)
-            (read_three.id, True, None),
-            # delete important_one, important_two have (older last_updated)
-            (important_three.id, False, True),
-            # delete unread_one, unread_two (older last_updated)
-            (unread_three.id, False, None),
-        }
-    else:
-        expected = {
-            (different_title.id, False, None),
-            # delete all others (older last_updated)
-            (unread_three.id, True, True),
-        }
-
-    assert {(e.id, e.read, e.important) for e in reader.get_entries()} == expected
 
 
 READ_MODIFIED_COPYING_DATA = [
