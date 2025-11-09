@@ -418,24 +418,24 @@ def _get_entry_groups(reader, feed, is_duplicate):
 
 
 def _get_flag_args(entry, duplicates, name):
-    entries = duplicates + [entry]
+    def flag(e):
+        return getattr(e, name), getattr(e, f'{name}_modified')
 
-    flags = {getattr(d, name) for d in entries}
-    for flag in (True, False, None):  # pragma: no cover
-        if flag in flags:
-            break
+    return merge_flags(flag(entry), list(map(flag, duplicates)))
 
-    modified_name = f'{name}_modified'
-    modifieds = (
-        getattr(e, modified_name)
-        for e in entries
-        if getattr(e, name) == flag and getattr(e, modified_name)
-    )
-    modified = next(iter(sorted(modifieds)), None)
 
-    if getattr(entry, name) != flag or getattr(entry, modified_name) != modified:
-        return flag, modified
+def merge_flags(entry, duplicates):
+    def key(flag):
+        value, modified = flag
+        return (
+            value if value is not None else -1,
+            (-modified.timestamp() if modified else float('-inf')),
+        )
 
+    new = sorted([entry] + duplicates, key=key)[-1]
+
+    if entry != new:
+        return new
     return None
 
 

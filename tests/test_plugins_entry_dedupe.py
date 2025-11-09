@@ -1,10 +1,11 @@
-from random import randrange
+import random
 
 import pytest
 
 from reader import Content
 from reader import Entry
 from reader.plugins.entry_dedupe import _is_duplicate_full
+from reader.plugins.entry_dedupe import merge_flags
 from reader.plugins.entry_dedupe import tokenize_content
 from reader.plugins.entry_dedupe import tokenize_title
 from utils import utc_datetime as datetime
@@ -86,6 +87,8 @@ def test_duplicates_change_during_update(reader, parser):
 @pytest.mark.parametrize('read', [False, True])
 @pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
 def test_read(reader, parser, read, modified):
+    # multiple duplicates / modified priority tested in test_merge_flags
+
     reader.add_feed(parser.feed(1))
 
     yesterday = datetime(2010, 1, 1)
@@ -102,12 +105,12 @@ def test_read(reader, parser, read, modified):
     assert two.read == read
     assert two.read_modified == modified
 
-    # TODO: simplify test_read_modified_copying
-
 
 @pytest.mark.parametrize('important', [False, None, True])
 @pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
 def test_important(reader, parser, important, modified):
+    # multiple duplicates / modified priority tested in test_merge_flags
+
     reader.add_feed(parser.feed(1))
 
     yesterday = datetime(2010, 1, 1)
@@ -123,8 +126,6 @@ def test_important(reader, parser, important, modified):
     two = reader.get_entry(two)
     assert two.important == important
     assert two.important_modified == modified
-
-    # TODO: simplify test_important_modified_copying
 
 
 @pytest.mark.parametrize(
@@ -284,304 +285,46 @@ def test_is_duplicate(one, two, result):
     assert bool(_is_duplicate_full(one, two)) is bool(result)
 
 
-READ_MODIFIED_COPYING_DATA = [
-    # sanity checks
-    ([], []),
-    ([(1, False, None)], [(1, False, None)]),
-    # some read, earliest modified of the read entries is used
-    (
-        [
-            (1, False, None),
-            (2, True, None),
-            (3, False, datetime(2010, 1, 3)),
-            (4, True, datetime(2010, 1, 4)),
-            (5, True, datetime(2010, 1, 5)),
-            (6, False, datetime(2010, 1, 6)),
-            (9, False, None),
-        ],
-        [
-            (9, True, datetime(2010, 1, 4)),
-        ],
-    ),
-    # none read, earliest modified of the unread entries is used
-    (
-        [
-            (1, False, None),
-            (2, False, datetime(2010, 1, 2)),
-            (3, False, datetime(2010, 1, 3)),
-            (9, False, None),
-        ],
-        [
-            (9, False, datetime(2010, 1, 2)),
-        ],
-    ),
-    # none read, no modified
-    (
-        [
-            (1, False, None),
-            (9, False, None),
-        ],
-        [
-            (9, False, None),
-        ],
-    ),
-    # old read, no modified
-    (
-        [
-            (1, True, None),
-            (9, False, None),
-        ],
-        [
-            (9, True, None),
-        ],
-    ),
-    # new read, no modified
-    (
-        [
-            (1, False, None),
-            (9, True, None),
-        ],
-        [
-            (9, True, None),
-        ],
-    ),
-    # all read, earliest modified of the read entries is used (last has modified)
-    (
-        [
-            (1, True, None),
-            (2, True, datetime(2010, 1, 2)),
-            (3, True, datetime(2010, 1, 3)),
-        ],
-        [
-            (3, True, datetime(2010, 1, 2)),
-        ],
-    ),
-    # none read, earliest modified of the unread entries is used (last has modified)
-    (
-        [
-            (1, False, None),
-            (2, False, datetime(2010, 1, 2)),
-            (3, False, datetime(2010, 1, 3)),
-        ],
-        [
-            (3, False, datetime(2010, 1, 2)),
-        ],
-    ),
+# ([duplicates ..., entry), expected), ...
+MERGE_FLAGS_DATA = [
+    # no change
+    ([(True, None)], None),
+    ([(False, None), (False, 2)], None),
+    ([(None, None), (True, 2)], None),
+    # read beats not read
+    ([(True, None), (False, None)], (True, None)),
+    # important beats not set
+    ([(True, None), (None, None)], (True, None)),
+    # unimportant beats not set
+    ([(False, None), (None, None)], (False, None)),
+    # none read, earliest modified wins
+    ([(False, None), (False, 2), (False, 3)], (False, 2)),
+    # none set, earliest modified wins
+    ([(None, None), (None, 2), (None, 3)], (None, 2)),
+    # some read, earliest read modified wins
+    ([(True, None), (False, 2), (True, 3), (True, 4), (None, 5)], (True, 3)),
+    # some not set + unimportant, earliest unimportant modified wins
+    ([(None, None), (False, 2), (None, 3), (False, 4)], (False, 2)),
 ]
 
 
-@pytest.fixture(params=[False, True])
-def same_last_updated(request):
-    yield request.param
+@pytest.mark.parametrize('flags, expected', MERGE_FLAGS_DATA)
+def test_merge_flags(flags, expected):
+    def from_days(flag):
+        if not flag:
+            return None
+        value, days = flag
+        return value, datetime(2010, 1, days) if days is not None else None
+
+    *duplicates, entry = map(from_days, flags)
+
+    # duplicate order does not matter
+    random.shuffle(duplicates)
+
+    assert merge_flags(entry, duplicates) == from_days(expected)
 
 
-@pytest.mark.parametrize('data, expected', READ_MODIFIED_COPYING_DATA)
-def test_read_modified_copying(
-    make_reader, db_path, parser, data, expected, same_last_updated
-):
-    _test_modified_copying(
-        make_reader, db_path, parser, data, expected, 'read', same_last_updated
-    )
-
-
-IMPORTANT_MODIFIED_COPYING_DATA = [
-    # sanity checks
-    ([], []),
-    ([(1, False, None)], [(1, False, None)]),
-    # none important, no modified
-    (
-        [
-            (1, False, None),
-            (9, False, None),
-        ],
-        [
-            (9, False, None),
-        ],
-    ),
-    # old important, no modified
-    (
-        [
-            (1, True, None),
-            (9, False, None),
-        ],
-        [
-            (9, True, None),
-        ],
-    ),
-    # new important, no modified
-    (
-        [
-            (1, False, None),
-            (9, True, None),
-        ],
-        [
-            (9, True, None),
-        ],
-    ),
-    # none important, modified
-    (
-        [
-            (1, False, datetime(2010, 1, 1)),
-            (9, False, None),
-        ],
-        [
-            (9, False, datetime(2010, 1, 1)),
-        ],
-    ),
-    # none important, modified (last has modified)
-    (
-        [
-            (1, False, datetime(2010, 1, 1)),
-            (9, False, datetime(2010, 1, 9)),
-        ],
-        [
-            (9, False, datetime(2010, 1, 1)),
-        ],
-    ),
-    # none important, modified (last has modified, same date)
-    (
-        [
-            (1, False, datetime(2010, 1, 1)),
-            (9, False, datetime(2010, 1, 1)),
-        ],
-        [
-            (9, False, datetime(2010, 1, 1)),
-        ],
-    ),
-    # old important, modified
-    (
-        [
-            (1, True, datetime(2010, 1, 1)),
-            (9, False, None),
-        ],
-        [
-            (9, True, datetime(2010, 1, 1)),
-        ],
-    ),
-    # new important, old modified
-    (
-        [
-            (1, False, datetime(2010, 1, 1)),
-            (9, True, None),
-        ],
-        [
-            (9, True, None),
-        ],
-    ),
-    # None vs False combos (subset of the above)
-    # TODO: find a better way?
-    # none set, modified (last has modified)
-    (
-        [
-            (1, None, datetime(2010, 1, 1)),
-            (9, None, datetime(2010, 1, 9)),
-        ],
-        [
-            (9, None, datetime(2010, 1, 1)),
-        ],
-    ),
-    # old unimportant, modified; new unset
-    (
-        [
-            (1, False, datetime(2010, 1, 1)),
-            (9, None, None),
-        ],
-        [
-            (9, False, datetime(2010, 1, 1)),
-        ],
-    ),
-    # new unimportant, old modified
-    (
-        [
-            (1, None, datetime(2010, 1, 1)),
-            (9, False, None),
-        ],
-        [
-            (9, False, None),
-        ],
-    ),
-    # None vs True combos (subset of the above)
-    # TODO: find a better way?
-    # old important, modified; new unset
-    (
-        [
-            (1, True, datetime(2010, 1, 1)),
-            (9, None, None),
-        ],
-        [
-            (9, True, datetime(2010, 1, 1)),
-        ],
-    ),
-    # new important, old modified
-    (
-        [
-            (1, None, datetime(2010, 1, 1)),
-            (9, True, None),
-        ],
-        [
-            (9, True, None),
-        ],
-    ),
-]
-
-
-@pytest.mark.parametrize('data, expected', IMPORTANT_MODIFIED_COPYING_DATA)
-def test_important_modified_copying(
-    make_reader, db_path, parser, data, expected, same_last_updated
-):
-    _test_modified_copying(
-        make_reader, db_path, parser, data, expected, 'important', same_last_updated
-    )
-
-
-def _test_modified_copying(
-    make_reader, db_path, parser, data, expected, name, same_last_updated
-):
-    reader = make_reader(db_path)
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    reader.add_feed(feed)
-
-    same_last_updated = False
-
-    if not same_last_updated:
-        # if .last_updated differs,
-        # the entry with the most recent .last_updated remains
-
-        for day_i, (id, *_) in enumerate(data, 1):
-            reader._now = lambda: datetime(2010, 1, day_i)
-            # updated doesn't matter, this should never make the test fail
-            updated = datetime(2010, 1, randrange(1, 30))
-            parser.entry(1, id, updated, title='title', summary='summary')
-            reader.update_feeds()
-
-    else:
-        # if .last_updated is the same for all entries,
-        # the order from get_entries(sort='recent') is preserved;
-        # in this case, the entry with the most recent .updated remains
-
-        reader._now = lambda: datetime(2010, 1, 1)
-        for day_i, (id, *_) in enumerate(data, 1):
-            parser.entry(
-                1, id, datetime(2010, 1, day_i), title='title', summary='summary'
-            )
-        reader.update_feeds()
-
-    reader._now: lambda: datetime(2011, 1, 1)
-
-    # the entry with the highest id is the last one
-    for id, flag, modified in data:
-        getattr(reader, f'set_entry_{name}')(('1', f'1, {id}'), flag, modified)
-
-    reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
-    reader.set_tag(feed, '.reader.dedupe.once')
-    reader.update_feeds()
-
-    actual = sorted(
-        (eval(e.id)[1], getattr(e, name), getattr(e, f'{name}_modified'))
-        for e in reader.get_entries()
-    )
-    assert actual == expected
+# TODO: test order remains stable if last_updated is the same
 
 
 COMPLEX_TAGS = {'tag': {'string': [10, True]}}
