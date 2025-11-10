@@ -464,6 +464,7 @@ def _get_tags(reader, entry, duplicates):
 def merge_tags(make_reserved, entry, duplicates):
     prefix = re.escape(make_reserved(''))
     duplicate_tag_re = re.compile(rf"^{prefix}duplicate\.\d+\.of\.(.*)$")
+    entry_request_tag = make_reserved(ENTRY_TAG)
 
     indexes = defaultdict(int)  # noqa: B910
     seen_values = defaultdict(list)
@@ -475,6 +476,9 @@ def merge_tags(make_reserved, entry, duplicates):
 
     for tags in duplicates:
         for key, value in tags.items():
+            if key == entry_request_tag:
+                continue
+
             if match := duplicate_tag_re.match(key):
                 key = match.group(1)
 
