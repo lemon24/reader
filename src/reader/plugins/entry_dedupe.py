@@ -108,9 +108,7 @@ To reduce false positives when detecting duplicates:
 
 import itertools
 import logging
-import random
 import re
-import string
 import unicodedata
 from collections import Counter
 from collections import defaultdict
@@ -438,93 +436,51 @@ def merge_flags(entry, duplicates):
     return None
 
 
-_CANDIDATE_KEYS_LIMIT = 200
-_CANDIDATE_KEYS_RANDOM_THRESHOLD = 100
-
-
-def _generate_candidate_keys(fmt, key):
-    yield key
-    for i in range(1, _CANDIDATE_KEYS_RANDOM_THRESHOLD + 1):
-        yield fmt.format(key=key, i=i)
-    while True:  # pragma: no cover
-        yield fmt.format(key=key, i=int(''.join(random.choices(string.digits, k=9))))
-
-
-def _make_duplicate_key_re(make_reserved, key=None):
-    prefix = re.escape(make_reserved("duplicate."))
-    key_re = re.escape(key) if key is not None else '.*'
-    return re.compile(rf"^{prefix}\d+{re.escape('.of.')}({key_re})$")
-
-
-def _collect_tags_to_copy(make_reserved, duplicates):
-    duplicate_key_re = _make_duplicate_key_re(make_reserved)
-
-    rv = defaultdict(list)
-    for tags in duplicates:
-        for key, value in tags.items():
-            # handle existing .reader.duplicate.N.of.KEY tags
-            match = duplicate_key_re.search(key)
-            if match:
-                key = match.group(1)
-
-            rv[key].append(value)
-
-    return rv
-
-
 def _get_tags(reader, entry, duplicates):
     # the logic mostly assumes it's ok to hold everything in memory
 
     entry_tags = dict(reader.get_tags(entry))
-    duplicates_tags = (dict(reader.get_tags(e)) for e in duplicates)
+    duplicates_tags = map(dict, map(reader.get_tags, duplicates))
     make_reserved = reader.make_reader_reserved_name
 
     return merge_tags(make_reserved, entry_tags, duplicates_tags)
 
 
 def merge_tags(make_reserved, entry, duplicates):
-    values_by_key = _collect_tags_to_copy(make_reserved, duplicates)
+    prefix = re.escape(make_reserved(''))
+    duplicate_tag_re = re.compile(rf"^{prefix}duplicate\.\d+\.of\.(.*)$")
 
-    initial_keys = set(entry)
-    seen_keys = set(initial_keys)
+    indexes = defaultdict(int)  # noqa: B910
+    seen_values = defaultdict(list)
 
-    for key, values in values_by_key.items():
-        seen_values = []
-        try:
-            seen_values.append(entry[key])
-        except KeyError:
-            pass
+    for key, value in entry.items():
+        if match := duplicate_tag_re.match(key):
+            key = match.group(1)
+        seen_values[key].append(value)
 
-        duplicate_key_re = _make_duplicate_key_re(make_reserved, key)
-        for initial_key in initial_keys:
-            if not duplicate_key_re.search(initial_key):
+    for tags in duplicates:
+        for key, value in tags.items():
+            if match := duplicate_tag_re.match(key):
+                key = match.group(1)
+
+            if value in seen_values[key]:
                 continue
-            try:
-                seen_values.append(entry[initial_key])
-            except KeyError:  # pragma: no cover
-                pass
+            seen_values[key].append(value)
 
-        duplicate_key_fmt = make_reserved("duplicate.{i}.of.{key}")
-        candidate_keys = _generate_candidate_keys(duplicate_key_fmt, key)
+            while True:
+                index = indexes[key]
+                indexes[key] += 1
 
-        for value in values:
-            if value in seen_values:
-                continue
+                if index == 0:
+                    candidate = key
+                else:
+                    candidate = make_reserved(f"duplicate.{index}.of.{key}")
 
-            for _ in range(_CANDIDATE_KEYS_LIMIT):
-                key = next(candidate_keys)
+                if candidate not in entry:
+                    key = candidate
+                    break
 
-                if key in seen_keys:
-                    continue
-
-                yield key, value
-                seen_keys.add(key)
-                seen_values.append(value)
-                break
-
-            else:  # pragma: no cover
-                # TODO: custom exception
-                raise RuntimeError(f"could not find key for tag {key}")
+            yield key, value
 
 
 def _make_actions(reader, entry, duplicates):

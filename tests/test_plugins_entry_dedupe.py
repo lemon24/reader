@@ -509,8 +509,8 @@ def test_entry_tags_copying(reader, parser, tags):
     reader.add_feed(feed)
     reader.update_feeds()
 
-    for entry, tags in list(zip([one, two], old_tags)) + [(three, new_tags)]:
-        for key, value in tags.items():
+    for entry, entry_tags in list(zip([one, two], old_tags)) + [(three, new_tags)]:
+        for key, value in entry_tags.items():
             reader.set_tag(entry, key, value)
 
     init_reader(reader)
