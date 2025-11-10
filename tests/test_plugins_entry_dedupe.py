@@ -7,6 +7,7 @@ from reader import Entry
 from reader.plugins.entry_dedupe import _is_duplicate_full
 from reader.plugins.entry_dedupe import init_reader
 from reader.plugins.entry_dedupe import merge_flags
+from reader.plugins.entry_dedupe import merge_tags
 from reader.plugins.entry_dedupe import tokenize_content
 from reader.plugins.entry_dedupe import tokenize_title
 from utils import utc_datetime as datetime
@@ -365,7 +366,7 @@ def test_is_duplicate(one, two, result):
     assert bool(_is_duplicate_full(one, two)) is bool(result)
 
 
-# ([duplicates ..., entry), expected), ...
+# ([duplicates, ..., entry], expected), ...
 MERGE_FLAGS_DATA = [
     # no change
     ([(True, None)], None),
@@ -409,118 +410,69 @@ def test_merge_flags(flags, expected):
 
 COMPLEX_TAGS = {'tag': {'string': [10, True]}}
 
-# [one [two]] three three_expected
-ENTRY_TAGS_COPYING_DATA = [
-    ({}, {}),
-    (dict(tag=None), dict(tag=None)),
-    (dict(tag=None), {}, dict(tag=None)),
-    (dict(tag=None), dict(tag=None), {}, dict(tag=None)),
-    (COMPLEX_TAGS, COMPLEX_TAGS, COMPLEX_TAGS, COMPLEX_TAGS),
-    (dict(tag='one'), {}, dict(tag='one')),
+# ([duplicates, ..., entry], expected), ...
+MERGE_TAGS_DATA = [
+    # no duplicate entries
+    ([{}], {}),
+    ([{'tag': None}], {}),
+    # duplicate entry with no tags
+    ([{}, {}], {}),
+    # tag doesn't exist
+    ([{'tag': None}, {}], {'tag': None}),
+    ([{'tag': 'one'}, {}], {'tag': 'one'}),
+    # different tags are merged
+    ([{'one': 1}, {'two': 2}, {'three': 3}], {'one': 1, 'two': 2}),
+    # tag exists with the same value
+    ([{'tag': None}, {'tag': None}], {}),
+    # tag doesn't exist, multiple duplicate entries with the same value
+    ([{'tag': None}, {'tag': None}, {}], {'tag': None}),
+    ([COMPLEX_TAGS, COMPLEX_TAGS, {}], COMPLEX_TAGS),
+    # tag doesn't exist, multiple duplicate entries with different values
+    ([{'tag': 1}, {'tag': 2}, {}], {'tag': 1, '.duplicate.1.of.tag': 2}),
+    # tag exists, multiple duplicate entries with different values
     (
-        dict(tag='one'),
-        dict(tag='two'),
-        {},
-        {
-            'tag': 'two',
-            '.reader.duplicate.1.of.tag': 'one',
-        },
+        [{'tag': 1}, {'tag': 2}, {'tag': 3}],
+        {'.duplicate.1.of.tag': 1, '.duplicate.2.of.tag': 2},
     ),
+    # existing duplicate tag remains unchanged, no duplicate entries
+    ([{'.duplicate.1.of.tag': 1}], {}),
+    # existing duplicate tag remains unchanged, duplicate entry
+    ([{'tag': 1}, {'.duplicate.1.of.tag': 2}], {'tag': 1}),
+    # existing duplicate tag remains unchanged, even if out of order
+    ([{'tag': 1}, {'.duplicate.10.of.tag': 2}], {'tag': 1}),
+    # existing duplicate tag is skipped
     (
-        dict(tag='one'),
-        dict(tag='two'),
-        dict(tag='three'),
-        {
-            'tag': 'three',
-            '.reader.duplicate.1.of.tag': 'two',
-            '.reader.duplicate.2.of.tag': 'one',
-        },
+        [
+            {'.duplicate.1.of.tag': 1},
+            {'.duplicate.1.of.tag': 2},
+            {'.duplicate.1.of.tag': 3},
+        ],
+        {'tag': 1, '.duplicate.2.of.tag': 2},
     ),
+    # out of order duplicate tags get renumbered
     (
-        dict(tag='one'),
-        dict(tag='three'),
+        [
+            {'.duplicate.20.of.tag': 1, '.duplicate.10.of.tag': 2},
+            {'.duplicate.10.of.tag': 3},
+            {'tag': 4},
+        ],
         {
-            'tag': 'three',
-            '.reader.duplicate.1.of.tag': 'one',
-        },
-    ),
-    (
-        dict(tag='one'),
-        {
-            'tag': 'two',
-            '.reader.duplicate.1.of.tag': 'three',
-        },
-        {
-            'tag': 'two',
-            '.reader.duplicate.1.of.tag': 'three',
-            '.reader.duplicate.2.of.tag': 'one',
-        },
-    ),
-    (
-        dict(tag='one'),
-        {
-            'tag': 'two',
-            '.reader.duplicate.2.of.tag': 'three',
-        },
-        {
-            'tag': 'two',
-            '.reader.duplicate.1.of.tag': 'one',
-            '.reader.duplicate.2.of.tag': 'three',
-        },
-    ),
-    (
-        dict(tag='one'),
-        {
-            'tag': 'two',
-            '.reader.duplicate.1.of.tag': 'one',
-        },
-        {
-            'tag': 'two',
-            '.reader.duplicate.1.of.tag': 'one',
-        },
-    ),
-    (
-        {
-            'tag': 'two',
-            '.reader.duplicate.1.of.tag': 'one',
-        },
-        {
-            'tag': 'four',
-            '.reader.duplicate.1.of.tag': 'three',
-        },
-        {
-            'tag': 'four',
-            '.reader.duplicate.1.of.tag': 'three',
-            '.reader.duplicate.2.of.tag': 'one',
-            '.reader.duplicate.3.of.tag': 'two',
+            '.duplicate.1.of.tag': 1,
+            '.duplicate.2.of.tag': 2,
+            '.duplicate.3.of.tag': 3,
         },
     ),
 ]
 
 
-@pytest.mark.parametrize('tags', ENTRY_TAGS_COPYING_DATA)
-def test_entry_tags_copying(reader, parser, tags):
-    *old_tags, new_tags, expected_tags = tags
+@pytest.mark.parametrize('tags, expected', MERGE_TAGS_DATA)
+def test_merge_tags(reader, parser, tags, expected):
+    *duplicates, entry = tags
 
-    feed = parser.feed(1)
-    one = parser.entry(1, 1, datetime(2010, 1, 1), title='title', summary='summary')
-    two = parser.entry(1, 2, datetime(2010, 1, 2), title='title', summary='summary')
-    three = parser.entry(1, 3, datetime(2010, 1, 3), title='title', summary='summary')
-    reader.add_feed(feed)
-    reader.update_feeds()
+    def make_reserved(n):
+        return '.' + n
 
-    for entry, entry_tags in list(zip([one, two], old_tags)) + [(three, new_tags)]:
-        for key, value in entry_tags.items():
-            reader.set_tag(entry, key, value)
-
-    init_reader(reader)
-
-    reader.set_tag(feed, '.reader.dedupe.once')
-    reader.update_feeds()
-
-    assert not list(reader.get_tag_keys(one))
-    assert not list(reader.get_tag_keys(two))
-    assert dict(reader.get_tags(three)) == expected_tags
+    assert dict(merge_tags(make_reserved, entry, duplicates)) == expected
 
 
 # TODO: with_maybe_published_or_updated
