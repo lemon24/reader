@@ -125,7 +125,6 @@ from typing import NamedTuple
 from reader._storage._html_utils import strip_html
 from reader._utils import BetterStrPartial as partial
 from reader.exceptions import EntryNotFoundError
-from reader.exceptions import TagNotFoundError
 from reader.types import EntryUpdateStatus
 
 
@@ -451,18 +450,18 @@ def _generate_candidate_keys(fmt, key):
         yield fmt.format(key=key, i=int(''.join(random.choices(string.digits, k=9))))
 
 
-def _make_duplicate_key_re(reader, key=None):
-    prefix = re.escape(reader.make_reader_reserved_name("duplicate."))
+def _make_duplicate_key_re(make_reserved, key=None):
+    prefix = re.escape(make_reserved("duplicate."))
     key_re = re.escape(key) if key is not None else '.*'
     return re.compile(rf"^{prefix}\d+{re.escape('.of.')}({key_re})$")
 
 
-def _collect_tags_to_copy(reader, duplicates):
-    duplicate_key_re = _make_duplicate_key_re(reader)
+def _collect_tags_to_copy(make_reserved, duplicates):
+    duplicate_key_re = _make_duplicate_key_re(make_reserved)
 
     rv = defaultdict(list)
-    for duplicate in duplicates:
-        for key, value in reader.get_tags(duplicate):
+    for tags in duplicates:
+        for key, value in tags.items():
             # handle existing .reader.duplicate.N.of.KEY tags
             match = duplicate_key_re.search(key)
             if match:
@@ -476,28 +475,36 @@ def _collect_tags_to_copy(reader, duplicates):
 def _get_tags(reader, entry, duplicates):
     # the logic mostly assumes it's ok to hold everything in memory
 
-    values_by_key = _collect_tags_to_copy(reader, duplicates)
+    entry_tags = dict(reader.get_tags(entry))
+    duplicates_tags = (dict(reader.get_tags(e)) for e in duplicates)
+    make_reserved = reader.make_reader_reserved_name
 
-    initial_keys = set(reader.get_tag_keys(entry))
+    return merge_tags(make_reserved, entry_tags, duplicates_tags)
+
+
+def merge_tags(make_reserved, entry, duplicates):
+    values_by_key = _collect_tags_to_copy(make_reserved, duplicates)
+
+    initial_keys = set(entry)
     seen_keys = set(initial_keys)
 
     for key, values in values_by_key.items():
         seen_values = []
         try:
-            seen_values.append(reader.get_tag(entry, key))
-        except TagNotFoundError:
+            seen_values.append(entry[key])
+        except KeyError:
             pass
 
-        duplicate_key_re = _make_duplicate_key_re(reader, key)
+        duplicate_key_re = _make_duplicate_key_re(make_reserved, key)
         for initial_key in initial_keys:
             if not duplicate_key_re.search(initial_key):
                 continue
             try:
-                seen_values.append(reader.get_tag(entry, initial_key))
-            except TagNotFoundError:  # pragma: no cover
+                seen_values.append(entry[initial_key])
+            except KeyError:  # pragma: no cover
                 pass
 
-        duplicate_key_fmt = reader.make_reader_reserved_name("duplicate.{i}.of.{key}")
+        duplicate_key_fmt = make_reserved("duplicate.{i}.of.{key}")
         candidate_keys = _generate_candidate_keys(duplicate_key_fmt, key)
 
         for value in values:
@@ -517,9 +524,7 @@ def _get_tags(reader, entry, duplicates):
 
             else:  # pragma: no cover
                 # TODO: custom exception
-                raise RuntimeError(
-                    f"could not find key for entry {entry.resource_id} and tag {key}"
-                )
+                raise RuntimeError(f"could not find key for tag {key}")
 
 
 def _make_actions(reader, entry, duplicates):
