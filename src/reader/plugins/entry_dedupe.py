@@ -429,13 +429,6 @@ _IS_DUPLICATE_BY_TAG = {
 }
 
 
-def _get_flag_args(entry, duplicates, name):
-    def flag(e):
-        return getattr(e, name), getattr(e, f'{name}_modified')
-
-    return merge_flags(flag(entry), list(map(flag, duplicates)))
-
-
 def merge_flags(entry, duplicates):
     def key(flag):
         value, modified = flag
@@ -449,16 +442,6 @@ def merge_flags(entry, duplicates):
     if entry != new:
         return new
     return None
-
-
-def _get_tags(reader, entry, duplicates):
-    # the logic mostly assumes it's ok to hold everything in memory
-
-    entry_tags = dict(reader.get_tags(entry))
-    duplicates_tags = map(dict, map(reader.get_tags, duplicates))
-    make_reserved = reader.make_reader_reserved_name
-
-    return merge_tags(make_reserved, entry_tags, duplicates_tags)
 
 
 def merge_tags(make_reserved, entry, duplicates):
@@ -503,31 +486,37 @@ def merge_tags(make_reserved, entry, duplicates):
 
 
 def _make_actions(reader, entry, duplicates):
-    args = _get_flag_args(entry, duplicates, 'read')
-    if args:
+
+    def make_flag_args(name):
+        def flag(e):
+            return getattr(e, name), getattr(e, f'{name}_modified')
+
+        return merge_flags(flag(entry), list(map(flag, duplicates)))
+
+    if args := make_flag_args('read'):
         yield partial(reader.set_entry_read, entry, *args)
 
-    args = _get_flag_args(entry, duplicates, 'important')
-    if args:
+    if args := make_flag_args('important'):
         yield partial(reader.set_entry_important, entry, *args)
 
-    for key, value in _get_tags(reader, entry, duplicates):
+    tags = merge_tags(
+        reader.make_reader_reserved_name,
+        dict(reader.get_tags(entry)),
+        map(dict, map(reader.get_tags, duplicates)),
+    )
+    for key, value in tags:
         yield partial(reader.set_tag, entry, key, value)
 
     duplicate_ids = [d.resource_id for d in duplicates]
+    all_ids = [entry.resource_id] + duplicate_ids
 
     yield partial(
         reader._storage.set_entry_recent_sort,
         entry.resource_id,
-        min(
-            map(
-                reader._storage.get_entry_recent_sort,
-                [entry.resource_id] + duplicate_ids,
-            )
-        ),
+        min(map(reader._storage.get_entry_recent_sort, all_ids)),
     )
 
-    # WARNING: any changes to the duplicates must happen at the end
+    # any changes to the duplicates must happen at the end
     yield partial(reader._storage.delete_entries, duplicate_ids)
 
 
