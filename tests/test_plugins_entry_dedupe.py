@@ -5,6 +5,7 @@ import pytest
 from reader import Content
 from reader import Entry
 from reader.plugins.entry_dedupe import _is_duplicate_full
+from reader.plugins.entry_dedupe import init_reader
 from reader.plugins.entry_dedupe import merge_flags
 from reader.plugins.entry_dedupe import tokenize_content
 from reader.plugins.entry_dedupe import tokenize_title
@@ -12,11 +13,19 @@ from utils import utc_datetime as datetime
 
 
 @pytest.fixture
-def reader(make_reader):
-    return make_reader(':memory:', plugins=['reader.entry_dedupe'])
+def reader(make_reader, request):
+    plugins = []
+    if 'with_plugin' in request.fixturenames:
+        plugins.append('reader.entry_dedupe')
+    return make_reader(':memory:', plugins=plugins)
 
 
-def test_duplicates_are_deleted(reader, parser):
+@pytest.fixture
+def with_plugin():
+    """Tell reader to use the plugin from the beginning."""
+
+
+def test_duplicates_are_deleted(reader, with_plugin, parser):
     # detailed matching in test_is_duplicate
 
     reader.add_feed(parser.feed(1))
@@ -32,7 +41,7 @@ def test_duplicates_are_deleted(reader, parser):
     assert {e.id for e in reader.get_entries()} == {'1, 2'}
 
 
-def test_non_duplicates_are_ignored(reader, parser):
+def test_non_duplicates_are_ignored(reader, with_plugin, parser):
     # detailed matching in test_is_duplicate
 
     reader.add_feed(parser.feed(1))
@@ -52,7 +61,7 @@ def test_non_duplicates_are_ignored(reader, parser):
     assert {eval(e.id)[1] for e in reader.get_entries()} == {1, 2, 3, 4, 5, 6}
 
 
-def test_duplicates_in_another_feed_are_ignored(reader, parser):
+def test_duplicates_in_another_feed_are_ignored(reader, with_plugin, parser):
     reader.add_feed(parser.feed(1))
     reader.add_feed(parser.feed(2))
 
@@ -67,7 +76,7 @@ def test_duplicates_in_another_feed_are_ignored(reader, parser):
     assert {e.id for e in reader.get_entries()} == {'1, 1', '2, 1'}
 
 
-def test_duplicates_change_during_update(reader, parser):
+def test_duplicates_change_during_update(reader, with_plugin, parser):
     reader.add_feed(parser.feed(1))
 
     yesterday = datetime(2010, 1, 1)
@@ -86,7 +95,7 @@ def test_duplicates_change_during_update(reader, parser):
 
 @pytest.mark.parametrize('read', [False, True])
 @pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
-def test_read(reader, parser, read, modified):
+def test_read(reader, with_plugin, parser, read, modified):
     # multiple duplicates / modified priority tested in test_merge_flags
 
     reader.add_feed(parser.feed(1))
@@ -108,7 +117,7 @@ def test_read(reader, parser, read, modified):
 
 @pytest.mark.parametrize('important', [False, None, True])
 @pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
-def test_important(reader, parser, important, modified):
+def test_important(reader, with_plugin, parser, important, modified):
     # multiple duplicates / modified priority tested in test_merge_flags
 
     reader.add_feed(parser.feed(1))
@@ -119,7 +128,7 @@ def test_important(reader, parser, important, modified):
 
     reader.set_entry_important(one, important, modified)
 
-    today = datetime(2010, 1, 3)
+    today = datetime(2010, 1, 2)
     two = parser.entry(1, 2, today, title='title', summary='value')
     reader.update_feeds()
 
@@ -138,9 +147,7 @@ def test_important(reader, parser, important, modified):
     ],
     ids=lambda p: ','.join(map(str, p)),
 )
-def test_dedupe_once(make_reader, db_path, parser, tags, expected):
-    reader = make_reader(db_path)
-
+def test_dedupe_once(reader, parser, tags, expected):
     feed = parser.feed(1)
     reader.add_feed(feed)
     reader.set_tag(feed, 'unrelated')
@@ -160,7 +167,7 @@ def test_dedupe_once(make_reader, db_path, parser, tags, expected):
 
     assert {eval(e.id)[1] for e in reader.get_entries()} == {1, 2, 3, 4}
 
-    reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
+    init_reader(reader)
 
     # which entry is "latest" differs between .dedupe.once and normal duplicate
     if tags:
@@ -419,10 +426,9 @@ ENTRY_TAGS_COPYING_DATA = [
 
 
 @pytest.mark.parametrize('tags', ENTRY_TAGS_COPYING_DATA)
-def test_entry_tags_copying(make_reader, db_path, parser, tags):
+def test_entry_tags_copying(reader, parser, tags):
     *old_tags, new_tags, expected_tags = tags
 
-    reader = make_reader(db_path)
     feed = parser.feed(1)
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='title', summary='summary')
     two = parser.entry(1, 2, datetime(2010, 1, 2), title='title', summary='summary')
@@ -434,7 +440,8 @@ def test_entry_tags_copying(make_reader, db_path, parser, tags):
         for key, value in tags.items():
             reader.set_tag(entry, key, value)
 
-    reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
+    init_reader(reader)
+
     reader.set_tag(feed, '.reader.dedupe.once')
     reader.update_feeds()
 
@@ -444,8 +451,7 @@ def test_entry_tags_copying(make_reader, db_path, parser, tags):
 
 
 # TODO: with_maybe_published_or_updated
-def test_recent_sort_copying(make_reader, db_path, parser):
-    reader = make_reader(db_path)
+def test_recent_sort_copying(reader, parser):
     reader.add_feed(parser.feed(1))
 
     parser.entry(1, 1, title='title', summary='summary')
@@ -457,7 +463,7 @@ def test_recent_sort_copying(make_reader, db_path, parser):
     reader._now = lambda: datetime(2010, 1, 20)
     reader.update_feeds()
 
-    reader = make_reader(db_path, plugins=['reader.entry_dedupe'])
+    init_reader(reader)
 
     del parser.entries[1][1]
     del parser.entries[1][2]
@@ -474,10 +480,8 @@ def test_recent_sort_copying(make_reader, db_path, parser):
 @pytest.mark.parametrize('update_after_one', [False, True])
 @pytest.mark.parametrize('with_dates, expected_id', [(False, '3'), (True, '2')])
 def test_duplicates_in_feed(
-    make_reader, parser, update_after_one, with_dates, expected_id
+    reader, with_plugin, parser, update_after_one, with_dates, expected_id
 ):
-    reader = make_reader(':memory:', plugins=['reader.entry_dedupe'])
-
     reader.add_feed(parser.feed(1))
     # force recent_sort logic to use current times, not updated/published
     reader.update_feeds()
