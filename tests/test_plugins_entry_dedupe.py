@@ -93,50 +93,6 @@ def test_duplicates_change_during_update(reader, with_plugin, parser):
     assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 3'}
 
 
-@pytest.mark.parametrize('read', [False, True])
-@pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
-def test_read(reader, with_plugin, parser, read, modified):
-    # multiple duplicates / modified priority tested in test_merge_flags
-
-    reader.add_feed(parser.feed(1))
-
-    yesterday = datetime(2010, 1, 1)
-    one = parser.entry(1, 1, yesterday, title='title', summary='value')
-    reader.update_feeds()
-
-    reader.set_entry_read(one, read, modified)
-
-    today = datetime(2010, 1, 2)
-    two = parser.entry(1, 2, today, title='title', summary='value')
-    reader.update_feeds()
-
-    two = reader.get_entry(two)
-    assert two.read == read
-    assert two.read_modified == modified
-
-
-@pytest.mark.parametrize('important', [False, None, True])
-@pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
-def test_important(reader, with_plugin, parser, important, modified):
-    # multiple duplicates / modified priority tested in test_merge_flags
-
-    reader.add_feed(parser.feed(1))
-
-    yesterday = datetime(2010, 1, 1)
-    one = parser.entry(1, 1, yesterday, title='title', summary='value')
-    reader.update_feeds()
-
-    reader.set_entry_important(one, important, modified)
-
-    today = datetime(2010, 1, 2)
-    two = parser.entry(1, 2, today, title='title', summary='value')
-    reader.update_feeds()
-
-    two = reader.get_entry(two)
-    assert two.important == important
-    assert two.important_modified == modified
-
-
 @pytest.mark.parametrize(
     'tags, expected',
     [
@@ -181,6 +137,123 @@ def test_dedupe_once(reader, parser, tags, expected):
 
     assert {eval(e.id)[1] for e in reader.get_entries()} == expected
     assert set(reader.get_tag_keys(feed)) == {'unrelated'}
+
+
+@pytest.mark.parametrize('read', [False, True])
+@pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
+def test_read(reader, with_plugin, parser, read, modified):
+    # multiple duplicates / modified priority tested in test_merge_flags
+
+    reader.add_feed(parser.feed(1))
+
+    yesterday = datetime(2010, 1, 1)
+    one = parser.entry(1, 1, yesterday, title='title', summary='value')
+    reader.update_feeds()
+
+    reader.set_entry_read(one, read, modified)
+
+    today = datetime(2010, 1, 2)
+    two = parser.entry(1, 2, today, title='title', summary='value')
+    reader.update_feeds()
+
+    two = reader.get_entry(two)
+    assert two.read == read
+    assert two.read_modified == modified
+
+
+@pytest.mark.parametrize('important', [False, None, True])
+@pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
+def test_important(reader, with_plugin, parser, important, modified):
+    # multiple duplicates / modified priority tested in test_merge_flags
+
+    reader.add_feed(parser.feed(1))
+
+    yesterday = datetime(2010, 1, 1)
+    one = parser.entry(1, 1, yesterday, title='title', summary='value')
+    reader.update_feeds()
+
+    reader.set_entry_important(one, important, modified)
+
+    today = datetime(2010, 1, 2)
+    two = parser.entry(1, 2, today, title='title', summary='value')
+    reader.update_feeds()
+
+    two = reader.get_entry(two)
+    assert two.important == important
+    assert two.important_modified == modified
+
+
+def test_tags(reader, parser):
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    one = parser.entry(1, 1, datetime(2010, 1, 2), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    two = parser.entry(1, 2, datetime(2010, 1, 1), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 2)
+    reader.update_feeds()
+
+    reader.set_tag(one, 'just', 'one')
+    reader.set_tag(one, 'same', 'value')
+    reader.set_tag(two, 'same', 'value')
+    reader.set_tag(one, 'different', 'one')
+    reader.set_tag(two, 'different', 'two')
+
+    init_reader(reader)
+
+    three = parser.entry(1, 3, datetime(2010, 1, 3), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 3)
+    reader.update_feeds()
+
+    assert dict(reader.get_tags(three)) == {
+        'just': 'one',
+        'same': 'value',
+        'different': 'one',
+        '.reader.duplicate.1.of.different': 'two',
+    }
+
+
+def test_tags_dedupe_once(reader, parser):
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    one = parser.entry(1, 1, datetime(2010, 1, 2), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    two = parser.entry(1, 2, datetime(2010, 1, 1), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 2)
+    reader.update_feeds()
+
+    reader.set_tag(one, 'just', 'one')
+    reader.set_tag(one, 'same', 'value')
+    reader.set_tag(two, 'same', 'value')
+    reader.set_tag(one, 'different', 'one')
+    reader.set_tag(two, 'different', 'two')
+
+    three = parser.entry(1, 3, datetime(2010, 1, 3), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 3)
+    reader.update_feeds()
+
+    reader.set_tag(three, 'same', 'value')
+    reader.set_tag(three, 'different', 'three')
+    reader.set_tag(three, 'only', 'three')
+
+    init_reader(reader)
+    reader.set_tag(feed, '.reader.dedupe.once')
+    reader.update_feeds()
+
+    assert dict(reader.get_tags(three)) == {
+        'just': 'one',
+        'same': 'value',
+        'different': 'three',
+        # note the order differs from test_tags
+        '.reader.duplicate.1.of.different': 'two',
+        '.reader.duplicate.2.of.different': 'one',
+        'only': 'three',
+    }
 
 
 def make_entry(title=None, summary=None, content=None):
