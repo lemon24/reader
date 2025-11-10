@@ -115,9 +115,9 @@ from collections import defaultdict
 from collections import deque
 from datetime import datetime
 from datetime import timezone
+from functools import cache
 from functools import cached_property
 from functools import lru_cache
-from itertools import groupby
 from typing import NamedTuple
 
 from reader._storage._html_utils import strip_html
@@ -156,18 +156,40 @@ class Deduplicator:
     def deduplicate(self):
         tag, is_duplicate = self.get_feed_request_tag()
 
-        if tag is not None:
-            log.info("entry_dedupe: %r for feed %r", tag, self.feed)
-            groups = _get_entry_groups(self.reader, self.feed, is_duplicate)
-        else:
-            entries = self.reader.get_entries(
+        # content is only required by is_duplicate,
+        # if get_entries() could skip content,
+        # we could get it on demand in is_duplicate_by_id
+        all_entries = list(self.reader.get_entries(feed=self.feed))
+
+        all_by_id = {e.id: e for e in all_entries}
+
+        @cache
+        def is_duplicate_by_id(one, two):
+            return is_duplicate(all_by_id[one], all_by_id[two])
+
+        def is_duplicate_cached(one, two):
+            return is_duplicate_by_id(one.id, two.id)
+
+        if tag is None:
+            # content is only required by is_duplicate
+            new_entries = self.reader.get_entries(
                 feed=self.feed, tags=[self.entry_request_tag]
             )
-            groups = map(partial(_get_entry_group, self.reader), entries)
+        else:
+            log.info("entry_dedupe: %r for feed %r", tag, self.feed)
+            new_entries = all_entries
 
-        for entry, duplicates in groups:
-            if not duplicates:
-                continue
+        # which entry in a group is "latest" depends on what triggered dedupe;
+        # ideally, we should unify this, see regular_update_key for details
+        latest_key = regular_update_key if tag is None else feed_request_key
+
+        for group_ids in group_entries(all_entries, new_entries, is_duplicate_cached):
+            assert len(group_ids) > 1, group_ids
+
+            group = [all_by_id[i] for i in group_ids]
+
+            # FIXME: if latest_key is the same, the all_entries order should be preserved
+            entry, *duplicates = sorted(group, key=latest_key, reverse=True)
             _dedupe_entries(self.reader, entry, duplicates)
 
             if tag is None:
@@ -199,6 +221,76 @@ class Deduplicator:
 
     def clear_entry_request(self, entry):
         self.reader.delete_tag(entry, self.entry_request_tag, missing_ok=True)
+
+
+HUGE_GROUP_SIZE = 16  # 8
+MAX_GROUP_SIZE = 16  # 4
+MASS_DUPLICATION_MIN_PAIRS = 4
+
+
+def group_entries(all_entries, new_entries, is_duplicate):
+    all = {e.id: e for e in all_entries}
+    new = {e.id: e for e in new_entries}
+    duplicates = DisjointSet()
+
+    for grouper in GROUPERS:
+        grouper_duplicates = DisjointSet()
+
+        for group in grouper(all.values(), new.values()):
+            if len(group) == 1:
+                continue
+
+            # grouper is not a good heuristic for this group, skip it
+            if len(group) > HUGE_GROUP_SIZE:  # pragma: no cover
+                log.info(
+                    "entry_dedupe: feed %r: found group > %r, skipping; first title: %s",
+                    group[0].feed_url,
+                    HUGE_GROUP_SIZE,
+                    group[0].title,
+                )
+                continue
+
+            # further constrain big groups to a fixed size,
+            # so the combinations() below don't blow up
+            group.sort(key=lambda e: e.added, reverse=True)
+            group = group[:MAX_GROUP_SIZE]
+
+            for one, two in itertools.combinations(group, 2):
+                if is_duplicate(one, two):
+                    grouper_duplicates.add(one.id, two.id)
+
+        groups = grouper_duplicates.subsets()
+        pair_count = sum(1 for g in groups if len(g) == 2)
+
+        for group in groups:
+            duplicates.add(*group)
+
+            for eid in group:
+                # if this is a new entry, we found duplicates for it,
+                # so trying other heuristics for it is overkill
+                new.pop(eid, None)
+
+                # lots of old entries were duplicated in this specific way,
+                # don't check remaining new entries against them
+                if pair_count >= MASS_DUPLICATION_MIN_PAIRS:  # pragma: no cover
+                    all.pop(eid, None)
+
+        # we found duplicates for all the new entries,
+        # no need to try additional heuristics
+        # if not new:
+        #     break
+
+    return duplicates.subsets()
+
+
+def title_grouper(entries, new_entries):
+    def key(e):
+        return tokenize_title(e.title)
+
+    return group_by(key, entries, new_entries)
+
+
+GROUPERS = [title_grouper]
 
 
 def _content_fields(entry):
@@ -305,60 +397,29 @@ def _jaccard_similarity(one, two, n):
         return 0
 
 
-def _get_entry_group(reader, entry):
-    duplicates = [
-        e
-        for e in _get_same_group_entries(reader, entry)
-        if _is_duplicate_full(entry, e)
-    ]
-    if not duplicates:
-        log.debug("entry_dedupe: no duplicates for %s", entry.resource_id)
-        return entry, []
-
-    try:
-        entry = reader.get_entry(entry)
-    except EntryNotFoundError:
-        log.info("entry_dedupe: entry %r was deleted, aborting", entry.resource_id)
-        return entry, []
-
-    def group_key(e):
-        # unlike _get_entry_groups, we cannot rely on e.last_updated,
-        # because for duplicates in the feed, we'd end up flip-flopping
-        # (on the first update, entry 1 is deleted and entry 2 remains;
-        # on the second update, entry 1 remains because it's new,
-        # and entry 2 is deleted because it's not modified,
-        # has lower last_updated, and no update hook runs for it; repeat).
-        #
-        # it would be more correct to sort by (is in new feed, last_retrieved),
-        # but as of 3.14, we don't know about existing but not modified entries
-        # (the hook isn't called), and entries don't have last_retrieved.
-        #
-        # also see test_duplicates_in_feed / #340.
-        #
-        return e.updated or e.published or DEFAULT_UPDATED, e.id
-
-    group = [entry] + duplicates
-    group.sort(key=group_key, reverse=True)
-    entry, *duplicates = group
-
-    return entry, duplicates
-
-
 DEFAULT_UPDATED = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
-def _get_same_group_entries(reader, entry):
-    # to make this better, we could do something like
-    # reader.search_entries(f'title: {fts5_escape(entry.title)}'),
-    # assuming the search index is up to date enough;
-    # https://github.com/lemon24/reader/issues/202
+def regular_update_key(e):
+    # unlike feed_request_key, we cannot rely on e.last_updated,
+    # because for duplicates in the feed, we'd end up flip-flopping
+    # (on the first update, entry 1 is deleted and entry 2 remains;
+    # on the second update, entry 1 remains because it's new,
+    # and entry 2 is deleted because it's not modified,
+    # has lower last_updated, and no update hook runs for it; repeat).
+    #
+    # it would be more correct to sort by (is in new feed, last_retrieved),
+    # but as of 3.14, we don't know about existing but not modified entries
+    # (the hook isn't called), and entries don't have last_retrieved.
+    #
+    # also see test_duplicates_in_feed / #340.
+    #
+    return e.updated or e.published or DEFAULT_UPDATED, e.id
 
-    for other in reader.get_entries(feed=entry.feed_url, read=None):
-        if entry.resource_id == other.resource_id:
-            continue
-        if tokenize_title(entry.title) != tokenize_title(other.title):
-            continue
-        yield other
+
+def feed_request_key(e):
+    # keep the latest entry, consider the rest duplicates
+    return e.last_updated
 
 
 # ordered by strictness (strictest first)
@@ -366,52 +427,6 @@ _IS_DUPLICATE_BY_TAG = {
     'dedupe.once': _is_duplicate_full,
     'dedupe.once.title': _is_duplicate_title,
 }
-
-
-_MAX_GROUP_SIZE = 16
-
-
-def _get_entry_groups(reader, feed, is_duplicate):
-    def by_title(e):
-        return tokenize_title(e.title)
-
-    # this reads all the feed's entries in memory;
-    # better would be to get all the (e.title, e.resource_id),
-    # sort them, and then get_entry() each entry in order;
-    # even better would be to have get_entries(sort='title');
-    # https://github.com/lemon24/reader/issues/202
-
-    entries = sorted(reader.get_entries(feed=feed, read=None), key=by_title)
-
-    for _, group_it in groupby(entries, key=by_title):
-        group = list(group_it)
-
-        # this gets extremely slow for different entries with the same title,
-        # hence the limit
-
-        if (
-            len(group) > _MAX_GROUP_SIZE and is_duplicate is _is_duplicate_full
-        ):  # pragma: no cover
-            log.info(
-                "entry_dedupe: feed %r: found group > %r, skipping; first title: %s",
-                feed,
-                _MAX_GROUP_SIZE,
-                group[0].title,
-            )
-            continue
-
-        while group:
-            # keep the latest entry, consider the rest duplicates
-            group.sort(key=lambda e: e.last_updated, reverse=True)
-            entry, *rest = group
-
-            duplicates, others = [], []
-            for e in rest:
-                (duplicates if is_duplicate(entry, e) else others).append(e)
-
-            yield entry, duplicates
-
-            group = others
 
 
 def _get_flag_args(entry, duplicates, name):
@@ -579,6 +594,60 @@ def strip_accents(s):
         normalized = unicodedata.normalize('NFKD', s)
         noncombining = itertools.filterfalse(unicodedata.combining, normalized)
         return ''.join(noncombining)
+
+
+# utilities
+
+
+class DisjointSet:
+
+    # naive version of scipy.cluster.hierarchy.DisjointSet
+
+    def __init__(self):
+        self._subsets = {}
+
+    def add(self, *xs):
+        prev = None
+        for x in xs:
+            if x not in self._subsets:
+                self._subsets[x] = {x}
+            if prev is not None:
+                self.merge(prev, x)
+            prev = x
+
+    def merge(self, x, y):
+        x_subset = self._subsets[x]
+        y_subset = self._subsets[y]
+
+        if x_subset is y_subset:
+            return
+
+        if len(x_subset) < len(y_subset):  # pragma: no cover
+            x_subset, y_subset = y_subset, x_subset
+
+        x_subset.update(y_subset)
+        for n in y_subset:
+            self._subsets[n] = x_subset
+
+    def subsets(self):
+        unique_subsets = {id(s): s for s in self._subsets.values()}
+        return [set(s) for s in unique_subsets.values()]
+
+
+def group_by(keyfn, items, only_items=None):
+    if only_items:
+        only_keys = list(map(keyfn, only_items))
+
+    groups = defaultdict(list)
+    for item in items:
+        key = keyfn(item)
+        if not key:
+            continue
+        if only_items and key not in only_keys:
+            continue
+        groups[key].append(item)
+
+    return groups.values()
 
 
 if __name__ == '__main__':  # pragma: no cover
