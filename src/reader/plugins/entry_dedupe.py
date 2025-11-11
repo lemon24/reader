@@ -85,24 +85,61 @@ To reduce false positives when detecting duplicates:
 .. versionchanged:: 2.3
     Delete old duplicates instead of marking them as read / unimportant.
 
-
-.. todo::
-
-    Some possible optimizations:
-
-    1.  Do this once per feed (now it's one ``get_entries(feed=...)`` per entry).
-    2.  Only get entries with the same title (not possible with the current API).
-
-        **2021 update**: We can use the full-text search if it's enabled.
-
-    3.  Add the entry directly as read instead of marking it afterwards
-        (requires a new hook to process the entry before it is added,
-        and Storage support).
-
 ..
     Implemented for https://github.com/lemon24/reader/issues/79.
-    Deleting entries added in https://github.com/lemon24/reader/issues/140.
+    Deleting entries in https://github.com/lemon24/reader/issues/140.
+    On-demand dedupe in https://github.com/lemon24/reader/issues/202.
+    More selection heuristics in https://github.com/lemon24/reader/issues/371.
 
+..
+    Some notes on how we are finding similar entries.
+
+    There are three methods that build conceptually on one another
+    (and get progressively more complicated):
+
+    1. Jaccard similarity + n-grams. Jaccard similarity uses sets;
+       the set of words in a document works, but this ignores word order;
+       using n-grams instead of words retains word order information.
+       This method is pair-wise (searching all the documents is O(n)),
+       and requires the documents to be stored forever.
+
+    2. MinHash allows estimating Jaccard similarity
+       by "compressing" documents into fixed-size arrays.
+       This method is pair-wise; only the arrays need to be stored.
+
+    3. Locality Sensitive Hashing allows using MinHash to find duplicates
+       without having to check similarity for all the documents,
+       by putting similar items into buckets.
+
+    I chose to go with #1, Jaccard similarity + n-grams,
+    since it is simple to understand and implement,
+    so we don't necessarily need an external dependency.
+    The main downside is that it is relatively slow;
+    to reduce the search space, we're using heuristics
+    that find potential duplicates based on title / link / timestamps
+    (although we could probably use a prefix of the document as well).
+
+    MinHash is not that complicated to implement[1],
+    but you still need LSH to avoid O(n) searches.
+    [1]: https://gist.github.com/lemon24/b9af5ade919713406bda9603847d32e5
+
+    (LLMs+embeddings are not an option due to the huge extra dependency,
+    are are overkill anyway, since we don't care about semantic similarity.)
+
+    Further reading:
+
+    * good summary of Jaccard similarity and MinHash:
+      https://blog.nelhage.com/post/fuzzy-dedup/
+    * "Mining of Massive Datasets" chapter:
+      http://infolab.stanford.edu/~ullman/mmds/ch3.pdf
+    * "Data Mining" course notes (shorter than MMDS):
+      https://users.cs.utah.edu/~jeffp/teaching/cs5140-S15/cs5140.html
+
+    Libraries (if we choose to have dependencies):
+
+    * https://www.nltk.org/ (tokenization, similarity)
+    * https://scikit-learn.org/stable/modules/feature_extraction.html (tokenization)
+    * https://ekzhu.com/datasketch/ (MinHash, LSH)
 
 """
 
@@ -190,7 +227,7 @@ class Deduplicator:
 
             # FIXME: if latest_key is the same, the all_entries order should be preserved
             entry, *duplicates = sorted(group, key=latest_key, reverse=True)
-            _dedupe_entries(self.reader, entry, duplicates)
+            dedupe_entries(self.reader, entry, duplicates)
 
             if tag is None:
                 self.clear_entry_request(entry)
@@ -203,14 +240,14 @@ class Deduplicator:
         return frozenset(self.reader.get_tag_keys(self.feed))
 
     def get_feed_request_tag(self):
-        for suffix, is_duplicate in _IS_DUPLICATE_BY_TAG.items():
+        for suffix, is_duplicate in IS_DUPLICATE_BY_TAG.items():
             tag = self.reader.make_reader_reserved_name(suffix)
             if tag in self.feed_tags:
                 return tag, is_duplicate
-        return None, _is_duplicate_full
+        return None, is_duplicate_content
 
     def clear_feed_request(self):
-        for suffix in reversed(_IS_DUPLICATE_BY_TAG):
+        for suffix in reversed(IS_DUPLICATE_BY_TAG):
             tag = self.reader.make_reader_reserved_name(suffix)
             if tag in self.feed_tags:
                 self.reader.delete_tag(self.feed, tag, missing_ok=True)
@@ -221,6 +258,9 @@ class Deduplicator:
 
     def clear_entry_request(self, entry):
         self.reader.delete_tag(entry, self.entry_request_tag, missing_ok=True)
+
+
+# heuristics for finding duplicates
 
 
 HUGE_GROUP_SIZE = 16  # 8
@@ -293,11 +333,7 @@ def title_grouper(entries, new_entries):
 GROUPERS = [title_grouper]
 
 
-def _content_fields(entry):
-    rv = [c.value for c in (entry.content or ())]
-    if entry.summary:
-        rv.append(entry.summary)
-    return [tokenize_content(s) for s in rv]
+# entry (content) similarity
 
 
 class _Threshold(NamedTuple):
@@ -305,6 +341,8 @@ class _Threshold(NamedTuple):
     similarity: float
 
 
+# thredsholds originally chosen in
+# https://github.com/lemon24/reader/issues/202#issuecomment-904139483
 # all figures in comments for 4-grams, substitutions only
 _THRESHOLDS = [
     # 2 fully-spaced subs in the middle,
@@ -320,10 +358,8 @@ _THRESHOLDS = [
 ]
 
 
-def _is_duplicate_full(one, two):
-    # info on similarity thresholds:
-    # https://github.com/lemon24/reader/issues/202#issuecomment-904139483
-
+def is_duplicate_content(one, two):
+    # TODO: remove title checks once thresholds are increased for #371
     if not one.title or not two.title:
         return False
     if tokenize_title(one.title) != tokenize_title(two.title):
@@ -348,7 +384,7 @@ def _is_duplicate_full(one, two):
             one_words = one_words[:min_length]
             two_words = two_words[:min_length]
 
-            similarity = _jaccard_similarity(one_words, two_words, 4)
+            similarity = jaccard_similarity(one_words, two_words, 4)
 
             for threshold in _THRESHOLDS:
                 if (
@@ -360,42 +396,27 @@ def _is_duplicate_full(one, two):
     return False
 
 
-def _is_duplicate_title(one, two):
+def _content_fields(entry):
+    rv = [c.value for c in (entry.content or ())]
+    if entry.summary:
+        rv.append(entry.summary)
+    return [tokenize_content(s) for s in rv]
+
+
+def is_duplicate_title(one, two):
     if not one.title or not two.title:  # pragma: no cover
         return False
     return tokenize_title(one.title) == tokenize_title(two.title)
 
 
-def _ngrams(iterable, n):
-    it = iter(iterable)
-    window = deque(maxlen=n)
-    while True:
-        if len(window) == n:
-            yield tuple(window)
-        try:
-            window.append(next(it))
-        except StopIteration:
-            return
+# ordered by strictness (strictest first)
+IS_DUPLICATE_BY_TAG = {
+    'dedupe.once': is_duplicate_content,
+    'dedupe.once.title': is_duplicate_title,
+}
 
 
-def _jaccard_similarity(one, two, n):
-    # https://github.com/lemon24/reader/issues/79#issuecomment-447636334
-    # https://www.cs.utah.edu/~jeffp/teaching/cs5140-S15/cs5140/L4-Jaccard+nGram.pdf
-
-    # if this ends up being too slow, this may help:
-    # https://www.cs.utah.edu/~jeffp/teaching/cs5140-S15/cs5140/L5-Minhash.pdf
-
-    one = Counter(_ngrams(one, n))
-    two = Counter(_ngrams(two, n))
-
-    # we count replicas (i.e. weighted Jaccard), hence the sum((...).values());
-    # I assume this decreases similarity if two has a sentence from one twice,
-    # whereas len(...) would not
-    try:
-        return sum((one & two).values()) / sum((one | two).values())
-    except ZeroDivisionError:  # pragma: no cover
-        return 0
-
+# finding the "latest" entry
 
 DEFAULT_UPDATED = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
@@ -422,11 +443,66 @@ def feed_request_key(e):
     return e.last_updated
 
 
-# ordered by strictness (strictest first)
-_IS_DUPLICATE_BY_TAG = {
-    'dedupe.once': _is_duplicate_full,
-    'dedupe.once.title': _is_duplicate_title,
-}
+# merging user data and deleting duplicates
+
+
+def dedupe_entries(reader, entry, duplicates):
+    log.info(
+        "entry_dedupe: %r (title: %r) duplicates: %r",
+        entry.resource_id,
+        entry.title,
+        [e.id for e in duplicates],
+    )
+
+    # don't do anything until we know all actions were generated successfully
+    actions = list(make_dedupe_actions(reader, entry, duplicates))
+    # FIXME: what if this fails with EntryNotFoundError?
+    # either the entry was deleted (abort),
+    # or a duplicate was deleted (start over with the other duplicates, if any)
+
+    try:
+        for action in actions:
+            action()
+            log.info("entry_dedupe: %s", action)
+    except EntryNotFoundError as e:  # pragma: no cover
+        if entry.resource_id != e.resource_id:
+            raise
+        log.info("entry_dedupe: entry %r was deleted, aborting", entry.resource_id)
+
+
+def make_dedupe_actions(reader, entry, duplicates):
+
+    def make_flag_args(name):
+        def flag(e):
+            return getattr(e, name), getattr(e, f'{name}_modified')
+
+        return merge_flags(flag(entry), list(map(flag, duplicates)))
+
+    if args := make_flag_args('read'):
+        yield partial(reader.set_entry_read, entry, *args)
+
+    if args := make_flag_args('important'):
+        yield partial(reader.set_entry_important, entry, *args)
+
+    tags = merge_tags(
+        reader.make_reader_reserved_name,
+        dict(reader.get_tags(entry)),
+        map(dict, map(reader.get_tags, duplicates)),
+    )
+    for key, value in tags:
+        yield partial(reader.set_tag, entry, key, value)
+
+    duplicate_ids = [d.resource_id for d in duplicates]
+    all_ids = [entry.resource_id] + duplicate_ids
+
+    yield partial(
+        reader._storage.set_entry_recent_sort,
+        entry.resource_id,
+        min(map(reader._storage.get_entry_recent_sort, all_ids)),
+    )
+
+    # any changes to the duplicates must happen at the end
+    yield partial(reader._storage.delete_entries, duplicate_ids)
 
 
 def merge_flags(entry, duplicates):
@@ -485,66 +561,7 @@ def merge_tags(make_reserved, entry, duplicates):
             yield key, value
 
 
-def _make_actions(reader, entry, duplicates):
-
-    def make_flag_args(name):
-        def flag(e):
-            return getattr(e, name), getattr(e, f'{name}_modified')
-
-        return merge_flags(flag(entry), list(map(flag, duplicates)))
-
-    if args := make_flag_args('read'):
-        yield partial(reader.set_entry_read, entry, *args)
-
-    if args := make_flag_args('important'):
-        yield partial(reader.set_entry_important, entry, *args)
-
-    tags = merge_tags(
-        reader.make_reader_reserved_name,
-        dict(reader.get_tags(entry)),
-        map(dict, map(reader.get_tags, duplicates)),
-    )
-    for key, value in tags:
-        yield partial(reader.set_tag, entry, key, value)
-
-    duplicate_ids = [d.resource_id for d in duplicates]
-    all_ids = [entry.resource_id] + duplicate_ids
-
-    yield partial(
-        reader._storage.set_entry_recent_sort,
-        entry.resource_id,
-        min(map(reader._storage.get_entry_recent_sort, all_ids)),
-    )
-
-    # any changes to the duplicates must happen at the end
-    yield partial(reader._storage.delete_entries, duplicate_ids)
-
-
-def _dedupe_entries(reader, entry, duplicates):
-    log.info(
-        "entry_dedupe: %r (title: %r) duplicates: %r",
-        entry.resource_id,
-        entry.title,
-        [e.id for e in duplicates],
-    )
-
-    # don't do anything until we know all actions were generated successfully
-    actions = list(_make_actions(reader, entry, duplicates))
-    # FIXME: what if this fails with EntryNotFoundError?
-    # either the entry was deleted (abort),
-    # or a duplicate was deleted (start over with the other duplicates, if any)
-
-    try:
-        for action in actions:
-            action()
-            log.info("entry_dedupe: %s", action)
-    except EntryNotFoundError as e:  # pragma: no cover
-        if entry.resource_id != e.resource_id:
-            raise
-        log.info("entry_dedupe: entry %r was deleted, aborting", entry.resource_id)
-
-
-# tokenization
+# text tokenization
 
 
 _TOKEN_RE = re.compile(
@@ -587,6 +604,34 @@ def strip_accents(s):
         normalized = unicodedata.normalize('NFKD', s)
         noncombining = itertools.filterfalse(unicodedata.combining, normalized)
         return ''.join(noncombining)
+
+
+# text similarity
+
+
+def jaccard_similarity(one, two, n):
+    one = Counter(ngrams(one, n))
+    two = Counter(ngrams(two, n))
+
+    # we count replicas (i.e. weighted Jaccard), hence the sum((...).values());
+    # I assume this decreases similarity if two has a sentence from one twice,
+    # whereas len(...) would not
+    try:
+        return sum((one & two).values()) / sum((one | two).values())
+    except ZeroDivisionError:  # pragma: no cover
+        return 0
+
+
+def ngrams(iterable, n):
+    it = iter(iterable)
+    window = deque(maxlen=n)
+    while True:
+        if len(window) == n:
+            yield tuple(window)
+        try:
+            window.append(next(it))
+        except StopIteration:
+            return
 
 
 # utilities

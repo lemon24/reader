@@ -756,11 +756,8 @@ Thoughts on dynamic lists of feeds: :issue:`165#issuecomment-905893420`.
 Duplicate entries
 ~~~~~~~~~~~~~~~~~
 
-Duplicate entries are mainly handled by the :mod:`reader.entry_dedupe` plugin.
-
-* Using MinHash to speed up similarity checks (maybe): https://gist.github.com/lemon24/b9af5ade919713406bda9603847d32e5
-* Discussion of unifying "on-line" dedupe (after an entry is added/updated),
-  and "on-demand" dedupe (backfill): :issue:`340`.
+Duplicate entries are handled by :mod:`~reader.plugins.entry_dedupe`
+(extensive notes in the :gh:`docstring <src/reader/plugins/entry_dedupe.py>`).
 
 However, it is also possible for a feed to have two entries with the same id
 – yes, even though in most (if not all) formats,

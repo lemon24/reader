@@ -4,8 +4,8 @@ import pytest
 
 from reader import Content
 from reader import Entry
-from reader.plugins.entry_dedupe import _is_duplicate_full
 from reader.plugins.entry_dedupe import init_reader
+from reader.plugins.entry_dedupe import is_duplicate_content
 from reader.plugins.entry_dedupe import merge_flags
 from reader.plugins.entry_dedupe import merge_tags
 from reader.plugins.entry_dedupe import tokenize_content
@@ -362,8 +362,8 @@ IS_DUPLICATE_DATA = [
 
 
 @pytest.mark.parametrize('one, two, result', IS_DUPLICATE_DATA)
-def test_is_duplicate(one, two, result):
-    assert bool(_is_duplicate_full(one, two)) is bool(result)
+def test_is_duplicate_content(one, two, result):
+    assert bool(is_duplicate_content(one, two)) is bool(result)
 
 
 # ([duplicates, ..., entry], expected), ...
