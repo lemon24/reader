@@ -244,7 +244,7 @@ class Deduplicator:
             tag = self.reader.make_reader_reserved_name(suffix)
             if tag in self.feed_tags:
                 return tag, is_duplicate
-        return None, is_duplicate_content
+        return None, is_duplicate_entry
 
     def clear_feed_request(self):
         for suffix in reversed(IS_DUPLICATE_BY_TAG):
@@ -336,29 +336,7 @@ GROUPERS = [title_grouper]
 # entry (content) similarity
 
 
-class _Threshold(NamedTuple):
-    length: int
-    similarity: float
-
-
-# thredsholds originally chosen in
-# https://github.com/lemon24/reader/issues/202#issuecomment-904139483
-# all figures in comments for 4-grams, substitutions only
-_THRESHOLDS = [
-    # 2 fully-spaced subs in the middle,
-    # 4 subs with consecutive on odd or even indexes in the middle,
-    # 7 subs with consecutive indexes in the middle,
-    # 10 subs at one end
-    _Threshold(64, 0.7),
-    # 1 substitution in the middle,
-    # or ~4 at the ends
-    _Threshold(48, 0.8),
-    # 1 substitution at the end
-    _Threshold(32, 0.9),
-]
-
-
-def is_duplicate_content(one, two):
+def is_duplicate_entry(one, two):
     # TODO: remove title checks once thresholds are increased for #371
     if not one.title or not two.title:
         return False
@@ -370,28 +348,16 @@ def is_duplicate_content(one, two):
 
     for one_words in one_fields:
         for two_words in two_fields:
-            if one_words == two_words:
-                return True
-
             # TODO: we should match content fields by length, preferring longer ones;
             # a summary is less likely to match, but the whole article might
 
             min_length = min(len(one_words), len(two_words))
 
-            if min_length < min(t.length for t in _THRESHOLDS):
-                continue
-
             one_words = one_words[:min_length]
             two_words = two_words[:min_length]
 
-            similarity = jaccard_similarity(one_words, two_words, 4)
-
-            for threshold in _THRESHOLDS:
-                if (
-                    min_length >= threshold.length
-                    and similarity >= threshold.similarity
-                ):
-                    return True
+            if is_duplicate(one_words, two_words):
+                return True
 
     return False
 
@@ -403,7 +369,7 @@ def _content_fields(entry):
     return [tokenize_content(s) for s in rv]
 
 
-def is_duplicate_title(one, two):
+def is_duplicate_entry_title(one, two):
     if not one.title or not two.title:  # pragma: no cover
         return False
     return tokenize_title(one.title) == tokenize_title(two.title)
@@ -411,8 +377,8 @@ def is_duplicate_title(one, two):
 
 # ordered by strictness (strictest first)
 IS_DUPLICATE_BY_TAG = {
-    'dedupe.once': is_duplicate_content,
-    'dedupe.once.title': is_duplicate_title,
+    'dedupe.once': is_duplicate_entry,
+    'dedupe.once.title': is_duplicate_entry_title,
 }
 
 
@@ -609,9 +575,52 @@ def strip_accents(s):
 # text similarity
 
 
-def jaccard_similarity(one, two, n):
-    one = Counter(ngrams(one, n))
-    two = Counter(ngrams(two, n))
+class _Threshold(NamedTuple):
+    length: int
+    similarity: float
+
+
+# thredsholds originally chosen in
+# https://github.com/lemon24/reader/issues/202#issuecomment-904139483
+# all figures in comments for 4-grams, substitutions only
+_THRESHOLDS = [
+    # 2 fully-spaced subs in the middle,
+    # 4 subs with consecutive on odd or even indexes in the middle,
+    # 7 subs with consecutive indexes in the middle,
+    # 10 subs at one end
+    _Threshold(64, 0.7),
+    # 1 substitution in the middle,
+    # or ~4 at the ends
+    _Threshold(48, 0.8),
+    # 1 substitution at the end
+    _Threshold(32, 0.9),
+]
+
+
+def is_duplicate(one, two):
+    # original logic doesn't handle short text well,
+    # so it just returns false if the inputs are not identical
+
+    if one == two:
+        return True
+
+    min_length = min(len(one), len(two))
+
+    if min_length < min(t.length for t in _THRESHOLDS):
+        return False
+
+    similarity = jaccard_similarity(ngrams(one, 4), ngrams(two, 4))
+
+    for threshold in _THRESHOLDS:
+        if min_length >= threshold.length and similarity >= threshold.similarity:
+            return True
+
+    return False
+
+
+def jaccard_similarity(one, two):
+    one = Counter(one)
+    two = Counter(two)
 
     # we count replicas (i.e. weighted Jaccard), hence the sum((...).values());
     # I assume this decreases similarity if two has a sentence from one twice,

@@ -5,7 +5,8 @@ import pytest
 from reader import Content
 from reader import Entry
 from reader.plugins.entry_dedupe import init_reader
-from reader.plugins.entry_dedupe import is_duplicate_content
+from reader.plugins.entry_dedupe import is_duplicate
+from reader.plugins.entry_dedupe import is_duplicate_entry
 from reader.plugins.entry_dedupe import merge_flags
 from reader.plugins.entry_dedupe import merge_tags
 from reader.plugins.entry_dedupe import tokenize_content
@@ -27,7 +28,7 @@ def with_plugin():
 
 
 def test_duplicates_are_deleted(reader, with_plugin, parser):
-    # detailed matching in test_is_duplicate
+    # detailed matching in test_is_duplicate_entry
 
     reader.add_feed(parser.feed(1))
 
@@ -43,7 +44,7 @@ def test_duplicates_are_deleted(reader, with_plugin, parser):
 
 
 def test_non_duplicates_are_ignored(reader, with_plugin, parser):
-    # detailed matching in test_is_duplicate
+    # detailed matching in test_is_duplicate_entry
 
     reader.add_feed(parser.feed(1))
 
@@ -264,7 +265,7 @@ def make_entry(title=None, summary=None, content=None):
     return entry
 
 
-IS_DUPLICATE_DATA = [
+IS_DUPLICATE_ENTRY_DATA = [
     (make_entry(), make_entry(), False),
     (make_entry(title='title'), make_entry(title='title'), False),
     (make_entry(summary='summary'), make_entry(summary='summary'), False),
@@ -361,9 +362,9 @@ IS_DUPLICATE_DATA = [
 ]
 
 
-@pytest.mark.parametrize('one, two, result', IS_DUPLICATE_DATA)
-def test_is_duplicate_content(one, two, result):
-    assert bool(is_duplicate_content(one, two)) is bool(result)
+@pytest.mark.parametrize('one, two, result', IS_DUPLICATE_ENTRY_DATA)
+def test_is_duplicate_entry(one, two, result):
+    assert bool(is_duplicate_entry(one, two)) is bool(result)
 
 
 # ([duplicates, ..., entry], expected), ...
@@ -575,3 +576,15 @@ def test_duplicates_in_feed(
 )
 def test_tokenize(tokenize, input, expected):
     assert tokenize(input) == expected
+
+
+IS_DUPLICATE_DATA = [
+    ('one two three four', 'one two three four', True),
+    ('one two three four', 'one two thre four', False),
+    ('one two three four', 'one two three five', False),
+]
+
+
+@pytest.mark.parametrize('one, two, expected', IS_DUPLICATE_DATA)
+def test_is_duplicate(one, two, expected):
+    assert is_duplicate(one.split(), two.split()) == expected
