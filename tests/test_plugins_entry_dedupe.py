@@ -9,6 +9,7 @@ from reader.plugins.entry_dedupe import is_duplicate
 from reader.plugins.entry_dedupe import is_duplicate_entry
 from reader.plugins.entry_dedupe import merge_flags
 from reader.plugins.entry_dedupe import merge_tags
+from reader.plugins.entry_dedupe import ngrams
 from reader.plugins.entry_dedupe import tokenize_content
 from reader.plugins.entry_dedupe import tokenize_title
 from utils import utc_datetime as datetime
@@ -588,3 +589,19 @@ IS_DUPLICATE_DATA = [
 @pytest.mark.parametrize('one, two, expected', IS_DUPLICATE_DATA)
 def test_is_duplicate(one, two, expected):
     assert is_duplicate(one.split(), two.split()) == expected
+
+
+@pytest.mark.parametrize(
+    'seq, n, pad, expected',
+    [
+        ([1, 2, 3], 2, False, [(1, 2), (2, 3)]),
+        ([1, 2], 2, False, [(1, 2)]),
+        ([1], 2, False, []),
+        ([], 2, False, []),
+        ([1, 2], 2, True, [(None, 1), (1, 2), (2, None)]),
+        ([1], 2, True, [(None, 1), (1, None)]),
+        ([], 2, True, [(None, None)]),
+    ],
+)
+def test_ngrams(seq, n, pad, expected):
+    assert list(ngrams(seq, n, pad)) == expected

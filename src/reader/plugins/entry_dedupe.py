@@ -149,12 +149,13 @@ import re
 import unicodedata
 from collections import Counter
 from collections import defaultdict
-from collections import deque
 from datetime import datetime
 from datetime import timezone
 from functools import cache
 from functools import cached_property
 from functools import lru_cache
+from itertools import chain
+from itertools import islice
 from typing import NamedTuple
 
 from reader._storage._html_utils import strip_html
@@ -631,16 +632,19 @@ def jaccard_similarity(one, two):
         return 0
 
 
-def ngrams(iterable, n):
+def ngrams(iterable, n, pad=False, pad_symbol=None):
+    # based on nltk.ngrams
     it = iter(iterable)
-    window = deque(maxlen=n)
-    while True:
-        if len(window) == n:
-            yield tuple(window)
-        try:
-            window.append(next(it))
-        except StopIteration:
-            return
+    if pad:
+        padding = (pad_symbol,) * (n - 1)
+        it = chain(padding, it, padding)
+    # latest nltk uses deque(maxlen=n) per itertools recipe,
+    # but list seems to be consistently faster
+    window = list(islice(it, n - 1))
+    for item in it:
+        window.append(item)
+        yield tuple(window)
+        del window[0]
 
 
 # utilities
