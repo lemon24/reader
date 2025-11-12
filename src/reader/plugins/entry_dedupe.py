@@ -156,7 +156,6 @@ from functools import cached_property
 from functools import lru_cache
 from itertools import chain
 from itertools import islice
-from typing import NamedTuple
 
 from reader._storage._html_utils import strip_html
 from reader._utils import BetterStrPartial as partial
@@ -576,47 +575,46 @@ def strip_accents(s):
 # text similarity
 
 
-class _Threshold(NamedTuple):
-    length: int
-    similarity: float
-
-
-# thredsholds originally chosen in
-# https://github.com/lemon24/reader/issues/202#issuecomment-904139483
-# all figures in comments for 4-grams, substitutions only
-_THRESHOLDS = [
-    # 2 fully-spaced subs in the middle,
-    # 4 subs with consecutive on odd or even indexes in the middle,
-    # 7 subs with consecutive indexes in the middle,
-    # 10 subs at one end
-    _Threshold(64, 0.7),
-    # 1 substitution in the middle,
-    # or ~4 at the ends
-    _Threshold(48, 0.8),
-    # 1 substitution at the end
-    _Threshold(32, 0.9),
+# [(length, tokens_are_chars, n, threshold), ...]
+_IS_DUPLICATE_THRESHOLDS = [
+    # for shorter texts, we use character ngrams instead of word ngrams,
+    # since they're more forgiving of small changes (e.g. typos);
+    # thresholds based on the "reasonable" edits in test_is_duplicate TEXT
+    (12, True, 3, 0.6),
+    (200, True, 3, 0.7),
+    (400, True, 4, 0.7),
+    (800, True, 4, 0.8),
+    # for longer texts, we switch to words, since character ngrams are slow
+    (1600, False, 3, 0.7),
+    # thresholds based on the 0.8 value mentioned in [1],
+    # but increasing towards 0.9 since 0.8 seems too low, e.g.
+    # removing 10 words from the middle of 100 -> similarity 0.84 (n=4)
+    # [1]: https://github.com/lemon24/reader/issues/202#issuecomment-904139483
+    (2400, False, 3, 0.8),
+    (3600, False, 4, 0.8),
+    (4800, False, 4, 0.9),
 ]
 
 
 def is_duplicate(one, two):
-    # original logic doesn't handle short text well,
-    # so it just returns false if the inputs are not identical
-
     if one == two:
         return True
 
-    min_length = min(len(one), len(two))
+    avg_length = (sum(map(len, one)) + sum(map(len, two))) / 2
 
-    if min_length < min(t.length for t in _THRESHOLDS):
-        return False
+    for length, *params in _IS_DUPLICATE_THRESHOLDS:  # pragma: no cover
+        tokens_are_chars, n, threshold = params
+        if avg_length <= length:
+            break
 
-    similarity = jaccard_similarity(ngrams(one, 4), ngrams(two, 4))
+    if tokens_are_chars:
+        one = ' '.join(one)
+        two = ' '.join(two)
 
-    for threshold in _THRESHOLDS:
-        if min_length >= threshold.length and similarity >= threshold.similarity:
-            return True
+    pad = min(len(one), len(two)) < 100
+    similarity = jaccard_similarity(ngrams(one, n, pad), ngrams(two, n, pad))
 
-    return False
+    return similarity >= threshold
 
 
 def jaccard_similarity(one, two):

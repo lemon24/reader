@@ -1,4 +1,5 @@
 import random
+import re
 
 import pytest
 
@@ -320,45 +321,7 @@ IS_DUPLICATE_ENTRY_DATA = [
         make_entry(title='title', content=('value', 'text/html')),
         True,
     ),
-    (
-        make_entry(title='title', summary='one ' * 40),
-        make_entry(title='title', summary='one ' * 39 + 'two '),
-        True,
-    ),
-    (
-        make_entry(title='title', summary='one ' * 40),
-        make_entry(title='title', summary='one ' * 38),
-        True,
-    ),
-    (
-        make_entry(title='title', summary='one ' * 40),
-        make_entry(title='title', summary='one ' * 20 + 'two ' * 3 + 17 * 'one '),
-        False,
-    ),
-    (
-        make_entry(title='title', summary='one ' * 50),
-        make_entry(
-            title='title', summary='one ' * 30 + 'two ' + 17 * 'one ' + 'three '
-        ),
-        True,
-    ),
-    (
-        make_entry(title='title', summary='one ' * 50),
-        make_entry(title='title', summary='one ' * 30 + 'two ' * 5 + 25 * 'one '),
-        False,
-    ),
-    (
-        make_entry(title='title', summary='one ' * 70),
-        make_entry(
-            title='title', summary='one ' * 30 + 'two ' * 5 + 33 * 'one ' + 'three '
-        ),
-        True,
-    ),
-    (
-        make_entry(title='title', summary='one ' * 70),
-        make_entry(title='title', summary='one ' * 30 + 'two ' * 10 + 30 * 'one '),
-        False,
-    ),
+    # TODO: test fuzzy matching (just one test)
     # TODO: test normalization
 ]
 
@@ -579,16 +542,107 @@ def test_tokenize(tokenize, input, expected):
     assert tokenize(input) == expected
 
 
-IS_DUPLICATE_DATA = [
-    ('one two three four', 'one two three four', True),
-    ('one two three four', 'one two thre four', False),
-    ('one two three four', 'one two three five', False),
+def with_edits(text, edits, end_at=None):
+    if end_at:
+        text = re.search(rf"(?s).*?{end_at}", text)[0]
+    edited = text
+    for edit in edits:
+        edited = edited.replace(*edit)
+    return text, edited
+
+
+TEXT = """\
+So, you're doing some I/O bound stuff, in parallel.
+
+Maybe you're scraping some websites – a lot of websites.
+
+Maybe you're updating or deleting millions of DynamoDB items.
+
+You've got your [ThreadPoolExecutor],
+you've increased the number of threads and tuned connection limits...
+but after some point, **it's just not getting any faster**.
+You look at your Python process,
+and you see CPU utilization hovers above 100%.
+
+You *could* split the work into batches
+and have a [ProcessPoolExecutor]
+run your original code in separate processes.
+But that requires yet more code, and a bunch of changes, which is no fun.
+And maybe your input is not that easy to split into batches.
+
+If only we had an executor that
+**worked seamlessly across processes and threads**.
+
+Well, you're in luck, since that's exactly what we're building today!
+
+And even better, in a couple years you won't even need it anymore.
+
+---
+
+**asyncio-thread-runner** allows you to run async code from sync code.
+
+This is useful when you're doing some sync stuff, but:
+
+* you also need to do some async stuff, **without** making **everything async**
+* maybe the sync stuff is an existing application
+* maybe you still want to use your favorite sync library
+* or maybe you need just a little async, without having to pay the full price
+
+Features:
+
+* unlike [asyncio.run()], it provides a **long-lived event loop**
+* unlike [asyncio.Runner], it runs in a dedicated thread, and you can use it from **multiple threads**
+* it allows you to use **async context managers** and **iterables** from sync code
+* check out [this article](https://death.andgravity.com/asyncio-bridge) for why these are useful
+
+"""
+EDITS = [
+    ("you're", "youre"),
+    ("I/O bound", "IO-bound"),
+    ("parallel", "paralel"),
+    ("Maybe", "And", 1),
+    ("a lot", "lots"),
+    ("PoolExecutor", " Pool Executor"),
+    ("work", "input"),
+    ("you won't even need it anymore", ""),
+]
+EXTRA_EDITS = EDITS + [
+    ("So", "Soo"),
+    ("stuff", "thing"),
+    ("millions", "billions"),
+    ("across processes and threads", ""),
 ]
 
 
-@pytest.mark.parametrize('one, two, expected', IS_DUPLICATE_DATA)
+IS_DUPLICATE_DATA = [
+    ('one two three four', 'one two three four', True),
+    ('one two three four', 'one two thre four', True),
+    ('one two three four', 'one two three five', False),
+    ('hello', 'helo', True),
+    ('hello', 'helio', False),
+    (*with_edits(TEXT, EDITS, "you're"), True),
+    (*with_edits(TEXT, EXTRA_EDITS, "you're"), False),
+    (*with_edits(TEXT, EDITS, "parallel"), True),
+    (*with_edits(TEXT, EXTRA_EDITS, "parallel"), False),
+    (*with_edits(TEXT, EDITS, "items"), True),
+    (*with_edits(TEXT, EXTRA_EDITS, "items"), False),
+    (*with_edits(TEXT, EDITS, "anymore"), True),
+    (*with_edits(TEXT, EXTRA_EDITS, "anymore"), False),
+    (*with_edits(TEXT, EDITS, "$"), True),
+    (*with_edits(TEXT, EXTRA_EDITS, "$"), False),
+]
+
+
+def long_ids(s):
+    if isinstance(s, str):
+        if len(s) > 20:
+            return s[:6] + '...' + s[-10:]
+
+
+@pytest.mark.parametrize('one, two, expected', IS_DUPLICATE_DATA, ids=long_ids)
 def test_is_duplicate(one, two, expected):
-    assert is_duplicate(one.split(), two.split()) == expected
+    actual = is_duplicate(tokenize_content(one), tokenize_content(two))
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
