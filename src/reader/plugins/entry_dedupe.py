@@ -612,20 +612,20 @@ def is_duplicate(one, two):
         two = ' '.join(two)
 
     pad = min(len(one), len(two)) < 100
+
+    # using weighted Jaccard (repeat occurrences are counted separately),
+    # which decreases similarity if two has a sentence from one twice
     similarity = jaccard_similarity(ngrams(one, n, pad), ngrams(two, n, pad))
 
     return similarity >= threshold
 
 
 def jaccard_similarity(one, two):
+    """Calculate (weighted) Jaccard similarity."""
     one = Counter(one)
     two = Counter(two)
-
-    # we count replicas (i.e. weighted Jaccard), hence the sum((...).values());
-    # I assume this decreases similarity if two has a sentence from one twice,
-    # whereas len(...) would not
     try:
-        return sum((one & two).values()) / sum((one | two).values())
+        return (one & two).total() / (one | two).total()
     except ZeroDivisionError:  # pragma: no cover
         return 0
 
