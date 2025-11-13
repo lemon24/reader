@@ -29,40 +29,41 @@ def with_plugin():
     """Tell reader to use the plugin from the beginning."""
 
 
-def test_duplicates_are_deleted(reader, with_plugin, parser):
-    # detailed matching in test_is_duplicate_entry
+def test_only_duplicates_are_deleted(reader, parser):
+    # detailed/fuzzy content matching tested in test_is_duplicate*
 
     reader.add_feed(parser.feed(1))
 
-    yesterday = datetime(2010, 1, 1)
-    parser.entry(1, 1, yesterday, title='title', summary='value')
+    common_attrs = dict(
+        updated=datetime(2010, 1, 1, 2, 3, 4),
+        title='title',
+        link='link',
+    )
+
+    parser.entry(1, 'different', **common_attrs, summary='another')
+    parser.entry(1, 'title', title='title', summary='value')
+    parser.entry(1, 'title-x', summary='value')
+    parser.entry(1, 'link', link='link', summary='value')
+    parser.entry(1, 'link-x', link='link')
+    parser.entry(1, 'published', published=datetime(2010, 1, 1, 2, 3), summary='value')
+    parser.entry(1, 'published-x', published=datetime(2010, 1, 1, 2, 3))
+    parser.entry(1, 'published-day', datetime(2010, 1, 1), summary='value')
+    parser.entry(1, 'published-day-x', datetime(2010, 1, 1))
     reader.update_feeds()
 
-    today = datetime(2010, 1, 2)
-    parser.entry(1, 2, today, title='title', summary='value')
+    init_reader(reader)
+
+    parser.entry(1, 'entry', **common_attrs, summary='value')
     reader.update_feeds()
 
-    assert {e.id for e in reader.get_entries()} == {'1, 2'}
-
-
-def test_non_duplicates_are_ignored(reader, with_plugin, parser):
-    # detailed matching in test_is_duplicate_entry
-
-    reader.add_feed(parser.feed(1))
-
-    yesterday = datetime(2010, 1, 1)
-    parser.entry(1, 1, None, title=None)
-    parser.entry(1, 2, yesterday, title='title')
-    parser.entry(1, 3, yesterday, summary='value')
-    parser.entry(1, 4, yesterday, title='title', summary='another')
-    parser.entry(1, 5, yesterday, title='another', summary='value')
-    reader.update_feeds()
-
-    today = datetime(2010, 1, 2)
-    parser.entry(1, 6, today, title='title', summary='value')
-    reader.update_feeds()
-
-    assert {eval(e.id)[1] for e in reader.get_entries()} == {1, 2, 3, 4, 5, 6}
+    assert {e.id for e in reader.get_entries()} == {
+        'different',
+        'title-x',
+        'link-x',
+        'published-x',
+        'published-day-x',
+        'entry',
+    }
 
 
 def test_duplicates_in_another_feed_are_ignored(reader, with_plugin, parser):
@@ -270,11 +271,11 @@ def make_entry(title=None, summary=None, content=None):
 IS_DUPLICATE_ENTRY_DATA = [
     (make_entry(), make_entry(), False),
     (make_entry(title='title'), make_entry(title='title'), False),
-    (make_entry(summary='summary'), make_entry(summary='summary'), False),
+    (make_entry(summary='summary'), make_entry(summary='summary'), True),
     (
         make_entry(content=('value', 'text/html')),
         make_entry(content=('value', 'text/html')),
-        False,
+        True,
     ),
     (
         make_entry(title='title', summary='summary'),
@@ -284,7 +285,7 @@ IS_DUPLICATE_ENTRY_DATA = [
     (
         make_entry(title='title', summary='summary'),
         make_entry(title='other', summary='summary'),
-        False,
+        True,
     ),
     (
         make_entry(title='title', summary='summary'),
@@ -299,7 +300,7 @@ IS_DUPLICATE_ENTRY_DATA = [
     (
         make_entry(title='title', content=('value', 'text/html')),
         make_entry(title='other', content=('value', 'text/html')),
-        False,
+        True,
     ),
     (
         make_entry(title='title', content=('value', 'text/html')),

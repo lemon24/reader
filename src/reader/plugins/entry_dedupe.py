@@ -156,6 +156,7 @@ from functools import cached_property
 from functools import lru_cache
 from itertools import chain
 from itertools import islice
+from urllib.parse import urlparse
 
 from reader._storage._html_utils import strip_html
 from reader._utils import BetterStrPartial as partial
@@ -324,25 +325,56 @@ def group_entries(all_entries, new_entries, is_duplicate):
 
 
 def title_grouper(entries, new_entries):
+    return group_by(lambda e: tokenize_title(e.title), entries, new_entries)
+
+
+def link_grouper(entries, new_entries):
+    return group_by(lambda e: normalize_url(e.link), entries, new_entries)
+
+
+def normalize_url(url):
+    try:
+        url = urlparse(url)
+    except ValueError:
+        return None
+
+    scheme = url.scheme.lower()
+    if scheme == 'http':
+        scheme = 'https'
+
+    netloc = url.netloc.lower()
+    path = url.path.rstrip('/')
+
+    return url._replace(scheme=scheme, netloc=netloc, path=path).geturl()
+
+
+def published_grouper(entries, new_entries):
     def key(e):
-        return tokenize_title(e.title)
+        dt = e.published or e.updated
+        if not dt:
+            return None
+        return dt.isoformat(timespec='minutes')
 
     return group_by(key, entries, new_entries)
 
 
-GROUPERS = [title_grouper]
+def published_day_grouper(entries, new_entries):
+    def key(e):
+        dt = e.published or e.updated
+        if not dt:
+            return None
+        return dt.date()
+
+    return group_by(key, entries, new_entries)
+
+
+GROUPERS = [title_grouper, link_grouper, published_grouper, published_day_grouper]
 
 
 # entry (content) similarity
 
 
 def is_duplicate_entry(one, two):
-    # TODO: remove title checks once thresholds are increased for #371
-    if not one.title or not two.title:
-        return False
-    if tokenize_title(one.title) != tokenize_title(two.title):
-        return False
-
     one_fields = _content_fields(one)
     two_fields = _content_fields(two)
 
