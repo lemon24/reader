@@ -335,7 +335,7 @@ def link_grouper(entries, new_entries):
 def normalize_url(url):
     try:
         url = urlparse(url)
-    except ValueError:
+    except ValueError:  # pragma: no cover
         return None
 
     scheme = url.scheme.lower()
