@@ -114,14 +114,19 @@ To reduce false positives when detecting duplicates:
     I chose to go with #1, Jaccard similarity + n-grams,
     since it is simple to understand and implement,
     so we don't necessarily need an external dependency.
-    The main downside is that it is relatively slow;
-    to reduce the search space, we're using heuristics
+
+    The main downside is that it is relatively slow.
+    To reduce the search space, we're using heuristics
     that find potential duplicates based on title / link / timestamps
     (although we could probably use a prefix of the document as well).
 
     MinHash is not that complicated to implement[1],
     but you still need LSH to avoid O(n) searches.
-    [1]: https://gist.github.com/lemon24/b9af5ade919713406bda9603847d32e5
+
+    Using datasketch (provides both MinHash and LSH)
+    would allow us to get rid of heuristics (which add some complexity),
+    since checking content similarity directly likely becomes fast enough.
+    Alas, it has some heavy dependencies (numpy, scipy).
 
     (LLMs+embeddings are not an option due to the huge extra dependency,
     are are overkill anyway, since we don't care about semantic similarity.)
@@ -140,6 +145,8 @@ To reduce false positives when detecting duplicates:
     * https://www.nltk.org/ (tokenization, similarity)
     * https://scikit-learn.org/stable/modules/feature_extraction.html (tokenization)
     * https://ekzhu.com/datasketch/ (MinHash, LSH)
+
+    [1]: https://gist.github.com/lemon24/b9af5ade919713406bda9603847d32e5
 
 """
 
@@ -316,16 +323,30 @@ def group_entries(all_entries, new_entries, is_duplicate):
                 if pair_count >= MASS_DUPLICATION_MIN_PAIRS:  # pragma: no cover
                     all.pop(eid, None)
 
+        # FIXME: tests need rework to uncomment this
         # we found duplicates for all the new entries,
         # no need to try additional heuristics
         # if not new:
-        #     break
+        # break
 
     return duplicates.subsets()
 
 
 def title_grouper(entries, new_entries):
     return group_by(lambda e: tokenize_title(e.title), entries, new_entries)
+
+
+def title_strip_prefix_grouper(entries, new_entries):
+    documents = [tokenize_title(e.title) for e in entries]
+
+    prefixes = map(' '.join, common_prefixes(documents))
+    pattern = f"^({'|'.join(map(re.escape, sorted(prefixes, key=len)))}) "
+
+    def key(e):
+        title = ' '.join(tokenize_title(e.title))
+        return re.sub(pattern, '', title) or title
+
+    return group_by(key, entries, new_entries)
 
 
 def link_grouper(entries, new_entries):
@@ -368,7 +389,13 @@ def published_day_grouper(entries, new_entries):
     return group_by(key, entries, new_entries)
 
 
-GROUPERS = [title_grouper, link_grouper, published_grouper, published_day_grouper]
+GROUPERS = [
+    title_grouper,
+    link_grouper,
+    published_grouper,
+    title_strip_prefix_grouper,
+    published_day_grouper,
+]
 
 
 # entry (content) similarity
@@ -677,6 +704,42 @@ def ngrams(iterable, n, pad=False, pad_symbol=None):
         del window[0]
 
 
+def common_prefixes(documents, *, min_df=4, min_length=5):
+    max_decrease_ratio = 3
+
+    def is_not_frequent_enough(node, _, __):
+        return node.value < min_df
+
+    def is_sharp_decrease(node, parent, path):
+        sharp_decrease = parent.value / node.value >= max_decrease_ratio
+        prefix_long_enough = sum(map(len, path)) >= min_length
+        return sharp_decrease and prefix_long_enough
+
+    def keep_frequent_subprefix(node, _):
+        if not node.children:
+            return
+        remaining = node.value - sum(c.value for c in node.children)
+        if remaining >= min_df:
+            node.add('', value=remaining)
+
+    # duplicate documents are not a prefix by themselves
+    unique_documents = dict.fromkeys(documents)
+
+    trie = Trie(0)
+    for d in unique_documents:
+        trie.insert(d, 0, 1)
+
+    trie.prune(is_not_frequent_enough)
+    trie.prune(is_sharp_decrease)
+    trie.walk(keep_frequent_subprefix)
+
+    for prefix in trie.flatten():
+        prefix = tuple(filter(None, prefix))
+        if sum(map(len, prefix)) < min_length:
+            continue
+        yield prefix
+
+
 # utilities
 
 
@@ -729,6 +792,61 @@ def group_by(keyfn, items, only_items=None):
         groups[key].append(item)
 
     return groups.values()
+
+
+class Trie:
+
+    def __init__(self, value):
+        self.value = value
+        self._children = {}
+
+    @property
+    def children(self):
+        return self._children.values()
+
+    def add(self, key, value):
+        assert key not in self._children, key
+        child = self._children[key] = type(self)(value)
+        return child
+
+    def insert(self, keys, value, step=None):
+        if not keys:
+            return
+        key, *rest = keys
+        if not (child := self._children.get(key)):
+            child = self._children[key] = type(self)(value)
+        if step is not None:  # pragma: no cover
+            child.value += step
+        if rest:
+            child.insert(rest, value, step)
+
+    def walk(self, fn):
+        for child in self._children.values():
+            fn(child, self)
+            child.walk(fn)
+
+    def prune(self, pred, _keys=()):
+        for key, child in list(self._children.items()):
+            if pred(child, self, _keys):
+                del self._children[key]
+            else:
+                child.prune(pred, _keys + (key,))
+
+    def flatten(self):
+        if not self._children:
+            yield ()
+            return
+        for key, child in self._children.items():
+            for child_key in child.flatten():
+                yield key, *child_key
+
+    def __str__(self):  # pragma: no cover
+        return ''.join(self._str())
+
+    def _str(self, indent=0):  # pragma: no cover
+        for key, child in self._children.items():
+            yield f"{indent * '  '}{key!r} ({child.value})\n"
+            yield from child._str(indent + 1)
 
 
 if __name__ == '__main__':  # pragma: no cover

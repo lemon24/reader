@@ -5,6 +5,7 @@ import pytest
 
 from reader import Content
 from reader import Entry
+from reader.plugins.entry_dedupe import common_prefixes
 from reader.plugins.entry_dedupe import init_reader
 from reader.plugins.entry_dedupe import is_duplicate
 from reader.plugins.entry_dedupe import is_duplicate_entry
@@ -49,6 +50,11 @@ def test_only_duplicates_are_deleted(reader, parser):
     parser.entry(1, 'published-x', published=datetime(2010, 1, 1, 2, 3))
     parser.entry(1, 'published-day', datetime(2010, 1, 1), summary='value')
     parser.entry(1, 'published-day-x', datetime(2010, 1, 1))
+    parser.entry(1, 'prefix', title='prefix-title', summary='value')
+    parser.entry(1, 'prefix-x', title='prefix-x')
+    parser.entry(1, 'prefix-xx', title='prefix-xx')
+    parser.entry(1, 'prefix-xxx', title='prefix-xxx', summary='value')
+
     reader.update_feeds()
 
     init_reader(reader)
@@ -62,6 +68,9 @@ def test_only_duplicates_are_deleted(reader, parser):
         'link-x',
         'published-x',
         'published-day-x',
+        'prefix-x',
+        'prefix-xx',
+        'prefix-xxx',
         'entry',
     }
 
@@ -660,3 +669,47 @@ def test_is_duplicate(one, two, expected):
 )
 def test_ngrams(seq, n, pad, expected):
     assert list(ngrams(seq, n, pad)) == expected
+
+
+def test_common_prefixes():
+    text = """\
+        uncommon
+
+        common one
+        common
+
+        prefix longer one
+        prefix longer two
+        prefix shorter one still
+        prefix used if significant
+
+        shortest xx wins
+        shortest xx if
+        shortest yy drop-off
+        shortest yy is
+        shortest zz too
+        shortest zz sharp
+
+        too xx but
+        too xx not
+        too yy if
+        too yy it's
+        too zz too
+        too zz short
+
+        duplicate counted just once
+        duplicate counted just once
+        duplicate
+
+    """
+    documents = [tuple(l.split()) for l in text.splitlines()]
+    assert set(common_prefixes(documents, min_df=2)) == {
+        ('common',),
+        ('prefix', 'longer'),
+        ('prefix',),
+        ('shortest',),
+        ('too', 'xx'),
+        ('too', 'yy'),
+        ('too', 'zz'),
+        ('duplicate',),
+    }
