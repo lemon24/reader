@@ -357,6 +357,29 @@ def title_strip_prefix_grouper(entries, new_entries):
     return group_by(key, entries, new_entries)
 
 
+def title_similarity_grouper(entries, new_entries):
+    n = 2
+    pad = True
+    threshold = 0.5
+
+    for one in new_entries:
+        if not one.title:  # pragma: no cover
+            continue
+        for two in entries:
+            if one.id == two.id:
+                continue
+            if not two.title:  # pragma: no cover
+                continue
+
+            similarity = jaccard_similarity(
+                ngrams(' '.join(tokenize_title(one.title)), n, pad=pad),
+                ngrams(' '.join(tokenize_title(two.title)), n, pad=pad),
+            )
+
+            if similarity >= threshold:
+                yield [one, two]
+
+
 def link_grouper(entries, new_entries):
     return group_by(lambda e: normalize_url(e.link), entries, new_entries)
 
@@ -403,6 +426,7 @@ GROUPERS = [
     published_grouper,
     title_strip_prefix_grouper,
     published_day_grouper,
+    title_similarity_grouper,
 ]
 
 

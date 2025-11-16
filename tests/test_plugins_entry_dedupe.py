@@ -43,7 +43,7 @@ def test_only_duplicates_are_deleted(reader, parser):
     )
 
     parser.entry(1, 'different', **common_attrs, summary='another')
-    parser.entry(1, 'title', title='title', summary='value')
+    parser.entry(1, 'title', title='Title', summary='value')
     parser.entry(1, 'title-x', summary='value')
     parser.entry(1, 'link', link='link', summary='value')
     parser.entry(1, 'link-x', link='link')
@@ -55,6 +55,8 @@ def test_only_duplicates_are_deleted(reader, parser):
     parser.entry(1, 'prefix-x', title='prefix-x')
     parser.entry(1, 'prefix-xx', title='prefix-xx')
     parser.entry(1, 'prefix-xxx', title='prefix-xxx', summary='value')
+    parser.entry(1, 'title-similarity', title='TilE', summary='value')
+    parser.entry(1, 'title-similarity-x', title='tale', summary='value')
 
     reader.update_feeds()
 
@@ -72,6 +74,7 @@ def test_only_duplicates_are_deleted(reader, parser):
         'prefix-x',
         'prefix-xx',
         'prefix-xxx',
+        'title-similarity-x',
         'entry',
     }
 
