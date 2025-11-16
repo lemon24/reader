@@ -331,11 +331,13 @@ def group_entries(all_entries, new_entries, is_duplicate):
                     new.pop(eid, None)
                     all.pop(eid, None)
 
-        # FIXME: tests need rework to uncomment this
         # we found duplicates for all the new entries,
         # no need to try additional heuristics
-        # if not new:
-        # break
+        if not new:
+            log.debug("no new entries remaining, not trying other groupers")
+            break
+    else:
+        log.debug("no groupers remaining: all=%d new=%d", len(all), len(new))
 
     return duplicates.subsets()
 
