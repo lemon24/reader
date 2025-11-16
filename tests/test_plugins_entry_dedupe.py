@@ -6,6 +6,7 @@ import pytest
 from reader import Content
 from reader import Entry
 from reader.plugins.entry_dedupe import common_prefixes
+from reader.plugins.entry_dedupe import group_by
 from reader.plugins.entry_dedupe import init_reader
 from reader.plugins.entry_dedupe import is_duplicate
 from reader.plugins.entry_dedupe import is_duplicate_entry
@@ -729,3 +730,15 @@ def test_common_prefixes():
         ('too', 'zz'),
         ('duplicate',),
     }
+
+
+@pytest.mark.parametrize(
+    'items, only_items, expected',
+    [
+        ('abc', 'a', [['a']]),
+        ('aAb', 'a', [['a', 'A']]),
+        ('abc', '', []),
+    ],
+)
+def test_group_by(items, only_items, expected):
+    assert list(group_by(str.upper, items, only_items)) == expected

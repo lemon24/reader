@@ -786,16 +786,15 @@ class DisjointSet:
         return [set(s) for s in unique_subsets.values()]
 
 
-def group_by(keyfn, items, only_items=None):
-    if only_items:
-        only_keys = list(map(keyfn, only_items))
+def group_by(keyfn, items, only_items):
+    only_keys = set(map(keyfn, only_items))
 
     groups = defaultdict(list)
     for item in items:
         key = keyfn(item)
         if not key:
             continue
-        if only_items and key not in only_keys:
+        if key not in only_keys:
             continue
         groups[key].append(item)
 
