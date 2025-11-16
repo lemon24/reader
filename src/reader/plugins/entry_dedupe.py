@@ -741,12 +741,12 @@ def ngrams(iterable, n, pad=False, pad_symbol=None):
 def common_prefixes(documents, *, min_df=4, min_length=5):
     max_decrease_ratio = 3
 
-    def is_not_frequent_enough(node, _, __):
+    def is_not_frequent_enough(node, _):
         return node.value < min_df
 
-    def is_sharp_decrease(node, parent, path):
-        sharp_decrease = parent.value / node.value >= max_decrease_ratio
-        prefix_long_enough = sum(map(len, path)) >= min_length
+    def is_sharp_decrease(node, parents):
+        sharp_decrease = parents[-1].value / node.value >= max_decrease_ratio
+        prefix_long_enough = sum(len(p.key) for p in parents) >= min_length
         return sharp_decrease and prefix_long_enough
 
     def keep_frequent_subprefix(node, _):
@@ -754,21 +754,22 @@ def common_prefixes(documents, *, min_df=4, min_length=5):
             return
         remaining = node.value - sum(c.value for c in node.children)
         if remaining >= min_df:
-            node.add('', value=remaining)
+            node.insert(('',), remaining)
 
     # duplicate documents are not a prefix by themselves
     unique_documents = dict.fromkeys(documents)
 
-    trie = Trie(0)
+    trie = Trie('', 0)
     for d in unique_documents:
-        trie.insert(d, 0, 1)
+        for node in trie.insert(d, 0):
+            node.value += 1
 
     trie.prune(is_not_frequent_enough)
     trie.prune(is_sharp_decrease)
-    trie.walk(keep_frequent_subprefix)
+    trie.apply(keep_frequent_subprefix)
 
-    for prefix in trie.flatten():
-        prefix = tuple(filter(None, prefix))
+    for nodes in trie.flatten():
+        prefix = tuple(n.key for n in nodes if n.key)
         if sum(map(len, prefix)) < min_length:
             continue
         yield prefix
@@ -829,57 +830,59 @@ def group_by(keyfn, items, only_items):
 
 class Trie:
 
-    def __init__(self, value):
+    def __init__(self, key, value):
+        self._key = key
         self.value = value
         self._children = {}
+
+    @property
+    def key(self):
+        return self._key
 
     @property
     def children(self):
         return self._children.values()
 
-    def add(self, key, value):
-        assert key not in self._children, key
-        child = self._children[key] = type(self)(value)
-        return child
+    def insert(self, keys, value):
+        rv = []
+        node = self
+        for key in keys:
+            try:
+                child = node._children[key]
+            except KeyError:
+                child = node._children[key] = type(self)(key, value)
+            rv.append(child)
+            node = child
+        return rv
 
-    def insert(self, keys, value, step=None):
-        if not keys:
-            return
-        key, *rest = keys
-        if not (child := self._children.get(key)):
-            child = self._children[key] = type(self)(value)
-        if step is not None:  # pragma: no cover
-            child.value += step
-        if rest:
-            child.insert(rest, value, step)
+    def walk(self, _parents=()):
+        _parents += (self,)
+        for child in self.children:
+            yield *_parents[1:], child
+            yield from child.walk(_parents)
 
-    def walk(self, fn):
-        for child in self._children.values():
-            fn(child, self)
-            child.walk(fn)
+    def apply(self, fn):
+        for *parents, node in self.walk():
+            fn(node, [self] + parents)
 
-    def prune(self, pred, _keys=()):
-        for key, child in list(self._children.items()):
-            if pred(child, self, _keys):
-                del self._children[key]
+    def prune(self, pred, _parents=()):
+        _parents += (self,)
+        for child in list(self.children):
+            if pred(child, _parents):
+                del self._children[child.key]
             else:
-                child.prune(pred, _keys + (key,))
+                child.prune(pred, _parents)
 
     def flatten(self):
-        if not self._children:
-            yield ()
-            return
-        for key, child in self._children.items():
-            for child_key in child.flatten():
-                yield key, *child_key
+        for nodes in self.walk():
+            if not nodes[-1].children:
+                yield nodes
 
     def __str__(self):  # pragma: no cover
-        return ''.join(self._str())
-
-    def _str(self, indent=0):  # pragma: no cover
-        for key, child in self._children.items():
-            yield f"{indent * '  '}{key!r} ({child.value})\n"
-            yield from child._str(indent + 1)
+        return ''.join(
+            f"{len(parents) * '  '}{node.key!r} ({node.value})\n"
+            for *parents, node in self.walk()
+        )
 
 
 if __name__ == '__main__':  # pragma: no cover

@@ -696,12 +696,15 @@ def test_common_prefixes():
         uncommon
 
         common one
-        common
+        common two
 
-        prefix longer one
-        prefix longer two
-        prefix shorter one still
-        prefix used if significant
+        tiny prefix
+        tiny is skipped
+
+        subprefix is used
+        subprefix is too
+        subprefix if
+        subprefix significant
 
         shortest xx wins
         shortest xx if
@@ -719,19 +722,22 @@ def test_common_prefixes():
 
         duplicate counted just once
         duplicate counted just once
-        duplicate
+
+        but counted once
+        but counted once
+        but counted
 
     """
     documents = [tuple(l.split()) for l in text.splitlines()]
     assert set(common_prefixes(documents, min_df=2)) == {
         ('common',),
-        ('prefix', 'longer'),
-        ('prefix',),
+        ('subprefix', 'is'),
+        ('subprefix',),
         ('shortest',),
         ('too', 'xx'),
         ('too', 'yy'),
         ('too', 'zz'),
-        ('duplicate',),
+        ('but', 'counted'),
     }
 
 
