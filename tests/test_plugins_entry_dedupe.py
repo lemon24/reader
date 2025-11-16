@@ -75,6 +75,22 @@ def test_only_duplicates_are_deleted(reader, parser):
     }
 
 
+def test_mass_duplication(reader, parser):
+    reader.add_feed(parser.feed(1))
+
+    for i in range(4):
+        parser.entry(1, f'{i}-old', datetime(2010, 1, 1), title=str(i), summary=str(i))
+    reader.update_feeds()
+
+    init_reader(reader)
+
+    for i in range(4):
+        parser.entry(1, f'{i}-new', datetime(2010, 1, 2), title=str(i), summary=str(i))
+    reader.update_feeds()
+
+    assert {e.id for e in reader.get_entries()} == {'0-new', '1-new', '2-new', '3-new'}
+
+
 def test_duplicates_in_another_feed_are_ignored(reader, with_plugin, parser):
     reader.add_feed(parser.feed(1))
     reader.add_feed(parser.feed(2))

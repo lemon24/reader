@@ -200,6 +200,7 @@ class Deduplicator:
 
     def deduplicate(self):
         tag, is_duplicate = self.get_feed_request_tag()
+        # FIXME: for .dedupe.once.title use only title_grouper
 
         # content is only required by is_duplicate,
         # if get_entries() could skip content,
@@ -284,6 +285,8 @@ def group_entries(all_entries, new_entries, is_duplicate):
     for grouper in GROUPERS:
         grouper_duplicates = DisjointSet()
 
+        log.debug("grouper %s: all=%d new=%d", grouper.__name__, len(all), len(new))
+
         for group in grouper(all.values(), new.values()):
             if len(group) == 1:
                 continue
@@ -310,17 +313,22 @@ def group_entries(all_entries, new_entries, is_duplicate):
         groups = grouper_duplicates.subsets()
         pair_count = sum(1 for g in groups if len(g) == 2)
 
+        log.debug("grouper %s: found %r", grouper.__name__, groups)
+
         for group in groups:
             duplicates.add(*group)
 
-            for eid in group:
-                # if this is a new entry, we found duplicates for it,
-                # so trying other heuristics for it is overkill
-                new.pop(eid, None)
-
-                # lots of old entries were duplicated in this specific way,
-                # don't check remaining new entries against them
-                if pair_count >= MASS_DUPLICATION_MIN_PAIRS:  # pragma: no cover
+            # lots of entries were duplicated in this specific way,
+            # don't check other heuristics for the new entries, and
+            # don't check remaining new entries against the old entries
+            #
+            # consequence: for a few new entries or a no-op .dedupe.once,
+            # we end up going through *all* heuristics for *all* entries,
+            # which may be slow
+            #
+            if pair_count >= MASS_DUPLICATION_MIN_PAIRS:
+                for eid in group:
+                    new.pop(eid, None)
                     all.pop(eid, None)
 
         # FIXME: tests need rework to uncomment this
