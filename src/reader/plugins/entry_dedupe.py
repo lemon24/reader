@@ -199,71 +199,61 @@ class Deduplicator:
         self.feed = feed
 
     def deduplicate(self):
-        tag, is_duplicate = self.get_feed_request_tag()
+        config = self.get_config()
 
-        # content is only required by is_duplicate,
-        # if get_entries() could skip content,
-        # we could get it on demand in is_duplicate_by_id
-        all_entries = list(self.reader.get_entries(feed=self.feed))
+        # if optimizing for memory, this should get only metadata (no content)
+        get_entries = partial(self.reader.get_entries, feed=self.feed)
 
-        all_by_id = {e.id: e for e in all_entries}
+        all = list(get_entries())
+        all_by_id = {e.id: e for e in all}
+
+        # if optimizing for memory, this should wrap the method (with content)
+        get_entry = all_by_id.get
 
         @cache
         def is_duplicate_by_id(one, two):
-            return is_duplicate(all_by_id[one], all_by_id[two])
+            return config.is_duplicate(get_entry(one), get_entry(two))
 
-        def is_duplicate_cached(one, two):
+        def is_duplicate(one, two):
             return is_duplicate_by_id(one.id, two.id)
 
-        if tag is None:
-            # content is only required by is_duplicate
-            new_entries = self.reader.get_entries(
-                feed=self.feed, tags=[self.entry_request_tag]
-            )
+        if not config.tag:
+            new = get_entries(tags=[self.entry_request_tag])
         else:
-            log.info("entry_dedupe: %r for feed %r", tag, self.feed)
-            new_entries = all_entries
+            log.info("entry_dedupe: %r for feed %r", config.tag, self.feed)
+            new = all
 
-        if not (tag and tag.endswith('.once.title')):
-            groupers = GROUPERS
-        else:
-            groupers = [title_grouper]
-
-        # which entry in a group is "latest" depends on what triggered dedupe;
-        # ideally, we should unify this, see regular_update_key for details
-        latest_key = regular_update_key if tag is None else feed_request_key
-
-        for group_ids in group_entries(
-            all_entries, new_entries, groupers, is_duplicate_cached
-        ):
-            assert len(group_ids) > 1, group_ids
-
-            group = [all_by_id[i] for i in group_ids]
-
-            # FIXME: if latest_key is the same, the all_entries order should be preserved
-            entry, *duplicates = sorted(group, key=latest_key, reverse=True)
+        for ids in group_entries(all, new, config.groupers, is_duplicate):
+            assert len(ids) > 1, ids
+            group = [all_by_id[id] for id in ids]
+            # TODO: if latest_key is the same, preserve the 'recent' order
+            entry, *duplicates = sorted(group, key=config.latest_key, reverse=True)
             dedupe_entries(self.reader, entry, duplicates)
 
-            if tag is None:
+            if not config.tag:
                 self.clear_entry_request(entry)
 
-        if tag is not None:
+        if config.tag:
             self.clear_feed_request()
 
     @cached_property
     def feed_tags(self):
         return frozenset(self.reader.get_tag_keys(self.feed))
 
-    def get_feed_request_tag(self):
-        for suffix, is_duplicate in IS_DUPLICATE_BY_TAG.items():
-            tag = self.reader.make_reader_reserved_name(suffix)
+    def get_config(self):
+        for config in CONFIGS:
+            if not config.tag:
+                continue
+            tag = self.reader.make_reader_reserved_name(config.tag)
             if tag in self.feed_tags:
-                return tag, is_duplicate
-        return None, is_duplicate_entry
+                return config
+        return Config
 
     def clear_feed_request(self):
-        for suffix in reversed(IS_DUPLICATE_BY_TAG):
-            tag = self.reader.make_reader_reserved_name(suffix)
+        for config in reversed(CONFIGS):
+            if not config.tag:
+                continue
+            tag = self.reader.make_reader_reserved_name(config.tag)
             if tag in self.feed_tags:
                 self.reader.delete_tag(self.feed, tag, missing_ok=True)
 
@@ -277,7 +267,7 @@ class Deduplicator:
 
 # heuristics for finding duplicates
 
-
+# FIXME: use the smaller value, test in test_mass_duplication
 HUGE_GROUP_SIZE = 16  # 8
 MAX_GROUP_SIZE = 16  # 4
 MASS_DUPLICATION_MIN_PAIRS = 4
@@ -428,17 +418,7 @@ def published_day_grouper(entries, new_entries):
     return group_by(key, entries, new_entries)
 
 
-GROUPERS = [
-    title_grouper,
-    link_grouper,
-    published_grouper,
-    title_strip_prefix_grouper,
-    published_day_grouper,
-    title_similarity_grouper,
-]
-
-
-# entry (content) similarity
+# behavior variations that depend on what triggered dedupe
 
 
 def is_duplicate_entry(one, two):
@@ -447,7 +427,7 @@ def is_duplicate_entry(one, two):
 
     for one_words in one_fields:
         for two_words in two_fields:
-            # TODO: we should match content fields by length, preferring longer ones;
+            # TODO: we should match fields by length, preferring longer ones;
             # a summary is less likely to match, but the whole article might
 
             min_length = min(len(one_words), len(two_words))
@@ -468,44 +448,63 @@ def _content_fields(entry):
     return [tokenize_content(s) for s in rv]
 
 
-def is_duplicate_entry_title(one, two):
-    if not one.title or not two.title:  # pragma: no cover
-        return False
-    return tokenize_title(one.title) == tokenize_title(two.title)
+_DEFAULT_UPDATED = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
-# ordered by strictness (strictest first)
-IS_DUPLICATE_BY_TAG = {
-    'dedupe.once': is_duplicate_entry,
-    'dedupe.once.title': is_duplicate_entry_title,
-}
+class Config:
+    tag = None
+
+    groupers = [
+        title_grouper,
+        link_grouper,
+        published_grouper,
+        title_strip_prefix_grouper,
+        published_day_grouper,
+        title_similarity_grouper,
+    ]
+
+    is_duplicate = staticmethod(is_duplicate_entry)
+
+    @staticmethod
+    def latest_key(e):
+        # unlike OnceConfig, we cannot rely on e.last_updated,
+        # because for duplicates in the feed, we'd end up flip-flopping
+        # (on the first update, entry 1 is deleted and entry 2 remains;
+        # on the second update, entry 1 remains because it's new,
+        # and entry 2 is deleted because it's not modified,
+        # has lower last_updated, and no update hook runs for it; repeat).
+        #
+        # it would be more correct to sort by (is in new feed, last_retrieved),
+        # but as of 3.14, we don't know about existing but not modified entries
+        # (the hook isn't called), and entries don't have last_retrieved.
+        #
+        # also see test_duplicates_in_feed / #340.
+        #
+        return e.updated or e.published or _DEFAULT_UPDATED, e.id
 
 
-# finding the "latest" entry
+class OnceConfig(Config):
+    tag = f'{ENTRY_TAG}.once'
 
-DEFAULT_UPDATED = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-
-def regular_update_key(e):
-    # unlike feed_request_key, we cannot rely on e.last_updated,
-    # because for duplicates in the feed, we'd end up flip-flopping
-    # (on the first update, entry 1 is deleted and entry 2 remains;
-    # on the second update, entry 1 remains because it's new,
-    # and entry 2 is deleted because it's not modified,
-    # has lower last_updated, and no update hook runs for it; repeat).
-    #
-    # it would be more correct to sort by (is in new feed, last_retrieved),
-    # but as of 3.14, we don't know about existing but not modified entries
-    # (the hook isn't called), and entries don't have last_retrieved.
-    #
-    # also see test_duplicates_in_feed / #340.
-    #
-    return e.updated or e.published or DEFAULT_UPDATED, e.id
+    @staticmethod
+    def latest_key(e):
+        # keep the latest entry, consider the rest duplicates
+        return e.last_updated
 
 
-def feed_request_key(e):
-    # keep the latest entry, consider the rest duplicates
-    return e.last_updated
+class OnceTitleConfig(OnceConfig):
+    tag = f'{ENTRY_TAG}.once.title'
+    groupers = [title_grouper]
+
+    @staticmethod
+    def is_duplicate(one, two):
+        if not one.title or not two.title:  # pragma: no cover
+            return False
+        return tokenize_title(one.title) == tokenize_title(two.title)
+
+
+# ordered by strictness (strictest tag first)
+CONFIGS = [Config, OnceConfig, OnceTitleConfig]
 
 
 # merging user data and deleting duplicates
@@ -521,7 +520,7 @@ def dedupe_entries(reader, entry, duplicates):
 
     # don't do anything until we know all actions were generated successfully
     actions = list(make_dedupe_actions(reader, entry, duplicates))
-    # FIXME: what if this fails with EntryNotFoundError?
+    # TODO: what if this fails with EntryNotFoundError?
     # either the entry was deleted (abort),
     # or a duplicate was deleted (start over with the other duplicates, if any)
 
