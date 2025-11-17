@@ -5,6 +5,7 @@ import pytest
 
 from reader import Content
 from reader import Entry
+from reader.plugins import entry_dedupe
 from reader.plugins.entry_dedupe import common_prefixes
 from reader.plugins.entry_dedupe import group_by
 from reader.plugins.entry_dedupe import init_reader
@@ -15,6 +16,7 @@ from reader.plugins.entry_dedupe import merge_tags
 from reader.plugins.entry_dedupe import ngrams
 from reader.plugins.entry_dedupe import tokenize_content
 from reader.plugins.entry_dedupe import tokenize_title
+from utils import parametrize_dict
 from utils import utc_datetime as datetime
 
 
@@ -127,50 +129,74 @@ def test_duplicates_change_during_update(reader, with_plugin, parser):
     assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 3'}
 
 
-@pytest.mark.parametrize(
+@parametrize_dict(
     'tags, expected',
-    [
-        ([], {3, 4}),
-        (['once'], {2, 4}),
-        (['once.title'], {2}),
-        (['once', 'once.title'], {2, 4}),
-    ],
-    ids=lambda p: ','.join(map(str, p)),
+    {
+        'once': (['once'], {'entry', 'title-only', 'link-only'}),
+        'once.title': (['once.title'], {'entry', 'link-and-summary', 'link-only'}),
+        'both': (['once', 'once.title'], {'entry', 'title-only', 'link-only'}),
+    },
 )
 def test_dedupe_once(reader, parser, tags, expected):
     feed = parser.feed(1)
     reader.add_feed(feed)
     reader.set_tag(feed, 'unrelated')
 
-    parser.entry(1, 1, datetime(2010, 1, 1), title='title', summary='value')
-    reader._now = lambda: datetime(2010, 1, 1, 1)
+    parser.entry(1, 'title-and-summary', title='title', summary='value')
+    parser.entry(1, 'title-only', title='title')
+    parser.entry(1, 'link-and-summary', link='link', summary='value')
+    parser.entry(1, 'link-only', link='link')
+
+    reader._now = lambda: datetime(2010, 1, 1)
     reader.update_feeds()
 
-    parser.entry(1, 3, datetime(2010, 1, 3), title='title', summary='value')
-    parser.entry(1, 4, datetime(2010, 1, 4), title='title')
-    reader._now = lambda: datetime(2010, 1, 3, 1)
+    parser.entry(1, 'entry', title='title', link='link', summary='value')
+    reader._now = lambda: datetime(2010, 1, 2)
     reader.update_feeds()
-
-    parser.entry(1, 2, datetime(2010, 1, 2), title='title', summary='value')
-    reader._now = lambda: datetime(2010, 1, 4, 1)
-    reader.update_feeds()
-
-    assert {eval(e.id)[1] for e in reader.get_entries()} == {1, 2, 3, 4}
 
     init_reader(reader)
 
-    # which entry is "latest" differs between .dedupe.once and normal duplicate
-    if tags:
-        for tag in tags:
-            reader.set_tag(feed, f".reader.dedupe.{tag}")
-    else:
-        parser.entry(1, 0, datetime(2010, 1, 1), title='title', summary='value')
-
-    reader._now = lambda: datetime(2010, 1, 5, 1)
+    for tag in tags:
+        reader.set_tag(feed, f".reader.dedupe.{tag}")
+    reader._now = lambda: datetime(2010, 1, 3)
     reader.update_feeds()
 
-    assert {eval(e.id)[1] for e in reader.get_entries()} == expected
+    assert {e.id for e in reader.get_entries()} == expected
     assert set(reader.get_tag_keys(feed)) == {'unrelated'}
+
+
+@pytest.mark.parametrize(
+    'tag, expected',
+    [(None, 'new-pub'), ('once', 'new-last-upd'), ('once.title', 'new-last-upd')],
+)
+def test_dedupe_once_order(reader, parser, tag, expected):
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    common_attrs = dict(title='title', summary='value')
+
+    parser.entry(1, 'old', datetime(2010, 1, 1), **common_attrs)
+    parser.entry(1, 'new-pub', datetime(2010, 1, 3), **common_attrs)
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    parser.entry(1, 'new-last-upd', datetime(2010, 1, 1), **common_attrs)
+    reader._now = lambda: datetime(2010, 1, 3)
+    reader.update_feeds()
+
+    if not tag:
+        init_reader(reader)
+
+    parser.entry(1, 'entry', datetime(2010, 1, 2), **common_attrs)
+    reader._now = lambda: datetime(2010, 1, 2)
+    reader.update_feeds()
+
+    if tag:
+        init_reader(reader)
+        reader.set_tag(feed, f".reader.dedupe.{tag}")
+        reader.update_feeds()
+
+    assert {e.id for e in reader.get_entries()} == {expected}
 
 
 def test_dedupe_once_title_uses_only_title_grouper(reader, parser, caplog):
