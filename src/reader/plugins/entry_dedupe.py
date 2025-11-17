@@ -267,9 +267,8 @@ class Deduplicator:
 
 # heuristics for finding duplicates
 
-# FIXME: use the smaller value
-HUGE_GROUP_SIZE = 16  # 8
-MAX_GROUP_SIZE = 16  # 4
+HUGE_GROUP_SIZE = 16
+MAX_GROUP_SIZE = 4
 MASS_DUPLICATION_MIN_PAIRS = 4
 
 

@@ -33,10 +33,13 @@ def with_plugin():
     """Tell reader to use the plugin from the beginning."""
 
 
-def test_only_duplicates_are_deleted(reader, parser):
+def test_only_duplicates_are_deleted(reader, parser, monkeypatch):
     # detailed/fuzzy content matching tested in test_is_duplicate*
 
     reader.add_feed(parser.feed(1))
+
+    # increase this slightly to allow for published(-day) in the same test
+    monkeypatch.setattr(entry_dedupe, 'MAX_GROUP_SIZE', entry_dedupe.MAX_GROUP_SIZE + 1)
 
     common_attrs = dict(
         updated=datetime(2010, 1, 1, 2, 3, 4),
@@ -54,9 +57,9 @@ def test_only_duplicates_are_deleted(reader, parser):
     parser.entry(1, 'published-day', datetime(2010, 1, 1), summary='value')
     parser.entry(1, 'published-day-x', datetime(2010, 1, 1))
     parser.entry(1, 'prefix', title='prefix-title', summary='value')
-    parser.entry(1, 'prefix-x', title='prefix-x')
+    parser.entry(1, 'prefix-x', title='prefix-x', summary='value')
     parser.entry(1, 'prefix-xx', title='prefix-xx')
-    parser.entry(1, 'prefix-xxx', title='prefix-xxx', summary='value')
+    parser.entry(1, 'prefix-xxx', title='prefix-xxx')
     parser.entry(1, 'title-similarity', title='TilE', summary='value')
     parser.entry(1, 'title-similarity-x', title='tale', summary='value')
 
