@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections import defaultdict
 from collections.abc import Callable
 from collections.abc import Iterable
@@ -672,6 +673,7 @@ class UpdateHooks:
     ) -> list[SingleUpdateHookError]:
         rv = []
         for hook in self.hooks[when]:
+            start = time.monotonic()
             try:
                 hook(self.target, *args)
             except Exception as e:
@@ -680,6 +682,19 @@ class UpdateHooks:
                 if not return_exceptions:
                     raise wrapper
                 rv.append(wrapper)
+            finally:
+                end = time.monotonic()
+                try:
+                    name = hook.__module__ + ':' + hook.__qualname__
+                except AttributeError:
+                    name = repr(hook)
+                log.debug(
+                    "ran %s hook %s for %r in %f seconds",
+                    when,
+                    name,
+                    resource_id,
+                    end - start,
+                )
         return rv
 
     def group(self, message: str) -> _UpdateHookErrorGrouper:
