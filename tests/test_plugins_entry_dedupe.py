@@ -81,7 +81,7 @@ def test_only_duplicates_are_deleted(reader, parser):
     }
 
 
-def test_mass_duplication(reader, parser):
+def test_mass_duplication_doesnt_use_all_groupers(reader, parser, caplog):
     reader.add_feed(parser.feed(1))
 
     for i in range(4):
@@ -89,12 +89,17 @@ def test_mass_duplication(reader, parser):
     reader.update_feeds()
 
     init_reader(reader)
+    caplog.set_level('DEBUG')
 
     for i in range(4):
         parser.entry(1, f'{i}-new', datetime(2010, 1, 2), title=str(i), summary=str(i))
     reader.update_feeds()
 
     assert {e.id for e in reader.get_entries()} == {'0-new', '1-new', '2-new', '3-new'}
+
+    assert 'title_grouper' in caplog.text
+    assert 'link_grouper' not in caplog.text
+    assert 'no new entries remaining' in caplog.text
 
 
 def test_duplicates_in_another_feed_are_ignored(reader, with_plugin, parser):
@@ -206,8 +211,9 @@ def test_dedupe_once_title_uses_only_title_grouper(reader, parser, caplog):
     reader.update_feeds()
 
     init_reader(reader)
-    reader.set_tag(feed, ".reader.dedupe.once.title")
     caplog.set_level('DEBUG')
+
+    reader.set_tag(feed, ".reader.dedupe.once.title")
     reader.update_feeds()
 
     assert 'title_grouper' in caplog.text
