@@ -200,7 +200,6 @@ class Deduplicator:
 
     def deduplicate(self):
         tag, is_duplicate = self.get_feed_request_tag()
-        # FIXME: for .dedupe.once.title use only title_grouper
 
         # content is only required by is_duplicate,
         # if get_entries() could skip content,
@@ -225,11 +224,18 @@ class Deduplicator:
             log.info("entry_dedupe: %r for feed %r", tag, self.feed)
             new_entries = all_entries
 
+        if not (tag and tag.endswith('.once.title')):
+            groupers = GROUPERS
+        else:
+            groupers = [title_grouper]
+
         # which entry in a group is "latest" depends on what triggered dedupe;
         # ideally, we should unify this, see regular_update_key for details
         latest_key = regular_update_key if tag is None else feed_request_key
 
-        for group_ids in group_entries(all_entries, new_entries, is_duplicate_cached):
+        for group_ids in group_entries(
+            all_entries, new_entries, groupers, is_duplicate_cached
+        ):
             assert len(group_ids) > 1, group_ids
 
             group = [all_by_id[i] for i in group_ids]
@@ -277,12 +283,12 @@ MAX_GROUP_SIZE = 16  # 4
 MASS_DUPLICATION_MIN_PAIRS = 4
 
 
-def group_entries(all_entries, new_entries, is_duplicate):
+def group_entries(all_entries, new_entries, groupers, is_duplicate):
     all = {e.id: e for e in all_entries}
     new = {e.id: e for e in new_entries}
     duplicates = DisjointSet()
 
-    for grouper in GROUPERS:
+    for grouper in groupers:
         grouper_duplicates = DisjointSet()
 
         log.debug("grouper %s: all=%d new=%d", grouper.__name__, len(all), len(new))

@@ -173,6 +173,21 @@ def test_dedupe_once(reader, parser, tags, expected):
     assert set(reader.get_tag_keys(feed)) == {'unrelated'}
 
 
+def test_dedupe_once_title_uses_only_title_grouper(reader, parser, caplog):
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+    parser.entry(1, 1)
+    reader.update_feeds()
+
+    init_reader(reader)
+    reader.set_tag(feed, ".reader.dedupe.once.title")
+    caplog.set_level('DEBUG')
+    reader.update_feeds()
+
+    assert 'title_grouper' in caplog.text
+    assert 'link_grouper' not in caplog.text
+
+
 @pytest.mark.parametrize('read', [False, True])
 @pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
 def test_read(reader, with_plugin, parser, read, modified):
