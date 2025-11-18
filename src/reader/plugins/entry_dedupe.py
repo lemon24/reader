@@ -306,9 +306,13 @@ def group_entries(all_entries, new_entries, groupers, is_duplicate):
                     grouper_duplicates.add(one.id, two.id)
 
         groups = grouper_duplicates.subsets()
-        pair_count = sum(1 for g in groups if len(g) == 2)
+        counts = Counter(map(len, groups))
 
         log.debug("grouper %s: found %r", grouper.__name__, groups)
+        if groups:
+            log.info(
+                "grouper %s: group count by size %r", grouper.__name__, dict(counts)
+            )
 
         for group in groups:
             duplicates.add(*group)
@@ -321,7 +325,7 @@ def group_entries(all_entries, new_entries, groupers, is_duplicate):
             # we end up going through *all* heuristics for *all* entries,
             # which may be slow
             #
-            if pair_count >= MASS_DUPLICATION_MIN_PAIRS:
+            if counts[2] >= MASS_DUPLICATION_MIN_PAIRS:
                 for eid in group:
                     new.pop(eid, None)
                     all.pop(eid, None)
@@ -334,7 +338,15 @@ def group_entries(all_entries, new_entries, groupers, is_duplicate):
     else:
         log.debug("no groupers remaining: all=%d new=%d", len(all), len(new))
 
-    return duplicates.subsets()
+    groups = duplicates.subsets()
+    if groups:
+        feed_url = all_entries[0].feed_url
+        counts = Counter(map(len, groups))
+        log.info(
+            "entry_dedupe: feed %r: group count by size %r", feed_url, dict(counts)
+        )
+
+    return groups
 
 
 def title_grouper(entries, new_entries):
