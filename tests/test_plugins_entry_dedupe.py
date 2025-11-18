@@ -49,7 +49,8 @@ def test_only_duplicates_are_deleted(reader, parser, monkeypatch):
 
     parser.entry(1, 'different', **common_attrs, summary='another')
     parser.entry(1, 'title', title='Title', summary='value')
-    parser.entry(1, 'title-x', summary='value')
+    # TODO: remove "link=None" once FakeParser doesn't have defaults anymore
+    parser.entry(1, 'title-x', link=None, summary='value')
     parser.entry(1, 'link', link='link', summary='value')
     parser.entry(1, 'link-x', link='link')
     parser.entry(1, 'published', published=datetime(2010, 1, 1, 2, 3), summary='value')

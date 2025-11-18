@@ -20,6 +20,7 @@ def _make_feed(number, updated=None, **kwargs):
     return FeedData(
         f'{number}',
         updated,
+        # TODO: remove these defaults, they're confusing
         kwargs.pop('title', f'Feed #{number}'),
         kwargs.pop('link', f'http://www.example.com/{number}'),
         **kwargs,
@@ -36,6 +37,7 @@ def _make_entry(feed_number, number, updated=None, **kwargs):
         f'{feed_number}',
         entry_number,
         updated,
+        # TODO: remove these defaults, they're confusing
         kwargs.pop('title', f'Entry #{number}'),
         kwargs.pop('link', f'http://www.example.com/entries/{number}'),
         **kwargs,
