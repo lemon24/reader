@@ -353,7 +353,7 @@ def title_grouper(entries, new_entries):
     return group_by(lambda e: tokenize_title(e.title), entries, new_entries)
 
 
-def title_strip_prefix_grouper(entries, new_entries):
+def title_strip_prefix_grouper(entries, new_entries):  # pragma: no cover
     documents = [tokenize_title(e.title) for e in entries]
 
     prefixes = map(' '.join, common_prefixes(documents))
@@ -366,7 +366,7 @@ def title_strip_prefix_grouper(entries, new_entries):
     return group_by(key, entries, new_entries)
 
 
-def title_similarity_grouper(entries, new_entries):
+def title_similarity_grouper(entries, new_entries):  # pragma: no cover
     n = 2
     pad = True
     threshold = 0.5
@@ -389,11 +389,11 @@ def title_similarity_grouper(entries, new_entries):
                 yield [one, two]
 
 
-def link_grouper(entries, new_entries):
+def link_grouper(entries, new_entries):  # pragma: no cover
     return group_by(lambda e: normalize_url(e.link), entries, new_entries)
 
 
-def normalize_url(url):
+def normalize_url(url):  # pragma: no cover
     if not url:
         return None
 
@@ -412,7 +412,7 @@ def normalize_url(url):
     return url._replace(scheme=scheme, netloc=netloc, path=path).geturl()
 
 
-def published_grouper(entries, new_entries):
+def published_grouper(entries, new_entries):  # pragma: no cover
     def key(e):
         dt = e.published or e.updated
         if not dt:
@@ -422,7 +422,7 @@ def published_grouper(entries, new_entries):
     return group_by(key, entries, new_entries)
 
 
-def published_day_grouper(entries, new_entries):
+def published_day_grouper(entries, new_entries):  # pragma: no cover
     def key(e):
         dt = e.published or e.updated
         if not dt:
@@ -482,13 +482,15 @@ _DEFAULT_UPDATED = datetime(1970, 1, 1, tzinfo=timezone.utc)
 class Config:
     tag = None
 
+    # FIXME (#371): some groupers disabled because of false positives
+    # https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
     groupers = [
         title_grouper,
-        link_grouper,
-        published_grouper,
-        title_strip_prefix_grouper,
-        published_day_grouper,
-        title_similarity_grouper,
+        # link_grouper,
+        # published_grouper,
+        # title_strip_prefix_grouper,
+        # published_day_grouper,
+        # title_similarity_grouper,
     ]
 
     is_duplicate = staticmethod(is_duplicate_entry)

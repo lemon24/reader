@@ -59,18 +59,19 @@ def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkey
     parser.entry(1, 'title', title='Title', summary='value')
     # TODO: remove "link=None" once FakeParser doesn't have defaults anymore
     parser.entry(1, 'title-x', link=None, summary='value')
-    parser.entry(1, 'link', link='link', summary='value')
-    parser.entry(1, 'link-x', link='link')
-    parser.entry(1, 'published', published=datetime(2010, 1, 1, 2, 3), summary='value')
-    parser.entry(1, 'published-x', published=datetime(2010, 1, 1, 2, 3))
-    parser.entry(1, 'published-day', datetime(2010, 1, 1), summary='value')
-    parser.entry(1, 'published-day-x', datetime(2010, 1, 1))
-    parser.entry(1, 'prefix', title='prefix-title', summary='value')
-    parser.entry(1, 'prefix-x', title='prefix-x', summary='value')
-    parser.entry(1, 'prefix-xx', title='prefix-xx')
-    parser.entry(1, 'prefix-xxx', title='prefix-xxx')
-    parser.entry(1, 'title-similarity', title='TilE', summary='value')
-    parser.entry(1, 'title-similarity-x', title='tale', summary='value')
+    # FIXME (#371): some groupers disabled because of false positives
+    # parser.entry(1, 'link', link='link', summary='value')
+    # parser.entry(1, 'link-x', link='link')
+    # parser.entry(1, 'published', published=datetime(2010, 1, 1, 2, 3), summary='value')
+    # parser.entry(1, 'published-x', published=datetime(2010, 1, 1, 2, 3))
+    # parser.entry(1, 'published-day', datetime(2010, 1, 1), summary='value')
+    # parser.entry(1, 'published-day-x', datetime(2010, 1, 1))
+    # parser.entry(1, 'prefix', title='prefix-title', summary='value')
+    # parser.entry(1, 'prefix-x', title='prefix-x', summary='value')
+    # parser.entry(1, 'prefix-xx', title='prefix-xx')
+    # parser.entry(1, 'prefix-xxx', title='prefix-xxx')
+    # parser.entry(1, 'title-similarity', title='TilE', summary='value')
+    # parser.entry(1, 'title-similarity-x', title='tale', summary='value')
 
     reader.update_feeds()
 
@@ -82,13 +83,13 @@ def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkey
     assert {e.id for e in reader.get_entries()} == {
         'different',
         'title-x',
-        'link-x',
-        'published-x',
-        'published-day-x',
-        'prefix-x',
-        'prefix-xx',
-        'prefix-xxx',
-        'title-similarity-x',
+        # 'link-x',
+        # 'published-x',
+        # 'published-day-x',
+        # 'prefix-x',
+        # 'prefix-xx',
+        # 'prefix-xxx',
+        # 'title-similarity-x',
         'entry',
     }
 
@@ -154,7 +155,7 @@ def test_duplicates_change_during_update(
     'tags, expected',
     {
         'once': (['once'], {'entry', 'title-only', 'link-only'}),
-        'once.title': (['once.title'], {'entry', 'link-and-summary', 'link-only'}),
+        'once.title': (['once.title'], {'entry', 'link-only'}),
         'both': (['once', 'once.title'], {'entry', 'title-only', 'link-only'}),
     },
 )
@@ -165,7 +166,8 @@ def test_dedupe_once(reader, parser, allow_short_content, tags, expected):
 
     parser.entry(1, 'title-and-summary', title='title', summary='value')
     parser.entry(1, 'title-only', title='title')
-    parser.entry(1, 'link-and-summary', link='link', summary='value')
+    # FIXME (#371): some groupers disabled because of false positives
+    # parser.entry(1, 'link-and-summary', link='link', summary='value')
     parser.entry(1, 'link-only', link='link')
 
     reader._now = lambda: datetime(2010, 1, 1)
@@ -796,6 +798,7 @@ def test_common_prefixes():
         ('abc', 'a', [['a']]),
         ('aAb', 'a', [['a', 'A']]),
         ('abc', '', []),
+        (['a', ''], 'a', [['a']]),
     ],
 )
 def test_group_by(items, only_items, expected):
