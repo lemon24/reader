@@ -33,7 +33,15 @@ def with_plugin():
     """Tell reader to use the plugin from the beginning."""
 
 
-def test_only_duplicates_are_deleted(reader, parser, monkeypatch):
+@pytest.fixture
+def allow_short_content(monkeypatch):
+    # to avoid false positives, entry content has to be long enough;
+    # this makes tests easier to read;
+    # TODO: have an integration-y test that doesn't mess with this
+    monkeypatch.setattr(entry_dedupe, 'MIN_CONTENT_LENGTH', 1)
+
+
+def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkeypatch):
     # detailed/fuzzy content matching tested in test_is_duplicate*
 
     reader.add_feed(parser.feed(1))
@@ -85,7 +93,9 @@ def test_only_duplicates_are_deleted(reader, parser, monkeypatch):
     }
 
 
-def test_mass_duplication_doesnt_use_all_groupers(reader, parser, caplog):
+def test_mass_duplication_doesnt_use_all_groupers(
+    reader, parser, allow_short_content, caplog
+):
     reader.add_feed(parser.feed(1))
 
     for i in range(4):
@@ -121,7 +131,9 @@ def test_duplicates_in_another_feed_are_ignored(reader, with_plugin, parser):
     assert {e.id for e in reader.get_entries()} == {'1, 1', '2, 1'}
 
 
-def test_duplicates_change_during_update(reader, with_plugin, parser):
+def test_duplicates_change_during_update(
+    reader, with_plugin, parser, allow_short_content
+):
     reader.add_feed(parser.feed(1))
 
     yesterday = datetime(2010, 1, 1)
@@ -146,7 +158,7 @@ def test_duplicates_change_during_update(reader, with_plugin, parser):
         'both': (['once', 'once.title'], {'entry', 'title-only', 'link-only'}),
     },
 )
-def test_dedupe_once(reader, parser, tags, expected):
+def test_dedupe_once(reader, parser, allow_short_content, tags, expected):
     feed = parser.feed(1)
     reader.add_feed(feed)
     reader.set_tag(feed, 'unrelated')
@@ -178,7 +190,7 @@ def test_dedupe_once(reader, parser, tags, expected):
     'tag, expected',
     [(None, 'new-pub'), ('once', 'new-last-upd'), ('once.title', 'new-last-upd')],
 )
-def test_dedupe_once_order(reader, parser, tag, expected):
+def test_dedupe_once_order(reader, parser, allow_short_content, tag, expected):
     feed = parser.feed(1)
     reader.add_feed(feed)
 
@@ -226,7 +238,7 @@ def test_dedupe_once_title_uses_only_title_grouper(reader, parser, caplog):
 
 @pytest.mark.parametrize('read', [False, True])
 @pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
-def test_read(reader, with_plugin, parser, read, modified):
+def test_read(reader, with_plugin, parser, allow_short_content, read, modified):
     # multiple duplicates / modified priority tested in test_merge_flags
 
     reader.add_feed(parser.feed(1))
@@ -248,7 +260,9 @@ def test_read(reader, with_plugin, parser, read, modified):
 
 @pytest.mark.parametrize('important', [False, None, True])
 @pytest.mark.parametrize('modified', [None, datetime(2010, 1, 1, 1)])
-def test_important(reader, with_plugin, parser, important, modified):
+def test_important(
+    reader, with_plugin, parser, allow_short_content, important, modified
+):
     # multiple duplicates / modified priority tested in test_merge_flags
 
     reader.add_feed(parser.feed(1))
@@ -268,7 +282,7 @@ def test_important(reader, with_plugin, parser, important, modified):
     assert two.important_modified == modified
 
 
-def test_tags(reader, parser):
+def test_tags(reader, parser, allow_short_content):
     feed = parser.feed(1)
     reader.add_feed(feed)
 
@@ -300,7 +314,7 @@ def test_tags(reader, parser):
     }
 
 
-def test_tags_dedupe_once(reader, parser):
+def test_tags_dedupe_once(reader, parser, allow_short_content):
     feed = parser.feed(1)
     reader.add_feed(feed)
 
@@ -349,60 +363,38 @@ def make_entry(title=None, summary=None, content=None):
 
 
 IS_DUPLICATE_ENTRY_DATA = [
+    # no content
     (make_entry(), make_entry(), False),
     (make_entry(title='title'), make_entry(title='title'), False),
-    (make_entry(summary='summary'), make_entry(summary='summary'), True),
+    # short content
+    (make_entry(summary='one'), make_entry(summary='one'), False),
+    # medium content (still below limit)
+    (make_entry(summary='one ' * 31), make_entry(summary='one ' * 31), False),
+    # long enough content (above limit)
+    (make_entry(summary='one ' * 32), make_entry(summary='one ' * 32), True),
+    # fuzzy matching
+    (make_entry(summary='one ' * 32), make_entry(summary='one ' * 31 + 'two'), True),
+    # fuzzy matching (below threshold)
+    # FIXME: this is likely too lenient in light of MIN_CONTENT_LENGTH
     (
-        make_entry(content=('value', 'text/html')),
-        make_entry(content=('value', 'text/html')),
-        True,
-    ),
-    (
-        make_entry(title='title', summary='summary'),
-        make_entry(title='title', summary='summary'),
-        True,
-    ),
-    (
-        make_entry(title='title', summary='summary'),
-        make_entry(title='other', summary='summary'),
-        True,
-    ),
-    (
-        make_entry(title='title', summary='summary'),
-        make_entry(title='title', summary='other'),
+        make_entry(summary='one ' * 32),
+        make_entry(summary='one ' * 26 + 'two ' * 6),
         False,
     ),
+    # shortest prefix is used
     (
-        make_entry(title='title', content=('value', 'text/html')),
-        make_entry(title='title', content=('value', 'text/html')),
+        make_entry(summary='one ' * 32),
+        make_entry(summary='one ' * 32 + 'two ' * 128),
         True,
     ),
+    # summary is treated as content
+    (make_entry(summary='one ' * 32), make_entry(content=('one ' * 32,)), True),
+    # content type doesn't matter
     (
-        make_entry(title='title', content=('value', 'text/html')),
-        make_entry(title='other', content=('value', 'text/html')),
+        make_entry(content=('one ' * 32, 'text/html')),
+        make_entry(content=('one ' * 32, 'absolute/garbage')),
         True,
     ),
-    (
-        make_entry(title='title', content=('value', 'text/html')),
-        make_entry(title='title', content=('other', 'text/html')),
-        False,
-    ),
-    (
-        make_entry(title='title', content=('value', 'text/plain')),
-        make_entry(title='title', content=('value', 'text/plain')),
-        True,
-    ),
-    (
-        make_entry(title='title', summary='value'),
-        make_entry(title='title', content=('value', 'text/html')),
-        True,
-    ),
-    (
-        make_entry(title='title', summary='value'),
-        make_entry(title='title', content=('value', 'text/html')),
-        True,
-    ),
-    # TODO: test fuzzy matching (just one test)
     # TODO: test normalization
 ]
 
@@ -524,7 +516,7 @@ def test_merge_tags(reader, parser, tags, expected):
 
 
 # TODO: with_maybe_published_or_updated
-def test_recent_sort_copying(reader, parser):
+def test_recent_sort_copying(reader, parser, allow_short_content):
     reader.add_feed(parser.feed(1))
 
     parser.entry(1, 1, title='title', summary='summary')
@@ -553,7 +545,13 @@ def test_recent_sort_copying(reader, parser):
 @pytest.mark.parametrize('update_after_one', [False, True])
 @pytest.mark.parametrize('with_dates, expected_id', [(False, '3'), (True, '2')])
 def test_duplicates_in_feed(
-    reader, with_plugin, parser, update_after_one, with_dates, expected_id
+    reader,
+    with_plugin,
+    parser,
+    allow_short_content,
+    update_after_one,
+    with_dates,
+    expected_id,
 ):
     reader.add_feed(parser.feed(1))
     # force recent_sort logic to use current times, not updated/published

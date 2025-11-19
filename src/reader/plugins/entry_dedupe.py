@@ -435,6 +435,17 @@ def published_day_grouper(entries, new_entries):
 # behavior variations that depend on what triggered dedupe
 
 
+# to avoid false positives, entries are considered duplicates
+# only if their content is long enough;
+# there are many valid cases where similar (or even identical) content
+# does not indicate two entries are duplicates of one another;
+# this is especially prevalent for short entries
+# (32 tokens chosen due to historical reasons, might want to increase it);
+# detailed motivation and examples in
+# https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
+MIN_CONTENT_LENGTH = 32
+
+
 def is_duplicate_entry(one, two):
     one_fields = _content_fields(one)
     two_fields = _content_fields(two)
@@ -445,6 +456,9 @@ def is_duplicate_entry(one, two):
             # a summary is less likely to match, but the whole article might
 
             min_length = min(len(one_words), len(two_words))
+
+            if min_length < MIN_CONTENT_LENGTH:
+                continue
 
             one_words = one_words[:min_length]
             two_words = two_words[:min_length]
