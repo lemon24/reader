@@ -151,6 +151,40 @@ def test_duplicates_change_during_update(
     assert {e.id for e in reader.get_entries()} == {'1, 1', '1, 3'}
 
 
+@pytest.mark.parametrize('add_third_entry', [False, True])
+def test_feed_duplicates_dont_flip_flop(
+    reader, with_plugin, parser, allow_short_content, add_third_entry
+):
+    # https://github.com/lemon24/reader/issues/340
+    # TODO: also test the .dedupe.once behavior
+
+    reader.add_feed(parser.feed(1))
+
+    common_attrs = dict(title='title', summary='summary')
+
+    one = parser.entry(1, 1, datetime(2010, 1, 2), **common_attrs)
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    parser.entry(1, 2, datetime(2010, 1, 3), **common_attrs)
+    if add_third_entry:
+        parser.entry(1, 3, datetime(2010, 1, 1), **common_attrs)
+    reader._now = lambda: datetime(2010, 1, 2)
+    reader.update_feeds()
+    # latest published remains
+    assert {e.id for e in reader.get_entries()} == {'1, 2'}
+
+    reader._now = lambda: datetime(2010, 1, 3)
+    reader.update_feeds()
+    # shouldn't flip flop
+    assert {e.id for e in reader.get_entries()} == {'1, 2'}
+
+    reader._now = lambda: datetime(2010, 1, 4)
+    reader.update_feeds()
+    # shouldn't flip flop
+    assert {e.id for e in reader.get_entries()} == {'1, 2'}
+
+
 @parametrize_dict(
     'tags, expected',
     {
@@ -542,69 +576,6 @@ def test_recent_sort_copying(reader, parser, allow_short_content):
 
     actual_recent_sort = reader._storage.get_entry_recent_sort(four.resource_id)
     assert actual_recent_sort == datetime(2010, 1, 10)
-
-
-@pytest.mark.parametrize('update_after_one', [False, True])
-@pytest.mark.parametrize('with_dates, expected_id', [(False, '3'), (True, '2')])
-def test_duplicates_in_feed(
-    reader,
-    with_plugin,
-    parser,
-    allow_short_content,
-    update_after_one,
-    with_dates,
-    expected_id,
-):
-    reader.add_feed(parser.feed(1))
-    # force recent_sort logic to use current times, not updated/published
-    reader.update_feeds()
-
-    one = parser.entry(1, '1', title='title', summary='summary')
-    if update_after_one:
-        reader._now = lambda: datetime(2009, 12, 1)
-        reader.update_feeds()
-        parser.entries[1].clear()
-        reader.mark_entry_as_read(one)
-        reader.mark_entry_as_important(one)
-        reader.set_tag(one, 'key', 'value')
-
-    parser.entry(
-        1,
-        '2',
-        title='title',
-        summary='summary',
-        updated=datetime(2010, 1, 2) if with_dates else None,
-    )
-    parser.entry(
-        1,
-        '3',
-        title='title',
-        summary='summary',
-        published=datetime(2010, 1, 1) if with_dates else None,
-    )
-
-    reader._now = lambda: datetime(2010, 1, 2, 12)
-
-    # shouldn't fail
-    reader.update_feeds()
-    assert {e.id for e in reader.get_entries()} == {expected_id}
-
-    reader._now = lambda: datetime(2010, 1, 2, 18)
-
-    # shouldn't flip flop
-    # https://github.com/lemon24/reader/issues/340
-    reader.update_feeds()
-    assert {e.id for e in reader.get_entries()} == {expected_id}
-
-    entry = reader.get_entry(('1', expected_id))
-    rs = reader._storage.get_entry_recent_sort(entry.resource_id)
-    if update_after_one:
-        assert entry.read
-        assert entry.important
-        assert dict(reader.get_tags(entry)) == {'key': 'value'}
-        assert rs == datetime(2009, 12, 1)
-    else:
-        assert rs == datetime(2010, 1, 2, 12)
 
 
 @pytest.mark.parametrize('tokenize', [tokenize_title, tokenize_content])
