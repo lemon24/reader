@@ -196,7 +196,6 @@ class Deduplicator:
         # if optimizing for memory, this should get only metadata (no content)
         all = list(self.reader.get_entries(feed=self.feed))
         all_by_id = {e.id: e for e in all}
-
         # if optimizing for memory, this should wrap the method (with content)
         get_entry = all_by_id.get
 
@@ -213,11 +212,11 @@ class Deduplicator:
             log.info("entry_dedupe: %r for feed %r", config.tag, self.feed.url)
             new = all
 
-        for ids in group_entries(all, new, config.groupers, is_duplicate):
-            assert len(ids) > 1, ids
-            group = [all_by_id[id] for id in ids]
+        for group in group_entries(all, new, config.groupers, is_duplicate):
+            assert len(group) > 1, [e.id for e in group]
             # TODO: if latest_key is the same, preserve the 'recent' order
-            entry, *duplicates = sorted(group, key=config.latest_key, reverse=True)
+            group.sort(key=config.latest_key, reverse=True)
+            entry, *duplicates = group
             dedupe_entries(self.reader, entry, duplicates)
 
             if not config.tag:
@@ -261,86 +260,82 @@ class Deduplicator:
 
 # heuristics for finding duplicates
 
-HUGE_GROUP_SIZE = 16
 MAX_GROUP_SIZE = 4
-MASS_DUPLICATION_MIN_PAIRS = 4
 
 
 def group_entries(all_entries, new_entries, groupers, is_duplicate):
     all = {e.id: e for e in all_entries}
     new = {e.id: e for e in new_entries}
-    duplicates = DisjointSet()
+    duplicates = []
 
     for grouper in groupers:
-        grouper_duplicates = DisjointSet()
+        grouper_duplicates = []
 
         log.debug("grouper %s: all=%d new=%d", grouper.__name__, len(all), len(new))
 
-        for group in grouper(all.values(), new.values()):
+        groups = list(grouper(all.values(), new.values()))
+        counts = Counter(map(len, groups))
+        log.debug("grouper %s: group count by size %r", grouper.__name__, dict(counts))
+
+        for group in groups:
             if len(group) == 1:
                 continue
 
+            # FIXME: unclear why MAX_GROUP_SIZE shouldn't be exactly 2 (or why not limit matches afterwards)
+
             # grouper is not a good heuristic for this group, skip it
-            if len(group) > HUGE_GROUP_SIZE:  # pragma: no cover
-                log.info(
-                    "entry_dedupe: feed %r: found group > %r, skipping; first title: %s",
-                    group[0].feed_url,
-                    HUGE_GROUP_SIZE,
-                    group[0].title,
+            if len(group) > MAX_GROUP_SIZE:  # pragma: no cover
+                log.debug(
+                    "grouper %s: found group of size %d > %d, skipping: %r",
+                    grouper.__name__,
+                    len(group),
+                    MAX_GROUP_SIZE,
+                    [e.id for e in group],
                 )
                 continue
 
-            # further constrain big groups to a fixed size,
-            # so the combinations() below don't blow up
-            group.sort(key=lambda e: e.added, reverse=True)
-            group = group[:MAX_GROUP_SIZE]
+            # TODO: is DisjointSet required? would sorting group be enough?
 
+            ds = DisjointSet()
             for one, two in itertools.combinations(group, 2):
                 if is_duplicate(one, two):
-                    grouper_duplicates.add(one.id, two.id)
+                    ds.add(one.id, two.id)
 
-        groups = grouper_duplicates.subsets()
-        counts = Counter(map(len, groups))
+            for subgroup_ids in ds.subsets():
+                subgroup = [all[id] for id in subgroup_ids]
 
-        log.debug("grouper %s: found %r", grouper.__name__, groups)
-        if groups:
+                grouper_duplicates.append(subgroup)
+
+                # don't use these entries with other groupers
+                for e in subgroup:
+                    all.pop(e.id, None)
+                    new.pop(e.id, None)
+
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                "grouper %s: found %r",
+                grouper.__name__,
+                [[e.id for e in ds] for ds in grouper_duplicates],
+            )
+        if grouper_duplicates:
             log.info(
-                "grouper %s: group count by size %r", grouper.__name__, dict(counts)
+                "grouper %s: found %d duplicate groups",
+                grouper.__name__,
+                len(grouper_duplicates),
             )
 
-        for group in groups:
-            duplicates.add(*group)
+        duplicates.extend(grouper_duplicates)
 
-            # lots of entries were duplicated in this specific way,
-            # don't check other heuristics for the new entries, and
-            # don't check remaining new entries against the old entries
-            #
-            # consequence: for a few new entries or a no-op .dedupe.once,
-            # we end up going through *all* heuristics for *all* entries,
-            # which may be slow
-            #
-            if counts[2] >= MASS_DUPLICATION_MIN_PAIRS:
-                for eid in group:
-                    new.pop(eid, None)
-                    all.pop(eid, None)
-
-        # we found duplicates for all the new entries,
-        # no need to try additional heuristics
         if not new:
             log.debug("no new entries remaining, not trying other groupers")
             break
     else:
         log.debug("no groupers remaining: all=%d new=%d", len(all), len(new))
 
-    groups = duplicates.subsets()
-    if groups:
-        feed_url = all_entries[0].feed_url
-        counts = Counter(map(len, groups))
-        log.info(
-            "entry_dedupe: feed %r: group count by size %r", feed_url, dict(counts)
-        )
+    if duplicates:
+        log.info("found %d duplicate groups", len(duplicates))
 
-    return groups
+    return duplicates
 
 
 def title_grouper(entries, new_entries):
@@ -479,12 +474,11 @@ class Config:
     # FIXME (#371): some groupers disabled because of false positives
     # https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
     groupers = [
-        title_grouper,
         # link_grouper,
+        title_grouper,
         # published_grouper,
         # title_strip_prefix_grouper,
         # published_day_grouper,
-        # title_similarity_grouper,
     ]
 
     is_duplicate = staticmethod(is_duplicate_entry)

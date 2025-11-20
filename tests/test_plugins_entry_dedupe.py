@@ -47,7 +47,7 @@ def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkey
     reader.add_feed(parser.feed(1))
 
     # increase this slightly to allow for published(-day) in the same test
-    monkeypatch.setattr(entry_dedupe, 'MAX_GROUP_SIZE', entry_dedupe.MAX_GROUP_SIZE + 1)
+    monkeypatch.setattr(entry_dedupe, 'MAX_GROUP_SIZE', 10)
 
     common_attrs = dict(
         updated=datetime(2010, 1, 1, 2, 3, 4),
@@ -769,6 +769,7 @@ def test_common_prefixes():
         ('abc', 'a', [['a']]),
         ('aAb', 'a', [['a', 'A']]),
         ('abc', '', []),
+        ('', 'abc', []),
         (['a', ''], 'a', [['a']]),
     ],
 )
