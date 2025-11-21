@@ -224,7 +224,7 @@ def test_dedupe_once(reader, parser, allow_short_content, tags, expected):
 
 @pytest.mark.parametrize(
     'tag, expected',
-    [(None, 'new-pub'), ('once', 'new-last-upd'), ('once.title', 'new-last-upd')],
+    [(None, 'new-pub'), ('once', 'entry'), ('once.title', 'entry')],
 )
 def test_dedupe_once_order(reader, parser, allow_short_content, tag, expected):
     feed = parser.feed(1)
@@ -238,14 +238,14 @@ def test_dedupe_once_order(reader, parser, allow_short_content, tag, expected):
     reader.update_feeds()
 
     parser.entry(1, 'new-last-upd', datetime(2010, 1, 1), **common_attrs)
-    reader._now = lambda: datetime(2010, 1, 3)
+    reader._now = lambda: datetime(2010, 1, 2)
     reader.update_feeds()
 
     if not tag:
         init_reader(reader)
 
     parser.entry(1, 'entry', datetime(2010, 1, 2), **common_attrs)
-    reader._now = lambda: datetime(2010, 1, 2)
+    reader._now = lambda: datetime(2010, 1, 3)
     reader.update_feeds()
 
     if tag:
