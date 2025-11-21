@@ -380,12 +380,12 @@ def normalize_url(url):
     return url._replace(scheme=scheme, netloc=netloc, path=path).geturl()
 
 
-def published_grouper(entries, new_entries):  # pragma: no cover
+def published_grouper(entries, new_entries):
     def key(e):
         dt = e.published or e.updated
         if not dt:
             return None
-        return dt.isoformat(timespec='minutes')
+        return dt.isoformat(timespec='seconds')
 
     return group_by(key, entries, new_entries)
 
