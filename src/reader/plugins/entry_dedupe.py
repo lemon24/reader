@@ -168,7 +168,6 @@ from urllib.parse import urlparse
 from reader._storage._html_utils import strip_html
 from reader._utils import BetterStrPartial as partial
 from reader.exceptions import EntryNotFoundError
-from reader.types import EntryUpdateStatus
 
 
 log = logging.getLogger(__name__)
@@ -178,14 +177,7 @@ ENTRY_TAG = 'dedupe'
 
 
 def init_reader(reader):
-    reader.after_entry_update_hooks.append(after_entry_update)
     reader.after_feed_update_hooks.append(after_feed_update)
-
-
-def after_entry_update(reader, entry, status, *, dry_run=False):
-    if status is EntryUpdateStatus.MODIFIED:
-        return
-    reader.set_tag(entry, reader.make_reader_reserved_name(ENTRY_TAG))
 
 
 def after_feed_update(reader, feed):
@@ -194,17 +186,15 @@ def after_feed_update(reader, feed):
 
 class Deduplicator:
 
-    def __init__(self, reader, feed):
+    def __init__(self, reader, feed_url):
         self.reader = reader
-        self.feed = feed
+        self.feed_url = feed_url
 
     def deduplicate(self):
         config = self.get_config()
 
         # if optimizing for memory, this should get only metadata (no content)
-        get_entries = partial(self.reader.get_entries, feed=self.feed)
-
-        all = list(get_entries())
+        all = list(self.reader.get_entries(feed=self.feed))
         all_by_id = {e.id: e for e in all}
 
         # if optimizing for memory, this should wrap the method (with content)
@@ -218,9 +208,9 @@ class Deduplicator:
             return is_duplicate_by_id(one.id, two.id)
 
         if not config.tag:
-            new = get_entries(tags=[self.entry_request_tag])
+            new = [e for e in all if e.added == self.feed.last_updated]
         else:
-            log.info("entry_dedupe: %r for feed %r", config.tag, self.feed)
+            log.info("entry_dedupe: %r for feed %r", config.tag, self.feed.url)
             new = all
 
         for ids in group_entries(all, new, config.groupers, is_duplicate):
@@ -235,6 +225,10 @@ class Deduplicator:
 
         if config.tag:
             self.clear_feed_request()
+
+    @cached_property
+    def feed(self):
+        return self.reader.get_feed(self.feed_url)
 
     @cached_property
     def feed_tags(self):
