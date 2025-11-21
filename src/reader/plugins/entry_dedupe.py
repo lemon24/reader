@@ -342,7 +342,9 @@ def title_grouper(entries, new_entries):
     return group_by(lambda e: tokenize_title(e.title), entries, new_entries)
 
 
-def title_strip_prefix_grouper(entries, new_entries):  # pragma: no cover
+def title_strip_prefix_grouper(entries, new_entries):
+    # FIXME: only strip new / only use prefixes in new but not in old!
+
     documents = [tokenize_title(e.title) for e in entries]
 
     prefixes = map(' '.join, common_prefixes(documents))
@@ -355,34 +357,11 @@ def title_strip_prefix_grouper(entries, new_entries):  # pragma: no cover
     return group_by(key, entries, new_entries)
 
 
-def title_similarity_grouper(entries, new_entries):  # pragma: no cover
-    n = 2
-    pad = True
-    threshold = 0.5
-
-    for one in new_entries:
-        if not one.title:  # pragma: no cover
-            continue
-        for two in entries:
-            if one.id == two.id:
-                continue
-            if not two.title:  # pragma: no cover
-                continue
-
-            similarity = jaccard_similarity(
-                ngrams(' '.join(tokenize_title(one.title)), n, pad=pad),
-                ngrams(' '.join(tokenize_title(two.title)), n, pad=pad),
-            )
-
-            if similarity >= threshold:
-                yield [one, two]
-
-
-def link_grouper(entries, new_entries):  # pragma: no cover
+def link_grouper(entries, new_entries):
     return group_by(lambda e: normalize_url(e.link), entries, new_entries)
 
 
-def normalize_url(url):  # pragma: no cover
+def normalize_url(url):
     if not url:
         return None
 
@@ -411,7 +390,7 @@ def published_grouper(entries, new_entries):  # pragma: no cover
     return group_by(key, entries, new_entries)
 
 
-def published_day_grouper(entries, new_entries):  # pragma: no cover
+def published_day_grouper(entries, new_entries):
     def key(e):
         dt = e.published or e.updated
         if not dt:
@@ -465,20 +444,18 @@ def _content_fields(entry):
     return [tokenize_content(s) for s in rv]
 
 
-_DEFAULT_UPDATED = datetime(1970, 1, 1, tzinfo=timezone.utc)
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 class Config:
     tag = None
 
-    # FIXME (#371): some groupers disabled because of false positives
-    # https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
     groupers = [
-        # link_grouper,
+        link_grouper,
         title_grouper,
-        # published_grouper,
-        # title_strip_prefix_grouper,
-        # published_day_grouper,
+        published_grouper,
+        title_strip_prefix_grouper,
+        published_day_grouper,
     ]
 
     is_duplicate = staticmethod(is_duplicate_entry)
@@ -498,7 +475,7 @@ class Config:
         #
         # also see test_duplicates_in_feed / #340.
         #
-        return e.updated or e.published or _DEFAULT_UPDATED, e.id
+        return e.updated or e.published or _EPOCH, e.last_updated, e.id
 
 
 class OnceConfig(Config):

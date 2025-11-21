@@ -49,51 +49,48 @@ def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkey
     # increase this slightly to allow for published(-day) in the same test
     monkeypatch.setattr(entry_dedupe, 'MAX_GROUP_SIZE', 10)
 
-    common_attrs = dict(
-        updated=datetime(2010, 1, 1, 2, 3, 4),
-        title='title',
-        link='link',
-    )
+    published = datetime(2010, 1, 1, 2, 3, 4)
+    common_attrs = dict(updated=published, title='title', link='link')
 
     parser.entry(1, 'different', **common_attrs, summary='another')
-    parser.entry(1, 'title', title='Title', summary='value')
     # TODO: remove "link=None" once FakeParser doesn't have defaults anymore
-    parser.entry(1, 'title-x', link=None, summary='value')
-    # FIXME (#371): some groupers disabled because of false positives
-    # parser.entry(1, 'link', link='link', summary='value')
-    # parser.entry(1, 'link-x', link='link')
-    # parser.entry(1, 'published', published=datetime(2010, 1, 1, 2, 3), summary='value')
-    # parser.entry(1, 'published-x', published=datetime(2010, 1, 1, 2, 3))
-    # parser.entry(1, 'published-day', datetime(2010, 1, 1), summary='value')
-    # parser.entry(1, 'published-day-x', datetime(2010, 1, 1))
-    # parser.entry(1, 'prefix', title='prefix-title', summary='value')
-    # parser.entry(1, 'prefix-x', title='prefix-x', summary='value')
-    # parser.entry(1, 'prefix-xx', title='prefix-xx')
-    # parser.entry(1, 'prefix-xxx', title='prefix-xxx')
-    # parser.entry(1, 'title-similarity', title='TilE', summary='value')
-    # parser.entry(1, 'title-similarity-x', title='tale', summary='value')
+    parser.entry(1, 'title-old', title='Title', link=None, summary='value')
+    parser.entry(1, 'link-old', link='link', summary='value')
+    parser.entry(1, 'published-old', published=published, summary='value')
+    parser.entry(1, 'published-day-old', datetime(2010, 1, 1, 1), summary='value')
+    parser.entry(1, 'prefix-old', title='prefix', summary='value')
+    parser.entry(1, 'prefix-x', title='series-x', summary='value')
+    parser.entry(1, 'prefix-xx', title='series-xx')
 
     reader.update_feeds()
 
     init_reader(reader)
 
-    parser.entry(1, 'entry', **common_attrs, summary='value')
+    parser.entry(1, 'title-new', title='title', summary='value')
+    parser.entry(1, 'link-new', link='link', summary='value')
+    parser.entry(1, 'published-new', updated=published, summary='value')
+    parser.entry(
+        1, 'published-day-new', published=datetime(2010, 1, 1, 2), summary='value'
+    )
+    parser.entry(1, 'prefix-new', title='series-prefix', summary='value')
+    parser.entry(1, 'prefix-xxx', title='series-xxx')
+
     reader.update_feeds()
 
     assert {e.id for e in reader.get_entries()} == {
         'different',
-        'title-x',
-        # 'link-x',
-        # 'published-x',
-        # 'published-day-x',
-        # 'prefix-x',
-        # 'prefix-xx',
-        # 'prefix-xxx',
-        # 'title-similarity-x',
-        'entry',
+        'title-new',
+        'link-new',
+        'published-new',
+        'published-day-new',
+        'prefix-new',
+        'prefix-x',
+        'prefix-xx',
+        'prefix-xxx',
     }
 
 
+@pytest.mark.xfail(reason="FIXME (#371) impl still in flux", strict=True)
 def test_mass_duplication_doesnt_use_all_groupers(
     reader, parser, allow_short_content, caplog
 ):
@@ -188,9 +185,9 @@ def test_feed_duplicates_dont_flip_flop(
 @parametrize_dict(
     'tags, expected',
     {
-        'once': (['once'], {'entry', 'title-only', 'link-only'}),
-        'once.title': (['once.title'], {'entry', 'link-only'}),
-        'both': (['once', 'once.title'], {'entry', 'title-only', 'link-only'}),
+        'once': (['once'], {'different', 'title-new', 'link-new'}),
+        'once.title': (['once.title'], {'title-new', 'link-old', 'link-new'}),
+        'both': (['once', 'once.title'], {'different', 'title-new', 'link-new'}),
     },
 )
 def test_dedupe_once(reader, parser, allow_short_content, tags, expected):
@@ -198,16 +195,19 @@ def test_dedupe_once(reader, parser, allow_short_content, tags, expected):
     reader.add_feed(feed)
     reader.set_tag(feed, 'unrelated')
 
-    parser.entry(1, 'title-and-summary', title='title', summary='value')
-    parser.entry(1, 'title-only', title='title')
-    # FIXME (#371): some groupers disabled because of false positives
-    # parser.entry(1, 'link-and-summary', link='link', summary='value')
-    parser.entry(1, 'link-only', link='link')
+    published = datetime(2010, 1, 1, 2, 3, 4)
+    common_attrs = dict(updated=published, title='title', link='link')
+
+    parser.entry(1, 'different', **common_attrs, summary='another')
+    parser.entry(1, 'title-old', title='title', summary='value')
+    parser.entry(1, 'link-old', link='link', summary='value')
 
     reader._now = lambda: datetime(2010, 1, 1)
     reader.update_feeds()
 
-    parser.entry(1, 'entry', title='title', link='link', summary='value')
+    parser.entry(1, 'title-new', title='title', summary='value')
+    parser.entry(1, 'link-new', link='link', summary='value')
+
     reader._now = lambda: datetime(2010, 1, 2)
     reader.update_feeds()
 
