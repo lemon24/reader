@@ -492,10 +492,8 @@ class OnceTitleConfig(OnceConfig):
         return [title_grouper, self.title_strip_prefix_grouper]
 
     def is_duplicate(self, one, two):
-        # TODO: "return True" may be enough (beware of None titles)
-        if not one.title or not two.title:  # pragma: no cover
-            return False
-        return self.strip_title(one.title) == self.strip_title(two.title)
+        # title is enough to tell duplicates apart
+        return True
 
 
 # ordered by strictness (strictest tag first)
@@ -635,7 +633,7 @@ _TOKEN_RE = re.compile(
 
 
 def tokenize(s, preprocessor=lambda x: x):
-    if s is None:  # pragma: no cover
+    if s is None:
         return ()
     s = preprocessor(s)
     s = strip_accents(s)

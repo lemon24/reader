@@ -50,7 +50,8 @@ def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkey
     common_attrs = dict(updated=published, title='title', link='link')
 
     parser.entry(1, 'different', **common_attrs, summary='another')
-    # TODO: remove "link=None" once FakeParser doesn't have defaults anymore
+    # TODO: remove "title/link=None" once FakeParser doesn't have defaults anymore
+    parser.entry(1, 'none', title=None, link=None)
     parser.entry(1, 'title-old', title='Title', link=None, summary='value')
     parser.entry(1, 'link-old', link='link', summary='value')
     parser.entry(1, 'published-old', published=published, summary='value')
@@ -76,6 +77,7 @@ def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkey
 
     assert {e.id for e in reader.get_entries()} == {
         'different',
+        'none',
         'title-new',
         'link-new',
         'published-new',
