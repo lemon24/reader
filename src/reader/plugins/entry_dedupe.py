@@ -197,16 +197,9 @@ class Deduplicator:
         # if optimizing for memory, this should wrap the method (with content)
         get_entry = all_by_id.get
 
-        config = self.config_cls(self.feed, all)
+        config = self.config_cls(self.feed, all, get_entry)
         if config.tag:
             log.info("entry_dedupe: %r for feed %r", config.tag, self.feed.url)
-
-        @cache
-        def is_duplicate_by_id(one, two):
-            return config.is_duplicate(get_entry(one), get_entry(two))
-
-        def is_duplicate(one, two):
-            return is_duplicate_by_id(one.id, two.id)
 
         for group in config.group_entries():
             assert len(group) > 1, [e.id for e in group]
@@ -256,9 +249,10 @@ class Config:
 
     max_group_size = 4
 
-    def __init__(self, feed, entries):
+    def __init__(self, feed, entries, get_entry):
         self.feed = feed
         self.entries = entries
+        self.get_entry = get_entry
 
     def group_entries(self):
         all = {e.id: e for e in self.entries}
@@ -358,8 +352,17 @@ class Config:
     def strip_title(self):
         return StripPrefixTokenizer((e.title for e in self.entries), tokenize_title)
 
-    def is_duplicate(self, one, two):
-        return is_duplicate_entry(one, two)
+    @cached_property
+    def is_duplicate(self):
+
+        @cache
+        def is_duplicate_by_id(one, two):
+            return is_duplicate_entry(self.get_entry(one), self.get_entry(two))
+
+        def is_duplicate(one, two):
+            return is_duplicate_by_id(one.id, two.id)
+
+        return is_duplicate
 
     @staticmethod
     def latest_key(e):
