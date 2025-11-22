@@ -344,17 +344,8 @@ def title_grouper(entries, new_entries):
 
 def title_strip_prefix_grouper(entries, new_entries):
     # FIXME: only strip new / only use prefixes in new but not in old!
-
-    documents = [tokenize_title(e.title) for e in entries]
-
-    prefixes = map(' '.join, common_prefixes(documents))
-    pattern = f"^({'|'.join(map(re.escape, sorted(prefixes, key=len)))}) "
-
-    def key(e):
-        title = ' '.join(tokenize_title(e.title))
-        return re.sub(pattern, '', title) or title
-
-    return group_by(key, entries, new_entries)
+    strip = StripPrefixTokenizer((e.title for e in entries), tokenize_title)
+    return group_by(lambda e: strip(e.title), entries, new_entries)
 
 
 def link_grouper(entries, new_entries):
@@ -736,6 +727,20 @@ def ngrams(iterable, n, pad=False, pad_symbol=None):
         window.append(item)
         yield tuple(window)
         del window[0]
+
+
+class StripPrefixTokenizer:
+
+    def __init__(self, documents, tokenize, **kwargs):
+        self.tokenize = tokenize
+        tokenized_documents = map(tokenize, documents)
+        tokenized_prefixes = common_prefixes(tokenized_documents, **kwargs)
+        prefixes = sorted(map(' '.join, tokenized_prefixes), key=len)
+        self.pattern = re.compile(f"^({'|'.join(map(re.escape, prefixes))}) ")
+
+    def __call__(self, s):
+        s = ' '.join(self.tokenize(s))
+        return self.pattern.sub('', s) or s
 
 
 def common_prefixes(documents, *, min_df=4, min_length=5):
