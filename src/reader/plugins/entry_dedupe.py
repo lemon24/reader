@@ -413,15 +413,23 @@ class OnceTitleConfig(OnceConfig):
 
     @property
     def groupers(self):
-        return [title_grouper, self.title_strip_prefix_grouper]
+        return [title_grouper]
 
     def is_duplicate(self, one, two):
         # title is enough to tell duplicates apart
         return True
 
 
+class OnceTitlePrefixConfig(OnceTitleConfig):
+    tag = f'{TAG_PREFIX}.once.title.prefix'
+
+    @property
+    def groupers(self):
+        return [title_grouper, self.title_strip_prefix_grouper]
+
+
 # ordered by strictness (strictest tag first)
-CONFIGS = [Config, OnceConfig, OnceTitleConfig]
+CONFIGS = [Config, OnceConfig, OnceTitleConfig, OnceTitlePrefixConfig]
 
 
 def title_grouper(entries, new_entries):

@@ -187,7 +187,9 @@ def test_feed_duplicates_dont_flip_flop(
         # for .dedupe.once, content matters
         'once': (['once'], {'title-only-old'}),
         # for .dedupe.once.title, duplicates must be pairs
-        'once.title': (['once.title'], {'title-old', 'link-old'}),
+        'once.title': (['once.title'], {'title-old', 'link-old', 'prefix-old'}),
+        # for .dedupe.once.title.prefix, common prefixes should be stripped
+        'once.title.prefix': (['once.title.prefix'], {'title-old', 'link-old'}),
         # .dedupe.once has priority
         'both': (['once', 'once.title'], {'title-only-old'}),
     },
