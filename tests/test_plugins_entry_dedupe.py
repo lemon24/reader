@@ -536,8 +536,6 @@ MERGE_TAGS_DATA = [
             '.duplicate.3.of.tag': 3,
         },
     ),
-    # duplicates have .dedupe set
-    ([{'.dedupe': None}, {'.dedupe': 2}, {}], {}),
 ]
 
 

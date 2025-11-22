@@ -173,7 +173,7 @@ from reader.exceptions import EntryNotFoundError
 log = logging.getLogger(__name__)
 
 
-ENTRY_TAG = 'dedupe'
+TAG_PREFIX = 'dedupe'
 
 
 def init_reader(reader):
@@ -219,9 +219,6 @@ class Deduplicator:
             entry, *duplicates = group
             dedupe_entries(self.reader, entry, duplicates)
 
-            if not config.tag:
-                self.clear_entry_request(entry)
-
         if config.tag:
             self.clear_feed_request()
 
@@ -249,13 +246,6 @@ class Deduplicator:
             tag = self.reader.make_reader_reserved_name(config.tag)
             if tag in self.feed_tags:
                 self.reader.delete_tag(self.feed, tag, missing_ok=True)
-
-    @cached_property
-    def entry_request_tag(self):
-        return self.reader.make_reader_reserved_name(ENTRY_TAG)
-
-    def clear_entry_request(self, entry):
-        self.reader.delete_tag(entry, self.entry_request_tag, missing_ok=True)
 
 
 # heuristics for finding duplicates
@@ -470,7 +460,7 @@ class Config:
 
 
 class OnceConfig(Config):
-    tag = f'{ENTRY_TAG}.once'
+    tag = f'{TAG_PREFIX}.once'
 
     @staticmethod
     def latest_key(e):
@@ -479,7 +469,7 @@ class OnceConfig(Config):
 
 
 class OnceTitleConfig(OnceConfig):
-    tag = f'{ENTRY_TAG}.once.title'
+    tag = f'{TAG_PREFIX}.once.title'
     groupers = [title_grouper]
 
     @staticmethod
@@ -573,7 +563,6 @@ def merge_flags(entry, duplicates):
 def merge_tags(make_reserved, entry, duplicates):
     prefix = re.escape(make_reserved(''))
     duplicate_tag_re = re.compile(rf"^{prefix}duplicate\.\d+\.of\.(.*)$")
-    entry_request_tag = make_reserved(ENTRY_TAG)
 
     indexes = defaultdict(int)  # noqa: B910
     seen_values = defaultdict(list)
@@ -585,9 +574,6 @@ def merge_tags(make_reserved, entry, duplicates):
 
     for tags in duplicates:
         for key, value in tags.items():
-            if key == entry_request_tag:
-                continue
-
             if match := duplicate_tag_re.match(key):
                 key = match.group(1)
 
