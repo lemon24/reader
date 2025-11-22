@@ -395,6 +395,10 @@ class OnceConfig(Config):
 class OnceTitleConfig(OnceConfig):
     tag = f'{TAG_PREFIX}.once.title'
 
+    # false positives are more likely when not comparing entry content;
+    # if a group has more than two entries, something weird is going on
+    max_group_size = 2
+
     @property
     def groupers(self):
         return [title_grouper, self.title_strip_prefix_grouper]

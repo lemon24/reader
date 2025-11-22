@@ -184,12 +184,12 @@ def test_feed_duplicates_dont_flip_flop(
 @parametrize_dict(
     'tags, expected_extra',
     {
-        # .dedupe.once, content matters
-        'once': (['once'], {'different', 'title-only-old'}),
-        # for .dedupe.once.title, only title matters
-        'once.title': (['once.title'], {'link-old'}),
+        # for .dedupe.once, content matters
+        'once': (['once'], {'title-only-old'}),
+        # for .dedupe.once.title, duplicates must be pairs
+        'once.title': (['once.title'], {'title-old', 'link-old'}),
         # .dedupe.once has priority
-        'both': (['once', 'once.title'], {'different', 'title-only-old'}),
+        'both': (['once', 'once.title'], {'title-only-old'}),
     },
 )
 def test_dedupe_once(reader, parser, allow_short_content, tags, expected_extra):
@@ -228,6 +228,7 @@ def test_dedupe_once(reader, parser, allow_short_content, tags, expected_extra):
     reader.update_feeds()
 
     assert {e.id for e in reader.get_entries()} == expected_extra | {
+        'different',
         'title-new',
         'title-only-new',
         'link-new',
@@ -239,10 +240,7 @@ def test_dedupe_once(reader, parser, allow_short_content, tags, expected_extra):
     assert set(reader.get_tag_keys(feed)) == {'unrelated'}
 
 
-@pytest.mark.parametrize(
-    'tag, expected',
-    [(None, 'new-pub'), ('once', 'entry'), ('once.title', 'entry')],
-)
+@pytest.mark.parametrize('tag, expected', [(None, 'new-pub'), ('once', 'entry')])
 def test_dedupe_once_order(reader, parser, allow_short_content, tag, expected):
     feed = parser.feed(1)
     reader.add_feed(feed)
