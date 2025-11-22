@@ -289,22 +289,21 @@ class Config:
                 ds = DisjointSet()
                 for one, two in itertools.combinations(group, 2):
                     if self.is_duplicate(one, two):
-                        ds.add(one.id, two.id)
+                        ds.add(one, two)
 
-                for subgroup_ids in ds.subsets():
-                    if len(subgroup_ids) > self.max_group_size:
+                for subgroup in ds.subsets():
+                    subgroup = sorted(subgroup, key=self.latest_key, reverse=True)
+
+                    if len(subgroup) > self.max_group_size:
                         log.debug(
                             "grouper %s: found group of size %d > %d, skipping: %r",
                             grouper.__name__,
-                            len(subgroup_ids),
+                            len(subgroup),
                             self.max_group_size,
-                            list(subgroup_ids),
+                            [e.id for e in subgroup],
                         )
                         continue
 
-                    subgroup = [all[id] for id in subgroup_ids]
-                    # TODO: if latest_key is the same, preserve the 'recent' order
-                    subgroup.sort(key=self.latest_key, reverse=True)
                     grouper_duplicates.append(subgroup)
 
                     # don't use these entries with other groupers
