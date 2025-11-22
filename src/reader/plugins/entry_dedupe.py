@@ -203,8 +203,6 @@ class Deduplicator:
 
         for group in config.group_entries():
             assert len(group) > 1, [e.id for e in group]
-            # TODO: if latest_key is the same, preserve the 'recent' order
-            group.sort(key=config.latest_key, reverse=True)
             entry, *duplicates = group
             dedupe_entries(self.reader, entry, duplicates)
 
@@ -305,7 +303,8 @@ class Config:
                         continue
 
                     subgroup = [all[id] for id in subgroup_ids]
-
+                    # TODO: if latest_key is the same, preserve the 'recent' order
+                    subgroup.sort(key=self.latest_key, reverse=True)
                     grouper_duplicates.append(subgroup)
 
                     # don't use these entries with other groupers
@@ -401,7 +400,7 @@ class OnceConfig(Config):
     @staticmethod
     def latest_key(e):
         # keep the latest entry, consider the rest duplicates
-        return e.last_updated
+        return e.last_updated, e.updated or e.published or _EPOCH, e.id
 
 
 class OnceTitleConfig(OnceConfig):
