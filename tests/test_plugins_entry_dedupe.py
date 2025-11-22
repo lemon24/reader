@@ -46,9 +46,6 @@ def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkey
 
     reader.add_feed(parser.feed(1))
 
-    # increase this slightly to allow for published(-day) in the same test
-    monkeypatch.setattr(entry_dedupe, 'MAX_GROUP_SIZE', 10)
-
     published = datetime(2010, 1, 1, 2, 3, 4)
     common_attrs = dict(updated=published, title='title', link='link')
 
@@ -183,14 +180,17 @@ def test_feed_duplicates_dont_flip_flop(
 
 
 @parametrize_dict(
-    'tags, expected',
+    'tags, expected_extra',
     {
-        'once': (['once'], {'different', 'title-new', 'link-new'}),
-        'once.title': (['once.title'], {'title-new', 'link-old', 'link-new'}),
-        'both': (['once', 'once.title'], {'different', 'title-new', 'link-new'}),
+        # .dedupe.once, content matters
+        'once': (['once'], {'different', 'title-only-old'}),
+        # for .dedupe.once.title, only title matters
+        'once.title': (['once.title'], {'link-old'}),
+        # .dedupe.once has priority
+        'both': (['once', 'once.title'], {'different', 'title-only-old'}),
     },
 )
-def test_dedupe_once(reader, parser, allow_short_content, tags, expected):
+def test_dedupe_once(reader, parser, allow_short_content, tags, expected_extra):
     feed = parser.feed(1)
     reader.add_feed(feed)
     reader.set_tag(feed, 'unrelated')
@@ -200,13 +200,20 @@ def test_dedupe_once(reader, parser, allow_short_content, tags, expected):
 
     parser.entry(1, 'different', **common_attrs, summary='another')
     parser.entry(1, 'title-old', title='title', summary='value')
+    parser.entry(1, 'title-only-old', title='only', summary='one')
     parser.entry(1, 'link-old', link='link', summary='value')
+    parser.entry(1, 'prefix-old', title='prefix', summary='value')
+    parser.entry(1, 'prefix-x', title='series-x', summary='value')
+    parser.entry(1, 'prefix-xx', title='series-xx')
 
     reader._now = lambda: datetime(2010, 1, 1)
     reader.update_feeds()
 
     parser.entry(1, 'title-new', title='title', summary='value')
+    parser.entry(1, 'title-only-new', title='only', summary='two')
     parser.entry(1, 'link-new', link='link', summary='value')
+    parser.entry(1, 'prefix-new', title='series-prefix', summary='value')
+    parser.entry(1, 'prefix-xxx', title='series-xxx')
 
     reader._now = lambda: datetime(2010, 1, 2)
     reader.update_feeds()
@@ -218,7 +225,15 @@ def test_dedupe_once(reader, parser, allow_short_content, tags, expected):
     reader._now = lambda: datetime(2010, 1, 3)
     reader.update_feeds()
 
-    assert {e.id for e in reader.get_entries()} == expected
+    assert {e.id for e in reader.get_entries()} == expected_extra | {
+        'title-new',
+        'title-only-new',
+        'link-new',
+        'prefix-new',
+        'prefix-x',
+        'prefix-xx',
+        'prefix-xxx',
+    }
     assert set(reader.get_tag_keys(feed)) == {'unrelated'}
 
 

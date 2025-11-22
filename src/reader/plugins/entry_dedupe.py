@@ -331,12 +331,6 @@ def title_grouper(entries, new_entries):
     return group_by(lambda e: tokenize_title(e.title), entries, new_entries)
 
 
-def title_strip_prefix_grouper(entries, new_entries):
-    # FIXME: only strip new / only use prefixes in new but not in old!
-    strip = StripPrefixTokenizer((e.title for e in entries), tokenize_title)
-    return group_by(lambda e: strip(e.title), entries, new_entries)
-
-
 def link_grouper(entries, new_entries):
     return group_by(lambda e: normalize_url(e.link), entries, new_entries)
 
@@ -439,13 +433,23 @@ class Config:
     def new_entries(self):
         return [e for e in self.entries if e.added == self.feed.last_updated]
 
-    groupers = [
-        link_grouper,
-        title_grouper,
-        published_grouper,
-        title_strip_prefix_grouper,
-        published_day_grouper,
-    ]
+    @property
+    def groupers(self):
+        return [
+            link_grouper,
+            title_grouper,
+            published_grouper,
+            self.title_strip_prefix_grouper,
+            published_day_grouper,
+        ]
+
+    def title_strip_prefix_grouper(self, entries, new_entries):
+        # FIXME: only strip new / only use prefixes in new but not in old!
+        return group_by(lambda e: self.strip_title(e.title), entries, new_entries)
+
+    @cached_property
+    def strip_title(self):
+        return StripPrefixTokenizer((e.title for e in self.entries), tokenize_title)
 
     is_duplicate = staticmethod(is_duplicate_entry)
 
@@ -482,13 +486,16 @@ class OnceConfig(Config):
 
 class OnceTitleConfig(OnceConfig):
     tag = f'{TAG_PREFIX}.once.title'
-    groupers = [title_grouper]
 
-    @staticmethod
-    def is_duplicate(one, two):
+    @property
+    def groupers(self):
+        return [title_grouper, self.title_strip_prefix_grouper]
+
+    def is_duplicate(self, one, two):
+        # TODO: "return True" may be enough (beware of None titles)
         if not one.title or not two.title:  # pragma: no cover
             return False
-        return tokenize_title(one.title) == tokenize_title(two.title)
+        return self.strip_title(one.title) == self.strip_title(two.title)
 
 
 # ordered by strictness (strictest tag first)
