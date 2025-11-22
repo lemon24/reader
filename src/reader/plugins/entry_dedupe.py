@@ -191,13 +191,15 @@ class Deduplicator:
         self.feed_url = feed_url
 
     def deduplicate(self):
-        config = self.get_config()
-
         # if optimizing for memory, this should get only metadata (no content)
         all = list(self.reader.get_entries(feed=self.feed))
         all_by_id = {e.id: e for e in all}
         # if optimizing for memory, this should wrap the method (with content)
         get_entry = all_by_id.get
+
+        config = self.config_cls(self.feed, all)
+        if config.tag:
+            log.info("entry_dedupe: %r for feed %r", config.tag, self.feed.url)
 
         @cache
         def is_duplicate_by_id(one, two):
@@ -206,13 +208,9 @@ class Deduplicator:
         def is_duplicate(one, two):
             return is_duplicate_by_id(one.id, two.id)
 
-        if not config.tag:
-            new = [e for e in all if e.added == self.feed.last_updated]
-        else:
-            log.info("entry_dedupe: %r for feed %r", config.tag, self.feed.url)
-            new = all
+        groups = group_entries(all, config.new_entries, config.groupers, is_duplicate)
 
-        for group in group_entries(all, new, config.groupers, is_duplicate):
+        for group in groups:
             assert len(group) > 1, [e.id for e in group]
             # TODO: if latest_key is the same, preserve the 'recent' order
             group.sort(key=config.latest_key, reverse=True)
@@ -230,7 +228,8 @@ class Deduplicator:
     def feed_tags(self):
         return frozenset(self.reader.get_tag_keys(self.feed))
 
-    def get_config(self):
+    @cached_property
+    def config_cls(self):
         for config in CONFIGS:
             if not config.tag:
                 continue
@@ -429,7 +428,16 @@ _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 class Config:
+
     tag = None
+
+    def __init__(self, feed, entries):
+        self.feed = feed
+        self.entries = entries
+
+    @cached_property
+    def new_entries(self):
+        return [e for e in self.entries if e.added == self.feed.last_updated]
 
     groupers = [
         link_grouper,
@@ -461,6 +469,10 @@ class Config:
 
 class OnceConfig(Config):
     tag = f'{TAG_PREFIX}.once'
+
+    @property
+    def new_entries(self):
+        return self.entries
 
     @staticmethod
     def latest_key(e):
