@@ -247,6 +247,7 @@ _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 class Config:
     tag = None
 
+    max_candidate_group_size = 4
     max_group_size = 4
 
     def __init__(self, feed, entries, get_entry):
@@ -274,15 +275,13 @@ class Config:
                 if len(group) == 1:
                     continue
 
-                # FIXME: unclear why max_group_size shouldn't be exactly 2 (or why not limit matches afterwards)
-
                 # grouper is not a good heuristic for this group, skip it
-                if len(group) > self.max_group_size:  # pragma: no cover
+                if len(group) > self.max_candidate_group_size:  # pragma: no cover
                     log.debug(
                         "grouper %s: found group of size %d > %d, skipping: %r",
                         grouper.__name__,
                         len(group),
-                        self.max_group_size,
+                        self.max_candidate_group_size,
                         [e.id for e in group],
                     )
                     continue
@@ -295,6 +294,16 @@ class Config:
                         ds.add(one.id, two.id)
 
                 for subgroup_ids in ds.subsets():
+                    if len(subgroup_ids) > self.max_group_size:
+                        log.debug(
+                            "grouper %s: found group of size %d > %d, skipping: %r",
+                            grouper.__name__,
+                            len(subgroup_ids),
+                            self.max_group_size,
+                            list(subgroup_ids),
+                        )
+                        continue
+
                     subgroup = [all[id] for id in subgroup_ids]
 
                     grouper_duplicates.append(subgroup)
