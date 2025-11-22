@@ -208,9 +208,7 @@ class Deduplicator:
         def is_duplicate(one, two):
             return is_duplicate_by_id(one.id, two.id)
 
-        groups = group_entries(all, config.new_entries, config.groupers, is_duplicate)
-
-        for group in groups:
+        for group in config.group_entries():
             assert len(group) > 1, [e.id for e in group]
             # TODO: if latest_key is the same, preserve the 'recent' order
             group.sort(key=config.latest_key, reverse=True)
@@ -249,82 +247,165 @@ class Deduplicator:
 
 # heuristics for finding duplicates
 
-MAX_GROUP_SIZE = 4
+
+_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
-def group_entries(all_entries, new_entries, groupers, is_duplicate):
-    all = {e.id: e for e in all_entries}
-    new = {e.id: e for e in new_entries}
-    duplicates = []
+class Config:
+    tag = None
 
-    for grouper in groupers:
-        grouper_duplicates = []
+    max_group_size = 4
 
-        log.debug("grouper %s: all=%d new=%d", grouper.__name__, len(all), len(new))
+    def __init__(self, feed, entries):
+        self.feed = feed
+        self.entries = entries
 
-        groups = list(grouper(all.values(), new.values()))
-        counts = Counter(map(len, groups))
-        log.debug("grouper %s: group count by size %r", grouper.__name__, dict(counts))
+    def group_entries(self):
+        all = {e.id: e for e in self.entries}
+        new = {e.id: e for e in self.new_entries}
+        duplicates = []
 
-        for group in groups:
-            if len(group) == 1:
-                continue
+        for grouper in self.groupers:
+            grouper_duplicates = []
 
-            # FIXME: unclear why MAX_GROUP_SIZE shouldn't be exactly 2 (or why not limit matches afterwards)
+            log.debug("grouper %s: all=%d new=%d", grouper.__name__, len(all), len(new))
 
-            # grouper is not a good heuristic for this group, skip it
-            if len(group) > MAX_GROUP_SIZE:  # pragma: no cover
-                log.debug(
-                    "grouper %s: found group of size %d > %d, skipping: %r",
-                    grouper.__name__,
-                    len(group),
-                    MAX_GROUP_SIZE,
-                    [e.id for e in group],
-                )
-                continue
-
-            # TODO: is DisjointSet required? would sorting group be enough?
-
-            ds = DisjointSet()
-            for one, two in itertools.combinations(group, 2):
-                if is_duplicate(one, two):
-                    ds.add(one.id, two.id)
-
-            for subgroup_ids in ds.subsets():
-                subgroup = [all[id] for id in subgroup_ids]
-
-                grouper_duplicates.append(subgroup)
-
-                # don't use these entries with other groupers
-                for e in subgroup:
-                    all.pop(e.id, None)
-                    new.pop(e.id, None)
-
-        if log.isEnabledFor(logging.DEBUG):
+            groups = list(grouper(all.values(), new.values()))
+            counts = Counter(map(len, groups))
             log.debug(
-                "grouper %s: found %r",
-                grouper.__name__,
-                [[e.id for e in ds] for ds in grouper_duplicates],
-            )
-        if grouper_duplicates:
-            log.info(
-                "grouper %s: found %d duplicate groups",
-                grouper.__name__,
-                len(grouper_duplicates),
+                "grouper %s: group count by size %r", grouper.__name__, dict(counts)
             )
 
-        duplicates.extend(grouper_duplicates)
+            for group in groups:
+                if len(group) == 1:
+                    continue
 
-        if not new:
-            log.debug("no new entries remaining, not trying other groupers")
-            break
-    else:
-        log.debug("no groupers remaining: all=%d new=%d", len(all), len(new))
+                # FIXME: unclear why max_group_size shouldn't be exactly 2 (or why not limit matches afterwards)
 
-    if duplicates:
-        log.info("found %d duplicate groups", len(duplicates))
+                # grouper is not a good heuristic for this group, skip it
+                if len(group) > self.max_group_size:  # pragma: no cover
+                    log.debug(
+                        "grouper %s: found group of size %d > %d, skipping: %r",
+                        grouper.__name__,
+                        len(group),
+                        self.max_group_size,
+                        [e.id for e in group],
+                    )
+                    continue
 
-    return duplicates
+                # TODO: is DisjointSet required? would sorting group be enough?
+
+                ds = DisjointSet()
+                for one, two in itertools.combinations(group, 2):
+                    if self.is_duplicate(one, two):
+                        ds.add(one.id, two.id)
+
+                for subgroup_ids in ds.subsets():
+                    subgroup = [all[id] for id in subgroup_ids]
+
+                    grouper_duplicates.append(subgroup)
+
+                    # don't use these entries with other groupers
+                    for e in subgroup:
+                        all.pop(e.id, None)
+                        new.pop(e.id, None)
+
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    "grouper %s: found %r",
+                    grouper.__name__,
+                    [[e.id for e in ds] for ds in grouper_duplicates],
+                )
+            if grouper_duplicates:
+                log.info(
+                    "grouper %s: found %d duplicate groups",
+                    grouper.__name__,
+                    len(grouper_duplicates),
+                )
+
+            duplicates.extend(grouper_duplicates)
+
+            if not new:
+                log.debug("no new entries remaining, not trying other groupers")
+                break
+        else:
+            log.debug("no groupers remaining: all=%d new=%d", len(all), len(new))
+
+        if duplicates:
+            log.info("found %d duplicate groups", len(duplicates))
+
+        return duplicates
+
+    @cached_property
+    def new_entries(self):
+        return [e for e in self.entries if e.added == self.feed.last_updated]
+
+    @property
+    def groupers(self):
+        return [
+            link_grouper,
+            title_grouper,
+            published_grouper,
+            self.title_strip_prefix_grouper,
+            published_day_grouper,
+        ]
+
+    def title_strip_prefix_grouper(self, entries, new_entries):
+        # FIXME: only strip new / only use prefixes in new but not in old!
+        return group_by(lambda e: self.strip_title(e.title), entries, new_entries)
+
+    @cached_property
+    def strip_title(self):
+        return StripPrefixTokenizer((e.title for e in self.entries), tokenize_title)
+
+    def is_duplicate(self, one, two):
+        return is_duplicate_entry(one, two)
+
+    @staticmethod
+    def latest_key(e):
+        # unlike OnceConfig, we cannot rely on e.last_updated,
+        # because for duplicates in the feed, we'd end up flip-flopping
+        # (on the first update, entry 1 is deleted and entry 2 remains;
+        # on the second update, entry 1 remains because it's new,
+        # and entry 2 is deleted because it's not modified,
+        # has lower last_updated, and no update hook runs for it; repeat).
+        #
+        # it would be more correct to sort by (is in new feed, last_retrieved),
+        # but as of 3.14, we don't know about existing but not modified entries
+        # (the hook isn't called), and entries don't have last_retrieved.
+        #
+        # also see test_duplicates_in_feed / #340.
+        #
+        return e.updated or e.published or _EPOCH, e.last_updated, e.id
+
+
+class OnceConfig(Config):
+    tag = f'{TAG_PREFIX}.once'
+
+    @property
+    def new_entries(self):
+        return self.entries
+
+    @staticmethod
+    def latest_key(e):
+        # keep the latest entry, consider the rest duplicates
+        return e.last_updated
+
+
+class OnceTitleConfig(OnceConfig):
+    tag = f'{TAG_PREFIX}.once.title'
+
+    @property
+    def groupers(self):
+        return [title_grouper, self.title_strip_prefix_grouper]
+
+    def is_duplicate(self, one, two):
+        # title is enough to tell duplicates apart
+        return True
+
+
+# ordered by strictness (strictest tag first)
+CONFIGS = [Config, OnceConfig, OnceTitleConfig]
 
 
 def title_grouper(entries, new_entries):
@@ -374,7 +455,22 @@ def published_day_grouper(entries, new_entries):
     return group_by(key, entries, new_entries)
 
 
-# behavior variations that depend on what triggered dedupe
+def group_by(keyfn, items, only_items):
+    only_keys = set(map(keyfn, only_items))
+
+    groups = defaultdict(list)
+    for item in items:
+        key = keyfn(item)
+        if not key:
+            continue
+        if key not in only_keys:
+            continue
+        groups[key].append(item)
+
+    return groups.values()
+
+
+# entry similarity
 
 
 # to avoid false positives, entries are considered duplicates
@@ -416,88 +512,6 @@ def _content_fields(entry):
     if entry.summary:
         rv.append(entry.summary)
     return [tokenize_content(s) for s in rv]
-
-
-_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-
-class Config:
-
-    tag = None
-
-    def __init__(self, feed, entries):
-        self.feed = feed
-        self.entries = entries
-
-    @cached_property
-    def new_entries(self):
-        return [e for e in self.entries if e.added == self.feed.last_updated]
-
-    @property
-    def groupers(self):
-        return [
-            link_grouper,
-            title_grouper,
-            published_grouper,
-            self.title_strip_prefix_grouper,
-            published_day_grouper,
-        ]
-
-    def title_strip_prefix_grouper(self, entries, new_entries):
-        # FIXME: only strip new / only use prefixes in new but not in old!
-        return group_by(lambda e: self.strip_title(e.title), entries, new_entries)
-
-    @cached_property
-    def strip_title(self):
-        return StripPrefixTokenizer((e.title for e in self.entries), tokenize_title)
-
-    is_duplicate = staticmethod(is_duplicate_entry)
-
-    @staticmethod
-    def latest_key(e):
-        # unlike OnceConfig, we cannot rely on e.last_updated,
-        # because for duplicates in the feed, we'd end up flip-flopping
-        # (on the first update, entry 1 is deleted and entry 2 remains;
-        # on the second update, entry 1 remains because it's new,
-        # and entry 2 is deleted because it's not modified,
-        # has lower last_updated, and no update hook runs for it; repeat).
-        #
-        # it would be more correct to sort by (is in new feed, last_retrieved),
-        # but as of 3.14, we don't know about existing but not modified entries
-        # (the hook isn't called), and entries don't have last_retrieved.
-        #
-        # also see test_duplicates_in_feed / #340.
-        #
-        return e.updated or e.published or _EPOCH, e.last_updated, e.id
-
-
-class OnceConfig(Config):
-    tag = f'{TAG_PREFIX}.once'
-
-    @property
-    def new_entries(self):
-        return self.entries
-
-    @staticmethod
-    def latest_key(e):
-        # keep the latest entry, consider the rest duplicates
-        return e.last_updated
-
-
-class OnceTitleConfig(OnceConfig):
-    tag = f'{TAG_PREFIX}.once.title'
-
-    @property
-    def groupers(self):
-        return [title_grouper, self.title_strip_prefix_grouper]
-
-    def is_duplicate(self, one, two):
-        # title is enough to tell duplicates apart
-        return True
-
-
-# ordered by strictness (strictest tag first)
-CONFIGS = [Config, OnceConfig, OnceTitleConfig]
 
 
 # merging user data and deleting duplicates
@@ -819,21 +833,6 @@ class DisjointSet:
     def subsets(self):
         unique_subsets = {id(s): s for s in self._subsets.values()}
         return [set(s) for s in unique_subsets.values()]
-
-
-def group_by(keyfn, items, only_items):
-    only_keys = set(map(keyfn, only_items))
-
-    groups = defaultdict(list)
-    for item in items:
-        key = keyfn(item)
-        if not key:
-            continue
-        if key not in only_keys:
-            continue
-        groups[key].append(item)
-
-    return groups.values()
 
 
 class Trie:
