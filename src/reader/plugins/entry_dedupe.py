@@ -342,6 +342,10 @@ class Config:
     def new_entries(self):
         return [e for e in self.entries if e.added == self.feed.last_updated]
 
+    @cached_property
+    def new_entry_ids(self):
+        return {e.id for e in self.new_entries}
+
     @property
     def groupers(self):
         rv = [
@@ -360,12 +364,16 @@ class Config:
         return len(self.new_entries) >= self.mass_update_min_entries
 
     def title_strip_prefix_grouper(self, entries, new_entries):
-        # FIXME: only strip new / only use prefixes in new but not in old!
-        return group_by(lambda e: self.strip_title(e.title), entries, new_entries)
+        def key(e):
+            if e.id in self.new_entry_ids:
+                return self.strip_title(e.title)
+            return ' '.join(tokenize_title(e.title))
+
+        return group_by(key, entries, new_entries)
 
     @cached_property
     def strip_title(self):
-        return StripPrefixTokenizer((e.title for e in self.entries), tokenize_title)
+        return StripPrefixTokenizer((e.title for e in self.new_entries), tokenize_title)
 
     @cached_property
     def is_duplicate(self):
