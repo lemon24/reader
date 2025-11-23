@@ -247,6 +247,7 @@ class Config:
 
     max_candidate_group_size = 4
     max_group_size = 4
+    mass_update_min_entries = 8
 
     def __init__(self, feed, entries, get_entry):
         self.feed = feed
@@ -343,13 +344,20 @@ class Config:
 
     @property
     def groupers(self):
-        return [
+        rv = [
             link_grouper,
             title_grouper,
             published_grouper,
             self.title_strip_prefix_grouper,
-            published_day_grouper,
         ]
+        if not self.mass_update:
+            rv.append(published_day_grouper)
+        return rv
+
+    @property
+    def mass_update(self):
+        # indistinguishable from updating after a long time (acceptable)
+        return len(self.new_entries) >= self.mass_update_min_entries
 
     def title_strip_prefix_grouper(self, entries, new_entries):
         # FIXME: only strip new / only use prefixes in new but not in old!
