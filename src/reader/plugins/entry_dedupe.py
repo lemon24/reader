@@ -516,21 +516,8 @@ MIN_TRIM_CONTENT_RATIO = 1.5
 
 
 def is_duplicate_entry(entry_one, entry_two):
-
-    def get_fields(entry):
-        # we treat the summary as any other content:
-        #
-        # * some entries have just summary
-        # * some entries have just content
-        # * sometimes the summary is longer than the content
-        #   (e.g. https://github.com/lemon24/reader/issues/262)
-        #
-        values = [entry.summary] + [c.value for c in (entry.content or ())]
-        tokenized_values = filter(None, map(tokenize_content, values))
-        return sorted(tokenized_values, key=len)
-
-    fields_one = get_fields(entry_one)
-    fields_two = get_fields(entry_two)
+    fields_one = tokenize_content_fields(entry_one)
+    fields_two = tokenize_content_fields(entry_two)
 
     # in the face of ambiguity, refuse the temptation to guess
     if not (fields_one and fields_two):
@@ -574,6 +561,19 @@ def is_duplicate_entry(entry_one, entry_two):
         return
 
     return is_duplicate(one, two)
+
+
+def tokenize_content_fields(entry):
+    # we treat the summary as any other content:
+    #
+    # * some entries have just summary
+    # * some entries have just content
+    # * sometimes the summary is longer than the content
+    #   (e.g. https://github.com/lemon24/reader/issues/262)
+    #
+    values = [entry.summary] + [c.value for c in (entry.content or ())]
+    tokenized_values = filter(None, map(tokenize_content, values))
+    return sorted(tokenized_values, key=len)
 
 
 # merging user data and deleting duplicates
