@@ -412,51 +412,42 @@ def test_tags_dedupe_once(reader, parser, allow_short_content):
     }
 
 
-def make_entry(title=None, summary=None, content=None):
+def entry(summary=None, *, title=None, content=None):
     entry = Entry('id', None, title=title, summary=summary)
     if content:
         entry = entry._replace(content=[Content(*content)])
     return entry
 
 
-IS_DUPLICATE_ENTRY_DATA = [
-    # no content
-    (make_entry(), make_entry(), False),
-    (make_entry(title='title'), make_entry(title='title'), False),
-    # short content
-    (make_entry(summary='one'), make_entry(summary='one'), False),
-    # medium content (still below limit)
-    (make_entry(summary='one ' * 31), make_entry(summary='one ' * 31), False),
-    # long enough content (above limit)
-    (make_entry(summary='one ' * 32), make_entry(summary='one ' * 32), True),
-    # fuzzy matching
-    (make_entry(summary='one ' * 32), make_entry(summary='one ' * 31 + 'two'), True),
-    # fuzzy matching (below threshold)
+IS_DUPLICATE_ENTRY_DATA = {
+    "no title, no content": (entry(), entry(), False),
+    "title, no content": (entry(title='title'), entry(title='title'), False),
+    "too short": (entry('one'), entry('one'), False),
+    "too medium": (entry('one ' * 31), entry('one ' * 31), False),
+    "long enough": (entry('one ' * 32), entry('one ' * 32), True),
+    "fuzzy, match": (entry('one ' * 32), entry('one ' * 31 + 'two'), True),
     # FIXME: this is likely too lenient in light of MIN_CONTENT_LENGTH
-    (
-        make_entry(summary='one ' * 32),
-        make_entry(summary='one ' * 26 + 'two ' * 6),
-        False,
-    ),
-    # shortest prefix is used
-    (
-        make_entry(summary='one ' * 32),
-        make_entry(summary='one ' * 32 + 'two ' * 128),
+    "fuzzy, no match": (entry('one ' * 32), entry('one ' * 26 + 'two ' * 6), False),
+    "shortest prefix is used": (
+        entry('one ' * 32),
+        entry('one ' * 32 + 'two ' * 128),
         True,
     ),
-    # summary is treated as content
-    (make_entry(summary='one ' * 32), make_entry(content=('one ' * 32,)), True),
-    # content type doesn't matter
-    (
-        make_entry(content=('one ' * 32, 'text/html')),
-        make_entry(content=('one ' * 32, 'absolute/garbage')),
+    "summary is content": (
+        entry(summary='one ' * 32),
+        entry(content=('one ' * 32,)),
+        True,
+    ),
+    "content type is ignored": (
+        entry(content=('one ' * 32, 'text/html')),
+        entry(content=('one ' * 32, 'absolute/garbage')),
         True,
     ),
     # TODO: test normalization
-]
+}
 
 
-@pytest.mark.parametrize('one, two, result', IS_DUPLICATE_ENTRY_DATA)
+@parametrize_dict('one, two, result', IS_DUPLICATE_ENTRY_DATA)
 def test_is_duplicate_entry(one, two, result):
     assert bool(is_duplicate_entry(one, two)) is bool(result)
 
