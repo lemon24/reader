@@ -415,6 +415,8 @@ def test_tags_dedupe_once(reader, parser, allow_short_content):
 def entry(summary=None, *, title=None, content=None):
     entry = Entry('id', None, title=title, summary=summary)
     if content:
+        if isinstance(content, str):
+            content = (content,)
         entry = entry._replace(content=[Content(*content)])
     return entry
 
@@ -425,17 +427,9 @@ IS_DUPLICATE_ENTRY_DATA = {
     "too short": (entry('one'), entry('one'), False),
     "too medium": (entry('one ' * 31), entry('one ' * 31), False),
     "long enough": (entry('one ' * 32), entry('one ' * 32), True),
-    "fuzzy, match": (entry('one ' * 32), entry('one ' * 31 + 'two'), True),
-    # FIXME: this is likely too lenient in light of MIN_CONTENT_LENGTH
-    "fuzzy, no match": (entry('one ' * 32), entry('one ' * 26 + 'two ' * 6), False),
-    "shortest prefix is used": (
-        entry('one ' * 32),
-        entry('one ' * 32 + 'two ' * 128),
-        True,
-    ),
     "summary is content": (
         entry(summary='one ' * 32),
-        entry(content=('one ' * 32,)),
+        entry(content='one ' * 32),
         True,
     ),
     "content type is ignored": (
@@ -443,7 +437,34 @@ IS_DUPLICATE_ENTRY_DATA = {
         entry(content=('one ' * 32, 'absolute/garbage')),
         True,
     ),
-    # TODO: test normalization
+    "fuzzy, match": (entry('one ' * 32), entry('one ' * 31 + 'two'), True),
+    # FIXME: this is likely too lenient in light of MIN_CONTENT_LENGTH
+    "fuzzy, no match": (entry('one ' * 32), entry('one ' * 26 + 'two ' * 6), False),
+    "big length difference, use prefix": (
+        entry('one ' * 32),
+        entry('one ' * 32 + 'two ' * 128),
+        True,
+    ),
+    "small length difference, use as-is": (
+        entry('one ' * 32),
+        entry('one ' * 32 + 'two ' * 15),
+        False,
+    ),
+    "two contents, longest wins, match": (
+        entry(summary='one ' * 40, content='abc ' * 32),
+        entry(summary='xyz ' * 32, content='one ' * 40),
+        True,
+    ),
+    "two contents, longest wins, no match": (
+        entry(summary='one ' * 40, content='one ' * 32),
+        entry(summary='one ' * 32, content='one ' * 32 + 'two ' * 8),
+        False,
+    ),
+    "content prefix becomes full content + different summary": (
+        entry(summary='one ' * 32),
+        entry(summary='two ' * 32, content='one ' * 32 + 'xyz ' * 128),
+        True,
+    ),
 }
 
 

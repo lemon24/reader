@@ -511,45 +511,69 @@ def group_by(keyfn, items, only_items):
 # entry similarity
 
 
-# to avoid false positives, entries are considered duplicates
-# only if their content is long enough;
-# there are many valid cases where similar (or even identical) content
-# does not indicate two entries are duplicates of one another;
-# this is especially prevalent for short entries
-# (32 tokens chosen due to historical reasons, might want to increase it);
-# detailed motivation and examples in
-# https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
 MIN_CONTENT_LENGTH = 32
+MIN_TRIM_CONTENT_RATIO = 1.5
 
 
-def is_duplicate_entry(one, two):
-    one_fields = _content_fields(one)
-    two_fields = _content_fields(two)
+def is_duplicate_entry(entry_one, entry_two):
 
-    for one_words in one_fields:
-        for two_words in two_fields:
-            # TODO: we should match fields by length, preferring longer ones;
-            # a summary is less likely to match, but the whole article might
+    def get_fields(entry):
+        # we treat the summary as any other content:
+        #
+        # * some entries have just summary
+        # * some entries have just content
+        # * sometimes the summary is longer than the content
+        #   (e.g. https://github.com/lemon24/reader/issues/262)
+        #
+        values = [entry.summary] + [c.value for c in (entry.content or ())]
+        tokenized_values = filter(None, map(tokenize_content, values))
+        return sorted(tokenized_values, key=len)
 
-            min_length = min(len(one_words), len(two_words))
+    fields_one = get_fields(entry_one)
+    fields_two = get_fields(entry_two)
 
-            if min_length < MIN_CONTENT_LENGTH:
-                continue
+    # in the face of ambiguity, refuse the temptation to guess
+    if not (fields_one and fields_two):
+        return False
 
-            one_words = one_words[:min_length]
-            two_words = two_words[:min_length]
+    # we always prefer the longest content from each entry
+    # (we want to use as much of the available information as possible)
+    # if one of the selected contents is much longer than the other,
+    # we trim it to the length of the shortest one.
+    #
+    # notably, this accounts for the following known[1] use cases:
+    #
+    # * content prefix becomes full content (blog platform change)
+    # * content prefix becomes full content + different summary (idem)
+    # * identical summaries but different content (promo message in summary)
+    #
+    # [1]: https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
+    #
+    long, short = fields_one[-1], fields_two[-1]
+    if len(long) < len(short):
+        long, short = short, long
+    if len(long) / len(short) > MIN_TRIM_CONTENT_RATIO:
+        long = long[: len(short)]
+    one, two = long, short
 
-            if is_duplicate(one_words, two_words):
-                return True
+    # TODO / YAGNI: handle multi-lingual entries (one content per language)
 
-    return False
+    # to avoid false positives, entries are considered duplicates
+    # only if their content is "long enough".
+    #
+    # there are many valid cases[1] where similar (or even identical) content
+    # does *not* indicate two entries are duplicates of one another;
+    # this is especially prevalent for short entries (e.g. podcasts),
+    # with the special case of comics, which may have no content at all.
+    #
+    # (32 tokens chosen due to historical reasons, might want to increase it.)
+    #
+    # [1]: https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
+    #
+    if min(len(one), len(two)) < MIN_CONTENT_LENGTH:
+        return
 
-
-def _content_fields(entry):
-    rv = [c.value for c in (entry.content or ())]
-    if entry.summary:
-        rv.append(entry.summary)
-    return [tokenize_content(s) for s in rv]
+    return is_duplicate(one, two)
 
 
 # merging user data and deleting duplicates
