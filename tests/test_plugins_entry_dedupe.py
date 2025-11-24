@@ -44,9 +44,6 @@ def allow_short_content(monkeypatch):
 def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkeypatch):
     # detailed/fuzzy content matching tested in test_is_duplicate*
 
-    # increase this slightly to allow for published-day in the same test
-    monkeypatch.setattr(entry_dedupe.Config, 'mass_update_min_entries', 10)
-
     reader.add_feed(parser.feed(1))
 
     published = datetime(2010, 1, 1, 2, 3, 4)
@@ -58,7 +55,6 @@ def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkey
     parser.entry(1, 'title-old', title='Title', link=None, summary='value')
     parser.entry(1, 'link-old', link='link', summary='value')
     parser.entry(1, 'published-old', published=published, summary='value')
-    parser.entry(1, 'published-day-old', datetime(2010, 1, 1, 1), summary='value')
     parser.entry(1, 'prefix-old', title='prefix', summary='value')
 
     reader.update_feeds()
@@ -68,9 +64,6 @@ def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkey
     parser.entry(1, 'title-new', title='title', summary='value')
     parser.entry(1, 'link-new', link='link', summary='value')
     parser.entry(1, 'published-new', updated=published, summary='value')
-    parser.entry(
-        1, 'published-day-new', published=datetime(2010, 1, 1, 2), summary='value'
-    )
     parser.entry(1, 'prefix-new', title='series-prefix', summary='value')
     parser.entry(1, 'prefix-x', title='series-x', summary='value')
     parser.entry(1, 'prefix-xx', title='series-xx')
@@ -84,7 +77,6 @@ def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkey
         'title-new',
         'link-new',
         'published-new',
-        'published-day-new',
         'prefix-new',
         'prefix-x',
         'prefix-xx',

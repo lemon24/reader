@@ -247,7 +247,6 @@ class Config:
 
     max_candidate_group_size = 4
     max_group_size = 4
-    mass_update_min_entries = 8
 
     def __init__(self, feed, entries, get_entry):
         self.feed = feed
@@ -348,20 +347,12 @@ class Config:
 
     @property
     def groupers(self):
-        rv = [
+        return [
             link_grouper,
             title_grouper,
             published_grouper,
             self.title_strip_prefix_grouper,
         ]
-        if not self.mass_update:
-            rv.append(published_day_grouper)
-        return rv
-
-    @property
-    def mass_update(self):
-        # indistinguishable from updating after a long time (acceptable)
-        return len(self.new_entries) >= self.mass_update_min_entries
 
     def title_strip_prefix_grouper(self, entries, new_entries):
         def key(e):
@@ -483,14 +474,15 @@ def published_grouper(entries, new_entries):
     return group_by(key, entries, new_entries)
 
 
-def published_day_grouper(entries, new_entries):
-    def key(e):
-        dt = e.published or e.updated
-        if not dt:
-            return None
-        return dt.date()
-
-    return group_by(key, entries, new_entries)
+# there was an unreleased[1] published day grouper, but I removed it
+# because it caused lots of false positives (.dedupe.once, activity feeds),
+# and had only a few true positives[2].
+#
+# entries being republished the with a rounded published day is possible,
+# but that one feed already matched the link and title prefix groupers (YAGNI).
+#
+# [1]: last in 0140613a5258a6df6af070b7c7b38a398824ebcf
+# [2]: https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
 
 
 def group_by(keyfn, items, only_items):
