@@ -341,30 +341,14 @@ class Config:
     def new_entries(self):
         return [e for e in self.entries if e.added == self.feed.last_updated]
 
-    @cached_property
-    def new_entry_ids(self):
-        return {e.id for e in self.new_entries}
-
     @property
     def groupers(self):
         return [
             link_grouper,
             title_grouper,
             published_grouper,
-            self.title_strip_prefix_grouper,
+            title_strip_prefix_grouper,
         ]
-
-    def title_strip_prefix_grouper(self, entries, new_entries):
-        def key(e):
-            if e.id in self.new_entry_ids:
-                return self.strip_title(e.title)
-            return ' '.join(tokenize_title(e.title))
-
-        return group_by(key, entries, new_entries)
-
-    @cached_property
-    def strip_title(self):
-        return StripPrefixTokenizer((e.title for e in self.new_entries), tokenize_title)
 
     @cached_property
     def is_duplicate(self):
@@ -430,7 +414,7 @@ class OnceTitlePrefixConfig(OnceTitleConfig):
 
     @property
     def groupers(self):
-        return [title_grouper, self.title_strip_prefix_grouper]
+        return [title_grouper, title_strip_prefix_grouper]
 
 
 # ordered by strictness (strictest tag first)
@@ -439,6 +423,27 @@ CONFIGS = [Config, OnceConfig, OnceTitleConfig, OnceTitlePrefixConfig]
 
 def title_grouper(entries, new_entries):
     return group_by(lambda e: tokenize_title(e.title), entries, new_entries)
+
+
+def title_strip_prefix_grouper(entries, new_entries):
+    new_entry_ids = {e.id for e in new_entries}
+    strip = StripPrefixTokenizer((e.title for e in new_entries), tokenize_title)
+
+    def key(e):
+        if e.id in new_entry_ids:
+            return strip(e.title)
+        return tokenize_title(e.title)
+
+    return group_by(key, entries, new_entries)
+
+
+# there was an unreleased[1] title similarity grouper,
+# but it was very slow (.dedupe.once of tens of seconds per feed)
+# due to pairwise matching of Jaccard similarity + ngrams,
+# and produced lots of false positives[2].
+#
+# [1]: last in 0a63e71d3002f653d6ef86dbc9740e361f0b0f7d
+# [2]: https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
 
 
 def link_grouper(entries, new_entries):
@@ -474,9 +479,8 @@ def published_grouper(entries, new_entries):
     return group_by(key, entries, new_entries)
 
 
-# there was an unreleased[1] published day grouper, but I removed it
-# because it caused lots of false positives (.dedupe.once, activity feeds),
-# and had only a few true positives[2].
+# there was an unreleased[1] published day grouper,
+# but it produced lots of false positives, and only a few true positives[2].
 #
 # entries being republished the with a rounded published day is possible,
 # but that one feed already matched the link and title prefix groupers (YAGNI).
@@ -802,16 +806,20 @@ def ngrams(iterable, n, pad=False, pad_symbol=None):
 
 class StripPrefixTokenizer:
 
+    # this is a class in case we ever want to expose the prefixes
+
     def __init__(self, documents, tokenize, **kwargs):
         self.tokenize = tokenize
         tokenized_documents = map(tokenize, documents)
         tokenized_prefixes = common_prefixes(tokenized_documents, **kwargs)
-        prefixes = sorted(map(' '.join, tokenized_prefixes), key=len)
+        prefixes = map(' '.join, tokenized_prefixes)
+        prefixes = sorted(prefixes, key=len, reverse=True)
         self.pattern = re.compile(f"^({'|'.join(map(re.escape, prefixes))}) ")
 
     def __call__(self, s):
-        s = ' '.join(self.tokenize(s))
-        return self.pattern.sub('', s) or s
+        tokenized = self.tokenize(s)
+        stripped = self.pattern.sub('', ' '.join(tokenized))
+        return tuple(stripped.split(' ')) if stripped else tokenized
 
 
 def common_prefixes(documents, *, min_df=4, min_length=5):
