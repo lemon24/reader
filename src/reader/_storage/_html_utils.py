@@ -70,6 +70,7 @@ def add_text_attrs_as_elements(soup: bs4.BeautifulSoup) -> None:
             if s := e.attrs.get('alt'):
                 strings.append(s)
         if s := e.attrs.get('title'):
-            strings.append(s)
+            if s not in strings:
+                strings.append(s)
         if strings:
             e.insert_after(*[soup.new_tag('span', string=f" {s} ") for s in strings])

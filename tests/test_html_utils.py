@@ -44,6 +44,7 @@ STRIP_HTML_DATA = [
     ),
     ('aa<img alt="x"/>bb', 'aa\nx\nbb'),
     ('aa<img alt="x" title="y"/>bb', 'aa\nx\ny\nbb'),
+    ('aa<img alt="x" title="x"/>bb', 'aa\nx\nbb'),
     ('<a alt="x" title="t">aa</a>', 'aa\nt'),
     ('aa<img alt="" title=""/>bb', 'aabb'),
     ('&mdash;', '—'),
