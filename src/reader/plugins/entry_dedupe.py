@@ -91,62 +91,6 @@ To reduce false positives when detecting duplicates:
     On-demand dedupe in https://github.com/lemon24/reader/issues/202.
     More selection heuristics in https://github.com/lemon24/reader/issues/371.
 
-..
-    Some notes on how we are finding similar entries.
-
-    There are three methods that build conceptually on one another
-    (and get progressively more complicated):
-
-    1. Jaccard similarity + n-grams. Jaccard similarity uses sets;
-       the set of words in a document works, but this ignores word order;
-       using n-grams instead of words retains word order information.
-       This method is pair-wise (searching all the documents is O(n)),
-       and requires the documents to be stored forever.
-
-    2. MinHash allows estimating Jaccard similarity
-       by "compressing" documents into fixed-size arrays.
-       This method is pair-wise; only the arrays need to be stored.
-
-    3. Locality Sensitive Hashing allows using MinHash to find duplicates
-       without having to check similarity for all the documents,
-       by putting similar items into buckets.
-
-    I chose to go with #1, Jaccard similarity + n-grams,
-    since it is simple to understand and implement,
-    so we don't necessarily need an external dependency.
-
-    The main downside is that it is relatively slow.
-    To reduce the search space, we're using heuristics
-    that find potential duplicates based on title / link / timestamps
-    (although we could probably use a prefix of the document as well).
-
-    MinHash is not that complicated to implement[1],
-    but you still need LSH to avoid O(n) searches.
-
-    Using datasketch (provides both MinHash and LSH)
-    would allow us to get rid of heuristics (which add some complexity),
-    since checking content similarity directly likely becomes fast enough.
-    Alas, it has some heavy dependencies (numpy, scipy).
-
-    (LLMs+embeddings are not an option due to the huge extra dependency,
-    are are overkill anyway, since we don't care about semantic similarity.)
-
-    Further reading:
-
-    * good summary of Jaccard similarity and MinHash:
-      https://blog.nelhage.com/post/fuzzy-dedup/
-    * "Mining of Massive Datasets" chapter:
-      http://infolab.stanford.edu/~ullman/mmds/ch3.pdf
-    * "Data Mining" course notes (shorter than MMDS):
-      https://users.cs.utah.edu/~jeffp/teaching/cs5140-S15/cs5140.html
-
-    Libraries (if we choose to have dependencies):
-
-    * https://www.nltk.org/ (tokenization, similarity)
-    * https://scikit-learn.org/stable/modules/feature_extraction.html (tokenization)
-    * https://ekzhu.com/datasketch/ (MinHash, LSH)
-
-    [1]: https://gist.github.com/lemon24/b9af5ade919713406bda9603847d32e5
 
 """
 
@@ -201,7 +145,7 @@ class Deduplicator:
         if config.tag:
             log.info("entry_dedupe: %r for feed %r", config.tag, self.feed.url)
 
-        for group in config.group_entries():
+        for group in config.find_duplicates():
             assert len(group) > 1, [e.id for e in group]
             entry, *duplicates = group
             dedupe_entries(self.reader, entry, duplicates)
@@ -243,6 +187,147 @@ _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 class Config:
+    """Logic for finding duplicates, with overridable variations.
+
+    Fundamental observations / requirements
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    1. False positives are not acceptable; missing duplicates is preferable
+       to deleting stuff we shouldn't. Because of this,
+       heuristics must be as conservative as possible.
+
+    2. Single duplicates vs mass duplication. Duplicates happen in two ways:
+       the same entry is posted twice (fixing a link typo, intentional, etc.),
+       or lots of entries are posted twice (usually a blog platform change).
+       The latter is much more annoying, but see (1) about false positives.
+
+    3. A feed is well-behaved until it isn't; if it were truly well-behaved,
+       we wouldn't need the plugin in the first place.
+       In practice, the real world is very messy, what is "well-behaved"
+       and what is a duplicate depends on the kind of feed,
+       and even then there are exceptions (examples below).
+       There's no general way to tell if an entry is a duplicate or not.
+
+    4. Title is the most reliable way to tell duplicates apart.
+       Published date is also pretty reliable. Content similarity helps,
+       but is not enough (not even if the content is identical).
+       Links are sometimes good indicators, and sometimes not.
+
+    Theory of operation
+    ~~~~~~~~~~~~~~~~~~~
+
+    Regular update (not triggered by a `.dedupe.once` tag):
+
+    1. Starting from all entries and new entries,
+       try a number of heuristics (title, link, published)
+       to find groups of potential duplicates.
+
+    2. For each group of potential duplicates returned by a heuristic,
+       if the group is not "huge" (>4), check content similarity;
+       if the entries are similar, return them,
+       and don't use them with subsequent heuristics.
+
+    Notably:
+
+    * We don't merge groups of potential duplicates from different groupers,
+      as it increases the chance of false positives.
+
+    * We deliberately use only a few heuristics;
+      the current combination covers most known use cases,
+      and others are either too specific (rare use cases),
+      or cause false positives (like title similarity and published day,
+      see comments after the groupers below).
+
+    For `.dedupe.once`, all entries are considered new.
+    For `.dedupe.once.title`, content is ignored.
+
+    Known special cases / exceptions
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Valid *similar title + similar/identical content* cases:
+
+    * usually short content
+      * the text is similar (podcast, comics, activity feed,
+        series with similar summary and no content)
+      * the text is identical, but the HTML is different (podcast, video, comics)
+      * the content is identical (podcast, summary-only feed, static text)
+      * the title is identical too (podcast, activity feed)
+      * the title is also the content (title-/link-only feed, tweets, activity feed)
+    * but sometimes longer (release notes, periodic reports)
+
+    Valid *identical link / published day + similar/identical content* cases:
+
+    * usually short/frequent content (podcast, link-only feed, activity feed)
+    * feed with no published, only updated (many entries updated)
+
+    *Identical link / published* or *similar title* can indicate true duplicates:
+
+    * title change (fixing typos, format change, wording change)
+    * due to false positives, only reliable with long content
+
+    Mass duplication has specific patterns:
+
+    * lots of new entries that match in pairs (!)
+    * titles
+      * are identical
+      * are identical but with a prefix
+      * (notably!) do not change in any other way
+    * entries may have the same link
+    * entries may have the same published (day)
+    * content may get a prefix
+    * content may be replaced by a prefix (possibly plus a summary)
+
+    Details + more special cases:
+
+    * https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
+    * https://github.com/lemon24/reader/issues/371#issuecomment-3409780383
+    * https://github.com/lemon24/reader/issues/202#issuecomment-904139483
+
+    On content similarity
+    ~~~~~~~~~~~~~~~~~~~~~
+
+    There are three main methods that build conceptually on one another:
+
+    1. Jaccard similarity + n-grams. Jaccard similarity uses sets;
+       the set of words in a document works, but this ignores word order;
+       using n-grams instead of words retains word order information.
+       This method is pair-wise (searching all the documents is O(n)),
+       and requires the documents to be stored forever.
+
+    2. MinHash allows estimating Jaccard similarity
+       by "compressing" documents into fixed-size arrays.
+       This method is pair-wise; only the arrays need to be stored.
+
+    3. Locality Sensitive Hashing (LSH) allows using MinHash without
+       checking all the documents by putting similar documents into buckets.
+
+    We went with #1, Jaccard similarity + n-grams, since it's simple
+    to understand and implement, and doesn't have external dependencies.
+    The main downside is that it is relatively slow,
+    but this is mitigated by groupers reducing the search space.
+
+    LSH would provide a ~fast content grouper,
+    but it's dependency-heavy (datasketch pulls in numpy and scipy),
+    and would likely not get rid of heuristics due to all the exceptions.
+
+    Further reading:
+
+    * good summary of Jaccard similarity and MinHash:
+      https://blog.nelhage.com/post/fuzzy-dedup/
+    * "Mining of Massive Datasets" chapter:
+      http://infolab.stanford.edu/~ullman/mmds/ch3.pdf
+    * "Data Mining" course notes (shorter than MMDS):
+      https://users.cs.utah.edu/~jeffp/teaching/cs5140-S15/cs5140.html
+
+    Libraries (if we choose to have dependencies):
+
+    * https://www.nltk.org/ (tokenization, similarity)
+    * https://scikit-learn.org/stable/modules/feature_extraction.html (tokenization)
+    * https://ekzhu.com/datasketch/ (MinHash, LSH)
+
+    """
+
+    # regular update (no tag)
     tag = None
 
     max_candidate_group_size = 4
@@ -253,7 +338,7 @@ class Config:
         self.entries = entries
         self.get_entry = get_entry
 
-    def group_entries(self):
+    def find_duplicates(self):
         all = {e.id: e for e in self.entries}
         new = {e.id: e for e in self.new_entries}
         duplicates = []
@@ -284,7 +369,7 @@ class Config:
                     )
                     continue
 
-                # TODO: is DisjointSet required? would sorting group be enough?
+                # in practice, sorting by group may be enough, but eh...
 
                 ds = DisjointSet()
                 for one, two in itertools.combinations(group, 2):
@@ -441,6 +526,10 @@ def title_strip_prefix_grouper(entries, new_entries):
 # but it was very slow (.dedupe.once of tens of seconds per feed)
 # due to pairwise matching of Jaccard similarity + ngrams,
 # and produced lots of false positives[2].
+#
+# a faster title similarity check is to use the set of words as key,
+# which helps if the title format changes (series: title -> title | series),
+# but there was just one feed that did that, so YAGNI.
 #
 # [1]: last in 0a63e71d3002f653d6ef86dbc9740e361f0b0f7d
 # [2]: https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
