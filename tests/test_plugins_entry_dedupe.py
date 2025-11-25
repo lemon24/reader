@@ -672,14 +672,12 @@ Features:
 
 """
 EDITS = [
-    ("you're", "youre"),
-    ("I/O bound", "IO-bound"),
+    ("you're", "youre", 2),
     ("parallel", "paralel"),
-    ("Maybe", "And", 1),
     ("a lot", "lots"),
     ("PoolExecutor", " Pool Executor"),
     ("work", "input"),
-    ("you won't even need it anymore", ""),
+    ("even need it anymore", ""),
 ]
 EXTRA_EDITS = EDITS + [
     ("So", "Soo"),

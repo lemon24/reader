@@ -738,19 +738,23 @@ def strip_accents(s):
 _IS_DUPLICATE_THRESHOLDS = [
     # for shorter texts, we use character ngrams instead of word ngrams,
     # since they're more forgiving of small changes (e.g. typos);
-    # thresholds based on the "reasonable" edits in test_is_duplicate TEXT
+    # thresholds based on "reasonable" edits in test_is_duplicate TEXT,
+    # in turn tuned to exclude/include the false/true positives in
+    # https://github.com/lemon24/reader/issues/371#issuecomment-3566100718
     (12, True, 3, 0.6),
-    (200, True, 3, 0.7),
-    (400, True, 4, 0.7),
-    (800, True, 4, 0.8),
+    (20, True, 3, 0.7),
+    (100, True, 4, 0.7),
+    (200, True, 4, 0.8),
+    (400, True, 4, 0.85),
+    (800, True, 4, 0.875),
     # for longer texts, we switch to words, since character ngrams are slow
-    (1600, False, 3, 0.7),
+    (1600, False, 3, 0.8),
     # thresholds based on the 0.8 value mentioned in [1],
     # but increasing towards 0.9 since 0.8 seems too low, e.g.
     # removing 10 words from the middle of 100 -> similarity 0.84 (n=4)
     # [1]: https://github.com/lemon24/reader/issues/202#issuecomment-904139483
-    (2400, False, 3, 0.8),
-    (3600, False, 4, 0.8),
+    (2400, False, 4, 0.8),
+    (3600, False, 4, 0.85),
     (4800, False, 4, 0.9),
 ]
 
