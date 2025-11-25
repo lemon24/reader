@@ -507,7 +507,7 @@ def group_by(keyfn, items, only_items):
 # entry similarity
 
 
-MIN_CONTENT_LENGTH = 32
+MIN_CONTENT_LENGTH = 48
 MIN_TRIM_CONTENT_RATIO = 1.5
 
 
@@ -549,7 +549,7 @@ def is_duplicate_entry(entry_one, entry_two):
     # this is especially prevalent for short entries (e.g. podcasts),
     # with the special case of comics, which may have no content at all.
     #
-    # (32 tokens chosen due to historical reasons, might want to increase it.)
+    # (32 tokens due to historical reasons, increased to 48 following [1].)
     #
     # [1]: https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
     #
@@ -743,8 +743,10 @@ _IS_DUPLICATE_THRESHOLDS = [
     # https://github.com/lemon24/reader/issues/371#issuecomment-3566100718
     (12, True, 3, 0.6),
     (20, True, 3, 0.7),
-    (100, True, 4, 0.7),
-    (200, True, 4, 0.8),
+    (40, True, 3, 0.8),
+    (80, True, 4, 0.7),
+    (120, True, 4, 0.8),
+    (200, True, 4, 0.825),
     (400, True, 4, 0.85),
     (800, True, 4, 0.875),
     # for longer texts, we switch to words, since character ngrams are slow

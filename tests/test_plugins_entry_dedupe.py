@@ -413,48 +413,53 @@ def entry(summary=None, *, title=None, content=None):
     return entry
 
 
+MC = entry_dedupe.MIN_CONTENT_LENGTH
+
 IS_DUPLICATE_ENTRY_DATA = {
     "no title, no content": (entry(), entry(), False),
     "title, no content": (entry(title='title'), entry(title='title'), False),
     "too short": (entry('one'), entry('one'), False),
-    "too medium": (entry('one ' * 31), entry('one ' * 31), False),
-    "long enough": (entry('one ' * 32), entry('one ' * 32), True),
+    "too medium": (entry('one ' * (MC - 1)), entry('one ' * (MC - 1)), False),
+    "long enough": (entry('one ' * MC), entry('one ' * MC), True),
     "summary is content": (
-        entry(summary='one ' * 32),
-        entry(content='one ' * 32),
+        entry(summary='one ' * MC),
+        entry(content='one ' * MC),
         True,
     ),
     "content type is ignored": (
-        entry(content=('one ' * 32, 'text/html')),
-        entry(content=('one ' * 32, 'absolute/garbage')),
+        entry(content=('one ' * MC, 'text/html')),
+        entry(content=('one ' * MC, 'absolute/garbage')),
         True,
     ),
-    "fuzzy, match": (entry('one ' * 32), entry('one ' * 31 + 'two'), True),
-    # FIXME: this is likely too lenient in light of MIN_CONTENT_LENGTH
-    "fuzzy, no match": (entry('one ' * 32), entry('one ' * 26 + 'two ' * 6), False),
+    "fuzzy, match": (entry('one ' * MC), entry('one ' * (MC - 4) + 'two ' * 4), True),
+    "fuzzy, no match": (
+        entry('one ' * MC),
+        entry('one ' * (MC - 5) + 'two ' * 5),
+        False,
+    ),
     "big length difference, use prefix": (
-        entry('one ' * 32),
-        entry('one ' * 32 + 'two ' * 128),
+        entry('one ' * MC),
+        entry('one ' * MC + 'two ' * 128),
         True,
     ),
     "small length difference, use as-is": (
-        entry('one ' * 32),
-        entry('one ' * 32 + 'two ' * 15),
+        entry('one ' * MC),
+        entry('one ' * MC + 'two ' * int(MC / 3)),
         False,
     ),
     "two contents, longest wins, match": (
-        entry(summary='one ' * 40, content='abc ' * 32),
-        entry(summary='xyz ' * 32, content='one ' * 40),
+        entry(summary='one ' * (MC + 8), content='abc ' * MC),
+        entry(summary='xyz ' * MC, content='one ' * (MC + 8)),
         True,
     ),
     "two contents, longest wins, no match": (
-        entry(summary='one ' * 40, content='one ' * 32),
-        entry(summary='one ' * 32, content='one ' * 32 + 'two ' * 8),
+        entry(summary='one ' * (MC + 8), content='one ' * MC),
+        entry(summary='one ' * MC, content='one ' * MC + 'two ' * (MC + 8)),
         False,
     ),
     "content prefix becomes full content + different summary": (
-        entry(summary='one ' * 32),
-        entry(summary='two ' * 32, content='one ' * 32 + 'xyz ' * 128),
+        entry(summary='one ' * MC),
+        entry(summary='two ' * MC, content='one ' * MC + 'xyz ' * 128),
         True,
     ),
 }
@@ -672,7 +677,7 @@ Features:
 
 """
 EDITS = [
-    ("you're", "youre", 2),
+    ("you're", "youre", 1),
     ("parallel", "paralel"),
     ("a lot", "lots"),
     ("PoolExecutor", " Pool Executor"),
