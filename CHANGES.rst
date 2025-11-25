@@ -12,7 +12,7 @@ Version 3.20
 Unreleased
 
 * Add the ``read_only`` :func:`make_reader` argument.
-  Thanks to `Roman Milko`_ for the pull request.
+  Thanks to `Roman Milko`_ for the PR.
   (:issue:`319`)
 
 * Include the ``alt`` and ``title`` HTML attributes
@@ -28,9 +28,15 @@ Unreleased
 
 * :mod:`~reader.plugins.entry_dedupe` improvements. (:issue:`371`)
 
+  * Use more heuristics to find potential duplicates
+    (in addition to title matching):
+    match link, match published timestamp,
+    strip common title prefixes for new entries.
   * When comparing entries,
     include the ``alt`` and ``title`` HTML attributes,
     strip accents, and treat dates and versions as single tokens.
+  * Increase required minimum content length from 32 to 48 words.
+
 
 .. _Roman Milko: https://github.com/rastr-0
 

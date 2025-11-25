@@ -18,15 +18,34 @@ like *read* or *important* from the old entries to the new one,
 and **deleting** the old entries.
 
 
-Duplicates are entries with the same title *and* the same summary/content.
+By default, the plugin runs only for newly-added entries,
+but you can run it for all the entries of a feed
+by adding one of the following feed tags;
+the plugin will run on the next update.
 
-By default, this plugin runs only for newly-added entries.
-To run it for the existing entries of a feed,
-add the ``.reader.dedupe.once`` tag to the feed;
-the plugin will run on the next feed update, and remove the tag afterwards.
-To run it for the existing entries in a feed,
-and only use the title for comparisons (ignoring the content),
-use ``.reader.dedupe.once.title`` instead.
+``.reader.dedupe.once``
+    Run deduplication for all entries, once.
+
+``.reader.dedupe.once.title``
+    ...but use only the title for comparisons (i.e. **ignore the content**).
+
+    .. warning::
+        This is an escape hatch for when old entries
+        are added again with different content.
+        Use it only if ``.once`` doesn't work,
+        and you are sure there are no non-duplicate entries with the same title.
+
+``.reader.dedupe.once.title.prefix``
+    ...but use only the title for comparisons (i.e. **ignore the content**),
+    and strip common title prefixes.
+
+    .. warning::
+        This is an escape hatch for when old entries
+        are added again with a title prefix and different content.
+        Use it only if ``.once.title`` doesn't work,
+        and you are sure there are no non-duplicate entries
+        with different common prefixes and the same title
+        (e.g. `Some Series: First Chapter` and `Different One: First Chapter`).
 
 
 Entry user attributes are set as follows:
@@ -51,12 +70,16 @@ entry tags
       where N is an integer and TAG is the tag key
 
     Only unique values are considered, such that
-    ``TAG``, ``.reader.duplicate.1.of.TAG``, ``.reader.duplicate.2.of.TAG``...
+    ``TAG``, ``.reader.duplicate.1.of.TAG``, ``.reader.duplicate.2.of.TAG``, ...
     always have different values.
 
 
+Duplicates are entries with the same title / link / published timestamp
+*and* the same summary / content.
 To reduce false negatives when detecting duplicates:
 
+* Common title prefixes from new entries are stripped
+  (common = at least four entries have it).
 * All comparisons are case-insensitive,
   with HTML tags, HTML entities, punctuation, and whitespace removed.
 * For entries with content of different lengths,
@@ -64,14 +87,14 @@ To reduce false negatives when detecting duplicates:
   (This is useful when one version of an entry
   has only the first paragraph of the article,
   but the other has the whole article.)
-* For entries with longer content (over ~48 words),
-  approximate matching is used instead of an exact match
-  (currently, Jaccard similarity of 4-grams).
+* Approximate (similarity) matching is used for content.
 
 To reduce false positives when detecting duplicates:
 
-* Titles must match exactly (after clean-up).
-* Both entries must have title *and* content.
+* Titles / links / published timestamps must match exactly.
+* Both entries must have title / link / published timestamp *and* content.
+* The ``alt`` and ``title`` HTML attributes are included in the content.
+* Content must be at least ~48 words long.
 * Similarity thresholds are set relatively high,
   and higher for shorter content.
 
@@ -84,6 +107,20 @@ To reduce false positives when detecting duplicates:
 
 .. versionchanged:: 2.3
     Delete old duplicates instead of marking them as read / unimportant.
+
+.. versionchanged:: 3.20
+    Use more heuristics to find potential duplicates
+    (in addition to title matching):
+    match link, match published timestamp,
+    strip common title prefixes for new entries.
+
+.. versionchanged:: 3.20
+    When comparing entries,
+    include the ``alt`` and ``title`` HTML attributes,
+    strip accents, and treat dates and versions as single tokens.
+
+.. versionchanged:: 3.20
+    Increase required minimum content length from 32 to 48 words.
 
 ..
     Implemented for https://github.com/lemon24/reader/issues/79.
