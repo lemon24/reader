@@ -7,93 +7,98 @@ reader.entry_dedupe
 
 Deduplicate the entries of a feed.
 
-Sometimes, the format of the entry id changes for all the entries in a feed,
-for example from ``example.com/123`` to ``example.com/entry-title``.
-Because :attr:`~Entry.id` uniquely identifies the entries of a feed,
-this results in them being added again with the new ids.
-
+Sometimes, the entry id of some or all the entries in a feed changes
+(e.g. from ``example.com/123`` to ``example.com/entry-title``),
+causing each entry to appear twice.
 :mod:`~reader.plugins.entry_dedupe` addresses this
 by copying entry user attributes
-like *read* or *important* from the old entries to the new one,
+like *read* or *important* to the new entry,
 and **deleting** the old entries.
 
 
-By default, the plugin runs only for newly-added entries,
-but you can run it for all the entries of a feed
-by adding one of the following feed tags;
-the plugin will run on the next update.
-
-``.reader.dedupe.once``
-    Run deduplication for all entries, once.
-
-``.reader.dedupe.once.title``
-    ...but use only the title for comparisons (i.e. **ignore the content**).
-
-    .. warning::
-        This is an escape hatch for when old entries
-        are added again with different content.
-        Use it only if ``.once`` doesn't work,
-        and you are sure there are no non-duplicate entries with the same title.
-
-``.reader.dedupe.once.title.prefix``
-    ...but use only the title for comparisons (i.e. **ignore the content**),
-    and strip common title prefixes.
-
-    .. warning::
-        This is an escape hatch for when old entries
-        are added again with a title prefix and different content.
-        Use it only if ``.once.title`` doesn't work,
-        and you are sure there are no non-duplicate entries
-        with different common prefixes and the same title
-        (e.g. `Some Series: First Chapter` and `Different One: First Chapter`).
-
+User attributes
+^^^^^^^^^^^^^^^
 
 Entry user attributes are set as follows:
 
 :attr:`~Entry.read` / :attr:`~Entry.important`
-
-    If any of the entries is read/important, the new entry will be read/important.
+    If any of the entries is read/important,
+    make the new entry read/important.
 
 :attr:`~Entry.read_modified` / :attr:`~Entry.important_modified`
-
-    Set to the oldest *modified* of the entries
+    Use the oldest *modified* of the entries
     with the same status as the new read/important.
 
 entry tags
-
-    For each tag key:
-
-    * collect all the values from the duplicate entries
-    * if the new entry does not have the tag, set it to the first value
-    * copy the remaining values to the new entry,
-      using a key of the form ``.reader.duplicate.N.of.TAG``,
-      where N is an integer and TAG is the tag key
-
-    Only unique values are considered, such that
-    ``TAG``, ``.reader.duplicate.1.of.TAG``, ``.reader.duplicate.2.of.TAG``, ...
-    always have different values.
+    Copy tags to the new entry;
+    duplicate tags are named ``.reader.duplicate.N.of.TAG``.
 
 
-Duplicates are entries with the same title / link / published timestamp
+Existing duplicates
+^^^^^^^^^^^^^^^^^^^
+
+By default, the plugin runs only for new entries;
+to have it run for all the entries of a feed on the next update,
+add the ``.reader.dedupe.once`` tag to the feed.
+
+
+To avoid false positives,
+the heuristics used to detect duplicate entries
+are fairly conservative.
+However, this can cause some duplicates to be missed
+(e.g. if the content changes significantly, or is too short);
+as an escape hatch for such cases,
+it is possible to ignore entry content once
+by adding one of the following feed tags:
+
+.. warning::
+
+    This mechanism makes the plugin **ignore entry content** entirely,
+    significantly increasing the chance of **false positives**
+    (i.e. deleting entries that shouldn't be deleted).
+    Use it only if ``.once`` doesn't work,
+    and you are sure there are no non-duplicate entries
+    with the same title / link.
+
+``.reader.dedupe.once.title``
+    Use only the title for comparisons.
+
+``.reader.dedupe.once.link``
+    Use only the link for comparisons.
+
+    .. versionadded:: 3.20
+
+``.reader.dedupe.once.title.prefix``
+    Use only the title for comparisons, removing common prefixes.
+
+    .. versionadded:: 3.20
+
+
+How duplicates are discovered
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+At a high level,
+duplicates are entries with the same title / link / published timestamp
 *and* the same summary / content.
-To reduce false negatives when detecting duplicates:
 
-* Common title prefixes from new entries are stripped
-  (common = at least four entries have it).
-* All comparisons are case-insensitive,
-  with HTML tags, HTML entities, punctuation, and whitespace removed.
+When matching entries:
+
+* Remove common title prefixes of new entries.
+* Use case-insensitive comparison,
+  and ignore whitespace and punctuation.
+* Ignore HTML tags (with the exception of
+  a few text attributes like ``alt`` and ``title``).
+* Use approximate content matching.
 * For entries with content of different lengths,
-  only a prefix of common (smaller) length is used in comparison.
-  (This is useful when one version of an entry
-  has only the first paragraph of the article,
-  but the other has the whole article.)
-* Approximate (similarity) matching is used for content.
+  trim the longer one to the length of the shorter one
+  (useful when one entry has only the first paragraph,
+  but the other the whole article).
 
-To reduce false positives when detecting duplicates:
+To reduce false positives:
 
 * Titles / links / published timestamps must match exactly.
-* Both entries must have title / link / published timestamp *and* content.
-* The ``alt`` and ``title`` HTML attributes are included in the content.
+* If there are too many entries with the same title/..., ignore them.
+* The entries must have both title/... *and* content.
 * Content must be at least ~48 words long.
 * Similarity thresholds are set relatively high,
   and higher for shorter content.
@@ -578,12 +583,16 @@ def title_strip_prefix_grouper(entries, new_entries):
 # due to pairwise matching of Jaccard similarity + ngrams,
 # and produced lots of false positives[2].
 #
-# a faster title similarity check is to use the set of words as key,
+# a faster title similarity check would be to use the set of words as key,
 # which helps if the title format changes (series: title -> title | series),
 # but there was just one feed that did that, so YAGNI.
 #
+# update: see [3] for a fast title similarity match prototype
+# (but it still has false positives: series, intentional duplicates).
+#
 # [1]: last in 0a63e71d3002f653d6ef86dbc9740e361f0b0f7d
 # [2]: https://github.com/lemon24/reader/issues/371#issuecomment-3549816117
+# [3]: https://gist.github.com/lemon24/a0d8ba030cd416cb7fdc973067938a0c#file-x_fast_bigram_score-py
 
 
 def link_grouper(entries, new_entries):

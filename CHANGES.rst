@@ -36,7 +36,11 @@ Unreleased
     include the ``alt`` and ``title`` HTML attributes,
     strip accents, and treat dates and versions as single tokens.
   * Increase required minimum content length from 32 to 48 words.
+  * Add the ``.reader.dedupe.once.link`` and
+    ``.reader.dedupe.once.title.prefix`` escape hatches.
+  * Clean up documentation, refactor code, and add extensive tests.
 
+* Log run times of before/after update hooks.
 
 .. _Roman Milko: https://github.com/rastr-0
 
