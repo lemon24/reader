@@ -32,6 +32,7 @@ def test_entries_recent_first_updated(
 ):
     """All other things being equal, entries should be sorted by first updated."""
     reader._storage.chunk_size = chunk_size
+    parser.with_titles()
     reader.add_feed(parser.feed(1))
 
     for id, day in [(3, 2), (2, 4), (4, 1), (1, 3)]:
@@ -55,6 +56,7 @@ def test_entries_recent_feed_order(
 
     """
     reader._storage.chunk_size = chunk_size
+    parser.with_titles()
     reader.add_feed(parser.feed(1))
 
     for id in [3, 2, 4, 1]:
@@ -213,6 +215,8 @@ def test_entries_recent_all(reader, parser, chunk_size, get_entries, reverse):
 @rename_argument('get_entries', 'get_entries_recent')
 def test_entries_recent_new_feed(reader, parser, get_entries):
     """Entries from the first update should be sorted by published/updated."""
+
+    parser.with_titles()
 
     one = parser.feed(1)
     reader.add_feed(one)

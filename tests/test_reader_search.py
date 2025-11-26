@@ -365,6 +365,7 @@ def test_update_triggers(reader, parser, data):
     if the indexed fields change.
 
     """
+    parser.with_titles()
     feed = parser.feed(1, datetime(2010, 1, 1))
     reader.add_feed(feed.url)
     reader.enable_search()
@@ -599,7 +600,7 @@ def test_search_entries_basic(reader, parser, sort):
     # we're far intro the future, there are no recent entries
     reader._now = lambda: datetime(2020, 1, 1)
 
-    feed = parser.feed(1, datetime(2010, 1, 1))
+    feed = parser.feed(1, datetime(2010, 1, 1), title='feed')
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
     two = parser.entry(1, 2, datetime(2010, 1, 1), title='two', summary='summary')
     three = parser.entry(
@@ -738,7 +739,7 @@ def test_search_entries_basic(reader, parser, sort):
 def test_search_entry_counts_basic(reader, parser, query, expected):
     # search_entry_counts() filtering is tested in test_reader.py::test_entry_counts
 
-    feed = parser.feed(1, datetime(2010, 1, 1))
+    feed = parser.feed(1, datetime(2010, 1, 1), title='feed')
     parser.entry(1, 1, datetime(2010, 2, 15), title='one')
     parser.entry(1, 2, datetime(2010, 11, 15), title='entry two')
     parser.entry(1, 3, datetime(2010, 12, 16), title='entry three')
@@ -759,7 +760,7 @@ def test_search_entry_counts_basic(reader, parser, query, expected):
 
 
 def test_search_entries_order_title_summary_beats_title(reader, parser):
-    feed = parser.feed(1, datetime(2010, 1, 1))
+    feed = parser.feed(1, datetime(2010, 1, 1), title='feed 1')
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
     two = parser.entry(1, 2, datetime(2010, 1, 1), title='two')
     three = parser.entry(1, 3, datetime(2010, 1, 1), title='one', summary='one')
@@ -776,7 +777,7 @@ def test_search_entries_order_title_summary_beats_title(reader, parser):
 
 
 def test_search_entries_order_title_content_beats_title(reader, parser):
-    feed = parser.feed(1, datetime(2010, 1, 1))
+    feed = parser.feed(1, datetime(2010, 1, 1), title='feed 1')
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')
     two = parser.entry(1, 2, datetime(2010, 1, 1), title='two')
     three = parser.entry(
@@ -867,7 +868,7 @@ def test_search_entries_order_content_recent(reader, parser):
     should still be sorted by relevance.
 
     """
-    feed = parser.feed(1, datetime(2010, 1, 1))
+    feed = parser.feed(1, datetime(2010, 1, 1), title='feed 1')
     one = parser.entry(
         1,
         1,
@@ -965,22 +966,10 @@ def test_feed_resolved_title(reader, parser):
         e.feed_url: {k: v.apply('>', '<') for k, v in e.metadata.items()}
         for e in reader.search_entries('title')
     } == {
-        '2': {
-            '.feed.title': '>title<',
-        },
-        '3': {
-            '.feed.user_title': 'user >title<',
-        },
-        '4': {
-            '.feed_resolved_title': 'source >title< (no match)',
-        },
-        '5': {
-            '.source.title': 'source >title<',
-        },
-        '6': {
-            '.feed_resolved_title': 'source >title< (>title<)',
-        },
-        '7': {
-            '.feed_resolved_title': 'source >title< (user >title<)',
-        },
+        '2': {'.feed.title': '>title<'},
+        '3': {'.feed.user_title': 'user >title<'},
+        '4': {'.feed_resolved_title': 'source >title< (no match)'},
+        '5': {'.source.title': 'source >title<'},
+        '6': {'.feed_resolved_title': 'source >title< (>title<)'},
+        '7': {'.feed_resolved_title': 'source >title< (user >title<)'},
     }

@@ -1440,6 +1440,7 @@ def test_get_entries_random(reader, parser, get_entries, chunk_size):
 
     """
     reader._storage.chunk_size = chunk_size
+    parser.with_titles()
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -1726,11 +1727,19 @@ def test_data_roundtrip(reader, parser):
 def test_data_hashes_remain_stable(parser):
     # TODO: note the duplication from test_data_roundtrip()
 
-    feed = parser.feed(1, datetime(2010, 1, 1), author='feed author')
+    feed = parser.feed(
+        1,
+        datetime(2010, 1, 1),
+        title='Feed #1',
+        link='http://www.example.com/1',
+        author='feed author',
+    )
     entry = parser.entry(
         1,
         1,
         datetime(2010, 1, 1),
+        title='Entry #1',
+        link='http://www.example.com/entries/1',
         author='entry author',
         summary='summary',
         content=(Content('value3', 'type', 'en'), Content('value2')),
@@ -1897,6 +1906,8 @@ def test_make_reader_feed_root(monkeypatch, make_reader, kwargs, feed_root):
 
 @pytest.fixture
 def reader_with_two_feeds(reader, parser):
+    parser.with_titles()
+
     one = parser.feed(1, datetime(2010, 1, 1))
     one_one = parser.entry(1, 1, datetime(2010, 1, 1))
     one_two = parser.entry(1, 2, datetime(2010, 1, 1))
@@ -2310,6 +2321,8 @@ with_call_paginated_method = pytest.mark.parametrize(
 
 @pytest.fixture
 def reader_with_three_feeds(reader, parser):
+    parser.with_titles()
+
     one = parser.feed(1, datetime(2010, 1, 1))
     parser.entry(1, 1, datetime(2010, 1, 1))
     parser.entry(1, 2, datetime(2010, 1, 1))
@@ -2677,7 +2690,7 @@ def test_add_entry(reader, parser):
 
     reader._now = lambda: datetime(2010, 1, 3)
 
-    entry = parser.entry(1, 1)
+    entry = parser.entry(1, 1, title='entry')
     reader.update_feeds()
 
     assert reader.get_entry(('1', '1, 1')) == entry.as_entry(

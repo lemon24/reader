@@ -14,6 +14,7 @@ from reader.plugins.entry_dedupe import is_duplicate_entry
 from reader.plugins.entry_dedupe import merge_flags
 from reader.plugins.entry_dedupe import merge_tags
 from reader.plugins.entry_dedupe import ngrams
+from reader.plugins.entry_dedupe import normalize_url
 from reader.plugins.entry_dedupe import tokenize_content
 from reader.plugins.entry_dedupe import tokenize_title
 from utils import parametrize_dict
@@ -50,9 +51,8 @@ def test_only_duplicates_are_deleted(reader, parser, allow_short_content, monkey
     common_attrs = dict(updated=published, title='title', link='link')
 
     parser.entry(1, 'different', **common_attrs, summary='another')
-    # TODO: remove "title/link=None" once FakeParser doesn't have defaults anymore
-    parser.entry(1, 'none', title=None, link=None)
-    parser.entry(1, 'title-old', title='Title', link=None, summary='value')
+    parser.entry(1, 'none')
+    parser.entry(1, 'title-old', title='Title', summary='value')
     parser.entry(1, 'link-old', link='link', summary='value')
     parser.entry(1, 'published-old', published=published, summary='value')
     parser.entry(1, 'prefix-old', title='prefix', summary='value')
@@ -813,3 +813,18 @@ def test_common_prefixes():
 )
 def test_group_by(items, only_items, expected):
     assert list(group_by(str.upper, items, only_items)) == expected
+
+
+@pytest.mark.parametrize(
+    'input, expected',
+    [
+        (None, None),
+        ('', None),
+        ('Https://Host/Path?Query=Str#Frag', 'https://host/Path?Query=Str#Frag'),
+        ('http://host', 'https://host'),
+        ('trailing/slash/?q=s', 'trailing/slash?q=s'),
+        ('https://in[valid', None),
+    ],
+)
+def test_normalize_url(input, expected):
+    assert normalize_url(input) == expected

@@ -130,6 +130,7 @@ def test_mark_all_as_read_unread(db_path, make_reader, parser, browser):
 
 @pytest.mark.slow
 def test_add_delete_feed(db_path, browser, parser, app, monkeypatch):
+    parser.with_titles()
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
@@ -218,6 +219,7 @@ def test_delete_feed_from_entries_page_redirects(db_path, make_reader, parser, b
 @pytest.mark.slow
 def test_limit(db_path, make_reader, parser, browser):
     reader = make_reader(db_path)
+    parser.with_titles()
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -229,18 +231,19 @@ def test_limit(db_path, make_reader, parser, browser):
     browser.open('http://app/')
     entries = browser.get_current_page().select('.entry')
     assert len(entries) == 2
-    assert '#2' in str(entries[0])
-    assert '#1' in str(entries[1])
+    assert '2' in str(entries[0])
+    assert '1' in str(entries[1])
 
     browser.open('http://app/', params={'limit': 1})
     entries = browser.get_current_page().select('.entry')
     assert len(entries) == 1
-    assert '#2' in str(entries[0])
+    assert '2' in str(entries[0])
 
 
 @pytest.mark.slow
 def test_search(db_path, make_reader, parser, browser):
     reader = make_reader(db_path)
+    parser.with_titles()
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1), title='one')

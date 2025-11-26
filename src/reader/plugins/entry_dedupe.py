@@ -605,7 +605,7 @@ def normalize_url(url):
 
     try:
         url = urlparse(url)
-    except ValueError:  # pragma: no cover
+    except ValueError:
         return None
 
     scheme = url.scheme.lower()

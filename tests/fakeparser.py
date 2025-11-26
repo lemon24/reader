@@ -16,39 +16,14 @@ from reader._types import FeedData
 from reader.types import _entry_argument
 
 
-def _make_feed(number, updated=None, **kwargs):
-    return FeedData(
-        f'{number}',
-        updated,
-        # TODO: remove these defaults, they're confusing
-        kwargs.pop('title', f'Feed #{number}'),
-        kwargs.pop('link', f'http://www.example.com/{number}'),
-        **kwargs,
-    )
-
-
-def _make_entry(feed_number, number, updated=None, **kwargs):
-    if isinstance(number, str):
-        entry_number = number
-    else:
-        # evals to tuple
-        entry_number = f'{feed_number}, {number}'
-    return EntryData(
-        f'{feed_number}',
-        entry_number,
-        updated,
-        # TODO: remove these defaults, they're confusing
-        kwargs.pop('title', f'Entry #{number}'),
-        kwargs.pop('link', f'http://www.example.com/entries/{number}'),
-        **kwargs,
-    )
-
-
 @dataclass
 class Parser:
     feeds: dict = field(default_factory=dict)
     entries: dict = field(default_factory=dict)
     caching_info: dict | None = None
+
+    feed_title_fmt: str | None = None
+    entry_title_fmt: str | None = None
 
     should_raise: callable or None = None
     exc: Exception = None
@@ -62,15 +37,29 @@ class Parser:
         self.entries.clear()
 
     def feed(self, number, updated=None, **kwargs):
-        feed = _make_feed(number, updated, **kwargs)
+        if 'title' not in kwargs and self.feed_title_fmt:
+            kwargs['title'] = self.feed_title_fmt.format(number=number)
+        feed = FeedData(f'{number}', updated, **kwargs)
         self.feeds[number] = feed
         self.entries.setdefault(number, OrderedDict())
         return feed
 
     def entry(self, feed_number, number, updated=None, **kwargs):
-        entry = _make_entry(feed_number, number, updated, **kwargs)
+        if isinstance(number, str):
+            entry_id = number
+        else:
+            # conveniently evals to tuple
+            entry_id = f'{feed_number}, {number}'
+        if 'title' not in kwargs and self.entry_title_fmt:
+            kwargs['title'] = self.entry_title_fmt.format(number=number)
+        entry = EntryData(f'{feed_number}', entry_id, updated, **kwargs)
         self.entries[feed_number][number] = entry
         return entry
+
+    def with_titles(self, feed="feed {number}", entry="entry {number}"):
+        self.feed_title_fmt = feed
+        self.entry_title_fmt = entry
+        return self
 
     def raise_exc(self, cond=None, exc=None):
         self.reset_mode()

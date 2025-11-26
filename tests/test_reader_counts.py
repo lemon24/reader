@@ -241,7 +241,7 @@ def reader_entry_counts():
     # https://github.com/lemon24/reader/pull/342#discussion_r1649614984
 
     with make_reader(':memory:') as reader:
-        reader._parser = parser = Parser()
+        reader._parser = parser = Parser().with_titles()
 
         one = parser.feed(1)
         two = parser.feed(2)

@@ -42,7 +42,7 @@ TAGS_AND_EXPECTED_IDS = [
 
 
 def setup_reader_for_tags(reader):
-    reader._parser = parser = Parser()
+    reader._parser = parser = Parser().with_titles()
 
     one = parser.feed(1)  # tag, first
     one_one = parser.entry(1, 1)
@@ -145,7 +145,7 @@ ALL_IDS = {
 @pytest.fixture(scope='module')
 def reader_entries():
     with make_reader(':memory:') as reader:
-        reader._parser = parser = Parser()
+        reader._parser = parser = Parser().with_titles()
 
         one = parser.feed(1)
         one_one = parser.entry(1, 1)
@@ -220,7 +220,7 @@ def test_entries_error(reader, get_entries, kwargs):
 @pytest.fixture(scope='module', params=[None, datetime(2010, 1, 1)])
 def reader_entries_important(request):
     with make_reader(':memory:') as reader:
-        reader._parser = parser = Parser()
+        reader._parser = parser = Parser().with_titles()
 
         reader.add_feed(parser.feed(1))
         one = parser.entry(1, 1)
