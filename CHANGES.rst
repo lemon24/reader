@@ -9,7 +9,7 @@ Changelog
 Version 3.20
 ------------
 
-Unreleased
+Released 2025-11-26
 
 * Add the ``read_only`` :func:`make_reader` argument.
   Thanks to `Roman Milko`_ for the PR.
