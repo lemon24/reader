@@ -515,23 +515,29 @@ class OnceConfig(Config):
         return e.last_updated, e.updated or e.published or _EPOCH, e.id
 
 
-class OnceTitleConfig(OnceConfig):
-    tag = f'{TAG_PREFIX}.once.title'
-
+class OnceNoContentConfig(OnceConfig):
     # false positives are more likely when not comparing entry content;
     # if a group has more than two entries, something weird is going on
     max_group_size = 2
 
     @property
-    def groupers(self):
-        return [title_grouper]
+    def groupers(self):  # pragma: no cover
+        raise NotImplementedError
 
     def is_duplicate(self, one, two):
-        # title is enough to tell duplicates apart
+        # grouper is enough to tell duplicates apart
         return True
 
 
-class OnceTitlePrefixConfig(OnceTitleConfig):
+class OnceTitleConfig(OnceNoContentConfig):
+    tag = f'{TAG_PREFIX}.once.title'
+
+    @property
+    def groupers(self):
+        return [title_grouper]
+
+
+class OnceTitlePrefixConfig(OnceNoContentConfig):
     tag = f'{TAG_PREFIX}.once.title.prefix'
 
     @property
@@ -539,8 +545,16 @@ class OnceTitlePrefixConfig(OnceTitleConfig):
         return [title_grouper, title_strip_prefix_grouper]
 
 
+class OnceLinkConfig(OnceNoContentConfig):
+    tag = f'{TAG_PREFIX}.once.link'
+
+    @property
+    def groupers(self):
+        return [link_grouper]
+
+
 # ordered by strictness (strictest tag first)
-CONFIGS = [Config, OnceConfig, OnceTitleConfig, OnceTitlePrefixConfig]
+CONFIGS = [Config, OnceConfig, OnceTitleConfig, OnceLinkConfig, OnceTitlePrefixConfig]
 
 
 def title_grouper(entries, new_entries):

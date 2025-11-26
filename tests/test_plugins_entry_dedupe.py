@@ -179,14 +179,23 @@ def test_feed_duplicates_dont_flip_flop(
 @parametrize_dict(
     'tags, expected_extra',
     {
-        # for .dedupe.once, content matters
-        'once': (['once'], {'title-only-old'}),
-        # for .dedupe.once.title, duplicates must be pairs
-        'once.title': (['once.title'], {'title-old', 'link-old', 'prefix-old'}),
-        # for .dedupe.once.title.prefix, common prefixes should be stripped
-        'once.title.prefix': (['once.title.prefix'], {'title-old', 'link-old'}),
-        # .dedupe.once has priority
-        'both': (['once', 'once.title'], {'title-only-old'}),
+        '.once, content matters': (['once'], {'title-only-old', 'link-only-old'}),
+        '.once.title, pairs only': (
+            ['once.title'],
+            {'title-old', 'link-old', 'link-only-old', 'prefix-old'},
+        ),
+        '.once.link': (
+            ['once.link'],
+            {'title-old', 'title-only-old', 'link-old', 'prefix-old'},
+        ),
+        '.once.title.prefix': (
+            ['once.title.prefix'],
+            {'title-old', 'link-old', 'link-only-old'},
+        ),
+        '.once has priority': (
+            ['once', 'once.title'],
+            {'title-only-old', 'link-only-old'},
+        ),
     },
 )
 def test_dedupe_once(reader, parser, allow_short_content, tags, expected_extra):
@@ -201,6 +210,7 @@ def test_dedupe_once(reader, parser, allow_short_content, tags, expected_extra):
     parser.entry(1, 'title-old', title='title', summary='value')
     parser.entry(1, 'title-only-old', title='only', summary='one')
     parser.entry(1, 'link-old', link='link', summary='value')
+    parser.entry(1, 'link-only-old', link='http', summary='abc')
     parser.entry(1, 'prefix-old', title='prefix', summary='value')
     # unlike regular dedupe, all entries are considered new
     parser.entry(1, 'prefix-x', title='series-x', summary='value')
@@ -212,6 +222,7 @@ def test_dedupe_once(reader, parser, allow_short_content, tags, expected_extra):
     parser.entry(1, 'title-new', title='title', summary='value')
     parser.entry(1, 'title-only-new', title='only', summary='two')
     parser.entry(1, 'link-new', link='link', summary='value')
+    parser.entry(1, 'link-only-new', link='http', summary='xyz')
     parser.entry(1, 'prefix-new', title='series-prefix', summary='value')
     parser.entry(1, 'prefix-xxx', title='series-xxx')
 
@@ -230,6 +241,7 @@ def test_dedupe_once(reader, parser, allow_short_content, tags, expected_extra):
         'title-new',
         'title-only-new',
         'link-new',
+        'link-only-new',
         'prefix-new',
         'prefix-x',
         'prefix-xx',
