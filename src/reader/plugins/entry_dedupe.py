@@ -7,13 +7,12 @@ reader.entry_dedupe
 
 Deduplicate the entries of a feed.
 
-Sometimes, the entry id of some or all the entries in a feed changes
+Sometimes, the id of some or all the entries in a feed changes
 (e.g. from ``example.com/123`` to ``example.com/entry-title``),
 causing each entry to appear twice.
-:mod:`~reader.plugins.entry_dedupe` addresses this
-by copying entry user attributes
-like *read* or *important* to the new entry,
-and **deleting** the old entries.
+:mod:`~reader.plugins.entry_dedupe` fixes this
+by copying user attributes to the new entry
+and deleting the old one.
 
 
 User attributes
