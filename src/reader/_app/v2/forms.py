@@ -116,7 +116,8 @@ ENTRY_SORT_CHOICES = ['recent', 'random']
 class EntryFilter(PresetsMixin, Form):
     feed = HiddenField("feed")
     search = SearchField("search", name='Q')
-    feed_tags = TagFilterField("tags", name='tags')
+    feed_tags = TagFilterField("feed tags", name='tags')
+    tags = TagFilterField("entry tags", name='entry-tags')
     read = radio_field("read", choices=BOOL_CHOICES, default='no')
     important = radio_field("important", choices=TRISTATE_CHOICES, default='maybe')
     has_enclosures = radio_field(

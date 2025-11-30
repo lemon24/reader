@@ -52,9 +52,11 @@
   {# TODO: if data or error #}
   {% if form.search.data %}{{ macros.input(form.search, 'search') }}{% endif %}
   {% if form.feed_tags.data %}{{ macros.input(form.feed_tags, 'tag') }}{% endif %}
+  {% if form.feed_tags.data %}{{ macros.input(form.tags, 'tag') }}{% endif %}
   <div class="collapse mb-3" id="nav-more">
     {% if not form.search.data %}{{ macros.input(form.search, 'search') }}{% endif %}
     {% if not form.feed_tags.data %}{{ macros.input(form.feed_tags, 'tag') }}{% endif %}
+    {% if not form.feed_tags.data %}{{ macros.input(form.tags, 'tag') }}{% endif %}
     <div class="mb-3">
     {{ macros.radio(form.read) }}
     {{ macros.radio(form.important) }}
