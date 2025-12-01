@@ -501,8 +501,13 @@ class LocalConnectionFactory:
         # works on cpython (finalizer runs in thread),
         # but not on pypy (finalizer runs in main thread);
         # also see https://bugs.python.org/issue14073
+        #
+        # originally, we were using threading.current_thread() as target,
+        # but an unrelated object owned by the thread is more reliable
+        # (the thread is collected with a delay, and rarely only atexit)
+        #
         self._local.finalizer = weakref.finalize(
-            threading.current_thread(), self._close, db, self.read_only
+            self._local.finalizer_sentinel, self._close, db, self.read_only
         )  # type: ignore[call-arg]
 
         for name, path in self.attached.items():
@@ -541,7 +546,7 @@ class LocalConnectionFactory:
                 return
             # can't close() a connection from a thread that didn't create it;
             # SQLAlchemy ignores this as well in SingletonThreadPool.dispose()
-            if "objects created in a thread" in message:
+            if "objects created in a thread" in message:  # pragma: no cover
                 return
             raise
 
@@ -644,15 +649,21 @@ class LocalConnectionFactory:
 
 
 class _LocalConnectionFactoryState(threading.local):
+
     def __init__(self) -> None:
         self.db: sqlite3.Connection | None = None
         self.finalizer: (
-            weakref.finalize[[sqlite3.Connection], threading.Thread] | None
+            weakref.finalize[[sqlite3.Connection], _FinalizerSentinel] | None
         ) = None
+        self.finalizer_sentinel = _FinalizerSentinel()
         self.is_creating_thread: bool = False
         self.context_stack: list[None] = []
         self.call_count: int = 0
         self.closed: bool = False
+
+
+class _FinalizerSentinel:
+    pass
 
 
 @contextmanager
