@@ -20,6 +20,7 @@ from contextlib import closing
 from contextlib import contextmanager
 from contextlib import nullcontext
 from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
@@ -440,6 +441,19 @@ class LocalConnectionFactory:
 
     INLINE_OPTIMIZE_TIMEOUT = 0.1
 
+    @dataclass
+    class _State(threading.local):
+        class _Sentinel:
+            pass
+
+        db: sqlite3.Connection | None = None
+        finalizer: weakref.finalize[[sqlite3.Connection], _Sentinel] | None = None
+        finalizer_sentinel: _Sentinel = field(default_factory=_Sentinel)
+        is_creating_thread: bool = False
+        context_stack: list[None] = field(default_factory=list)
+        call_count: int = 0
+        closed: bool = False
+
     def __init__(
         self,
         path: str,
@@ -455,15 +469,14 @@ class LocalConnectionFactory:
             raise NotImplementedError("is_private() does not work for uri=True")
         self.kwargs['uri'] = True
         self.attached: dict[str, str] = {}
-        self._local = _LocalConnectionFactoryState()
+        self._local = self._State()
         self._local.is_creating_thread = True
         self._other_threads = False
         # connect immediately, so exceptions are raised before the first call
         self.__call__()
 
     def __call__(self) -> sqlite3.Connection:
-        db = self._local.db
-        if db:
+        if db := self._local.db:
             if not self._local.context_stack:
                 if self._should_optimize(self._local.call_count):
                     self._optimize(db, self.read_only, self.INLINE_OPTIMIZE_TIMEOUT)
@@ -482,14 +495,10 @@ class LocalConnectionFactory:
         if not self._local.is_creating_thread:
             self._other_threads = True
 
-        # TODO: remove needless cast (needed after mypy 1.16.0 update)
-        db = cast(
+        self._local.db = db = cast(
             sqlite3.Connection,
             sqlite3.connect(self._make_uri(self.path), **self.kwargs),
         )
-
-        self._local.db = db
-        self._local.call_count = 0
 
         try:
             self.setup_db(db)
@@ -646,24 +655,6 @@ class LocalConnectionFactory:
 
         """
         return path in TEMPORARY_DB_PATHS
-
-
-class _LocalConnectionFactoryState(threading.local):
-
-    def __init__(self) -> None:
-        self.db: sqlite3.Connection | None = None
-        self.finalizer: (
-            weakref.finalize[[sqlite3.Connection], _FinalizerSentinel] | None
-        ) = None
-        self.finalizer_sentinel = _FinalizerSentinel()
-        self.is_creating_thread: bool = False
-        self.context_stack: list[None] = []
-        self.call_count: int = 0
-        self.closed: bool = False
-
-
-class _FinalizerSentinel:
-    pass
 
 
 @contextmanager
