@@ -930,10 +930,14 @@ def test_update_after_invalid_config(reader, parser, config, config_is_global):
     assert feed.update_after == datetime(2010, 1, 1, 1)
 
 
-def headers(*, ra=None):
+def headers(*, ra=None, ma=None, exp=None):
     rv = {}
     if ra is not None:
         rv['retry-after'] = ra
+    if ma is not None:
+        rv['cache-control'] = f"max-age={ma}"
+    if exp is not None:
+        rv['expires'] = exp
     return rv
 
 
@@ -979,6 +983,22 @@ def ids(value):
         (60, 429, headers(ra='Thu, 31 Dec 2009 23:40:00 GMT'), datetime(2010, 1, 1, 1)),
         (60, 429, headers(ra="not a date, not an int"), datetime(2010, 1, 1, 1)),
         (60, 200, headers(ra=6000), datetime(2010, 1, 1, 1)),
+        (60, 200, headers(ma=6000), datetime(2010, 1, 1, 2)),
+        (60, 200, headers(ma="not an int"), datetime(2010, 1, 1, 1)),
+        (
+            60,
+            200,
+            headers(exp='Fri, 01 Jan 2010 01:40:00 GMT'),
+            datetime(2010, 1, 1, 2),
+        ),
+        (
+            60,
+            200,
+            headers(ma=3000, exp='Fri, 01 Jan 2010 01:40:00 GMT'),
+            datetime(2010, 1, 1, 1),
+        ),
+        (60, 429, headers(ra=3000, ma=6000), datetime(2010, 1, 1, 2)),
+        (60, 429, headers(ra=6000, ma=3000), datetime(2010, 1, 1, 2)),
     ],
     ids=ids,
 )

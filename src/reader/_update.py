@@ -253,6 +253,7 @@ class Decider:
 
         update_after = next_update_after(self.global_now, **self.config)
         if result.http_info:
+            # TODO (#376): technically this is supposed to be against request end
             http_update_after = result.http_info.get_update_after(self.global_now)
             # also accounts for it being in the past / negative
             if http_update_after and http_update_after > update_after:

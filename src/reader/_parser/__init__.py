@@ -35,6 +35,8 @@ from .requests import TimeoutType
 
 
 if TYPE_CHECKING:  # pragma: no cover
+    from werkzeug.datastructures import RequestCacheControl
+
     from ._lazy import Parser as Parser
 
 
@@ -213,6 +215,32 @@ class HTTPInfo(_namedtuple_compat):
 
         return timedelta(seconds=seconds)
 
+    @property
+    def cache_control(self) -> RequestCacheControl | None:
+        """Parsed Cache-Control header, or None if missing."""
+
+        # lazy import
+        from ._http_utils import parse_cache_control_header
+
+        value = self.headers.get('cache-control')
+        if not value:
+            return None
+
+        return parse_cache_control_header(value)
+
+    @property
+    def expires(self) -> datetime | None:
+        """Parsed Expires header, or None if missing."""
+
+        # lazy import
+        from ._http_utils import parse_date
+
+        value = self.headers.get('expires')
+        if not value:
+            return None
+
+        return parse_date(value)
+
     def get_update_after(self, now: datetime) -> datetime | None:
         """Select the best "update after" date from available headers."""
         rv = []
@@ -224,6 +252,15 @@ class HTTPInfo(_namedtuple_compat):
                 else:
                     retry_after = now + retry_after
                 rv.append(retry_after)
+
+        # https://httpwg.org/specs/rfc9111.html#calculating.freshness.lifetime
+        if cache_control := self.cache_control:
+            if max_age := cache_control.max_age:
+                rv.append(now + timedelta(seconds=max_age))
+        elif expires := self.expires:
+            # TODO (#376): technically this is supposed to be against Date
+            rv.append(expires.astimezone(timezone.utc))
+        # TODO (#376): what about heuristics?
 
         return max(rv, default=None)
 
