@@ -252,17 +252,12 @@ class Decider:
             value = self.get_feed_to_update(result.value, bool(entries_to_update))
 
         update_after = next_update_after(self.global_now, **self.config)
-
-        http_info = result.http_info
-        if http_info and http_info.status in (429, 503) and http_info.retry_after:
-            if isinstance(http_info.retry_after, datetime):
-                retry_after = http_info.retry_after.astimezone(timezone.utc)
-            else:
-                retry_after = self.global_now + http_info.retry_after
-            # also accounts for retry_after being in the past / negative
-            if retry_after > update_after:
+        if result.http_info:
+            http_update_after = result.http_info.get_update_after(self.global_now)
+            # also accounts for it being in the past / negative
+            if http_update_after and http_update_after > update_after:
                 # round up to the next interval
-                update_after = next_update_after(retry_after, **self.config)
+                update_after = next_update_after(http_update_after, **self.config)
 
         # We always return a FeedUpdateIntent because
         # we always want to set last_retrieved and update_after,

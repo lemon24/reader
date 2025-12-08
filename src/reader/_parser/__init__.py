@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timedelta
+from datetime import timezone
 from typing import Any
 from typing import cast
 from typing import ContextManager
@@ -211,6 +212,20 @@ class HTTPInfo(_namedtuple_compat):
             return parse_date(value)
 
         return timedelta(seconds=seconds)
+
+    def get_update_after(self, now: datetime) -> datetime | None:
+        """Select the best "update after" date from available headers."""
+        rv = []
+
+        if self.status in (429, 503):
+            if retry_after := self.retry_after:
+                if isinstance(retry_after, datetime):
+                    retry_after = retry_after.astimezone(timezone.utc)
+                else:
+                    retry_after = now + retry_after
+                rv.append(retry_after)
+
+        return max(rv, default=None)
 
 
 class RetrieveError(ParseError):
