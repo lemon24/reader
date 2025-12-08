@@ -930,39 +930,79 @@ def test_update_after_invalid_config(reader, parser, config, config_is_global):
     assert feed.update_after == datetime(2010, 1, 1, 1)
 
 
+def headers(*, ra=None):
+    rv = {}
+    if ra is not None:
+        rv['retry-after'] = ra
+    return rv
+
+
+def ids(value):
+    from datetime import datetime
+
+    if isinstance(value, dict):
+        return repr(value)
+    if isinstance(value, datetime):
+        if value.tzinfo == timezone.utc:
+            value = value.replace(tzinfo=None)
+        if value.microsecond:
+            return value.isoformat()
+        if value.second:
+            return value.isoformat(timespec='seconds')
+        if value.minute:
+            return value.isoformat(timespec='minutes')
+        if value.hour:
+            return value.isoformat(timespec='hours')
+        return value.date().isoformat()
+
+
 @pytest.mark.parametrize(
-    'interval, retry_after, update_after',
+    'interval, status, headers, expected',
     [
-        (60, 3600, datetime(2010, 1, 1, 1)),
-        (60, 6000, datetime(2010, 1, 1, 2)),
-        (60, 'Fri, 01 Jan 2010 01:40:00 GMT', datetime(2010, 1, 1, 2)),
-        (60, 'Fri, 01 Jan 2010 01:40:00', datetime(2010, 1, 1, 2)),
-        (60, 'Fri, 01 Jan 2010 02:40:00 +0100', datetime(2010, 1, 1, 2)),
-        (60, 2000, datetime(2010, 1, 1, 1)),
-        (15, 6000, datetime(2010, 1, 1, 1, 45)),
-        (15, 2000, datetime(2010, 1, 1, 0, 45)),
-        (60, None, datetime(2010, 1, 1, 1)),
-        (60, -2000, datetime(2010, 1, 1, 1)),
-        (60, 'Fri, 01 Jan 2010 00:40:00 GMT', datetime(2010, 1, 1, 1)),
-        (60, 'Thu, 31 Dec 2009 23:40:00 GMT', datetime(2010, 1, 1, 1)),
-        (60, "not a date, not an int", datetime(2010, 1, 1, 1)),
+        (60, 429, headers(ra=3600), datetime(2010, 1, 1, 1)),
+        (60, 429, headers(ra=6000), datetime(2010, 1, 1, 2)),
+        (60, 503, headers(ra=6000), datetime(2010, 1, 1, 2)),
+        (60, 429, headers(ra='Fri, 01 Jan 2010 01:40:00 GMT'), datetime(2010, 1, 1, 2)),
+        (60, 429, headers(ra='Fri, 01 Jan 2010 01:40:00'), datetime(2010, 1, 1, 2)),
+        (
+            60,
+            429,
+            headers(ra='Fri, 01 Jan 2010 02:40:00 +0100'),
+            datetime(2010, 1, 1, 2),
+        ),
+        (60, 429, headers(ra=2000), datetime(2010, 1, 1, 1)),
+        (15, 429, headers(ra=6000), datetime(2010, 1, 1, 1, 45)),
+        (15, 429, headers(ra=2000), datetime(2010, 1, 1, 0, 45)),
+        (60, 429, headers(), datetime(2010, 1, 1, 1)),
+        (60, 429, headers(ra=-2000), datetime(2010, 1, 1, 1)),
+        (60, 429, headers(ra='Fri, 01 Jan 2010 00:40:00 GMT'), datetime(2010, 1, 1, 1)),
+        (60, 429, headers(ra='Thu, 31 Dec 2009 23:40:00 GMT'), datetime(2010, 1, 1, 1)),
+        (60, 429, headers(ra="not a date, not an int"), datetime(2010, 1, 1, 1)),
+        (60, 200, headers(ra=6000), datetime(2010, 1, 1, 1)),
     ],
+    ids=ids,
 )
-def test_update_retry_after(reader, parser, interval, retry_after, update_after):
+def test_update_after_http(reader, parser, interval, status, headers, expected):
     feed = parser.feed(1)
     reader.add_feed(feed)
 
     reader.set_tag(feed, '.reader.update', {'interval': interval})
 
-    status = random.choice([429, 503])
-    headers = {'retry-after': retry_after} if retry_after is not None else {}
-    parser.raise_exc(RetrieveError('', http_info=HTTPInfo(status, headers)))
+    http_info = HTTPInfo(status, headers)
+    if status >= 400:
+        parser.raise_exc(RetrieveError('', http_info=http_info))
+    elif status >= 300:
+        assert status == 304, status
+        parser.not_modified()
+    else:
+        assert status == 200, status
+        parser.http_info = http_info
 
     reader._now = lambda: datetime(2010, 1, 1)
     reader.update_feeds()
     feed = reader.get_feed(feed)
 
-    assert feed.update_after == update_after
+    assert feed.update_after == expected
 
 
 @pytest.mark.parametrize(
