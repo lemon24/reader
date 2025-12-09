@@ -192,28 +192,50 @@ class HTTPInfo(_namedtuple_compat):
     #: The HTTP response headers.
     headers: Headers
 
-    @property
-    def retry_after(self) -> datetime | timedelta | None:
-        """Parsed Retry-After header.
+    def get_update_after(self, now: datetime) -> datetime | None:
+        """Select the best "update after" date from available headers."""
+        rv = []
 
-        None if parsing fails (instead of raising an exception).
-        Always a timezone-aware datetime object;
-        if timezone information is missing, UTC is assumed.
+        if self.status in (429, 503):
+            try:
+                seconds = int(self.headers.get('retry-after', ''))
+                rv.append(now + timedelta(seconds=seconds))
+            except ValueError:
+                if retry_after := self.parse_date('retry-after', now):
+                    rv.append(retry_after)
+
+        # https://httpwg.org/specs/rfc9111.html#calculating.freshness.lifetime
+        if cache_control := self.cache_control:
+            if max_age := cache_control.max_age:
+                rv.append(now + timedelta(seconds=max_age))
+        elif expires := self.parse_date('expires', now):
+            rv.append(expires)
+
+        # TODO: RFC 9111 specifies a Last-Modified fallback heuristic,
+        # but it might be better to implement it in the updater
+        # as part of https://github.com/lemon24/reader/issues/382
+
+        return max(rv, default=None)
+
+    def parse_date(self, name: str, now: datetime | None = None) -> datetime | None:
+        """Parse an HTTP date header and return a timezone-aware datetime.
+
+        Return None if missing or if parsing fails.
+
+        If `now` is given and the Date header is set,
+        make the returned value relative to `now`.
 
         """
         # lazy import
         from ._http_utils import parse_date
 
-        value = self.headers.get('retry-after')
-        if not value:
-            return None
+        if value := parse_date(self.headers.get(name, '')):
+            value = value.astimezone(timezone.utc)
+            if now and (date := parse_date(self.headers.get('date', ''))):
+                value = now + (value - date)
+            return value
 
-        try:
-            seconds = int(value)
-        except ValueError:
-            return parse_date(value)
-
-        return timedelta(seconds=seconds)
+        return None
 
     @property
     def cache_control(self) -> RequestCacheControl | None:
@@ -227,62 +249,6 @@ class HTTPInfo(_namedtuple_compat):
             return None
 
         return parse_cache_control_header(value)
-
-    @property
-    def expires(self) -> datetime | None:
-        """Parsed Expires header, or None if missing."""
-
-        # lazy import
-        from ._http_utils import parse_date
-
-        value = self.headers.get('expires')
-        if not value:
-            return None
-
-        return parse_date(value)
-
-    @property
-    def date(self) -> datetime | None:
-        """Parsed Date header, or None if missing."""
-
-        # lazy import
-        from ._http_utils import parse_date
-
-        value = self.headers.get('date')
-        if not value:
-            return None
-
-        return parse_date(value)
-
-    def get_update_after(self, now: datetime) -> datetime | None:
-        """Select the best "update after" date from available headers."""
-        rv = []
-
-        if date := self.date:
-            date = date.astimezone(timezone.utc)
-
-        if self.status in (429, 503):
-            if retry_after := self.retry_after:
-                if isinstance(retry_after, datetime):
-                    retry_after = retry_after.astimezone(timezone.utc)
-                    if date:
-                        retry_after = now + (retry_after - date)
-                else:
-                    retry_after = now + retry_after
-                rv.append(retry_after)
-
-        # https://httpwg.org/specs/rfc9111.html#calculating.freshness.lifetime
-        if cache_control := self.cache_control:
-            if max_age := cache_control.max_age:
-                rv.append(now + timedelta(seconds=max_age))
-        elif expires := self.expires:
-            expires = expires.astimezone(timezone.utc)
-            if date:
-                expires = now + (expires - date)
-            rv.append(expires)
-        # TODO (#376): what about heuristics?
-
-        return max(rv, default=None)
 
 
 class RetrieveError(ParseError):
