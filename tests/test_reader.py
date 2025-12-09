@@ -52,6 +52,7 @@ from reader_methods import search_entries_recent
 from reader_methods import search_entries_relevant
 from utils import Blocking
 from utils import make_url_base
+from utils import parametrize_dict
 from utils import rename_argument
 from utils import utc_datetime
 from utils import utc_datetime as datetime
@@ -930,96 +931,71 @@ def test_update_after_invalid_config(reader, parser, config, config_is_global):
     assert feed.update_after == datetime(2010, 1, 1, 1)
 
 
-def headers(*, ra=None, ma=None, exp=None, dt=None):
-    rv = {}
-    if ra is not None:
-        rv['retry-after'] = ra
-    if ma is not None:
-        rv['cache-control'] = f"max-age={ma}"
-    if exp is not None:
-        rv['expires'] = exp
-    if dt is not None:
-        rv['date'] = dt
-    return rv
+def data(expected, status, *, interval=60, max_age=None, **kwargs):
+    if isinstance(expected, int):
+        expected = (expected,)
+    if isinstance(expected, tuple):
+        expected = datetime(2010, 1, 1, *expected)
+    headers = {k.lower().replace('_', '-'): v for k, v in kwargs.items()}
+    if max_age is not None:
+        headers['cache-control'] = f"max-age={max_age}"
+    return interval, status, headers, expected
 
 
-def ids(value):
-    from datetime import datetime
+UPDATE_AFTER_HTTP_DATA = {
+    # no headers (should fail after #378)
+    '429 without headers is ignored': data(1, 429),
+    '503 without headers is ignored': data(1, 429),
+    # retry-after
+    'retry-after < interval': data(1, 429, retry_after=3599),
+    'retry-after = interval': data(1, 429, retry_after=3600),
+    'retry-after > interval (429)': data(2, 429, retry_after=3601),
+    'retry-after > interval (503)': data(2, 503, retry_after=3601),
+    'invalid retry-after is ignored': data(1, 429, retry_after='xyz'),
+    '200 retry-after is ignored': data(1, 200, retry_after=6000),
+    'date retry-after': data(2, 429, retry_after='Fri, 01 Jan 2010 01:40:00 GMT'),
+    'date retry-after (no timezone)': data(
+        2, 429, retry_after='Fri, 01 Jan 2010 01:40:00'
+    ),
+    'date retry-after (not GMT)': data(
+        2, 429, retry_after='Fri, 01 Jan 2010 02:40:00 +0100'
+    ),
+    'retry-after in the past': data(1, 429, retry_after=-200000),
+    'retry-after in the past (date)': data(
+        1, 429, retry_after='Thu, 31 Dec 2009 23:40:00 GMT'
+    ),
+    # cache-control max-age
+    'max-age > interval': data(2, 200, max_age=6000),
+    'invalid max-age is ignored': data(1, 200, max_age='xyz'),
+    # expires
+    'expires > interval': data(2, 200, expires='Fri, 01 Jan 2010 01:40:00 GMT'),
+    # interactions
+    'max-age beats expires': data(
+        1, 200, max_age=3000, expires='Fri, 01 Jan 2010 01:40:00 GMT'
+    ),
+    'retry-after < max-age': data(2, 429, retry_after=3000, max_age=6000),
+    'retry-after > max-age': data(2, 429, retry_after=6000, max_age=3000),
+    'relative to date (retry-after)': data(
+        3,
+        429,
+        date='Thu, 31 Dec 2009 23:00:00 GMT',
+        retry_after='Fri, 01 Jan 2010 01:40:00 GMT',
+    ),
+    'relative to date (expires)': data(
+        3,
+        200,
+        date='Thu, 31 Dec 2009 23:00:00 GMT',
+        expires='Fri, 01 Jan 2010 01:40:00 GMT',
+    ),
+    # different intervals
+    'non-hour interval (retry-after)': data(
+        (1, 45), 429, retry_after=6000, interval=15
+    ),
+    'non-hour interval (max-age)': data((0, 45), 429, max_age=2000, interval=15),
+}
 
-    if isinstance(value, dict):
-        return repr(value)
-    if isinstance(value, datetime):
-        if value.tzinfo == timezone.utc:
-            value = value.replace(tzinfo=None)
-        if value.microsecond:
-            return value.isoformat()
-        if value.second:
-            return value.isoformat(timespec='seconds')
-        if value.minute:
-            return value.isoformat(timespec='minutes')
-        if value.hour:
-            return value.isoformat(timespec='hours')
-        return value.date().isoformat()
 
-
-@pytest.mark.parametrize(
-    'interval, status, headers, expected',
-    [
-        (60, 429, headers(ra=3600), datetime(2010, 1, 1, 1)),
-        (60, 429, headers(ra=6000), datetime(2010, 1, 1, 2)),
-        (60, 503, headers(ra=6000), datetime(2010, 1, 1, 2)),
-        (60, 429, headers(ra='Fri, 01 Jan 2010 01:40:00 GMT'), datetime(2010, 1, 1, 2)),
-        (60, 429, headers(ra='Fri, 01 Jan 2010 01:40:00'), datetime(2010, 1, 1, 2)),
-        (
-            60,
-            429,
-            headers(ra='Fri, 01 Jan 2010 02:40:00 +0100'),
-            datetime(2010, 1, 1, 2),
-        ),
-        (60, 429, headers(ra=2000), datetime(2010, 1, 1, 1)),
-        (15, 429, headers(ra=6000), datetime(2010, 1, 1, 1, 45)),
-        (15, 429, headers(ra=2000), datetime(2010, 1, 1, 0, 45)),
-        (60, 429, headers(), datetime(2010, 1, 1, 1)),
-        (60, 429, headers(ra=-2000), datetime(2010, 1, 1, 1)),
-        (60, 429, headers(ra='Fri, 01 Jan 2010 00:40:00 GMT'), datetime(2010, 1, 1, 1)),
-        (60, 429, headers(ra='Thu, 31 Dec 2009 23:40:00 GMT'), datetime(2010, 1, 1, 1)),
-        (60, 429, headers(ra="not a date, not an int"), datetime(2010, 1, 1, 1)),
-        (60, 200, headers(ra=6000), datetime(2010, 1, 1, 1)),
-        (60, 200, headers(ma=6000), datetime(2010, 1, 1, 2)),
-        (60, 200, headers(ma="not an int"), datetime(2010, 1, 1, 1)),
-        (
-            60,
-            200,
-            headers(exp='Fri, 01 Jan 2010 01:40:00 GMT'),
-            datetime(2010, 1, 1, 2),
-        ),
-        (
-            60,
-            200,
-            headers(ma=3000, exp='Fri, 01 Jan 2010 01:40:00 GMT'),
-            datetime(2010, 1, 1, 1),
-        ),
-        (60, 429, headers(ra=3000, ma=6000), datetime(2010, 1, 1, 2)),
-        (60, 429, headers(ra=6000, ma=3000), datetime(2010, 1, 1, 2)),
-        (
-            60,
-            200,
-            headers(
-                dt='Thu, 31 Dec 2009 23:00:00 GMT', exp='Fri, 01 Jan 2010 01:40:00 GMT'
-            ),
-            datetime(2010, 1, 1, 3),
-        ),
-        (
-            60,
-            429,
-            headers(
-                dt='Thu, 31 Dec 2009 23:00:00 GMT', ra='Fri, 01 Jan 2010 01:40:00 GMT'
-            ),
-            datetime(2010, 1, 1, 3),
-        ),
-    ],
-    ids=ids,
-)
+@parametrize_dict('interval, status, headers, expected', UPDATE_AFTER_HTTP_DATA)
 def test_update_after_http(reader, parser, interval, status, headers, expected):
     feed = parser.feed(1)
     reader.add_feed(feed)
