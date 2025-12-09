@@ -11,6 +11,13 @@ Version 3.21
 
 Unreleased
 
+* During :ref:`scheduled updates <scheduled>`,
+  honor the Cache-Control max-age and Expires HTTP headers.
+  (:issue:`376`)
+
+  * Also, if the Retry-After is a date,
+    make the update interval relative to Date.
+
 
 Version 3.20
 ------------

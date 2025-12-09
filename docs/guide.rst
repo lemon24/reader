@@ -289,9 +289,9 @@ such that updates don't happen exactly at the the same time;
 for example, with a one-hour interval, a jitter of 0.25 means
 updates will occur any time in the first 15 minutes of each hour.
 
-If the server sends the Retry-After HTTP header with
-429 Too Many Requests or 503 Service Unavailable responses,
-:meth:`update_feeds(scheduled=True) <Reader.update_feeds>` will honor it.
+If the server responds with any of the
+Cache-Control max-age, Expires, or Retry-After HTTP headers,
+:meth:`update_feeds(scheduled=True) <Reader.update_feeds>` will honor them.
 
 
 .. note::
@@ -307,6 +307,9 @@ If the server sends the Retry-After HTTP header with
 
 .. versionchanged:: 3.15
     Honor the Retry-After HTTP header.
+
+.. versionchanged:: 3.21
+    Honor the Cache-Control max-age and Expires HTTP headers.
 
 
 Update status
