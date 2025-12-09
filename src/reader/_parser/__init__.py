@@ -241,14 +241,32 @@ class HTTPInfo(_namedtuple_compat):
 
         return parse_date(value)
 
+    @property
+    def date(self) -> datetime | None:
+        """Parsed Date header, or None if missing."""
+
+        # lazy import
+        from ._http_utils import parse_date
+
+        value = self.headers.get('date')
+        if not value:
+            return None
+
+        return parse_date(value)
+
     def get_update_after(self, now: datetime) -> datetime | None:
         """Select the best "update after" date from available headers."""
         rv = []
+
+        if date := self.date:
+            date = date.astimezone(timezone.utc)
 
         if self.status in (429, 503):
             if retry_after := self.retry_after:
                 if isinstance(retry_after, datetime):
                     retry_after = retry_after.astimezone(timezone.utc)
+                    if date:
+                        retry_after = now + (retry_after - date)
                 else:
                     retry_after = now + retry_after
                 rv.append(retry_after)
@@ -258,8 +276,10 @@ class HTTPInfo(_namedtuple_compat):
             if max_age := cache_control.max_age:
                 rv.append(now + timedelta(seconds=max_age))
         elif expires := self.expires:
-            # TODO (#376): technically this is supposed to be against Date
-            rv.append(expires.astimezone(timezone.utc))
+            expires = expires.astimezone(timezone.utc)
+            if date:
+                expires = now + (expires - date)
+            rv.append(expires)
         # TODO (#376): what about heuristics?
 
         return max(rv, default=None)
