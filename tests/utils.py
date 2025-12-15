@@ -8,6 +8,7 @@ import threading
 import time
 from datetime import datetime
 from datetime import timezone
+from unittest.mock import Mock
 from urllib.parse import urlparse
 
 import pytest
@@ -100,6 +101,25 @@ def monkeypatch_tz(monkeypatch, request):
         request.addfinalizer(time.tzset)
     with monkeypatch.context() as monkeypatch:
         yield monkeypatch_tz
+
+
+@pytest.fixture
+def monkeypatch_datetime(monkeypatch):
+
+    def monkeypatch_datetime(target):
+        mock = Mock(wraps=datetime, now=Now())
+        monkeypatch.setattr(target, mock)
+        return mock
+
+    return monkeypatch_datetime
+
+
+class Now:
+    def __call__(self, tz=None):
+        return self.value.replace(tzinfo=tz)
+
+    def set(self, value):
+        self.value = value
 
 
 def utc_datetime(*args, **kwargs):

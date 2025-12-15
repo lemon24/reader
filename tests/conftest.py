@@ -11,6 +11,7 @@ import reader_methods
 from fakeparser import Parser
 from reader import make_reader as original_make_reader
 from reader._storage import Storage
+from utils import monkeypatch_datetime
 from utils import monkeypatch_os
 from utils import monkeypatch_tz
 from utils import reload_module

@@ -68,41 +68,16 @@ def generate_response(body=b'', *, status='200 OK', **headers):
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom', 'json'])
-def test_local(reader, feed_type, data_dir, monkeypatch):
+def test_local(reader, feed_type, data_dir, monkeypatch_datetime):
+    datetime = monkeypatch_datetime('reader.core.datetime')
+
     feed_filename = f'full.{feed_type}'
     feed_url = str(data_dir.joinpath(feed_filename))
 
-    # TODO: maybe don't mock, and just check datetimes are in the correct order
-
-    # On CPython, we can't mock datetime.datetime.now because
-    # datetime.datetime is a built-in/extension type; we can mock the class.
-    # On PyPy, we can mock the class, but it results in weird type errors
-    # when the mock/subclass and original datetime class interact.
-
-    from datetime import datetime
-
-    try:
-        # if we can set attributes on the class, we just patch now() directly
-        # (we don't use monkeypatch because it breaks cleanup if it doesn't work)
-        datetime.now = datetime.now
-        datetime_mock = datetime
-    except TypeError:
-        # otherwise, we monkeypatch the datetime class on the module
-        class datetime_mock(datetime):
-            pass
-
-        # reader.core must "from datetime import datetime" !
-        monkeypatch.setattr('reader.core.datetime', datetime_mock)
-
-    monkeypatch.setattr(
-        datetime_mock, 'now', lambda tz=None: datetime(2010, 1, 1, tzinfo=tz)
-    )
+    datetime.now.set(datetime(2010, 1, 1))
     reader.add_feed(feed_url)
-    monkeypatch.setattr(
-        datetime_mock, 'now', lambda tz=None: datetime(2010, 1, 2, tzinfo=tz)
-    )
+    datetime.now.set(datetime(2010, 1, 2))
     reader.update_feeds()
-    monkeypatch.undo()
 
     (feed,) = reader.get_feeds()
     entries = sorted(reader.get_entries(), key=lambda e: e.id)
