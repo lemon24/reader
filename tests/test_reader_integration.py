@@ -180,3 +180,27 @@ def test_conditional_requests(reader, data_dir, server):
     request_line, headers, body = server.request
     assert headers[b'If-None-Match'] == b'"11111-67890abcdef12"'
     assert headers[b'If-Modified-Since'] == b'Thu, 1 Jan 2020 11:11:11 GMT'
+
+
+@pytest.mark.slow
+def test_cache_control(reader, data_dir, server, monkeypatch_datetime):
+    datetime = monkeypatch_datetime('reader.core.datetime')
+    datetime.now.set(datetime(2010, 1, 1))
+    reader.add_feed(server.url)
+
+    server.set_response(
+        data_dir.joinpath('empty.atom').read_text(),
+        Cache_Control=f'max-age={3600 * 12}',
+    )
+
+    def update():
+        return set(dict(reader.update_feeds_iter(scheduled=True)))
+
+    datetime.now.set(datetime(2010, 1, 2))
+    assert update() == {server.url}
+
+    datetime.now.set(datetime(2010, 1, 2, 12, 59, 59))
+    assert update() == set()
+
+    datetime.now.set(datetime(2010, 1, 2, 13))
+    assert update() == {server.url}
