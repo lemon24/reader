@@ -2855,6 +2855,11 @@ def test_copy_entry(reader, data_dir, data_file):
         reader.copy_entry(src_id, dst_id)
     assert excinfo.value.resource_id == dst_id
 
+    # dst is src
+    with pytest.raises(EntryExistsError) as excinfo:
+        reader.copy_entry(src_id, src_id)
+    assert excinfo.value.resource_id == src_id
+
     # dst feed does not exist
     with pytest.raises(FeedNotFoundError) as excinfo:
         reader.copy_entry(src_id, ('inexistent', 'id'))
@@ -2862,6 +2867,10 @@ def test_copy_entry(reader, data_dir, data_file):
 
     # delete
     reader.delete_entry(dst_id)
+
+    # copy to same feed works
+    reader.copy_entry(src_id, (src_url, 'copy'))
+    assert reader.get_entry((src_url, 'copy'))
 
     # user title has priority in source if original entry does not have source
     reader.set_feed_user_title(src_url, 'user')

@@ -1624,8 +1624,6 @@ class Reader:
         recent_sort = self._storage.get_entry_recent_sort(src_entry.resource_id)
         dst_resource_id = _entry_argument(dst)
 
-        # FIXME: do not allow copy to the same feed (or at least entry)
-
         attrs = dict(src_entry.__dict__)
         attrs['feed_url'], attrs['id'] = dst_resource_id
 
