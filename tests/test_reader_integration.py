@@ -8,36 +8,10 @@ from utils import make_url_base
 from utils import utc_datetime
 
 
-class Server(socketserver.TCPServer):
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.response = b''
-        self.request = None
-
-    @property
-    def url(self):
-        return f"http://{self.server_address[0]}:{self.server_address[1]}/"
-
-    def set_response(self, *args, **kwargs):
-        self.response = make_response(*args, **kwargs)
-
-
-class Handler(socketserver.StreamRequestHandler):
-    def handle(self):
-        lines = []
-        while True:
-            line = self.rfile.readline()
-            lines.append(line)
-            if not line.rstrip():
-                break
-        self.server.request = parse_request(b''.join(lines))
-        self.wfile.write(self.server.response)
-
-
 @pytest.fixture
 def server(request):
-    server = Server(('127.0.0.1', 0), Handler)
-    thread = threading.Thread(target=server.serve_forever)
+    server = HTTPServer(('127.0.0.1', 0))
+    thread = threading.Thread(target=server.serve_forever, args=(0.005,))
     thread.start()
     try:
         yield server
@@ -46,45 +20,51 @@ def server(request):
         thread.join()
 
 
-def make_response(*args, **kwargs):
-    """Simple HTTP response.
+class HTTPServer(socketserver.TCPServer):
 
-    >>> print(make_response('body', 'Thu, 1 Jan 2020 00:00:00 GMT', '"12345-67890abcdef12"').decode(), end='<eof>\n')
-    HTTP/1.1 200 OK
-    Last-Modified: Thu, 1 Jan 2020 00:00:00 GMT
-    ETag: "12345-67890abcdef12"
-    Content-Length: 4
-    Content-Type: text/xml
+    class Handler(socketserver.StreamRequestHandler):
+        def handle(self):
+            lines = iter(self.rfile.readline, b'\r\n')
+            self.server.request = parse_request(b''.join(lines))
+            self.wfile.writelines(self.server.response)
 
-    body<eof>
-    """
-    return b''.join(generate_response(*args, **kwargs))
+    def __init__(self, server_address, bind_and_activate=True):
+        super().__init__(server_address, self.Handler, bind_and_activate)
+        self.response = None
+        self.request = None
 
+    @property
+    def url(self):
+        return f"http://{self.server_address[0]}:{self.server_address[1]}/"
 
-def generate_response(body='', etag=None, last_modified=None, status_line='200 OK'):
-    yield b'HTTP/1.1 ' + ensure_bytes(status_line) + b'\r\n'
-    if etag:
-        yield b'ETag: ' + ensure_bytes(etag) + b'\r\n'
-    if last_modified:
-        yield b'Last-Modified: ' + ensure_bytes(last_modified) + b'\r\n'
-    body = ensure_bytes(body)
-    yield b'Content-Length: ' + str(len(body)).encode() + b'\r\n'
-    yield b'Content-Type: text/xml\r\n'
-    yield b'\r\n'
-    yield body
-
-
-def ensure_bytes(s):
-    if not isinstance(s, bytes):
-        return s.encode()
-    return s
+    def set_response(self, *args, **kwargs):
+        self.response = list(generate_response(*args, **kwargs))
 
 
 def parse_request(request):
     header, _, body = request.partition(b'\r\n\r\n')
-    lines = header.split(b'\r\n')
+    lines = header.removesuffix(b'\r\n').split(b'\r\n')
     headers = dict(l.partition(b': ')[::2] for l in lines[1:])
     return lines[0], headers, body
+
+
+def generate_response(body=b'', *, status='200 OK', **headers):
+    def ensure_bytes(s):
+        return s.encode() if isinstance(s, str) else s
+
+    body = ensure_bytes(body)
+    processed_headers = {}
+    if body:
+        processed_headers['Content-Length'] = str(len(body))
+        processed_headers['Content-Type'] = 'text/xml'
+    for name, value in headers.items():
+        processed_headers[name.replace('_', '-')] = value
+
+    yield b'HTTP/1.1 ' + ensure_bytes(status) + b'\r\n'
+    for name, value in processed_headers.items():
+        yield ensure_bytes(name) + b': ' + ensure_bytes(value) + b'\r\n'
+    yield b'\r\n'
+    yield body
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom', 'json'])
@@ -152,7 +132,32 @@ def test_local(reader, feed_type, data_dir, monkeypatch):
 
 
 @pytest.mark.slow
-def test_etag_last_modified(reader, data_dir, server):
+def test_fixed_headers(reader, data_dir, server):
+    reader.add_feed(server.url)
+
+    server.set_response(data_dir.joinpath('empty.atom').read_text())
+    reader.update_feed(server.url)
+
+    _, headers, _ = server.request
+
+    assert headers[b'User-Agent'] == USER_AGENT.encode()
+    assert headers[b'User-Agent'].startswith(b'python-reader/')
+    assert headers[b'User-Agent'].endswith(b' (+https://github.com/lemon24/reader)')
+
+    assert headers[b'Accept'] == (
+        b'application/atom+xml,application/rdf+xml,application/rss+xml'
+        b',application/x-netcdf,application/feed+json,application/xml'
+        b';q=0.9,application/json'
+        b';q=0.9,text/xml'
+        b';q=0.2,*/*'
+        b';q=0.1'
+    )
+
+    assert headers[b'A-IM'] == b'feed'
+
+
+@pytest.mark.slow
+def test_conditional_requests(reader, data_dir, server):
     """Check ETag / Last-Modified are sent back, at the wire level.
 
     Ensures https://rachelbythebay.com/w/2023/01/18/http/ cannot happen.
@@ -161,13 +166,15 @@ def test_etag_last_modified(reader, data_dir, server):
     etag = b'"00000-67890abcdef12"'
     last_modified = b'Thu, 1 Jan 2020 00:00:00 GMT'
 
-    server.set_response(data_dir.joinpath('full.atom').read_text(), etag, last_modified)
-    url = server.url
-
-    reader.add_feed(url)
+    reader.add_feed(server.url)
 
     # server response with caching headers
-    assert reader.update_feed(url).new == 5
+    server.set_response(
+        data_dir.joinpath('full.atom').read_text(),
+        ETag=etag,
+        Last_Modified=last_modified,
+    )
+    assert reader.update_feed(server.url).new == 5
     request_line, headers, body = server.request
     assert request_line == b'GET / HTTP/1.1'
     assert body == b''
@@ -175,35 +182,26 @@ def test_etag_last_modified(reader, data_dir, server):
     assert b'If-Modified-Since' not in headers
 
     # assert caching headers are used
-    server.set_response(status_line='304 Not Modified')
-    assert reader.update_feed(url) is None
+    server.set_response(status='304 Not Modified')
+    assert reader.update_feed(server.url) is None
     request_line, headers, body = server.request
-    assert request_line == b'GET / HTTP/1.1'
-    assert body == b''
     assert headers[b'If-None-Match'] == etag
     assert headers[b'If-Modified-Since'] == last_modified
-
-    ua = headers[b'User-Agent']
-    assert ua == USER_AGENT.encode()
-    assert ua.startswith(b'python-reader/')
-    assert ua.endswith(b' (+https://github.com/lemon24/reader)')
-
-    # TODO: since we're here, assert accept, and a-im too; subtests, ideally
 
     # server responds with new caching headers
     server.set_response(
         data_dir.joinpath('empty.atom').read_text(),
-        b'"11111-67890abcdef12"',
-        b'Thu, 1 Jan 2020 11:11:11 GMT',
+        ETag=b'"11111-67890abcdef12"',
+        Last_Modified=b'Thu, 1 Jan 2020 11:11:11 GMT',
     )
-    assert reader.update_feed(url).new == 0
+    assert reader.update_feed(server.url).new == 0
     request_line, headers, body = server.request
     assert headers[b'If-None-Match'] == etag
     assert headers[b'If-Modified-Since'] == last_modified
 
     # assert new caching headers are used
-    server.set_response(status_line='304 Not Modified')
-    assert reader.update_feed(url) is None
+    server.set_response(status='304 Not Modified')
+    assert reader.update_feed(server.url) is None
     request_line, headers, body = server.request
     assert headers[b'If-None-Match'] == b'"11111-67890abcdef12"'
     assert headers[b'If-Modified-Since'] == b'Thu, 1 Jan 2020 11:11:11 GMT'
