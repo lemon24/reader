@@ -15,8 +15,23 @@ Unreleased
   honor the Cache-Control max-age and Expires HTTP headers.
   (:issue:`376`)
 
-  * Also, if the Retry-After is a date,
+  * Also, if the Retry-After header is a date,
     make the update interval relative to Date.
+
+* Only update feeds scheduled feeds by default
+  (the ``scheduled`` argument of
+  :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
+  now defaults to true);
+  previously, all feeds would be updated.
+  (:issue:`379`)
+
+  .. warning::
+
+    **This is a minor compatibility break**;
+    it is considered acceptable,
+    since the previous behavior is a bug –
+    *reader* should do the right thing
+    even if the user doesn't read the documentation.
 
 
 Version 3.20

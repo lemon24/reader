@@ -6,6 +6,9 @@ import pytest
 from utils import utc_datetime as datetime
 
 
+pytestmark = pytest.mark.noscheduled
+
+
 def test_regex_mark_as_read_backfill(make_reader, parser):
     reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
 

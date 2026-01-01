@@ -27,6 +27,9 @@ from utils import utc_datetime
 from utils import utc_datetime as datetime
 
 
+pytestmark = pytest.mark.noscheduled
+
+
 @pytest.fixture(params=[False, True], ids=['without_entries', 'with_entries'])
 def reader_without_and_with_entries(request, make_reader, parser):
     reader = make_reader(':memory:', search_enabled=None)

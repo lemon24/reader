@@ -6,6 +6,9 @@ from utils import rename_argument
 from utils import utc_datetime as datetime
 
 
+pytestmark = pytest.mark.noscheduled
+
+
 def get_readtimes(reader):
     return {
         e.id: reader.get_tag(e, '.reader.readtime', {}).get('seconds')

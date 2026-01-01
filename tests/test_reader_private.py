@@ -20,6 +20,9 @@ from utils import utc_datetime
 from utils import utc_datetime as datetime
 
 
+pytestmark = pytest.mark.noscheduled
+
+
 @pytest.mark.parametrize('entry_updated', [utc_datetime(2010, 1, 1), None])
 def test_update_stale(reader, parser, update_feed, entry_updated):
     """When a feed is marked as stale feeds/entries should be updated

@@ -7,6 +7,9 @@ from utils import rename_argument
 from utils import utc_datetime as datetime
 
 
+pytestmark = pytest.mark.noscheduled
+
+
 with_maybe_published_or_updated = pytest.mark.parametrize(
     'entry_kwargs',
     [

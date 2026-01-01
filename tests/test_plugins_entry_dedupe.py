@@ -21,6 +21,9 @@ from utils import parametrize_dict
 from utils import utc_datetime as datetime
 
 
+pytestmark = pytest.mark.noscheduled
+
+
 @pytest.fixture
 def reader(make_reader, request):
     plugins = []

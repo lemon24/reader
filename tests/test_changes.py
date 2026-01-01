@@ -8,6 +8,9 @@ from reader._types import Change
 from reader.exceptions import ChangeTrackingNotEnabledError
 
 
+pytestmark = pytest.mark.noscheduled
+
+
 @pytest.fixture
 def reader(reader, parser):
     feed = parser.feed('1', title='one')

@@ -61,6 +61,7 @@ from utils import utc_datetime as datetime
 # TODO: testing added/last_updated/last_retrieved/update_after everywhere is kinda ugly
 
 
+@pytest.mark.noscheduled
 def test_update_feed_updated(reader, parser, update_feed, caplog):
     """If a feed is not newer than the stored one,
     it should be updated only if its content (hash) changed.
@@ -256,6 +257,7 @@ def test_update_feed_updated(reader, parser, update_feed, caplog):
     caplog.clear()
 
 
+@pytest.mark.noscheduled
 def test_update_entry_updated(reader, parser, update_feed, caplog, monkeypatch):
     """An entry should be updated only if
     it is newer than the stored one OR its content (hash) changed.
@@ -439,6 +441,7 @@ def test_update_no_updated(reader, parser, chunk_size, update_feed):
 
 
 @pytest.mark.slow
+@pytest.mark.noscheduled
 def test_update_blocking(db_path, make_reader, parser, update_feed):
     """Calls to reader._parser() shouldn't block the underlying storage."""
 
@@ -468,6 +471,7 @@ def test_update_blocking(db_path, make_reader, parser, update_feed):
     t.join()
 
 
+@pytest.mark.noscheduled
 def test_update_not_modified(reader, parser, update_feed):
     """A feed should not be updated if it was not modified."""
 
@@ -629,6 +633,7 @@ def test_update_last_updated_entries_updated_feed_not_updated(
     assert feed_for_update.last_updated == datetime(2010, 1, 2)
 
 
+@pytest.mark.noscheduled
 @pytest.mark.parametrize('workers', [1, 2])
 def test_update_feeds_parse_error(reader, parser, workers, caplog):
     caplog.set_level(logging.ERROR, 'reader')
@@ -712,6 +717,7 @@ def test_last_exception_ok(reader, update_feed):
     assert next(reader.get_entries()).feed.last_exception is None
 
 
+@pytest.mark.noscheduled
 @rename_argument('reader', 'reader_with_one_feed')
 def test_last_exception_failed(reader, parser, update_feed):
     update_feed(reader, '1')
@@ -771,6 +777,7 @@ def updated_feeds_parser(parser):
     parser.reset_mode()
 
 
+@pytest.mark.noscheduled
 @pytest.mark.parametrize(
     'update_parser',
     [
@@ -812,6 +819,7 @@ def test_update_feeds_unexpected_error(reader, parser, monkeypatch):
     assert excinfo.value is exc
 
 
+@pytest.mark.noscheduled
 @pytest.mark.parametrize('action', ['', 'not_modified', 'raise_exc'])
 def test_last_retrieved_update_after_basic(reader, parser, action):
     feed = parser.feed(1)
@@ -1099,6 +1107,35 @@ def test_update_scheduled(reader, parser, call_update_iter_method):
     assert update() == set()
 
 
+def call_update_feeds(reader, **kwargs):
+    reader.update_feeds(**kwargs)
+
+
+def call_update_feeds_iter_noiter(reader, **kwargs):
+    for _ in reader.update_feeds_iter(**kwargs):
+        pass
+
+
+@pytest.fixture(params=[call_update_feeds, call_update_feeds_iter_noiter])
+def call_update_method(request):
+    return request.param
+
+
+def test_update_scheduled_default(reader, parser, call_update_method):
+    reader.add_feed(parser.feed(1))
+
+    def update():
+        call_update_method(reader)
+        return {e.last_retrieved for e in reader.get_feeds()}
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    assert update() == {datetime(2010, 1, 1)}
+    reader._now = lambda: datetime(2010, 1, 1, 0, 59, 59)
+    assert update() == {datetime(2010, 1, 1)}
+    reader._now = lambda: datetime(2010, 1, 1, 1)
+    assert update() == {datetime(2010, 1, 1, 1)}
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     'scheduled, end, expected_counts',
@@ -1191,6 +1228,7 @@ class EntryAction(Enum):
 
 
 @pytest.mark.slow
+@pytest.mark.noscheduled
 @pytest.mark.parametrize(
     'feed_action, entry_action',
     [
@@ -1253,6 +1291,7 @@ def test_update_feed_deleted(
     t.join()
 
 
+@pytest.mark.noscheduled
 def test_update_feed(reader, parser, feed_arg):
     one = parser.feed(1, datetime(2010, 1, 1))
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -1327,16 +1366,12 @@ def call_update_feed_iter(reader, **kwargs):
             yield feed.url, e
 
 
-@pytest.fixture(
-    params=[
-        call_update_feeds_iter,
-        call_update_feed_iter,
-    ]
-)
+@pytest.fixture(params=[call_update_feeds_iter, call_update_feed_iter])
 def call_update_iter_method(request):
     return request.param
 
 
+@pytest.mark.noscheduled
 def test_update_feeds_iter(reader, parser, call_update_iter_method):
     parser.raise_exc(lambda url: url == '3')
 
@@ -2253,6 +2288,7 @@ def test_change_feed_url_tags(reader):
 # END change_feed_url tests
 
 
+@pytest.mark.noscheduled
 def test_updates_enabled(reader, parser):
     """Test Feed.updates_enabled functionality.
 
@@ -2607,6 +2643,7 @@ def test_entry_read_important_modified_argument(reader, flag, monkeypatch_tz):
     assert getattr(entry, f'{flag}_modified') == utc_datetime(2010, 1, 1, 6)
 
 
+@pytest.mark.noscheduled
 @pytest.mark.parametrize('flag', ['read', 'important'])
 def test_entry_read_important_modified_remains_set_after_update(reader, parser, flag):
     feed = parser.feed(1)

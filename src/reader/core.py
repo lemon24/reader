@@ -388,6 +388,9 @@ class Reader:
         self._enable_search = _enable_search
         self._update_hooks = UpdateHooks(self)
 
+        #: Override update_feeds(scheduled=...).
+        self._scheduled_override = None
+
         if _called_directly:
             warnings.warn(
                 "Reader objects should be created using make_reader(); the Reader "
@@ -795,7 +798,7 @@ class Reader:
         broken: bool | None = None,
         updates_enabled: bool | None = True,
         new: bool | None = None,
-        scheduled: bool = False,
+        scheduled: bool = True,
         workers: int = 1,
     ) -> None:
         r"""Update all or some of the feeds.
@@ -808,7 +811,7 @@ class Reader:
         currently, only the exceptions for the first 5 feeds
         with hook failures are collected.
 
-        By default, update all the feeds that have updates enabled.
+        By default, update all scheduled feeds that have updates enabled.
 
         Roughly equivalent to ``for _ in reader.update_feeds_iter(...): pass``.
 
@@ -826,6 +829,7 @@ class Reader:
                 / have been updated before. Defaults to None.
             scheduled (bool):
                 Only update feeds scheduled to be updated.
+                Defaults to true.
             workers (int): Number of threads to use when getting the feeds.
 
         Raises:
@@ -876,6 +880,9 @@ class Reader:
             ``new`` uses :attr:`~Feed.last_retrieved`
             instead of :attr:`~Feed.last_updated`.
 
+        .. versionchanged:: 3.21
+            Only update scheduled feeds by default.
+
         """
         with self._update_hooks.group("some hooks failed") as hook_errors:
             results = self.update_feeds_iter(
@@ -913,7 +920,7 @@ class Reader:
         broken: bool | None = None,
         updates_enabled: bool | None = True,
         new: bool | None = None,
-        scheduled: bool = False,
+        scheduled: bool = True,
         workers: int = 1,
         _call_feeds_update_hooks: bool = True,
     ) -> Iterable[UpdateResult]:
@@ -927,7 +934,7 @@ class Reader:
         and re-raise them as an :exc:`UpdateHookErrorGroup`
         after updating all the feeds.
 
-        By default, update all the feeds that have updates enabled.
+        By default, update all scheduled feeds that have updates enabled.
 
         Args:
             feed (str or tuple(str) or Feed or None): Only update the feed with this URL.
@@ -943,6 +950,7 @@ class Reader:
                 / have been updated before. Defaults to None.
             scheduled (bool):
                 Only update feeds scheduled to be updated.
+                Defaults to true.
             workers (int): Number of threads to use when getting the feeds.
 
         Yields:
@@ -1006,8 +1014,15 @@ class Reader:
             ``new`` uses :attr:`~Feed.last_retrieved`
             instead of :attr:`~Feed.last_updated`.
 
+        .. versionchanged:: 3.21
+            Only update scheduled feeds by default.
+
         """
         now = self._now()
+
+        if self._scheduled_override is not None:  # pragma: no cover
+            scheduled = self._scheduled_override
+
         filter = FeedFilter.from_args(
             now, feed, tags, broken, updates_enabled, new, scheduled
         )

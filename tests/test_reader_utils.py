@@ -6,6 +6,9 @@ from reader import EntryNotFoundError
 from reader.utils import archive_entries
 
 
+pytestmark = pytest.mark.noscheduled
+
+
 def test_archive_entries(reader, parser):
     reader.copy_entry = Mock(wraps=reader.copy_entry)
 

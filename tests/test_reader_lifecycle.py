@@ -22,6 +22,9 @@ from reader import StorageError
 from utils import rename_argument
 
 
+pytestmark = pytest.mark.noscheduled
+
+
 # paths for which different connections see the same database
 PATHS_SHARED = ['db.sqlite']
 # paths for which different connections see a private database

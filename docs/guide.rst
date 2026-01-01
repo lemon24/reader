@@ -270,11 +270,12 @@ Scheduled updates
 ~~~~~~~~~~~~~~~~~
 
 Because different feeds need to be updated at different rates,
-*reader* also provides a mechanism for scheduling updates.
+*reader* also provides a mechanism for scheduling updates
+that is enabled by default.
 
 On every update, *reader* determines when a feed should be updated next
 based on a configurable update interval;
-:meth:`update_feeds(scheduled=True) <Reader.update_feeds>`
+:meth:`~Reader.update_feeds`
 updates only the feeds that should be updated at or before the current time.
 
 The interval can be **configured by the user**
@@ -310,6 +311,9 @@ Cache-Control max-age, Expires, or Retry-After HTTP headers,
 
 .. versionchanged:: 3.21
     Honor the Cache-Control max-age and Expires HTTP headers.
+
+.. versionchanged:: 3.21
+    Only update scheduled feeds by default.
 
 
 Update status

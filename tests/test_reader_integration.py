@@ -132,6 +132,7 @@ def test_fixed_headers(reader, data_dir, server):
 
 
 @pytest.mark.slow
+@pytest.mark.noscheduled
 def test_conditional_requests(reader, data_dir, server):
     """Check ETag / Last-Modified are sent back, at the wire level.
 

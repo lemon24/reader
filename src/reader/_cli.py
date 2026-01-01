@@ -290,7 +290,10 @@ def iter_update_status(it, length):
     help="Only update new (never updated before) feeds.",
 )
 @click.option(
-    '--scheduled/--no-scheduled', help="Only update feeds scheduled to be updated."
+    '--scheduled/--no-scheduled',
+    default=True,
+    show_default=True,
+    help="Only update feeds scheduled to be updated.",
 )
 @click.option(
     '--workers',

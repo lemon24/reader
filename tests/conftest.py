@@ -75,6 +75,9 @@ def make_reader(request):
         if 'parser' in request.fixturenames:
             reader._parser = request.getfixturevalue('parser')
 
+        if 'noscheduled' in request.keywords:
+            reader._scheduled_override = False
+
         return reader
 
     return make_reader
@@ -86,6 +89,9 @@ def reader(request):
 
         if 'parser' in request.fixturenames:
             reader._parser = request.getfixturevalue('parser')
+
+        if 'noscheduled' in request.keywords:
+            reader._scheduled_override = False
 
         yield reader
 

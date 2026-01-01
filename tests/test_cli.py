@@ -93,16 +93,16 @@ def test_cli(db_path, data_dir, monkeypatch):
 
     result = invoke('update')
     assert result.exit_code == 0
-    assert "0 ok, 0 error, 1 not modified; entries: 0 new, 0 modified" in result.output
-
-    result = invoke('update', '--scheduled')
-    assert result.exit_code == 0
     assert "0 ok, 0 error, 0 not modified; entries: 0 new, 0 modified" in result.output
+
+    result = invoke('update', '--no-scheduled')
+    assert result.exit_code == 0
+    assert "0 ok, 0 error, 1 not modified; entries: 0 new, 0 modified" in result.output
 
     now = Reader._now()
     monkeypatch.setattr(Reader, '_now', staticmethod(lambda: now + timedelta(hours=1)))
 
-    result = invoke('update', '--scheduled')
+    result = invoke('update')
     assert result.exit_code == 0
     assert "0 ok, 0 error, 1 not modified; entries: 0 new, 0 modified" in result.output
 

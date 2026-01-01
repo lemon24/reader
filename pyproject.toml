@@ -149,6 +149,7 @@ markers = [
     "slow: mark a test as slow.",
     "requires_lxml: mark a test to only run in places where we have lxml.",
     "apptest: mark a test as a web app test (skipped sometimes).",
+    "noscheduled: force update_feeds(scheduled=...) to false.",
     "noautoclose: skip 'autoclose' autouse fixture for a test."
 ]
 filterwarnings = [
