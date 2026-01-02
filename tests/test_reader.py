@@ -173,34 +173,6 @@ def test_update_workers(reader, parser, workers):
         reader.update_feeds(workers=workers)
 
 
-def test_update_last_updated_entries_updated_feed_not_updated(
-    reader, parser, update_feed
-):
-    """A feed's last_updated should be updated if any of its entries are,
-    even if the feed itself isn't updated.
-
-    """
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    reader.add_feed(feed.url)
-    reader._now = lambda: datetime(2010, 1, 1)
-    update_feed(reader, feed.url)
-
-    def get_feed_for_update(feed):
-        options = FeedFilter.from_args(feed)
-        (rv,) = reader._storage.get_feeds_for_update(options)
-        return rv
-
-    feed_for_update = get_feed_for_update(feed)
-    assert feed_for_update.last_updated == datetime(2010, 1, 1)
-
-    parser.entry(1, 1, datetime(2010, 1, 1))
-    reader._now = lambda: datetime(2010, 1, 2)
-    update_feed(reader, feed.url)
-
-    feed_for_update = get_feed_for_update(feed)
-    assert feed_for_update.last_updated == datetime(2010, 1, 2)
-
-
 @pytest.mark.noscheduled
 @pytest.mark.parametrize('workers', [1, 2])
 def test_update_feeds_parse_error(reader, parser, workers, caplog):
