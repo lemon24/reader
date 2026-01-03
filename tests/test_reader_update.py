@@ -429,6 +429,71 @@ def test_entry_deleted_during_update(monkeypatch, db_path, make_reader, parser):
 # END: edge cases
 
 
+def test_new(reader, parser, subtests):
+    feed = parser.feed(1, title='old')
+    parser.entry(1, 1, title='one')
+    reader.add_feed(feed)
+
+    with subtests.test("only old"):
+        reader._now = lambda: datetime(2010, 1, 1)
+        reader.update_feeds(new=False)
+
+        feed = reader.get_feed(feed)
+        assert feed.title is None
+        assert feed.last_updated is None
+        assert feed.last_retrieved is None
+        assert len(list(reader.get_entries())) == 0
+
+    with subtests.test("only new"):
+        reader._now = lambda: datetime(2010, 1, 2)
+        reader.update_feeds(new=True)
+
+        feed = reader.get_feed(feed)
+        assert feed.title == 'old'
+        assert feed.last_updated == datetime(2010, 1, 2)
+        assert feed.last_retrieved == datetime(2010, 1, 2)
+        assert len(list(reader.get_entries())) == 1
+
+    with subtests.test("not new anymore"):
+        feed = parser.feed(1, title='new')
+        parser.entry(1, 2, title='two')
+
+        reader._now = lambda: datetime(2010, 1, 3)
+        reader.update_feeds(new=True)
+
+        feed = reader.get_feed(feed)
+        assert feed.title == 'old'
+        assert feed.last_updated == datetime(2010, 1, 2)
+        assert feed.last_retrieved == datetime(2010, 1, 2)
+        assert len(list(reader.get_entries())) == 1
+
+
+@pytest.mark.parametrize('how', ['not_modified', 'raise_exc'])
+def test_new_failed_update(reader, parser, how, subtests):
+    feed = parser.feed(1, title='feed')
+    reader.add_feed(feed)
+
+    with subtests.test("only new"):
+        reader._now = lambda: datetime(2010, 1, 1)
+        getattr(parser, how)()
+        reader.update_feeds(new=True)
+
+        feed = reader.get_feed(feed)
+        assert feed.title is None
+        assert feed.last_updated is None
+        assert feed.last_retrieved == datetime(2010, 1, 1)
+
+    with subtests.test("not new anymore"):
+        reader._now = lambda: datetime(2010, 1, 2)
+        parser.reset_mode()
+        reader.update_feeds(new=True)
+
+        feed = reader.get_feed(feed)
+        assert feed.title is None
+        assert feed.last_updated is None
+        assert feed.last_retrieved == datetime(2010, 1, 1)
+
+
 def test_updates_enabled_scheduled(reader, parser):
     """Bug: updates_enabled=True was not working when scheduled=True.
 
