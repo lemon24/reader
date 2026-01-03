@@ -7,8 +7,21 @@ from reader import EntrySource
 from reader import Feed
 from reader import make_reader
 from reader_methods import get_feeds
+from reader_methods import get_feeds_via_update
 from utils import rename_argument
 from utils import utc_datetime as datetime
+
+
+def kwargs_ids(x):
+    if not isinstance(x, dict):
+        return None
+    pairs = []
+    for k, v in x.items():
+        v_repr = repr(v)
+        if len(v_repr) > 10:
+            v_repr = f"{type(v).__name__}(...)"
+        pairs.append(f"{k}={v_repr}")
+    return f"{{{','.join(pairs)}}}"
 
 
 # BEGIN tag filtering tests
@@ -211,7 +224,6 @@ def test_entries(reader, get_entries, kwargs, expected):
         dict(source=object()),
     ],
 )
-@rename_argument('reader', 'reader_entries')
 def test_entries_error(reader, get_entries, kwargs):
     with pytest.raises(ValueError):
         list(get_entries(reader, **kwargs))
@@ -268,47 +280,59 @@ def test_entries_important(reader, get_entries, important, expected):
 # BEGIN feed filtering tests
 
 
-ALL_IDS = {1, 2, 3, 4}
+ALL_FEEDS = {'normal', 'broken', 'disabled', 'new', 'scheduled'}
 
 
-@pytest.fixture(scope='module')
-def reader_feeds():
-    with make_reader(':memory:') as reader:
-        reader._parser = parser = Parser()
+def setup_reader_for_feeds(reader, parser):
+    reader._now = lambda: datetime(2010, 1, 1)
+    scheduled = parser.feed('scheduled')
+    reader.add_feed(scheduled)
+    reader.update_feeds()
 
-        one = parser.feed(1)
-        two = parser.feed(2)  # broken
-        three = parser.feed(3)
-        four = parser.feed(4)  # updates disabled
+    reader._now = lambda: datetime(2010, 1, 2)
+    normal = parser.feed('normal')
+    broken = parser.feed('broken')
+    parser.raise_exc(lambda url: url == 'broken')
+    disabled = parser.feed('disabled')
+    for feed in normal, broken, disabled:
+        reader.add_feed(feed)
+        try:
+            reader.update_feed(feed)
+        except Exception:
+            assert feed is broken
+    reader.disable_feed_updates('disabled')
 
-        parser.raise_exc(lambda url: url == two.url)
-
-        for feed in one, two, three, four:
-            reader.add_feed(feed)
-
-        reader.disable_feed_updates(four)
-        reader.update_feeds()
-
-        yield reader
+    new = parser.feed('new')
+    reader.add_feed(new)
 
 
 @pytest.mark.parametrize(
     'kwargs, expected',
     [
-        (dict(), ALL_IDS),
-        (dict(feed='1'), {1}),
-        (dict(feed=Feed('1')), {1}),
-        (dict(broken=None), ALL_IDS),
-        (dict(broken=True), {2}),
-        (dict(broken=False), ALL_IDS - {2}),
-        (dict(updates_enabled=None), ALL_IDS),
-        (dict(updates_enabled=True), ALL_IDS - {4}),
-        (dict(updates_enabled=False), {4}),
+        (dict(), ALL_FEEDS),
+        (dict(feed='normal'), {'normal'}),
+        (dict(feed=Feed('normal')), {'normal'}),
+        (dict(broken=True), {'broken'}),
+        (dict(broken=False), ALL_FEEDS - {'broken'}),
+        (dict(updates_enabled=True), ALL_FEEDS - {'disabled'}),
+        (dict(updates_enabled=False), {'disabled'}),
+        (dict(new=True), {'new'}),
+        (dict(new=False), ALL_FEEDS - {'new'}),
+        (dict(scheduled=True), {'scheduled', 'new'}),
+        (dict(scheduled=False), ALL_FEEDS),
     ],
+    ids=kwargs_ids,
 )
-@rename_argument('reader', 'reader_feeds')
-def test_feeds(reader, kwargs, expected):
-    assert {eval(f.url) for f in reader.get_feeds(**kwargs)} == expected
+@pytest.mark.parametrize('get_feeds', [get_feeds, get_feeds_via_update])
+def test_feeds(reader, parser, get_feeds, kwargs, expected):
+    setup_reader_for_feeds(reader, parser)
+
+    # need to get counts before get_feeds(), since it may do an update
+    counts = get_feeds.counts(reader, **kwargs)
+    urls = {f.url for f in get_feeds(reader, **kwargs)}
+
+    assert urls == expected
+    assert counts.total == len(expected)
 
     # TODO: how do we test the combinations between arguments?
 
@@ -324,7 +348,6 @@ def test_feeds(reader, kwargs, expected):
         dict(scheduled=None),
     ],
 )
-@rename_argument('reader', 'reader_feeds')
 def test_feeds_error(reader, kwargs):
     with pytest.raises(ValueError):
         list(reader.get_feeds(**kwargs))

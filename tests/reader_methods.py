@@ -69,10 +69,6 @@ def search_entries_random(reader, **kwargs):
     return reader.search_entries('entry', sort='random', **kwargs)
 
 
-def get_feeds(reader, **kwargs):
-    return reader.get_feeds(**kwargs)
-
-
 for name, obj in dict(globals()).items():
     if name.startswith('get_'):
         obj.after_update = do_nothing
@@ -133,7 +129,7 @@ class _update_feeds_iter_methods:
         return reader.update_feeds_iter(workers=2)
 
     def update_feeds_iter_simulated(reader):
-        for feed in reader.get_feeds(updates_enabled=True):
+        for feed in reader.get_feeds(updates_enabled=True, scheduled=True):
             try:
                 yield UpdateResult(feed.url, reader.update_feed(feed))
             except UpdateError as e:
@@ -144,3 +140,23 @@ class _update_feeds_iter_methods:
 update_feeds_iter_methods = [
     v for k, v in _update_feeds_iter_methods.__dict__.items() if not k.startswith('_')
 ]
+
+
+def get_feed_counts(reader, **kwargs):
+    return reader.get_feed_counts(**kwargs)
+
+
+def get_feeds(reader, **kwargs):
+    return reader.get_feeds(**kwargs)
+
+
+def get_feeds_via_update(reader, **kwargs):
+    # make update_feeds_iter() have the same defaults as get_feeds()
+    kwargs.setdefault('scheduled', False)
+    kwargs.setdefault('updates_enabled', None)
+    return reader.update_feeds_iter(**kwargs)
+
+
+for name, obj in dict(globals()).items():
+    if name.startswith('get_feeds'):
+        obj.counts = get_feed_counts
