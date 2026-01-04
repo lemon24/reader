@@ -151,6 +151,7 @@ ALL_IDS = {
     'default',
     'read',
     'important',
+    'unimportant',
     'enclosures',
     'source',
 }
@@ -165,6 +166,7 @@ def reader_entries():
         default = parser.entry(1, 'default')
         read = parser.entry(1, 'read')
         important = parser.entry(1, 'important')
+        unimportant = parser.entry(1, 'unimportant')
         enclosures = parser.entry(1, 'enclosures', enclosures=[Enclosure('http://e2')])
         two = parser.feed(2)
         source = parser.entry(2, 'source', source=EntrySource(url='source'))
@@ -176,6 +178,7 @@ def reader_entries():
 
         reader.mark_entry_as_read(read)
         reader.mark_entry_as_important(important)
+        reader.mark_entry_as_unimportant(unimportant)
 
         yield reader
 
@@ -190,11 +193,18 @@ def reader_entries():
         (dict(important=None), ALL_IDS),
         (dict(important=True), {'important'}),
         (dict(important=False), ALL_IDS - {'important'}),
+        (dict(important='istrue'), {'important'}),
+        (dict(important='isfalse'), {'unimportant'}),
+        (dict(important='notset'), ALL_IDS - {'important', 'unimportant'}),
+        (dict(important='nottrue'), ALL_IDS - {'important'}),
+        (dict(important='notfalse'), ALL_IDS - {'unimportant'}),
+        (dict(important='isset'), {'important', 'unimportant'}),
+        (dict(important='any'), ALL_IDS),
         (dict(has_enclosures=None), ALL_IDS),
         (dict(has_enclosures=True), {'enclosures'}),
         (dict(has_enclosures=False), ALL_IDS - {'enclosures'}),
         (dict(feed=None), ALL_IDS),
-        (dict(feed='1'), {'default', 'read', 'important', 'enclosures'}),
+        (dict(feed='1'), ALL_IDS - {'source'}),
         (dict(feed='2'), {'source'}),
         (dict(feed=Feed('2')), {'source'}),
         (dict(feed='inexistent'), set()),
@@ -221,6 +231,7 @@ def test_entries(reader_entries, get_entries, kwargs, expected):
     [
         dict(read=object()),
         dict(important=object()),
+        dict(important='astring'),
         dict(has_enclosures=object()),
         dict(feed=object()),
         dict(entry=object()),
@@ -230,49 +241,6 @@ def test_entries(reader_entries, get_entries, kwargs, expected):
 def test_entries_error(reader, get_entries, kwargs):
     with pytest.raises(ValueError):
         list(get_entries(reader, **kwargs))
-
-
-@pytest.fixture(scope='module', params=[None, datetime(2010, 1, 1)])
-def reader_entries_important(request):
-    with make_reader(':memory:') as reader:
-        reader._parser = parser = Parser().with_titles()
-
-        reader.add_feed(parser.feed(1))
-        one = parser.entry(1, 1)
-        two = parser.entry(1, 2)
-        reader.add_feed(parser.feed(2))
-        three = parser.entry(2, 3)
-
-        reader.update_feeds()
-        reader.update_search()
-
-        reader.set_entry_important(one, None, request.param)
-        reader.set_entry_important(two, True, request.param)
-        reader.set_entry_important(three, False, request.param)
-
-        return reader
-
-
-@pytest.mark.parametrize(
-    'important, expected',
-    [
-        ('istrue', {'1, 2'}),
-        (True, {'1, 2'}),
-        ('isfalse', {'2, 3'}),
-        ('notset', {'1, 1'}),
-        ('nottrue', {'2, 3', '1, 1'}),
-        (False, {'2, 3', '1, 1'}),
-        ('notfalse', {'1, 2', '1, 1'}),
-        ('isset', {'2, 3', '1, 2'}),
-        ('any', {'1, 1', '2, 3', '1, 2'}),
-        (None, {'1, 1', '2, 3', '1, 2'}),
-    ],
-)
-@rename_argument('reader', 'reader_entries_important')
-def test_entries_important(reader, get_entries, important, expected):
-    actual = {e.id for e in get_entries(reader, important=important)}
-    assert actual == expected
-    assert get_entries.counts(reader, important=important).total == len(expected)
 
 
 # TODO: ideally, systematize all filtering tests?
