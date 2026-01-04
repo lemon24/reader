@@ -18,8 +18,9 @@ def kwargs_ids(x):
     pairs = []
     for k, v in x.items():
         v_repr = repr(v)
-        if len(v_repr) > 10:
-            v_repr = f"{type(v).__name__}(...)"
+        if not type(v).__module__ == 'builtins':
+            if len(v_repr) > 10:
+                v_repr = f"{type(v).__name__}(...)"
         pairs.append(f"{k}={v_repr}")
     return f"{{{','.join(pairs)}}}"
 
@@ -147,11 +148,11 @@ def test_entries_by_entry_tags(reader, get_entries, tags, expected):
 # BEGIN entry filtering tests
 
 ALL_IDS = {
-    (1, 1),
-    (1, 2),
-    (1, 3),
-    (1, 4),
-    (2, 1),
+    'default',
+    'read',
+    'important',
+    'enclosures',
+    'source',
 }
 
 
@@ -161,20 +162,20 @@ def reader_entries():
         reader._parser = parser = Parser().with_titles()
 
         one = parser.feed(1)
-        one_one = parser.entry(1, 1)
-        one_two = parser.entry(1, 2)  # read
-        one_three = parser.entry(1, 3)  # important
-        one_four = parser.entry(1, 4, enclosures=[Enclosure('http://e2')])
+        default = parser.entry(1, 'default')
+        read = parser.entry(1, 'read')
+        important = parser.entry(1, 'important')
+        enclosures = parser.entry(1, 'enclosures', enclosures=[Enclosure('http://e2')])
         two = parser.feed(2)
-        two_one = parser.entry(2, 1, source=EntrySource(url='source'))
+        source = parser.entry(2, 'source', source=EntrySource(url='source'))
 
-        reader.add_feed(one.url)
-        reader.add_feed(two.url)
+        reader.add_feed(one)
+        reader.add_feed(two)
         reader.update_feeds()
         reader.update_search()
 
-        reader.mark_entry_as_read((one.url, one_two.id))
-        reader.mark_entry_as_important((one.url, one_three.id))
+        reader.mark_entry_as_read(read)
+        reader.mark_entry_as_important(important)
 
         yield reader
 
@@ -184,31 +185,33 @@ def reader_entries():
     [
         (dict(), ALL_IDS),
         (dict(read=None), ALL_IDS),
-        (dict(read=True), {(1, 2)}),
-        (dict(read=False), ALL_IDS - {(1, 2)}),
+        (dict(read=True), {'read'}),
+        (dict(read=False), ALL_IDS - {'read'}),
         (dict(important=None), ALL_IDS),
-        (dict(important=True), {(1, 3)}),
-        (dict(important=False), ALL_IDS - {(1, 3)}),
+        (dict(important=True), {'important'}),
+        (dict(important=False), ALL_IDS - {'important'}),
         (dict(has_enclosures=None), ALL_IDS),
-        (dict(has_enclosures=True), {(1, 4)}),
-        (dict(has_enclosures=False), ALL_IDS - {(1, 4)}),
+        (dict(has_enclosures=True), {'enclosures'}),
+        (dict(has_enclosures=False), ALL_IDS - {'enclosures'}),
         (dict(feed=None), ALL_IDS),
-        (dict(feed='1'), {(1, 1), (1, 2), (1, 3), (1, 4)}),
-        (dict(feed='2'), {(2, 1)}),
-        (dict(feed=Feed('2')), {(2, 1)}),
+        (dict(feed='1'), {'default', 'read', 'important', 'enclosures'}),
+        (dict(feed='2'), {'source'}),
+        (dict(feed=Feed('2')), {'source'}),
         (dict(feed='inexistent'), set()),
         (dict(entry=None), ALL_IDS),
-        (dict(entry=('1', '1, 1')), {(1, 1)}),
-        (dict(entry=('1', '1, 2')), {(1, 2)}),
-        (dict(entry=Entry('1, 2', feed=Feed('1'))), {(1, 2)}),
-        (dict(entry=('inexistent', 'also-inexistent')), set()),
-        (dict(source='source'), {(2, 1)}),
-        (dict(source=Feed('source')), {(2, 1)}),
+        (dict(entry=('1', 'default')), {'default'}),
+        (dict(entry=('1', 'read')), {'read'}),
+        (dict(entry=Entry('read', feed=Feed('1'))), {'read'}),
+        (dict(entry=('inexistent', 'idem')), set()),
+        (dict(source='source'), {'source'}),
+        (dict(source=Feed('source')), {'source'}),
     ],
+    ids=kwargs_ids,
 )
-@rename_argument('reader', 'reader_entries')
-def test_entries(reader, get_entries, kwargs, expected):
-    assert {eval(e.id) for e in get_entries(reader, **kwargs)} == expected
+def test_entries(reader_entries, get_entries, kwargs, expected):
+    reader = reader_entries
+    assert {e.id for e in get_entries(reader, **kwargs)} == expected
+    assert get_entries.counts(reader, **kwargs).total == len(expected)
 
     # TODO: how do we test the combinations between arguments?
 
