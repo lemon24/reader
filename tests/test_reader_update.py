@@ -5,11 +5,14 @@ TODO: move all update tests from test_reader.py here
 
 """
 
+import logging
 import threading
+from contextlib import contextmanager
 from unittest.mock import ANY
 
 import pytest
 
+from reader import ParseError
 from utils import Blocking
 from utils import utc_datetime as datetime
 
@@ -250,6 +253,161 @@ def test_not_modified(reader, parser, update_feed):
     assert actual_feed.last_updated == datetime(2010, 1, 1)
     assert actual_feed.last_retrieved == datetime(2010, 1, 2)
     assert set(reader.get_entries()) == set()
+
+
+# BEGIN: update errors
+
+
+def test_update_feeds_logs_parse_error(reader, parser, caplog):
+    caplog.set_level(logging.ERROR, 'reader')
+
+    reader.add_feed(parser.feed(1))
+    parser.raise_exc()
+
+    # shouldn't raise an exception
+    reader.update_feeds()
+
+    # it should log the error, with traceback
+    (record,) = caplog.records
+    assert record.levelname == 'ERROR'
+    exc = record.exc_info[1]
+    assert isinstance(exc, ParseError)
+    assert exc.url == '1'
+    assert str(exc.__cause__) == 'failing'
+    assert repr(exc.url) in record.message
+    assert repr(exc.__cause__) in record.message
+
+
+def parse_error(parser):
+    parser.raise_exc(lambda url: url == '1')
+
+
+def retriever_enter_error(parser):
+    original_retrieve = parser.retrieve
+
+    def retrieve(url, *args):
+        @contextmanager
+        def raise_exc():
+            raise ParseError(url)
+            yield 'unreachable'
+
+        return raise_exc() if url == '1' else original_retrieve(url, *args)
+
+    parser.retrieve = retrieve
+
+
+@pytest.mark.parametrize('workers', [1, 2])
+@pytest.mark.parametrize('when', [parse_error, retriever_enter_error])
+def test_update_feeds_does_not_stop_on(reader, parser, when, workers):
+    parser.with_titles()
+    for i in 1, 2, 3:
+        reader.add_feed(parser.feed(i))
+
+    when(parser)
+    reader.update_feeds(workers=workers)
+
+    assert {f.title for f in reader.get_feeds()} == {None, "feed 2", "feed 3"}
+
+
+def test_update_feeds_unexpected_error(reader, parser, monkeypatch):
+    parser.with_titles()
+    for i in 1, 2, 3:
+        reader.add_feed(parser.feed(i))
+
+    exc = Exception('unexpected')
+
+    def update_feed(*_, **__):
+        raise exc
+
+    monkeypatch.setattr('reader._update.Pipeline.update_feed', update_feed)
+
+    with pytest.raises(Exception) as excinfo:
+        reader.update_feeds()
+    assert excinfo.value is exc
+
+    assert [f.title for f in reader.get_feeds()] == [None, None, None]
+    assert [f.last_retrieved for f in reader.get_feeds()] == [None, None, None]
+
+
+@pytest.mark.noscheduled
+def test_last_exception(reader, parser, subtests):
+    reader.add_feed(parser.feed(1))
+    parser.entry(1, 1)
+
+    with subtests.test("is none if not updated"):
+        assert reader.get_feed('1').last_exception is None
+
+    with subtests.test("is none if updated successfully"):
+        reader._now = lambda: datetime(2010, 1, 1)
+        reader.update_feeds()
+        assert reader.get_feed('1').last_exception is None
+
+    with subtests.test("is set on error"):
+        reader._now = lambda: datetime(2010, 1, 2)
+        parser.raise_exc()
+        reader.update_feeds()
+
+        feed = reader.get_feed('1')
+        assert feed.last_updated == datetime(2010, 1, 1)
+        assert feed.last_retrieved == datetime(2010, 1, 2)
+
+        last_exception = feed.last_exception
+        assert last_exception.type_name == 'reader.exceptions.ParseError'
+        assert last_exception.value_str == "'1': builtins.Exception: failing"
+        assert last_exception.traceback_str.startswith('Traceback')
+
+        assert next(reader.get_entries()).feed.last_exception == last_exception
+
+    with subtests.test("is updated on another error"):
+        reader._now = lambda: datetime(2010, 1, 3)
+        parser.raise_exc(ValueError('another'))
+        reader.update_feeds()
+
+        feed = reader.get_feed('1')
+        assert feed.last_updated == datetime(2010, 1, 1)
+        assert feed.last_retrieved == datetime(2010, 1, 3)
+
+        last_exception = feed.last_exception
+        assert last_exception.value_str == "'1': builtins.ValueError: another"
+
+
+@pytest.mark.noscheduled
+@pytest.mark.parametrize('by', ['reset_mode', 'not_modified'])
+def test_last_exception_is_reset_by(reader, parser, by):
+    reader.add_feed(parser.feed(1))
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    parser.raise_exc()
+    reader.update_feeds()
+
+    assert reader.get_feed('1').last_exception is not None
+
+    reader._now = lambda: datetime(2010, 1, 2)
+    getattr(parser, by)()
+    reader.update_feeds()
+
+    feed = reader.get_feed('1')
+    assert feed.last_updated == (datetime(2010, 1, 2) if by == 'reset_mode' else None)
+    assert feed.last_retrieved == datetime(2010, 1, 2)
+    assert feed.last_exception is None
+
+
+@pytest.mark.noscheduled
+def test_last_exception_is_not_reset_by_another_feed(reader, parser):
+    parser.with_titles()
+    for i in 1, 2:
+        reader.add_feed(parser.feed(i))
+    parser.raise_exc()
+    reader.update_feeds()
+
+    parser.reset_mode()
+    reader.update_feed('2')
+
+    assert reader.get_feed('1').last_exception is not None
+    assert reader.get_feed('2').last_exception is None
+
+
+# END: update errors
 
 
 # BEGIN: edge cases
