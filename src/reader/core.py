@@ -1091,7 +1091,10 @@ class Reader:
         """
         _, rv = zero_or_one(
             self.update_feeds_iter(
-                feed=feed, updates_enabled=None, _call_feeds_update_hooks=False
+                feed=feed,
+                updates_enabled=None,
+                scheduled=False,
+                _call_feeds_update_hooks=False,
             ),
             lambda: FeedNotFoundError(_feed_argument(feed)),
         )

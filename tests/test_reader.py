@@ -625,6 +625,21 @@ def test_update_feed(reader, parser, feed_arg):
         reader.update_feed(feed_arg(one))
 
 
+def test_update_feed_scheduled_in_the_future(reader, parser):
+    """Bug: https://github.com/lemon24/reader/issues/385"""
+    feed = parser.feed(1, title='old')
+    reader.add_feed(feed)
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    feed = parser.feed(1, title='new')
+    reader._now = lambda: datetime(2010, 1, 1, 0, 0, 1)
+    reader.update_feed(feed)
+
+    assert reader.get_feed(feed).title == 'new'
+
+
 def call_update_feeds_iter(reader, **kwargs):
     yield from reader.update_feeds_iter(**kwargs)
 
