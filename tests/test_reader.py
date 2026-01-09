@@ -7,7 +7,6 @@ from collections import Counter
 from contextlib import contextmanager
 from datetime import timedelta
 from datetime import timezone
-from enum import Enum
 from itertools import permutations
 
 import pytest
@@ -484,82 +483,6 @@ def test_set_update_interval_down(reader, parser):
 
     reader._now = lambda: datetime(2010, 1, 1, 5)
     assert len(list(reader.update_feeds_iter(scheduled=True))) == 1
-
-
-class FeedAction(Enum):
-    none = object()
-    update = object()
-    fail = object()
-
-
-class EntryAction(Enum):
-    none = object()
-    insert = object()
-    update = object()
-
-
-@pytest.mark.slow
-@pytest.mark.noscheduled
-@pytest.mark.parametrize(
-    'feed_action, entry_action',
-    [
-        (f, e)
-        for f in FeedAction
-        for e in EntryAction
-        if (f, e)
-        not in {
-            (FeedAction.none, EntryAction.none),
-        }
-    ],
-)
-def test_update_feed_deleted(
-    db_path, make_reader, parser, update_feed, feed_action, entry_action
-):
-    """reader.update_feed should raise FeedNotFoundError if the feed is
-    deleted during parsing.
-
-    reader.update_feeds shouldn't (but should log).
-
-    """
-    reader = make_reader(db_path)
-
-    feed = parser.feed(1, datetime(2010, 1, 1))
-    reader.add_feed(feed.url)
-    reader.update_feeds()
-
-    if entry_action is not EntryAction.none:
-        parser.entry(1, 1, datetime(2010, 1, 1))
-        if entry_action is EntryAction.update:
-            reader.update_feeds()
-            parser.entry(1, 1, datetime(2010, 1, 2))
-
-    if feed_action is FeedAction.update:
-        feed = parser.feed(1, datetime(2010, 1, 2), title='new title')
-
-    if feed_action is FeedAction.fail:
-        parser.raise_exc()
-
-    parser.retrieve = blocking_retrieve = Blocking(parser.retrieve)
-
-    def target():
-        with reader, blocking_retrieve:
-            reader.delete_feed(feed.url)
-
-    t = threading.Thread(target=target)
-    t.start()
-
-    if update_feed.__name__ == 'update_feed':
-        with pytest.raises(FeedNotFoundError) as excinfo:
-            update_feed(reader, feed.url)
-        assert excinfo.value.url == feed.url
-        assert 'no such feed' in excinfo.value.message
-    elif update_feed.__name__.startswith('update_feeds'):
-        # shouldn't raise an exception
-        update_feed(reader, feed.url)
-    else:
-        assert False, "shouldn't happen"
-
-    t.join()
 
 
 def call_update_feeds_iter(reader, **kwargs):

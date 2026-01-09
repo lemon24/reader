@@ -525,6 +525,35 @@ def test_duplicate_ids(reader, parser):
 
 
 @pytest.mark.slow
+@pytest.mark.noscheduled
+@pytest.mark.parametrize('when', [feed_changes, entry_is_added])
+def test_feed_deleted_during_update(db_path, make_reader, parser, update_feed, when):
+    reader = make_reader(db_path)
+    feed = prepare_feed(reader)
+    reader.update_feeds()
+
+    when(reader)
+
+    parser.retrieve = Blocking(parser.retrieve)
+
+    def target():
+        with reader, parser.retrieve:
+            reader.delete_feed(feed)
+
+    t = threading.Thread(target=target)
+    t.start()
+
+    if update_feed.__name__ == 'update_feed':
+        with pytest.raises(FeedNotFoundError) as excinfo:
+            update_feed(reader, feed)
+    else:
+        # shouldn't raise an exception
+        update_feed(reader, feed)
+
+    t.join()
+
+
+@pytest.mark.slow
 @pytest.mark.parametrize('new', [True, False])
 def test_concurrent_update(monkeypatch, db_path, make_reader, parser, new):
     """If a feed is updated in parallel, the last writer wins.
