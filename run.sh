@@ -63,7 +63,7 @@ function typing-dev {
 }
 
 function docs-dev {
-    rm -r docs/_build/html
+    rm -rf docs/_build/html
     watch sphinx-build -W docs docs/_build/html "$@"
 }
 
