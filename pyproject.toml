@@ -117,6 +117,8 @@ typing = [
 
 docs = [
     "sphinx",
+    # TODO: remove when https://github.com/sphinx-doc/sphinx/issues/14186 is solved
+    "roman_numerals<4.1",
     "sphinx-rtd-theme",
     "click>=7",
     "sphinx-click",
