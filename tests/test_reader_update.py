@@ -12,6 +12,7 @@ from unittest.mock import ANY
 
 import pytest
 
+from reader import FeedNotFoundError
 from reader import ParseError
 from utils import Blocking
 from utils import utc_datetime as datetime
@@ -408,6 +409,58 @@ def test_last_exception_is_not_reset_by_another_feed(reader, parser):
 
 
 # END: update errors
+
+
+# BEGIN: update_feed()
+
+# return value and ParseError handling covered in test_update_feeds_iter
+
+
+def test_update_feed_basic(reader, parser, feed_arg):
+    one = parser.feed(1, title='one')
+    parser.entry(1, 1)
+    two = parser.feed(2, title='two')
+    parser.entry(2, 1)
+
+    for feed in one, two:
+        reader.add_feed(feed)
+
+    reader._now = lambda: datetime(2010, 1, 1)
+
+    reader.update_feed(feed_arg(one))
+
+    assert {(f.title, f.last_updated) for f in reader.get_feeds()} == {
+        ('one', datetime(2010, 1, 1)),
+        (None, None),
+    }
+    assert {e.id for e in reader.get_entries()} == {'1, 1'}
+
+
+def test_update_feed_updates_not_scheduled_feeds(reader, parser):
+    feed = parser.feed(1, title='old')
+    reader.add_feed(feed)
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    feed = parser.feed(1, title='new')
+    reader._now = lambda: datetime(2010, 1, 1, 0, 1)
+    reader.update_feed(feed)
+
+    assert reader.get_feed(feed).title == 'new'
+
+
+def test_update_feed_not_found(reader):
+    with pytest.raises(FeedNotFoundError):
+        reader.update_feed('1')
+
+
+def test_update_feed_value_error(reader):
+    with pytest.raises(ValueError):
+        reader.update_feed(object())
+
+
+# END: update_feed()
 
 
 # BEGIN: edge cases
