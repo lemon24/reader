@@ -241,9 +241,7 @@ UPDATE_AFTER_HTTP_DATA = {
     # cache-control max-age
     'max-age > interval': data(2, 200, max_age=6000),
     'invalid max-age is ignored': data(1, 200, max_age='xyz'),
-    'excessive max-age': data(
-        datetime(2010, 2, 1), 200, cache_control='max-age=2678401'
-    ),
+    'excessive max-age': data(datetime(2010, 2, 1), 200, max_age=31 * 24 * 3600 + 1),
     # expires
     'expires > interval': data(2, 200, expires='Fri, 01 Jan 2010 01:40:00 GMT'),
     'excessive expires': data(
@@ -267,6 +265,7 @@ UPDATE_AFTER_HTTP_DATA = {
         date='Thu, 31 Dec 2009 23:00:00 GMT',
         expires='Fri, 01 Jan 2010 01:40:00 GMT',
     ),
+    'no-cache ignores max-age': data(1, 200, cache_control='no-cache, max-age=6000'),
     # different intervals
     'non-hour interval (retry-after)': data(
         (1, 45), 429, retry_after=6000, interval=15

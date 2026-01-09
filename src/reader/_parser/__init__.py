@@ -206,8 +206,9 @@ class HTTPInfo(_namedtuple_compat):
 
         # https://httpwg.org/specs/rfc9111.html#calculating.freshness.lifetime
         if cache_control := self.cache_control:
-            if max_age := cache_control.max_age:
-                rv.append(now + timedelta(seconds=max_age))
+            if not cache_control.no_cache:
+                if max_age := cache_control.max_age:
+                    rv.append(now + timedelta(seconds=max_age))
         elif expires := self.parse_date('expires', now):
             rv.append(expires)
 
