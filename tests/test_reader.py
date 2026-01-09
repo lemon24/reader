@@ -205,6 +205,7 @@ def data(expected, status, *, interval=60, max_age=None, **kwargs):
         expected = datetime(2010, 1, 1, *expected)
     headers = {k.lower().replace('_', '-'): v for k, v in kwargs.items()}
     if max_age is not None:
+        assert 'cache-control' not in headers, headers['cache-control']
         headers['cache-control'] = f"max-age={max_age}"
     return interval, status, headers, expected
 
@@ -231,11 +232,23 @@ UPDATE_AFTER_HTTP_DATA = {
     'retry-after in the past (date)': data(
         1, 429, retry_after='Thu, 31 Dec 2009 23:40:00 GMT'
     ),
+    'excessive retry-after': data(
+        datetime(2010, 2, 1), 429, retry_after=31 * 24 * 3600 + 6000
+    ),
+    'excessive retry-after (below limit)': data(
+        datetime(2010, 1, 31, 23), 429, retry_after=31 * 24 * 3600 - 6000
+    ),
     # cache-control max-age
     'max-age > interval': data(2, 200, max_age=6000),
     'invalid max-age is ignored': data(1, 200, max_age='xyz'),
+    'excessive max-age': data(
+        datetime(2010, 2, 1), 200, cache_control='max-age=2678401'
+    ),
     # expires
     'expires > interval': data(2, 200, expires='Fri, 01 Jan 2010 01:40:00 GMT'),
+    'excessive expires': data(
+        datetime(2010, 2, 1), 200, expires='Mon, 01 Feb 2010 01:40:00 GMT'
+    ),
     # interactions
     'max-age beats expires': data(
         1, 200, max_age=3000, expires='Fri, 01 Jan 2010 01:40:00 GMT'

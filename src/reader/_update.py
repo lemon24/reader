@@ -5,6 +5,7 @@ import random
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
 from functools import partial
 from itertools import chain
@@ -258,7 +259,10 @@ class Decider:
             # also accounts for it being in the past / negative
             if http_update_after and http_update_after > update_after:
                 # round up to the next interval
+                # TODO: don't round up if already on the next interval
                 update_after = next_update_after(http_update_after, **self.config)
+                # limit excessive update_after
+                update_after = min(update_after, self.global_now + MAX_UPDATE_AFTER)
 
         # We always return a FeedUpdateIntent because
         # we always want to set last_retrieved and update_after,
@@ -320,6 +324,7 @@ def set_number(name, src, dst, type, min=0, max=float('inf')):  # type: ignore
 # start on a Monday, so weekly amounts of seconds line up
 UPDATE_AFTER_START = datetime(1970, 1, 5)
 EPOCH_OFFSET = (UPDATE_AFTER_START - datetime(1970, 1, 1)).total_seconds()
+MAX_UPDATE_AFTER = timedelta(31)
 
 
 def next_update_after(now: datetime, interval: int, jitter: float = 0) -> datetime:

@@ -18,6 +18,11 @@ Unreleased
   * Also, if the Retry-After header is a date,
     make the update interval relative to Date.
 
+* Limit the maximum value of
+  the Cache-Control max-age, Expires, or Retry-After HTTP headers
+  to a month in the future.
+  (:issue:`384`)
+
 * Only update feeds scheduled feeds by default
   (the ``scheduled`` argument of
   :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
