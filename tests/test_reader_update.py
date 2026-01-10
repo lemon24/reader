@@ -6,6 +6,7 @@ TODO: move all update tests from test_reader.py here
 """
 
 import logging
+import sys
 import threading
 from contextlib import contextmanager
 from unittest.mock import ANY
@@ -14,6 +15,9 @@ import pytest
 
 from reader import FeedNotFoundError
 from reader import ParseError
+from reader import StorageError
+from reader import UpdatedFeed
+from reader import UpdateResult
 from utils import Blocking
 from utils import utc_datetime as datetime
 
@@ -411,9 +415,98 @@ def test_last_exception_is_not_reset_by_another_feed(reader, parser):
 # END: update errors
 
 
+# BEGIN: update_feeds_iter()
+
+# TODO: these don't necessarily need the workers= version
+
+
+@pytest.mark.noscheduled
+def test_update_feeds_iter_basic(reader, parser, update_feeds_iter):
+    assert dict(update_feeds_iter(reader)) == {}
+
+    for i in 1, 2:
+        reader.add_feed(parser.feed(i))
+
+    assert dict(update_feeds_iter(reader)) == {
+        '1': UpdatedFeed(url='1'),
+        '2': UpdatedFeed(url='2'),
+    }
+
+    parser.entry(1, 1)
+    parser.entry(1, 2)
+    parser.entry(2, 1)
+
+    assert dict(update_feeds_iter(reader)) == {
+        '1': UpdatedFeed(url='1', new=2),
+        '2': UpdatedFeed(url='2', new=1),
+    }
+
+    parser.entry(1, 2, title='new')
+    parser.entry(1, 3)
+    parser.entry(1, 4)
+
+    assert dict(update_feeds_iter(reader)) == {
+        '1': UpdatedFeed(url='1', new=2, modified=1, unmodified=1),
+        '2': UpdatedFeed(url='2', new=0, modified=0, unmodified=1),
+    }
+
+
+def test_update_feeds_iter_parse_error(reader, parser, update_feeds_iter):
+    for i in 1, 2:
+        reader.add_feed(parser.feed(i))
+    parser.raise_exc(lambda url: url == '1')
+
+    rv = dict(update_feeds_iter(reader))
+
+    assert isinstance(rv['1'], ParseError)
+    assert rv['1'].url == '1'
+    assert rv['1'].__cause__ is parser.exc
+    assert rv['2'] == UpdatedFeed(url='2')
+
+
+def test_update_feeds_iter_not_modified(reader, parser, update_feeds_iter):
+    for i in 1, 2:
+        reader.add_feed(parser.feed(i))
+    parser.not_modified(lambda url: url == '1')
+
+    assert dict(update_feeds_iter(reader)) == {
+        '1': None,
+        '2': UpdatedFeed(url='2'),
+    }
+
+
+@pytest.mark.parametrize('exc_type', [StorageError, Exception])
+def test_update_feeds_iter_unexpected_error(
+    reader, parser, exc_type, update_feeds_iter
+):
+    for i in 1, 2, 3:
+        reader.add_feed(parser.feed(i))
+
+    original_storage_update_feed = reader._storage.update_feed
+    exc = exc_type('message')
+
+    def storage_update_feed(intent):
+        if intent.url == '2':
+            raise exc
+        return original_storage_update_feed(intent)
+
+    reader._storage.update_feed = storage_update_feed
+
+    rv = {}
+    with pytest.raises(exc_type) as excinfo:
+        rv.update(update_feeds_iter(reader))
+    assert excinfo.value is exc
+
+    if 'workers' not in update_feeds_iter.__name__:
+        assert rv == {'1': UpdatedFeed(url='1')}
+
+
+# END: update_feeds_iter()
+
+
 # BEGIN: update_feed()
 
-# return value and ParseError handling covered in test_update_feeds_iter
+# return value and ParseError handling covered in update_feeds_iter() tests
 
 
 def test_update_feed_basic(reader, parser, feed_arg):

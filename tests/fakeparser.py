@@ -29,7 +29,7 @@ class Parser:
 
     should_raise: callable or None = None
     exc: Exception = None
-    is_not_modified: bool = False
+    is_not_modified: callable or None = None
 
     def copy(self):
         return deepcopy(self)
@@ -72,15 +72,15 @@ class Parser:
         self.exc = exc or Exception('failing')
         return self
 
-    def not_modified(self):
+    def not_modified(self, cond=lambda _: True):
         self.reset_mode()
-        self.is_not_modified = True
+        self.is_not_modified = cond
         return self
 
     def reset_mode(self):
         self.should_raise = None
         self.exc = None
-        self.is_not_modified = False
+        self.is_not_modified = None
         return self
 
     # parser API
@@ -104,7 +104,7 @@ class Parser:
                 raise
             except Exception as e:
                 raise ParseError(url) from e
-        if self.is_not_modified:
+        if self.is_not_modified and self.is_not_modified(url):
             raise NotModified(url)
         return nullcontext(RetrievedFeed(BytesIO(b'opaque'), http_info=self.http_info))
 

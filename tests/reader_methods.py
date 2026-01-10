@@ -122,14 +122,17 @@ update_feed_methods = [
 
 
 class _update_feeds_iter_methods:
-    def update_feeds_iter(reader):
-        return reader.update_feeds_iter()
+    def update_feeds_iter(reader, **kwargs):
+        return reader.update_feeds_iter(**kwargs)
 
-    def update_feeds_iter_workers(reader):
-        return reader.update_feeds_iter(workers=2)
+    def update_feeds_iter_workers(reader, **kwargs):
+        return reader.update_feeds_iter(workers=2, **kwargs)
 
-    def update_feeds_iter_simulated(reader):
-        for feed in reader.get_feeds(updates_enabled=True, scheduled=True):
+    def update_feeds_iter_simulated(reader, **kwargs):
+        scheduled = True
+        if reader._scheduled_override is not None:
+            kwargs['scheduled'] = reader._scheduled_override
+        for feed in reader.get_feeds(updates_enabled=True, **kwargs):
             try:
                 yield UpdateResult(feed.url, reader.update_feed(feed))
             except UpdateError as e:

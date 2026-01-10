@@ -332,7 +332,7 @@ def test_next_update_after(monkeypatch, now, interval, jitter, random, expected)
     assert next_update_after(now, interval, jitter) == expected
 
 
-def test_update_scheduled(reader, parser, call_update_iter_method):
+def test_update_scheduled(reader, parser, update_feeds_iter):
     one = parser.feed(1)
     two = parser.feed(2)
     three = parser.feed(3)
@@ -343,7 +343,7 @@ def test_update_scheduled(reader, parser, call_update_iter_method):
     reader.set_tag(three, '.reader.update', {'interval': 120, 'jitter': 0.5})
 
     def update():
-        return set(dict(call_update_iter_method(reader, scheduled=True)))
+        return set(dict(update_feeds_iter(reader, scheduled=True)))
 
     reader._now = lambda: datetime(2010, 1, 1)
     assert update() == {'1', '2', '3'}
@@ -483,98 +483,6 @@ def test_set_update_interval_down(reader, parser):
 
     reader._now = lambda: datetime(2010, 1, 1, 5)
     assert len(list(reader.update_feeds_iter(scheduled=True))) == 1
-
-
-def call_update_feeds_iter(reader, **kwargs):
-    yield from reader.update_feeds_iter(**kwargs)
-
-
-def call_update_feed_iter(reader, **kwargs):
-    for feed in reader.get_feeds(updates_enabled=True, **kwargs):
-        try:
-            yield feed.url, reader.update_feed(feed)
-        except ParseError as e:
-            yield feed.url, e
-
-
-@pytest.fixture(params=[call_update_feeds_iter, call_update_feed_iter])
-def call_update_iter_method(request):
-    return request.param
-
-
-@pytest.mark.noscheduled
-def test_update_feeds_iter(reader, parser, call_update_iter_method):
-    parser.raise_exc(lambda url: url == '3')
-
-    one = parser.feed(1, datetime(2010, 1, 1))
-    one_one = parser.entry(1, 1, datetime(2010, 1, 1))
-    one_two = parser.entry(1, 2, datetime(2010, 2, 1))
-    two = parser.feed(2, datetime(2010, 1, 1))
-    two_one = parser.entry(2, 1, datetime(2010, 2, 1))
-
-    for feed in one, two:
-        reader.add_feed(feed)
-
-    assert dict(call_update_iter_method(reader)) == {
-        '1': UpdatedFeed(url='1', new=2, modified=0),
-        '2': UpdatedFeed(url='2', new=1, modified=0),
-    }
-
-    assert next(call_update_iter_method(reader)) == UpdateResult(
-        '1', UpdatedFeed(url='1', new=0, modified=0, unmodified=2)
-    )
-
-    one_two = parser.entry(1, 2, datetime(2010, 2, 2), title='new title')
-    one_three = parser.entry(1, 3, datetime(2010, 2, 1))
-    one_four = parser.entry(1, 4, datetime(2010, 2, 1))
-    three = parser.feed(3, datetime(2010, 1, 1))
-
-    reader.add_feed(three)
-
-    rv = dict(call_update_iter_method(reader))
-    assert set(rv) == set('123')
-
-    assert rv['1'] == UpdatedFeed(url='1', new=2, modified=1, unmodified=1)
-    assert rv['2'] == UpdatedFeed(url='2', new=0, modified=0, unmodified=1)
-
-    assert isinstance(rv['3'], ParseError)
-    assert rv['3'].url == '3'
-    assert rv['3'].__cause__ is parser.exc
-
-    reader._parser.not_modified()
-
-    assert dict(call_update_iter_method(reader)) == dict.fromkeys('123')
-
-
-@pytest.mark.parametrize('exc_type', [StorageError, Exception])
-def test_update_feeds_iter_raised_exception(
-    reader, parser, exc_type, call_update_iter_method
-):
-    one = parser.feed(1, datetime(2010, 1, 1))
-    two = parser.feed(2, datetime(2010, 1, 1))
-    three = parser.feed(3, datetime(2010, 1, 1))
-
-    for feed in one, two, three:
-        reader.add_feed(feed)
-
-    original_storage_update_feed = reader._storage.update_feed
-
-    def storage_update_feed(intent):
-        if intent.url == '2':
-            raise exc_type('message')
-        return original_storage_update_feed(intent)
-
-    reader._storage.update_feed = storage_update_feed
-
-    rv = {}
-    with pytest.raises(exc_type) as excinfo:
-        rv.update(call_update_iter_method(reader))
-    assert 'message' in str(excinfo.value)
-
-    if not sys.implementation.name == 'pypy':
-        # for some reason, on PyPy the updates sometimes
-        # happen out of order and rv is empty
-        assert rv == {'1': UpdatedFeed(url='1', new=0, modified=0)}
 
 
 def test_mark_as_read_unread(reader, parser, entry_arg):
