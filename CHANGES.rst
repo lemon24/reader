@@ -6,6 +6,12 @@ Changelog
   :no-index:
 
 
+Version 3.22
+------------
+
+Unreleased
+
+
 Version 3.21
 ------------
 
