@@ -11,32 +11,33 @@ Version 3.21
 
 Unreleased
 
-* During :ref:`scheduled updates <scheduled>`,
-  honor the Cache-Control max-age and Expires HTTP headers.
-  (:issue:`376`)
+* :ref:`Scheduled updates <scheduled>` improvements.
 
-  * Also, if the Retry-After header is a date,
+  * Only update scheduled feeds by default
+    (:meth:`update_feeds(scheduled=...) <Reader.update_feeds>`
+    defaults to :const:`True`);
+    previously, all feeds would be updated.
+    (:issue:`379`)
+
+    .. warning::
+
+      **This is a minor compatibility break**;
+      the previous behavior is a bug –
+      *reader* should do the right thing
+      even if the user doesn't read the documentation.
+
+    In the CLI, make ``update --scheduled`` the default.
+
+  * Honor the Cache-Control (max-age) and Expires HTTP headers.
+    (:issue:`376`)
+
+  * Limit the :attr:`~Feed.update_after` derived from HTTP headers
+    to a month in the future.
+    (:issue:`384`)
+
+  * If the Retry-After value is a date,
     make the update interval relative to Date.
 
-* Limit the maximum value of
-  the Cache-Control max-age, Expires, or Retry-After HTTP headers
-  to a month in the future.
-  (:issue:`384`)
-
-* Only update feeds scheduled feeds by default
-  (the ``scheduled`` argument of
-  :meth:`~Reader.update_feeds()` and :meth:`~Reader.update_feeds_iter()`
-  now defaults to true);
-  previously, all feeds would be updated.
-  (:issue:`379`)
-
-  .. warning::
-
-    **This is a minor compatibility break**;
-    it is considered acceptable,
-    since the previous behavior is a bug –
-    *reader* should do the right thing
-    even if the user doesn't read the documentation.
 
 
 Version 3.20
