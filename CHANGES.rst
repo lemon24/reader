@@ -9,7 +9,7 @@ Changelog
 Version 3.21
 ------------
 
-Unreleased
+Released 2026-01-12
 
 * :ref:`Scheduled updates <scheduled>` improvements.
 
