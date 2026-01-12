@@ -121,6 +121,22 @@ update_feed_methods = [
 ]
 
 
+class _update_feeds_methods:
+
+    def update_feeds(reader, **kwargs):
+        reader.update_feeds(**kwargs)
+
+    def update_feeds_iter(reader, **kwargs):
+        for _ in reader.update_feeds_iter(**kwargs):
+            pass
+
+
+# update_feeds(reader) -> None
+update_feeds_methods = [
+    v for k, v in _update_feeds_methods.__dict__.items() if not k.startswith('_')
+]
+
+
 class _update_feeds_iter_methods:
     def update_feeds_iter(reader, **kwargs):
         return reader.update_feeds_iter(**kwargs)
@@ -129,7 +145,7 @@ class _update_feeds_iter_methods:
         return reader.update_feeds_iter(workers=2, **kwargs)
 
     def update_feeds_iter_simulated(reader, **kwargs):
-        scheduled = True
+        kwargs.setdefault('scheduled', True)
         if reader._scheduled_override is not None:
             kwargs['scheduled'] = reader._scheduled_override
         for feed in reader.get_feeds(updates_enabled=True, **kwargs):

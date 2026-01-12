@@ -131,6 +131,11 @@ def update_feeds_iter(request):
     return request.param
 
 
+@pytest.fixture(params=reader_methods.update_feeds_methods)
+def update_feeds(request):
+    return request.param
+
+
 def feed_arg_as_str(feed):
     return feed.url
 
