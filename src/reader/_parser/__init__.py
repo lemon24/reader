@@ -206,9 +206,24 @@ class HTTPInfo(_namedtuple_compat):
 
         # https://httpwg.org/specs/rfc9111.html#calculating.freshness.lifetime
         if cache_control := self.cache_control:
+
+            # no-cache ("don't use cached version without revalidating") and
+            # max-age ("can use cached for no more than") are mutually exclusive.
+            #
+            # If no-cache is present, max-age can / should(?) be ignored
+            # (not specified by the RFC, but it's what browsers do[1][2]);
+            # thankfully, this doesn't happen very often[1].
+            #
+            # Note that no-cache doesn't imply anything about ETag,
+            # we always do conditional requests if ETag is present.
+            #
+            # [1]: https://www.fastly.com/blog/cache-control-wild#:~:text=conflicts
+            # [2]: https://cache-tests.fyi/?id=cc-resp-no-store-fresh&id=cc-resp-no-cache
+            #
             if not cache_control.no_cache:
                 if max_age := cache_control.max_age:
                     rv.append(now + timedelta(seconds=max_age))
+
         elif expires := self.parse_date('expires', now):
             rv.append(expires)
 
