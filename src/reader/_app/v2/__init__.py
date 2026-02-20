@@ -9,13 +9,14 @@ from flask import request
 from flask import url_for
 from jinja2_fragments.flask import render_block
 
-from reader import InvalidSearchQueryError
-
 from .. import EntryProxy
 from .. import get_reader
 from .. import stream_template
 from .forms import EntryFilter
-from .forms import SearchEntryFilter
+
+
+# for a prototype with tags and search support, see
+# https://github.com/lemon24/reader/tree/3.21/src/reader/_app/v2
 
 
 blueprint = Blueprint(
@@ -27,46 +28,22 @@ blueprint = Blueprint(
 def entries():
     reader = get_reader()
 
-    # TODO: search improvements
-    # TODO: paqgination
-    # TODO: read time
+    # TODO: pagination
 
-    if request.args.get('q', '').strip():
-        form = SearchEntryFilter(request.args)
-    else:
-        form = EntryFilter(request.args)
-
-    form_args = form.args
-    if q := form_args.pop('Q', ''):
-        form_args['q'] = q
-        return redirect(url_for('.entries', **form_args))
-    if form_args != request.args.to_dict():
-        return redirect(url_for('.entries', **form_args))
+    form = EntryFilter(request.args)
 
     feed = None
-    if form.feed.data:
-        feed = reader.get_feed(form.feed.data, None)
+    if feed_url := form.feed.data:
+        feed = reader.get_feed(feed_url, None)
         if not feed:
             abort(404)
 
     kwargs = dict(form.data)
-    if query := kwargs.pop('search', None):
-
-        def get_entries(**kwargs):
-            for sr in reader.search_entries(query, **kwargs):
-                yield EntryProxy(sr, reader.get_entry(sr))
-
-    else:
-        get_entries = reader.get_entries
+    get_entries = reader.get_entries
 
     entries = []
     if form.validate():
-        try:
-            entries = eager_iterator(get_entries(**kwargs, limit=64))
-        except StopIteration:
-            pass
-        except InvalidSearchQueryError as e:
-            form.search.errors.append(f"invalid query: {e}")
+        entries = get_entries(**kwargs, limit=64)
 
     return stream_template(
         'v2/entries.html',
@@ -74,14 +51,6 @@ def entries():
         entries=entries,
         feed=feed,
     )
-
-
-def eager_iterator(it):
-    it = iter(it)
-    try:
-        return itertools.chain([next(it)], it)
-    except StopIteration:
-        return it
 
 
 @blueprint.route('/mark-as', methods=['POST'])
