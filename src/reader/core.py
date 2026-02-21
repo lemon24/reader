@@ -1851,7 +1851,7 @@ class Reader:
             query, filter, sort, limit, starting_after
         )
         try:
-            first = next(entries)
+            first = next(entries) # type: ignore
         except StopIteration:
             return iter(())  # return empty iterator
         else:
