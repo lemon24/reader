@@ -296,16 +296,8 @@ def entries():
         important=important,
         feed_tags=tags,
     )
-    entries = get_entries(**kwargs, limit=request.args.get('limit', type=int))
-
-    with_counts = request.args.get('counts')
-    with_counts = {None: None, 'no': False, 'yes': True}[with_counts]
-    counts = get_entry_counts(**kwargs) if with_counts else None
-
     try:
-        entries = itertools.chain([next(entries)], entries)
-    except StopIteration:
-        pass
+        entries = get_entries(**kwargs, limit=request.args.get('limit', type=int))
     except InvalidSearchQueryError as e:
         error = f"invalid search query: {e}"
     except ValueError as e:
@@ -314,6 +306,9 @@ def entries():
             error = f"invalid tag query: {e}: {tags_str}"
         else:
             raise
+    with_counts = request.args.get('counts')
+    with_counts = {None: None, 'no': False, 'yes': True}[with_counts]
+    counts = get_entry_counts(**kwargs) if with_counts else None
 
     entries_data = None
     if feed_url:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins
+import itertools
 import logging
 import numbers
 import warnings
@@ -1846,7 +1847,15 @@ class Reader:
         if starting_after and sort == EntrySearchSort.RANDOM:
             raise ValueError("using starting_after with sort=RANDOM not supported")
 
-        return self._search.search_entries(query, filter, sort, limit, starting_after)
+        entries = self._search.search_entries(
+            query, filter, sort, limit, starting_after
+        )
+        try:
+            first = next(entries)  # type: ignore
+        except StopIteration:
+            return iter(())  # return empty iterator
+        else:
+            return itertools.chain((first,), entries)
 
     def search_entry_counts(
         self,
