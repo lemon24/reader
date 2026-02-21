@@ -1847,11 +1847,13 @@ class Reader:
         if starting_after and sort == EntrySearchSort.RANDOM:
             raise ValueError("using starting_after with sort=RANDOM not supported")
 
-        entries = self._search.search_entries(query, filter, sort, limit, starting_after)
+        entries = self._search.search_entries(
+            query, filter, sort, limit, starting_after
+        )
         try:
             first = next(entries)
         except StopIteration:
-            return iter(()) #return empty iterator
+            return iter(())  # return empty iterator
         else:
             return itertools.chain((first,), entries)
 
