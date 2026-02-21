@@ -11,6 +11,7 @@ from reader import EntrySearchResult
 from reader import EntrySource
 from reader import FeedNotFoundError
 from reader import HighlightedString
+from reader import InvalidSearchQueryError
 from reader import Reader
 from reader import ReaderError
 from reader import SearchError
@@ -140,6 +141,14 @@ def test_search_enabled_true(make_reader):
 
     reader.update_search()
     list(reader.search_entries('one'))
+
+
+def test_search_entries_for_invalid_query_error(make_reader):
+    reader = make_reader(':memory:', search_enabled=True)
+    reader.update_search()
+
+    with pytest.raises(InvalidSearchQueryError):
+        reader.search_entries('"')
 
 
 def test_search_enabled_false(make_reader, db_path):
