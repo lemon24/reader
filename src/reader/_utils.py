@@ -87,6 +87,14 @@ def count_consumed(it: Iterable[_T]) -> tuple[Iterable[_T], Callable[[], int]]:
     return wrapper(), get_count
 
 
+def eager_iterable(it: Iterable[_T]) -> Iterable[_T]:
+    it = iter(it)
+    try:
+        return itertools.chain([next(it)], it)
+    except StopIteration:
+        return it
+
+
 MapFunction = Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
 MapContextManager = AbstractContextManager[MapFunction[_T, _U]]
 

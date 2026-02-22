@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import builtins
-import itertools
 import logging
 import numbers
 import warnings
@@ -36,6 +35,7 @@ from ._types import SearchType
 from ._types import StorageType
 from ._types import UpdateHooks
 from ._update import Pipeline
+from ._utils import eager_iterable
 from ._utils import make_pool_map
 from ._utils import MapContextManager
 from ._utils import zero_or_one
@@ -634,7 +634,9 @@ class Reader:
                 raise ValueError("limit should be a positive integer")
         starting_after = _feed_argument(starting_after) if starting_after else None
 
-        return self._storage.get_feeds(filter, sort, limit, starting_after)
+        rv = self._storage.get_feeds(filter, sort, limit, starting_after)
+        # ensure query/pagination errors are raised before the iterable is consumed
+        return eager_iterable(rv)
 
     @overload
     def get_feed(self, feed: FeedInput, /) -> Feed:  # pragma: no cover
@@ -1195,7 +1197,9 @@ class Reader:
         if starting_after and sort == EntrySort.RANDOM:
             raise ValueError("using starting_after with sort=RANDOM not supported")
 
-        return self._storage.get_entries(filter, sort, limit, starting_after)
+        rv = self._storage.get_entries(filter, sort, limit, starting_after)
+        # ensure pagination errors are raised before the iterable is consumed
+        return eager_iterable(rv)
 
     @overload
     def get_entry(self, entry: EntryInput, /) -> Entry:  # pragma: no cover
@@ -1847,15 +1851,9 @@ class Reader:
         if starting_after and sort == EntrySearchSort.RANDOM:
             raise ValueError("using starting_after with sort=RANDOM not supported")
 
-        entries = self._search.search_entries(
-            query, filter, sort, limit, starting_after
-        )
-        try:
-            first = next(entries)  # type: ignore
-        except StopIteration:
-            return iter(())  # return empty iterator
-        else:
-            return itertools.chain((first,), entries)
+        rv = self._search.search_entries(query, filter, sort, limit, starting_after)
+        # ensure query/pagination errors are raised before the iterable is consumed
+        return eager_iterable(rv)
 
     def search_entry_counts(
         self,
