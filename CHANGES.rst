@@ -11,6 +11,16 @@ Version 3.22
 
 Unreleased
 
+* :meth:`~Reader.get_feeds`, :meth:`~Reader.get_entries`, and
+  :meth:`~Reader.search_entries` now raise exceptions
+  for invalid ``query`` and ``starting_after`` eagerly,
+  before the iterable is consumed.
+  Thanks to `Omprakash Choudhary`_ for the PR.
+  (:issue:`388`)
+
+
+.. _Omprakash Choudhary: https://github.com/omseervi098
+
 
 Version 3.21
 ------------

@@ -623,6 +623,10 @@ class Reader:
             ``new`` uses :attr:`~Feed.last_retrieved`
             instead of :attr:`~Feed.last_updated`.
 
+        .. versionchanged:: 3.22
+            Raise exception for invalid ``starting_after`` eagerly,
+            before the iterable is consumed.
+
         """
         filter = FeedFilter.from_args(
             self._now(), feed, tags, broken, updates_enabled, new, scheduled
@@ -635,7 +639,7 @@ class Reader:
         starting_after = _feed_argument(starting_after) if starting_after else None
 
         rv = self._storage.get_feeds(filter, sort, limit, starting_after)
-        # ensure query/pagination errors are raised before the iterable is consumed
+        # ensure pagination errors are raised before the iterable is consumed
         return eager_iterable(rv)
 
     @overload
@@ -1178,6 +1182,10 @@ class Reader:
 
         .. versionadded:: 3.16
             The ``source`` keyword argument.
+
+        .. versionchanged:: 3.22
+            Raise exception for invalid ``starting_after`` eagerly,
+            before the iterable is consumed.
 
         """
 
@@ -1836,6 +1844,10 @@ class Reader:
 
         .. versionadded:: 3.16
             The ``source`` keyword argument.
+
+        .. versionchanged:: 3.22
+            Raise exceptions for invalid ``query`` and ``starting_after`` eagerly,
+            before the iterable is consumed.
 
         """
         filter = EntryFilter.from_args(
