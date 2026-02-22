@@ -248,3 +248,10 @@ def test_entries_recent_new_feed(reader, parser, get_entries):
         (1, 2),
         (2, 5),
     ]
+
+
+@pytest.mark.parametrize('sort', ['bad sort', 'relevant'])
+def test_get_entries_sort_error(reader, sort):
+    with pytest.raises(ValueError):
+        # raises before the iterable is consumed
+        reader.get_entries(sort=sort)

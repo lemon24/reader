@@ -194,11 +194,6 @@ def test_get_entries_random(reader, parser, get_entries, chunk_size):
     # just that the output is "reasonably random"
 
 
-def test_get_entries_sort_error(reader):
-    with pytest.raises(ValueError):
-        set(reader.get_entries(sort='bad sort'))
-
-
 def test_add_remove_get_feeds(reader, parser, feed_arg):
     one = parser.feed(1, datetime(2010, 1, 1))
     entry_one = parser.entry(1, 1, datetime(2010, 1, 1))
@@ -278,7 +273,8 @@ def test_add_remove_get_feeds(reader, parser, feed_arg):
 
 def test_get_feeds_sort_error(reader):
     with pytest.raises(ValueError):
-        set(reader.get_feeds(sort='bad sort'))
+        # raises before the iterable is consumed
+        reader.get_feeds(sort='bad sort')
 
 
 def test_get_feeds_order_title(reader, parser, chunk_size):

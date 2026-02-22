@@ -240,7 +240,8 @@ def test_entries(reader_entries, get_entries, kwargs, expected):
 )
 def test_entries_error(reader, get_entries, kwargs):
     with pytest.raises(ValueError):
-        list(get_entries(reader, **kwargs))
+        # raises before the iterable is consumed
+        get_entries(reader, **kwargs)
 
 
 # TODO: ideally, systematize all filtering tests?
@@ -321,7 +322,8 @@ def test_feeds(reader, parser, get_feeds, kwargs, expected):
 )
 def test_feeds_error(reader, kwargs):
     with pytest.raises(ValueError):
-        list(reader.get_feeds(**kwargs))
+        # raises before the iterable is consumed
+        reader.get_feeds(**kwargs)
 
 
 # END feed filtering tests

@@ -143,14 +143,6 @@ def test_search_enabled_true(make_reader):
     list(reader.search_entries('one'))
 
 
-def test_search_entries_for_invalid_query_error(make_reader):
-    reader = make_reader(':memory:', search_enabled=True)
-    reader.update_search()
-
-    with pytest.raises(InvalidSearchQueryError):
-        reader.search_entries('"')
-
-
 def test_search_enabled_false(make_reader, db_path):
     reader = make_reader(db_path, search_enabled=None)
     reader.enable_search()
@@ -913,9 +905,16 @@ def test_search_entries_order_content_recent(reader, parser):
 
 
 def test_search_entries_sort_error(reader):
-    reader.enable_search()
     with pytest.raises(ValueError):
-        set(reader.search_entries('one', sort='bad sort'))
+        # raises before the iterable is consumed
+        reader.search_entries('one', sort='bad sort')
+
+
+def test_search_entries_invalid_query_error(reader):
+    reader.enable_search()
+    with pytest.raises(InvalidSearchQueryError):
+        # raises before the iterable is consumed
+        reader.search_entries('"')
 
 
 def test_add_entry_repeatedly(reader):
