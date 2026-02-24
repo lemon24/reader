@@ -145,6 +145,19 @@ class SearchEntryFilter(EntryFilter):
     )
 
 
+FEED_SORT_CHOICES = ['title', 'added']
+
+
+class FeedFilter(PresetsMixin, Form):
+    sort = RadioField("sort", choices=FEED_SORT_CHOICES, default='title')
+
+    PRESET_FIELDS = {'sort'}
+    PRESETS = {
+        'all': {},
+        'added': {'sort': 'added'},
+    }
+
+
 if __name__ == '__main__':
     from werkzeug.datastructures import MultiDict
 

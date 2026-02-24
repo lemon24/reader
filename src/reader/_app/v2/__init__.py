@@ -13,6 +13,7 @@ from .. import EntryProxy
 from .. import get_reader
 from .. import stream_template
 from .forms import EntryFilter
+from .forms import FeedFilter
 
 
 # for a prototype with tags and search support, see
@@ -95,3 +96,22 @@ def mark_as():
         )
 
     return redirect(request.form['next'], code=303)
+
+
+@blueprint.route('/feeds')
+def feeds():
+    reader = get_reader()
+
+    form = FeedFilter(request.args)
+
+    kwargs = dict(form.data)
+
+    feeds = []
+    if form.validate():
+        feeds = reader.get_feeds(**kwargs)
+
+    return stream_template(
+        'v2/feeds.html',
+        form=form,
+        feeds=feeds,
+    )

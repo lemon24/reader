@@ -1,0 +1,95 @@
+{% extends "v2/layout.html" %}
+
+{% import "v2/macros.html" as macros %}
+
+
+{% block page_title %}
+  Feeds - reader
+{% endblock %}
+
+{% block main_title %}
+  Feeds
+{% endblock %}
+
+
+{% block body %}
+
+
+<ul class="nav controls mb-3 small">
+  {% for preset in form.presets %}
+  <li class="nav-item">
+    <a class="nav-link{% if preset.active %} active{% endif %}"
+      {%- if preset.active %} aria-current="page"{% endif %}
+      href="{{ url_for('.feeds', **preset.args) }}">
+      {{ preset.name }}
+    </a>
+  </li>
+  {%- endfor %}
+  <li class="nav-item">
+    <a class="nav-link dropdown-toggle{% if not form.active_presets %} active{% endif %}"
+      href="#nav-more" data-bs-toggle="collapse"
+      role="button" aria-expanded="false" aria-controls="nav-more">
+      more
+    </a>
+  </li>
+</ul>
+
+
+<form>
+  <div class="collapse mb-3" id="nav-more">
+    <div class="mb-3">
+    {{ macros.radio(form.sort) }}
+    </div>
+    <button type="submit" class="btn btn-primary">go</button>
+  </div>
+</form>
+
+
+{% for feed in feeds %}
+<div class="mb-4" id="feed-{{ loop.index }}">
+
+  <ul class="list-inline" style="margin-bottom: 0.125rem">
+
+    {% set updated = feed.updated or feed.last_updated -%}
+    {# TODO: updated should be a tooltip #}
+    {# TODO: babel.format_timedelta(..., format='narrow') -> 3h #}
+    <li class="list-inline-item text-secondary" title="{{ updated or '' }}">
+      <small>
+        {{ 'updated ' + updated | humanize_naturaltime if updated else 'not updated' }}
+      </small>
+    </li>
+
+  </ul>
+
+  <h2 class="h5 mb-1" style="font-size: 1.125rem">
+    <a class="text-decoration-none" href="{{ url_for('.entries', feed=feed.url) }}">
+      {{- feed.resolved_title or feed.url -}}
+    </a>
+    {#- NOTE: there must be no whitespace between the last word and the icon -#}
+    {#- TODO: aria stuff -#}
+    {%- if feed.link -%}
+    <a class="ms-2 text-nowrap small" href="{{ feed.link }}" target="_blank">{#
+      #}<i class="bi bi-box-arrow-up-right text-secondary"></i>{#
+    #}</a>
+    {%- endif -%}
+    {%- if not feed.url.startswith('reader:') -%}
+    <a class="ms-2 text-nowrap small" href="{{ feed.url }}" target="_blank">{#
+      #}<i class="bi bi-rss text-secondary"></i>{#
+    #}</a>
+    {%- endif -%}
+    {%- if feed.last_exception and feed.updates_enabled -%}
+    <span class="ms-2 text-nowrap small" title="{{ feed.last_exception.value_str }}">{#
+      #}<i class="bi bi-slash-circle text-danger"></i>{#
+    #}</a>
+    {%- endif -%}
+  </h2>
+
+
+</div>
+
+{% else %}
+  <p>no entries found</p>
+{% endfor %}
+
+
+{% endblock %}
