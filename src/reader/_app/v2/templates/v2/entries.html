@@ -75,7 +75,7 @@
     <li class="list-inline-item">
       <a class="text-decoration-none" href="{{ url_for('.entries', feed=entry.feed.url) }}">
         <small>
-          {{ entry.feed_resolved_title or 'untitled feed' }}
+          {{ entry.feed_resolved_title or entry.feed.url }}
         </small>
       </a>
     </li>
@@ -98,10 +98,10 @@
     {#- NOTE: there must be no whitespace between the last word and the icon -#}
     {#- TODO: aria stuff -#}
     {%- if entry.link -%}
-    <a class="mx-2 small text-nowrap" href="{{ entry.link }}" target="_blank">{#
-      #}<i class="bi bi-box-arrow-up-right small"></i>{#
+    <a class="ms-2 text-nowrap small" href="{{ entry.link }}" target="_blank">{#
+      #}<i class="bi bi-box-arrow-up-right text-secondary"></i>{#
     #}</a>
-    {%- endif %}
+    {%- endif -%}
   </h2>
 
   {% set summary = entry.get_content(prefer_summary=True).value | striptags | trim %}
