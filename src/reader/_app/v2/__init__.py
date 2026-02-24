@@ -28,8 +28,6 @@ blueprint = Blueprint(
 def entries():
     reader = get_reader()
 
-    # TODO: pagination
-
     form = EntryFilter(request.args)
 
     feed = None
@@ -39,17 +37,24 @@ def entries():
             abort(404)
 
     kwargs = dict(form.data)
+
+    if not (feed or kwargs.get('starting_after')):
+        limit = 64
+    else:
+        limit = 256
+
     get_entries = reader.get_entries
 
     entries = []
     if form.validate():
-        entries = get_entries(**kwargs, limit=64)
+        entries = get_entries(**kwargs, limit=limit)
 
     return stream_template(
         'v2/entries.html',
         form=form,
         entries=entries,
         feed=feed,
+        limit=limit,
     )
 
 

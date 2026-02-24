@@ -826,6 +826,8 @@ def additional_links(entry):
 
 def create_app(config):
     app = Flask(__name__)
+    app.jinja_env.add_extension('jinja2.ext.do')
+
     app.secret_key = 'secret'
 
     app.config['READER_CONFIG'] = config

@@ -115,6 +115,10 @@ ENTRY_SORT_CHOICES = ['recent', 'random']
 
 class EntryFilter(PresetsMixin, Form):
     feed = HiddenField("feed")
+    starting_after = HiddenField(
+        name="after",
+        filters=[lambda s: tuple(s.split('\0', maxsplit=1)) if s else None],
+    )
     # search = SearchField("search", name='Q')
     # feed_tags = TagFilterField("feed tags", name='tags')
     # tags = TagFilterField("entry tags", name='entry-tags')

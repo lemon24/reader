@@ -62,7 +62,12 @@
 </form>
 
 
+{% set last = namespace() %}
 {% for entry in entries %}
+{%- if loop.last -%}
+  {% set last.entry = entry -%}
+  {% set last.index = loop.index -%}
+{%- endif -%}
 <div class="mb-4" id="entry-{{ loop.index }}">
 
   <ul class="list-inline" style="margin-bottom: 0.125rem">
@@ -201,22 +206,35 @@
 {% endfor %}
 
 
-<!--
 <nav aria-label="page navigation">
+  {% set after = 'after' in request.args %}
+  {% set more = request.args.sort != 'random' and last.entry and last.index == limit %}
+
+  {% if after or more %}
   <ul class="pagination">
+
+    {% if after %}
     <li class="page-item">
-      <a class="page-link" href="#">
+      <a class="page-link" href="javascript:history.back()">
         <span aria-hidden="true" class="me-2">&lsaquo;</span>previous
       </a>
     </li>
+    {% endif %}
+
+    {% if more %}
     <li class="page-item">
-      <a class="page-link" href="#">
+      {% set args = dict(request.args) %}
+      {% do args.update(after='\0'.join(last.entry.resource_id)) %}
+      <a class="page-link" href="{{ url_for('.entries',**args) }}">
         next<span aria-hidden="true" class="ms-2">&rsaquo;</span>
       </a>
     </li>
+    {% endif %}
+
   </ul>
+  {% endif %}
+
 </nav>
--->
 
 
 {% endblock %}
