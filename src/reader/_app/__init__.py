@@ -103,10 +103,18 @@ def get_reader():
 
 
 def stream_template(template_name_or_list, **kwargs):
+    # Ensure flashed messages get removed from the session,
+    # otherwise they keep adding up and never disappear.
+    # Assumes the template will call get_flashed_messages() at some point.
+    # https://github.com/lemon24/reader/issues/81
+    get_flashed_messages()
+
     template = current_app.jinja_env.get_template(template_name_or_list)
+
     stream = template.stream(**kwargs)
     # TODO: increase to at least 1-2k, like this we have 50% overhead
     stream.enable_buffering(50)
+
     return Response(stream_with_context(stream))
 
 
@@ -323,12 +331,6 @@ def entries():
     if feed_url:
         feed_entry_counts = reader.get_entry_counts(feed=feed)
 
-    # Ensure flashed messages get removed from the session,
-    # otherwise they keep adding up and never disappear.
-    # Assumes the template will call get_flashed_messages() at some point.
-    # https://github.com/lemon24/reader/issues/81
-    get_flashed_messages()
-
     entries_and_tags = ((e, get_entry_tags(reader, e)) for e in entries)
 
     return stream_template(
@@ -498,10 +500,6 @@ def feeds():
 
         feed_data = sorted(feed_data, key=fancy_sort_key)
 
-    # Ensure flashed messages get removed from the session.
-    # https://github.com/lemon24/reader/issues/81
-    get_flashed_messages()
-
     return stream_template(
         'feeds.html', feed_data=feed_data, error=error, counts=counts
     )
@@ -527,10 +525,6 @@ def metadata():
         resource_id = ()
 
     metadata = reader.get_tags(resource_id)
-
-    # Ensure flashed messages get removed from the session.
-    # https://github.com/lemon24/reader/issues/81
-    get_flashed_messages()
 
     return stream_template(
         'metadata.html',

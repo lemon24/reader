@@ -5,7 +5,6 @@ from flask import abort
 from flask import Blueprint
 from flask import current_app
 from flask import flash
-from flask import get_flashed_messages
 from flask import redirect
 from flask import render_template
 from flask import request
@@ -112,12 +111,6 @@ def feeds():
     feeds = []
     if form.validate():
         feeds = reader.get_feeds(**kwargs)
-
-    # Ensure flashed messages get removed from the session,
-    # otherwise they keep adding up and never disappear.
-    # Assumes the template will call get_flashed_messages() at some point.
-    # https://github.com/lemon24/reader/issues/81
-    get_flashed_messages()
 
     return stream_template(
         'v2/feeds.html',
