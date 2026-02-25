@@ -45,6 +45,14 @@
 </form>
 
 
+<ul class="list-unstyled">
+{% for category, message in get_flashed_messages(with_categories=true) %}
+  <li class="alert alert-{{ category }}">{{ message }}</li>
+{% endfor %}
+</ul>
+
+
+
 {% for feed in feeds %}
 <div class="mb-4" id="feed-{{ loop.index }}">
 
@@ -93,7 +101,7 @@
     {#- TODO: aria stuff #}
     {% block feed_actions scoped %}
 
-    {%- if not feed.url.startswith('reader:') -%}
+    {% if not feed.url.startswith('reader:') -%}
     <button type="submit" name="enabled"
       value="{{ 'false' if feed.updates_enabled else 'true' }}"
       hx-post="{{ url_for('.feed_actions') }}"
@@ -111,7 +119,13 @@
       </div>
 
     </button>
-    {%- endif -%}
+    {%- endif %}
+
+    <a href="{{ url_for('.delete_feed', feed=feed.url) }}"
+      class="btn btn-outline-danger btn-sm"
+      role="button"
+      style="width: 4rem"
+    >delete</a>
 
     <input type="hidden" name="feed-url" value="{{ feed.url }}">
     <input type="hidden" name="next" value="{{ next }}">

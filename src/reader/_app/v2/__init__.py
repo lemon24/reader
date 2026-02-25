@@ -4,7 +4,10 @@ from functools import partial
 from flask import abort
 from flask import Blueprint
 from flask import current_app
+from flask import flash
+from flask import get_flashed_messages
 from flask import redirect
+from flask import render_template
 from flask import request
 from flask import url_for
 from jinja2_fragments.flask import render_block
@@ -110,6 +113,12 @@ def feeds():
     if form.validate():
         feeds = reader.get_feeds(**kwargs)
 
+    # Ensure flashed messages get removed from the session,
+    # otherwise they keep adding up and never disappear.
+    # Assumes the template will call get_flashed_messages() at some point.
+    # https://github.com/lemon24/reader/issues/81
+    get_flashed_messages()
+
     return stream_template(
         'v2/feeds.html',
         form=form,
@@ -143,3 +152,22 @@ def feed_actions():
         )
 
     return redirect(request.form['next'], code=303)
+
+
+@blueprint.route('/feeds/delete', methods=['GET', 'POST'])
+def delete_feed():
+    reader = get_reader()
+
+    feed = reader.get_feed(request.args['feed'], None)
+    if not feed:
+        abort(404)
+
+    if request.method == 'POST':
+        reader.delete_feed(feed)
+        flash(f"Deleted feed {feed.resolved_title or feed.url}.", 'success')
+        return redirect(url_for('.feeds'), code=303)
+
+    return render_template(
+        'v2/delete_feed.html',
+        feed=feed,
+    )

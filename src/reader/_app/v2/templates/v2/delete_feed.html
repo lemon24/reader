@@ -1,0 +1,39 @@
+{% extends "v2/layout.html" %}
+
+{% import "v2/macros.html" as macros %}
+
+
+{% block page_title %}
+  Delete {{ feed.resolved_title or feed.url }} - reader
+{% endblock %}
+
+{% block main_title %}
+  Delete feed?
+{% endblock %}
+
+
+{% block body %}
+  <p class="lead">Feed
+  <a href="{{ url_for('.entries', feed=feed.url) }}">{{ feed.resolved_title or feed.url }}</a>
+  and all its entries will be deleted.
+  This cannot be undone.
+  </p>
+
+  <form action="{{ url_for(request.endpoint, **request.args) }}" method="post" class="my-2">
+    {#- TODO: aria stuff #}
+
+    <button type="submit" name="delete" value="true" class="btn btn-danger">
+      delete
+    </button>
+
+    <a href="javascript:history.back()" class="btn btn-outline-secondary" role="button" >
+      cancel
+    </a>
+
+    <input type="hidden" name="feed" value="{{ feed.url }}">
+
+  </form>
+
+
+
+{% endblock %}
