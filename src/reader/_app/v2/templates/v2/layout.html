@@ -24,12 +24,17 @@
   <div class="container-fluid">
 
     <ul class="navbar-nav me-auto flex-row">
+      {%- macro nav_item(endpoint, text) -%}
+      {%- set active = request.endpoint.endswith(endpoint) -%}
       <li class="nav-item">
-        <a class="nav-link px-2 active" href="{{ url_for('v2.entries') }}" aria-current="page">entries</a>
+        <a href="{{ url_for(endpoint) }}"
+          class="nav-link px-2{% if active %} active{% endif %}"
+          {% if active %}aria-current="page"{% endif %}
+        >{{ text }}</a>
       </li>
-      <li class="nav-item">
-        <a class="nav-link px-2" href="{{ url_for('v2.feeds') }}">feeds</a>
-      </li>
+      {% endmacro %}
+      {{ nav_item('.entries', 'entries') }}
+      {{ nav_item('.feeds', 'feeds') }}
     </ul>
 
     <button
