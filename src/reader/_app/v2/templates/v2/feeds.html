@@ -93,23 +93,25 @@
     {#- TODO: aria stuff #}
     {% block feed_actions scoped %}
 
+    {%- if not feed.url.startswith('reader:') -%}
     <button type="submit" name="enabled"
       value="{{ 'false' if feed.updates_enabled else 'true' }}"
       hx-post="{{ url_for('.feed_actions') }}"
       hx-disabled-elt="this"
-      class="btn btn-outline-secondary btn-sm{% if feed.updates_enabled %} active{% endif %}"
+      class="btn btn-outline-secondary btn-sm {% if feed.updates_enabled %} active{% endif %}"
       {% if feed.updates_enabled -%}
       aria-pressed="true"
       {% endif -%}
       style="width: 4rem">
 
-      {{ 'disable' if feed.updates_enabled is true else 'enable' }}
+      <span class="label">{{ 'disable' if feed.updates_enabled is true else 'enable' }}</span>
 
       <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
         <span class="visually-hidden">loading...</span>
       </div>
 
     </button>
+    {%- endif -%}
 
     <input type="hidden" name="feed-url" value="{{ feed.url }}">
     <input type="hidden" name="next" value="{{ next }}">
