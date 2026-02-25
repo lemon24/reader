@@ -59,8 +59,8 @@ def entries():
     )
 
 
-@blueprint.route('/mark-as', methods=['POST'])
-def mark_as():
+@blueprint.route('/entry-actions', methods=['POST'])
+def entry_actions():
     reader = get_reader()
 
     entry = request.form['feed-url'], request.form['entry-id']
@@ -88,7 +88,7 @@ def mark_as():
     if request.headers.get('hx-request') == 'true':
         return render_block(
             'v2/entries.html',
-            'entry_form',
+            'entry_actions',
             entry=reader.get_entry(entry),
             next=request.form['next'],
             # equivalent to {% import "v2/macros.html" as macros %}

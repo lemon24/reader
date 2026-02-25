@@ -113,16 +113,16 @@
 
   {% set next_index = loop.index if not loop.last else loop.index - 1 -%}
   {% set next = url_for('.entries', **request.args) + '#entry-' + (next_index|string) %}
-  <form action="{{ url_for('.mark_as') }}" method="post"
+  <form action="{{ url_for('.entry_actions') }}" method="post"
     hx-target="closest form"
 
     class="my-2">
     {#- TODO: aria stuff #}
-    {% block entry_form scoped %}
+    {% block entry_actions scoped %}
 
     <button type="submit" name="read"
       value="{{ 'false' if entry.read else 'true' }}"
-      hx-post="{{ url_for('.mark_as') }}"
+      hx-post="{{ url_for('.entry_actions') }}"
       hx-disabled-elt="this"
       class="btn btn-outline-secondary btn-sm{% if entry.read %} active{% endif %}"
       {% if entry.read -%}
@@ -143,7 +143,7 @@
     <div class="btn-group" role="group" aria-label="importance">
       <button type="submit" name="important"
         value="{{ 'none' if entry.important is true else 'true' }}"
-        hx-post="{{ url_for('.mark_as') }}"
+        hx-post="{{ url_for('.entry_actions') }}"
         hx-disabled-elt="this, next button"
         class="btn btn-outline-secondary btn-sm {% if entry.important is true %} active{% endif %}"
         {% if entry.important is true -%}
@@ -163,7 +163,7 @@
 
       <button type="submit" name="important"
         value="{{ 'none' if entry.important is false else 'false' }}"
-        hx-post="{{ url_for('.mark_as') }}"
+        hx-post="{{ url_for('.entry_actions') }}"
         hx-disabled-elt="this, previous button"
         class="btn btn-outline-secondary btn-sm {% if entry.important is false %} active{% endif %}"
         {% if entry.important is false -%}
