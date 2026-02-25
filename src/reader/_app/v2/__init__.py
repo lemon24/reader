@@ -115,3 +115,31 @@ def feeds():
         form=form,
         feeds=feeds,
     )
+
+
+@blueprint.route('/feed-actions', methods=['POST'])
+def feed_actions():
+    reader = get_reader()
+
+    feed = request.form['feed-url']
+
+    if 'enabled' in request.form:
+        match request.form['enabled']:
+            case 'true':
+                reader.enable_feed_updates(feed)
+            case 'false':
+                reader.disable_feed_updates(feed)
+            case _:
+                abort(422)
+
+    if request.headers.get('hx-request') == 'true':
+        return render_block(
+            'v2/feeds.html',
+            'feed_actions',
+            feed=reader.get_feed(feed),
+            next=request.form['next'],
+            # equivalent to {% import "v2/macros.html" as macros %}
+            macros=current_app.jinja_env.get_template('v2/macros.html').module,
+        )
+
+    return redirect(request.form['next'], code=303)

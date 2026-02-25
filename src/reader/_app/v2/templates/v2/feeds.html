@@ -84,6 +84,38 @@
     {%- endif -%}
   </h2>
 
+  {% set next_index = loop.index if not loop.last else loop.index - 1 -%}
+  {% set next = url_for('.feeds', **request.args) + '#feed-' + (next_index|string) %}
+  <form action="{{ url_for('.feed_actions') }}" method="post"
+    hx-target="closest form"
+
+    class="my-2">
+    {#- TODO: aria stuff #}
+    {% block feed_actions scoped %}
+
+    <button type="submit" name="enabled"
+      value="{{ 'false' if feed.updates_enabled else 'true' }}"
+      hx-post="{{ url_for('.feed_actions') }}"
+      hx-disabled-elt="this"
+      class="btn btn-outline-secondary btn-sm{% if feed.updates_enabled %} active{% endif %}"
+      {% if feed.updates_enabled -%}
+      aria-pressed="true"
+      {% endif -%}
+      style="width: 4rem">
+
+      {{ 'disable' if feed.updates_enabled is true else 'enable' }}
+
+      <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
+        <span class="visually-hidden">loading...</span>
+      </div>
+
+    </button>
+
+    <input type="hidden" name="feed-url" value="{{ feed.url }}">
+    <input type="hidden" name="next" value="{{ next }}">
+
+  {% endblock %}
+  </form>
 
 </div>
 
