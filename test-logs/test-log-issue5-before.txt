@@ -1,0 +1,1004 @@
+docs: install_package> python -I -m pip install --force-reinstall --no-deps /home/willi/reader-fork-assignment4/.tox/.tmp/package/7/reader-3.22.dev0-0.editable-py3-none-any.whl
+docs: commands[0]> sphinx-build -E -W docs docs/_build/html
+Running Sphinx v9.1.0
+loading translations [en]... done
+building [mo]: targets for 0 po files that are out of date
+writing output...
+building [html]: targets for 15 source files that are out of date
+updating environment: [new config] 15 added, 0 changed, 0 removed
+reading sources... [  7%] api
+reading sources... [ 13%] app
+reading sources... [ 20%] changelog
+reading sources... [ 27%] cli
+reading sources... [ 33%] config
+reading sources... [ 40%] contributing
+reading sources... [ 47%] dev
+reading sources... [ 53%] dev-app
+reading sources... [ 60%] guide
+reading sources... [ 67%] index
+reading sources... [ 73%] install
+reading sources... [ 80%] internal
+reading sources... [ 87%] plugins
+reading sources... [ 93%] tutorial
+reading sources... [100%] why
+
+looking for now-outdated files... none found
+pickling environment... done
+checking consistency... done
+preparing documents... done
+copying assets...
+copying static files...
+Writing evaluated template result to /home/willi/reader-fork-assignment4/docs/_build/html/_static/language_data.js
+Writing evaluated template result to /home/willi/reader-fork-assignment4/docs/_build/html/_static/basic.css
+Writing evaluated template result to /home/willi/reader-fork-assignment4/docs/_build/html/_static/documentation_options.js
+Writing evaluated template result to /home/willi/reader-fork-assignment4/docs/_build/html/_static/js/versions.js
+copying static files: done
+copying extra files...
+copying extra files: done
+copying assets: done
+writing output... [  7%] api
+writing output... [ 13%] app
+writing output... [ 20%] changelog
+writing output... [ 27%] cli
+writing output... [ 33%] config
+writing output... [ 40%] contributing
+writing output... [ 47%] dev
+writing output... [ 53%] dev-app
+writing output... [ 60%] guide
+writing output... [ 67%] index
+writing output... [ 73%] install
+writing output... [ 80%] internal
+writing output... [ 87%] plugins
+writing output... [ 93%] tutorial
+writing output... [100%] why
+
+generating indices... genindex py-modindex done
+writing additional pages... search done
+copying images... [  9%] screenshots/entries-v2-dark.png
+copying images... [ 18%] screenshots/entries-v2-filters-light.png
+copying images... [ 27%] screenshots/entries.png
+copying images... [ 36%] screenshots/entries-feed.png
+copying images... [ 45%] screenshots/feeds.png
+copying images... [ 55%] screenshots/entry-one.png
+copying images... [ 64%] screenshots/entry-two.png
+copying images... [ 73%] screenshots/search.png
+copying images... [ 82%] screenshots/lynx.png
+copying images... [ 91%] screenshots/dillo.png
+copying images... [100%] images/redesign-01.png
+
+dumping search index in English (code: en)... done
+dumping object inventory... done
+build finished with problems, 12 warnings (with warnings treated as errors).
+docs: exit 1 (6.52 seconds) /home/willi/reader-fork-assignment4> sphinx-build -E -W docs docs/_build/html pid=56295
+
+[K
+⠋ [0/9]
+[K
+⠙ [3/9] coverage-clean | typing | docs
+[K
+⠹ [3/9] coverage-clean | typing | docs
+[Kcoverage-clean: OK ✔ in 0.28 seconds
+
+[K
+⠸ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠼ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠴ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠦ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠧ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠇ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠏ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠋ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠙ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠹ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠸ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠼ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠴ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠦ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠧ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠇ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[K
+⠏ [7/9] typing | docs | py314 | py313 | py312 | py311 | pypy311
+[Kpypy311: SKIP ⚠ in 1.69 seconds
+
+[Kpy311: SKIP ⚠ in 1.69 seconds
+
+[Kpy314: SKIP ⚠ in 1.69 seconds
+
+[Kpy313: SKIP ⚠ in 1.69 seconds
+
+[K
+⠋ [3/9] typing | docs | py312
+[K
+⠙ [3/9] typing | docs | py312
+[K
+⠹ [3/9] typing | docs | py312
+[K
+⠸ [3/9] typing | docs | py312
+[K
+⠼ [3/9] typing | docs | py312
+[K
+⠴ [3/9] typing | docs | py312
+[K
+⠦ [3/9] typing | docs | py312
+[K
+⠧ [3/9] typing | docs | py312
+[K
+⠇ [3/9] typing | docs | py312
+[Ktyping: OK ✔ in 2.88 seconds
+
+[K
+⠏ [2/9] docs | py312
+[K
+⠋ [2/9] docs | py312
+[K
+⠙ [2/9] docs | py312
+[K
+⠹ [2/9] docs | py312
+[K
+⠸ [2/9] docs | py312
+[K
+⠼ [2/9] docs | py312
+[K
+⠴ [2/9] docs | py312
+[K
+⠦ [2/9] docs | py312
+[K
+⠧ [2/9] docs | py312
+[K
+⠇ [2/9] docs | py312
+[K
+⠏ [2/9] docs | py312
+[K
+⠋ [2/9] docs | py312
+[K
+⠙ [2/9] docs | py312
+[K
+⠹ [2/9] docs | py312
+[K
+⠸ [2/9] docs | py312
+[K
+⠼ [2/9] docs | py312
+[K
+⠴ [2/9] docs | py312
+[K
+⠦ [2/9] docs | py312
+[K
+⠧ [2/9] docs | py312
+[K
+⠇ [2/9] docs | py312
+[K
+⠏ [2/9] docs | py312
+[K
+⠋ [2/9] docs | py312
+[K
+⠙ [2/9] docs | py312
+[K
+⠹ [2/9] docs | py312
+[K
+⠸ [2/9] docs | py312
+[K
+⠼ [2/9] docs | py312
+[K
+⠴ [2/9] docs | py312
+[K
+⠦ [2/9] docs | py312
+[K
+⠧ [2/9] docs | py312
+[K
+⠇ [2/9] docs | py312
+[K
+⠏ [2/9] docs | py312
+[K
+⠋ [2/9] docs | py312
+[K
+⠙ [2/9] docs | py312
+[K
+⠹ [2/9] docs | py312
+[K
+⠸ [2/9] docs | py312
+[K
+⠼ [2/9] docs | py312
+[K
+⠴ [2/9] docs | py312
+[K
+⠦ [2/9] docs | py312
+[K
+⠧ [2/9] docs | py312
+[K
+⠇ [2/9] docs | py312
+[K
+⠏ [2/9] docs | py312
+[K
+⠋ [2/9] docs | py312
+[K
+⠙ [2/9] docs | py312
+[K
+⠹ [2/9] docs | py312
+[K
+⠸ [2/9] docs | py312
+[K
+⠼ [2/9] docs | py312
+[K
+⠴ [2/9] docs | py312
+[K
+⠦ [2/9] docs | py312
+[K
+⠧ [2/9] docs | py312
+[K
+⠇ [2/9] docs | py312
+[K
+⠏ [2/9] docs | py312
+[K
+⠋ [2/9] docs | py312
+[K
+⠙ [2/9] docs | py312
+[K
+⠹ [2/9] docs | py312
+[K
+⠸ [2/9] docs | py312
+[K
+⠼ [2/9] docs | py312
+[K
+⠴ [2/9] docs | py312
+[K
+⠦ [2/9] docs | py312
+[K
+⠧ [2/9] docs | py312
+[K
+⠇ [2/9] docs | py312
+[K
+⠏ [2/9] docs | py312
+[K
+⠋ [2/9] docs | py312
+[Kdocs: FAIL ✖ in 9.08 seconds
+
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[K
+⠸ [1/9] py312
+[K
+⠼ [1/9] py312
+[K
+⠴ [1/9] py312
+[K
+⠦ [1/9] py312
+[K
+⠧ [1/9] py312
+[K
+⠇ [1/9] py312
+[K
+⠏ [1/9] py312
+[K
+⠋ [1/9] py312
+[K
+⠙ [1/9] py312
+[K
+⠹ [1/9] py312
+[Kpy312: OK ✔ in 42.05 seconds
+
+[K
+⠸ [1/9] coverage-report
+[K
+⠼ [1/9] coverage-report
+[K
+⠴ [1/9] coverage-report
+[K
+⠦ [1/9] coverage-report
+[K
+⠧ [1/9] coverage-report
+[K
+⠇ [1/9] coverage-report
+[K
+⠏ [1/9] coverage-report
+[K
+⠋ [1/9] coverage-report
+[K
+⠙ [1/9] coverage-report
+[K
+⠹ [1/9] coverage-report
+[K
+⠸ [1/9] coverage-report
+[K
+⠼ [1/9] coverage-report
+[K
+⠴ [1/9] coverage-report
+[K
+⠦ [1/9] coverage-report
+[K
+⠧ [1/9] coverage-report
+[K
+⠇ [1/9] coverage-report
+[K
+⠏ [1/9] coverage-report
+[K
+⠋ [1/9] coverage-report
+[K
+⠙ [1/9] coverage-report
+[K
+⠹ [1/9] coverage-report
+[K
+⠸ [1/9] coverage-report
+[K
+⠼ [1/9] coverage-report
+[K
+⠴ [1/9] coverage-report
+[K
+⠦ [1/9] coverage-report
+[K
+⠧ [1/9] coverage-report
+[K
+⠇ [1/9] coverage-report
+[K
+⠏ [1/9] coverage-report
+[K
+⠋ [1/9] coverage-report
+[K
+⠙ [1/9] coverage-report
+[K
+[K  coverage-clean: OK (0.28=setup[0.13]+cmd[0.15] seconds)
+  py314: SKIP (1.69 seconds)
+  py313: SKIP (1.69 seconds)
+  py312: OK (42.05=setup[2.54]+cmd[39.51] seconds)
+  py311: SKIP (1.69 seconds)
+  pypy311: SKIP (1.68 seconds)
+  coverage-report: OK (2.93=setup[0.01]+cmd[2.37,0.54] seconds)
+  typing: OK (2.88=setup[2.27]+cmd[0.61] seconds)
+  docs: FAIL code 1 (9.08=setup[2.56]+cmd[6.52] seconds)
+  evaluation failed :( (45.36 seconds)
