@@ -1335,8 +1335,6 @@ class ChangeTrackingStorageType(StorageType, Protocol):
 class ChangeTrackerType(Protocol):  # pragma: no cover
     """Storage API used to keep the full-text search index in sync.
 
-    ----
-
     The sync model works as follows.
 
     Each resource to be indexed has a sequence that changes
@@ -1380,8 +1378,6 @@ class ChangeTrackerType(Protocol):  # pragma: no cover
 
         The model was validated using property-based testing
         in `this gist <https://gist.github.com/lemon24/558955ad82ba2e4f50c0184c630c668c>`_.
-
-    ----
 
     The entry sequence is exposed as :attr:`.Entry._sequence`,
     and should change when

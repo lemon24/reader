@@ -267,7 +267,7 @@ Released 2024-07-23
 * Fix bug in the :mod:`~reader.plugins.entry_dedupe` plugin causing entries
   to flip-flop if there were multiple *new* duplicates of the same issue
   (on the first update, one entry remains, on the second update, the other);
-  related to the bug fixed in `version 3.2 <Version 3.2_>`_.
+  related to the bug fixed in `version 3.2`_.
   (:issue:`340`)
 
 * :mod:`~reader._plugins.enclosure_tags` plugin improvements. (:issue:`344`)
@@ -310,7 +310,7 @@ Released 2024-06-19
   * Update an entry whenever its :attr:`~Entry.updated` changes
     (don't require it to be newer).
 
-* Fix bug introduced in `version 3.12 <Version 3.12_>`_ causing an assertion error
+* Fix bug introduced in `version 3.12`_ causing an assertion error
   when there are multiple entries with the same id in the same feed,
   or when parallel :meth:`~Reader.update_feeds` calls add the same entry.
   The fix restores the pre-3.12 first-entry-wins / last-write-wins behavior.
@@ -461,7 +461,7 @@ Released 2023-08-20
 
 * Add werkzeug dependency,
   instead of vendoring selected :mod:`werkzeug.http` utilities.
-* Rework lazy imports introduced in `version 3.3 <Version 3.3_>`_.
+* Rework lazy imports introduced in `version 3.3`_.
   (:issue:`316`)
 * Make :mod:`reader._parser` a package, and move parsing-related modules into it.
   (:issue:`316`)
@@ -522,7 +522,7 @@ Released 2023-03-19
   so one can express "explicitly unimportant" (*don't care*)
   by setting it to :const:`False`.
   This replaces the semantics for *don't care* introduced
-  in `version 2.2 <Version 2.2_>`_.
+  in `version 2.2`_.
   (:issue:`254`)
 
   .. warning::
@@ -570,7 +570,7 @@ Released 2023-01-22
   (:issue:`235`, :issue:`255`)
 
 * Fix ``preview_feed_list`` plugin,
-  broken by `3.3 <Version 3.3_>`_ parser refactoring.
+  broken by `version 3.3`_ parser refactoring.
   (:issue:`299`)
 
 
