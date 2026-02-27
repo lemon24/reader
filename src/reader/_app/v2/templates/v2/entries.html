@@ -62,6 +62,13 @@
 </form>
 
 
+<ul class="list-unstyled">
+{% for category, message in get_flashed_messages(with_categories=true) %}
+  <li class="alert alert-{{ category }}">{{ message }}</li>
+{% endfor %}
+</ul>
+
+
 {% set last = namespace() %}
 {% for entry in entries %}
 {%- if loop.last -%}

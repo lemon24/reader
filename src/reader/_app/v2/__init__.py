@@ -164,3 +164,26 @@ def delete_feed():
         'v2/delete_feed.html',
         feed=feed,
     )
+
+
+@blueprint.route('/feeds/title', methods=['GET', 'POST'])
+def change_feed_title():
+    reader = get_reader()
+
+    feed = reader.get_feed(request.args['feed'], None)
+    if not feed:
+        abort(404)
+
+    if request.method == 'POST':
+        title = request.form['title'].strip() or None
+        reader.set_feed_user_title(feed, title)
+        flash(
+            f"Changed title of feed {feed.resolved_title or feed.url} to {title or feed.title}.",
+            'success',
+        )
+        return redirect(url_for('.entries', feed=feed.url), code=303)
+
+    return render_template(
+        'v2/change_feed_title.html',
+        feed=feed,
+    )

@@ -121,10 +121,14 @@
     </button>
     {%- endif %}
 
+    <a href="{{ url_for('.change_feed_title', feed=feed.url) }}"
+      class="btn btn-outline-secondary btn-sm"
+      role="button"
+    >change title</a>
+
     <a href="{{ url_for('.delete_feed', feed=feed.url) }}"
       class="btn btn-outline-danger btn-sm"
       role="button"
-      style="width: 4rem"
     >delete</a>
 
     <input type="hidden" name="feed-url" value="{{ feed.url }}">
