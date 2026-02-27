@@ -6,6 +6,7 @@ from contextlib import closing
 from functools import wraps
 
 import pytest
+import respx
 
 import reader_methods
 from fakeparser import Parser
@@ -15,6 +16,53 @@ from utils import monkeypatch_datetime
 from utils import monkeypatch_os
 from utils import monkeypatch_tz
 from utils import reload_module
+
+
+class _RequestsMockCompat:
+    def __init__(self, respx_mock):
+        self._respx = respx_mock
+
+    def get(self, url, text=None, content=None, headers=None, status_code=200):
+        return self._add(
+            "GET",
+            url,
+            text=text,
+            content=content,
+            headers=headers,
+            status_code=status_code,
+        )
+
+    def post(self, url, text=None, content=None, headers=None, status_code=200):
+        return self._add(
+            "POST",
+            url,
+            text=text,
+            content=content,
+            headers=headers,
+            status_code=status_code,
+        )
+
+    def _add(self, method, url, *, text, content, headers, status_code):
+        if content is None and text is not None:
+            content = text.encode("utf-8")
+
+        if headers is None:
+            headers = {}
+
+        route = self._respx.route(method=method, url=url)
+        route.respond(
+            status_code=status_code,
+            headers=headers,
+            content=content if content is not None else b"",
+        )
+        return route  # optional; some tests may inspect it
+
+
+@pytest.fixture
+def requests_mock(respx_mock):
+    # This shadows the requests-mock plugin fixture with the same name.
+    # Tests keep working unchanged.
+    return _RequestsMockCompat(respx_mock)
 
 
 def pytest_addoption(parser):

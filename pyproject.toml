@@ -97,8 +97,8 @@ tests = [
     "pytest-randomly",
     "pytest-rerunfailures",
     "coverage",
-    "pytest-httpx",
-    "requests-mock",
+	#"requests-mock",
+	"respx>=0.22.0",
     # mechanicalsoup hard-depends on lxml (see below)
     'mechanicalsoup; (implementation_name != "pypy" and python_version <= "3.14")',
     "requests-wsgi-adapter",
