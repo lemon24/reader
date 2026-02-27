@@ -18,7 +18,6 @@ from . import RetrievedFeed
 from . import RetrieveError
 from . import wrap_exceptions
 from ._http_utils import parse_options_header
-from .requests import SessionWrapper
 
 
 @dataclass(frozen=True)
@@ -32,7 +31,7 @@ class HTTPRetriever:
 
     """
 
-    get_session: Callable[[], ContextManager[SessionWrapper]]  # not using this now
+    get_session: Callable[[], ContextManager[httpx.Client]]
 
     @contextmanager
     def __call__(
@@ -63,7 +62,7 @@ class HTTPRetriever:
 
         with wrap_exceptions(error):
             error._message = "while getting feed"
-            with httpx.Client() as client:
+            with self.get_session() as client:
                 response = client.get(url, headers=request_headers)
 
                 headers = dict(response.headers)

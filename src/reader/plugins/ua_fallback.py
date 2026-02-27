@@ -30,19 +30,31 @@ _LOG_HEADERS = ['Server', 'X-Powered-By']
 log = logging.getLogger(__name__)
 
 
-def _ua_fallback_response_hook(session, response, request, **kwargs):
-    if not response.status_code == 403:
-        return None
+def _ua_fallback_response_hook(response):
+    """httpx response hook: retry 403 responses with feedparser User-Agent.
+    
+    Args:
+        response: The httpx.Response object.
+        
+    Note:
+        Sets response.next_request to trigger a retry with modified headers.
+    """
+    if response.status_code != 403:
+        return
 
-    ua = request.headers.get('User-Agent', session.headers.get('User-Agent'))
+    request = response.request
+    ua = request.headers.get('User-Agent')
     if not ua:  # pragma: no cover
-        return None
+        return
 
     # lazy import (https://github.com/lemon24/reader/issues/297)
     from .._parser.feedparser import feedparser
 
     ua_prefix = feedparser.USER_AGENT.partition(" ")[0]
-    request.headers['User-Agent'] = f'{ua_prefix} {ua}'
+    
+    # Create a new request with modified User-Agent
+    retry_request = request.copy()
+    retry_request.headers['User-Agent'] = f'{ua_prefix} {ua}'
 
     log_headers = {
         h: response.headers[h] for h in _LOG_HEADERS if h in response.headers
@@ -56,7 +68,8 @@ def _ua_fallback_response_hook(session, response, request, **kwargs):
         log_headers,
     )
 
-    return request
+    # Trigger retry by setting next_request
+    response.next_request = retry_request
 
 
 def init_reader(reader):
