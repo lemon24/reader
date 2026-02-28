@@ -178,7 +178,8 @@ def change_feed_title():
         title = request.form['title'].strip() or None
         reader.set_feed_user_title(feed, title)
         flash(
-            f"Changed title of feed {feed.resolved_title or feed.url} to {title or feed.title}.",
+            f"Changed title of feed {feed.resolved_title or feed.url}"
+            f" to {title or feed.title or feed.url}.",
             'success',
         )
         return redirect(url_for('.entries', feed=feed.url), code=303)

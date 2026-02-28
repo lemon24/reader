@@ -16,7 +16,7 @@
   <p class="lead">Change title of feed
   <a href="{{ url_for('.entries', feed=feed.url) }}">{{ feed.resolved_title or feed.url }}</a>?
   {%- if feed.resolved_title != feed.title %}
-  Leave empty to use the original <em>{{ feed.title }}</em> title.
+  Leave empty to use the original <em>{{ feed.title or feed.url }}</em> title.
   {%- endif -%}
   </p>
 
@@ -24,7 +24,7 @@
     {#- TODO: aria stuff #}
 
     {#- TODO: clear button -#}
-    <input type="text" name="title" value="{{ feed.user_title or '' }}" placeholder="{{ feed.title or '' }}" class="form-control mb-3">
+    <input type="text" name="title" value="{{ feed.user_title or '' }}" placeholder="{{ feed.title or feed.url }}" class="form-control mb-3">
 
     <button type="submit" name="change" value="true" class="btn btn-primary">
       change
