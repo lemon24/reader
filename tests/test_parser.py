@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
-
+import httpx
 from reader import Feed
 from reader._parser import default_parser
 from reader._parser import FeedForUpdate
@@ -307,7 +307,7 @@ def test_parse_bad_status(
     with pytest.raises(ParseError) as excinfo:
         parse(feed_url)
 
-    assert isinstance(excinfo.value.__cause__, requests.HTTPError)
+    assert isinstance(excinfo.value.__cause__, (httpx.HTTPStatusError, requests.HTTPError))
     assert excinfo.value.url == feed_url
     assert 'bad HTTP status code' in excinfo.value.message
 
@@ -322,12 +322,16 @@ def make_http_get_headers_url(requests_mock):
     def make_url(feed_path):
         url = 'http://example.com/' + feed_path.name
         headers = {}
+        
+
         if feed_path.suffix == '.rss':
             headers['Content-Type'] = 'application/rss+xml'
         elif feed_path.suffix == '.atom':
             headers['Content-Type'] = 'application/atom+xml'
+        elif feed_path.suffix == '.json':
+            headers['Content-Type'] = 'application/feed+json'
 
-        def callback(request, context):
+        def callback(request, _):
             make_url.request_headers = request.headers
             return feed_path.read_text()
 
@@ -363,7 +367,8 @@ def test_parse_sends_etag_last_modified(
     parse(feed_url, caching_info)
 
     headers = make_http_get_headers_url.request_headers
-    assert expected_headers.items() <= headers.items()
+    for i, j in expected_headers.items():
+        assert headers.get(i) == j
 
 
 @pytest.mark.parametrize('feed_type', ['rss', 'atom', 'json'])
@@ -467,7 +472,7 @@ def test_parse_requests_get_exception(
     def do_raise(*args, **kwargs):
         raise exc
 
-    monkeypatch.setattr('reader._parser.requests._lazy.SessionWrapper.get', do_raise)
+    monkeypatch.setattr('httpx.Client.get', do_raise)
 
     with pytest.raises(ParseError) as excinfo:
         parse(feed_url)
@@ -528,8 +533,8 @@ def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
 def test_parallel_persistent_session(parse, make_http_url, data_dir):
     sessions = []
 
-    def req_plugin(session, request, **kwargs):
-        sessions.append(session)
+    def req_plugin(request):
+        sessions.append(parse.session_factory.client)
 
     parse.session_factory.request_hooks.append(req_plugin)
 
