@@ -94,6 +94,13 @@
     {%- endif -%}
   </h2>
 
+  {% set summary = (feed.subtitle | striptags | trim) if feed.subtitle else '' %}
+  {% if summary %}
+  <p class="small mb-2">
+    {{ summary | truncate(223) }}
+  </p>
+  {% endif %}
+
   {% set next_index = loop.index if not loop.last else loop.index - 1 -%}
   {% set next = url_for('.feeds', **request.args) + '#feed-' + (next_index|string) %}
   <form action="{{ url_for('.feed_actions') }}" method="post"
