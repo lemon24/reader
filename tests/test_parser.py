@@ -513,7 +513,7 @@ def test_user_agent_default(parse, make_http_get_headers_url, data_dir):
     parse(feed_url)
 
     headers = make_http_get_headers_url.request_headers
-    assert headers['User-Agent'].startswith('python-requests/')
+    assert headers['User-Agent'].startswith('python-httpx/')
 
 
 def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
@@ -522,7 +522,7 @@ def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
     parse(feed_url)
 
     headers = make_http_get_headers_url.request_headers
-    assert headers['User-Agent'].startswith('python-requests/')
+    assert headers['User-Agent'].startswith('python-httpx/')
 
 
 def test_parallel_persistent_session(parse, make_http_url, data_dir):

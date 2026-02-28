@@ -1,3 +1,4 @@
+import inspect
 import os
 import pathlib
 import sqlite3
@@ -5,6 +6,7 @@ import sys
 from contextlib import closing
 from functools import wraps
 
+import httpx
 import pytest
 import respx
 
@@ -43,18 +45,57 @@ class _RequestsMockCompat:
         )
 
     def _add(self, method, url, *, text, content, headers, status_code):
-        if content is None and text is not None:
-            content = text.encode("utf-8")
 
         if headers is None:
             headers = {}
 
         route = self._respx.route(method=method, url=url)
-        route.respond(
-            status_code=status_code,
-            headers=headers,
-            content=content if content is not None else b"",
-        )
+        # allow text to be a callable for dynamic http responses
+        if callable(text):
+
+            class Context:
+                pass
+
+            sig = inspect.signature(text)
+            expects_context = len(sig.parameters) > 1
+
+            def respx_callback(request):
+                try:
+                    if expects_context:
+                        result_text = text(request, Context())
+                    else:
+                        result_text = text(request)
+                except TypeError:
+                    try:
+                        result_text = text(request, Context())
+                    except TypeError:
+                        result_text = text(request)
+
+                if isinstance(result_text, bytes):
+                    result_text = result_text.decode('utf-8')
+                elif not isinstance(result_text, str):
+                    result_text = str(result_text)
+
+                return httpx.Response(
+                    status_code=status_code,
+                    headers=headers,
+                    text=result_text,
+                )
+
+            route.side_effect = respx_callback
+        else:
+            if content is None and text is not None:
+                if isinstance(text, str):
+                    content = text.encode("utf-8")
+                else:
+                    content = text
+
+            route.respond(
+                status_code=status_code,
+                headers=headers,
+                content=content if content is not None else b"",
+            )
+
         return route  # optional; some tests may inspect it
 
 
