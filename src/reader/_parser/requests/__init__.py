@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import TypeVar
 from typing import Union
+
 import httpx
 
 from ..._utils import lazy_import
@@ -179,7 +180,8 @@ DEFAULT_TIMEOUT = (3.05, 60)
 #             finally:
 #                 self.session = None
 
-@dataclass 
+
+@dataclass
 class SessionFactory:
     """Manage the lifetime of a session.
 
@@ -189,16 +191,16 @@ class SessionFactory:
 
     user_agent: str | None = None
     timeout: TimeoutType = DEFAULT_TIMEOUT
-    
+
     request_hooks: list[Callable[[httpx.Request], None]] = field(default_factory=list)
     response_hooks: list[Callable[[httpx.Response], None]] = field(default_factory=list)
-    
+
     client: httpx.Client | None = None
 
     def __call__(self) -> httpx.Client:
         # httpx.Timeout can accept a tuple directly: (connect, read)
         # or all four parameters must be set explicitly
-        if self.timeout:
+        if isinstance(self.timeout, tuple):
             timeout_obj = httpx.Timeout(
                 connect=self.timeout[0],
                 read=self.timeout[1],
@@ -206,12 +208,12 @@ class SessionFactory:
                 pool=None,
             )
         else:
-            timeout_obj = httpx.Timeout(5.0)  # default timeout
-        
+            timeout_obj = httpx.Timeout(self.timeout)  # default timeout
+
         headers = {}
         if self.user_agent:
             headers['User-Agent'] = self.user_agent
-        
+
         return httpx.Client(
             timeout=timeout_obj,
             headers=headers,
@@ -221,7 +223,7 @@ class SessionFactory:
             },
             follow_redirects=True,
         )
-    
+
     @contextmanager
     def transient(self):
         """Return the current :meth:`persistent` client, or a new one.
@@ -241,7 +243,7 @@ class SessionFactory:
                 yield client
             finally:
                 client.close()
-    
+
     @contextmanager
     def persistent(self):
         """Register a persistent client with this factory.
@@ -263,7 +265,7 @@ class SessionFactory:
         if self.client:
             yield self.client
             return
-        
+
         self.client = self()
         try:
             yield self.client
