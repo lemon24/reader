@@ -149,12 +149,18 @@ FEED_SORT_CHOICES = ['title', 'added']
 
 
 class FeedFilter(PresetsMixin, Form):
+    broken = radio_field("broken", choices=BOOL_CHOICES, default='all')
+    updates_enabled = radio_field(
+        "enabled", name='enabled', choices=BOOL_CHOICES, default='all'
+    )
     sort = RadioField("sort", choices=FEED_SORT_CHOICES, default='title')
 
-    PRESET_FIELDS = {'sort'}
+    PRESET_FIELDS = {'broken', 'enabled', 'sort'}
     PRESETS = {
         'all': {},
         'added': {'sort': 'added'},
+        'broken': {'broken': 'yes', 'enabled': 'yes'},
+        'disabled': {'enabled': 'no'},
     }
 
 

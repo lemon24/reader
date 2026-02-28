@@ -38,6 +38,8 @@
 <form>
   <div class="collapse mb-3" id="nav-more">
     <div class="mb-3">
+    {{ macros.radio(form.broken) }}
+    {{ macros.radio(form.updates_enabled) }}
     {{ macros.radio(form.sort) }}
     </div>
     <button type="submit" class="btn btn-primary">go</button>
