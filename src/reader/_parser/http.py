@@ -65,9 +65,11 @@ class HTTPRetriever:
             with self.get_session() as client:
                 response = client.get(url, headers=request_headers)
 
-                headers = dict(response.headers)
-                headers.setdefault("content-location", str(response.url))
-                headers.pop("content-encoding", None)
+                headers_dict = dict(response.headers)
+                headers_dict.pop("content-encoding", None)
+                if "content-location" not in headers_dict:
+                    headers_dict["content-location"] = str(response.url)
+                headers = httpx.Headers(headers_dict)
 
                 http_info = HTTPInfo(response.status_code, headers)
                 error.http_info = http_info
