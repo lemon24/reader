@@ -526,7 +526,6 @@ def test_session_hook_unexpected_exception(
         if '1' in str(response.request.url):
             raise exc
 
-    # 根据 hook_name 选择正确的 hook
     hook = request_hook if hook_name == 'request_hooks' else response_hook
     getattr(reader._parser.session_factory, hook_name).append(hook)
 
