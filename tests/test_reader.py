@@ -9,6 +9,7 @@ from datetime import timedelta
 from datetime import timezone
 from itertools import permutations
 
+import httpx
 import pytest
 
 import reader._parser
@@ -1161,10 +1162,13 @@ def test_logging_defaults():
     ],
 )
 def test_session_timeout(monkeypatch, make_reader, kwargs, expected_timeout):
-    def send(*args, timeout=None, **kwargs):
+    client = {}
+
+    def request(*args, timeout=None, **kwargs):
+        client['client'] = args[0]
         raise Exception('timeout', timeout)
 
-    monkeypatch.setattr('requests.adapters.HTTPAdapter.send', send)
+    monkeypatch.setattr(httpx.Client, 'request', request, raising=True)
 
     reader = make_reader(':memory:', **kwargs)
     reader.add_feed('http://www.example.com')
@@ -1172,7 +1176,14 @@ def test_session_timeout(monkeypatch, make_reader, kwargs, expected_timeout):
     with pytest.raises(ParseError) as exc_info:
         reader.update_feed('http://www.example.com')
 
-    assert exc_info.value.__cause__.args == ('timeout', expected_timeout)
+    str_timeout, timeout = exc_info.value.__cause__.args
+    client = client['client']
+
+    assert str_timeout == 'timeout'
+    if timeout == httpx.USE_CLIENT_DEFAULT:
+        assert (client._timeout.connect, client._timeout.read) == expected_timeout
+    else:
+        assert (timeout.connect, timeout.read) == expected_timeout
 
 
 def test_reserved_names(make_reader):

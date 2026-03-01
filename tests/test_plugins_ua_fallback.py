@@ -9,15 +9,17 @@ def test_fallback(requests_mock, make_reader):
     reader = make_reader(':memory:', plugins=('reader.ua_fallback',))
     reader.add_feed(url)
 
-    matcher = requests_mock.get(url, status_code=403)
+    route = requests_mock.get(url, status_code=403)
 
     with pytest.raises(ParseError) as exc_info:
         reader.update_feed(url)
 
     assert '403' in str(exc_info.value)
 
-    assert len(matcher.request_history) == 2
-    first_ua, second_ua = (r.headers['User-Agent'] for r in matcher.request_history)
+    # respx uses route.calls instead of request_history
+    assert len(route.calls) == 2
+    first_ua = route.calls[0].request.headers['User-Agent']
+    second_ua = route.calls[1].request.headers['User-Agent']
 
     assert first_ua.startswith('python-reader/')
     assert second_ua.startswith('feedparser/')
@@ -30,10 +32,11 @@ def test_noop(requests_mock, make_reader):
     reader = make_reader(':memory:', plugins=('reader.ua_fallback',))
     reader.add_feed(url)
 
-    matcher = requests_mock.get(url, status_code=404)
+    route = requests_mock.get(url, status_code=404)
 
     with pytest.raises(ParseError) as exc_info:
         reader.update_feed(url)
 
     assert '404' in str(exc_info.value)
-    assert len(matcher.request_history) == 1
+    # respx uses route.calls instead of request_history
+    assert len(route.calls) == 1

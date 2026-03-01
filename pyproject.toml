@@ -38,6 +38,7 @@ dependencies = [
     "typing-extensions>=4",
     "feedparser>=6",
     "requests>=2.18",
+    "httpx>=0.28.1",
     # for _http_utils
     "werkzeug>2",
     # for JSON Feed date parsing
@@ -77,7 +78,7 @@ app = [
 # mushed together for convenience
 unstable-plugins = [
     # enclosure-tags
-    "requests",
+    "httpx",
     "mutagen",
     # preview-feed-list
     "requests",
@@ -96,7 +97,8 @@ tests = [
     "pytest-randomly",
     "pytest-rerunfailures",
     "coverage",
-    "requests-mock",
+	#"requests-mock",
+	"respx>=0.22.0",
     # mechanicalsoup hard-depends on lxml (see below)
     'mechanicalsoup; (implementation_name != "pypy" and python_version <= "3.14")',
     "requests-wsgi-adapter",
@@ -112,6 +114,7 @@ tests = [
 typing = [
     'mypy',
     "types-requests",
+    "httpx>=0.28.1",
     "types-beautifulsoup4",
 ]
 
