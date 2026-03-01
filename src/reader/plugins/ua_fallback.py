@@ -25,52 +25,21 @@ Servers/CDNs known to not accept the *reader* UA: Cloudflare, WP Engine.
 import logging
 
 
-_LOG_HEADERS = ['Server', 'X-Powered-By']
-
 log = logging.getLogger(__name__)
 
 
-def _ua_fallback_response_hook(response):
-    """httpx response hook: retry 403 responses with feedparser User-Agent.
+def init_reader(reader):
+    """Initialize the UA fallback plugin.
     
-    Args:
-        response: The httpx.Response object.
-        
-    Note:
-        Sets response.next_request to trigger a retry with modified headers.
+    This sets up a UAFallbackAuth handler that will automatically retry
+    403 responses with feedparser's User-Agent.
     """
-    if response.status_code != 403:
-        return
-
-    request = response.request
-    ua = request.headers.get('User-Agent')
-    if not ua:  # pragma: no cover
-        return
-
-    # lazy import (https://github.com/lemon24/reader/issues/297)
+    # lazy import to avoid circular dependency
     from .._parser.feedparser import feedparser
-
-    ua_prefix = feedparser.USER_AGENT.partition(" ")[0]
+    from .._parser.requests import UAFallbackAuth
     
-    # Create a new request with modified User-Agent
-    retry_request = request.copy()
-    retry_request.headers['User-Agent'] = f'{ua_prefix} {ua}'
-
-    log_headers = {
-        h: response.headers[h] for h in _LOG_HEADERS if h in response.headers
-    }
-    log.info(
-        "%s: got status code %i, "
-        "retrying with feedparser User-Agent; "
-        "relevant response headers: %s",
-        request.url,
-        response.status_code,
-        log_headers,
+    # Create and register the auth handler
+    reader._parser.session_factory.custom_auth = UAFallbackAuth(
+        fallback_ua=feedparser.USER_AGENT
     )
 
-    # Trigger retry by setting next_request
-    response.next_request = retry_request
-
-
-def init_reader(reader):
-    reader._parser.session_factory.response_hooks.append(_ua_fallback_response_hook)
