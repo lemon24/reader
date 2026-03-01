@@ -11,8 +11,6 @@ from collections.abc import Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Any
-from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import Union
@@ -22,66 +20,11 @@ from ..._utils import lazy_import
 
 if TYPE_CHECKING:  # pragma: no cover
     import httpx
-    import requests
 
     from ._lazy import UAFallbackAuth as UAFallbackAuth
 
 
 __getattr__ = lazy_import(__name__, ['UAFallbackAuth'])
-
-
-class RequestHook(Protocol):
-    """Hook to modify a :class:`~requests.Request` before it is sent."""
-
-    def __call__(
-        self,
-        session: requests.Session,
-        request: requests.Request,
-        **kwargs: Any,
-    ) -> requests.Request | None:  # pragma: no cover
-        """Modify a request before it is sent.
-
-        Args:
-            session (requests.Session): The session that will send the request.
-            request (requests.Request): The request to be sent.
-
-        Keyword Args:
-            **kwargs: Will be passed to :meth:`~requests.adapters.BaseAdapter.send`.
-
-        Returns:
-            requests.Request or None:
-            A (possibly modified) request to be sent.
-            If none, send the initial request.
-
-        """
-
-
-class ResponseHook(Protocol):
-    """Hook to repeat a request depending on the :class:`~requests.Response`."""
-
-    def __call__(
-        self,
-        session: requests.Session,
-        response: requests.Response,
-        request: requests.Request,
-        **kwargs: Any,
-    ) -> requests.Request | None:  # pragma: no cover
-        """Repeat a request  depending on the response.
-
-        Args:
-            session (requests.Session): The session that sent the request.
-            request (requests.Request): The sent request.
-            response (requests.Response): The received response.
-
-        Keyword Args:
-            **kwargs: Were passed to :meth:`~requests.adapters.BaseAdapter.send`.
-
-        Returns:
-            requests.Request or None:
-            A (possibly new) request to be sent,
-            or None, to return the current response.
-
-        """
 
 
 Headers = Mapping[str, str]
