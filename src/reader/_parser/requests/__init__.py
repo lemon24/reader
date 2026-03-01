@@ -8,24 +8,26 @@ from __future__ import annotations
 from collections.abc import Callable
 from collections.abc import Iterator
 from collections.abc import Mapping
-from collections.abc import Sequence
 from contextlib import contextmanager
-from contextlib import nullcontext
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
-from typing import ContextManager
-from typing import Generator
 from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypedDict
-from typing import TypeVar
 from typing import Union
 
-import httpx
+from ..._utils import lazy_import
+
 
 if TYPE_CHECKING:  # pragma: no cover
+    import httpx
     import requests
+
+    from ._lazy import UAFallbackAuth as UAFallbackAuth
+
+
+__getattr__ = lazy_import(__name__, ['UAFallbackAuth'])
 
 
 class RequestHook(Protocol):
@@ -89,60 +91,6 @@ CachingInfo = TypedDict('CachingInfo', {'etag': str, 'last-modified': str}, tota
 DEFAULT_TIMEOUT = (3.05, 60)
 
 
-class UAFallbackAuth(httpx.Auth):
-    """Auth handler that retries 403 responses with a fallback User-Agent.
-    
-    This is a httpx-native implementation that uses auth_flow to handle retries
-    declaratively, without the need for next_request patches or while loops.
-    Used by the ua_fallback plugin.
-    """
-    
-    def __init__(self, fallback_ua: str, original_request_url: str | None = None):
-        """Initialize UA fallback auth.
-        
-        Args:
-            fallback_ua: The fallback User-Agent string to use on retry.
-            original_request_url: For logging purposes (optional).
-        """
-        self.fallback_ua = fallback_ua
-        self.original_request_url = original_request_url
-    
-    def auth_flow(self, request: httpx.Request) -> Generator[httpx.Request, httpx.Response, None]:
-        """Handle request/response with declarative retry logic.
-        
-        Yields:
-            httpx.Request: The request to send.
-        """
-        response = yield request
-        
-        # If we got 403 and haven't tried the fallback UA yet, retry
-        if response.status_code == 403:
-            current_ua = request.headers.get('User-Agent', '')
-            fallback_prefix = self.fallback_ua.partition(' ')[0]
-            
-            # Only retry if we haven't already used the fallback UA
-            if current_ua and not current_ua.startswith(fallback_prefix):
-                import logging
-                log = logging.getLogger('reader.plugins.ua_fallback')
-                
-                _LOG_HEADERS = ['Server', 'X-Powered-By']
-                log_headers = {
-                    h: response.headers[h] for h in _LOG_HEADERS if h in response.headers
-                }
-                log.info(
-                    "%s: got status code %i, "
-                    "retrying with feedparser User-Agent; "
-                    "relevant response headers: %s",
-                    request.url,
-                    response.status_code,
-                    log_headers,
-                )
-                
-                request.headers['User-Agent'] = f'{fallback_prefix} {current_ua}'
-                
-                response = yield request
-
-
 @dataclass
 class SessionFactory:
     """Manage the lifetime of a session.
@@ -156,13 +104,15 @@ class SessionFactory:
 
     request_hooks: list[Callable[[httpx.Request], None]] = field(default_factory=list)
     response_hooks: list[Callable[[httpx.Response], None]] = field(default_factory=list)
-    
-    # Custom auth handler (can be set by plugins like ua_fallback)
-    custom_auth: httpx.Auth | None = None
+
+    # Custom auth handler (can be set by plugins like ua_fallback).
+    custom_auth: httpx.Auth | Callable[[], httpx.Auth] | None = None
 
     client: httpx.Client | None = None
 
     def __call__(self) -> httpx.Client:
+        import httpx
+
         # httpx.Timeout can accept a tuple directly: (connect, read)
         # or all four parameters must be set explicitly
         if isinstance(self.timeout, tuple):
@@ -178,7 +128,8 @@ class SessionFactory:
         headers = {}
         if self.user_agent:
             headers['User-Agent'] = self.user_agent
-        
+        auth = self.custom_auth() if callable(self.custom_auth) else self.custom_auth
+
         return httpx.Client(
             timeout=timeout_obj,
             headers=headers,
@@ -188,7 +139,7 @@ class SessionFactory:
                 # but ua_fallback now uses custom_auth instead
                 'response': list(self.response_hooks),
             },
-            auth=self.custom_auth,  # Use plugin-provided auth (e.g., UAFallbackAuth)
+            auth=auth,
             follow_redirects=True,
         )
 

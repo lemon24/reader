@@ -30,16 +30,20 @@ log = logging.getLogger(__name__)
 
 def init_reader(reader):
     """Initialize the UA fallback plugin.
-    
+
     This sets up a UAFallbackAuth handler that will automatically retry
     403 responses with feedparser's User-Agent.
     """
-    # lazy import to avoid circular dependency
-    from .._parser.feedparser import feedparser
-    from .._parser.requests import UAFallbackAuth
-    
-    # Create and register the auth handler
-    reader._parser.session_factory.custom_auth = UAFallbackAuth(
-        fallback_ua=feedparser.USER_AGENT
-    )
 
+    def make_auth():
+        # lazy imports: httpx and feedparser are only loaded when a client is created
+        from .._parser.requests import UAFallbackAuth
+
+        def get_fallback_ua():
+            from .._parser.feedparser import feedparser
+
+            return feedparser.USER_AGENT
+
+        return UAFallbackAuth(get_fallback_ua)
+
+    reader._parser.session_factory.custom_auth = make_auth

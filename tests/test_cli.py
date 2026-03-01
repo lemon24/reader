@@ -273,10 +273,14 @@ def test_cli_plugin_builtin_and_import_path(db_path, tests_dir, monkeypatch):
     )
 
     assert result.exit_code == 0, result.output
-    # ua_fallback plugin now uses custom_auth instead of response_hooks
-    # Two ua_fallback plugins were loaded, but only one custom_auth can be set
+    # ua_fallback plugin registers a factory callable so that httpx is only
+    # imported when the first HTTP client is created (lazy import strategy).
+    # Two ua_fallback plugins were loaded, but only one custom_auth can be set.
+    custom_auth = store_reader_plugin.reader._parser.session_factory.custom_auth
+    assert callable(custom_auth)
     from reader._parser.requests import UAFallbackAuth
-    assert isinstance(store_reader_plugin.reader._parser.session_factory.custom_auth, UAFallbackAuth)
+
+    assert isinstance(custom_auth(), UAFallbackAuth)
 
 
 def raise_exception_app_plugin(thing):
