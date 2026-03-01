@@ -96,6 +96,8 @@ S_UPDATE_FEEDS = "reader.update_feeds()", {
     'requests',
     'reader._vendor.feedparser',
     'urllib.request',
+    # httpx -> httpcore -> anyio -> concurrent.futures
+    'concurrent.futures',
 }
 S_UPDATE_FEEDS_WORKERS = "reader.update_feeds(workers=2)", {
     'requests',
