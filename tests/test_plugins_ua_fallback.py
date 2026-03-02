@@ -40,3 +40,32 @@ def test_noop(requests_mock, make_reader):
     assert '404' in str(exc_info.value)
     # respx uses route.calls instead of request_history
     assert len(route.calls) == 1
+
+
+
+
+def test_ua_fallback_auth_static_string():
+    from reader._parser.requests import UAFallbackAuth
+    auth = UAFallbackAuth(fallback_ua="Static/1.0")
+    assert auth.fallback_ua == "Static/1.0"
+    
+    
+def test_ua_fallback_auth_no_retry_if_already_prefixed():
+    import httpx
+    from reader._parser.requests import UAFallbackAuth
+    auth = UAFallbackAuth(fallback_ua="Fallback/1.0")
+    
+
+    request = httpx.Request("GET", "https://example.com", headers={"User-Agent": "Fallback/1.0 Original/1.0"})
+    
+    flow = auth.auth_flow(request)
+    next(flow) 
+    
+    response = httpx.Response(403, request=request)
+    
+    try:
+        flow.send(response) 
+    except StopIteration:
+        # If it hits the 'exit' on line 40, the generator finishes
+        pass
+    

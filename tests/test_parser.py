@@ -19,6 +19,7 @@ from reader._parser.feedparser import feedparser
 from reader._parser.feedparser import FeedparserParser
 from reader._parser.file import FileRetriever
 from reader._parser.jsonfeed import JSONFeedParser
+from reader._parser.requests import SessionFactory
 from reader._types import FeedData
 from reader.exceptions import ParseError
 from utils import make_url_base
@@ -1168,3 +1169,45 @@ def test_reader_use_system_feedparser(monkeypatch, reload_module):
     monkeypatch.setenv(name, '1')
     reload_module(reader._parser.feedparser)
     assert reader._parser.feedparser.feedparser is feedparser
+
+
+
+
+
+def test_session_factory_handles_scalar_timeout():
+    from reader._parser.requests import SessionFactory
+    factory = SessionFactory(timeout=10.0)
+    client = factory()
+    assert client.timeout.connect == 10.0
+    assert client.timeout.read == 10.0
+
+def test_session_factory_persistent_session_sharing():
+    from reader._parser.requests import SessionFactory
+    factory = SessionFactory()
+    
+    with factory.persistent() as p1:
+        assert factory.client is p1
+        
+        with factory.persistent() as p2:
+            assert p1 is p2
+            
+        with factory.transient() as t1:
+            assert t1 is p1
+            
+    assert factory.client is None
+
+def test_session_factory_transient_lifecycle():
+    from reader._parser.requests import SessionFactory
+    # Hits the branch where it creates/closes its own client
+    factory = SessionFactory()
+    with factory.transient() as t1:
+        assert isinstance(t1, httpx.Client)
+        assert factory.client is None # Should NOT be persistent
+        
+def test_session_factory_user_agent_coverage():
+    from reader._parser.requests import SessionFactory
+    factory = SessionFactory(user_agent="TestAgent/1.0")
+    client = factory()
+    
+    assert client.headers["user-agent"] == "TestAgent/1.0"
+    
