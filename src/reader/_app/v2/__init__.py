@@ -1,5 +1,6 @@
 import itertools
 from functools import partial
+from urllib.parse import urlparse
 
 from flask import abort
 from flask import Blueprint
@@ -139,11 +140,16 @@ def feed_actions():
                 abort(422)
 
     if request.headers.get('hx-request') == 'true':
+        if urlparse(request.headers['hx-current-url']).path == url_for('.entries'):
+            template = 'v2/entries.html'
+        else:
+            template = 'v2/feeds.html'
+
         return render_block(
-            'v2/feeds.html',
+            template,
             'feed_actions',
             feed=reader.get_feed(feed),
-            next=request.form['next'],
+            next=request.form.get('next'),
             # equivalent to {% import "v2/macros.html" as macros %}
             macros=current_app.jinja_env.get_template('v2/macros.html').module,
         )

@@ -15,17 +15,99 @@
 
 {% block body %}
 
-<h1>
 {% if not feed %}
-  Entries
+<h1>Entries</h1>
 {% else %}
-  <span {% if feed.title and feed.resolved_title != feed.title -%}
-    title="{{ feed.title }}"
-    {%- endif %}>
-    {{ feed.resolved_title or feed.url }}
-  </span>
-{% endif %}
+
+
+<ul class="list-inline" style="margin-bottom: 0.25rem">
+
+  {% set updated = feed.updated or feed.last_updated -%}
+  {# TODO: updated should be a tooltip #}
+  {# TODO: babel.format_timedelta(..., format='narrow') -> 3h #}
+  <li class="list-inline-item text-secondary" title="{{ updated or '' }}">
+    <small>
+      {{ 'updated ' + updated | humanize_naturaltime if updated else 'not updated' }}
+    </small>
+  </li>
+
+</ul>
+
+
+<h1 class="mb-1" {% if feed.title and feed.resolved_title != feed.title %} title="{{ feed.title }}"{% endif -%}>
+  {{ feed.resolved_title or feed.url }}
+  {#- NOTE: there must be no whitespace between the last word and the icon -#}
+  {#- TODO: aria stuff -#}
+  {%- if feed.link -%}
+  <a class="ms-2 text-nowrap small" href="{{ feed.link }}" target="_blank">{#
+    #}<i class="bi bi-box-arrow-up-right text-secondary"></i>{#
+  #}</a>
+  {%- endif -%}
+  {%- if not feed.url.startswith('reader:') -%}
+  <a class="ms-2 text-nowrap small" href="{{ feed.url }}" target="_blank">{#
+    #}<i class="bi bi-rss text-secondary"></i>{#
+  #}</a>
+  {%- endif -%}
+  {%- if feed.last_exception and feed.updates_enabled -%}
+  <span class="ms-2 text-nowrap small" title="{{ feed.last_exception.value_str }}">{#
+    #}<i class="bi bi-slash-circle text-danger"></i>{#
+  #}</a>
+  {%- endif -%}
 </h1>
+
+
+{% set summary = (feed.subtitle | striptags | trim) if feed.subtitle else '' %}
+{% if summary %}
+<p class="small mb-2">
+  {{ summary | truncate(223) }}
+</p>
+{% endif %}
+
+
+<form action="{{ url_for('.feed_actions', from='entries') }}" method="post"
+  hx-target="closest form"
+
+  class="mb-4">
+  {#- TODO: aria stuff #}
+  {% block feed_actions scoped %}
+
+  {% if not feed.url.startswith('reader:') -%}
+  <button type="submit" name="enabled"
+    value="{{ 'false' if feed.updates_enabled else 'true' }}"
+    hx-post="{{ url_for('.feed_actions') }}"
+    hx-disabled-elt="this"
+    class="btn btn-outline-secondary btn-sm {% if feed.updates_enabled %} active{% endif %}"
+    {% if feed.updates_enabled -%}
+    aria-pressed="true"
+    {% endif -%}
+    style="width: 4rem">
+
+    <span class="label">{{ 'disable' if feed.updates_enabled is true else 'enable' }}</span>
+
+    <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
+      <span class="visually-hidden">loading...</span>
+    </div>
+
+  </button>
+  {%- endif %}
+
+  <a href="{{ url_for('.change_feed_title', feed=feed.url) }}"
+    class="btn btn-outline-secondary btn-sm"
+    role="button"
+  >change title</a>
+
+  <a href="{{ url_for('.delete_feed', feed=feed.url) }}"
+    class="btn btn-outline-danger btn-sm"
+    role="button"
+  >delete</a>
+
+  <input type="hidden" name="feed-url" value="{{ feed.url }}">
+
+{% endblock %}
+</form>
+
+
+{% endif %}
 
 
 <ul class="list-unstyled">

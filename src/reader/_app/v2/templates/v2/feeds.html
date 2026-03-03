@@ -68,7 +68,7 @@
 
   </ul>
 
-  <h2 class="h5 mb-1" style="font-size: 1.125rem">
+  <h2 class="h5 mb-1" style="font-size: 1.125rem"{% if feed.title and feed.resolved_title != feed.title %} title="{{ feed.title }}"{% endif -%}>
     <a class="text-decoration-none" href="{{ url_for('.entries', feed=feed.url) }}">
       {{- feed.resolved_title or feed.url -}}
     </a>
