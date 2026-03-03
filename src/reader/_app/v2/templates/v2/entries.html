@@ -27,6 +27,30 @@
 
 {% block body %}
 
+<ul class="list-unstyled">
+{% for category, message in get_flashed_messages(with_categories=true) %}
+  <li class="alert alert-{{ category }}">{{ message }}</li>
+{% endfor %}
+
+{% if feed and not feed.url.startswith('reader:') %}
+
+{% if not feed.last_updated and not feed.last_exception %}
+  <li class="alert alert-secondary">
+  Feed not updated yet. <a href="">Refresh.</a>
+  </li>
+{% endif %}
+
+{% if feed.last_exception %}
+  <li class="alert alert-danger">
+  <strong>Update error</strong>{% if not feed.last_updated %}
+  (first update)
+  {%- endif %}: {{ feed.last_exception.value_str }}
+  </li>
+{% endif %}
+
+{% endif %}
+</ul>
+
 
 <ul class="nav controls mb-3 small">
   {% for preset in form.presets %}
@@ -60,31 +84,6 @@
     <button type="submit" class="btn btn-primary">go</button>
   </div>
 </form>
-
-
-<ul class="list-unstyled">
-{% for category, message in get_flashed_messages(with_categories=true) %}
-  <li class="alert alert-{{ category }}">{{ message }}</li>
-{% endfor %}
-
-{% if not feed.url.startswith('reader:') %}
-
-{% if not feed.last_updated and not feed.last_exception %}
-  <li class="alert alert-secondary">
-  Feed not updated yet. <a href="">Refresh.</a>
-  </li>
-{% endif %}
-
-{% if feed.last_exception %}
-  <li class="alert alert-danger">
-  <strong>Update error</strong>{% if not feed.last_updated %}
-  (first update)
-  {%- endif %}: {{ feed.last_exception.value_str }}
-  </li>
-{% endif %}
-
-{% endif %}
-</ul>
 
 
 {% set last = namespace() %}

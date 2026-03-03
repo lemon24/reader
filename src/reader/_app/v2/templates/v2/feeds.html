@@ -14,6 +14,12 @@
 
 {% block body %}
 
+<ul class="list-unstyled">
+{% for category, message in get_flashed_messages(with_categories=true) %}
+  <li class="alert alert-{{ category }}">{{ message }}</li>
+{% endfor %}
+</ul>
+
 
 <ul class="nav controls mb-3 small">
   {% for preset in form.presets %}
@@ -45,14 +51,6 @@
     <button type="submit" class="btn btn-primary">go</button>
   </div>
 </form>
-
-
-<ul class="list-unstyled">
-{% for category, message in get_flashed_messages(with_categories=true) %}
-  <li class="alert alert-{{ category }}">{{ message }}</li>
-{% endfor %}
-</ul>
-
 
 
 {% for feed in feeds %}
