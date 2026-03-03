@@ -35,6 +35,7 @@
       {% endmacro %}
       {{ nav_item('.entries', 'entries') }}
       {{ nav_item('.feeds', 'feeds') }}
+      {{ nav_item('.add_feed', 'add') }}
     </ul>
 
     <button
@@ -49,13 +50,6 @@
         <!-- left hidden navbar -->
 
       </ul>
-
-      <form class="d-flex nav-item" action="{{ url_for('reader.preview') }}">
-        <input
-          class="form-control me-0 me-md-2 mb-2 mb-md-0"
-          type="url" name="url" autocomplete="off"
-          placeholder="add" aria-label="URL of feed to add">
-      </form>
 
       <ul class="navbar-nav mb-0">
         <!-- right hidden navbar -->

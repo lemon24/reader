@@ -1,0 +1,47 @@
+{% extends "v2/layout.html" %}
+
+{% import "v2/macros.html" as macros %}
+
+
+{% block page_title %}
+  Add feed - reader
+{% endblock %}
+
+{% block main_title %}
+  Add feed?
+{% endblock %}
+
+
+{% block body %}
+
+  <form action="{{ url_for(request.endpoint, **request.args) }}" method="post" class="my-2">
+    {#- TODO: aria stuff #}
+
+    <div class="mb-3">
+    {#- TODO: clear button -#}
+    <input
+      type="url" required autocomplete="off" name="feed"
+      value="{{ feed or '' }}" placeholder="URL"
+      class="form-control{{' is-invalid' if error else ''}}">
+
+    {%- if error %}
+    <div class="invalid-feedback">
+      {{ error.message }}
+    </div>
+    {%- endif %}
+
+    </div>
+
+    <button type="submit" name="add" value="true" class="btn btn-primary">
+      add
+    </button>
+
+    <a href="javascript:history.back()" class="btn btn-outline-secondary" role="button" >
+      cancel
+    </a>
+
+  </form>
+
+
+
+{% endblock %}

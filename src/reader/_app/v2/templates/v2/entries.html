@@ -66,6 +66,24 @@
 {% for category, message in get_flashed_messages(with_categories=true) %}
   <li class="alert alert-{{ category }}">{{ message }}</li>
 {% endfor %}
+
+{% if not feed.url.startswith('reader:') %}
+
+{% if not feed.last_updated and not feed.last_exception %}
+  <li class="alert alert-secondary">
+  Feed not updated yet. <a href="">Refresh.</a>
+  </li>
+{% endif %}
+
+{% if feed.last_exception %}
+  <li class="alert alert-danger">
+  <strong>Update error</strong>{% if not feed.last_updated %}
+  (first update)
+  {%- endif %}: {{ feed.last_exception.value_str }}
+  </li>
+{% endif %}
+
+{% endif %}
 </ul>
 
 

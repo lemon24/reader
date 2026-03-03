@@ -11,6 +11,10 @@ from flask import request
 from flask import url_for
 from jinja2_fragments.flask import render_block
 
+from reader import FeedExistsError
+from reader import InvalidFeedURLError
+from reader import UpdateError
+
 from .. import EntryProxy
 from .. import get_reader
 from .. import stream_template
@@ -187,4 +191,41 @@ def change_feed_title():
     return render_template(
         'v2/change_feed_title.html',
         feed=feed,
+    )
+
+
+@blueprint.route('/feeds/add', methods=['GET', 'POST'])
+def add_feed():
+    reader = get_reader()
+
+    feed = error = None
+
+    if request.method == 'POST':
+        feed = request.form['feed'].strip()
+
+        try:
+            reader.add_feed(feed)
+        except InvalidFeedURLError as e:
+            error = e
+        except FeedExistsError:
+            feed = reader.get_feed(feed)
+            flash(
+                f"Feed {feed.resolved_title or feed.url} already exists.", 'secondary'
+            )
+            return redirect(url_for('.entries', feed=feed.url), code=303)
+        else:
+            # TODO: updating should be out of band
+            try:
+                reader.update_feed(feed)
+            except UpdateError:
+                feed = reader.get_feed(feed)
+            else:
+                feed = reader.get_feed(feed)
+                flash(f"Added feed {feed.resolved_title or feed.url}.", 'success')
+            return redirect(url_for('.entries', feed=feed.url), code=303)
+
+    return render_template(
+        'v2/add_feed.html',
+        feed=feed,
+        error=error,
     )
