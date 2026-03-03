@@ -9,23 +9,24 @@
   {% else %}
    {{ feed.resolved_title or feed.url }}
   {% endif %}
-  - reader
-{% endblock %}
-
-{% block main_title %}
-  {% if not feed %}
-    Entries
-  {% else %}
-    <span {% if feed.title and feed.resolved_title != feed.title -%}
-      title="{{ feed.title }}"
-      {%- endif %}>
-      {{ feed.resolved_title or feed.url }}
-    </span>
-  {% endif %}
+  - {{ super() }}
 {% endblock %}
 
 
 {% block body %}
+
+<h1>
+{% if not feed %}
+  Entries
+{% else %}
+  <span {% if feed.title and feed.resolved_title != feed.title -%}
+    title="{{ feed.title }}"
+    {%- endif %}>
+    {{ feed.resolved_title or feed.url }}
+  </span>
+{% endif %}
+</h1>
+
 
 <ul class="list-unstyled">
 {% for category, message in get_flashed_messages(with_categories=true) %}

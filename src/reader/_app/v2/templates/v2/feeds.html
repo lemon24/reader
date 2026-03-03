@@ -4,15 +4,14 @@
 
 
 {% block page_title %}
-  Feeds - reader
-{% endblock %}
-
-{% block main_title %}
-  Feeds
+  Feeds - {{ super() }}
 {% endblock %}
 
 
 {% block body %}
+
+<h1>Feeds</h1>
+
 
 <ul class="list-unstyled">
 {% for category, message in get_flashed_messages(with_categories=true) %}

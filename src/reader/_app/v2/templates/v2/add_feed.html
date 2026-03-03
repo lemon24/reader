@@ -4,15 +4,14 @@
 
 
 {% block page_title %}
-  Add feed - reader
-{% endblock %}
-
-{% block main_title %}
-  Add feed?
+  Add feed - {{ super() }}
 {% endblock %}
 
 
 {% block body %}
+
+<h1>Add feed</h1>
+
 
   <form action="{{ url_for(request.endpoint, **request.args) }}" method="post" class="my-2">
     {#- TODO: aria stuff #}
