@@ -125,6 +125,13 @@ class="mt-3 mb-4">
     </button>
 </div>
 
+{% if entry.enclosures %}
+<a class="btn text-secondary btn-sm" role="button"
+  title="enclosures" href="#enclosures">
+  <i class="bi bi-{{ macros.bs_file_icon(entry.enclosures[0].type) }}"></i>
+</a>
+{% endif %}
+
 <input type="hidden" name="feed-url" value="{{ entry.feed_url }}">
 <input type="hidden" name="entry-id" value="{{ entry.id }}">
 
@@ -142,7 +149,7 @@ class="mt-3 mb-4">
 <div class="card-body">
 
 {# TODO: might be nice if this were a collapsible #}
-<details>
+<details class="card-text">
 <summary>Summary</summary>
 {{ summary.value | safe }}
 </details>
@@ -152,6 +159,7 @@ class="mt-3 mb-4">
 {% endif %}
 
 
+<article class="mb-4">
 {% if content %}
 {% if not content.is_html -%}
 <pre class='plaintext'>{{ content.value }}</pre>
@@ -161,11 +169,29 @@ class="mt-3 mb-4">
 {% else %}
 <p>no content</p>
 {% endif %}
+</article>
 
 
-{# TODO: enclosures, links #}
+{% if entry.enclosures %}
+<div id="enclosures" class="card mb-4">
+<div class="card-body">
+<h5 class="card-title">enclosures</h5>
 
+<ul class="card-text list-unstyled">
+{% for enclosure in entry.enclosures %}
+<li>
+<a href="{{ enclosure.href }}">{{ enclosure.href.split('/')[-1].split('?')[0] }}</a>
+<small>{{ enclosure.type }}</small>
+</li>
+{% endfor %}
+</ul>
+{% endif %}
 
 </div>
+</div>
+
+
+{# TODO: links #}
+
 
 {% endblock %}
