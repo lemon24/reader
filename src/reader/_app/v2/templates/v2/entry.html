@@ -56,12 +56,20 @@
 </h1>
 
 
-<form action="{{ url_for('.entry_actions') }}" method="post"
-hx-target="closest form"
+{% set content = entry.get_content() %}
+{% set summary = entry.get_content(prefer_summary=True) %}
+{% set summary = summary if summary != content and not (content.value | striptags).startswith(summary.value | striptags) else none %}
 
+
+<form action="{{ url_for('.entry_actions') }}" method="post"
+hx-target="closest .actions"
 class="mt-3 mb-4">
+
 {#- TODO: aria stuff #}
+{#- TODO: use https://getbootstrap.com/docs/5.3/forms/layout/#inline-forms for spacing -#}
+
 {% block entry_actions scoped %}
+<div class="d-inline actions">
 
 <button type="submit" name="read"
     value="{{ 'false' if entry.read else 'true' }}"
@@ -125,6 +133,22 @@ class="mt-3 mb-4">
     </button>
 </div>
 
+<input type="hidden" name="feed-url" value="{{ entry.feed_url }}">
+<input type="hidden" name="entry-id" value="{{ entry.id }}">
+
+</div>
+{% endblock %}
+
+
+{% if summary %}
+<a class="btn text-secondary btn-sm" role="button"
+  title="summary" href="#summary"
+  data-bs-toggle="collapse" aria-expanded="false" aria-controls="summary">
+  <i class="bi bi-card-text }}"></i>
+</a>
+{% endif %}
+
+
 {% if entry.enclosures %}
 <a class="btn text-secondary btn-sm" role="button"
   title="enclosures" href="#enclosures">
@@ -132,28 +156,16 @@ class="mt-3 mb-4">
 </a>
 {% endif %}
 
-<input type="hidden" name="feed-url" value="{{ entry.feed_url }}">
-<input type="hidden" name="entry-id" value="{{ entry.id }}">
 
-{% endblock %}
 </form>
 
 
-{% set content = entry.get_content() %}
-{% set summary = entry.get_content(prefer_summary=True) %}
-{% set summary = summary if summary != content and not (content.value | striptags).startswith(summary.value | striptags) else none %}
-
-
 {% if summary %}
+<div class="collapse" id="summary">
 <div class="card mb-3">
 <div class="card-body">
-
-{# TODO: might be nice if this were a collapsible #}
-<details class="card-text">
-<summary>Summary</summary>
 {{ summary.value | safe }}
-</details>
-
+</div>
 </div>
 </div>
 {% endif %}
@@ -175,7 +187,7 @@ class="mt-3 mb-4">
 {% if entry.enclosures %}
 <div id="enclosures" class="card mb-4">
 <div class="card-body">
-<h5 class="card-title">enclosures</h5>
+<h6 class="card-title">enclosures</h6>
 
 <ul class="card-text list-unstyled">
 {% for enclosure in entry.enclosures %}
