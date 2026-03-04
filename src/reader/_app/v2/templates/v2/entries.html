@@ -67,7 +67,7 @@
 <form action="{{ url_for('.feed_actions', from='entries') }}" method="post"
   hx-target="closest form"
 
-  class="mb-4">
+  class="mt-3 mb-4">
   {#- TODO: aria stuff #}
   {% block feed_actions scoped %}
 
@@ -199,7 +199,7 @@
   </ul>
 
   <h2 class="h5 mb-1" style="font-size: 1.125rem">
-    <a class="text-decoration-none" href="{{ url_for('reader.entry', feed=entry.feed.url, entry=entry.id) }}">
+    <a class="text-decoration-none" href="{{ url_for('.entry', feed=entry.feed.url, entry=entry.id) }}">
       {{- (entry.title or 'untitled') | striptags | truncate(95) -}}
     </a>
     {#- NOTE: there must be no whitespace between the last word and the icon -#}

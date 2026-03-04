@@ -1,0 +1,171 @@
+{% extends "v2/layout.html" %}
+
+{% import "v2/macros.html" as macros %}
+
+
+{% block page_title %}
+  {{ entry.title or 'untitled' }}
+  - {{ super() }}
+{% endblock %}
+
+
+{% block body %}
+
+<ul class="list-inline" style="margin-bottom: 0.25rem">
+
+<li class="list-inline-item">
+    <a class="text-decoration-none" href="{{ url_for('.entries', feed=entry.feed.url) }}">
+    <small>
+        {{ entry.feed_resolved_title or entry.feed.url }}
+    </small>
+    </a>
+</li>
+
+
+{% set author = entry.author if entry.author != entry.feed_resolved_title else none %}
+{% if author %}
+<li class="list-inline-item text-secondary" title="{{ published }}">
+    <small>
+    by {{ author }}
+    </small>
+</li>
+{% endif %}
+
+
+{% set published = entry.published or entry.updated_not_none -%}
+{# TODO: published should be a tooltip #}
+{# TODO: babel.format_timedelta(..., format='narrow') -> 3h #}
+<li class="list-inline-item text-secondary" title="{{ published }}">
+    <small>
+    {{ published | humanize_naturaltime }}
+    </small>
+</li>
+
+</ul>
+
+
+<h1 class="mb-1">
+{{- (entry.title or 'untitled') | striptags | truncate(95) -}}
+{#- NOTE: there must be no whitespace between the last word and the icon -#}
+{#- TODO: aria stuff -#}
+{%- if entry.link -%}
+<a class="ms-2 text-nowrap small" href="{{ entry.link }}" target="_blank">{#
+    #}<i class="bi bi-box-arrow-up-right text-secondary"></i>{#
+#}</a>
+{%- endif -%}
+</h1>
+
+
+<form action="{{ url_for('.entry_actions') }}" method="post"
+hx-target="closest form"
+
+class="mt-3 mb-4">
+{#- TODO: aria stuff #}
+{% block entry_actions scoped %}
+
+<button type="submit" name="read"
+    value="{{ 'false' if entry.read else 'true' }}"
+    hx-post="{{ url_for('.entry_actions') }}"
+    hx-disabled-elt="this"
+    class="btn btn-outline-secondary btn-sm{% if entry.read %} active{% endif %}"
+    {% if entry.read -%}
+    aria-pressed="true"
+    {% endif -%}
+    style="width: 4rem">
+
+    <i class="label bi {{
+    'bi-check-circle-fill' if entry.read is true else 'bi-check-lg'
+    }}"></i>
+
+    <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
+    <span class="visually-hidden">loading...</span>
+    </div>
+
+</button>
+
+<div class="btn-group" role="group" aria-label="importance">
+    <button type="submit" name="important"
+    value="{{ 'none' if entry.important is true else 'true' }}"
+    hx-post="{{ url_for('.entry_actions') }}"
+    hx-disabled-elt="this, next button"
+    class="btn btn-outline-secondary btn-sm {% if entry.important is true %} active{% endif %}"
+    {% if entry.important is true -%}
+    aria-pressed="true"
+    {% endif -%}
+    style="width: 2rem">
+
+    <i class="label bi {{
+        'bi-star-fill' if entry.important is true else 'bi-star'
+    }}"></i>
+
+    <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
+        <span class="visually-hidden">loading...</span>
+    </div>
+
+    </button>
+
+    <button type="submit" name="important"
+    value="{{ 'none' if entry.important is false else 'false' }}"
+    hx-post="{{ url_for('.entry_actions') }}"
+    hx-disabled-elt="this, previous button"
+    class="btn btn-outline-secondary btn-sm {% if entry.important is false %} active{% endif %}"
+    {% if entry.important is false -%}
+    aria-pressed="true"
+    {% endif -%}
+    style="width: 2rem">
+
+    <i class="label bi {{
+        'bi-arrow-down-circle-fill' if entry.important is false else 'bi-arrow-down'
+    }}"></i>
+
+    <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
+        <span class="visually-hidden">loading...</span>
+    </div>
+
+    </button>
+</div>
+
+<input type="hidden" name="feed-url" value="{{ entry.feed_url }}">
+<input type="hidden" name="entry-id" value="{{ entry.id }}">
+
+{% endblock %}
+</form>
+
+
+{% set content = entry.get_content() %}
+{% set summary = entry.get_content(prefer_summary=True) %}
+{% set summary = summary if summary != content and not (content.value | striptags).startswith(summary.value | striptags) else none %}
+
+
+{% if summary %}
+<div class="card mb-3">
+<div class="card-body">
+
+{# TODO: might be nice if this were a collapsible #}
+<details>
+<summary>Summary</summary>
+{{ summary.value | safe }}
+</details>
+
+</div>
+</div>
+{% endif %}
+
+
+{% if content %}
+{% if not content.is_html -%}
+<pre class='plaintext'>{{ content.value }}</pre>
+{%- else -%}
+{{ content.value | safe }}
+{%- endif %}
+{% else %}
+<p>no content</p>
+{% endif %}
+
+
+{# TODO: enclosures, links #}
+
+
+</div>
+
+{% endblock %}

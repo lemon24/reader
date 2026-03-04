@@ -93,15 +93,22 @@ def entry_actions():
                 abort(422)
 
     if request.headers.get('hx-request') == 'true':
+        if urlparse(request.headers['hx-current-url']).path == url_for('.entry'):
+            template = 'v2/entry.html'
+        else:
+            template = 'v2/entries.html'
+
+    if request.headers.get('hx-request') == 'true':
         return render_block(
-            'v2/entries.html',
+            template,
             'entry_actions',
             entry=reader.get_entry(entry),
-            next=request.form['next'],
+            next=request.form.get('next'),
             # equivalent to {% import "v2/macros.html" as macros %}
             macros=current_app.jinja_env.get_template('v2/macros.html').module,
         )
 
+    # FIXME: doesn't work for entry
     return redirect(request.form['next'], code=303)
 
 
@@ -154,6 +161,7 @@ def feed_actions():
             macros=current_app.jinja_env.get_template('v2/macros.html').module,
         )
 
+    # FIXME: doesn't work for feed (entries)
     return redirect(request.form['next'], code=303)
 
 
@@ -234,4 +242,18 @@ def add_feed():
         'v2/add_feed.html',
         feed=feed,
         error=error,
+    )
+
+
+@blueprint.route('/entry')
+def entry():
+    reader = get_reader()
+
+    entry = reader.get_entry((request.args['feed'], request.args['entry']), None)
+    if not entry:
+        abort(404)
+
+    return render_template(
+        'v2/entry.html',
+        entry=entry,
     )
