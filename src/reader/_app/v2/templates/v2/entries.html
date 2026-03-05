@@ -15,6 +15,9 @@
 
 {% block body %}
 
+{{ macros.flashed_messages() }}
+
+
 {% if not feed %}
 <h1>Entries</h1>
 {% else %}
@@ -34,7 +37,7 @@
 </ul>
 
 
-<h1 class="mb-1" {% if feed.title and feed.resolved_title != feed.title %} title="{{ feed.title }}"{% endif -%}>
+<h1 class="mb-2" {% if feed.title and feed.resolved_title != feed.title %} title="{{ feed.title }}"{% endif -%}>
   {{ feed.resolved_title or feed.url }}
   {#- NOTE: there must be no whitespace between the last word and the icon -#}
   {#- TODO: aria stuff -#}
@@ -64,10 +67,31 @@
 {% endif %}
 
 
+{%- if feed and not feed.url.startswith('reader:') %}
+<ul class="list-unstyled mt-3">
+
+  {%- if not feed.last_updated and not feed.last_exception %}
+    <li class="alert alert-secondary">
+      Feed not updated yet. <a href="">Refresh.</a>
+    </li>
+  {%- endif %}
+
+  {%- if feed.last_exception %}
+    <li class="alert alert-danger">
+      <strong>Update error</strong>
+      {%- if not feed.last_updated %} (first update){% endif %}:
+      {{ feed.last_exception.value_str }}
+    </li>
+  {%- endif %}
+
+</ul>
+{%- endif %}
+
+
 <form action="{{ url_for('.feed_actions', from='entries') }}" method="post"
   hx-target="closest form"
 
-  class="mt-3 mb-4">
+  class="mt-2 mb-4">
   {#- TODO: aria stuff #}
   {% block feed_actions scoped %}
 
@@ -108,31 +132,6 @@
 
 
 {% endif %}
-
-
-<ul class="list-unstyled">
-{% for category, message in get_flashed_messages(with_categories=true) %}
-  <li class="alert alert-{{ category }}">{{ message }}</li>
-{% endfor %}
-
-{% if feed and not feed.url.startswith('reader:') %}
-
-{% if not feed.last_updated and not feed.last_exception %}
-  <li class="alert alert-secondary">
-  Feed not updated yet. <a href="">Refresh.</a>
-  </li>
-{% endif %}
-
-{% if feed.last_exception %}
-  <li class="alert alert-danger">
-  <strong>Update error</strong>{% if not feed.last_updated %}
-  (first update)
-  {%- endif %}: {{ feed.last_exception.value_str }}
-  </li>
-{% endif %}
-
-{% endif %}
-</ul>
 
 
 {% call macros.filter_form(form) %}

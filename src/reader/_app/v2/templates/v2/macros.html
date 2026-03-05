@@ -1,4 +1,13 @@
 
+{% macro flashed_messages() %}
+<ul class="list-unstyled">
+{%- for category, message in get_flashed_messages(with_categories=true) %}
+  <li class="alert alert-{{ category }}">{{ message }}</li>
+{%- endfor %}
+</ul>
+{% endmacro %}
+
+
 {% macro filter_form(form) %}
 <ul class="nav mb-3 small filter-presets">
   {%- for preset in form.presets %}

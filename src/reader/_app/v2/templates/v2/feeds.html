@@ -10,14 +10,9 @@
 
 {% block body %}
 
+{{ macros.flashed_messages() }}
+
 <h1>Feeds</h1>
-
-
-<ul class="list-unstyled">
-{% for category, message in get_flashed_messages(with_categories=true) %}
-  <li class="alert alert-{{ category }}">{{ message }}</li>
-{% endfor %}
-</ul>
 
 
 {% call macros.filter_form(form) %}
