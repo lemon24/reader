@@ -84,7 +84,7 @@
 
     <span class="label">{{ 'disable' if feed.updates_enabled is true else 'enable' }}</span>
 
-    <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
+    <div class="spinner-border htmx-indicator" role="status">
       <span class="visually-hidden">loading...</span>
     </div>
 
@@ -241,7 +241,7 @@
         'bi-check-circle-fill' if entry.read is true else 'bi-check-lg'
       }}"></i>
 
-      <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
+      <div class="spinner-border htmx-indicator" role="status">
         <span class="visually-hidden">loading...</span>
       </div>
 
@@ -262,7 +262,7 @@
           'bi-star-fill' if entry.important is true else 'bi-star'
         }}"></i>
 
-        <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
+        <div class="spinner-border htmx-indicator" role="status">
           <span class="visually-hidden">loading...</span>
         </div>
 
@@ -282,7 +282,7 @@
           'bi-arrow-down-circle-fill' if entry.important is false else 'bi-arrow-down'
         }}"></i>
 
-        <div class="spinner-border htmx-indicator" role="status" style="width: 0.875rem; height: 0.875rem;">
+        <div class="spinner-border htmx-indicator" role="status">
           <span class="visually-hidden">loading...</span>
         </div>
 

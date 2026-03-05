@@ -25,3 +25,8 @@
 .htmx-request .label, .htmx-request.label {
   display: none;
 }
+
+.btn .spinner-border {
+  width: var(--bs-btn-font-size);
+  height: var(--bs-btn-font-size);
+}
