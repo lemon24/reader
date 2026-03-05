@@ -1,27 +1,43 @@
 
+{% macro filter_form(form) %}
+<ul class="nav mb-3 small filter-presets">
+  {%- for preset in form.presets %}
+  <li class="nav-item">
+    <a
+      href="{{ url_for(request.endpoint, **preset.args) }}"
+      class="nav-link{% if preset.active %} active{% endif %}"
+      {%- if preset.active %}
+      aria-current="page"
+      {%- endif %}
+    >
+      {{ preset.name }}
+    </a>
+  </li>
+  {%- endfor %}
+  <li class="nav-item">
+    <a
+      href="#filters"
+      class="nav-link dropdown-toggle{% if not form.active_presets %} active{% endif %}"
+      data-bs-toggle="collapse"
+      role="button"
+      aria-expanded="false"
+      aria-controls="filters"
+    >
+      more
+    </a>
+  </li>
+</ul>
 
-{%- macro input(field, icon=none, class=none) %}
-<div class="row mb-3{% if class %} {{ class }}{% endif %}">
-  <div class="col-md-12 input-group{% if field.errors %} has-validation{% endif %}">
-    {% if icon -%}
-    <span class="input-group-text"><i class="bi bi-{{icon}}"></i></span>
-    {%- endif %}
-    {{ field(
-      class="form-control" + (' is-invalid' if field.errors else ''),
-      placeholder=field.label.text) }}
-    {%- if field.errors %}
-    <div class="invalid-feedback">
-      {%- for error in field.errors %}
-        {{ error }}
-      {%- endfor %}
-    </div>
-    {%- endif %}
+<form>
+  <div class="collapse mb-3" id="filters">
+    {{ caller() }}
+    <button type="submit" class="btn btn-primary mt-2">go</button>
   </div>
-</div>
-{%- endmacro %}
+</form>
+{% endmacro %}
 
 
-{%- macro radio(field) %}
+{%- macro filter_radio(field) %}
 <fieldset class="row mb-1">
   <legend class="col-form-label col-sm-2 pt-0">{{ field.label.text }}</legend>
   <div class="col-sm-10">

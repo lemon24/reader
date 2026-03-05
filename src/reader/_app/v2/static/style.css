@@ -7,12 +7,12 @@
   --bs-navbar-toggler-border-color: rgba(0, 0, 0, 0);
 }
 
-.nav.controls {
+.nav.filter-presets {
   --bs-nav-link-padding-x: 0;
   --bs-nav-link-padding-y: 0;
   gap: 1rem;
 }
-.nav.controls .nav-link.active {
+.nav.filter-presets .nav-link.active {
   color: var(--bs-navbar-active-color);
 }
 
