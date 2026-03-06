@@ -11,23 +11,19 @@
 
 {% block body %}
 
-<ul class="list-inline" style="margin-bottom: 0.25rem">
+<ul class="list-inline text-secondary small mb-1">
 
 <li class="list-inline-item">
     <a class="text-decoration-none" href="{{ url_for('.entries', feed=entry.feed.url) }}">
-    <small>
-        {{ entry.feed_resolved_title or entry.feed.url }}
-    </small>
+      {{ entry.feed_resolved_title or entry.feed.url }}
     </a>
 </li>
 
 
 {% set author = entry.author if entry.author != entry.feed_resolved_title else none %}
 {% if author %}
-<li class="list-inline-item text-secondary" title="{{ published }}">
-    <small>
-    by {{ author }}
-    </small>
+<li class="list-inline-item" title="{{ published }}">
+  by {{ author }}
 </li>
 {% endif %}
 
@@ -35,10 +31,8 @@
 {% set published = entry.published or entry.updated_not_none -%}
 {# TODO: published should be a tooltip #}
 {# TODO: babel.format_timedelta(..., format='narrow') -> 3h #}
-<li class="list-inline-item text-secondary" title="{{ published }}">
-    <small>
-    {{ published | humanize_naturaltime }}
-    </small>
+<li class="list-inline-item" title="{{ published }}">
+  {{ published | humanize_naturaltime }}
 </li>
 
 </ul>
