@@ -74,7 +74,7 @@
 
 
 {% macro title_href(text, href=none, external=none) %}
-{%- set text = text | striptags | truncate(95) -%}
+{%- set text = text | truncate(95) -%}
 
 {%- macro maybe_href(text, href) %}
   {%- if href %}<a href="{{ href }}" class="text-decoration-none">{% endif -%}
