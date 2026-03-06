@@ -30,13 +30,7 @@
   {{ macros.title_href(feed.resolved_title or feed.url, external=feed.link) }}
 </h1>
 
-
-{% set summary = (feed.subtitle | striptags | trim) if feed.subtitle else '' %}
-{% if summary %}
-<p class="small mb-2">
-  {{ summary | truncate(223) }}
-</p>
-{% endif %}
+{{ macros.subtitle(feed.subtitle) }}
 
 
 {%- if feed and not feed.url.startswith('reader:') %}
@@ -155,12 +149,7 @@
     {{ macros.title_href(entry.title or 'untitled', url_for('.entry', feed=entry.feed.url, entry=entry.id), entry.link) }}
   </h2>
 
-  {% set summary = entry.get_content(prefer_summary=True).value | striptags | trim %}
-  {% if summary %}
-  <p class="small mb-2">
-    {{ summary | truncate(223) }}
-  </p>
-  {% endif %}
+  {{ macros.subtitle(entry.get_content(prefer_summary=True).value) }}
 
   {% set next_index = loop.index if not loop.last else loop.index - 1 -%}
   {% set next = url_for('.entries', **request.args) + '#entry-' + (next_index|string) %}

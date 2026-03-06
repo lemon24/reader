@@ -100,6 +100,16 @@
 {%- endmacro %}
 
 
+{% macro subtitle(text) %}
+{%- set text = (text or '') | striptags | trim -%}
+{%- if text %}
+<p class="small mb-2">
+  {{ text | truncate(223) }}
+</p>
+{%- endif %}
+{% endmacro %}
+
+
 {%- macro bs_file_icon(mimetype) -%}
 {%- set type = (mimetype or '').partition('/')[0] -%}
 {%- if type == 'audio' -%} file-earmark-music
