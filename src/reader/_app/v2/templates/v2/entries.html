@@ -24,6 +24,7 @@
 
 <ul class="list-inline text-secondary small mb-2">
   {{ macros.feed_updated(feed) }}
+  {{ macros.feed_author(feed) }}
 </ul>
 
 <h1 class="mb-2">
@@ -129,20 +130,8 @@
 <div class="mb-4" id="entry-{{ loop.index }}">
 
   <ul class="list-inline text-secondary small mb-1">
-
-    <li class="list-inline-item">
-      <a class="text-decoration-none" href="{{ url_for('.entries', feed=entry.feed.url) }}">
-        {{ entry.feed_resolved_title or entry.feed.url }}
-      </a>
-    </li>
-
-    {% set published = entry.published or entry.updated_not_none -%}
-    {# TODO: published should be a tooltip #}
-    {# TODO: babel.format_timedelta(..., format='narrow') -> 3h #}
-    <li class="list-inline-item" title="{{ published }}">
-      {{ published | humanize_naturaltime }}
-    </li>
-
+    {{ macros.entry_feed(entry) }}
+    {{ macros.entry_published(entry) }}
   </ul>
 
   <h2 class="h5 mb-1" style="font-size: 1.125rem">
