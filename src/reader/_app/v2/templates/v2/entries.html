@@ -36,16 +36,6 @@
     #}<i class="bi bi-box-arrow-up-right text-secondary"></i>{#
   #}</a>
   {%- endif -%}
-  {%- if not feed.url.startswith('reader:') -%}
-  <a class="ms-2 text-nowrap small" href="{{ feed.url }}" target="_blank">{#
-    #}<i class="bi bi-rss text-secondary"></i>{#
-  #}</a>
-  {%- endif -%}
-  {%- if feed.last_exception and feed.updates_enabled -%}
-  <span class="ms-2 text-nowrap small" title="{{ feed.last_exception.value_str }}">{#
-    #}<i class="bi bi-slash-circle text-danger"></i>{#
-  #}</a>
-  {%- endif -%}
 </h1>
 
 
@@ -114,6 +104,17 @@
     class="btn btn-outline-danger btn-sm"
     role="button"
   >delete</a>
+
+  {%- if not feed.url.startswith('reader:') -%}
+  <a class="ms-2 text-nowrap small" href="{{ feed.url }}" target="_blank">{#
+    #}<i class="bi bi-rss text-secondary"></i>{#
+  #}</a>
+  {%- endif -%}
+  {%- if feed.last_exception and feed.updates_enabled -%}
+  <span class="ms-2 text-nowrap small" title="{{ feed.last_exception.value_str }}">{#
+    #}<i class="bi bi-slash-circle text-danger"></i>{#
+  #}</span>
+  {%- endif -%}
 
   <input type="hidden" name="feed-url" value="{{ feed.url }}">
 
