@@ -22,18 +22,8 @@
 <h1>Entries</h1>
 {% else %}
 
-
 <ul class="list-inline" style="margin-bottom: 0.25rem">
-
-  {% set updated = feed.updated or feed.last_updated -%}
-  {# TODO: updated should be a tooltip #}
-  {# TODO: babel.format_timedelta(..., format='narrow') -> 3h #}
-  <li class="list-inline-item text-secondary" title="{{ updated or '' }}">
-    <small>
-      {{ 'updated ' + updated | humanize_naturaltime if updated else 'not updated' }}
-    </small>
-  </li>
-
+  {{ macros.feed_updated(feed) }}
 </ul>
 
 

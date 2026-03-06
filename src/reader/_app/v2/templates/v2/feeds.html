@@ -26,16 +26,7 @@
 <div class="mb-4" id="feed-{{ loop.index }}">
 
   <ul class="list-inline" style="margin-bottom: 0.125rem">
-
-    {% set updated = feed.updated or feed.last_updated -%}
-    {# TODO: updated should be a tooltip #}
-    {# TODO: babel.format_timedelta(..., format='narrow') -> 3h #}
-    <li class="list-inline-item text-secondary" title="{{ updated or '' }}">
-      <small>
-        {{ 'updated ' + updated | humanize_naturaltime if updated else 'not updated' }}
-      </small>
-    </li>
-
+    {{ macros.feed_updated(feed) }}
   </ul>
 
   <h2 class="h5 mb-1" style="font-size: 1.125rem"{% if feed.title and feed.resolved_title != feed.title %} title="{{ feed.title }}"{% endif -%}>

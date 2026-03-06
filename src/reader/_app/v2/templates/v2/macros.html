@@ -61,6 +61,18 @@
 {%- endmacro %}
 
 
+{%- macro feed_updated(feed) %}
+{%- set updated = feed.updated or feed.last_updated -%}
+{# TODO: updated should be a tooltip #}
+{# TODO: babel.format_timedelta(..., format='narrow') -> 3h #}
+<li class="list-inline-item text-secondary" title="{{ updated or '' }}">
+  <small>
+    {{ 'updated ' + updated | humanize_naturaltime if updated else 'not updated' }}
+  </small>
+</li>
+{%- endmacro %}
+
+
 {%- macro bs_file_icon(mimetype) -%}
 {%- set type = (mimetype or '').partition('/')[0] -%}
 {%- if type == 'audio' -%} file-earmark-music
