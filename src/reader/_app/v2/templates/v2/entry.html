@@ -45,14 +45,7 @@
 
 
 <h1 class="mb-1">
-{{- (entry.title or 'untitled') | striptags | truncate(95) -}}
-{#- NOTE: there must be no whitespace between the last word and the icon -#}
-{#- TODO: aria stuff -#}
-{%- if entry.link -%}
-<a class="ms-2 text-nowrap small" href="{{ entry.link }}" target="_blank">{#
-    #}<i class="bi bi-box-arrow-up-right text-secondary"></i>{#
-#}</a>
-{%- endif -%}
+  {{ macros.title_href(entry.title or 'untitled', external=entry.link) }}
 </h1>
 
 

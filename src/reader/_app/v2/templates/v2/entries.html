@@ -26,16 +26,8 @@
   {{ macros.feed_updated(feed) }}
 </ul>
 
-
-<h1 class="mb-2" {% if feed.title and feed.resolved_title != feed.title %} title="{{ feed.title }}"{% endif -%}>
-  {{ feed.resolved_title or feed.url }}
-  {#- NOTE: there must be no whitespace between the last word and the icon -#}
-  {#- TODO: aria stuff -#}
-  {%- if feed.link -%}
-  <a class="ms-2 text-nowrap small" href="{{ feed.link }}" target="_blank">{#
-    #}<i class="bi bi-box-arrow-up-right text-secondary"></i>{#
-  #}</a>
-  {%- endif -%}
+<h1 class="mb-2">
+  {{ macros.title_href(feed.resolved_title or feed.url, external=feed.link) }}
 </h1>
 
 
@@ -164,16 +156,7 @@
   </ul>
 
   <h2 class="h5 mb-1" style="font-size: 1.125rem">
-    <a class="text-decoration-none" href="{{ url_for('.entry', feed=entry.feed.url, entry=entry.id) }}">
-      {{- (entry.title or 'untitled') | striptags | truncate(95) -}}
-    </a>
-    {#- NOTE: there must be no whitespace between the last word and the icon -#}
-    {#- TODO: aria stuff -#}
-    {%- if entry.link -%}
-    <a class="ms-2 text-nowrap small" href="{{ entry.link }}" target="_blank">{#
-      #}<i class="bi bi-box-arrow-up-right text-secondary"></i>{#
-    #}</a>
-    {%- endif -%}
+    {{ macros.title_href(entry.title or 'untitled', url_for('.entry', feed=entry.feed.url, entry=entry.id), entry.link) }}
   </h2>
 
   {% set summary = entry.get_content(prefer_summary=True).value | striptags | trim %}

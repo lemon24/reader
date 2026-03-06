@@ -73,6 +73,33 @@
 {%- endmacro %}
 
 
+{% macro title_href(text, href=none, external=none) %}
+{%- set text = text | striptags | truncate(95) -%}
+
+{%- macro maybe_href(text, href) %}
+  {%- if href %}<a href="{{ href }}" class="text-decoration-none">{% endif -%}
+  {{ text }}
+  {%- if href %}</a>{% endif -%}
+{%- endmacro %}
+
+{%- if not external %}
+  {{ maybe_href(text, href) }}
+{%- else %}
+  {%- set first, _, last = text.strip().rpartition(' ') -%}
+  {{ maybe_href(first, href) }}
+  <span class="text-nowrap">
+    <span class="me-1">
+      {{ maybe_href(last, href) }}
+    </span>
+    <a href="{{ external }}" target="_blank" class="text-nowrap small" title="external">
+      <i class="bi bi-box-arrow-up-right text-secondary"></i>
+    </a>
+  </span>
+{%- endif %}
+
+{%- endmacro %}
+
+
 {%- macro bs_file_icon(mimetype) -%}
 {%- set type = (mimetype or '').partition('/')[0] -%}
 {%- if type == 'audio' -%} file-earmark-music

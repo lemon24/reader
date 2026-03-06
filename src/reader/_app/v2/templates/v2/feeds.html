@@ -29,17 +29,8 @@
     {{ macros.feed_updated(feed) }}
   </ul>
 
-  <h2 class="h5 mb-1" style="font-size: 1.125rem"{% if feed.title and feed.resolved_title != feed.title %} title="{{ feed.title }}"{% endif -%}>
-    <a class="text-decoration-none" href="{{ url_for('.entries', feed=feed.url) }}">
-      {{- feed.resolved_title or feed.url -}}
-    </a>
-    {#- NOTE: there must be no whitespace between the last word and the icon -#}
-    {#- TODO: aria stuff -#}
-    {%- if feed.link -%}
-    <a class="ms-2 text-nowrap small" href="{{ feed.link }}" target="_blank">{#
-      #}<i class="bi bi-box-arrow-up-right text-secondary"></i>{#
-    #}</a>
-    {%- endif -%}
+  <h2 class="h5 mb-1" style="font-size: 1.125rem">
+    {{ macros.title_href(feed.resolved_title or feed.url, url_for('.entries', feed=feed.url), feed.link) }}
   </h2>
 
   {% set summary = (feed.subtitle | striptags | trim) if feed.subtitle else '' %}
