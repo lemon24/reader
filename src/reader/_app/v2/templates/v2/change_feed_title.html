@@ -10,35 +10,45 @@
 
 {% block body %}
 
-<h1>Change title?</h1>
+<h1>Change title</h1>
 
-
-  <p class="lead">Change title of feed
-  <a href="{{ url_for('.entries', feed=feed.url) }}">{{ feed.resolved_title or feed.url }}</a>?
+<p>
+  Changing title of
+  <a href="{{ url_for('.entries', feed=feed.url) }}">
+    {{- feed.resolved_title or feed.url -}}
+  </a>.
   {%- if feed.resolved_title != feed.title %}
   Leave empty to use the original <em>{{ feed.title or feed.url }}</em> title.
-  {%- endif -%}
-  </p>
+  {%- endif %}
+</p>
 
-  <form action="{{ url_for(request.endpoint, **request.args) }}" method="post" class="my-2">
-    {#- TODO: aria stuff #}
+<form action="{{ url_for(request.endpoint, **request.args) }}" method="post" class="my-2">
+{#- TODO: aria stuff #}
 
-    {#- TODO: clear button -#}
-    <input type="text" name="title" value="{{ feed.user_title or '' }}" placeholder="{{ feed.title or feed.url }}" class="form-control mb-3">
+<div class="mb-3">
 
-    <button type="submit" name="change" value="true" class="btn btn-primary">
-      change
-    </button>
+{#- TODO: clear button -#}
+{%- set field = form.title -%}
+{{ field(
+  class="form-control" + (' is-invalid' if field.errors else ''),
+  placeholder=feed.title or feed.url,
+) }}
+{%- if field.errors %}
+<div class="invalid-feedback">
+  {%- for error in field.errors %}
+    {{ error }}
+  {%- endfor %}
+</div>
+{%- endif %}
 
-    <a href="javascript:history.back()" class="btn btn-outline-secondary" role="button" >
-      cancel
-    </a>
+</div>
 
-    {# TODO: this is not needed if we use request.args['feed'] #}
-    <input type="hidden" name="feed" value="{{ feed.url }}">
+<input type="submit" class="btn btn-primary" value="change">
 
-  </form>
+<a href="javascript:history.back()" class="btn btn-outline-secondary" role="button" >
+  cancel
+</a>
 
-
+</form>
 
 {% endblock %}

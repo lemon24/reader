@@ -170,6 +170,10 @@ class AddFeed(Form):
     feed = URLField('URL', [validators.DataRequired(), validators.URL()])
 
 
+class ChangeFeedTitle(Form):
+    title = StringField('title', filters=[lambda s: (s or '').strip() or None])
+
+
 if __name__ == '__main__':
     from werkzeug.datastructures import MultiDict
 

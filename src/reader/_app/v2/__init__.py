@@ -23,6 +23,7 @@ from .. import EntryProxy
 from .. import get_reader
 from .. import stream_template
 from .forms import AddFeed
+from .forms import ChangeFeedTitle
 from .forms import EntryFilter
 from .forms import FeedFilter
 
@@ -195,17 +196,24 @@ def change_feed_title():
     reader = get_reader()
     feed = reader.get_feed(request.args['feed'])
 
-    if request.method == 'POST':
-        title = request.form['title'].strip() or None
-        reader.set_feed_user_title(feed, title)
-        flash(
-            f"Changed title of feed {feed.resolved_title or feed.url}"
-            f" to {title or feed.title or feed.url}.",
-            'success',
-        )
+    form = ChangeFeedTitle(request.form, title=feed.resolved_title)
+
+    if request.method == 'POST' and form.validate():
+        title = form.title.data
+        if not title or title == feed.title:
+            title = None
+        if title == feed.user_title:
+            flash("Feed title is unchanged.", 'secondary')
+        else:
+            reader.set_feed_user_title(feed, title)
+            flash(
+                f"Changed feed title from {feed.resolved_title or feed.url}"
+                f" to {title or feed.title or feed.url}.",
+                'success',
+            )
         return redirect(url_for('.entries', feed=feed.url), code=303)
 
-    return render_template('v2/change_feed_title.html', feed=feed)
+    return render_template('v2/change_feed_title.html', form=form, feed=feed)
 
 
 @blueprint.route('/feeds/add', methods=['GET', 'POST'])
