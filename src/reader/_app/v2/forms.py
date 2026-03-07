@@ -6,6 +6,8 @@ from wtforms import HiddenField
 from wtforms import RadioField
 from wtforms import SearchField
 from wtforms import StringField
+from wtforms import URLField
+from wtforms import validators
 
 from reader._types import tag_filter_argument
 
@@ -162,6 +164,10 @@ class FeedFilter(PresetsMixin, Form):
         'broken': {'broken': 'yes', 'enabled': 'yes'},
         'disabled': {'enabled': 'no'},
     }
+
+
+class AddFeed(Form):
+    feed = URLField('URL', [validators.DataRequired(), validators.URL()])
 
 
 if __name__ == '__main__':

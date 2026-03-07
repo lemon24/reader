@@ -19,6 +19,7 @@ from reader import UpdateError
 from .. import EntryProxy
 from .. import get_reader
 from .. import stream_template
+from .forms import AddFeed
 from .forms import EntryFilter
 from .forms import FeedFilter
 
@@ -211,38 +212,29 @@ def change_feed_title():
 @blueprint.route('/feeds/add', methods=['GET', 'POST'])
 def add_feed():
     reader = get_reader()
+    form = AddFeed(request.form)
 
-    feed = error = None
-
-    if request.method == 'POST':
-        feed = request.form['feed'].strip()
+    if request.method == 'POST' and form.validate():
+        url = form.feed.data
 
         try:
-            reader.add_feed(feed)
+            reader.add_feed(url)
         except InvalidFeedURLError as e:
-            error = e
+            form.feed.errors.append(f"invalid feed: {e}")
         except FeedExistsError:
-            feed = reader.get_feed(feed)
-            flash(
-                f"Feed {feed.resolved_title or feed.url} already exists.", 'secondary'
-            )
-            return redirect(url_for('.entries', feed=feed.url), code=303)
+            flash("Feed already exists.", 'secondary')
+            return redirect(url_for('.entries', feed=url), code=303)
         else:
             # TODO: updating should be out of band
             try:
-                reader.update_feed(feed)
+                reader.update_feed(url)
             except UpdateError:
-                feed = reader.get_feed(feed)
+                pass
             else:
-                feed = reader.get_feed(feed)
-                flash(f"Added feed {feed.resolved_title or feed.url}.", 'success')
-            return redirect(url_for('.entries', feed=feed.url), code=303)
+                flash("Added and updated feed.", 'success')
+            return redirect(url_for('.entries', feed=url), code=303)
 
-    return render_template(
-        'v2/add_feed.html',
-        feed=feed,
-        error=error,
-    )
+    return render_template('v2/add_feed.html', form=form)
 
 
 @blueprint.route('/entry')

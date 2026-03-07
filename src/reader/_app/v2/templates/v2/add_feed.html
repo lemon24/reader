@@ -12,35 +12,32 @@
 
 <h1>Add feed</h1>
 
+<form action="{{ url_for(request.endpoint) }}" method="post" class="my-2">
 
-  <form action="{{ url_for(request.endpoint, **request.args) }}" method="post" class="my-2">
-    {#- TODO: aria stuff #}
+<div class="mb-3">
 
-    <div class="mb-3">
-    {#- TODO: clear button -#}
-    <input
-      type="url" required autocomplete="off" name="feed"
-      value="{{ feed or '' }}" placeholder="URL"
-      class="form-control{{' is-invalid' if error else ''}}">
+{#- TODO: clear button -#}
+{%- set field = form.feed -%}
+{{ field(
+  class="form-control" + (' is-invalid' if field.errors else ''),
+  placeholder=field.label.text,
+) }}
+{%- if field.errors %}
+<div class="invalid-feedback">
+  {%- for error in field.errors %}
+    {{ error }}
+  {%- endfor %}
+</div>
+{%- endif %}
 
-    {%- if error %}
-    <div class="invalid-feedback">
-      {{ error.message }}
-    </div>
-    {%- endif %}
+</div>
 
-    </div>
+<input type="submit" class="btn btn-primary" value="add">
 
-    <button type="submit" name="add" value="true" class="btn btn-primary">
-      add
-    </button>
+<a href="javascript:history.back()" class="btn btn-outline-secondary" role="button" >
+  cancel
+</a>
 
-    <a href="javascript:history.back()" class="btn btn-outline-secondary" role="button" >
-      cancel
-    </a>
-
-  </form>
-
-
+</form>
 
 {% endblock %}
