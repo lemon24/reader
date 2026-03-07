@@ -71,6 +71,7 @@ app = [
     "PyYAML",
     # for v2
     "WTForms",
+    "Flask-WTF",
     "jinja2-fragments",
 ]
 

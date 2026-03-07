@@ -10,6 +10,7 @@ from flask import redirect
 from flask import render_template
 from flask import request
 from flask import url_for
+from flask_wtf import FlaskForm
 from jinja2_fragments.flask import render_block
 from werkzeug.exceptions import NotFound
 
@@ -183,12 +184,15 @@ def delete_feed():
     reader = get_reader()
     feed = reader.get_feed(request.args['feed'])
 
-    if request.method == 'POST':
+    # for CSRF token, until we split the app and can use global protection
+    form = FlaskForm(request.form)
+
+    if request.method == 'POST' and form.validate():
         reader.delete_feed(feed)
         flash(f"Deleted feed {feed.resolved_title or feed.url}.", 'success')
         return redirect(url_for('.feeds'), code=303)
 
-    return render_template('v2/delete_feed.html', feed=feed)
+    return render_template('v2/delete_feed.html', form=form, feed=feed)
 
 
 @blueprint.route('/feeds/title', methods=['GET', 'POST'])

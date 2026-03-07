@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import yaml
+from flask_wtf import FlaskForm
 from wtforms import Form
 from wtforms import HiddenField
 from wtforms import RadioField
@@ -166,11 +167,11 @@ class FeedFilter(PresetsMixin, Form):
     }
 
 
-class AddFeed(Form):
+class AddFeed(FlaskForm):
     feed = URLField('URL', [validators.DataRequired(), validators.URL()])
 
 
-class ChangeFeedTitle(Form):
+class ChangeFeedTitle(FlaskForm):
     title = StringField('title', filters=[lambda s: (s or '').strip() or None])
 
 

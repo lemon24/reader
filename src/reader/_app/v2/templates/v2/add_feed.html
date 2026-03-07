@@ -13,6 +13,16 @@
 <h1>Add feed</h1>
 
 <form action="{{ url_for(request.endpoint) }}" method="post" class="my-2">
+{#- TODO: aria stuff #}
+
+{{ form.csrf_token }}
+{%- if form.csrf_token.errors %}
+<ul class="list-unstyled">
+  {%- for error in form.csrf_token.errors %}
+    <li class="alert alert-danger">{{ error }}</li>
+  {%- endfor %}
+</ul>
+{%- endif %}
 
 <div class="mb-3">
 
