@@ -12,27 +12,23 @@
 
 <h1>Delete feed</h1>
 
-
-  <p class="lead">Feed
-  <a href="{{ url_for('.entries', feed=feed.url) }}">{{ feed.resolved_title or feed.url }}</a>
-  and all its entries will be deleted.
+<p>
+  <a href="{{ url_for('.entries', feed=feed.url) }}">
+    {{- feed.resolved_title or feed.url -}}
+  </a>
+  and its entries will be deleted.
   This cannot be undone.
-  </p>
+</p>
 
-  <form action="{{ url_for(request.endpoint, **request.args) }}" method="post" class="my-2">
-    {#- TODO: aria stuff #}
+<form action="{{ url_for(request.endpoint, **request.args) }}" method="post" class="my-2">
 
-    <button type="submit" name="delete" value="true" class="btn btn-danger">
-      delete
-    </button>
+<input type="submit" class="btn btn-danger" value="delete">
 
-    <a href="javascript:history.back()" class="btn btn-outline-secondary" role="button" >
-      cancel
-    </a>
+<a href="javascript:history.back()" class="btn btn-outline-secondary" role="button" >
+  cancel
+</a>
 
-    <input type="hidden" name="feed" value="{{ feed.url }}">
-
-  </form>
+</form>
 
 
 
