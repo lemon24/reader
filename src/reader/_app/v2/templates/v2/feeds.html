@@ -44,6 +44,8 @@
     {#- TODO: aria stuff #}
     {% block feed_actions scoped %}
 
+    {{ macros.csrf_token_field() }}
+
     {% if not feed.url.startswith('reader:') -%}
     <button type="submit" name="enabled"
       value="{{ 'false' if feed.updates_enabled else 'true' }}"

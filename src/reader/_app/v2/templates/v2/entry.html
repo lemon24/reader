@@ -38,6 +38,8 @@ class="mt-3 mb-4">
 {% block entry_actions scoped %}
 <div class="d-inline actions">
 
+{{ macros.csrf_token_field() }}
+
 <button type="submit" name="read"
     value="{{ 'false' if entry.read else 'true' }}"
     hx-post="{{ url_for('.entry_actions') }}"

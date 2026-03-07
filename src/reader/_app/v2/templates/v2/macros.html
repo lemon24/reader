@@ -10,6 +10,11 @@
 {% endmacro %}
 
 
+{% macro csrf_token_field() -%}
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{%- endmacro %}
+
+
 {% macro filter_form(form) %}
 <ul class="nav mb-3 small filter-presets">
   {%- for preset in form.presets %}

@@ -22,14 +22,7 @@
 
 <form action="{{ url_for(request.endpoint, **request.args) }}" method="post" class="my-2">
 
-{{ form.csrf_token }}
-{%- if form.csrf_token.errors %}
-<ul class="list-unstyled">
-  {%- for error in form.csrf_token.errors %}
-    <li class="alert alert-danger">{{ error }}</li>
-  {%- endfor %}
-</ul>
-{%- endif %}
+{{ macros.csrf_token_field() }}
 
 <input type="submit" class="btn btn-danger" value="delete">
 

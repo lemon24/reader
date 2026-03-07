@@ -27,6 +27,7 @@ from flask import request
 from flask import Response
 from flask import stream_with_context
 from flask import url_for
+from flask_wtf.csrf import CSRFProtect
 
 import reader
 from reader import Content
@@ -44,7 +45,10 @@ from .api_thing import APIError
 from .api_thing import APIThing
 
 
+csrf = CSRFProtect()
+
 blueprint = Blueprint('reader', __name__)
+csrf.exempt(blueprint)
 
 
 @blueprint.app_template_filter()
@@ -823,6 +827,7 @@ def create_app(config):
     app.jinja_env.add_extension('jinja2.ext.do')
 
     app.secret_key = 'secret'
+    csrf.init_app(app)
 
     app.config['READER_CONFIG'] = config
 
