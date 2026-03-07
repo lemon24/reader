@@ -11,8 +11,11 @@ from flask import render_template
 from flask import request
 from flask import url_for
 from jinja2_fragments.flask import render_block
+from werkzeug.exceptions import NotFound
 
+from reader import EntryNotFoundError
 from reader import FeedExistsError
+from reader import FeedNotFoundError
 from reader import InvalidFeedURLError
 from reader import UpdateError
 
@@ -33,6 +36,16 @@ blueprint = Blueprint(
 )
 
 
+@blueprint.errorhandler(FeedNotFoundError)
+def handle_feed_not_found(e):
+    return NotFound()
+
+
+@blueprint.errorhandler(EntryNotFoundError)
+def handle_entry_not_found(e):
+    return NotFound()
+
+
 @blueprint.route('/')
 def entries():
     reader = get_reader()
@@ -41,9 +54,7 @@ def entries():
 
     feed = None
     if feed_url := form.feed.data:
-        feed = reader.get_feed(feed_url, None)
-        if not feed:
-            abort(404)
+        feed = reader.get_feed(feed_url)
 
     kwargs = dict(form.data)
 
@@ -169,29 +180,20 @@ def feed_actions():
 @blueprint.route('/feeds/delete', methods=['GET', 'POST'])
 def delete_feed():
     reader = get_reader()
-
-    feed = reader.get_feed(request.args['feed'], None)
-    if not feed:
-        abort(404)
+    feed = reader.get_feed(request.args['feed'])
 
     if request.method == 'POST':
         reader.delete_feed(feed)
         flash(f"Deleted feed {feed.resolved_title or feed.url}.", 'success')
         return redirect(url_for('.feeds'), code=303)
 
-    return render_template(
-        'v2/delete_feed.html',
-        feed=feed,
-    )
+    return render_template('v2/delete_feed.html', feed=feed)
 
 
 @blueprint.route('/feeds/title', methods=['GET', 'POST'])
 def change_feed_title():
     reader = get_reader()
-
-    feed = reader.get_feed(request.args['feed'], None)
-    if not feed:
-        abort(404)
+    feed = reader.get_feed(request.args['feed'])
 
     if request.method == 'POST':
         title = request.form['title'].strip() or None
@@ -203,10 +205,7 @@ def change_feed_title():
         )
         return redirect(url_for('.entries', feed=feed.url), code=303)
 
-    return render_template(
-        'v2/change_feed_title.html',
-        feed=feed,
-    )
+    return render_template('v2/change_feed_title.html', feed=feed)
 
 
 @blueprint.route('/feeds/add', methods=['GET', 'POST'])
@@ -240,12 +239,5 @@ def add_feed():
 @blueprint.route('/entry')
 def entry():
     reader = get_reader()
-
-    entry = reader.get_entry((request.args['feed'], request.args['entry']), None)
-    if not entry:
-        abort(404)
-
-    return render_template(
-        'v2/entry.html',
-        entry=entry,
-    )
+    entry = reader.get_entry((request.args['feed'], request.args['entry']))
+    return render_template('v2/entry.html', entry=entry)
