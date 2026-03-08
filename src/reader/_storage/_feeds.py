@@ -347,7 +347,7 @@ def feed_filter(query: Query, filter: FeedFilter) -> dict[str, Any]:
 
     context: dict[str, object] = {}
 
-    if url:
+    if url is not None:
         query.WHERE("url = :url")
         context.update(url=url)
 
