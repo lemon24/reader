@@ -22,6 +22,7 @@
 {% endcall %}
 
 
+
 {% for feed in feeds %}
 <div class="mb-4" id="feed-{{ loop.index }}">
 
@@ -45,26 +46,7 @@
     {% block feed_actions scoped %}
 
     {{ macros.csrf_token_field() }}
-
-    {% if not feed.url.startswith('reader:') -%}
-    <button type="submit" name="enabled"
-      value="{{ 'false' if feed.updates_enabled else 'true' }}"
-      hx-post="{{ url_for('.feed_actions') }}"
-      hx-disabled-elt="this"
-      class="btn btn-outline-secondary btn-sm {% if feed.updates_enabled %} active{% endif %}"
-      {% if feed.updates_enabled -%}
-      aria-pressed="true"
-      {% endif -%}
-      style="width: 4rem">
-
-      <span class="label">{{ 'disable' if feed.updates_enabled is true else 'enable' }}</span>
-
-      <div class="spinner-border htmx-indicator" role="status">
-        <span class="visually-hidden">loading...</span>
-      </div>
-
-    </button>
-    {%- endif %}
+    {{ macros.feed_enabled_button(feed) }}
 
     <a href="{{ url_for('.change_feed_title', feed=feed.url) }}"
       class="btn btn-outline-secondary btn-sm"

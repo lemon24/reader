@@ -63,26 +63,7 @@
   {% block feed_actions scoped %}
 
   {{ macros.csrf_token_field() }}
-
-  {% if not feed.url.startswith('reader:') -%}
-  <button type="submit" name="enabled"
-    value="{{ 'false' if feed.updates_enabled else 'true' }}"
-    hx-post="{{ url_for('.feed_actions') }}"
-    hx-disabled-elt="this"
-    class="btn btn-outline-secondary btn-sm {% if feed.updates_enabled %} active{% endif %}"
-    {% if feed.updates_enabled -%}
-    aria-pressed="true"
-    {% endif -%}
-    style="width: 4rem">
-
-    <span class="label">{{ 'disable' if feed.updates_enabled is true else 'enable' }}</span>
-
-    <div class="spinner-border htmx-indicator" role="status">
-      <span class="visually-hidden">loading...</span>
-    </div>
-
-  </button>
-  {%- endif %}
+  {{ macros.feed_enabled_button(feed) }}
 
   <a href="{{ url_for('.change_feed_title', feed=feed.url) }}"
     class="btn btn-outline-secondary btn-sm"
@@ -152,68 +133,8 @@
     {% block entry_actions scoped %}
 
     {{ macros.csrf_token_field() }}
-
-    <button type="submit" name="read"
-      value="{{ 'false' if entry.read else 'true' }}"
-      hx-post="{{ url_for('.entry_actions') }}"
-      hx-disabled-elt="this"
-      class="btn btn-outline-secondary btn-sm{% if entry.read %} active{% endif %}"
-      {% if entry.read -%}
-      aria-pressed="true"
-      {% endif -%}
-      style="width: 4rem">
-
-      <i class="label bi {{
-        'bi-check-circle-fill' if entry.read is true else 'bi-check-lg'
-      }}"></i>
-
-      <div class="spinner-border htmx-indicator" role="status">
-        <span class="visually-hidden">loading...</span>
-      </div>
-
-    </button>
-
-    <div class="btn-group" role="group" aria-label="importance">
-      <button type="submit" name="important"
-        value="{{ 'none' if entry.important is true else 'true' }}"
-        hx-post="{{ url_for('.entry_actions') }}"
-        hx-disabled-elt="this, next button"
-        class="btn btn-outline-secondary btn-sm {% if entry.important is true %} active{% endif %}"
-        {% if entry.important is true -%}
-        aria-pressed="true"
-        {% endif -%}
-        style="width: 2rem">
-
-        <i class="label bi {{
-          'bi-star-fill' if entry.important is true else 'bi-star'
-        }}"></i>
-
-        <div class="spinner-border htmx-indicator" role="status">
-          <span class="visually-hidden">loading...</span>
-        </div>
-
-      </button>
-
-      <button type="submit" name="important"
-        value="{{ 'none' if entry.important is false else 'false' }}"
-        hx-post="{{ url_for('.entry_actions') }}"
-        hx-disabled-elt="this, previous button"
-        class="btn btn-outline-secondary btn-sm {% if entry.important is false %} active{% endif %}"
-        {% if entry.important is false -%}
-        aria-pressed="true"
-        {% endif -%}
-        style="width: 2rem">
-
-        <i class="label bi {{
-          'bi-arrow-down-circle-fill' if entry.important is false else 'bi-arrow-down'
-        }}"></i>
-
-        <div class="spinner-border htmx-indicator" role="status">
-          <span class="visually-hidden">loading...</span>
-        </div>
-
-      </button>
-    </div>
+    {{ macros.entry_read_button(entry) }}
+    {{ macros.entry_important_button(entry) }}
 
     {% for enclosure in entry.enclosures[:1] -%}
     {%- set links = additional_enclosure_links(enclosure, entry) | list -%}
