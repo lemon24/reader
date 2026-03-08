@@ -239,7 +239,7 @@
 {% endfor %}
 
 
-<nav aria-label="page navigation">
+<nav aria-label="page navigation" class="d-flex gap-2">
   {% set after = 'after' in request.args %}
   {% set more = request.args.sort != 'random' and last.entry and last.index == limit %}
 
@@ -266,6 +266,8 @@
 
   </ul>
   {% endif %}
+
+  {{ macros.pagination_top() }}
 
 </nav>
 

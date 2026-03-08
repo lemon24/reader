@@ -164,3 +164,14 @@
 {%- else -%} file-earmark
 {%- endif -%}
 {%- endmacro -%}
+
+
+{% macro pagination_top() %}
+<ul class="pagination">
+  <li class="page-item">
+    <a href="#" class="page-link">
+      top<span aria-hidden="true" class="ms-2 small">⌃</span>
+    </a>
+  </li>
+</ul>
+{%- endmacro %}

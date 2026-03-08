@@ -166,13 +166,18 @@ class="mt-3 mb-4">
 </li>
 {% endfor %}
 </ul>
-{% endif %}
 
 </div>
 </div>
+{% endif %}
 
 
 {# TODO: links #}
+
+
+<nav aria-label="page navigation">
+  {{ macros.pagination_top() }}
+</nav>
 
 
 {% endblock %}
