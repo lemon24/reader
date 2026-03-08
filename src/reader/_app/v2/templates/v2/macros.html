@@ -79,9 +79,12 @@
   hx-post="{{ post_url }}"
   hx-disabled-elt="{{ disabled_element }}"
   class="btn btn-outline-secondary btn-sm{% if state %} active{% endif %}"
-  {% if state -%}
+  {%- if icon %}
+  title="{{ label }}"
+  {%- endif %}
+  {%- if state %}
   aria-pressed="true"
-  {% endif -%}
+  {%- endif %}
   {{ kwargs | xmlattr(false) }}
 >
   <span class="label">
