@@ -87,20 +87,20 @@ def entry_actions():
 
     if 'read' in request.form:
         match request.form['read']:
-            case 'true':
+            case 'read':
                 reader.set_entry_read(entry, True)
-            case 'false':
+            case 'unread':
                 reader.set_entry_read(entry, False)
             case _:
                 abort(422)
 
     if 'important' in request.form:
         match request.form['important']:
-            case 'true':
+            case 'important':
                 reader.set_entry_important(entry, True)
-            case 'false':
+            case 'unimportant':
                 reader.set_entry_important(entry, False)
-            case 'none':
+            case 'clear':
                 reader.set_entry_important(entry, None)
             case _:
                 abort(422)
@@ -152,9 +152,9 @@ def feed_actions():
 
     if 'enabled' in request.form:
         match request.form['enabled']:
-            case 'true':
+            case 'enable':
                 reader.enable_feed_updates(feed)
-            case 'false':
+            case 'disable':
                 reader.disable_feed_updates(feed)
             case _:
                 abort(422)

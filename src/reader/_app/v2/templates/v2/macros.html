@@ -110,7 +110,7 @@
   feed.updates_enabled,
   url_for('.feed_actions'),
   'enabled',
-  (['false', 'disable'], ['true', 'enable']),
+  (['disable', 'disable'], ['enable', 'enable']),
   style="width: 5rem",
 ) }}
 {%- endif %}
@@ -122,8 +122,8 @@
   entry.read,
   url_for('.entry_actions'),
   'read',
-  (['false', 'mark as unread', 'check-circle-fill'],
-    ['true', 'mark as read', 'check-lg']),
+  (['unread', 'mark as unread', 'check-circle-fill'],
+    ['read', 'mark as read', 'check-lg']),
   style="width: 4rem",
 ) }}
 {%- endmacro %}
@@ -135,8 +135,8 @@
   entry.important is true,
   url_for('.entry_actions'),
   'important',
-  (['none', 'clear important', 'star-fill'],
-    ['true', 'mark as important', 'star']),
+  (['clear', 'clear important', 'star-fill'],
+    ['important', 'mark as important', 'star']),
   disabled_element="this, next button",
   style="width: 2rem",
 ) }}
@@ -144,8 +144,8 @@
   entry.important is false,
   url_for('.entry_actions'),
   'important',
-  (['none', "clear don't care", 'arrow-down-circle-fill'],
-    ['false', "don't care", 'arrow-down']),
+  (['clear', "clear don't care", 'arrow-down-circle-fill'],
+    ['unimportant', "don't care", 'arrow-down']),
   disabled_element="this, previous button",
   style="width: 2rem",
 ) }}
