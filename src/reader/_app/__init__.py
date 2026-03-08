@@ -28,6 +28,7 @@ from flask import Response
 from flask import stream_with_context
 from flask import url_for
 from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import generate_csrf
 
 import reader
 from reader import Content
@@ -112,6 +113,11 @@ def stream_template(template_name_or_list, **kwargs):
     # Assumes the template will call get_flashed_messages() at some point.
     # https://github.com/lemon24/reader/issues/81
     get_flashed_messages()
+
+    # Ensure the CSRF session token is set.
+    # Assumes the template will generate a token at some at some point.
+    # https://github.com/pallets-eco/flask-wtf/issues/668
+    generate_csrf()
 
     template = current_app.jinja_env.get_template(template_name_or_list)
 
