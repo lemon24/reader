@@ -40,6 +40,7 @@
   {% set next = url_for('.feeds', **request.args) + '#feed-' + (next_index|string) %}
   <form action="{{ url_for('.feed_actions') }}" method="post"
     hx-target="closest form"
+    hx-target-419="this"
 
     class="my-2">
     {#- TODO: aria stuff #}

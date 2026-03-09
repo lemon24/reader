@@ -8,8 +8,10 @@ from flask import current_app
 from flask import flash
 from flask import redirect
 from flask import render_template
+from flask import render_template_string
 from flask import request
 from flask import url_for
+from flask_wtf.csrf import CSRFError
 from jinja2_fragments.flask import render_block
 from werkzeug.exceptions import NotFound
 
@@ -45,6 +47,23 @@ def handle_feed_not_found(e):
 @blueprint.errorhandler(EntryNotFoundError)
 def handle_entry_not_found(e):
     return NotFound()
+
+
+@blueprint.errorhandler(CSRFError)
+def handle_csrf_error(error):
+    if request.headers.get('hx-request') == 'true':
+        return render_template_string(CSRF_ERROR_TEMPLATE, error=error), 419
+    return error
+
+
+CSRF_ERROR_TEMPLATE = """\
+<ul class="list-unstyled">
+  <li class="alert alert-danger">
+    {{ error.description }}
+    <a href="javascript:document.location.reload()">Refresh</a> and try again.
+  </li>
+</ul>
+"""
 
 
 @blueprint.route('/')

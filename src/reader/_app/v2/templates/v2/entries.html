@@ -57,6 +57,7 @@
 
 <form action="{{ url_for('.feed_actions', from='entries') }}" method="post"
   hx-target="closest form"
+  hx-target-419="this"
 
   class="mt-2 mb-4">
   {#- TODO: aria stuff #}
@@ -127,6 +128,7 @@
   {% set next = url_for('.entries', **request.args) + '#entry-' + (next_index|string) %}
   <form action="{{ url_for('.entry_actions') }}" method="post"
     hx-target="closest form"
+    hx-target-419="this"
 
     class="my-2">
     {#- TODO: aria stuff #}
