@@ -59,14 +59,25 @@ Please use `GitHub Issues`_ to discuss non-trivial changes:
 * For trivial changes (e.g. typos), you can open a PR directly.
 
 .. _help wanted: https://github.com/lemon24/reader/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22
+.. _good first issue: https://github.com/lemon24/reader/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22
 .. _open issues: https://github.com/lemon24/reader/issues
 
 
-When submitting a pull request (details in the following sections):
+When working on a pull request:
 
-* Use `pre-commit`_ to run formatters and linters.
-* Add tests for your change.
+* Consider whether the change is necessary.
+* Make minimal, focused changes.
+* Follow existing coding style and patterns.
+* Write tests that exercise the change.
 * Update relevant documentation and docstrings.
+
+Before submitting the PR,
+make sure that
+:ref:`tests <tests>`,
+:ref:`coverage <test-coverage>`,
+:ref:`type checking <type-checking>`,
+and :ref:`linters <linters>`
+pass.
 
 
 .. admonition:: run.sh
@@ -133,13 +144,15 @@ Set up the repository
 .. _Clone: https://docs.github.com/en/github/getting-started-with-github/fork-a-repo#step-2-create-a-local-clone-of-your-fork
 
 
+.. _dev-deps:
+
 Install development dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. admonition:: run.sh
 
   ``./run.sh install``
-    Install development dependencies.
+    Install development dependencies and pre-commit hooks.
 
 Install *reader* in editable mode,
 with all :ref:`extras <optional dependencies>` and development dependencies:
@@ -148,8 +161,9 @@ with all :ref:`extras <optional dependencies>` and development dependencies:
 
     $ pip install -e '.[all]' --group dev
 
-Install `pre-commit`_ hooks
-(so `Black`_, `Flake8`_ etc. are run automatically before each commit):
+Install `pre-commit`_ hooks,
+so that :ref:`linters <linters>`
+run automatically before each commit:
 
 .. code-block:: console
 
@@ -176,7 +190,7 @@ Using your favorite editor, make your changes, `committing as you go`_.
 
 Include tests that cover any code changes you make.
 Make sure the test fails without your patch.
-Run the tests as described below.
+Run the tests and type checking as described below.
 
 Update any relevant documentation pages and docstrings;
 see :ref:`documentation` for details.
@@ -187,6 +201,9 @@ a maintainer will write one if you're not sure how to.
 .. _committing as you go: https://afraid-to-commit.readthedocs.io/en/latest/git/commandlinegit.html#commit-your-changes
 .. _inline changelogs: https://www.sphinx-doc.org/en/master/usage/restructuredtext/directives.html#describing-changes-between-versions
 
+
+
+.. _tests:
 
 Run tests
 ~~~~~~~~~
@@ -208,6 +225,8 @@ Run the tests with `pytest`_ (including slow tests):
 
 .. _pytest: https://docs.pytest.org/
 
+
+.. _test-coverage:
 
 Run test coverage
 ~~~~~~~~~~~~~~~~~
@@ -241,6 +260,8 @@ do not have coverage requirements.
 .. _coverage: https://coverage.readthedocs.io
 
 
+.. _type-checking:
+
 Run type checking
 ~~~~~~~~~~~~~~~~~
 
@@ -266,6 +287,15 @@ do not have type checking requirements.
 
 
 .. _mypy: https://mypy.readthedocs.io/en/stable/
+
+
+.. _linters:
+
+Run formatters and linters
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`pre-commit`_ will run `Black`_, `Flake8`_ etc.
+automatically before each commit.
 
 
 Build the documentation
