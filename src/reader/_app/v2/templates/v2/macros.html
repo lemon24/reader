@@ -153,6 +153,44 @@
 {%- endmacro %}
 
 
+{% macro change_feed_title_button(feed) -%}
+<a href="{{ url_for('.change_feed_title', feed=feed.url) }}"
+  class="btn btn-outline-secondary"
+  role="button"
+>change title</a>
+{%- endmacro %}
+
+{% macro delete_feed_button(feed) -%}
+<a href="{{ url_for('.delete_feed', feed=feed.url) }}"
+  class="btn btn-outline-danger"
+  role="button"
+>delete</a>
+{%- endmacro %}
+
+{% macro feed_url_button(feed) -%}
+{%- if not feed.url.startswith('reader:') %}
+<a href="{{ feed.url }}"
+  target="_blank"
+  class="btn text-secondary"
+  title="feed source"
+>
+  <i class="bi bi-rss"></i>
+</a>
+{% endif -%}
+{%- endmacro %}
+
+{% macro feed_error_button(feed) -%}
+{%- if feed.last_exception and feed.updates_enabled %}
+<a href="{{ url_for('.entries', feed=feed.url) }}"
+  class="btn text-danger"
+  title="update error"
+>
+  <i class="bi bi-slash-circle"></i>
+</a>
+{% endif -%}
+{%- endmacro %}
+
+
 {%- macro feed_updated(feed) %}
 {%- set updated = feed.updated or feed.last_updated -%}
 {#- TODO: updated should be a tooltip #}

@@ -48,28 +48,12 @@
 
     {{ macros.csrf_token_field() }}
     {{ macros.feed_enabled_button(feed) }}
-
-    <a href="{{ url_for('.change_feed_title', feed=feed.url) }}"
-      class="btn btn-outline-secondary"
-      role="button"
-    >change title</a>
-
-    <a href="{{ url_for('.delete_feed', feed=feed.url) }}"
-      class="btn btn-outline-danger"
-      role="button"
-    >delete</a>
+    {{ macros.change_feed_title_button(feed) }}
+    {{ macros.delete_feed_button(feed) }}
 
     <div class="icons">
-    {%- if not feed.url.startswith('reader:') -%}
-    <a class="btn text-secondary" href="{{ feed.url }}" target="_blank">
-      <i class="bi bi-rss"></i>
-    </a>
-    {%- endif -%}
-    {%- if feed.last_exception and feed.updates_enabled -%}
-    <a href="{{ url_for('.entries', feed=feed.url) }}" class="btn text-danger" title="update error" >
-      <i class="bi bi-slash-circle"></i>
-    </a>
-    {%- endif -%}
+    {{ macros.feed_url_button(feed) }}
+    {{ macros.feed_error_button(feed) }}
     </div>
 
     <input type="hidden" name="feed-url" value="{{ feed.url }}">
