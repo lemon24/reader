@@ -31,7 +31,7 @@
 <form action="{{ url_for('.entry_actions') }}" method="post"
 hx-target="closest .actions"
 hx-target-419="this"
-class="mt-3 mb-4">
+class="actions mt-3 mb-4">
 
 {#- TODO: aria stuff #}
 {#- TODO: use https://getbootstrap.com/docs/5.3/forms/layout/#inline-forms for spacing -#}
@@ -48,7 +48,7 @@ class="mt-3 mb-4">
 
 
 {% if summary %}
-<a class="btn text-secondary btn-sm" role="button"
+<a class="btn text-secondary" role="button"
   title="summary" href="#summary"
   data-bs-toggle="collapse" aria-expanded="false" aria-controls="summary">
   <i class="bi bi-card-text }}"></i>
@@ -57,7 +57,7 @@ class="mt-3 mb-4">
 
 
 {% if entry.enclosures %}
-<a class="btn text-secondary btn-sm" role="button"
+<a class="btn text-secondary" role="button"
   title="enclosures" href="#enclosures">
   <i class="bi bi-{{ macros.bs_file_icon(entry.enclosures[0].type) }}"></i>
 </a>

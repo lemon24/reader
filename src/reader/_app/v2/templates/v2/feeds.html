@@ -42,7 +42,7 @@
     hx-target="closest form"
     hx-target-419="this"
 
-    class="my-2">
+    class="actions my-2">
     {#- TODO: aria stuff #}
     {% block feed_actions scoped %}
 
@@ -50,12 +50,12 @@
     {{ macros.feed_enabled_button(feed) }}
 
     <a href="{{ url_for('.change_feed_title', feed=feed.url) }}"
-      class="btn btn-outline-secondary btn-sm"
+      class="btn btn-outline-secondary"
       role="button"
     >change title</a>
 
     <a href="{{ url_for('.delete_feed', feed=feed.url) }}"
-      class="btn btn-outline-danger btn-sm"
+      class="btn btn-outline-danger"
       role="button"
     >delete</a>
 

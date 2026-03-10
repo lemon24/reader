@@ -78,7 +78,7 @@
   value="{{ value }}"
   hx-post="{{ post_url }}"
   hx-disabled-elt="{{ disabled_element }}"
-  class="btn btn-outline-secondary btn-sm{% if state %} active{% endif %}"
+  class="btn btn-outline-secondary{% if state %} active{% endif %}"
   {%- if icon %}
   title="{{ label }}"
   {%- endif %}

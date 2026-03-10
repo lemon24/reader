@@ -59,7 +59,7 @@
   hx-target="closest form"
   hx-target-419="this"
 
-  class="mt-2 mb-4">
+  class="actions mt-2 mb-4">
   {#- TODO: aria stuff #}
   {% block feed_actions scoped %}
 
@@ -67,12 +67,12 @@
   {{ macros.feed_enabled_button(feed) }}
 
   <a href="{{ url_for('.change_feed_title', feed=feed.url) }}"
-    class="btn btn-outline-secondary btn-sm"
+    class="btn btn-outline-secondary"
     role="button"
   >change title</a>
 
   <a href="{{ url_for('.delete_feed', feed=feed.url) }}"
-    class="btn btn-outline-danger btn-sm"
+    class="btn btn-outline-danger"
     role="button"
   >delete</a>
 
@@ -130,7 +130,7 @@
     hx-target="closest form"
     hx-target-419="this"
 
-    class="my-2">
+    class="actions my-2">
     {#- TODO: aria stuff #}
     {% block entry_actions scoped %}
 
@@ -142,7 +142,7 @@
     {%- set links = additional_enclosure_links(enclosure, entry) | list -%}
     {%- set _ = links.append(('', enclosure.href)) -%}
     {%- set link = links[0][1] -%}
-    <a class="btn text-secondary btn-sm" role="button" target="_blank"
+    <a class="btn text-secondary" role="button" target="_blank"
       title="{{ enclosure.type }}" href="{{ link }}">
       <i class="bi bi-{{ macros.bs_file_icon(enclosure.type) }}"></i>
     </a>

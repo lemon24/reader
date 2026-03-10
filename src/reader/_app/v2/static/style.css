@@ -30,3 +30,22 @@
   width: var(--bs-btn-font-size);
   height: var(--bs-btn-font-size);
 }
+
+/* make .actions .btn look like .btn-sm but with big icons */
+.actions .btn {
+  --bs-btn-border-radius: var(--bs-border-radius-sm);
+}
+.actions .btn:not(:has(.bi)) {
+  /* .btn-sm */
+  --bs-btn-padding-y: 0.25rem;
+  --bs-btn-padding-x: 0.5rem;
+  --bs-btn-font-size: 0.875rem;
+  --bs-btn-border-radius: var(--bs-border-radius-sm);
+}
+.actions .btn:has(.bi) {
+  /* .btn-sm padding minus .btn font size */
+  --bs-btn-padding-y: 0.125rem;
+  --bs-btn-padding-x: 0.375rem;
+  /* .btn font size */
+  --bs-btn-font-size: 1rem;
+}
