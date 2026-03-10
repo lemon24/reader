@@ -526,10 +526,10 @@ def entry_filter(
 
     context = {}
 
-    if feed_url:
+    if feed_url is not None:
         add("entries.feed = :feed_url")
         context['feed_url'] = feed_url
-        if entry_id:
+        if entry_id is not None:
             add("entries.id = :entry_id")
             context['entry_id'] = entry_id
 
