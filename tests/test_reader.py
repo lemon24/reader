@@ -271,6 +271,44 @@ def test_add_remove_get_feeds(reader, parser, feed_arg):
         reader.delete_feed(feed_arg(one))
 
 
+def test_get_feed_empty_string_url(reader, parser):
+    """get_feed('') must raise FeedNotFoundError, not match all feeds.
+
+    Regression test for https://github.com/lemon24/reader/issues/392 —
+    feed_filter() used a truthiness check (``if url:``) instead of an
+    explicit ``is not None`` check, causing an empty-string URL to be
+    silently ignored and the first feed in the DB to be returned.
+    """
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.add_feed(feed.url)
+
+    with pytest.raises(FeedNotFoundError) as excinfo:
+        reader.get_feed('')
+    assert excinfo.value.url == ''
+    assert 'no such feed' in excinfo.value.message
+
+
+def test_get_entry_empty_string_ids(reader, parser):
+    """get_entry(('', '')) must raise EntryNotFoundError, not match any entry.
+
+    Regression test for https://github.com/lemon24/reader/issues/392 —
+    entry_filter() used truthiness checks for feed_url and entry_id,
+    causing empty-string IDs to be silently ignored.
+    """
+    feed = parser.feed(1, datetime(2010, 1, 1))
+    parser.entry(1, 1, datetime(2010, 1, 1))
+    reader._now = lambda: datetime(2010, 1, 2)
+    reader.add_feed(feed.url)
+    reader._now = lambda: datetime(2010, 1, 3)
+    reader.update_feeds()
+
+    with pytest.raises(EntryNotFoundError) as excinfo:
+        reader.get_entry(('', ''))
+    assert (excinfo.value.feed_url, excinfo.value.id) == ('', '')
+    assert 'no such entry' in excinfo.value.message
+
+
 def test_get_feeds_sort_error(reader):
     with pytest.raises(ValueError):
         # raises before the iterable is consumed
