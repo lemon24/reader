@@ -90,10 +90,11 @@
 {% endif %}
 
 
-<article class="mb-4">
+<article class="entry-content mb-4">
 {% if content %}
 {% if not content.is_html -%}
 <pre class='plaintext'>{{ content.value }}</pre>
+{# TODO: toggle button for pre-wrap #}
 {%- else -%}
 {{ content.value | safe }}
 {%- endif %}

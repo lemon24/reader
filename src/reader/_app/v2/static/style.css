@@ -63,3 +63,8 @@
 .actions *:has(+ .icons:not(:empty)) {
   margin-right: .25rem;
 }
+
+.entry-content img {
+  max-width: 100%;
+  height: auto;
+}
