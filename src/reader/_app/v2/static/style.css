@@ -51,13 +51,13 @@
 }
 
 /* .actions spacing */
-.actions {
-  /* .d-flex .gap-1 */
+.actions, .actions .icons {
+  /* .d-flex .flex-wrap .gap-1 */
   display: flex;
+  flex-wrap: wrap;
   gap: .25rem;
 }
 .actions .icons {
-  display: flex;
   gap: 0;
 }
 .actions .icons:not(:empty) {
