@@ -166,7 +166,7 @@
     {% if after %}
     <li class="page-item">
       <a class="page-link" href="javascript:history.back()">
-        <span aria-hidden="true" class="me-2">&lsaquo;</span>previous
+        <i class="bi bi-chevron-left me-2 small"></i>previous
       </a>
     </li>
     {% endif %}
@@ -176,7 +176,7 @@
       {% set args = dict(request.args) %}
       {% do args.update(after='\0'.join(last.entry.resource_id)) %}
       <a class="page-link" href="{{ url_for('.entries',**args) }}">
-        next<span aria-hidden="true" class="ms-2">&rsaquo;</span>
+        next<i class="bi bi-chevron-right ms-2 small"></i>
       </a>
     </li>
     {% endif %}
