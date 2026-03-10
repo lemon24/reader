@@ -49,3 +49,17 @@
   /* .btn font size */
   --bs-btn-font-size: 1rem;
 }
+
+/* .actions spacing */
+.actions {
+  /* .d-flex .gap-1 */
+  display: flex;
+  gap: .25rem;
+}
+.actions .icons {
+  display: flex;
+  gap: 0;
+}
+.actions .icons:not(:empty) {
+  margin-left: .25rem;
+}

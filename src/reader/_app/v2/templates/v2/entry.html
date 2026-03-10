@@ -34,27 +34,27 @@ hx-target-419="this"
 class="actions mt-3 mb-4">
 
 {#- TODO: aria stuff #}
-{#- TODO: use https://getbootstrap.com/docs/5.3/forms/layout/#inline-forms for spacing -#}
 
+<div class="actions">
 {% block entry_actions scoped %}
-<div class="d-inline actions">
 {{ macros.csrf_token_field() }}
 {{ macros.entry_read_button(entry) }}
 {{ macros.entry_important_button(entry) }}
 <input type="hidden" name="feed-url" value="{{ entry.feed_url }}">
 <input type="hidden" name="entry-id" value="{{ entry.id }}">
-</div>
 {% endblock %}
+</div>
 
+
+<div class="icons">
 
 {% if summary %}
 <a class="btn text-secondary" role="button"
   title="summary" href="#summary"
   data-bs-toggle="collapse" aria-expanded="false" aria-controls="summary">
-  <i class="bi bi-card-text }}"></i>
+  <i class="bi bi-card-text"></i>
 </a>
 {% endif %}
-
 
 {% if entry.enclosures %}
 <a class="btn text-secondary" role="button"
@@ -62,6 +62,8 @@ class="actions mt-3 mb-4">
   <i class="bi bi-{{ macros.bs_file_icon(entry.enclosures[0].type) }}"></i>
 </a>
 {% endif %}
+
+</div>
 
 
 </form>
