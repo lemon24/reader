@@ -18,64 +18,60 @@
 {{ macros.flashed_messages() }}
 
 
-{% if not feed %}
-<h1>Entries</h1>
-{% else %}
+{%- if not feed %}
+  <h1>Entries</h1>
+{%- else %}
 
-<ul class="list-inline text-secondary small mb-2">
-  {{ macros.feed_updated(feed) }}
-  {{ macros.feed_author(feed) }}
-</ul>
+  <ul class="list-inline text-secondary small mb-2">
+    {{ macros.feed_updated(feed) }}
+    {{ macros.feed_author(feed) }}
+  </ul>
 
-<h1 class="mb-2">
-  {{ macros.title_href(feed.resolved_title or feed.url, external=feed.link) }}
-</h1>
+  <h1 class="mb-2">
+    {{ macros.title_href(feed.resolved_title or feed.url, external=feed.link) }}
+  </h1>
 
-{{ macros.subtitle(feed.subtitle) }}
+  {{ macros.subtitle(feed.subtitle) }}
 
-
-{%- if feed and not feed.url.startswith('reader:') %}
-<ul class="list-unstyled mt-3">
-
-  {%- if not feed.last_updated and not feed.last_exception %}
-    <li class="alert alert-secondary">
-      Feed not updated yet. <a href="">Refresh.</a>
-    </li>
+  {%- if feed and not feed.url.startswith('reader:') %}
+    <ul class="list-unstyled mt-3">
+      {%- if not feed.last_updated and not feed.last_exception %}
+        <li class="alert alert-secondary">
+          Feed not updated yet. <a href="">Refresh.</a>
+        </li>
+      {%- endif %}
+      {%- if feed.last_exception %}
+        <li class="alert alert-danger">
+          <strong>Update error</strong>
+          {%- if not feed.last_updated %} (first update){% endif %}:
+          {{ feed.last_exception.value_str }}
+        </li>
+      {%- endif %}
+    </ul>
   {%- endif %}
 
-  {%- if feed.last_exception %}
-    <li class="alert alert-danger">
-      <strong>Update error</strong>
-      {%- if not feed.last_updated %} (first update){% endif %}:
-      {{ feed.last_exception.value_str }}
-    </li>
-  {%- endif %}
+  <form
+    action="{{ url_for('.feed_actions', from='entries') }}"
+    method="post"
+    hx-target="closest form"
+    hx-target-419="this"
+    class="actions mt-2 mb-4"
+  >
+    {%- block feed_actions scoped %}
 
-</ul>
-{%- endif %}
+    {{ macros.csrf_token_field() }}
+    <input type="hidden" name="feed-url" value="{{ feed.url }}">
 
+    {{ macros.feed_enabled_button(feed) }}
+    {{ macros.change_feed_title_button(feed) }}
+    {{ macros.delete_feed_button(feed) }}
 
-<form action="{{ url_for('.feed_actions', from='entries') }}" method="post"
-  hx-target="closest form"
-  hx-target-419="this"
+    <div class="icons">
+      {{ macros.feed_url_button(feed) }}
+    </div>
 
-  class="actions mt-2 mb-4">
-  {% block feed_actions scoped %}
-
-  {{ macros.csrf_token_field() }}
-  {{ macros.feed_enabled_button(feed) }}
-  {{ macros.change_feed_title_button(feed) }}
-  {{ macros.delete_feed_button(feed) }}
-
-  <div class="icons">
-  {{ macros.feed_url_button(feed) }}
-  </div>
-
-  <input type="hidden" name="feed-url" value="{{ feed.url }}">
-
-{% endblock %}
-</form>
-
+    {%- endblock %}
+  </form>
 
 {% endif %}
 
@@ -91,10 +87,12 @@
 
 {% set last = namespace() %}
 {% for entry in entries %}
+
 {%- if loop.last -%}
   {% set last.entry = entry -%}
   {% set last.index = loop.index -%}
 {%- endif -%}
+
 <div class="mb-4" id="entry-{{ loop.index }}">
 
   <ul class="list-inline text-secondary small mb-1">
@@ -103,42 +101,52 @@
   </ul>
 
   <h2 class="h5 mb-1" style="font-size: 1.125rem">
-    {{ macros.title_href(entry.title or 'untitled', url_for('.entry', feed=entry.feed.url, entry=entry.id), entry.link) }}
+    {{ macros.title_href(
+      entry.title or 'untitled',
+      url_for('.entry', feed=entry.feed.url, entry=entry.id),
+      entry.link
+    ) }}
   </h2>
 
   {{ macros.subtitle(entry.get_content(prefer_summary=True).value) }}
 
   {% set next_index = loop.index if not loop.last else loop.index - 1 -%}
   {% set next = url_for('.entries', **request.args) + '#entry-' + (next_index|string) %}
-  <form action="{{ url_for('.entry_actions') }}" method="post"
+  <form
+    action="{{ url_for('.entry_actions') }}"
+    method="post"
     hx-target="closest form"
     hx-target-419="this"
-
-    class="actions my-2">
-    {#- TODO: aria stuff #}
+    class="actions my-2"
+  >
     {% block entry_actions scoped %}
 
     {{ macros.csrf_token_field() }}
-    {{ macros.entry_read_button(entry) }}
-    {{ macros.entry_important_button(entry) }}
-
-    <div class="icons">
-    {% for enclosure in entry.enclosures[:1] -%}
-    {%- set links = additional_enclosure_links(enclosure, entry) | list -%}
-    {%- set _ = links.append(('', enclosure.href)) -%}
-    {%- set link = links[0][1] -%}
-    <a class="btn text-secondary" role="button" target="_blank"
-      title="{{ enclosure.type }}" href="{{ link }}">
-      <i class="bi bi-{{ macros.bs_file_icon(enclosure.type) }}"></i>
-    </a>
-    {%- endfor %}
-    </div>
-
     <input type="hidden" name="feed-url" value="{{ entry.feed_url }}">
     <input type="hidden" name="entry-id" value="{{ entry.id }}">
     <input type="hidden" name="next" value="{{ next }}">
 
-  {% endblock %}
+    {{ macros.entry_read_button(entry) }}
+    {{ macros.entry_important_button(entry) }}
+
+    <div class="icons">
+      {% for enclosure in entry.enclosures[:1] -%}
+        {%- set links = additional_enclosure_links(enclosure, entry) | list -%}
+        {%- set _ = links.append(('', enclosure.href)) -%}
+        {%- set link = links[0][1] -%}
+        <a
+          href="{{ link }}"
+          target="_blank"
+          title="download {{ enclosure.type }}"
+          class="btn text-secondary"
+          role="button"
+        >
+          <i class="bi bi-{{ macros.bs_file_icon(enclosure.type) }}"></i>
+        </a>
+      {%- endfor %}
+    </div>
+
+    {% endblock %}
   </form>
 
 </div>

@@ -17,7 +17,6 @@
   {{ macros.entry_author(entry) }}
 </ul>
 
-
 <h1 class="mb-1">
   {{ macros.title_href(entry.title or 'untitled', external=entry.link) }}
 </h1>
@@ -27,43 +26,54 @@
 {% set summary = entry.get_content(prefer_summary=True) %}
 {% set summary = summary if summary != content and not (content.value | striptags).startswith(summary.value | striptags) else none %}
 
+<form
+  action="{{ url_for('.entry_actions') }}"
+  method="post"
+  hx-target="closest .actions"
+  hx-target-419="this"
+  class="actions mt-3 mb-4"
+>
+  <div class="actions">
+    {% block entry_actions scoped %}
 
-<form action="{{ url_for('.entry_actions') }}" method="post"
-hx-target="closest .actions"
-hx-target-419="this"
-class="actions mt-3 mb-4">
+    {{ macros.csrf_token_field() }}
+    <input type="hidden" name="feed-url" value="{{ entry.feed_url }}">
+    <input type="hidden" name="entry-id" value="{{ entry.id }}">
 
-{#- TODO: aria stuff #}
+    {{ macros.entry_read_button(entry) }}
+    {{ macros.entry_important_button(entry) }}
 
-<div class="actions">
-{% block entry_actions scoped %}
-{{ macros.csrf_token_field() }}
-{{ macros.entry_read_button(entry) }}
-{{ macros.entry_important_button(entry) }}
-<input type="hidden" name="feed-url" value="{{ entry.feed_url }}">
-<input type="hidden" name="entry-id" value="{{ entry.id }}">
-{% endblock %}
-</div>
+    {% endblock %}
+  </div>
 
+  <div class="icons">
 
-<div class="icons">
+  {%- if summary %}
+    <a
+      href="#summary"
+      title="summary"
+      class="btn text-secondary"
+      role="button"
+      data-bs-toggle="collapse"
+      aria-expanded="false"
+      aria-controls="summary"
+    >
+      <i class="bi bi-card-text"></i>
+    </a>
+  {%- endif %}
 
-{% if summary %}
-<a class="btn text-secondary" role="button"
-  title="summary" href="#summary"
-  data-bs-toggle="collapse" aria-expanded="false" aria-controls="summary">
-  <i class="bi bi-card-text"></i>
-</a>
-{% endif %}
+  {%- if entry.enclosures %}
+    <a
+      href="#enclosures"
+      title="enclosures"
+      class="btn text-secondary"
+      role="button"
+    >
+      <i class="bi bi-{{ macros.bs_file_icon(entry.enclosures[0].type) }}"></i>
+    </a>
+  {%- endif %}
 
-{% if entry.enclosures %}
-<a class="btn text-secondary" role="button"
-  title="enclosures" href="#enclosures">
-  <i class="bi bi-{{ macros.bs_file_icon(entry.enclosures[0].type) }}"></i>
-</a>
-{% endif %}
-
-</div>
+  </div>
 
 
 </form>
