@@ -60,6 +60,8 @@
 .actions .icons {
   gap: 0;
 }
-.actions .icons:not(:empty) {
-  margin-left: .25rem;
+.actions .btn:has(+ .icons:not(:empty)),
+.actions .btn-group:has(+ .icons:not(:empty)),
+.actions .actions:has(+ .icons:not(:empty)) {
+  margin-right: .25rem;
 }
