@@ -4,7 +4,7 @@ import pytest
 import requests
 import wsgiadapter
 
-from reader._app import create_app
+from reader._app.legacy import create_app
 from reader._config import make_reader_config
 from reader._config import make_reader_from_config
 from utils import utc_datetime as datetime

@@ -1,0 +1,188 @@
+{% extends "layout.html" %}
+
+{% import "macros.html" as macros %}
+
+{% macro make_title() %}
+    Feeds
+    {% if request.args.tags %}
+        tagged <b>{{ request.args.tags }}</b>
+    {% endif %}
+{% endmacro %}
+
+{% block page_title %}{{ make_title() | striptags }}{% endblock %}
+{% block main_title %}{{ make_title() }}{% endblock %}
+
+
+
+{% block body %}
+
+<div id="update-feeds">
+<ul class="controls">
+
+{{ macros.radio_links('broken', [
+    ('yes', none),
+    ('no', none),
+    (none, "don't care"),
+], none, '.feeds', 'broken') }}
+
+{{ macros.radio_links('updates-enabled', [
+    ('yes', none),
+    ('no', none),
+    (none, "don't care"),
+], none, '.feeds', 'updates enabled') }}
+
+{{ macros.radio_links('sort', [
+    ('title', none),
+    ('added', none),
+    ('important', none),
+    ('unread', none),
+    ('avg1m', '1m'),
+    ('avg3m', '3m'),
+    ('avg1y', '1y'),
+
+], 'title', '.feeds', 'sort by') }}
+
+
+{% set context = request.args.copy() %}
+{% set _ = context.pop('tags', none) %}
+
+{{ macros.text_input_button_get(
+    '.feeds', 'filter by tag', 'tags', '["one", "two"]', request.args.tags,
+    input_type='search',
+    context=context,
+    autocomplete=true,
+) }}
+
+
+{% if request.args.tags %}
+<li>
+    <a href="{{ url_for('.entries', tags=request.args.tags) }}">entries with these tags</a>
+{% endif %}
+
+
+{{ macros.toggle_link('counts', [
+    ('yes', 'counts'),
+    ('no', 'no counts'),
+], 'no', '.feeds') }}
+
+
+{% if error %}
+<li class="error"><b>error</b>: {{ error }}
+{% endif %}
+
+</ul>
+</div>
+
+
+
+{% if counts %}
+<p>
+    <abbr title='({{ counts.broken }} broken, {{ counts.total - counts.updates_enabled }} disabled)'>
+    {{ counts.total }} feeds
+    </abbr>
+
+    {# TODO: we can't have entries here because we can't filter entries by broken / updates_enabled #}
+
+{% endif %}
+
+
+
+{% for feed, feed_tags, entry_counts in feed_data %}
+<div id="feed-{{ loop.index }}" class="feed">
+
+<h2 title="{{ macros.feed_title_secondary(feed) }}">
+<a href="{{ url_for('.entries', feed=feed.url) }}">
+{{- macros.feed_title(feed) -}}
+</a>
+</h2>
+
+<ul class="controls">
+
+<li>
+    {% if feed.link %}<a href="{{ feed.link }}">site</a>{% else %}no site{% endif %}
+    <a href="{{ feed.url }}"
+        {%- if feed.version %} title="{{ feed.version }}"{% endif -%}
+    >feed</a>
+
+<li>
+    added <span title="{{ feed.added }}">{{ feed.added | humanize_naturaltime }}</span>;
+    {% if feed.updated %}
+        updated
+        <span title="{{ feed.updated }}">{{ feed.updated | humanize_naturaltime }}</span>
+    {% else %}
+        not updated
+    {% endif %}
+
+
+{% if entry_counts %}
+<li>
+    {{ macros.entry_counts(entry_counts) }}
+{% endif %}
+
+
+<li>
+    {% for tag in feed_tags %}
+    <small><a href="{{ url_for('.feeds', tags=[tag] | tojson) }}" class="tag">{{ tag }}</a></small>
+    {% endfor %}
+
+{% set next = url_for('.feeds', **request.args) + '#feed-' + ((loop.index if not loop.last else loop.index - 1) | string) %}
+{% set context = {'feed-url': feed.url, 'target': feed.url} %}
+
+{{ macros.confirm_button('.form_api', 'delete-feed', 'delete feed', loop.index, leave_disabled=true, next=next, context=context) }}
+
+{{ macros.text_input_button('.form_api', 'update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true, next=next, context=context, value=feed.user_title) }}
+
+{{ macros.text_input_button('.form_api', 'update-feed-tags', 'update feed tags', 'feed-tags', 'feed tags', leave_disabled=true, next=next, context=context, value=feed_tags | join(' ')) }}
+
+<li>
+<a href="{{ url_for('.metadata', feed=feed.url) }}">update metadata</a>
+
+{{ macros.text_confirm_button('.form_api', 'change-feed-url', 'change feed URL', 'new-feed-url', 'new URL', loop.index, leave_disabled=true, next=next, context=context) }}
+
+{{ macros.simple_button('.form_api', 'update-feed', 'update', leave_disabled=true, next=next, context={'feed-url': feed.url}) }}
+
+{% if feed.updates_enabled %}
+{{ macros.simple_button('.form_api', 'disable-feed-updates', 'disable updates', leave_disabled=true, next=next, context=context) }}
+{% else %}
+{{ macros.simple_button('.form_api', 'enable-feed-updates', 'enable updates', leave_disabled=true, next=next, context=context) }}
+{% endif %}
+
+{% for message in get_flashed_messages_by_prefix(
+    ('delete-feed', feed.url),
+    ('update-feed-title', feed.url),
+    ('update-feed-tags', feed.url),
+    ('change-feed-url', feed.url),
+    ('update-feed', feed.url),
+    ('disable-feed-updates', feed.url),
+    ('enable-feed-updates', feed.url),
+) %}
+<li class="error">{{ message }}
+{% endfor %}
+
+{% if feed.last_exception and feed.updates_enabled %}
+<li class="error" title="{{ feed.last_exception.traceback_str }}">
+<b>update error</b>:
+{% set type_parts = feed.last_exception.type_name.partition('builtins.') %}
+{{ feed.last_exception.type_name if type_parts[0] else type_parts[2] }}:
+{{ feed.last_exception.value_str }}
+{% endif %}
+
+</ul>
+
+
+</div>
+
+
+{% else %}
+
+{% if not error %}
+    {% if not request.args.tags %}
+        <p>no feeds</p>
+    {% else %}
+        <p>no results for this query</p>
+    {% endif %}
+{% endif %}
+
+{% endfor %}
+
+{% endblock %}

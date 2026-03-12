@@ -1,0 +1,275 @@
+
+
+ul.controls {
+    padding: 0;
+}
+
+ul.controls li {
+    list-style-type: none;
+    padding: 0;
+}
+
+ul.controls li.error {
+    color: red;
+}
+
+ul.controls .collapsible {
+    position: relative;
+}
+
+
+@media only screen and (min-width: 600px) {
+
+    body { }
+
+    ul.controls {
+        margin-left: -.5em;
+    }
+
+    ul.controls li {
+        display: inline-block;
+        padding: .5em;
+    }
+
+    ul.controls li:hover,
+    ul.controls li:focus-within {
+    }
+
+    ul.controls li.error{
+        display: block;
+    }
+
+    ul.controls li.simple-button {
+    }
+
+    ul.controls .simple-button button {
+    }
+
+    ul.controls .simple-button button:hover {
+    }
+
+    ul.controls .collapsible:hover,
+    ul.controls .collapsible:focus-within {
+    }
+
+    ul.controls .collapsible:hover .label,
+    ul.controls .collapsible:focus-within .label {
+    }
+
+    ul.controls .collapsible .label::after {
+        content: "↴";
+        font-size: .8em;
+    }
+
+    ul.controls .collapsible .hidden {
+        display: inline-block;
+        overflow: hidden;
+        width: 0;
+        margin: 0;
+        padding: 0;
+
+        position: absolute;
+        left: 0;
+        top: 2em;
+
+        text-align: right;
+        white-space: nowrap;
+
+        background: #fff;
+    }
+
+    ul.controls .collapsible:hover .hidden,
+    ul.controls .collapsible:focus-within .hidden {
+        width: auto;
+        padding: .8em;
+
+        outline: .1px solid silver;
+    }
+
+}
+
+
+@media only screen and (max-width: 600px) {
+
+    body { }
+
+    ul.controls li {
+        display: inline-block;
+        padding-right: .5em;
+    }
+
+    ul.controls .collapsible:hover,
+    ul.controls .collapsible:focus-within {
+    }
+
+    ul.controls .collapsible:hover .label,
+    ul.controls .collapsible:focus-within .label {
+        display: none;
+    }
+
+    ul.controls .collapsible .hidden {
+        display: none;
+    }
+
+    ul.controls .collapsible:hover .hidden,
+    ul.controls .collapsible:focus-within .hidden {
+        display: initial;
+    }
+
+    .metadata textarea {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+
+.feed, .entry {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+
+.entry article img {
+    max-width: 100%;
+    height: auto;
+}
+
+.entry article pre {
+    overflow-x: auto;
+}
+
+
+.entry article pre.plaintext {
+    white-space: pre-wrap;
+}
+
+
+.footer {
+    margin-top: 4rem;
+    opacity: 0.25;
+}
+
+
+.tag {
+    border-radius: 1em;
+    padding: .4em .6em .2em .6em;
+    border: .1px solid silver;
+}
+
+
+.tag-list dt {
+    clear: left;
+    float: left;
+    min-width: 8em;
+}
+.tag-list dd {
+    display: inline;
+    margin-left: 1em;
+}
+.tag-list dd::after {
+    content: "";
+    display: block;
+    height: 1em;
+}
+
+
+abbr[title]:hover::after,
+abbr[title]:focus::after {
+    content: " " attr(title);
+}
+abbr[title]:hover .ellipsis,
+abbr[title]:focus .ellipsis {
+    display: none;
+}
+
+
+.averages-block {
+    display: inline-block;
+    overflow: hidden;
+    background: black;
+    border-bottom: .5px solid black;
+    margin-right: 1px;
+
+}
+
+
+
+.tweet {
+    margin: 1em 0;
+}
+.tweet + .tweet {
+    border-top: .1em solid rgba(0, 0, 0, 0.2);
+    padding-top: .5em;
+}
+.tweet .tweet  {
+    border: .1em solid rgba(0, 0, 0, 0.2);
+    padding: .5em 1em;
+    margin-bottom: 1em;
+}
+.tweet .tweet p:last-child {
+    margin-bottom: 0;
+}
+.tweet .top-line {
+    font-size: smaller;
+}
+
+
+
+
+/* TODO: same for <strong>? */
+h1 b,
+h2 b,
+h3 b,
+h4 b,
+h5 b,
+h6 b,
+b b {
+    font-weight: normal;
+}
+
+
+/* BEGIN Skeleton
+
+Using a stripped down version of https://github.com/dhg/Skeleton/
+
+Only kept stuff related to text typography.
+
+Headers bumped down 3 steps (h1 has the size of h4, ...).
+
+Many vertical margins removed, to make stuff more condensed.
+
+*/
+
+html {
+    font-size: 62.5%;
+}
+body {
+    font-size: 1.5em;
+    line-height: 1.2;
+    font-family: sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    margin-bottom: 2rem;
+    font-weight: bold;
+}
+h1 { font-size: 2.4rem; line-height: 1.35; }
+h2 { font-size: 1.8rem; line-height: 1.5; }
+h3, h4, h5, h6 { font-size: 1.5rem; line-height: 1.6; }
+
+p {
+    margin-top: 0;
+}
+
+ol, ul {
+    margin-top: 0;
+}
+ul ul,
+ul ol,
+ol ol,
+ol ul {
+    font-size: 90%;
+}
+
+/* END Skeleton */

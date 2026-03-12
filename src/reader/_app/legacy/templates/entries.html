@@ -1,0 +1,392 @@
+{% extends "layout.html" %}
+
+{% import "macros.html" as macros %}
+
+
+{% macro make_title() %}
+    {% if read_only %}
+        Preview{% if feed %} for{% endif %}
+    {% elif not request.args.q %}
+        Entries{% if feed %} for{% endif %}
+    {% else %}
+        Search for <b>{{ request.args.q }}</b>{% if feed %} in{% endif %}
+    {% endif %}
+    {% if feed %}
+        <b title="{{ macros.feed_title_secondary(feed) }}">{{ macros.feed_title(feed) }}</b>
+    {% endif %}
+    {% if request.args.tags %}
+        in feeds tagged <b>{{ request.args.tags }}</b>
+    {% endif %}
+{% endmacro %}
+
+{% block page_title %}{{ make_title() | striptags }}{% endblock %}
+{% block main_title %}{{ make_title() }}{% endblock %}
+
+
+{% block body %}
+
+{% if feed and feed.subtitle %}
+{# 24 words * 4.7 letters/word = 112.8 letters #}
+<p><em>
+{{ macros.abbr_truncate(feed.subtitle, 113) }}
+</em></p>
+{% endif %}
+
+
+<div id="update-entries">
+<ul class="controls">
+
+
+{% if not read_only %}
+
+    {{ macros.radio_links('show', [
+        ('unread', none),
+        ('read', none),
+        ('all', none),
+    ], 'unread', '.entries') }}
+
+    {{ macros.radio_links('has-enclosures', [
+        ('yes', none),
+        ('no', none),
+        (none, 'all'),
+    ], none, '.entries', 'has enclosures') }}
+
+    {{ macros.radio_links('important', [
+        ('notfalse', 'yes or not set'),
+        ('istrue', 'yes'),
+        ('nottrue', 'no'),
+        ('any', 'all'),
+    ], 'notfalse', '.entries', 'important') }}
+
+
+    {% if not request.args.q %}
+        {{ macros.radio_links('sort', [
+            ('recent', none),
+            ('random', none),
+        ], 'recent', '.entries', 'sort by') }}
+    {% else %}
+        {{ macros.radio_links('sort', [
+            ('relevant', none),
+            ('recent', none),
+            ('random', none),
+        ], 'relevant', '.entries', 'sort by') }}
+    {% endif %}
+
+
+    {# TODO: maybe show it uncollapsed if we're on the search page #}
+    {# TODO: maybe have a different template for search #}
+
+    {% set context = request.args.copy() %}
+    {% set _ = context.pop('q', none) %}
+
+    {% if not request.args.q %}
+        {% set _ = context.pop('sort', none) %}
+    {% endif %}
+
+    {{ macros.text_input_button_get(
+        '.entries', 'search', 'q', 'search', request.args.q,
+        input_type='search',
+        context=context,
+        autocomplete=true,
+    ) }}
+
+
+    {% if not feed %}
+        {% set context = request.args.copy() %}
+        {% set _ = context.pop('tags', none) %}
+
+        {{ macros.text_input_button_get(
+            '.entries', 'filter by tag', 'tags', '["one", "two"]', request.args.tags,
+            input_type='search',
+            context=context,
+            autocomplete=true,
+        ) }}
+
+        {% if request.args.tags %}
+            <li>
+                <a href="{{ url_for('.feeds', tags=request.args.tags) }}">feeds with these tags</a>
+        {% endif %}
+
+    {% endif %}
+
+
+{% endif %} {# not read_only #}
+
+
+{{ macros.toggle_link('counts', [
+    ('yes', 'counts'),
+    ('no', 'no counts'),
+], 'no', '.entries') }}
+
+
+{% if feed %}
+
+    <li>
+        {% if feed.link %}<a href="{{ feed.link }}">site</a>{% endif %}
+        <a href="{{ feed.url }}"
+            {%- if feed.version %} title="{{ feed.version }}"{% endif -%}
+        >feed</a>
+
+    {# TODO: duplicated from feeds.html #}
+    <li>
+        added <span title="{{ feed.added }}">{{ feed.added | humanize_naturaltime }}</span>;
+        {% if feed.updated %}
+            updated
+            <span title="{{ feed.updated }}">{{ feed.updated | humanize_naturaltime }}</span>
+        {% else %}
+            not updated
+        {% endif %}
+
+    {# TODO: almost duplicated from feeds.html #}
+    {% if feed_entry_counts %}
+    <li>
+        {{ macros.entry_counts(feed_entry_counts) }}
+    {% endif %}
+
+    {# TODO: duplicated from feeds.html #}
+    <li>
+        {% for tag in feed_tags %}
+        <small><a href="{{ url_for('.feeds', tags=[tag] | tojson) }}" class="tag">{{ tag }}</a></small>
+        {% endfor %}
+
+    {# TODO: read_only != preview, we should be more specific #}
+    {% if read_only %}
+        {{ macros.simple_button(
+            '.form_api', 'add-feed', 'add feed',
+            leave_disabled=true,
+            next=url_for('.entries', feed=request.args.url),
+            context={'feed-url': request.args.url},
+            js_enabled=False,
+        ) }}
+    {% endif %}
+
+
+    {% if not read_only %}
+
+        {% set next = url_for('.entries', **request.args) %}
+
+        {% if current_what != 'read' %}
+            {{- macros.confirm_button('.form_api', 'mark-all-as-read', 'all read', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
+        {% endif %}
+        {% if current_what != 'unread' %}
+            {{- macros.confirm_button('.form_api', 'mark-all-as-unread', 'all unread', leave_disabled=true, next=next, context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
+        {% endif %}
+
+        {{- macros.confirm_button('.form_api', 'archive-all', 'archive all', leave_disabled=true, next=url_for('.entries', feed='reader:archived'), context={'feed-url': feed.url, 'entry-id': entries_data | tojson}) -}}
+        {# TODO: should redirect to archived # entry #}
+
+        {{ macros.confirm_button('.form_api', 'delete-feed', 'delete feed', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
+
+        {{ macros.text_input_button('.form_api', 'update-feed-title', 'update feed title', 'feed-title', 'feed title', leave_disabled=true, next=next, context={'feed-url': feed.url}, value=feed.user_title) }}
+
+        {{ macros.text_input_button('.form_api', 'update-feed-tags', 'update feed tags', 'feed-tags', 'feed tags', leave_disabled=true, next=next, context={'feed-url': feed.url}, value=feed_tags | join(' ')) }}
+
+        <li>
+        <a href="{{ url_for('.metadata', feed=feed.url) }}">update metadata</a>
+
+        <li>
+        <a href="{{ url_for('.add_entry', feed=feed.url) }}">add entry</a>
+
+        {# <!-- TODO: how do we redirect to the new feed after url update? --> #}
+        {{ macros.text_confirm_button('.form_api', 'change-feed-url', 'change feed URL', 'new-feed-url', 'new URL', leave_disabled=true, next=url_for('.entries'), context={'feed-url': feed.url}) }}
+
+        {# we reload from javascript so we still get the "..." loading indicator #}
+        {% call macros.simple_button('.form_api', 'update-feed', 'update', next=next, context={'feed-url': feed.url}) %}
+            location.reload();
+        {% endcall %}
+
+        {% if feed.updates_enabled %}
+            {{ macros.simple_button('.form_api', 'disable-feed-updates', 'disable updates', leave_disabled=true, next=next, context={'feed-url': feed.url}) }}
+        {% else %}
+            {{ macros.simple_button('.form_api', 'enable-feed-updates', 'enable updates', leave_disabled=true, next=next, context={'feed-url': feed.url}) }}
+        {% endif %}
+
+    {% endif %} {# not read_only #}
+
+{% endif %} {# feed #}
+
+
+{% for message in get_flashed_messages_by_prefix(
+    'mark-all-as-read',
+    'mark-all-as-unread',
+    'delete-feed',
+    'update-feed-title',
+    'update-feed-tags',
+    'change-feed-url',
+    'update-feed',
+    'disable-feed-updates',
+    'enable-feed-updates',
+) %}
+<li class="error">{{ message }}
+{% endfor %}
+
+
+{# TODO: duplicated from feeds.html #}
+{% if feed and feed.last_exception and feed.updates_enabled %}
+    <li class="error" title="{{ feed.last_exception.traceback_str }}">
+    <b>update error</b>:
+    {% set type_parts = feed.last_exception.type_name.partition('builtins.') %}
+    {{ feed.last_exception.type_name if type_parts[0] else type_parts[2] }}:
+    {{ feed.last_exception.value_str }}
+{% endif %}
+
+
+{% if error %}
+    <li class="error"><b>error</b>: {{ error }}
+{% endif %}
+
+
+</ul>
+
+
+</div>
+
+{% if counts %}
+<p>
+    {{ macros.entry_counts(counts) }}
+{% endif %}
+
+
+{% set vars = namespace(entry_index=0) %}
+{% for entry, tags in entries_and_tags %}
+{% set vars.entry_index = loop.index %}
+
+{% set feed = entry.feed %}
+{% set content = entry.get_content(prefer_summary=False) %}
+{% set summary = entry.get_content(prefer_summary=True) %}
+{% set show_full_content = request.args.get('feed') and feed.version == 'twitter' %}
+
+
+<div id="entry-{{ loop.index }}" class="entry">
+
+{% set title = (entry.title or 'untitled') | striptags %}
+{% if feed.version == 'twitter' %}
+    {% set title = title | truncate(95) %}
+{% endif %}
+<h2><a href="{{ entry.link }}">{{ title }}</a></h2>
+
+<ul class="controls">
+
+<li>
+    <a href="{{ url_for('.entries', feed=entry.feed.url) }}">{{ entry.feed_resolved_title or feed.url }}</a>
+<li>
+    {%- set published = entry.published or entry.updated_not_none -%}
+    <span title="{{ published }}">{{ published | humanize_naturaltime }}</span>
+
+
+{% if not read_only %}
+
+    {% set next = url_for('.entries', **request.args) + '#entry-' + ((loop.index if not loop.last else loop.index - 1) | string) %}
+    {% set context = {'feed-url': feed.url, 'entry-id': entry.id} %}
+
+    {% if entry.read %}
+        {{ macros.simple_button('.form_api', 'mark-as-unread', 'unread', leave_disabled=true, next=next, context=context, title=entry.read_modified or "not modified") }}
+    {% else %}
+        {{ macros.simple_button('.form_api', 'mark-as-read', 'read', leave_disabled=true, next=next, context=context, title=entry.read_modified or "not modified") }}
+    {% endif %}
+
+    {% if not entry.important %}
+        {{ macros.simple_button('.form_api', 'mark-as-important', 'important', leave_disabled=true, next=next, context=context, title=entry.important_modified or "not modified") }}
+    {% endif %}
+    {% if entry.important is not none %}
+        {{ macros.simple_button('.form_api', 'clear-important', "clear " + ("important" if entry.important else "don't care"), leave_disabled=true, next=next, context=context) }}
+    {% endif %}
+    {% if entry.important is not false %}
+        {{ macros.simple_button('.form_api', 'mark-as-unimportant', "don't care", leave_disabled=true, next=next, context=context, title=entry.important_modified or "not modified") }}
+    {% endif %}
+
+    {% if entry.added_by == 'user' %}
+        {{ macros.confirm_button('.form_api', 'delete-entry', 'delete', leave_disabled=true, next=url_for('.entries', **request.args), context=context) }}
+    {% endif %}
+
+{% endif %} {# not read only #}
+
+
+{{ macros.readtime(tags) }}
+
+
+
+{% for message in get_flashed_messages_by_prefix(
+    ('mark-as-read', feed.url, entry.id),
+    ('mark-as-unread', feed.url, entry.id),
+    ('mark-as-important', feed.url, entry.id),
+    ('clear-important', feed.url, entry.id),
+    ('mark-as-unimportant', feed.url, entry.id),
+    ('delete-entry', feed.url, entry.id),
+) %}
+<li class="error">{{ message }}
+{% endfor %}
+
+</ul>
+
+
+{% if show_full_content %}
+
+    {# TODO: duplicated from entry.html #}
+    {% if content %}
+    <article>
+    {% if not content.is_html -%}
+    <pre class='plaintext'>{{ content.value }}</pre>
+    {%- else -%}
+    {{ content.value | safe }}
+    {%- endif %}
+    </article>
+    {% else %}
+    <p>no content</p>
+    {% endif %}
+
+{% else %}
+
+    {% if summary %}
+    <p>
+        {# TODO: maybe unify entry / search result content or something? #}
+        {% if not request.args.q %}
+            {{ summary.value | striptags | truncate }}
+        {% else %}
+            {{ summary.value }}
+        {% endif %}
+
+        {% if not read_only %}
+            <a href="{{ url_for('.entry', feed=entry.feed.url, entry=entry.id) }}">more</a>
+        {% endif %}
+    </p>
+    {% endif %}
+
+{% endif %}
+
+
+{{ macros.entry_enclosures(entry) }}
+
+
+</div>
+
+{% else %}
+
+{% if not error %}
+    {% if not request.args.q and not request.args.tags %}
+        <p>no {% if current_what != 'all' %}{{ current_what }} {% endif %}entries for this feed</p>
+    {% else %}
+        <p>no results for this query</p>
+    {% endif %}
+{% endif %}
+
+{% endfor %}
+
+
+{% set limit = request.args.get('limit') | int %}
+{% if limit and vars.entry_index >= limit -%}
+{%- set args = request.args.copy() -%}
+{%- set _ = args.poplist('limit') -%}
+
+<p>
+showing only the first {{ vars.entry_index }} entries;
+<a href='
+    {{- url_for('.entries', **args) -}}
+    {%- if entries %}#entry-{{ vars.entry_index }}{% endif -%}
+'>show all entries</a>
+</p>
+
+{%- endif %}
+
+
+{% endblock %}

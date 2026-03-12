@@ -1,0 +1,84 @@
+<!doctype html>
+
+<meta name="viewport" content="width=device-width" />
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<script src="{{ url_for('static', filename='controls.js') }}"></script>
+<script>
+
+window.onload = function () {
+    register_all({{ url_for('reader.form_api') | tojson | safe }});
+};
+
+</script>
+
+<title>{% block page_title %}{% endblock %}</title>
+
+<div id="top-bar">
+<ul class="controls">
+<li>
+<a href="{{ url_for('reader.entries') }}">entries</a>
+<a href="{{ url_for('reader.feeds') }}">feeds</a>
+<a href="{{ url_for('reader.tags') }}">tags</a>
+<a href="{{ url_for('reader.metadata') }}">metadata</a>
+
+{{ macros.text_input_button_get(
+    'reader.preview', 'add feed', 'url', 'url',
+) }}
+
+
+{# TODO: this is likely not needed since add-feed became a GET button #}
+{% for message in get_flashed_messages_by_prefix('add-feed') %}
+<li class="error">{{ message }}
+{% endfor %}
+</ul>
+
+</div>
+
+
+<h1>{% block main_title %}{% endblock %}</h1>
+
+{% block body %}{% endblock %}
+
+
+<div class='footer'>
+<p>
+page generated in about {{ g.request_time() | round(3, 'ceil') }} seconds
+by <a href="https://github.com/lemon24/reader">reader</a>._app
+{{ g.reader_version }}
+</p>
+
+{% if g.reader_timer %}
+<details>
+<summary>
+spent {{ g.reader_timer.total('Reader.') | round(3, 'ceil') }} seconds in reader calls
+</summary>
+{{ g.reader_timer.format_stats(tablefmt='html') | safe }}
+</details>
+{% endif %}
+
+</div>
+
+
+{% if config.DEBUG  %}
+<p style="
+color: white;
+background: red;
+padding: .5rem 1rem;
+margin: 0;
+position: fixed;
+bottom: 0;
+right: 0;
+">
+
+<span title='{{ config.READER_CONFIG.data | toyaml | escape }}'>
+    {{ config.READER_CONFIG.merged('app').reader.url }}
+</span>
+
+{% set maxrss = debug_maxrss_mib() %}
+<span title="maxrss = {{ maxrss | round(3) }} MiB">
+rss={{ maxrss | round(1) }}
+</span>
+
+</p>
+{% endif %}

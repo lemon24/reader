@@ -1,0 +1,101 @@
+{% extends "layout.html" %}
+
+{% import "macros.html" as macros %}
+
+{% block page_title %}Entry: {{ (entry.title or entry.link or entry.id) | trim | striptags }}{% endblock %}
+{% block main_title %}Entry: <a href="{{ entry.link }}">{{ (entry.title or entry.link or entry.id) | striptags }}</a>{% endblock %}
+
+
+{% block body %}
+
+{% set feed = entry.feed %}
+{% set content = entry.get_content() %}
+
+
+<div class="entry">
+
+
+<ul class="controls">
+
+<li>
+    {% if entry.author %} by {{ entry.author }}{% endif %}
+    in <a href="{{ url_for('.entries', feed=entry.feed.url) }}">{{ entry.feed_resolved_title or feed.url }}</a>
+<li>
+    {%- set published = entry.published or entry.updated_not_none -%}
+    <span title="{{ published }}">{{ published | humanize_naturaltime }}</span>
+
+{% set next = url_for('.entry', **request.args) %}
+{% set context = {'feed-url': feed.url, 'entry-id': entry.id} %}
+
+{% if entry.read %}
+    {{ macros.simple_button('.form_api', 'mark-as-unread', 'unread', leave_disabled=true, next=next, context=context, title=entry.read_modified or "not modified") }}
+{% else %}
+    {{ macros.simple_button('.form_api', 'mark-as-read', 'read', leave_disabled=true, next=next, context=context, title=entry.read_modified or "not modified") }}
+{% endif %}
+
+{% if not entry.important %}
+    {{ macros.simple_button('.form_api', 'mark-as-important', 'important', leave_disabled=true, next=next, context=context, title=entry.important_modified or "not modified") }}
+{% endif %}
+{% if entry.important is not none %}
+    {{ macros.simple_button('.form_api', 'clear-important', "clear " + ("important" if entry.important else "don't care"), leave_disabled=true, next=next, context=context) }}
+{% endif %}
+{% if entry.important is not false %}
+    {{ macros.simple_button('.form_api', 'mark-as-unimportant', "don't care", leave_disabled=true, next=next, context=context, title=entry.important_modified or "not modified") }}
+{% endif %}
+
+{% if entry.added_by == 'user' %}
+    {{ macros.confirm_button('.form_api', 'delete-entry', 'delete', leave_disabled=true, next=url_for('.entries', **request.args), context=context) }}
+{% endif %}
+
+<li>
+<a href="{{ url_for('.metadata', feed=entry.feed.url, entry=entry.id) }}">update metadata</a>
+
+{{ macros.readtime(tags) }}
+
+
+{% for message in get_flashed_messages_by_prefix(
+    ('mark-as-read', feed.url, entry.id),
+    ('mark-as-unread', feed.url, entry.id),
+    ('mark-as-important', feed.url, entry.id),
+    ('clear-important', feed.url, entry.id),
+    ('mark-as-unimportant', feed.url, entry.id),
+    ('delete-entry', feed.url, entry.id),
+) %}
+<li class="error">{{ message }}
+{% endfor %}
+
+</ul>
+
+
+{# TODO: Also show summary. #}
+{# TODO: This allows iframes to show; is it safe? #}
+{# TODO: This should be styled somehow. #}
+{# TODO: h1 inside article is as big as the h1 in the header. #}
+{# TODO: Tables look wonky if they're too wide; hard to fix without cooperation from the html. #}
+
+
+{% if content %}
+<article>
+{% if not content.is_html -%}
+<pre class='plaintext'>{{ content.value }}</pre>
+{%- else -%}
+{{ content.value | safe }}
+{%- endif %}
+
+</article>
+{% else %}
+<p>no content</p>
+{% endif %}
+
+{{ macros.entry_enclosures(entry) }}
+
+
+<p>Links:
+{% for title, href in additional_links(entry) %}
+<a href="{{ href }}">{{ title }}</a>&ensp;
+{% endfor %}
+</ul>
+
+
+</div>
+{% endblock %}

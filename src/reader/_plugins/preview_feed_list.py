@@ -33,8 +33,8 @@ from flask import render_template
 from flask import request
 from flask import url_for
 
-from reader._app import get_reader
-from reader._app import got_preview_parse_error
+from reader._app.legacy import get_reader
+from reader._app.legacy import got_preview_parse_error
 
 
 blueprint = Blueprint('preview_feed_list', __name__, template_folder='templates')

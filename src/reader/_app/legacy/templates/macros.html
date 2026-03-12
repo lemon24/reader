@@ -1,0 +1,289 @@
+
+{% macro feed_link(feed) -%}
+{%- if feed.link %}<a href="{{ feed.link }}">{%- endif -%}
+{{ feed_title(feed) }}
+{%- if feed.link %}</a>{% endif -%}
+{%- endmacro %}
+
+{% macro feed_title(feed) %}
+{{- feed.resolved_title or feed.url -}}
+{% endmacro %}
+
+{% macro feed_title_secondary(feed) %}
+{%- if feed.title and feed.resolved_title != feed.title -%}
+    {{ feed.title }}
+{%- endif -%}
+{% endmacro %}
+
+
+{% macro entry_enclosures(entry) %}
+{% if entry.enclosures %}
+<ul>
+
+{% for enclosure in entry.enclosures %}
+
+<li>
+<a href="{{ enclosure.href }}">{{ enclosure.href.split('/')[-1].split('?')[0] }}</a>
+<small>
+
+{% for title, href in additional_enclosure_links(enclosure, entry) %}
+<a href="{{ href }}">{{ title }}</a>
+{% endfor %}
+
+{{ enclosure.type }}</small>
+</li>
+
+{% endfor %}
+</ul>
+{% endif %}
+{% endmacro %}
+
+
+{# https://github.com/lemon24/reader/issues/93 has some notes for refactoring the *_button macros #}
+
+
+{% macro text_input_button(form_view, action, label, name, placeholder, leave_disabled=false, next=none, context=none, js_enabled=True, value=none) -%}
+<li class="collapsible"
+
+data-button-type="text-input"
+
+{% if js_enabled %}
+
+data-callback="function callback(data, request_data) {
+
+{% if caller is defined %}{{ caller() | forceescape }}{% endif %}
+
+}; callback"
+
+data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
+
+{% endif %}
+>
+<form action="{{ url_for(form_view) }}" method="post" class="action-{{ action }}">
+    <span class="label">{{ label }}</span>
+    <span class="hidden">
+        <input type="text" name="{{ name }}" placeholder="{{ placeholder }}" value="{{ value or '' }}" autocomplete="off">
+        <button type="submit" name="action" value="{{ action }}" autocomplete="off">{{ label }}</button>
+    </span>
+    {% if next is not none %}<input type="hidden" name="next-{{ action }}" value='{{ next }}'>{% endif %}
+    {% for name, value in (context or {}) | dictsort -%}
+    <input type="hidden" name='{{ name }}' value='{{ value }}'>
+    {% endfor %}
+</form>
+{%- endmacro %}
+
+
+{# TODO: unify with text_input_button somehow (likely by using js_enabled=False) #}
+
+{% macro text_input_button_get(form_view, label, name, placeholder, value, input_type='text', context=none, autocomplete=false) -%}
+<li class="collapsible">
+<form action="{{ url_for(form_view) }}" method="get">
+    <span class="label">{{ label }}</span>
+    <span class="hidden">
+        <input type="{{ input_type }}" name="{{ name }}" placeholder="{{ placeholder }}" value="{{ value }}"{% if not autocomplete %} autocomplete="off"{% endif %}>
+        <button type="submit">{{ label }}</button>
+    </span>
+    {% for name, value in (context or {}) | dictsort -%}
+    <input type="hidden" name='{{ name }}' value='{{ value }}'>
+    {% endfor %}
+</form>
+{%- endmacro %}
+
+
+{% macro text_confirm_button(form_view, action, label, name, placeholder, id=none, leave_disabled=false, next=none, context=none, js_enabled=True, value=none) -%}
+<li class="collapsible"
+
+data-button-type="text-confirm"
+
+{% if js_enabled %}
+
+data-callback="function callback(data, request_data) {
+
+{% if caller is defined %}{{ caller() | forceescape }}{% endif %}
+
+}; callback"
+
+data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
+
+{% endif %}
+>
+<form action="{{ url_for(form_view) }}" method="post" class="action-{{ action }}">
+    <span class="label">{{ label }}</span>
+    <span class="hidden">
+        <input type="text" name="{{ name }}" placeholder="{{ placeholder }}" value="{{ value or '' }}" autocomplete="off">
+
+        <input type="checkbox" id="really-{{ action }}{% if id is not none %}-{{ id }}{% endif %}" name="really-{{ action }}" value="really" autocomplete="off">
+        <label for="really-{{ action }}{% if id %}-{{ id }}{% endif %}">I really want to</label>
+
+        <button type="submit" name="action" value="{{ action }}" autocomplete="off">{{ label }}</button>
+    </span>
+    {% if next is not none %}<input type="hidden" name="next-{{ action }}" value='{{ next }}'>{% endif %}
+    {% for name, value in (context or {}) | dictsort -%}
+    <input type="hidden" name='{{ name }}' value='{{ value }}'>
+    {% endfor %}
+</form>
+{%- endmacro %}
+
+
+{% macro confirm_button(form_view, action, label, id=none, leave_disabled=false, next=none, context=none, js_enabled=True) -%}
+<li class="collapsible"
+
+data-button-type="confirm"
+
+{% if js_enabled %}
+
+data-callback="function callback(data, request_data) {
+
+{% if caller is defined %}{{ caller() | forceescape }}{% endif %}
+
+}; callback"
+
+data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
+
+{% endif %}
+>
+<form action="{{ url_for(form_view) }}" method="post" class="action-{{ action }}">
+    <span class="label">{{ label }}</span>
+    <span class="hidden">
+        <input type="checkbox" id="really-{{ action }}{% if id is not none %}-{{ id }}{% endif %}" name="really-{{ action }}" value="really" autocomplete="off">
+        <label for="really-{{ action }}{% if id %}-{{ id }}{% endif %}">I really want to</label>
+        <button type="submit" name="action" value="{{ action }}" autocomplete="off">{{ label }}</button>
+    </span>
+    {% if next is not none %}<input type="hidden" name="next-{{ action }}" value='{{ next }}'>{% endif %}
+    {% for name, value in (context or {}) | dictsort -%}
+    <input type="hidden" name='{{ name }}' value='{{ value }}'>
+    {% endfor %}
+</form>
+{%- endmacro %}
+
+
+{% macro simple_button(form_view, action, label, leave_disabled=false, next=none, context=none, js_enabled=True, title=none) -%}
+<li class="simple-button"
+
+data-button-type="simple"
+
+{% if js_enabled %}
+
+data-callback="function callback(data, request_data) {
+
+{% if caller is defined %}{{ caller() | forceescape }}{% endif %}
+
+}; callback"
+
+data-leave-disabled="{{ 'true' if leave_disabled else 'false' }}"
+
+{% endif %}
+>
+<form action="{{ url_for(form_view) }}" method="post" class="action-{{ action }}">
+    <button type="submit" name="action" value="{{ action }}" autocomplete="off"
+    {%- if title %} title="{{ title }}"{% endif -%}
+    >{{ label }}</button>
+    {% if next is not none %}<input type="hidden" name="next-{{ action }}" value='{{ next }}'>{% endif %}
+    {% for name, value in (context or {}) | dictsort -%}
+    <input type="hidden" name='{{ name }}' value='{{ value }}'>
+    {% endfor %}
+</form>
+{%- endmacro %}
+
+
+{% macro radio_links(name, options, default, endpoint, label=none, drop_args=()) -%}
+<li>{% if label %}{{ label }}: {% endif %}
+{% set current_option = request.args.get(name, default) -%}
+{%- for option, option_label in options -%}
+{%- set option_label = option_label or option -%}
+
+{%- set args = request.args.copy() -%}
+
+{%- for arg in drop_args -%}
+{%- set _ = args.poplist(arg) -%}
+{%- endfor -%}
+
+{%- if option == default -%}
+    {%- set _ = args.poplist(name) -%}
+{%- else -%}
+    {%- set _ = args.setlist(name, [option]) -%}
+{%- endif -%}
+
+{%- if option != current_option %}<a href='{{ url_for(endpoint, **args) }}'>{% endif -%}
+{{- option_label -}}
+{%- if option != current_option %}</a> {% endif %}
+{% endfor %}
+{%- endmacro %}
+
+
+{% macro toggle_link(name, options, default, endpoint) %}
+{%- set (yes_option, yes_label), (no_option, no_label) = options -%}
+
+{%- set args = request.args.copy() -%}
+{%- set current_option = args.get(name, default) -%}
+{%- set option, option_label = options[ current_option == yes_option ] %}
+
+{% if option == default %}
+    {%- set _ = args.poplist(name) -%}
+{% else %}
+    {%- set _ = args.setlist(name, [option]) -%}
+{% endif %}
+
+<li>
+    <a href="{{ url_for(endpoint, **args) }}">{{ option_label or option }}</a>
+
+{% endmacro %}
+
+
+
+{% macro entry_counts(counts, url=none) %}
+
+{% set blocks = {0: '&nbsp;' | safe, 1: '▁', 2: '▂', 3: '▃', 4: '▄', 5: '▅', 6: '▆', 7: '▇'} %}
+
+    <abbr title='({{ counts.read }} read, {{ counts.important }} important)'>
+    {{ counts.total }}
+    {% if url %}<a href="{{ url }}">{% endif %}
+        entries
+    {% if url %}</a>{% endif %}
+    </abbr>
+
+    <abbr title='(per month in the past 1, 3, 12 months: {{
+            (counts.averages[0] * 30)       | round(1)      }}, {{
+            (counts.averages[1] * 91 / 3)   | round(1)      }}, {{
+            (counts.averages[2] * 365 / 12) | round(1)
+    }})'>
+        <code class="averages">
+        {%- for avg in counts.averages -%}
+        <span class="averages-block" style="height: {{ [avg | log_scale(2), 1] | min }}em;">
+        {{- blocks.get((avg | log_scale(2) * 8) | int, blocks[7]) -}}
+        </span>
+        {%- endfor -%}
+        </code>
+    </abbr>
+
+
+{% endmacro %}
+
+
+
+{% macro abbr_truncate(s, length=255, end='...') %}
+
+{% set s = s | striptags | trim %}
+{% set truncated = s | truncate(length, end='') %}
+{% set have_tail = truncated | length < s | length %}
+
+{%- if have_tail -%}
+<abbr title="{{ s[ truncated | length :] }}">
+{%- endif -%}
+{{ truncated }}
+{%- if have_tail %}<span class="ellipsis">{{ end }}</span></abbr>{% endif -%}
+
+{% endmacro %}
+
+
+
+{% macro readtime(tags) %}
+
+{% set seconds = tags.reader.get('readtime', {}).get('seconds', 0) %}
+{% set minutes = (seconds / 60) | round(method='ceil') %}
+{% if minutes > 1 %}
+<li>
+    {{ minutes | humanize_apnumber }} minute read
+{% endif %}
+
+{% endmacro %}

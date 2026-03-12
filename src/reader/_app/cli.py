@@ -25,13 +25,17 @@ def make_add_response_headers_middleware(wsgi_app, headers):
     envvar=reader._APP_PLUGIN_ENVVAR,
     help="Import path to a web app plug-in. Can be passed multiple times.",
 )
+@click.option('--legacy/--no-legacy', help="Serve the legacy app.")
 @click.option('-v', '--verbose', count=True)
-def serve(config, host, port, plugin, verbose):
+def serve(config, host, port, plugin, legacy, verbose):
     """Start a local HTTP reader server."""
     setup_logging(verbose)
     from werkzeug.serving import run_simple
 
-    from . import create_app
+    if not legacy:
+        from . import create_app
+    else:
+        from .legacy import create_app
 
     if plugin:
         config['app']['plugins'] = dict.fromkeys(plugin)
