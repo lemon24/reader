@@ -131,11 +131,8 @@
 
     <div class="icons">
       {% for enclosure in entry.enclosures[:1] -%}
-        {%- set links = additional_enclosure_links(enclosure, entry) | list -%}
-        {%- set _ = links.append(('', enclosure.href)) -%}
-        {%- set link = links[0][1] -%}
         <a
-          href="{{ link }}"
+          href="{{ enclosure.href }}"
           target="_blank"
           title="download {{ enclosure.type }}"
           class="btn text-secondary"
