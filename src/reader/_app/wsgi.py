@@ -9,6 +9,7 @@ To run a local development server:
 
 """
 
+import logging
 import os
 
 import yaml
@@ -39,4 +40,9 @@ if reader._APP_PLUGIN_ENVVAR in os.environ:
 app = reader._app.create_app(config)
 app.config['TRAP_BAD_REQUEST_ERRORS'] = bool(
     os.environ.get('FLASK_TRAP_BAD_REQUEST_ERRORS', '')
+)
+
+logging.basicConfig(
+    format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S.%f',
 )
