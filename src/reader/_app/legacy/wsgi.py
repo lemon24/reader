@@ -42,7 +42,7 @@ app.config['TRAP_BAD_REQUEST_ERRORS'] = bool(
     os.environ.get('FLASK_TRAP_BAD_REQUEST_ERRORS', '')
 )
 
-logging.basicConfig(
-    format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S.%f',
-)
+if not app.debug:
+    logging.basicConfig(
+        format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+    )
