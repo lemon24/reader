@@ -142,6 +142,9 @@ def enable_reader_timer():
 
 @blueprint.teardown_request
 def close_reader_timer(_):
+    # NOTE: timer doesn't work with Flask 3.1.2 because this gets called twice,
+    # once when the view returns and once when stream_with_context ends;
+    # should be fixed in 3.2: https://github.com/pallets/flask/issues/5804
     if not g.reader_timer:
         return
     g.reader_timer.disable()
