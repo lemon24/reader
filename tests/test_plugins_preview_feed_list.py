@@ -1,6 +1,6 @@
 import pytest
 
-from reader._plugins.preview_feed_list import get_alternates
+from reader._plugins.legacy.preview_feed_list import get_alternates
 from test_app_legacy import make_app
 from test_app_legacy import make_browser
 from test_app_legacy import pytestmark
@@ -84,7 +84,7 @@ def test_plugin(db_path, requests_mock):
     app = make_app(
         {
             'reader': {'url': db_path},
-            'app': {'plugins': {'reader._plugins.preview_feed_list:init': None}},
+            'app': {'plugins': {'reader._plugins.legacy.preview_feed_list:init': None}},
         }
     )
     browser = make_browser(app)

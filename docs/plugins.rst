@@ -39,11 +39,19 @@ use the entry point as a :ref:`custom plugin <custom plugins>`::
 
 
 .. automodule:: reader._plugins.cli_status
-.. automodule:: reader._plugins.preview_feed_list
-.. automodule:: reader._plugins.enclosure_tags
 .. automodule:: reader._plugins.sqlite_releases
 .. automodule:: reader._plugins.timer
-.. automodule:: reader._plugins.share
+
+
+
+Legacy web app plugins
+----------------------
+
+Following are experimental plugins that work with the legacy web app:
+
+.. automodule:: reader._plugins.legacy.preview_feed_list
+.. automodule:: reader._plugins.legacy.enclosure_tags
+.. automodule:: reader._plugins.legacy.share
 
 
 

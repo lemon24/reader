@@ -6,7 +6,7 @@ Add social sharing links at the end of the entry page.
 
 To load::
 
-    READER_APP_PLUGIN='reader._plugins.share:init' \\
+    READER_APP_PLUGIN='reader._plugins.legacy.share:init' \\
     python -m reader serve
 
 """

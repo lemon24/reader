@@ -17,6 +17,7 @@ for name in [
     'flask.signals',
     'werkzeug',
     'werkzeug.datastructures',
+    'werkzeug.exceptions',
     'werkzeug.http',
     'yaml',
 ]:
@@ -45,6 +46,7 @@ autodoc_mock_imports = [
     'bs4',
     'mutagen',
     'flask',
+    'flask_wtf',
     'werkzeug',
     'humanize',
     'markupsafe',
