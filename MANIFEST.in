@@ -1,7 +1,9 @@
 recursive-include src/reader/_app/templates *
 recursive-include src/reader/_app/static *
-recursive-include src/reader/_app/v2 *
 recursive-include src/reader/_plugins/templates *
+recursive-include src/reader/_app/legacy/templates *
+recursive-include src/reader/_app/legacy/static *
+recursive-include src/reader/_plugins/legacy/templates *
 recursive-include src/reader *.pyi
 recursive-include src/reader py.typed
 include run.sh CHANGES.rst LICENSE tox.ini
