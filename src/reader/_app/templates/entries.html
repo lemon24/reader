@@ -170,9 +170,8 @@
 
     {% if more %}
     <li class="page-item">
-      {% set args = dict(request.args) %}
-      {% do args.update(after='\0'.join(last.entry.resource_id)) %}
-      <a class="page-link" href="{{ url_for('.entries',**args) }}">
+      {% set args = form.replace(starting_after=last.entry.resource_id).args  %}
+      <a class="page-link" href="{{ url_for('.entries', **args) }}">
         next<i class="bi bi-chevron-right ms-2 small"></i>
       </a>
     </li>

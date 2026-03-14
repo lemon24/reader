@@ -36,6 +36,23 @@ class TagFilterField(StringField):
         return yaml.safe_dump(self.data, default_flow_style=True).rstrip()
 
 
+class HiddenEntryField(HiddenField):
+
+    def process_formdata(self, valuelist):
+        if not valuelist:
+            return
+        value = valuelist[0]
+        feed, _, id = value.partition('\0')
+        self.data = feed, id
+
+    def _value(self):
+        if self.raw_data:
+            return self.raw_data[0]
+        if not self.data:
+            return None
+        return '\0'.join(self.data)
+
+
 class PresetsMixin:
 
     @property
@@ -77,6 +94,9 @@ class PresetsMixin:
                 rv[field.name] = value
         return rv
 
+    def replace(self, **kwargs):
+        return type(self)(data=self.data, **kwargs)
+
 
 @dataclass
 class Preset:
@@ -106,7 +126,7 @@ def radio_field(*args, choices, **kwargs):
     return RadioField(
         *args,
         choices=[c[1] if len(c) == 2 else c[1:] for c in choices],
-        coerce={c[1]: c[0] for c in choices}.get,
+        coerce=({c[1]: c[0] for c in choices} | {c[0]: c[0] for c in choices}).get,
         **kwargs,
     )
 
@@ -118,10 +138,7 @@ ENTRY_SORT_CHOICES = ['recent', 'random']
 
 class EntryFilter(PresetsMixin, Form):
     feed = HiddenField("feed")
-    starting_after = HiddenField(
-        name="after",
-        filters=[lambda s: tuple(s.split('\0', maxsplit=1)) if s else None],
-    )
+    starting_after = HiddenEntryField(name="after")
     # search = SearchField("search", name='Q')
     # feed_tags = TagFilterField("feed tags", name='tags')
     # tags = TagFilterField("entry tags", name='entry-tags')
