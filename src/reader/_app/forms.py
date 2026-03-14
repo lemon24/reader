@@ -54,12 +54,17 @@ class HiddenEntryField(HiddenField):
 
 
 class PresetsMixin:
+    PRESET_FIELDS = set()
+    PRESET_SKIP_FIELDS = set()
+    PRESETS = {}
 
     @property
     def presets(self):
         form_args = {}
         form_preset_args = {}
         for field in self:
+            if field.name in self.PRESET_SKIP_FIELDS:
+                continue
             value = get_formdata(field)
             form_args[field.name] = value
             if field.name in self.PRESET_FIELDS:
@@ -69,7 +74,8 @@ class PresetsMixin:
             args = {}
             preset_args = {}
             for field in self:
-
+                if field.name in self.PRESET_SKIP_FIELDS:
+                    continue
                 if field.name in self.PRESET_FIELDS:
                     value = args_raw.get(field.name, field.default)
                     preset_args[field.name] = value
@@ -150,6 +156,7 @@ class EntryFilter(PresetsMixin, Form):
     sort = RadioField("sort", choices=ENTRY_SORT_CHOICES, default='recent')
 
     PRESET_FIELDS = {'read', 'important', 'enclosures', 'sort'}
+    PRESET_SKIP_FIELDS = {'after'}
     PRESETS = {
         'unread': {},
         'important': {'read': 'all', 'important': 'yes'},
@@ -195,17 +202,11 @@ class ChangeFeedTitle(FlaskForm):
 if __name__ == '__main__':
     from werkzeug.datastructures import MultiDict
 
-    args = MultiDict(dict(tags='1'))
-    for FormCls in EntryFilter, SearchEntryFilter:
-        form = FormCls(args)
-        for field in form:
-            print(field())
-            print()
-        print(form.data)
-        print(form.to_formdata())
-        print()
+    args = MultiDict(dict(read=False, after='a\0b'))
+    form = EntryFilter(args)
+    print(form.data)
+    print(form.args)
+    for preset in form.presets:
+        print(preset)
 
-    print(form.feed_tags.__dict__)
-    import IPython
-
-    IPython.embed()
+    # import IPython; IPython.embed()
