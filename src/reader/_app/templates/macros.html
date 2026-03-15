@@ -222,11 +222,15 @@
 
 {% macro entry_published(entry) %}
 {%- set published = entry.published or entry.updated_not_none -%}
+{#- otherwise we get ValueError for datetime(1, 1, 1) -#}
+{%- set published = published if published.year >= 1900 else none -%}
 {#- TODO: published should be a tooltip #}
 {#- TODO: babel.format_timedelta(..., format='narrow') -> 3h #}
+{%- if published %}
 <li class="list-inline-item" title="{{ published }}">
   {{ published | humanize_naturaltime }}
 </li>
+{%- endif %}
 {% endmacro %}
 
 
