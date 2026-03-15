@@ -15,7 +15,7 @@ from ..exceptions import InvalidPluginError
 
 
 if TYPE_CHECKING:  # pragma: no cover
-    from . import Reader
+    from . import Reader  # noqa: F401
 
 
 #: The :func:`~reader.make_reader` default list of :ref:`plugins <plugins>`.

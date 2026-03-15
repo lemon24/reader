@@ -17,7 +17,6 @@ from typing import ContextManager
 from typing import Protocol
 from typing import TYPE_CHECKING
 from typing import TypedDict
-from typing import TypeVar
 from typing import Union
 
 from ..._utils import lazy_import

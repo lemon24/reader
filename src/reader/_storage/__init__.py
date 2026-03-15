@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from .._types import ChangeTrackerType
 from .._types import SearchType
 from ._base import StorageBase

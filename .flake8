@@ -27,5 +27,5 @@ ignore =
     B042
 per-file-ignores =
     # __init__ modules export names
-    **/__init__.py: F401
-exclude = tests/*, docs/*, scripts/*, src/reader/_vendor/*
+    src/reader/__init__.py: F401
+exclude = tests/*, docs/*, scripts/*, src/reader/_vendor/*, src/reader/_app/legacy/*

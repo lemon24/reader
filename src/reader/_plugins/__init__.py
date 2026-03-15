@@ -8,7 +8,6 @@ the contents of the actual plugins is not.
 
 """
 
-import functools
 from contextlib import contextmanager
 from pkgutil import resolve_name
 

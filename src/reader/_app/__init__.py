@@ -1,8 +1,6 @@
-import itertools
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
-from functools import partial
 from urllib.parse import urlparse
 
 import humanize
