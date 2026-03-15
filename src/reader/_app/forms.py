@@ -54,8 +54,8 @@ class HiddenEntryField(HiddenField):
 
 
 class PresetsMixin:
-    PRESET_FIELDS = set()
-    PRESET_SKIP_FIELDS = set()
+    PRESETS_INCLUDE = set()
+    PRESETS_EXCLUDE = set()
     PRESETS = {}
 
     @property
@@ -63,20 +63,20 @@ class PresetsMixin:
         form_args = {}
         form_preset_args = {}
         for field in self:
-            if field.name in self.PRESET_SKIP_FIELDS:
+            if field.name in self.PRESETS_EXCLUDE:
                 continue
             value = get_formdata(field)
             form_args[field.name] = value
-            if field.name in self.PRESET_FIELDS:
+            if field.name in self.PRESETS_INCLUDE:
                 form_preset_args[field.name] = value
 
         for name, args_raw in self.PRESETS.items():
             args = {}
             preset_args = {}
             for field in self:
-                if field.name in self.PRESET_SKIP_FIELDS:
+                if field.name in self.PRESETS_EXCLUDE:
                     continue
-                if field.name in self.PRESET_FIELDS:
+                if field.name in self.PRESETS_INCLUDE:
                     value = args_raw.get(field.name, field.default)
                     preset_args[field.name] = value
                 else:
@@ -155,8 +155,8 @@ class EntryFilter(PresetsMixin, Form):
     )
     sort = RadioField("sort", choices=ENTRY_SORT_CHOICES, default='recent')
 
-    PRESET_FIELDS = {'read', 'important', 'enclosures', 'sort'}
-    PRESET_SKIP_FIELDS = {'after'}
+    PRESETS_INCLUDE = {'read', 'important', 'enclosures', 'sort'}
+    PRESETS_EXCLUDE = {'after'}
     PRESETS = {
         'unread': {},
         'important': {'read': 'all', 'important': 'yes'},
@@ -182,7 +182,7 @@ class FeedFilter(PresetsMixin, Form):
     )
     sort = RadioField("sort", choices=FEED_SORT_CHOICES, default='title')
 
-    PRESET_FIELDS = {'broken', 'enabled', 'sort'}
+    PRESETS_INCLUDE = {'broken', 'enabled', 'sort'}
     PRESETS = {
         'all': {},
         'added': {'sort': 'added'},
