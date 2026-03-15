@@ -108,7 +108,7 @@ def entries():
 def entry_actions():
     reader = get_reader()
 
-    entry = request.form['feed-url'], request.form['entry-id']
+    entry = request.form['feed'], request.form['entry']
 
     if 'read' in request.form:
         match request.form['read']:
@@ -172,7 +172,7 @@ def feeds():
 def feed_actions():
     reader = get_reader()
 
-    feed = request.form['feed-url']
+    feed = request.form['feed']
 
     if 'enabled' in request.form:
         match request.form['enabled']:

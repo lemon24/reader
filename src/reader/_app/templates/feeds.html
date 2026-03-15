@@ -51,7 +51,7 @@
     {% block feed_actions scoped %}
 
     {{ macros.csrf_token_field() }}
-    <input type="hidden" name="feed-url" value="{{ feed.url }}">
+    <input type="hidden" name="feed" value="{{ feed.url }}">
     <input type="hidden" name="next" value="{{ next }}">
 
     {{ macros.feed_enabled_button(feed) }}

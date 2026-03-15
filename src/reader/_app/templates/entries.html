@@ -60,7 +60,7 @@
     {%- block feed_actions scoped %}
 
     {{ macros.csrf_token_field() }}
-    <input type="hidden" name="feed-url" value="{{ feed.url }}">
+    <input type="hidden" name="feed" value="{{ feed.url }}">
     <input type="hidden" name="next" value="{{ url_for(request.endpoint, **request.args) }}">
 
     {{ macros.feed_enabled_button(feed) }}
@@ -123,8 +123,8 @@
     {% block entry_actions scoped %}
 
     {{ macros.csrf_token_field() }}
-    <input type="hidden" name="feed-url" value="{{ entry.feed_url }}">
-    <input type="hidden" name="entry-id" value="{{ entry.id }}">
+    <input type="hidden" name="feed" value="{{ entry.feed_url }}">
+    <input type="hidden" name="entry" value="{{ entry.id }}">
     <input type="hidden" name="next" value="{{ next }}">
 
     {{ macros.entry_read_button(entry) }}
