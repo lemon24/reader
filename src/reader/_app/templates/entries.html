@@ -61,6 +61,7 @@
 
     {{ macros.csrf_token_field() }}
     <input type="hidden" name="feed-url" value="{{ feed.url }}">
+    <input type="hidden" name="next" value="{{ url_for(request.endpoint, **request.args) }}">
 
     {{ macros.feed_enabled_button(feed) }}
     {{ macros.change_feed_title_button(feed) }}

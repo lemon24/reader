@@ -146,7 +146,6 @@ def entry_actions():
             macros=current_app.jinja_env.get_template('macros.html').module,
         )
 
-    # FIXME: doesn't work for entry
     return redirect(request.form['next'], code=303)
 
 
@@ -199,7 +198,6 @@ def feed_actions():
             macros=current_app.jinja_env.get_template('macros.html').module,
         )
 
-    # FIXME: doesn't work for feed (entries)
     return redirect(request.form['next'], code=303)
 
 
