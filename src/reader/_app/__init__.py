@@ -28,6 +28,7 @@ from reader import FeedExistsError
 from reader import FeedNotFoundError
 from reader import InvalidFeedURLError
 from reader import UpdateError
+from reader._config import make_reader_from_config
 from reader._plugins import Loader
 
 from .forms import AddFeed
@@ -314,31 +315,26 @@ def get_reader():
     return current_app.reader
 
 
-def create_app(config):
+def create_app(reader_config, reader_app_plugins):
     app = Flask(__name__)
     app.jinja_env.add_extension('jinja2.ext.do')
 
     app.secret_key = 'secret'
     csrf.init_app(app)
 
-    app.config['READER_CONFIG'] = config
+    # TODO: unify with reader._cli.pass_reader
+    params = reader_config
+    app.config['READER_CONFIG'] = dict(url=params['db'], plugins=params['plugin'])
 
     app.register_blueprint(blueprint)
 
     app.plugin_loader = loader = Loader()
 
-    def log_exception(message, cause):
-        app.logger.exception("%s; original traceback follows", message, exc_info=cause)
-
-    # Don't raise exceptions for plugins, just log.
-    # Does it make sense to keep going after initializing a plugin fails?
-    # How do we know the target isn't left in a bad state?
-    loader.handle_import_error = log_exception
-    loader.handle_init_error = log_exception
-
     # There's one reader instance per app.
-    app.reader = app.config['READER_CONFIG'].make_reader('app', plugin_loader=loader)
+    app.reader = make_reader_from_config(
+        **app.config['READER_CONFIG'], plugin_loader=loader
+    )
 
-    loader.init(app, config.merged('app').get('plugins', {}))
+    loader.init(app, reader_app_plugins)
 
     return app

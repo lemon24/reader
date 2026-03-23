@@ -1,39 +1,192 @@
+import copy
 import functools
 import logging
 import os.path
 import shutil
 import sys
+import tomllib
 import traceback
 from contextlib import nullcontext
 from datetime import datetime
 
 import click
-import yaml
+from click.core import ParameterSource
 
 import reader
 
 from . import StorageError
-from ._config import make_reader_config
 from ._config import make_reader_from_config
 from ._plugins import Loader
 from ._plugins import LoaderError
 
 
-APP_NAME = reader.__name__
+app_name = reader.__name__
+app_dir = click.get_app_dir(app_name)
+
 
 log = logging.getLogger(__name__)
 
 
-def get_default_db_path(create_dir=False):
-    app_dir = click.get_app_dir(APP_NAME)
-    db_path = os.path.join(app_dir, 'db.sqlite')
-    if create_dir:
-        os.makedirs(app_dir, exist_ok=True)
-    return db_path
+def load_reader_config(args):
+    # used at least by wsgi.py
+    return load_config(cli, args, '')
 
 
-def get_default_config_path():
-    return os.path.join(click.get_app_dir(APP_NAME), 'config.yaml')
+def load_config(command, args=None, prog_name=None):
+    """Return the parameters from invoking command and its subcommands,
+    but without actually invoking any command.
+
+    Together with the load_defaults() option callback,
+    this allows using Click to parse a config file,
+    honoring the same defaults and environment variables
+    that invoking the command would.
+
+    Example:
+
+    Given a load_defaults() --config option set to config.toml:
+
+        [reader]
+        plugin=['config']
+        [reader.subcommand]
+        option='config'
+
+    Defaults come from the config file:
+
+        >>> load_config(cli, [])
+        {'': {'plugin': ('CONFIG',)}}
+
+    Options with extend_defaults() extend the config file values:
+
+        >>> load_config(cli, ['--plugin', 'option'])
+        {'': {'plugin': ('CONFIG', 'OPTION')}}
+
+    Subcommands also get their defaults from the config file:
+
+        >>> load_config(cli, ['subcommand'])
+        {'': {'plugin': ('CONFIG',)}, 'subcommand': {'option': 'CONFIG'}}
+        >>> load_config(cli, ['subcommand', '--option', 'command'])
+        {'': {'plugin': ('CONFIG',)}, 'subcommand': {'option': 'COMMAND'}}
+
+    Click UsageErrors are wrapped in ValueError.
+
+    """
+    command = copy.deepcopy(command)
+    calls = []
+
+    def callback(**kwargs):
+        ctx = click.get_current_context()
+        calls.append((ctx.command_path, kwargs))
+
+    def patch_command(command):
+        command.callback = callback
+        command.no_args_is_help = False
+        if hasattr(command, 'commands'):
+            command.invoke_without_command = True
+            for subcommand in command.commands.values():
+                patch_command(subcommand)
+
+    patch_command(command)
+
+    try:
+        command(args, standalone_mode=False, prog_name=prog_name)
+    except click.UsageError as e:
+        raise ValueError(f"Command {e.ctx.command_path!r}: {e.format_message()}") from e
+
+    return dict(calls)
+
+
+def extend_defaults(ctx, param, value):
+    """Option callback: extend default_map values instead of replacing them.
+
+    Useful with multiple=True options when default_map is loaded from config.
+
+    """
+    source = ctx.get_parameter_source(param.name)
+    if source == ParameterSource.DEFAULT_MAP:
+        return value
+    raw_defaults = (ctx.default_map or {}).get(param.name, [])
+    defaults = param.type_cast_value(ctx, raw_defaults)
+    defaults = tuple(d for d in defaults if d not in value)
+    return defaults + value
+
+
+def load_defaults(ctx, param, value):
+    """Option callback: load and set default_map from a config file.
+
+    The file is a TOML file, with the values in the top-level key
+    auto_envvar_prefix.lower() of the root context.
+    Unknown options or command will cause a failure.
+
+    The option type must be File (or a subclass).
+
+    """
+    if not value:
+        return
+
+    section_name = ctx.find_root().auto_envvar_prefix.lower()
+
+    try:
+        config = tomllib.load(value)
+    except tomllib.TOMLDecodeError as e:
+        param.type.fail(f"TOML error: {e}", param, ctx)
+
+    if section_name not in config:
+        param.type.fail(f"No [{section_name}] section found", param, ctx)
+
+    default_map = config[section_name]
+    root = ctx.find_root()
+
+    errors = validate_default_map(root, default_map, section_name)
+    if errors:
+        sep = '\n* '
+        message = f"\n{sep}{sep.join(errors)}\n"
+        param.type.fail(message, param, ctx)
+
+    root.default_map = default_map
+    return config
+
+
+def validate_default_map(ctx, default_map, section_name):
+    def validate(command, map, path=section_name):
+        if map is None:
+            return
+        if not isinstance(map, dict):
+            yield f"{path}: Expected mapping, got: {type(map).__name__}"
+            return
+
+        map = map.copy()
+
+        for param in command.params:
+            map.pop(param.name, None)
+
+        if hasattr(command, 'commands'):
+            for sub_name, sub in command.commands.items():
+                sub_map = map.pop(sub_name, None)
+                yield from validate(sub, sub_map, f"{path}.{sub_name}")
+
+        for key in map:
+            yield f"{path}.{key}: No such option or command"
+
+    errors = list(validate(ctx.command, default_map))
+    errors.reverse()
+    return errors
+
+
+class InteractiveFile(click.File):
+    """Like click.File, but optional if the value is not from command line.
+
+    Useful with load_defaults().
+
+    """
+
+    def convert(self, value, param, ctx):
+        try:
+            return super().convert(value, param, ctx)
+        except click.BadParameter:
+            source = ctx.get_parameter_source(param.name)
+            if source not in (ParameterSource.DEFAULT, ParameterSource.ENVIRONMENT):
+                raise
+            return None
 
 
 def format_tb(e):
@@ -120,66 +273,50 @@ def log_command(fn):
     return wrapper
 
 
-def config_option(*args, **kwargs):
-    def callback(ctx, param, value):
-        config_path = value if value is not None else get_default_config_path()
-        try:
-            with open(config_path) as file:
-                config = make_reader_config(yaml.safe_load(file))
-        except FileNotFoundError:
-            assert value is None
-            config = make_reader_config({})
-
-        ctx.default_map = config['cli'].get('defaults', {})
-
-        ctx.obj = config
-        return config
-
-    return click.option(
-        *args,
-        type=click.Path(exists=True, dir_okay=False),
-        callback=callback,
-        is_eager=True,
-        expose_value=False,
-        **kwargs,
-    )
-
-
 def pass_reader(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         ctx = click.get_current_context().find_root()
         # TODO: replace with ctx.obj.make_reader('cli')
-        reader = make_reader_with_plugins(**ctx.obj.merged('cli').get('reader', {}))
+        params = ctx.params
+        reader = make_reader_with_plugins(
+            url=params['db'], plugins=params['plugin'], feed_root=params['feed_root']
+        )
         ctx.call_on_close(reader.close)
         return fn(reader, *args, **kwargs)
 
     return wrapper
 
 
-@click.group()
+@click.group(context_settings=dict(auto_envvar_prefix=app_name.upper()))
 @click.option(
     '--db',
-    type=click.Path(dir_okay=False),
-    envvar=reader._DB_ENVVAR,
-    help=f"Path to the reader database. [default: {get_default_db_path()}]",
+    type=click.Path(dir_okay=False, resolve_path=True),
+    show_default=True,
+    default=os.path.join(app_dir, 'db.sqlite'),
+    help="Path to the reader database.",
 )
 @click.option(
     '--plugin',
     multiple=True,
-    envvar=reader._PLUGIN_ENVVAR,
+    callback=extend_defaults,
     help="Import path to a reader plug-in. Can be passed multiple times.",
 )
 @click.option(
     '--cli-plugin',
     multiple=True,
-    envvar=reader._CLI_PLUGIN_ENVVAR,
+    callback=extend_defaults,
     help="Import path to a CLI plug-in. Can be passed multiple times.",
 )
-@config_option(
+@click.option(
     '--config',
-    envvar=reader._CONFIG_ENVVAR,
-    help=f"Path to the reader config. [default: {get_default_config_path()}]",
+    type=InteractiveFile('rb'),
+    callback=load_defaults,
+    is_eager=True,
+    expose_value=False,
+    show_default=True,
+    default=os.path.join(app_dir, 'config.toml'),
+    help="Path to the reader config.",
 )
 @click.option(
     '--feed-root',
@@ -192,35 +329,17 @@ def pass_reader(fn):
     ),
 )
 @click.version_option(reader.__version__, message='%(prog)s %(version)s')
-@click.pass_obj
-def cli(config, db, plugin, cli_plugin, feed_root):
-    # TODO: mention in docs that --db/--plugin/envvars ALWAYS override the config
-    # (same for wsgi envvars)
-    # NOTE: we can never use click defaults for --db/--plugin, because they would override the config always
-
-    if db:
-        config.all['reader']['url'] = db
-    else:
-        # ... could be the 'cli' section, maybe...
-        if not config['default'].get('reader', {}).get('url'):
-            try:
-                db = get_default_db_path(create_dir=True)
-            except Exception as e:
-                abort("{}", e)
-            config.all['reader']['url'] = db
-
-    if plugin:
-        config.all['reader']['plugins'] = dict.fromkeys(plugin)
-
-    if cli_plugin:
-        config['cli']['plugins'] = dict.fromkeys(cli_plugin)
-
-    if feed_root is not None:
-        config['default']['reader']['feed_root'] = feed_root
+@click.pass_context
+def cli(ctx, db, plugin, cli_plugin, feed_root):
+    if os.path.commonpath([app_dir, db]) == app_dir:
+        try:
+            os.makedirs(app_dir, exist_ok=True)
+        except Exception as e:
+            abort("{}", e)
 
     try:
         loader = Loader()
-        loader.init(config, config.merged('cli').get('plugins', {}))
+        loader.init(ctx.find_root().default_map, cli_plugin)
     except LoaderError as e:
         abort("{}; original traceback follows\n\n{}", e, format_tb(e.__cause__ or e))
 
@@ -453,29 +572,6 @@ def search_entries(reader, query):
     for rv in reader.search_entries(query):
         entry = reader.get_entry(rv)
         click.echo(f"{entry.feed.url} {entry.link or entry.id}")
-
-
-@cli.group()
-def config():
-    """Do various things related to config."""
-
-
-class Dumper(yaml.SafeDumper):
-    def ignore_aliases(self, data):
-        return True
-
-
-def dump_config(data):
-    return yaml.dump(data, sort_keys=False, Dumper=Dumper)
-
-
-@config.command()
-@click.option('--merge/--no-merge')
-@click.pass_obj
-def dump(config, merge):
-    if merge:
-        config = config.merge_all()
-    click.echo(dump_config(config.data))
 
 
 try:

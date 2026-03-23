@@ -22,6 +22,7 @@ To load::
 """
 
 import io
+import pprint
 import re
 import shlex
 import sys
@@ -34,7 +35,6 @@ import click
 from reader import EntryNotFoundError
 from reader import FeedExistsError
 from reader import Reader
-from reader._cli import dump_config
 from reader._cli import format_tb
 from reader._cli import pass_reader
 
@@ -125,7 +125,7 @@ def get_output(config, now, output, exc):
                 '\n## argv',
                 '\n'.join(map(shlex.quote, sys.argv[1:])),
                 '\n## config',
-                dump_config(config.merge_all().data.get('cli')).rstrip(),
+                pprint.pformat(config),
             ]
         )
 

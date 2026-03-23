@@ -34,4 +34,4 @@ so they should be used only for debugging.
 The following example shows the config file structure
 and the options currently available:
 
-.. literalinclude:: ../examples/config.yaml
+.. literalinclude:: ../examples/config.toml

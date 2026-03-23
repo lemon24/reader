@@ -5,7 +5,6 @@ import requests
 import wsgiadapter
 
 from reader._app.legacy import create_app
-from reader._config import make_reader_config
 from reader._config import make_reader_from_config
 from utils import utc_datetime as datetime
 
@@ -19,8 +18,8 @@ except ImportError:
 pytestmark = [pytest.mark.requires_lxml, pytest.mark.apptest]
 
 
-def make_app(config):
-    return create_app(make_reader_config(config))
+# TODO: unify with ._app.create_app()
+make_app = create_app
 
 
 def make_browser(app):
@@ -47,7 +46,7 @@ class WSGIAdapter(wsgiadapter.WSGIAdapter):
 
 @pytest.fixture
 def app(db_path):
-    return make_app({'reader': {'url': db_path}})
+    return make_app({'db': db_path, 'plugin': []}, [])
 
 
 @pytest.fixture
@@ -142,7 +141,7 @@ def test_add_delete_feed(db_path, browser, parser, app, monkeypatch):
         return reader
 
     # this is brittle, it may break if we change how we use make_reader in app
-    monkeypatch.setattr('reader._config.make_reader_from_config', app_make_reader)
+    monkeypatch.setattr('reader._app.legacy.make_reader_from_config', app_make_reader)
 
     reader = app_make_reader(url=db_path)
 

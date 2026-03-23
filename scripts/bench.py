@@ -23,7 +23,6 @@ from fakeparser import Parser
 from reader import make_reader
 from reader._app import create_app
 from reader._app import get_reader
-from reader._config import make_reader_config
 
 
 def get_params(fn):
@@ -74,7 +73,7 @@ def inject(**factories):
 
 
 def make_test_client(path):
-    app = create_app(make_reader_config({'reader': {'url': path}}))
+    app = create_app({'db': path, 'plugin': []}, [])
     client = app.test_client()
     with app.app_context():
         get_reader()

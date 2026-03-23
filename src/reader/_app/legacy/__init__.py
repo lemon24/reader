@@ -35,6 +35,7 @@ from reader import EntrySearchResult
 from reader import InvalidSearchQueryError
 from reader import ParseError
 from reader import ReaderError
+from reader._config import make_reader_from_config
 from reader._plugins import Loader
 from reader.types import _get_entry_content
 from reader.types import TristateFilterInput
@@ -357,9 +358,9 @@ def preview():
 
     # TODO: maybe cache stuff
 
-    reader = current_app.config['READER_CONFIG'].make_reader(
-        'default', url=':memory:', plugin_loader=current_app.plugin_loader
-    )
+    config = current_app.config['READER_CONFIG'].copy()
+    config['url'] = ':memory:'
+    reader = make_reader_from_config(**config, plugin_loader=current_app.plugin_loader)
 
     reader.add_feed(url, allow_invalid_url=True)
 
@@ -821,12 +822,14 @@ def additional_links(entry):
         yield from func(entry)
 
 
-def create_app(config):
+def create_app(reader_config, reader_app_plugins):
     app = Flask(__name__)
 
     app.secret_key = 'secret'
 
-    app.config['READER_CONFIG'] = config
+    # TODO: unify with reader._cli.pass_reader
+    params = reader_config
+    app.config['READER_CONFIG'] = dict(url=params['db'], plugins=params['plugin'])
 
     app.register_blueprint(blueprint)
 
@@ -836,19 +839,12 @@ def create_app(config):
 
     app.plugin_loader = loader = Loader()
 
-    def log_exception(message, cause):
-        app.logger.exception("%s; original traceback follows", message, exc_info=cause)
-
-    # Don't raise exceptions for plugins, just log.
-    # Does it make sense to keep going after initializing a plugin fails?
-    # How do we know the target isn't left in a bad state?
-    loader.handle_import_error = log_exception
-    loader.handle_init_error = log_exception
-
     # There's one reader instance per app.
-    app.reader = app.config['READER_CONFIG'].make_reader('app', plugin_loader=loader)
+    app.reader = make_reader_from_config(
+        **app.config['READER_CONFIG'], plugin_loader=loader
+    )
 
-    loader.init(app, config.merged('app').get('plugins', {}))
+    loader.init(app, reader_app_plugins)
 
     # TODO: lowering app.reader._storage.chunk_size may reduce memory usage slightly
 

@@ -1,7 +1,9 @@
 import click
 
-import reader
+from reader._cli import abort
+from reader._cli import format_tb
 from reader._cli import setup_logging
+from reader._plugins import LoaderError
 
 
 def make_add_response_headers_middleware(wsgi_app, headers):
@@ -16,18 +18,17 @@ def make_add_response_headers_middleware(wsgi_app, headers):
 
 
 @click.command()
-@click.pass_obj
 @click.option('-h', '--host', default='localhost', help="The interface to bind to.")
 @click.option('-p', '--port', default=8080, type=int, help="The port to bind to.")
 @click.option(
     '--plugin',
     multiple=True,
-    envvar=reader._APP_PLUGIN_ENVVAR,
     help="Import path to a web app plug-in. Can be passed multiple times.",
 )
 @click.option('--legacy/--no-legacy', help="Serve the legacy app.")
 @click.option('-v', '--verbose', count=True)
-def serve(config, host, port, plugin, legacy, verbose):
+@click.pass_context
+def serve(ctx, host, port, plugin, legacy, verbose):
     """Start a local HTTP reader server."""
     setup_logging(verbose)
     from werkzeug.serving import run_simple
@@ -37,10 +38,11 @@ def serve(config, host, port, plugin, legacy, verbose):
     else:
         from .legacy import create_app
 
-    if plugin:
-        config['app']['plugins'] = dict.fromkeys(plugin)
+    try:
+        app = create_app(ctx.find_root().params, plugin)
+    except LoaderError as e:
+        abort("{}; original traceback follows\n\n{}", e, format_tb(e.__cause__ or e))
 
-    app = create_app(config)
     app.wsgi_app = make_add_response_headers_middleware(
         app.wsgi_app,
         [('Referrer-Policy', 'same-origin')],

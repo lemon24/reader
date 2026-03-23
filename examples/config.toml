@@ -1,0 +1,26 @@
+# The config file consists of default values for CLI options.
+
+# Global options go in the [reader] section.
+
+[reader]
+db = "/path/to/db.sqlite"
+feed_root = "/path/to/feeds"
+# Options that can be passed multiple times take a list of values
+# (unlike other settings, plugins are merged with commandline options).
+plugin = [
+    "reader._plugins.sqlite_releases:init",
+    "reader.ua_fallback",
+]
+
+# Subcommand defaults go in nested tables.
+
+# add --update
+[reader.add]
+# Flags take a boolean value.
+update = true
+
+# update --workers 10 -vv
+[reader.update]
+workers = 10
+# Flags that can be repeated take an integer.
+verbose = 2

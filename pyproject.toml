@@ -61,8 +61,6 @@ all = ["reader[cli,app,unstable-plugins]"]
 
 cli = [
     "click>=7",
-    # for config
-    "PyYAML",
 ]
 app = [
     "flask>=0.10",
