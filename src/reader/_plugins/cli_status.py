@@ -26,6 +26,7 @@ import pprint
 import re
 import shlex
 import sys
+import traceback
 from contextlib import redirect_stdout
 from datetime import datetime
 from datetime import timedelta
@@ -35,7 +36,6 @@ import click
 from reader import EntryNotFoundError
 from reader import FeedExistsError
 from reader import Reader
-from reader._cli import format_tb
 from reader._cli import pass_reader
 
 
@@ -131,6 +131,10 @@ def get_output(config, now, output, exc):
 
     parts.append('\n')
     return '\n\n'.join(parts)
+
+
+def format_tb(e):
+    return ''.join(traceback.format_exception(type(e), e, e.__traceback__))
 
 
 HEADING = r'# (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\n'

@@ -9,7 +9,7 @@ feed_root = "/path/to/feeds"
 # (unlike other settings, plugins are merged with commandline options).
 plugin = [
     "reader._plugins.sqlite_releases:init",
-    "reader.ua_fallback",
+    ".ua_fallback",
 ]
 
 # Subcommand defaults go in nested tables.

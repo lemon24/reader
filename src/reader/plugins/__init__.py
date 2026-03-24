@@ -1,64 +1,53 @@
 """
 Built-in plug-ins.
 
+While the plugin entry points are stable,
+the plugin implementation is *not*.
+
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from collections.abc import Iterable
-from pkgutil import resolve_name
+import warnings
 from typing import TYPE_CHECKING
-from typing import Union
 
-from ..exceptions import InvalidPluginError
+from ._loader import PluginLoader
 
 
 if TYPE_CHECKING:  # pragma: no cover
-    from . import Reader  # noqa: F401
+    from .. import Reader  # noqa: F401
 
 
 #: The :func:`~reader.make_reader` default list of :ref:`plugins <plugins>`.
 DEFAULT_PLUGINS = [
-    'reader.ua_fallback',
+    '.ua_fallback',
 ]
 
-_PLUGIN_PREFIX = 'reader.'
-_MODULE_PREFIX = 'reader.plugins.'
+
+_LEGACY_PLUGINS = {
+    'reader.enclosure_dedupe',
+    'reader.entry_dedupe',
+    'reader.mark_as_read',
+    'reader.readtime',
+    'reader.ua_fallback',
+}
 
 
-PluginType = Callable[['Reader'], None]
-PluginInput = Union[str, PluginType]
+def _process_legacy(name: str) -> str | None:
+    # FIXME: test this and fix all other test legacy name usage
+    if name not in _LEGACY_PLUGINS:
+        return None
+    new_name = name.removeprefix('reader')
+    warnings.warn(
+        "Support for built-in plugin names starting with 'reader.' "
+        "is deprecated and will be removed in reader 4.0. "
+        f"Use {new_name!r} instead of {name!r}.",
+        DeprecationWarning,
+        stacklevel=5,
+    )
+    return new_name
 
 
-def _load_plugins(plugins: Iterable[PluginInput]) -> Iterable[PluginType]:
-    for plugin in plugins:
-        yield _load_plugin(plugin)
-
-
-def _load_plugin(plugin: PluginInput) -> PluginType:
-    if not isinstance(plugin, str):
-        return plugin
-
-    if not plugin.startswith(_PLUGIN_PREFIX):
-        raise InvalidPluginError(f"no such built-in plugin: {plugin!r}")
-
-    module_name = plugin.replace(_PLUGIN_PREFIX, _MODULE_PREFIX, 1)
-    import_error = None
-
-    try:
-        return resolve_name(module_name + ':init_reader')
-    except ModuleNotFoundError as e:
-        import_error = e
-    except ValueError:
-        pass
-
-    try:
-        return resolve_name(plugin)
-    except (ModuleNotFoundError, AttributeError):
-        pass
-
-    if import_error and import_error.name != module_name:
-        raise import_error
-
-    raise InvalidPluginError(f"no such built-in plugin: {plugin!r}") from import_error
+_PLUGIN_LOADER = PluginLoader['Reader'](
+    'init_reader', 'reader.plugins', _process_legacy
+)

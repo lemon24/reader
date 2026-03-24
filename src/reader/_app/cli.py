@@ -1,9 +1,6 @@
 import click
 
-from reader._cli import abort
-from reader._cli import format_tb
 from reader._cli import setup_logging
-from reader._plugins import LoaderError
 
 
 def make_add_response_headers_middleware(wsgi_app, headers):
@@ -38,10 +35,7 @@ def serve(ctx, host, port, plugin, legacy, verbose):
     else:
         from .legacy import create_app
 
-    try:
-        app = create_app(ctx.find_root().params, plugin)
-    except LoaderError as e:
-        abort("{}; original traceback follows\n\n{}", e, format_tb(e.__cause__ or e))
+    app = create_app(ctx.find_root().params, plugin)
 
     app.wsgi_app = make_add_response_headers_middleware(
         app.wsgi_app,

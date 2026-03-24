@@ -27,9 +27,9 @@ from reader import EntryNotFoundError
 from reader import FeedExistsError
 from reader import FeedNotFoundError
 from reader import InvalidFeedURLError
+from reader import make_reader
 from reader import UpdateError
-from reader._config import make_reader_from_config
-from reader._plugins import Loader
+from reader.plugins._loader import PluginLoader
 
 from .forms import AddFeed
 from .forms import ChangeFeedTitle
@@ -328,13 +328,9 @@ def create_app(reader_config, reader_app_plugins):
 
     app.register_blueprint(blueprint)
 
-    app.plugin_loader = loader = Loader()
-
     # There's one reader instance per app.
-    app.reader = make_reader_from_config(
-        **app.config['READER_CONFIG'], plugin_loader=loader
-    )
+    app.reader = make_reader(**app.config['READER_CONFIG'])
 
-    loader.init(app, reader_app_plugins)
+    PluginLoader('init_app').oneshot(app, reader_app_plugins)
 
     return app

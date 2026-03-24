@@ -27,9 +27,7 @@ def test_cli_status(db_path, data_dir, make_reader, monkeypatch):
     monkeypatch.setattr(
         'reader.Reader._now', staticmethod(lambda: datetime(2010, 1, 1, 0, 2))
     )
-    result = invoke(
-        '--cli-plugin', 'reader._plugins.cli_status:init_cli', 'update', '-v'
-    )
+    result = invoke('--cli-plugin', 'reader._plugins.cli_status', 'update', '-v')
     assert result.exit_code == 0, result.output
     assert 'full.rss' in result.output
 
@@ -73,7 +71,7 @@ def test_many_runs(db_path, make_reader, monkeypatch):
         monkeypatch.setattr('reader.Reader._now', staticmethod(lambda: now))
         result = invoke(
             '--cli-plugin',
-            'reader._plugins.cli_status.init_cli',
+            'reader._plugins.cli_status',
             'update',
         )
         assert result.exit_code == 0, result.output

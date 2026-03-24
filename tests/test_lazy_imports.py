@@ -20,7 +20,9 @@ pytestmark = pytest.mark.slow
 
 
 ALL_PLUGINS = [
-    'reader.' + m.name for m in pkgutil.iter_modules(reader.plugins.__path__)
+    '.' + m.name
+    for m in pkgutil.iter_modules(reader.plugins.__path__)
+    if not m.name.startswith('_')
 ]
 
 

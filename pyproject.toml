@@ -181,7 +181,11 @@ module = [
     "reader._app",
     "reader._app.*",
     "reader._plugins.*",
-    "reader.plugins.*",
+    "reader.plugins.enclosure_dedupe",
+    "reader.plugins.entry_dedupe",
+    "reader.plugins.ua_fallback",
+    "reader.plugins.readtime",
+    "reader.plugins.mark_as_read",
     "reader._vendor.feedparser.*",
 ]
 ignore_errors = true

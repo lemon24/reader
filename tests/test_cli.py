@@ -8,6 +8,7 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
+from reader import PluginError
 from reader import Reader
 from reader import ReaderError
 from reader import UpdateHookError
@@ -174,21 +175,20 @@ def test_cli_plugin(db_path, monkeypatch, tests_dir):
     monkeypatch.syspath_prepend(tests_dir)
 
     runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        [
-            '--db',
-            db_path,
-            '--plugin',
-            'test_cli:raise_exception_plugin',
-            'list',
-            'feeds',
-        ],
-        catch_exceptions=False,
-    )
 
-    assert result.exit_code != 0
-    assert "plug-in error" in result.output
+    with pytest.raises(PluginError):
+        result = runner.invoke(
+            cli,
+            [
+                '--db',
+                db_path,
+                '--plugin',
+                'test_cli:raise_exception_plugin',
+                'list',
+                'feeds',
+            ],
+            catch_exceptions=False,
+        )
 
 
 def raise_hook(*args):
@@ -293,21 +293,18 @@ def test_cli_app_plugin(db_path, tests_dir, monkeypatch):
     monkeypatch.setattr('werkzeug.serving.run_simple', run_simple)
 
     runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        [
-            '--db',
-            db_path,
-            'serve',
-            '--plugin',
-            'test_cli:raise_exception_app_plugin',
-        ],
-        catch_exceptions=False,
-    )
-
-    # it doesn't fail, just skips the plugin
-    assert result.exit_code != 0, result.output
-    assert "plug-in error" in result.output
+    with pytest.raises(PluginError):
+        result = runner.invoke(
+            cli,
+            [
+                '--db',
+                db_path,
+                'serve',
+                '--plugin',
+                'test_cli:raise_exception_app_plugin',
+            ],
+            catch_exceptions=False,
+        )
 
 
 # TODO: also test plugins in the successful case, like we do in test_app_wsgi.py

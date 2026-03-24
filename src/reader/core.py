@@ -43,13 +43,12 @@ from .exceptions import EntryNotFoundError
 from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
 from .exceptions import ParseError
-from .exceptions import PluginInitError
 from .exceptions import SearchNotEnabledError
 from .exceptions import TagNotFoundError
 from .exceptions import UpdateHookError
-from .plugins import _load_plugins
+from .plugins import _PLUGIN_LOADER
 from .plugins import DEFAULT_PLUGINS
-from .plugins import PluginInput
+from .plugins._loader import PluginInput
 from .types import _entry_argument
 from .types import _feed_argument
 from .types import _resource_argument
@@ -105,7 +104,7 @@ def make_reader(
     *,
     feed_root: str | None = None,
     read_only: bool = False,
-    plugins: Iterable[PluginInput] = DEFAULT_PLUGINS,
+    plugins: Iterable[PluginInput[Reader]] = DEFAULT_PLUGINS,
     session_timeout: TimeoutType = DEFAULT_TIMEOUT,
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
     search_enabled: bool | None | Literal['auto'] = 'auto',
@@ -172,11 +171,11 @@ def make_reader(
             Only allow read-only storage operations.
 
         plugins (iterable(str or callable(Reader)) or None):
-            An iterable of built-in plugin names or
-            `plugin(reader) --> None` callables.
-            The callables are called with the reader object
-            before it is returned.
-            Exceptions from plugin code will propagate to the caller.
+            An iterable of built-in plugin names (``.<plugin>``),
+            :func:`~pkgutil.resolve_name` import paths
+            (either the name of a module with an ``init_reader`` function,
+            or a colon-separated path to a callable),
+            or ``plugin(reader) -> None`` callables.
             Defaults to :data:`~reader.plugins.DEFAULT_PLUGINS`.
 
         session_timeout (float or tuple(float, float) or None):
@@ -244,6 +243,13 @@ def make_reader(
     .. versionadded:: 3.20
         The ``read_only`` keyword argument.
 
+    .. versionchanged:: 3.22
+        ``plugins`` now supports arbitrary import paths.
+
+    .. deprecated:: 3.22
+        Built-in plugins starting with ``reader.``;
+        use ``.<plugin>`` instead.
+
     """
 
     # Do as much work as possible before creating the storage.
@@ -262,7 +268,7 @@ def make_reader(
     except Exception as e:
         raise ValueError(f"invalid reserved name scheme: {reserved_name_scheme}") from e
 
-    plugin_funcs = list(_load_plugins(plugins))
+    loaded_plugins = _PLUGIN_LOADER.load_many(plugins)
 
     # If we ever need to change the signature of make_reader(),
     # or support additional storage/search implementations,
@@ -294,16 +300,7 @@ def make_reader(
             _called_directly=False,
         )
 
-        # TODO: move this logic to reader.plugins
-        # TODO: show the name the user passed, not that of plugin_func
-        for plugin_func in plugin_funcs:
-            try:
-                plugin_func(reader)
-            except Exception as e:
-                raise PluginInitError(
-                    "plugin failed to initialze: "
-                    f"{plugin_func.__module__}:{plugin_func.__qualname__}"
-                ) from e
+        _PLUGIN_LOADER.init_many(reader, loaded_plugins)
 
     except BaseException:
         storage.close()

@@ -33,10 +33,10 @@ from reader import Content
 from reader import Entry
 from reader import EntrySearchResult
 from reader import InvalidSearchQueryError
+from reader import make_reader
 from reader import ParseError
 from reader import ReaderError
-from reader._config import make_reader_from_config
-from reader._plugins import Loader
+from reader.plugins._loader import PluginLoader
 from reader.types import _get_entry_content
 from reader.types import TristateFilterInput
 from reader.utils import archive_entries
@@ -360,7 +360,7 @@ def preview():
 
     config = current_app.config['READER_CONFIG'].copy()
     config['url'] = ':memory:'
-    reader = make_reader_from_config(**config, plugin_loader=current_app.plugin_loader)
+    reader = make_reader(**config)
 
     reader.add_feed(url, allow_invalid_url=True)
 
@@ -837,14 +837,10 @@ def create_app(reader_config, reader_app_plugins):
     app.reader_additional_enclosure_links = []
     app.reader_additional_links = []
 
-    app.plugin_loader = loader = Loader()
-
     # There's one reader instance per app.
-    app.reader = make_reader_from_config(
-        **app.config['READER_CONFIG'], plugin_loader=loader
-    )
+    app.reader = make_reader(**app.config['READER_CONFIG'])
 
-    loader.init(app, reader_app_plugins)
+    PluginLoader('init_app').oneshot(app, reader_app_plugins)
 
     # TODO: lowering app.reader._storage.chunk_size may reduce memory usage slightly
 

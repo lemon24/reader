@@ -5,7 +5,6 @@ import os.path
 import shutil
 import sys
 import tomllib
-import traceback
 from contextlib import nullcontext
 from datetime import datetime
 
@@ -14,10 +13,9 @@ from click.core import ParameterSource
 
 import reader
 
+from . import make_reader
 from . import StorageError
-from ._config import make_reader_from_config
-from ._plugins import Loader
-from ._plugins import LoaderError
+from .plugins._loader import PluginLoader
 
 
 app_name = reader.__name__
@@ -189,23 +187,8 @@ class InteractiveFile(click.File):
             return None
 
 
-def format_tb(e):
-    return ''.join(traceback.format_exception(type(e), e, e.__traceback__))
-
-
 def abort(message, *args, **kwargs):
     raise click.ClickException(message.format(*args, **kwargs))
-
-
-def make_reader_with_plugins(**kwargs):
-    try:
-        return make_reader_from_config(**kwargs)
-    except StorageError as e:
-        abort("{}: {}", kwargs['url'], e)
-    except LoaderError as e:
-        abort("{}; original traceback follows\n\n{}", e, format_tb(e.__cause__ or e))
-    except Exception as e:
-        abort("unexpected error; original traceback follows\n\n{}", format_tb(e))
 
 
 def setup_logging(verbose):
@@ -277,11 +260,15 @@ def pass_reader(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         ctx = click.get_current_context().find_root()
-        # TODO: replace with ctx.obj.make_reader('cli')
         params = ctx.params
-        reader = make_reader_with_plugins(
-            url=params['db'], plugins=params['plugin'], feed_root=params['feed_root']
-        )
+        try:
+            reader = make_reader(
+                url=params['db'],
+                plugins=params['plugin'],
+                feed_root=params['feed_root'],
+            )
+        except StorageError as e:
+            abort("{}: {}", params['db'], e)
         ctx.call_on_close(reader.close)
         return fn(reader, *args, **kwargs)
 
@@ -337,11 +324,7 @@ def cli(ctx, db, plugin, cli_plugin, feed_root):
         except Exception as e:
             abort("{}", e)
 
-    try:
-        loader = Loader()
-        loader.init(ctx.find_root().default_map, cli_plugin)
-    except LoaderError as e:
-        abort("{}; original traceback follows\n\n{}", e, format_tb(e.__cause__ or e))
+    PluginLoader('init_cli').oneshot(ctx.find_root().default_map, cli_plugin)
 
 
 @cli.command()

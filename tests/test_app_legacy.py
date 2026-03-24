@@ -4,8 +4,8 @@ import pytest
 import requests
 import wsgiadapter
 
+from reader import make_reader
 from reader._app.legacy import create_app
-from reader._config import make_reader_from_config
 from utils import utc_datetime as datetime
 
 
@@ -136,12 +136,13 @@ def test_add_delete_feed(db_path, browser, parser, app, monkeypatch):
     app.reader._parser = parser
 
     def app_make_reader(**kwargs):
-        reader = make_reader_from_config(**kwargs)
+        reader = make_reader(**kwargs)
         reader._parser = parser
         return reader
 
     # this is brittle, it may break if we change how we use make_reader in app
-    monkeypatch.setattr('reader._app.legacy.make_reader_from_config', app_make_reader)
+    # FIXME: monkeypatch user
+    monkeypatch.setattr('reader._app.legacy.make_reader', app_make_reader)
 
     reader = app_make_reader(url=db_path)
 
