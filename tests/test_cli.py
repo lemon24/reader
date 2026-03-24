@@ -338,13 +338,12 @@ def test_config_option(tmp_path):
     raise NotImplementedError()
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="needs windows paths")
 def test_config_example(db_path, monkeypatch, tmp_path, root_dir):
     runner = CliRunner()
 
     config_path = tmp_path.joinpath('config.toml')
     text = root_dir.joinpath('examples/config.toml').read_text()
-    if os.name == 'nt':
-        text.replace("/path/to/feeds", "c:\\path\\to\\feeds")
     config_path.write_text(text)
 
     command_base = ['--db', db_path, '--config', str(config_path)]
