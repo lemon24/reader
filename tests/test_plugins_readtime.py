@@ -26,7 +26,7 @@ def get_readtimes(reader):
     ],
 )
 def test_basic(make_reader, parser, kwargs, expected):
-    reader = make_reader(':memory:', plugins=['reader.readtime'])
+    reader = make_reader(':memory:', plugins=['.readtime'])
     feed = parser.feed(1)
     entry = parser.entry(1, 1, **kwargs)
     reader.add_feed(feed)
@@ -54,7 +54,7 @@ def test_normal_workflow(make_reader, db_path, parser, monkeypatch):
 
     assert get_readtimes(reader) == {'1, 1': None, '1, 2': None}
 
-    reader = make_reader(db_path, plugins=['reader.readtime'])
+    reader = make_reader(db_path, plugins=['.readtime'])
 
     three = parser.entry(
         1, 3, datetime(2010, 1, 1), title='title', summary='summary ' * 3
@@ -90,7 +90,7 @@ def backfill_reader(make_reader, db_path, parser, monkeypatch):
 
     reader.update_feeds()
 
-    reader = make_reader(db_path, plugins=['reader.readtime'])
+    reader = make_reader(db_path, plugins=['.readtime'])
 
     return reader
 
@@ -189,7 +189,7 @@ def test_entry_deleted(make_reader, parser):
 
         reader.after_entry_update_hooks.append(hook)
 
-    reader = make_reader(':memory:', plugins=[delete_entry_plugin, 'reader.readtime'])
+    reader = make_reader(':memory:', plugins=[delete_entry_plugin, '.readtime'])
     reader.add_feed(parser.feed(1))
     parser.entry(1, 1)
     parser.entry(1, 2)

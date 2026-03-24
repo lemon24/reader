@@ -262,7 +262,7 @@ def test_cli_plugin_builtin_and_import_path(db_path, tests_dir, monkeypatch):
             '--plugin',
             'test_cli:store_reader_plugin',
             '--plugin',
-            'reader.ua_fallback',
+            '.ua_fallback',
             '--plugin',
             'reader.plugins.ua_fallback:init_reader',
             'list',

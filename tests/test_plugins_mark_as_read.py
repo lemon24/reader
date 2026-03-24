@@ -10,7 +10,7 @@ pytestmark = pytest.mark.noscheduled
 
 
 def test_regex_mark_as_read_backfill(make_reader, parser):
-    reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
+    reader = make_reader(':memory:', plugins=['.mark_as_read'])
 
     key = '.reader.mark-as-read'
     value = {'title': ['^match']}
@@ -53,7 +53,7 @@ def test_regex_mark_as_read_backfill(make_reader, parser):
 
 
 def test_regex_mark_as_read(make_reader, parser):
-    reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
+    reader = make_reader(':memory:', plugins=['.mark_as_read'])
 
     key = '.reader.mark-as-read'
     value = {'title': ['^match']}
@@ -102,7 +102,7 @@ def test_regex_mark_as_read(make_reader, parser):
 
 @pytest.mark.parametrize('value', ['x', {'title': 'x'}, {'title': [1]}])
 def test_regex_mark_as_read_bad_metadata(make_reader, parser, value):
-    reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
+    reader = make_reader(':memory:', plugins=['.mark_as_read'])
 
     one = parser.feed(1, datetime(2010, 1, 1))
     parser.entry(1, 1, datetime(2010, 1, 1), title='match')
@@ -123,9 +123,7 @@ def test_entry_deleted(make_reader, parser):
 
         reader.after_entry_update_hooks.append(hook)
 
-    reader = make_reader(
-        ':memory:', plugins=[delete_entry_plugin, 'reader.mark_as_read']
-    )
+    reader = make_reader(':memory:', plugins=[delete_entry_plugin, '.mark_as_read'])
     one = parser.feed(1)
     reader.add_feed(one)
     reader.set_tag(one, '.reader.mark-as-read', {'title': ['one']})
@@ -139,7 +137,7 @@ def test_entry_deleted(make_reader, parser):
 
 
 def test_missing_title(make_reader, parser):
-    reader = make_reader(':memory:', plugins=['reader.mark_as_read'])
+    reader = make_reader(':memory:', plugins=['.mark_as_read'])
     one = parser.feed(1)
     reader.add_feed(one)
     parser.entry(1, 1, title=None)

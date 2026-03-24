@@ -28,7 +28,7 @@ pytestmark = pytest.mark.noscheduled
 def reader(make_reader, request):
     plugins = []
     if 'with_plugin' in request.fixturenames:
-        plugins.append('reader.entry_dedupe')
+        plugins.append('.entry_dedupe')
     return make_reader(':memory:', plugins=plugins)
 
 

@@ -3,7 +3,7 @@ from utils import utc_datetime as datetime
 
 
 def test_plugin(make_reader, parser):
-    reader = make_reader(':memory:', plugins=['reader.enclosure_dedupe'])
+    reader = make_reader(':memory:', plugins=['.enclosure_dedupe'])
 
     feed = parser.feed(1, datetime(2010, 1, 1))
     one = parser.entry(1, 1, datetime(2010, 1, 1))

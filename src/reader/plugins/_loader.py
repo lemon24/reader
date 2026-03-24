@@ -22,8 +22,7 @@ class PluginLoader(Generic[T]):
     default_func: str
     builtin_package: str | None = None
 
-    # This exists only to support the legacy built-in plugin scheme
-    # (reader.<plugin>) and can be removed in 4.0.
+    # TODO: Remove legacy reader.<plugin> support in 4.0.
     process_name: Callable[[str], str | None] | None = None
 
     def load(self, plugin: PluginInput[T]) -> Plugin[T]:

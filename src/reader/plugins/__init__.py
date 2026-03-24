@@ -34,7 +34,7 @@ _LEGACY_PLUGINS = {
 
 
 def _process_legacy(name: str) -> str | None:
-    # FIXME: test this and fix all other test legacy name usage
+    # TODO: Remove legacy reader.<plugin> support in 4.0.
     if name not in _LEGACY_PLUGINS:
         return None
     new_name = name.removeprefix('reader')

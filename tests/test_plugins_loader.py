@@ -95,3 +95,9 @@ def test_init_many_error():
     assert 'test_plugins_loader' in str(exc_info.value)
     assert 'raise_exc' in str(exc_info.value)
     assert exc_info.value.__cause__ is cause
+
+
+def test_legacy_plugin_support(make_reader):
+    # TODO: Remove legacy reader.<plugin> support in 4.0.
+    with pytest.deprecated_call():
+        make_reader(':memory:', plugins=['reader.ua_fallback'])

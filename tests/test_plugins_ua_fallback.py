@@ -6,7 +6,7 @@ from reader import ParseError
 def test_fallback(requests_mock, make_reader):
     url = 'http://www.example.com/'
 
-    reader = make_reader(':memory:', plugins=('reader.ua_fallback',))
+    reader = make_reader(':memory:', plugins=('.ua_fallback',))
     reader.add_feed(url)
 
     matcher = requests_mock.get(url, status_code=403)
@@ -27,7 +27,7 @@ def test_fallback(requests_mock, make_reader):
 def test_noop(requests_mock, make_reader):
     url = 'http://www.example.com/'
 
-    reader = make_reader(':memory:', plugins=('reader.ua_fallback',))
+    reader = make_reader(':memory:', plugins=('.ua_fallback',))
     reader.add_feed(url)
 
     matcher = requests_mock.get(url, status_code=404)
