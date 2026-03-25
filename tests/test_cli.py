@@ -72,7 +72,7 @@ def test_cli(db_path, data_dir, monkeypatch):
         return runner.invoke(cli, ('--db', db_path, '--feed-root', '') + args)
 
     result = invoke('list', 'feeds')
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert result.output == ''
 
     result = invoke('add', feed_path)
@@ -315,7 +315,7 @@ def test_cli_app_plugin(db_path, tests_dir, monkeypatch):
 def test_cli_serve_calls_create_app(db_path, monkeypatch):
     exception = Exception("create_app error")
 
-    def create_app(config, app_plugins):
+    def create_app(config):
         create_app.config = config
         raise exception
 
@@ -327,7 +327,7 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
         runner.invoke(cli, ['--db', db_path, 'web', 'run'], catch_exceptions=False)
 
     assert excinfo.value is exception
-    assert create_app.config['url'] == db_path
+    assert create_app.config['']['url'] == db_path
 
 
 @pytest.mark.xfail

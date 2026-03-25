@@ -46,7 +46,7 @@ class WSGIAdapter(wsgiadapter.WSGIAdapter):
 
 @pytest.fixture
 def app(db_path):
-    return make_app({'url': db_path, 'plugins': []}, [])
+    return make_app({'': {'url': db_path}})
 
 
 @pytest.fixture
@@ -133,7 +133,7 @@ def test_add_delete_feed(db_path, browser, parser, app, monkeypatch):
     feed = parser.feed(1, datetime(2010, 1, 1))
     entry = parser.entry(1, 1, datetime(2010, 1, 1))
 
-    app.reader._parser = parser
+    app.extensions['reader']._reader._parser = parser
 
     def app_make_reader(**kwargs):
         reader = make_reader(**kwargs)
@@ -142,7 +142,7 @@ def test_add_delete_feed(db_path, browser, parser, app, monkeypatch):
 
     # this is brittle, it may break if we change how we use make_reader in app
     # FIXME: monkeypatch user
-    monkeypatch.setattr('reader._app.legacy.make_reader', app_make_reader)
+    monkeypatch.setattr('reader._app.ext.make_reader', app_make_reader)
 
     reader = app_make_reader(url=db_path)
 

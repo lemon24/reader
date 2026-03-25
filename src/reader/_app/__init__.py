@@ -27,10 +27,10 @@ from reader import EntryNotFoundError
 from reader import FeedExistsError
 from reader import FeedNotFoundError
 from reader import InvalidFeedURLError
-from reader import make_reader
 from reader import UpdateError
-from reader.plugins._loader import PluginLoader
 
+from .ext import get_reader
+from .ext import ReaderExtension
 from .forms import AddFeed
 from .forms import ChangeFeedTitle
 from .forms import EntryFilter
@@ -308,29 +308,20 @@ def humanize_naturaltime(dt):
         return humanize.naturaltime(dt + timedelta(days=1), when=when)
 
 
-csrf = CSRFProtect()
+@blueprint.record_once
+def add_jinja_do_extension(setup_state):
+    setup_state.app.jinja_env.add_extension('jinja2.ext.do')
 
 
-def get_reader():
-    return current_app.reader
-
-
-def create_app(reader_config, reader_app_plugins):
+def create_app(reader_config):
     app = Flask(__name__)
-    app.jinja_env.add_extension('jinja2.ext.do')
+    app.config['SECRET_KEY'] = 'secret'
 
-    app.secret_key = 'secret'
-    csrf.init_app(app)
+    CSRFProtect(app)
 
-    # TODO: unify with reader._cli.pass_reader
-    params = reader_config
-    app.config['READER_CONFIG'] = dict(url=params['url'], plugins=params['plugins'])
+    app.config['READER_CONFIG'] = reader_config
+    ReaderExtension(app)
 
     app.register_blueprint(blueprint)
-
-    # There's one reader instance per app.
-    app.reader = make_reader(**app.config['READER_CONFIG'])
-
-    PluginLoader('init_app').oneshot(app, reader_app_plugins)
 
     return app

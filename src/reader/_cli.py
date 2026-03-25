@@ -1,5 +1,6 @@
 import copy
 import functools
+import inspect
 import logging
 import os.path
 import shutil
@@ -25,12 +26,29 @@ app_dir = click.get_app_dir(app_name)
 log = logging.getLogger(__name__)
 
 
-def load_reader_config(args):
-    # used at least by wsgi.py
-    return load_config(cli, args, '')
+def load_reader_config(*args):
+    config = load_config(cli, args)
+    config[''] = extract_reader_params(config[''])
+    return config
 
 
-def load_config(command, args=None, prog_name=None):
+def load_reader_config_from_context():
+    config = load_config_from_context()
+    config[''] = extract_reader_params(config[''])
+    return config
+
+
+def extract_reader_params(params):
+    rv = {}
+    for sp in inspect.signature(make_reader).parameters.values():
+        if 'KEYWORD' not in sp.kind.name:
+            continue
+        if sp.name in params:
+            rv[sp.name] = params[sp.name]
+    return rv
+
+
+def load_config(command, args=None):
     """Return the parameters from invoking command and its subcommands,
     but without actually invoking any command.
 
@@ -69,11 +87,10 @@ def load_config(command, args=None, prog_name=None):
 
     """
     command = copy.deepcopy(command)
-    calls = []
+    calls = {}
 
     def callback(**kwargs):
-        ctx = click.get_current_context()
-        calls.append((ctx.command_path, kwargs))
+        calls.update(load_config_from_context())
 
     def patch_command(command):
         command.callback = callback
@@ -86,11 +103,25 @@ def load_config(command, args=None, prog_name=None):
     patch_command(command)
 
     try:
-        command(args, standalone_mode=False, prog_name=prog_name)
+        command(args, standalone_mode=False, prog_name='')
     except click.UsageError as e:
         raise ValueError(f"Command {e.ctx.command_path!r}: {e.format_message()}") from e
 
-    return dict(calls)
+    return calls
+
+
+def load_config_from_context():
+    ctx = click.get_current_context()
+    root = ctx.find_root()
+    rv = {}
+    while ctx:
+        if ctx is root:
+            path = ''
+        else:
+            path = ctx.command_path.removeprefix(root.info_name + ' ')
+        rv[path] = ctx.params
+        ctx = ctx.parent
+    return rv
 
 
 def extend_defaults(ctx, param, value):
@@ -259,17 +290,12 @@ def log_command(fn):
 def pass_reader(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
-        ctx = click.get_current_context().find_root()
-        params = ctx.params
+        reader_args = load_reader_config_from_context()['']
         try:
-            reader = make_reader(
-                url=params['url'],
-                plugins=params['plugins'],
-                feed_root=params['feed_root'],
-            )
+            reader = make_reader(**reader_args)
         except StorageError as e:
-            abort("{}: {}", params['url'], e)
-        ctx.call_on_close(reader.close)
+            abort("{}: {}", reader_args['url'], e)
+        click.get_current_context().call_on_close(reader.close)
         return fn(reader, *args, **kwargs)
 
     return wrapper

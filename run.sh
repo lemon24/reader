@@ -68,7 +68,7 @@ function docs-dev {
 }
 
 function serve-dev {
-    export READER_DB=db.sqlite
+    export READER_URL=db.sqlite
     flask -A reader._app.wsgi --debug run "$@"
 }
 

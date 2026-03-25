@@ -33,14 +33,14 @@ from reader import Content
 from reader import Entry
 from reader import EntrySearchResult
 from reader import InvalidSearchQueryError
-from reader import make_reader
 from reader import ParseError
 from reader import ReaderError
-from reader.plugins._loader import PluginLoader
 from reader.types import _get_entry_content
 from reader.types import TristateFilterInput
 from reader.utils import archive_entries
 
+from ..ext import get_reader
+from ..ext import ReaderExtension
 from .api_thing import APIError
 from .api_thing import APIThing
 
@@ -97,10 +97,6 @@ signals = flask.signals.Namespace()
 
 # NOTE: these signals are part of the app extension API
 got_preview_parse_error = signals.signal('preview-parse-error')
-
-
-def get_reader():
-    return current_app.reader
 
 
 def stream_template(template_name_or_list, **kwargs):
@@ -358,9 +354,7 @@ def preview():
 
     # TODO: maybe cache stuff
 
-    config = current_app.config['READER_CONFIG'].copy()
-    config['url'] = ':memory:'
-    reader = make_reader(**config)
+    reader = current_app.extensions['reader']._make_reader(url=':memory:')
 
     reader.add_feed(url, allow_invalid_url=True)
 
@@ -798,7 +792,7 @@ def get_feed_tag_keys(url):
 
         @lru_cache(128)
         def get(url):
-            return list(current_app.reader.get_tag_keys(url))
+            return list(get_reader().get_tag_keys(url))
 
         g.reader_get_feed_tag_keys = get
 
@@ -822,26 +816,17 @@ def additional_links(entry):
         yield from func(entry)
 
 
-def create_app(reader_config, reader_app_plugins):
+def create_app(reader_config):
     app = Flask(__name__)
-
-    app.secret_key = 'secret'
-
-    # TODO: unify with reader._cli.pass_reader
-    params = reader_config
-    app.config['READER_CONFIG'] = dict(url=params['url'], plugins=params['plugins'])
-
-    app.register_blueprint(blueprint)
+    app.config['SECRET_KEY'] = 'secret'
 
     # NOTE: this is part of the app extension API
     app.reader_additional_enclosure_links = []
     app.reader_additional_links = []
 
-    # There's one reader instance per app.
-    app.reader = make_reader(**app.config['READER_CONFIG'])
+    app.config['READER_CONFIG'] = reader_config
+    ReaderExtension(app)
 
-    PluginLoader('init_app').oneshot(app, reader_app_plugins)
-
-    # TODO: lowering app.reader._storage.chunk_size may reduce memory usage slightly
+    app.register_blueprint(blueprint)
 
     return app

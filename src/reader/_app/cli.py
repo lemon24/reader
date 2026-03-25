@@ -1,5 +1,6 @@
 import click
 
+from reader._cli import load_reader_config_from_context
 from reader._cli import setup_logging
 
 
@@ -42,7 +43,7 @@ def run(ctx, host, port, verbose):
     else:
         from .legacy import create_app
 
-    app = create_app(ctx.find_root().params, ctx.parent.params['plugins'])
+    app = create_app(load_reader_config_from_context())
 
     app.wsgi_app = make_add_response_headers_middleware(
         app.wsgi_app,
