@@ -73,7 +73,7 @@ def inject(**factories):
 
 
 def make_test_client(path):
-    app = create_app({'db': path, 'plugin': []}, [])
+    app = create_app({'url': path, 'plugins': []}, [])
     client = app.test_client()
     with app.app_context():
         get_reader()

@@ -299,9 +299,10 @@ def test_cli_app_plugin(db_path, tests_dir, monkeypatch):
             [
                 '--db',
                 db_path,
-                'serve',
+                'web',
                 '--plugin',
                 'test_cli:raise_exception_app_plugin',
+                'run',
             ],
             catch_exceptions=False,
         )
@@ -323,10 +324,10 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
     runner = CliRunner()
 
     with pytest.raises(Exception) as excinfo:
-        runner.invoke(cli, ['--db', db_path, 'serve'], catch_exceptions=False)
+        runner.invoke(cli, ['--db', db_path, 'web', 'run'], catch_exceptions=False)
 
     assert excinfo.value is exception
-    assert create_app.config['db'] == db_path
+    assert create_app.config['url'] == db_path
 
 
 @pytest.mark.xfail
@@ -353,7 +354,7 @@ def test_config_example(db_path, monkeypatch, tmp_path, root_dir):
 
     monkeypatch.setattr('werkzeug.serving.run_simple', run_simple)
 
-    result = runner.invoke(cli, command_base + ['serve'])
+    result = runner.invoke(cli, command_base + ['web', 'run'])
     assert result.exit_code == 0, result.output
     assert 'ERROR' not in result.output
     assert 'Traceback' not in result.output

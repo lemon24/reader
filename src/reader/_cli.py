@@ -263,12 +263,12 @@ def pass_reader(fn):
         params = ctx.params
         try:
             reader = make_reader(
-                url=params['db'],
-                plugins=params['plugin'],
+                url=params['url'],
+                plugins=params['plugins'],
                 feed_root=params['feed_root'],
             )
         except StorageError as e:
-            abort("{}: {}", params['db'], e)
+            abort("{}: {}", params['url'], e)
         ctx.call_on_close(reader.close)
         return fn(reader, *args, **kwargs)
 
@@ -277,20 +277,36 @@ def pass_reader(fn):
 
 @click.group(context_settings=dict(auto_envvar_prefix=app_name.upper()))
 @click.option(
+    '--url',
     '--db',
+    show_envvar=True,
     type=click.Path(dir_okay=False, resolve_path=True),
     show_default=True,
     default=os.path.join(app_dir, 'db.sqlite'),
     help="Path to the reader database.",
 )
 @click.option(
+    '--feed-root',
+    type=click.Path(file_okay=False),
+    show_default=True,
+    help=(
+        "Directory local feeds are relative to. "
+        "'' (empty string) means full filesystem access. "
+        "If not provided, don't open local feeds."
+    ),
+)
+@click.option(
     '--plugin',
+    'plugins',
+    show_envvar=True,
     multiple=True,
     callback=extend_defaults,
     help="Import path to a reader plug-in. Can be passed multiple times.",
 )
 @click.option(
     '--cli-plugin',
+    'cli_plugins',
+    show_envvar=True,
     multiple=True,
     callback=extend_defaults,
     help="Import path to a CLI plug-in. Can be passed multiple times.",
@@ -305,26 +321,24 @@ def pass_reader(fn):
     default=os.path.join(app_dir, 'config.toml'),
     help="Path to the reader config.",
 )
-@click.option(
-    '--feed-root',
-    type=click.Path(file_okay=False),
-    show_default=True,
-    help=(
-        "Directory local feeds are relative to. "
-        "'' (empty string) means full filesystem access. "
-        "If not provided, don't open local feeds."
-    ),
-)
 @click.version_option(reader.__version__, message='%(prog)s %(version)s')
 @click.pass_context
-def cli(ctx, db, plugin, cli_plugin, feed_root):
-    if os.path.commonpath([app_dir, db]) == app_dir:
+def cli(ctx, url, plugins, cli_plugins, feed_root):
+    """reader command-line interface.
+
+    Option defaults can be set via environment variables;
+    unless documented otherwise, the format is READER[_SUBCOMMAND]_OPTION.
+
+    https://reader.readthedocs.io/
+
+    """
+    if os.path.commonpath([app_dir, url]) == app_dir:
         try:
             os.makedirs(app_dir, exist_ok=True)
         except Exception as e:
             abort("{}", e)
 
-    PluginLoader('init_cli').oneshot(ctx.find_root().default_map, cli_plugin)
+    PluginLoader('init_cli').oneshot(ctx.find_root().default_map, cli_plugins)
 
 
 @cli.command()
@@ -343,8 +357,8 @@ def add(reader, url, update):
 @click.argument('url')
 @log_verbose
 @pass_reader
-def remove(reader, url):
-    """Remove an existing feed."""
+def delete(reader, url):
+    """Delete an existing feed."""
     reader.delete_feed(url)
 
 
@@ -508,7 +522,7 @@ def entries(reader):
 
 @cli.group()
 def search():
-    """Do various things related to search."""
+    """Search commands."""
 
 
 @search.command('status')
@@ -558,11 +572,11 @@ def search_entries(reader, query):
 
 
 try:
-    from reader._app.cli import serve
-
-    cli.add_command(serve)
+    import reader._app.cli
 except ImportError:
     pass
+else:
+    cli.add_command(reader._app.cli.cli)
 
 
 if __name__ == '__main__':

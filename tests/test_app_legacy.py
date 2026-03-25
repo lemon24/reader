@@ -46,7 +46,7 @@ class WSGIAdapter(wsgiadapter.WSGIAdapter):
 
 @pytest.fixture
 def app(db_path):
-    return make_app({'db': db_path, 'plugin': []}, [])
+    return make_app({'url': db_path, 'plugins': []}, [])
 
 
 @pytest.fixture

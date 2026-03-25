@@ -82,7 +82,8 @@ def test_get_alternates_relative():
 @pytest.mark.requires_lxml
 def test_plugin(db_path, requests_mock):
     app = make_app(
-        {'db': db_path, 'plugin': []}, ['reader._plugins.legacy.preview_feed_list:init']
+        {'url': db_path, 'plugins': []},
+        ['reader._plugins.legacy.preview_feed_list:init'],
     )
     browser = make_browser(app)
 

@@ -324,7 +324,7 @@ def create_app(reader_config, reader_app_plugins):
 
     # TODO: unify with reader._cli.pass_reader
     params = reader_config
-    app.config['READER_CONFIG'] = dict(url=params['db'], plugins=params['plugin'])
+    app.config['READER_CONFIG'] = dict(url=params['url'], plugins=params['plugins'])
 
     app.register_blueprint(blueprint)
 
