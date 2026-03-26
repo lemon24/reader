@@ -94,15 +94,6 @@ from .exceptions import (
 )
 
 
-# For internal use only.
-
-_CONFIG_ENVVAR = 'READER_CONFIG'
-_DB_ENVVAR = 'READER_DB'
-_PLUGIN_ENVVAR = 'READER_PLUGIN'
-_APP_PLUGIN_ENVVAR = 'READER_APP_PLUGIN'
-_CLI_PLUGIN_ENVVAR = 'READER_CLI_PLUGIN'
-
-
 # Constants.
 
 USER_AGENT = f'python-reader/{__version__} (+https://github.com/lemon24/reader)'
