@@ -177,7 +177,7 @@ strict = true
 module = [
     "reader.__main__",
     "reader._cli",
-    "reader._config",
+    "reader._config_utils",
     "reader._app",
     "reader._app.*",
     "reader._plugins.*",

@@ -330,12 +330,6 @@ def test_cli_serve_calls_create_app(db_path, monkeypatch):
     assert create_app.config['']['url'] == db_path
 
 
-@pytest.mark.xfail
-def test_config_option(tmp_path):
-    # FIXME: from https://github.com/lemon24/reader/issues/395 prototype
-    raise NotImplementedError()
-
-
 @pytest.mark.skipif(os.name == 'nt', reason="needs windows paths")
 def test_config_example(db_path, monkeypatch, tmp_path, root_dir):
     runner = CliRunner()

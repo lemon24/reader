@@ -1,21 +1,22 @@
-import copy
 import functools
-import inspect
 import logging
 import os.path
 import shutil
 import sys
-import tomllib
 from contextlib import nullcontext
 from datetime import datetime
 
 import click
-from click.core import ParameterSource
 
 import reader
 
 from . import make_reader
 from . import StorageError
+from ._config_utils import config_option
+from ._config_utils import extend_defaults
+from ._config_utils import extract_args
+from ._config_utils import load_config
+from ._config_utils import load_config_from_context
 from .plugins._loader import PluginLoader
 
 
@@ -28,194 +29,14 @@ log = logging.getLogger(__name__)
 
 def load_reader_config(*args):
     config = load_config(cli, args)
-    config[''] = extract_reader_params(config[''])
+    config[''] = extract_args(config[''], make_reader)
     return config
 
 
 def load_reader_config_from_context():
     config = load_config_from_context()
-    config[''] = extract_reader_params(config[''])
+    config[''] = extract_args(config[''], make_reader)
     return config
-
-
-def extract_reader_params(params):
-    rv = {}
-    for sp in inspect.signature(make_reader).parameters.values():
-        if 'KEYWORD' not in sp.kind.name:
-            continue
-        if sp.name in params:
-            rv[sp.name] = params[sp.name]
-    return rv
-
-
-def load_config(command, args=None):
-    """Return the parameters from invoking command and its subcommands,
-    but without actually invoking any command.
-
-    Together with the load_defaults() option callback,
-    this allows using Click to parse a config file,
-    honoring the same defaults and environment variables
-    that invoking the command would.
-
-    Example:
-
-    Given a load_defaults() --config option set to config.toml:
-
-        [reader]
-        plugin=['config']
-        [reader.subcommand]
-        option='config'
-
-    Defaults come from the config file:
-
-        >>> load_config(cli, [])
-        {'': {'plugin': ('CONFIG',)}}
-
-    Options with extend_defaults() extend the config file values:
-
-        >>> load_config(cli, ['--plugin', 'option'])
-        {'': {'plugin': ('CONFIG', 'OPTION')}}
-
-    Subcommands also get their defaults from the config file:
-
-        >>> load_config(cli, ['subcommand'])
-        {'': {'plugin': ('CONFIG',)}, 'subcommand': {'option': 'CONFIG'}}
-        >>> load_config(cli, ['subcommand', '--option', 'command'])
-        {'': {'plugin': ('CONFIG',)}, 'subcommand': {'option': 'COMMAND'}}
-
-    Click UsageErrors are wrapped in ValueError.
-
-    """
-    command = copy.deepcopy(command)
-    calls = {}
-
-    def callback(**kwargs):
-        calls.update(load_config_from_context())
-
-    def patch_command(command):
-        command.callback = callback
-        command.no_args_is_help = False
-        if hasattr(command, 'commands'):
-            command.invoke_without_command = True
-            for subcommand in command.commands.values():
-                patch_command(subcommand)
-
-    patch_command(command)
-
-    try:
-        command(args, standalone_mode=False, prog_name='')
-    except click.UsageError as e:
-        raise ValueError(f"Command {e.ctx.command_path!r}: {e.format_message()}") from e
-
-    return calls
-
-
-def load_config_from_context():
-    ctx = click.get_current_context()
-    root = ctx.find_root()
-    rv = {}
-    while ctx:
-        if ctx is root:
-            path = ''
-        else:
-            path = ctx.command_path.removeprefix(root.info_name + ' ')
-        rv[path] = ctx.params
-        ctx = ctx.parent
-    return rv
-
-
-def extend_defaults(ctx, param, value):
-    """Option callback: extend default_map values instead of replacing them.
-
-    Useful with multiple=True options when default_map is loaded from config.
-
-    """
-    source = ctx.get_parameter_source(param.name)
-    if source == ParameterSource.DEFAULT_MAP:
-        return value
-    raw_defaults = (ctx.default_map or {}).get(param.name, [])
-    defaults = param.type_cast_value(ctx, raw_defaults)
-    defaults = tuple(d for d in defaults if d not in value)
-    return defaults + value
-
-
-def load_defaults(ctx, param, value):
-    """Option callback: load and set default_map from a config file.
-
-    The file is a TOML file, with the values in the top-level key
-    auto_envvar_prefix.lower() of the root context.
-    Unknown options or command will cause a failure.
-
-    The option type must be File (or a subclass).
-
-    """
-    if not value:
-        return
-
-    section_name = ctx.find_root().auto_envvar_prefix.lower()
-
-    try:
-        config = tomllib.load(value)
-    except tomllib.TOMLDecodeError as e:
-        param.type.fail(f"TOML error: {e}", param, ctx)
-
-    if section_name not in config:
-        param.type.fail(f"No [{section_name}] section found", param, ctx)
-
-    default_map = config[section_name]
-    root = ctx.find_root()
-
-    errors = validate_default_map(root, default_map, section_name)
-    if errors:
-        sep = '\n* '
-        message = f"\n{sep}{sep.join(errors)}\n"
-        param.type.fail(message, param, ctx)
-
-    root.default_map = default_map
-    return config
-
-
-def validate_default_map(ctx, default_map, section_name):
-    def validate(command, map, path=section_name):
-        if map is None:
-            return
-        if not isinstance(map, dict):
-            yield f"{path}: Expected mapping, got: {type(map).__name__}"
-            return
-
-        map = map.copy()
-
-        for param in command.params:
-            map.pop(param.name, None)
-
-        if hasattr(command, 'commands'):
-            for sub_name, sub in command.commands.items():
-                sub_map = map.pop(sub_name, None)
-                yield from validate(sub, sub_map, f"{path}.{sub_name}")
-
-        for key in map:
-            yield f"{path}.{key}: No such option or command"
-
-    errors = list(validate(ctx.command, default_map))
-    errors.reverse()
-    return errors
-
-
-class InteractiveFile(click.File):
-    """Like click.File, but optional if the value is not from command line.
-
-    Useful with load_defaults().
-
-    """
-
-    def convert(self, value, param, ctx):
-        try:
-            return super().convert(value, param, ctx)
-        except click.BadParameter:
-            source = ctx.get_parameter_source(param.name)
-            if source not in (ParameterSource.DEFAULT, ParameterSource.ENVIRONMENT):
-                raise
-            return None
 
 
 def abort(message, *args, **kwargs):
@@ -337,12 +158,8 @@ def pass_reader(fn):
     callback=extend_defaults,
     help="Import path to a CLI plug-in. Can be passed multiple times.",
 )
-@click.option(
+@config_option(
     '--config',
-    type=InteractiveFile('rb'),
-    callback=load_defaults,
-    is_eager=True,
-    expose_value=False,
     show_default=True,
     default=os.path.join(app_dir, 'config.toml'),
     help="Path to the reader config.",
