@@ -106,7 +106,7 @@ def make_reader(
     read_only: bool = False,
     plugins: Iterable[PluginInput[Reader]] = DEFAULT_PLUGINS,
     session_timeout: TimeoutType = DEFAULT_TIMEOUT,
-    reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
+    reserved_name_scheme: Mapping[str, str] | None = None,
     search_enabled: bool | None | Literal['auto'] = 'auto',
     _storage: StorageType | None = None,
 ) -> Reader:
@@ -168,7 +168,7 @@ def make_reader(
             (an absolute path that feed paths are relative to).
 
         read_only (bool):
-            Only allow read-only storage operations.
+            Allow only read storage operations.
 
         plugins (iterable(str or callable(Reader)) or None):
             An iterable of built-in plugin names (``.<plugin>``),
@@ -184,7 +184,7 @@ def make_reader(
             as a float, or a (connect timeout, read timeout) tuple.
             Passed to the underlying `Requests session`_.
 
-        reserved_name_scheme (dict(str, str)):
+        reserved_name_scheme (dict(str, str) or None):
             Value for :attr:`~Reader.reserved_name_scheme`.
             Defaults to :data:`.DEFAULT_RESERVED_NAME_SCHEME`.
 
@@ -263,6 +263,8 @@ def make_reader(
 
     parser.session_factory.user_agent = USER_AGENT
 
+    if reserved_name_scheme is None:
+        reserved_name_scheme = DEFAULT_RESERVED_NAME_SCHEME
     try:
         name_scheme = NameScheme.from_value(reserved_name_scheme)
     except Exception as e:

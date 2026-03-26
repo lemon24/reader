@@ -122,6 +122,25 @@ def pass_reader(fn):
     return wrapper
 
 
+class MapParamType(click.ParamType):
+    name = 'key=value,...'
+
+    def convert(self, value, param, ctx):
+        if isinstance(value, dict):
+            return value
+        rv = {}
+        for pair in value.split(','):
+            key, sep, value = pair.partition('=')
+            if not sep:
+                self.fail(f"{pair!r} is not a key=value pair")
+            key = key.strip()
+            value = value.strip()
+            if not key:
+                self.fail(f"{pair!r} must have a key")
+            rv[key] = value
+        return rv
+
+
 @click.group(context_settings=dict(auto_envvar_prefix=app_name.upper()))
 @click.option(
     '--url',
@@ -142,6 +161,7 @@ def pass_reader(fn):
         "If not provided, don't open local feeds."
     ),
 )
+@click.option('--read-only/--no-read-only', help="Do not modify storage.")
 @click.option(
     '--plugin',
     'plugins',
@@ -158,6 +178,15 @@ def pass_reader(fn):
     callback=extend_defaults,
     help="Import path to a CLI plug-in. Can be passed multiple times.",
 )
+@click.option(
+    '--reserved-name-scheme',
+    type=MapParamType(),
+    default=', '.join(
+        '='.join(i) for i in reader.core.DEFAULT_RESERVED_NAME_SCHEME.items()
+    ),
+    show_default=True,
+    help="",
+)
 @config_option(
     '--config',
     show_default=True,
@@ -166,7 +195,7 @@ def pass_reader(fn):
 )
 @click.version_option(reader.__version__, message='%(prog)s %(version)s')
 @click.pass_context
-def cli(ctx, url, plugins, cli_plugins, feed_root):
+def cli(ctx, url, feed_root, read_only, plugins, cli_plugins, reserved_name_scheme):
     """reader command-line interface.
 
     Option defaults can be set via environment variables;
