@@ -23,8 +23,8 @@ def config_option(*args, **kwargs):
     )
 
 
-def load_config(command, args=None, env=None):
-    """Return the parameters from invoking command with args,
+def load_config(command, prefix=None, env=None):
+    """Return the parameters from invoking command and its subcommands,
     but without actually running any (sub)command.
 
     Together with an option using load_defaults(),
@@ -38,23 +38,31 @@ def load_config(command, args=None, env=None):
 
     """
     command = copy.deepcopy(command)
-    calls = {}
+    prefix = tuple(prefix or ())
+    params = {}
+    leaves = []
 
     def callback(**kwargs):
-        calls.update(load_config_from_context())
+        params.update(load_config_from_context())
 
-    def patch_command(command):
+    def patch_command(command, path=()):
         command.callback = callback
         command.no_args_is_help = False
+        for param in list(command.params):
+            if isinstance(param, click.Argument):
+                command.params.remove(param)
         if hasattr(command, 'commands'):
             command.invoke_without_command = True
-            for subcommand in command.commands.values():
-                patch_command(subcommand)
+            for sub_name, sub in command.commands.items():
+                patch_command(sub, path + (sub_name,))
+        else:
+            leaves.append(path)
 
     patch_command(command)
     runner = click.testing.CliRunner(catch_exceptions=False)
-    runner.invoke(command, args, env=env, standalone_mode=False, prog_name='')
-    return calls
+    for args in leaves:
+        runner.invoke(command, prefix + args, env=env, standalone_mode=False)
+    return params
 
 
 def load_config_from_context():

@@ -31,37 +31,35 @@ def with_config(tmp_path, monkeypatch):
     return with_config
 
 
-def check_all(args, expected, **kwargs):
+def invoke(cli, args=None, env=None):
     runner = CliRunner(catch_exceptions=False)
-
-    result = runner.invoke(cli, args, standalone_mode=False, **kwargs)
-    assert expected == result.return_value
-
-    loaded = load_config(cli, args)
-    assert expected == loaded
+    result = runner.invoke(cli, args, env=env, standalone_mode=False)
+    return result.return_value
 
 
-def check_error(args, strings=(), exc_type=click.BadParameter, **kwargs):
-    runner = CliRunner(catch_exceptions=False)
-
+def check_error(strings=(), exc_type=click.BadParameter):
     with pytest.raises(exc_type) as exc_info:
-        runner.invoke(cli, args, standalone_mode=False, **kwargs)
+        invoke(cli, ['sub'])
     for s in strings:
         assert s in str(exc_info.value).lower()
 
     with pytest.raises(exc_type) as exc_info:
-        loaded = load_config(cli, args)
+        loaded = load_config(cli)
     for s in strings:
         assert s in str(exc_info.value).lower()
 
 
 def test_no_config():
-    check_all(['sub'], {'': {'plugin': ()}, 'sub': {'option': 'DEFAULT'}})
+    expected = {'': {'plugin': ()}, 'sub': {'option': 'DEFAULT'}}
+    assert invoke(cli, ['sub']) == expected
+    assert load_config(cli) == expected
 
 
 def test_empty_config(with_config):
     with_config("[cli]")
-    check_all(['sub'], {'': {'plugin': ()}, 'sub': {'option': 'DEFAULT'}})
+    expected = {'': {'plugin': ()}, 'sub': {'option': 'DEFAULT'}}
+    assert invoke(cli, ['sub']) == expected
+    assert load_config(cli) == expected
 
 
 def test_config(with_config):
@@ -73,43 +71,37 @@ def test_config(with_config):
         option='config'
         """
     )
-    load_config(cli, []) == {'': {'plugin': ('CONFIG',)}}
-    check_all(
-        ['sub'],
-        {
-            '': {'plugin': ('CONFIG',)},
-            'sub': {'option': 'CONFIG'},
-        },
-    )
-    check_all(
-        ['--plugin', 'user', 'sub', '--option', 'user'],
-        {
-            '': {'plugin': ('CONFIG', 'USER')},
-            'sub': {'option': 'USER'},
-        },
-    )
+
+    expected = {'': {'plugin': ('CONFIG',)}, 'sub': {'option': 'CONFIG'}}
+    assert invoke(cli, ['sub']) == expected
+    assert load_config(cli) == expected
+
+    env = {'CLI_SUB_OPTION': 'env'}
+    expected = {'': {'plugin': ('CONFIG', 'USER')}, 'sub': {'option': 'ENV'}}
+    assert invoke(cli, ['--plugin', 'user', 'sub'], env=env)
+    assert load_config(cli, ['--plugin', 'user'], env=env)
 
 
 def test_toml_error(with_config):
     with_config("[cli")
-    check_error(['sub'], ['toml error'])
+    check_error(['toml error'])
 
 
 def test_no_section_error(with_config):
     with_config("")
-    check_error(['sub'], ['no [cli] section'])
+    check_error(['no [cli] section'])
 
 
 def test_bad_section_type_error(with_config):
     with_config("cli = 1")
-    check_error(['sub'], ['cli:', 'expected mapping'])
+    check_error(['cli:', 'expected mapping'])
 
 
 def test_unknown_option_error(with_config):
     with_config("[cli]\nunknown = 1")
-    check_error(['sub'], ['cli.unknown:', 'no such option'])
+    check_error(['cli.unknown:', 'no such option'])
 
 
 def test_unknown_command_error(with_config):
     with_config("[cli.unknown]")
-    check_error(['sub'], ['cli.unknown:', 'no such option'])
+    check_error(['cli.unknown:', 'no such option'])

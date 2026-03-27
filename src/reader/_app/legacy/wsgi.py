@@ -16,7 +16,7 @@ import reader._app.legacy
 import reader._cli
 
 
-config = reader._cli.load_reader_config('web')
+config = reader._cli.load_reader_config()
 app = reader._app.create_app(config)
 app.config['TRAP_BAD_REQUEST_ERRORS'] = bool(
     os.environ.get('FLASK_TRAP_BAD_REQUEST_ERRORS', '')

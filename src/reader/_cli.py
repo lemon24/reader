@@ -27,14 +27,14 @@ app_dir = click.get_app_dir(app_name)
 log = logging.getLogger(__name__)
 
 
-def load_reader_config(*args, path=None, silent=False):
-    env = None
+def load_reader_config(path=None, silent=False):
+    prefix = env = None
     if path:
         if not silent:
-            args = ('--config', str(path)) + args
+            prefix = ('--config', os.fspath(path))
         else:
-            env = {'READER_CONFIG': str(path)}
-    config = load_config(cli, args, env)
+            env = {'READER_CONFIG': os.fspath(path)}
+    config = load_config(cli, prefix, env)
     config[''] = extract_args(config[''], make_reader)
     return config
 
