@@ -826,7 +826,7 @@ def create_app(reader_config):
     app.reader_additional_enclosure_links = []
     app.reader_additional_links = []
 
-    app.config['READER_CONFIG'] = reader_config
+    app.config['READER'] = reader_config
     ReaderExtension(app)
 
     app.register_blueprint(blueprint)

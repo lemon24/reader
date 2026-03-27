@@ -71,8 +71,8 @@ bottom: 0;
 right: 0;
 ">
 
-<span title='{{ config.READER_CONFIG.data | toyaml | escape }}'>
-    {{ config.READER_CONFIG.merged('app').reader.url }}
+<span title='{{ config.READER | toyaml | escape }}'>
+    {{ config.READER[''].url }}
 </span>
 
 {% set maxrss = debug_maxrss_mib() %}

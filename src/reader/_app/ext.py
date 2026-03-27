@@ -26,7 +26,7 @@ class ReaderExtension:
             self.init_app(app)
 
     def init_app(self, app):
-        config = app.config['READER_CONFIG']
+        config = app.config['READER']
         app.extensions['reader'] = self.state_cls(config[''])
         _plugin_loader.oneshot(app, config.get('web', {}).get('plugins', ()))
 

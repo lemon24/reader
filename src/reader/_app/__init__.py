@@ -321,7 +321,7 @@ def create_app(reader_config):
 
     CSRFProtect(app)
 
-    app.config['READER_CONFIG'] = reader_config
+    app.config['READER'] = reader_config
     ReaderExtension(app)
 
     app.register_blueprint(blueprint)
