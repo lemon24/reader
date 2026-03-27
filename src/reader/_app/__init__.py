@@ -41,7 +41,9 @@ from .forms import FeedFilter
 # https://github.com/lemon24/reader/tree/3.21/src/reader/_app/v2
 
 
-blueprint = Blueprint('reader', __name__)
+blueprint = Blueprint(
+    'reader', __name__, static_folder='static', template_folder='templates'
+)
 
 
 @blueprint.errorhandler(FeedNotFoundError)

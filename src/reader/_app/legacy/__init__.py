@@ -45,7 +45,9 @@ from .api_thing import APIError
 from .api_thing import APIThing
 
 
-blueprint = Blueprint('reader', __name__)
+blueprint = Blueprint(
+    'reader', __name__, static_folder='static', template_folder='templates'
+)
 
 
 @blueprint.app_template_filter()
