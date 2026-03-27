@@ -8,6 +8,7 @@ import inspect
 import tomllib
 
 import click
+import click.testing
 from click.core import ParameterSource
 
 
@@ -22,7 +23,7 @@ def config_option(*args, **kwargs):
     )
 
 
-def load_config(command, args=None):
+def load_config(command, args=None, env=None):
     """Return the parameters from invoking command with args,
     but without actually running any (sub)command.
 
@@ -51,7 +52,8 @@ def load_config(command, args=None):
                 patch_command(subcommand)
 
     patch_command(command)
-    command(args, standalone_mode=False, prog_name='')
+    runner = click.testing.CliRunner(catch_exceptions=False)
+    runner.invoke(command, args, env=env, standalone_mode=False, prog_name='')
     return calls
 
 
