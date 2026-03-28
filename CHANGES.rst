@@ -11,12 +11,29 @@ Version 3.22
 
 Unreleased
 
+* :func:`make_reader` plugin loading improvements. (:issue:`395`)
+
+  * ``plugins`` now supports arbitrary import paths.
+  * :ref:`Built-in plugins <built-in plugins>` now use the
+    ``.<plugin>`` naming scheme, instead of ``reader.<plugin>``;
+    support for the latter is deprecated and will be removed in version 4.0.
+
 * :meth:`~Reader.get_feeds`, :meth:`~Reader.get_entries`, and
   :meth:`~Reader.search_entries` now raise exceptions
   for invalid ``query`` and ``starting_after`` eagerly,
   before the iterable is consumed.
   Thanks to `Omprakash Choudhary`_ for the PR.
   (:issue:`388`)
+
+* :doc:`CLI <cli>` and :doc:`config file <config>` breaking changes. (:issue:`395`)
+
+  * The config file format changed from YAML to TOML,
+    and follows the shape of the CLI.
+  * The ``reader serve`` command was renamed to ``reader web``.
+  * Plugin loading environment variables changed:
+    ``READER_PLUGIN`` -> ``READER_PLUGINS``,
+    ``READER_CLI_PLUGIN`` -> ``READER_CLI_PLUGINS``,
+    ``READER_APP_PLUGIN`` -> ``READER_WEB_PLUGINS``.
 
 
 .. _Omprakash Choudhary: https://github.com/omseervi098
