@@ -1,6 +1,8 @@
 """
-reader.readtime
-~~~~~~~~~~~~~~~
+.. _reader-readtime:
+
+.readtime
+~~~~~~~~~
 
 .. module:: reader
   :no-index:

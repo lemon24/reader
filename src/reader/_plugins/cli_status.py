@@ -16,7 +16,7 @@ Entries are marked as read.
 
 To load::
 
-    READER_CLI_PLUGIN='reader._plugins.cli_status.init_cli' \\
+    READER_CLI_PLUGINS='reader._plugins.cli_status' \\
     python -m reader ...
 
 """

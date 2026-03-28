@@ -3,12 +3,7 @@ Configuration
 =============
 
 Both the :doc:`CLI <cli>` and the :doc:`web application <app>` can
-be configured from a file.
-
-.. warning::
-
-    The configuration file format is not stable yet
-    and might change without any notice.
+be configured from a TOML file.
 
 .. note::
 
@@ -21,17 +16,15 @@ The configuration file path can be specified either through the ``--config``
 CLI option or through the ``READER_CONFIG`` environment variable
 (also usable with the web application).
 
-The config file is split in contexts;
-this allows having a set of global defaults
-and overriding them with CLI- or web-app-specific values.
-Use the ``config dump --merge`` command
-to see the final configuration for each context.
+The configuration file matches the shape of the :doc:`CLI <cli>`
+(the ``reader`` section has options for the ``reader`` command,
+the ``reader.update`` section has options for the ``reader update`` command, etc.).
+In general, option names match those in the CLI
+(``--feed-root`` -> ``feed_root``);
+options that can be passed multiple times in the CLI
+are pluralized in the config
+(``--cli-plugin`` -> ``cli_plugins``).
 
-The older ``READER_DB``, ``READER_PLUGIN``, and ``READER_APP_PLUGIN``
-environment variables always *replace* the corresponding config values,
-so they should be used only for debugging.
-
-The following example shows the config file structure
-and the options currently available:
+Example:
 
 .. literalinclude:: ../examples/config.toml

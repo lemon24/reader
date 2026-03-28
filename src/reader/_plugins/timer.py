@@ -12,7 +12,7 @@ the timing of each method call is collected in ``reader.timer.calls``;
 ``disable()`` clears the list of calls and stops collection::
 
     >>> reader = make_reader('db.sqlite', plugins=[
-    ...     'reader._plugins.timer:init_reader'
+    ...     'reader._plugins.timer'
     ... ])
     >>> reader.timer.enable()
     >>> for _ in reader.get_entries(limit=500): pass

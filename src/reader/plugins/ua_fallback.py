@@ -1,6 +1,8 @@
 """
-reader.ua_fallback
-~~~~~~~~~~~~~~~~~~
+.. _reader-ua-fallback:
+
+.ua_fallback
+~~~~~~~~~~~~
 
 Retry feed requests that get ``403 Forbidden``
 with a different user agent.

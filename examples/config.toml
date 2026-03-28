@@ -8,7 +8,7 @@ feed_root = "/path/to/feeds"
 # Options that can be passed multiple times take a list of values
 # (unlike other settings, plugins are merged with commandline options).
 plugins = [
-    "reader._plugins.sqlite_releases:init",
+    "reader._plugins.sqlite_releases",
     ".ua_fallback",
 ]
 

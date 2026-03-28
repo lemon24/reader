@@ -84,7 +84,7 @@ def test_plugin(db_path, requests_mock):
     app = make_app(
         {
             '': {'url': db_path},
-            'web': {'plugins': ['reader._plugins.legacy.preview_feed_list:init']},
+            'web': {'plugins': ['reader._plugins.legacy.preview_feed_list']},
         }
     )
     browser = make_browser(app)

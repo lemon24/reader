@@ -1,14 +1,14 @@
 import pytest
 
 from reader._plugins.sqlite_releases import FULL_URL
-from reader._plugins.sqlite_releases import init
+from reader._plugins.sqlite_releases import init_reader
 from reader._types import FeedFilter
 from utils import utc_datetime as datetime
 
 
 @pytest.mark.filterwarnings("ignore:No parser was explicitly specified")
 def test_sqlite_releases(reader, requests_mock, data_dir):
-    init(reader)
+    init_reader(reader)
 
     # we're not using .read_binary() because it messes with line endings on windows
     with open(str(data_dir.joinpath('sqlite_releases.html')), 'rb') as f:

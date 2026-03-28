@@ -1,6 +1,8 @@
 """
-reader.enclosure_dedupe
-~~~~~~~~~~~~~~~~~~~~~~~
+.. _reader-enclosure-dedupe:
+
+.enclosure_dedupe
+~~~~~~~~~~~~~~~~~
 
 Deduplicate the enclosures of an entry by enclosure URL.
 

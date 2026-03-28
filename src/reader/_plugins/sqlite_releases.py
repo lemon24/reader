@@ -18,7 +18,7 @@ to install them:
 
 To load::
 
-    READER_PLUGIN='reader._plugins.sqlite_releases:init' \\
+    READER_PLUGINS='reader._plugins.sqlite_releases' \\
     python -m reader ...
 
 """
@@ -106,6 +106,6 @@ def parse(url, file, headers):
     return feed, entries
 
 
-def init(reader):
+def init_reader(reader):
     for url in URLS:
         reader._parser.mount_parser_by_url(url, parse)

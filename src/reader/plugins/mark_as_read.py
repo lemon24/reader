@@ -1,6 +1,8 @@
 """
-reader.mark_as_read
-~~~~~~~~~~~~~~~~~~~
+.. _reader-mark-as-read:
+
+.mark_as_read
+~~~~~~~~~~~~~
 
 .. module:: reader
   :no-index:

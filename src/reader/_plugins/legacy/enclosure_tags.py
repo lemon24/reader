@@ -19,7 +19,7 @@ to install them:
 
 To load::
 
-    READER_APP_PLUGIN='reader._plugins.legacy.enclosure_tags:init' \\
+    READER_WEB_PLUGINS='reader._plugins.legacy.enclosure_tags' \\
     python -m reader serve
 
 Implemented for :issue:`50`.
@@ -163,6 +163,6 @@ def enclosure_tags_filter(enclosure, entry, feed_tags):
     return [('with tags', url_for('enclosure_tags.enclosure_tags', **args))]
 
 
-def init(app):
+def init_app(app):
     app.register_blueprint(blueprint)
     app.reader_additional_enclosure_links.append(enclosure_tags_filter)

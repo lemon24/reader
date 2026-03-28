@@ -2,18 +2,12 @@
 Command-line interface
 ======================
 
-*reader* comes with a command-line interface
-that exposes basic management functionality.
-
-
-.. warning::
-
-    The CLI is is not fully stable,
-    see the :ref:`roadmap <cli roadmap>` for details.
+*reader* comes with a CLI
+that exposes management functionality.
 
 .. note::
 
-    The command-line interface is optional, use the ``cli`` extra to install
+    The CLI is optional, use the ``cli`` extra to install
     its :ref:`dependencies <Optional dependencies>`.
 
 Most commands need a database to work. The following are equivalent:

@@ -40,11 +40,11 @@ An example uWSGI configuration file (probably not idiomatic, from `here`_)::
     mount = /reader=reader._app.wsgi:app
     plugin = python3
     virtualenv = /apps/reader/
-    env = READER_CONFIG=/apps/reader/reader.yaml
+    env = READER_CONFIG=/apps/reader/reader.toml
 
 
-You can also run the web application with the ``serve`` command.
-``serve`` uses `Werkzeug's development server`_,
+You can also run the web application with the ``web run`` command.
+``web run`` uses `Werkzeug's development server`_,
 so it probably won't scale well past a single user.
 
 .. note::
@@ -53,13 +53,15 @@ so it probably won't scale well past a single user.
     you may want to configure your web server to not send a ``Referer`` header
     (by setting ``Referrer-Policy`` header to ``same-origin``
     for all responses; `nginx example`_).
-    The ``serve`` command does it by default.
+    The ``web run`` command does it by default.
 
 
-If running on a personal computer, you can use cron to run ``serve`` at boot::
+If running on a personal computer, you can use cron to run ``web run`` at boot::
 
-    @reboot     sleep 60; reader serve -p 8080 2>&1 ) >>"/tmp/$LOGNAME.reader.serve.boot.log"
+    @reboot     sleep 60; reader web run -p 8080 2>&1 ) >>"/tmp/$LOGNAME.reader.web.run.boot.log"
 
+
+.. FIXME link to new config
 
 .. _here: https://github.com/lemon24/owncloud/blob/b6a6ba28f84fa40a1a822c200c9e245bad84600b/reader.yaml#L77
 .. _nginx example: https://github.com/lemon24/owncloud/commit/39c5311d9c0973642d3a7dec73369b3607828fdd#diff-4486765de09ef22bfc83d68c7350a8088db6f2ba35f152f49ee36c8ec5aef03d

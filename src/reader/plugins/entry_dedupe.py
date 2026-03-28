@@ -1,6 +1,8 @@
 """
-reader.entry_dedupe
-~~~~~~~~~~~~~~~~~~~
+.. _reader-entry-dedupe:
+
+.entry_dedupe
+~~~~~~~~~~~~~
 
 .. module:: reader
   :no-index:

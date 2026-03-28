@@ -100,30 +100,23 @@ You can still find the code on GitHub:
 Loading plugins from the CLI and the web application
 ----------------------------------------------------
 
-There is experimental support of plugins in the CLI and the web application.
-
-.. warning::
-
-    The plugin system/hooks are not stable yet and may change without any notice.
-
-
-To load plugins, set the ``READER_PLUGIN`` environment variable to the plugin
+To load plugins, set the ``READER_PLUGINS`` environment variable to the plugin
 entry point (e.g. ``package.module:entry_point``); multiple entry points should
-be separated by one space::
+be separated by space::
 
-    READER_PLUGIN='first.plugin:entry_point second_plugin:main' \
+    READER_PLUGINS='first.plugin:entry_point second_plugin' \
     python -m reader some-command
 
-For `built-in plugins`_, it is enough to use the plugin name (``reader.XYZ``).
+For `built-in plugins`_, it is enough to use the plugin name (``.plugin``).
 
 .. note::
 
     :func:`make_reader` ignores the plugin environment variables.
 
 
-To load web application plugins, set the ``READER_APP_PLUGIN`` environment variable.
+To load web application plugins, set the ``READER_WEB_PLUGINS`` environment variable.
 To load CLI plugins (that customize the CLI),
-set the ``READER_CLI_PLUGIN`` environment variable.
+set the ``READER_CLI_PLUGINS`` environment variable.
 
 
 

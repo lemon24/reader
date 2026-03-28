@@ -6,7 +6,7 @@ Add social sharing links at the end of the entry page.
 
 To load::
 
-    READER_APP_PLUGIN='reader._plugins.legacy.share:init' \\
+    READER_WEB_PLUGINS='reader._plugins.legacy.share' \\
     python -m reader serve
 
 """
@@ -49,5 +49,5 @@ def share(entry):
         yield name, url
 
 
-def init(app):
+def init_app(app):
     app.reader_additional_links.append(share)

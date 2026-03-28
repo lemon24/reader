@@ -747,8 +747,8 @@ Plugins
 To use a built-in plugin, pass the plugin name to :func:`make_reader`::
 
     >>> reader = make_reader("db.sqlite", plugins=[
-    ...     "reader.enclosure_dedupe",
-    ...     "reader.entry_dedupe",
+    ...     ".enclosure_dedupe",
+    ...     ".entry_dedupe",
     ... ])
 
 

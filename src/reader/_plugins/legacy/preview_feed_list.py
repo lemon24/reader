@@ -14,7 +14,7 @@ to install them:
 
 To load::
 
-    READER_APP_PLUGIN='reader._plugins.legacy.preview_feed_list:init' \\
+    READER_WEB_PLUGINS='reader._plugins.legacy.preview_feed_list' \\
     python -m reader serve
 
 Implemented for https://github.com/lemon24/reader/issues/150.
@@ -154,5 +154,5 @@ def handle_parse_error_i_guess(error):
     return redirect(url_for('preview_feed_list.feed_list', url=parse_error.url))
 
 
-def init(app):
+def init_app(app):
     app.register_blueprint(blueprint)
