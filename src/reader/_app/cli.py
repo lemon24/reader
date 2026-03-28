@@ -15,7 +15,9 @@ def make_add_response_headers_middleware(wsgi_app, headers):
     return wsgi_app_wrapper
 
 
-@click.group('web')
+@click.command('web')
+@click.option('-h', '--host', default='localhost', help="The interface to bind to.")
+@click.option('-p', '--port', default=8080, type=int, help="The port to bind to.")
 @click.option(
     '--plugin',
     'plugins',
@@ -24,21 +26,15 @@ def make_add_response_headers_middleware(wsgi_app, headers):
     help="Import path to a web app plug-in. Can be passed multiple times.",
 )
 @click.option('--legacy/--no-legacy', help="Serve the legacy app.")
-def cli(plugins, legacy):
-    """Web application commands."""
-
-
-@cli.command()
-@click.option('-h', '--host', default='localhost', help="The interface to bind to.")
-@click.option('-p', '--port', default=8080, type=int, help="The port to bind to.")
 @click.option('-v', '--verbose', count=True)
 @click.pass_context
-def run(ctx, host, port, verbose):
+def cli(ctx, host, port, plugins, legacy, verbose):
     """Run a local HTTP reader server."""
+
     setup_logging(verbose)
     from werkzeug.serving import run_simple
 
-    if not ctx.parent.params['legacy']:
+    if not legacy:
         from . import create_app
     else:
         from .legacy import create_app

@@ -43,8 +43,8 @@ An example uWSGI configuration file (probably not idiomatic, from `here`_)::
     env = READER_CONFIG=/apps/reader/reader.toml
 
 
-You can also run the web application with the ``web run`` command.
-``web run`` uses `Werkzeug's development server`_,
+You can also run the web application with the ``web`` command.
+``web`` uses `Werkzeug's development server`_,
 so it probably won't scale well past a single user.
 
 .. note::
@@ -53,12 +53,12 @@ so it probably won't scale well past a single user.
     you may want to configure your web server to not send a ``Referer`` header
     (by setting ``Referrer-Policy`` header to ``same-origin``
     for all responses; `nginx example`_).
-    The ``web run`` command does it by default.
+    The ``web`` command does it by default.
 
 
-If running on a personal computer, you can use cron to run ``web run`` at boot::
+If running on a personal computer, you can use cron to run ``web`` at boot::
 
-    @reboot     sleep 60; reader web run -p 8080 2>&1 ) >>"/tmp/$LOGNAME.reader.web.run.boot.log"
+    @reboot     sleep 60; reader web -p 8080 2>&1 ) >>"/tmp/$LOGNAME.reader.web.run.boot.log"
 
 
 .. _here: https://github.com/lemon24/owncloud/blob/8009f227ef60ebaab621e7bb3363ec9071d8a2e8/reader.yaml#L103-L116
