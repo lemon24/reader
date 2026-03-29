@@ -288,9 +288,11 @@ def stream_template(template_name_or_list, **kwargs):
     generate_csrf()
 
     template = current_app.jinja_env.get_template(template_name_or_list)
+    current_app.update_template_context(kwargs)
 
     stream = template.stream(**kwargs)
     # TODO: increase to at least 1-2k, like this we have 50% overhead
+    # TODO: alternatively, just usse flask.stream_template (no buffering)
     stream.enable_buffering(50)
 
     return Response(stream_with_context(stream))
