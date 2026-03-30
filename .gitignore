@@ -103,3 +103,6 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# add back some stuff
+!src/reader/_app/static/vendor/*/dist/

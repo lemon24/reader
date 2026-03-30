@@ -1,3 +1,4 @@
+import pathlib
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
@@ -315,6 +316,31 @@ def humanize_naturaltime(dt):
 @blueprint.record_once
 def add_jinja_do_extension(setup_state):
     setup_state.app.jinja_env.add_extension('jinja2.ext.do')
+
+
+@blueprint.add_app_template_global
+def find_static(filename, blueprint=None):
+    blueprint = blueprint or request.blueprint
+    if blueprint:
+        endpoint = f'{blueprint}.static'
+        folder = current_app.blueprints[blueprint].static_folder
+    else:
+        endpoint = 'static'
+        folder = current_app.static_folder
+
+    dir = pathlib.Path(folder)
+    matches = [p.relative_to(dir) for p in dir.rglob(f'{filename}')]
+
+    if not matches:
+        raise RuntimeError(f"no such static file: {filename!r}")
+    if len(matches) > 1:
+        sep = '\n* '
+        raise RuntimeError(
+            f"more than one static file for {filename!r}:\n"
+            f"{sep}{sep.join(p.as_posix() for p in matches)}\n"
+        )
+
+    return url_for(endpoint, filename=matches[0])
 
 
 def create_app(reader_config):

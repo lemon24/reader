@@ -2,3 +2,4 @@
 * text eol=lf
 *.png -text
 *.bat -text
+src/reader/_app/static/vendor/** -text -diff
