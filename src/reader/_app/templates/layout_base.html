@@ -6,17 +6,17 @@
 
     <title>{% block page_title %}reader{% endblock %}</title>
 
-    <link rel="stylesheet" href="{{ find_static('bootstrap.min.css') }}">
-    <script src="{{ find_static('bootstrap.bundle.min.js') }}" defer></script>
+    <link rel="stylesheet" href="{{ find_static('bootstrap.min.css', 'reader') }}">
+    <script src="{{ find_static('bootstrap.bundle.min.js', 'reader') }}" defer></script>
     <!-- styles flash if this is deferred  -->
-    <script src="{{ find_static('theme.js') }}"></script>
+    <script src="{{ find_static('theme.js', 'reader') }}"></script>
 
-    <link rel="stylesheet" href="{{ find_static('bootstrap-icons.min.css') }}">
+    <link rel="stylesheet" href="{{ find_static('bootstrap-icons.min.css', 'reader') }}">
 
-    <link rel="stylesheet" href="{{ find_static('style.css') }}">
+    <link rel="stylesheet" href="{{ find_static('style.css', 'reader') }}">
 
-    <script src="{{ find_static('htmx.min.js') }}" defer></script>
-    <script src="{{ find_static('response-targets.min.js') }}" defer></script>
+    <script src="{{ find_static('htmx.min.js', 'reader') }}" defer></script>
+    <script src="{{ find_static('response-targets.min.js', 'reader') }}" defer></script>
 
   </head>
   <body hx-ext="response-targets">
@@ -26,6 +26,8 @@
   <div class="container-fluid">
 
     <ul class="navbar-nav me-auto flex-row">
+      {% block left_navbar %}
+
       {%- macro nav_item(endpoint, text) -%}
       {%- set active = request.endpoint.endswith(endpoint) -%}
       <li class="nav-item">
@@ -35,9 +37,11 @@
         >{{ text }}</a>
       </li>
       {% endmacro %}
-      {{ nav_item('.entries', 'entries') }}
-      {{ nav_item('.feeds', 'feeds') }}
-      {{ nav_item('.add_feed', 'add') }}
+      {{ nav_item('reader.entries', 'entries') }}
+      {{ nav_item('reader.feeds', 'feeds') }}
+      {{ nav_item('reader.add_feed', 'add') }}
+
+      {% endblock %}
     </ul>
 
     <button
