@@ -517,7 +517,7 @@ class LocalConnectionFactory:
         #
         self._local.finalizer = weakref.finalize(
             self._local.finalizer_sentinel, self._close, db, self.read_only
-        )  # type: ignore[call-arg]
+        )
 
         for name, path in self.attached.items():
             self._attach(db, name, path)

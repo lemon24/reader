@@ -191,7 +191,7 @@ class EntriesMixin(StorageBase):
 
         with self.get_db() as db:
             cursor = db.cursor()
-            cursor.row_factory = row_factory
+            cursor.row_factory = row_factory  # type: ignore[assignment]
 
             # Use an explicit transaction for speed.
             cursor.execute('BEGIN;')
