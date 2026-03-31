@@ -2,6 +2,7 @@ import pathlib
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from functools import lru_cache
 from urllib.parse import urlparse
 
 import humanize
@@ -318,7 +319,7 @@ def add_jinja_do_extension(setup_state):
     setup_state.app.jinja_env.add_extension('jinja2.ext.do')
 
 
-@blueprint.add_app_template_global
+@blueprint.app_template_global()
 def find_static(filename, blueprint=None):
     blueprint = blueprint or request.blueprint
     if blueprint:
@@ -328,8 +329,14 @@ def find_static(filename, blueprint=None):
         endpoint = 'static'
         folder = current_app.static_folder
 
+    find = _find_static.__wrapped__ if current_app.debug else _find_static
+    return url_for(endpoint, filename=find(folder, filename))
+
+
+@lru_cache
+def _find_static(folder, filename):
     dir = pathlib.Path(folder)
-    matches = [p.relative_to(dir) for p in dir.rglob(f'{filename}')]
+    matches = [p.relative_to(dir) for p in dir.rglob(filename)]
 
     if not matches:
         raise RuntimeError(f"no such static file: {filename!r}")
@@ -340,7 +347,7 @@ def find_static(filename, blueprint=None):
             f"{sep}{sep.join(p.as_posix() for p in matches)}\n"
         )
 
-    return url_for(endpoint, filename=matches[0])
+    return matches[0]
 
 
 def create_app(reader_config):
