@@ -59,22 +59,22 @@ but I will prioritize supporting :doc:`contributors <contributing>`
 * resource tags
 
   * :ref:`searchable tag values <searchable tags>`, e.g. for comments
-  * :ref:`unification with entry.read/important <entry flag unification>`
   * optimistic locking, :issue:`308`
   * filter tags by prefix, :issue:`309`
 
-
-* HTTP compliance, likely as plugins
+* HTTP behavior / compliance, likely as plugins, :issue:`377`
 
   * 301 Moved Permanently, :issue:`246`
   * 410 Gone, :issue:`246`
-  * 429 Too Many Requests, :issue:`307`
+  * slow down on throttling / max-age, :issue:`378`
+  * match the rhythm of the feed, :issue:`382`
 
 * add more fields to data objects
 
+  * .links attribute, :issue:`320`
+  * .authors attribute, :issue:`391`
   * extra data, as an escape hatch, :issue:`277`
 
-* :ref:`multiple storage implementations <multiple storage implementations>`
 * :ref:`batch get methods <batch get methods>`
 * :doc:`internal` stabilization
 * arbitrary website scraping, :issue:`222`
@@ -93,15 +93,16 @@ but I will prioritize supporting :doc:`contributors <contributing>`
 Command-line interface
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The :doc:`cli` is more or less stable,\ [*]_
-although both the output and config loading need more polish
-and additional tests.
+The :doc:`cli` is more or less stable,
+although it could use additional tests.
 
-A full-blown terminal feed reader is *not* in scope,
+A terminal feed reader is *not* in scope,
 since I don't need one,
-but I'm not opposed to the idea.
+but I'm not opposed to the idea;
+note that the web app should already
+work with text-based browsers such as `Lynx`_.
 
-.. [*] With the exception of ``serve``, which is provided by the web app.
+.. _Lynx: https://en.wikipedia.org/wiki/Lynx_(web_browser)
 
 
 .. _app roadmap:
@@ -109,27 +110,23 @@ but I'm not opposed to the idea.
 Web application
 ~~~~~~~~~~~~~~~
 
-The :doc:`app` is "unsupported",
-in that it's not all that polished,
-and I don't have time to do major improvments.
-But, I am using it daily,
-and it will keep working until a better one exists.
+The new :doc:`app` is under active development.
+I am working on adding features
+already implemented in the library
+and the :ref:`legacy web app <legacy web app>`,
+and possibly on a hosted version.
 
-Long term, I'd like to:
+Like with the library,
+the goal is to keep it simple to use
+and sustainable to maintain long-term;
+the decision to use `Flask`_, `Bootstrap`_, and `htmx`_ is part of this
+(if they were around for ~15 years,
+they should be around for 15 more).
 
-* re-design it from scratch to improve usability
-  (see :issue:`318` for a wishlist)
-* switch to `htmx`_ instead of using a home-grown solution
-* spin it off into a separate package/project
-
-**2025 update**:
-I've started working on a re-design based on `htmx`_ and `Bootstrap`_;
-some :ref:`screenshots <app screenshots>`.
-The new app will be available in parallel with the old one
-until it reaches feature parity.
-
-.. _htmx: https://htmx.org/
+.. _Flask: https://flask.palletsprojects.com/
 .. _Bootstrap: https://getbootstrap.com/
+.. _htmx: https://htmx.org/
+
 
 
 .. _compat:
@@ -677,7 +674,10 @@ Why I want to postpone batch update/set methods:
 tl:dr: Performance is likely a non-issue with SQLite,
 convenience can be added on top as a plugin.
 
-(2025) Why it may be worth adding batch interfaces anyway (even if underneath the storage implementation doesn't actually batch) – it allows for future optimization: https://blog.glyph.im/2022/12/potato-programming.html
+(2025 update) Why it may be worth adding batch interfaces anyway
+(even if underneath the storage implementation doesn't actually batch)
+– it allows for future optimization:
+https://blog.glyph.im/2022/12/potato-programming.html
 
 See the 2.12 reader._app.ResourceTags class for an idea of how to
 represent a bunch of tags in a reserved-name-scheme-agnostic way
@@ -771,10 +771,3 @@ REST API
 
 Some early thoughts: :issue:`192#issuecomment-700773138`
 (closed with `wontfix`, for now).
-
-
-Web application
-~~~~~~~~~~~~~~~
-
-.. toctree::
-    dev-app

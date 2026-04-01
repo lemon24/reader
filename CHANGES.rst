@@ -25,6 +25,26 @@ Unreleased
   Thanks to `Omprakash Choudhary`_ for the PR.
   (:issue:`388`)
 
+* :doc:`app` improvements.
+
+  * Finish the web app re-design MVP,
+    including:
+    add / list / filter / delete feeds,
+    list / filter articles,
+    article view,
+    mark articles as read / (un)important,
+    article view,
+    custom feed titles,
+    dark mode,
+    CSRF protection,
+    vendored CSS / JS dependencies.
+
+  * Make the new web app the default (entry point ``reader._app.wsgi:app``);
+    the :ref:`legacy web app <legacy web app>` remains available
+    at ``reader._app.legacy.wsgi:app``.
+
+  * Update both web apps to use the new configuration infrastructure (see below).
+
 * :doc:`CLI <cli>` and :doc:`config file <config>` breaking changes. (:issue:`395`)
 
   * The config file format changed from YAML to TOML,

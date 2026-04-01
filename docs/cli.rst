@@ -36,7 +36,7 @@ Serve the web application locally (at http://localhost:8080/):
 
 .. code-block:: bash
 
-    python -m reader serve
+    python -m reader web
 
 
 .. _cli-update:

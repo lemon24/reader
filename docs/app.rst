@@ -2,23 +2,76 @@
 Web application
 ===============
 
-*reader* comes with a minimal web application, intended to work across
-all browsers, including light-weight / text-only ones.
+*reader* comes with a web application
+based on  `Flask`_, `Bootstrap`_, and `htmx`_,
+intended to work across all browsers,
+including mobile and light-weight / text-only ones.
+
+.. _Flask: https://flask.palletsprojects.com/
+.. _Bootstrap: https://getbootstrap.com/
+.. _htmx: https://htmx.org/
+
+Features, as of *reader* version |version|:
+
+* add / list / filter / delete feeds
+* list / filter articles
+* mark articles as read / (un)important
+* article view
+* custom feed titles
+* dark mode
+
+More features already implemented in the library
+and the :ref:`legacy web app <legacy web app>`
+should be added in the next releases;
+see the :ref:`roadmap <app roadmap>` for details.
 
 
-.. warning::
 
-    The web application is not fully supported,
-    see the :ref:`roadmap <app roadmap>` for details.
+.. _app screenshots:
+
+Screenshots
+-----------
+
+.. figure:: screenshots/entries.png
+    :width: 240px
+
+    main page (dark mode)
+
+.. figure:: screenshots/entries-filters-light.png
+    :width: 240px
+
+    main page – more filters (light mode)
+
+.. figure:: screenshots/feed.png
+    :width: 240px
+
+    feed page (dark mode)
+
+.. figure:: screenshots/feeds.png
+    :width: 240px
+
+    feeds page (dark mode)
+
+.. figure:: screenshots/entry.png
+    :width: 240px
+
+    article view (dark mode)
+
+.. figure:: screenshots/entry-image-light.png
+    :width: 240px
+
+    article view (light mode)
+
+
+
+Serving the web app
+-------------------
 
 .. note::
 
     The web application is optional, use the ``app`` extra to install
     its :ref:`dependencies <Optional dependencies>`.
 
-
-Serving the web application
----------------------------
 
 *reader* exposes a standard WSGI application as ``reader._app.wsgi:app``.
 See the `Flask documentation`_ for more details on how to deploy it.
@@ -56,7 +109,7 @@ so it probably won't scale well past a single user.
     The ``web`` command does it by default.
 
 
-If running on a personal computer, you can use cron to run ``web`` at boot::
+If running on a personal computer, you can use cron to run it at boot::
 
     @reboot     sleep 60; reader web -p 8080 2>&1 ) >>"/tmp/$LOGNAME.reader.web.run.boot.log"
 
@@ -67,89 +120,22 @@ If running on a personal computer, you can use cron to run ``web`` at boot::
 .. _Werkzeug's development server: https://werkzeug.palletsprojects.com/en/stable/serving/#werkzeug.serving.run_simple
 
 
-.. _app screenshots:
 
-Screenshots
------------
+.. _legacy web app:
 
-Following are screenshots of the web app re-design
-mentioned in the :ref:`roadmap <app roadmap>`.
-For the legacy web app, see `Screenshots (legacy)`_.
+Legacy web app
+--------------
 
-Main page
-~~~~~~~~~
+Before the current web application,
+there was another one,
+serving as test bed for new features.
+It is usable, if a bit unpolished,
+but was never meant to be a long-term thing,
+hence the new app;
+you can find screenshots
+`here <https://github.com/lemon24/reader/blob/3.21/docs/app.rst#screenshots-legacy>`_.
 
-.. figure:: screenshots/entries-v2-dark.png
-    :width: 240px
+The WSGI entry point is ``reader._app.legacy.wsgi:app``.
 
-    main page (dark mode)
-
-.. figure:: screenshots/entries-v2-filters-light.png
-    :width: 240px
-
-    main page – more filters (light mode)
-
-
-Screenshots (legacy)
---------------------
-
-Following are screenshots of the original (legacy) web app.
-
-Main page
-~~~~~~~~~
-
-.. figure:: screenshots/entries.png
-    :width: 240px
-
-    main page
-
-Feed page
-~~~~~~~~~
-
-.. figure:: screenshots/entries-feed.png
-    :width: 240px
-
-    feed page
-
-Feeds page
-~~~~~~~~~~
-
-.. figure:: screenshots/feeds.png
-    :width: 240px
-
-    feeds page
-
-Entry page
-~~~~~~~~~~
-
-.. figure:: screenshots/entry-one.png
-    :width: 240px
-
-    entry page
-
-
-.. figure:: screenshots/entry-two.png
-    :width: 240px
-
-    entry page
-
-Search page
-~~~~~~~~~~~
-
-.. figure:: screenshots/search.png
-    :width: 240px
-
-    search page
-
-Lightweight browsers
-~~~~~~~~~~~~~~~~~~~~
-
-.. figure:: screenshots/lynx.png
-    :width: 240px
-
-    Lynx
-
-.. figure:: screenshots/dillo.png
-    :width: 240px
-
-    Dillo
+The legacy web app should remain available
+until the new app reaches feature parity.
