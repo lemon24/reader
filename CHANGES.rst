@@ -9,7 +9,7 @@ Changelog
 Version 3.22
 ------------
 
-Unreleased
+Released 2026-04-01
 
 * :func:`make_reader` plugin loading improvements. (:issue:`395`)
 
