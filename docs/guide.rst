@@ -21,7 +21,7 @@ The Reader object
 Most *reader* functionality is available through a :class:`Reader` instance,
 which persists feed and entry state
 and provides operations on them;
-in :abbr:`MVC (model–view–controller)` parlance,
+in :abbr:`MVC (model–view–controller)` terms,
 you would probably call it a fat model.
 
 

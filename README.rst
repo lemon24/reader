@@ -4,7 +4,9 @@
 
 It is designed to allow writing feed reader applications
 without any business code,
-and without depending on a particular framework.
+and without depending on a particular framework;
+in MVC terms,
+you'd probably call it a fat model.
 
 .. end-intro
 
@@ -58,19 +60,13 @@ and without depending on a particular framework.
 
 What *reader* doesn't do:
 
-* provide an UI
-* provide a REST API (yet)
 * depend on a web framework
-* have an opinion of how/where you use it
+* have an opinion of how or where you use it
 
-The following exist, but are optional (and frankly, a bit unpolished):
+In addition, *reader* provides:
 
-* a minimal web interface
-
-  * that works even with text-only browsers
-  * with automatic tag fixing for podcasts (MP3 enclosures)
-
-* a command-line interface
+* an optional web application based on Flask, Bootstrap, and htmx
+* an optional command-line interface
 
 .. end-features
 
