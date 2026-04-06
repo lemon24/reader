@@ -19,7 +19,6 @@ from reader._types import FeedFilter
 from utils import utc_datetime
 from utils import utc_datetime as datetime
 
-
 pytestmark = pytest.mark.noscheduled
 
 

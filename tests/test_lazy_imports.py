@@ -14,7 +14,6 @@ import pytest
 import reader.plugins
 from utils import parametrize_dict
 
-
 # these tests take ~1s in total
 pytestmark = pytest.mark.slow
 
@@ -65,8 +64,7 @@ def get_imported_modules(code):
     return process.stdout.split()
 
 
-LAZY_MODULES = frozenset(
-    """\
+LAZY_MODULES = frozenset("""\
     bs4
     requests
     feedparser
@@ -74,8 +72,7 @@ LAZY_MODULES = frozenset(
     urllib.request
     multiprocessing
     concurrent.futures
-    """.split()
-)
+    """.split())
 
 
 # all in a single script to save time

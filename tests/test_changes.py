@@ -7,7 +7,6 @@ from reader._types import Action
 from reader._types import Change
 from reader.exceptions import ChangeTrackingNotEnabledError
 
-
 pytestmark = pytest.mark.noscheduled
 
 

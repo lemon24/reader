@@ -18,7 +18,6 @@ from typing import Any
 from typing import cast
 from typing import TypeVar
 
-
 FuncType = Callable[..., Any]
 F = TypeVar('F', bound=FuncType)
 

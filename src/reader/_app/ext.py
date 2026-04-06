@@ -10,7 +10,6 @@ from flask import current_app
 from reader import make_reader
 from reader.plugins._loader import PluginLoader
 
-
 _plugin_loader = PluginLoader('init_app')
 
 

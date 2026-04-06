@@ -21,7 +21,6 @@ from reader import SearchError
 from reader import StorageError
 from utils import rename_argument
 
-
 pytestmark = pytest.mark.noscheduled
 
 

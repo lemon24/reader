@@ -20,7 +20,6 @@ from reader.plugins.entry_dedupe import tokenize_title
 from utils import parametrize_dict
 from utils import utc_datetime as datetime
 
-
 pytestmark = pytest.mark.noscheduled
 
 

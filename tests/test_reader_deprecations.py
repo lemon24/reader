@@ -4,5 +4,4 @@ import pytest
 
 from fakeparser import Parser
 
-
 # Nothing here (yet).

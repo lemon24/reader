@@ -14,7 +14,6 @@ from functools import partial
 
 import click
 
-
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../src'))
 sys.path.insert(0, os.path.join(root_dir, '../tests'))

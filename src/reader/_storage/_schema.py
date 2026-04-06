@@ -4,7 +4,6 @@ from ._sql_utils import parse_schema
 from ._sqlite_utils import ddl_transaction
 from ._sqlite_utils import HeavyMigration
 
-
 SCHEMA = parse_schema("""
 
 CREATE TABLE feeds (
@@ -153,12 +152,10 @@ def create_indexes(db: sqlite3.Connection) -> None:
 def update_from_36_to_37(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     # for https://github.com/lemon24/reader/issues/279
     db.execute("ALTER TABLE entries ADD COLUMN recent_sort TIMESTAMP;")
-    db.execute(
-        """
+    db.execute("""
         UPDATE entries
         SET recent_sort = coalesce(published, updated, first_updated_epoch);
-        """
-    )
+        """)
     db.execute("DROP INDEX entries_by_kinda_first_updated;")
     db.execute("DROP INDEX entries_by_kinda_published;")
     entries_by_recent_index.create(db)
@@ -168,8 +165,7 @@ def update_from_37_to_38(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     # https://github.com/lemon24/reader/issues/254#issuecomment-1404215814
 
     entries_table.create(db, 'new_entries')
-    db.execute(
-        """
+    db.execute("""
         INSERT INTO new_entries (
             id,
             feed,
@@ -226,8 +222,7 @@ def update_from_37_to_38(db: sqlite3.Connection, /) -> None:  # pragma: no cover
             feed_order,
             recent_sort
         FROM entries;
-        """
-    )
+        """)
 
     # IMPORTANT: this drops ALL indexes and triggers ON entries
     db.execute("DROP TABLE entries;")

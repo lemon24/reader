@@ -14,7 +14,6 @@ To load::
 from urllib.parse import quote
 from urllib.parse import urlparse
 
-
 TEMPLATES = {
     'Twitter': "https://twitter.com/share?text={title}&url={url}",
     'HN': "https://news.ycombinator.com/submitlink?u={url}&t={title}",

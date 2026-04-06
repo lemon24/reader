@@ -56,7 +56,6 @@ from .types import ResourceId
 from .types import TagFilterInput
 from .types import TristateFilterInput
 
-
 log = logging.getLogger("reader")
 
 # Private API

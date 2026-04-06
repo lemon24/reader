@@ -5,7 +5,6 @@ import pytest
 
 from utils import utc_datetime as datetime
 
-
 pytestmark = pytest.mark.noscheduled
 
 

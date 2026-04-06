@@ -8,12 +8,10 @@ from reader import make_reader
 from test_cli import patch_app_dir
 from test_reader_filter import setup_reader_for_tags
 
-
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../scripts'))
 import bench
 from bench import cli
-
 
 pytestmark = pytest.mark.slow
 pytest.importorskip("numpy")

@@ -5,7 +5,6 @@ from reader import Enclosure
 from reader._types import EntryData
 from reader._types import FeedData
 
-
 feed = FeedData(
     url=f'{url_base}invalid.json',
     version='json11',

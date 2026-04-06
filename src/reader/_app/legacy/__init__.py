@@ -44,7 +44,6 @@ from ..ext import ReaderExtension
 from .api_thing import APIError
 from .api_thing import APIThing
 
-
 blueprint = Blueprint(
     'reader', __name__, static_folder='static', template_folder='templates'
 )

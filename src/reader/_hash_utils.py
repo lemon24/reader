@@ -27,7 +27,6 @@ import json
 from collections.abc import Collection
 from typing import Any
 
-
 # The first byte of the hash contains its version,
 # to allow upgrading the implementation without changing existing hashes.
 # (In practice, it's likely we'll just let the hash change and update

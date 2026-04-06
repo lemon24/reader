@@ -12,7 +12,6 @@ from test_reader_private import CustomParser
 from test_reader_private import CustomRetriever
 from utils import utc_datetime as datetime
 
-
 pytestmark = pytest.mark.noscheduled
 
 

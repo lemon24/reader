@@ -27,7 +27,6 @@ from utils import Blocking
 from utils import parametrize_dict
 from utils import utc_datetime as datetime
 
-
 # fmt: off
 
 def prepare_feed(reader):

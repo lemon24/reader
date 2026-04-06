@@ -38,7 +38,6 @@ from .forms import ChangeFeedTitle
 from .forms import EntryFilter
 from .forms import FeedFilter
 
-
 # for a prototype with tags and search support, see
 # https://github.com/lemon24/reader/tree/3.21/src/reader/_app/v2
 

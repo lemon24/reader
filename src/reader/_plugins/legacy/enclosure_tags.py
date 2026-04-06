@@ -40,7 +40,6 @@ from flask import stream_with_context
 from flask import url_for
 from jinja2.filters import do_striptags as striptags
 
-
 blueprint = Blueprint('enclosure_tags', __name__)
 
 

@@ -18,7 +18,6 @@ from ..exceptions import ParseError
 from ..types import Content
 from ..types import Enclosure
 
-
 if TYPE_CHECKING:  # pragma: no cover
     from . import FeedAndEntries
     from .requests import Headers

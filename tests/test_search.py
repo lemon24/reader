@@ -16,7 +16,6 @@ from reader._storage._sqlite_utils import DBError
 from reader._storage._sqlite_utils import require_version
 from utils import utc_datetime as datetime
 
-
 STRIP_HTML_DATA = [(i, i) for i in [None, 10, 11.2, b'aabb', b'aa<br>bb']] + [
     ('aabb', 'aabb'),
     ('aa<br>bb', 'aabb'),

@@ -8,7 +8,6 @@ from reader import make_reader
 from reader._app.legacy import create_app
 from utils import utc_datetime as datetime
 
-
 # mechanicalsoup depends on lxml, but we don't have that everywhere.
 try:
     import mechanicalsoup

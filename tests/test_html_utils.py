@@ -3,7 +3,6 @@ import pytest
 
 from reader._storage._html_utils import strip_html
 
-
 STRIP_HTML_DATA = [
     ('', ''),
     ('<br>', ''),

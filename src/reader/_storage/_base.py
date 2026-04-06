@@ -15,7 +15,6 @@ from . import _sqlite_utils
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
 
-
 APPLICATION_ID = b'read'
 
 _T = TypeVar('_T')

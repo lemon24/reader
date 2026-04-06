@@ -156,7 +156,6 @@ from reader._storage._html_utils import strip_html
 from reader._utils import BetterStrPartial as partial
 from reader.exceptions import EntryNotFoundError
 
-
 log = logging.getLogger(__name__)
 
 
@@ -839,8 +838,7 @@ def merge_tags(make_reserved, entry, duplicates):
 # text tokenization
 
 
-_TOKEN_RE = re.compile(
-    r"""(?x)
+_TOKEN_RE = re.compile(r"""(?x)
     \b  # word boundary
     (?:
         \d{1,4} (?: [/-] \d{1,4} ){1,2}  # dates
@@ -850,8 +848,7 @@ _TOKEN_RE = re.compile(
         \w+  # other words
     )
     \b   # word boundary
-    """
-)
+    """)
 
 
 def tokenize(s, preprocessor=lambda x: x):

@@ -13,7 +13,6 @@ import requests
 from . import CachingInfo
 from . import TimeoutType
 
-
 if TYPE_CHECKING:  # pragma: no cover
     from . import Headers
     from . import RequestHook

@@ -93,7 +93,6 @@ from .exceptions import (
     ReaderWarning as ReaderWarning,
 )
 
-
 # Constants.
 
 USER_AGENT = f'python-reader/{__version__} (+https://github.com/lemon24/reader)'

@@ -3,7 +3,6 @@ import shutil
 
 import requests
 
-
 STUFF = {
     "htmx.org@2.0.8": ["dist/htmx.min.js"],
     "htmx-ext-response-targets@2.0.4": ["dist/response-targets.min.js"],

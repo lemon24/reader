@@ -5,7 +5,6 @@ import pytest
 from reader import EntryNotFoundError
 from reader.utils import archive_entries
 
-
 pytestmark = pytest.mark.noscheduled
 
 

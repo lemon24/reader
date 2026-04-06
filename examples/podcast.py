@@ -14,7 +14,6 @@ import requests
 
 from reader import make_reader
 
-
 feed_url = "http://www.hellointernet.fm/podcast?format=rss"
 podcasts_dir = "podcasts"
 
