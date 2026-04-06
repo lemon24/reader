@@ -12,7 +12,6 @@ from ._sql_utils import parse_schema
 from ._sql_utils import Query
 from ._sqlite_utils import ddl_transaction
 
-
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
 
@@ -41,12 +40,10 @@ class Changes:
             for object in objects.values():
                 object.create(db)
         db.execute("UPDATE entries SET sequence = randomblob(16)")
-        db.execute(
-            """
+        db.execute("""
             INSERT INTO changes
             SELECT sequence, feed, id, '', 1 FROM entries
-            """
-        )
+            """)
 
     @wrap_exceptions()
     def disable(self) -> None:

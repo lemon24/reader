@@ -10,7 +10,6 @@ import werkzeug.http
 from werkzeug.datastructures import MIMEAccept
 from werkzeug.datastructures import ResponseCacheControl
 
-
 parse_options_header = werkzeug.http.parse_options_header
 parse_accept_header = werkzeug.http.parse_accept_header
 parse_date = werkzeug.http.parse_date

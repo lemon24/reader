@@ -15,7 +15,6 @@ import os
 import reader._app.legacy
 import reader._cli
 
-
 config = reader._cli.load_reader_config()
 app = reader._app.legacy.create_app(config)
 app.config['TRAP_BAD_REQUEST_ERRORS'] = bool(

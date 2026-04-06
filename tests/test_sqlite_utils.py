@@ -22,7 +22,6 @@ from reader._storage._sqlite_utils import UsageError
 from reader._storage._sqlite_utils import wrap_exceptions
 from utils import rename_argument
 
-
 original_sqlite3_connect = sqlite3.connect
 
 

@@ -37,7 +37,6 @@ from ._sqlite_utils import rowcount_exactly_one
 from ._tags import entry_tags_filter
 from ._tags import feed_tags_filter
 
-
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
 else:
@@ -404,10 +403,7 @@ class EntriesMixin(StorageBase):
 def get_entries_query(
     filter: EntryFilter, sort: EntrySort
 ) -> tuple[Query, dict[str, Any]]:
-    query = (
-        Query()
-        .SELECT(
-            *"""
+    query = Query().SELECT(*"""
             entries.feed
             feeds.updated
             feeds.title
@@ -441,11 +437,7 @@ def get_entries_query(
             entries.last_updated
             entries.original_feed
             entries.sequence
-            """.split()
-        )
-        .FROM("entries")
-        .JOIN("feeds ON feeds.url = entries.feed")
-    )
+            """.split()).FROM("entries").JOIN("feeds ON feeds.url = entries.feed")
     context = entry_filter(query, filter)
     ENTRIES_SORT[sort](query)
     return query, context
@@ -540,13 +532,11 @@ def entry_filter(
         add(TRISTATE_FILTER_TO_SQL[important].format(expr='entries.important'))
 
     if has_enclosures is not None:
-        add(
-            f"""
+        add(f"""
             {'NOT' if has_enclosures else ''}
                 (json_array_length(entries.enclosures) IS NULL
                     OR json_array_length(entries.enclosures) = 0)
-            """
-        )
+            """)
 
     if source_url:
         add("json_extract(entries.source, '$.url') = :source_url")

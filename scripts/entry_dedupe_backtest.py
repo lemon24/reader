@@ -21,7 +21,6 @@ import time
 from reader import make_reader
 from reader.plugins import entry_dedupe
 
-
 DB_ARCHIVE = "_backups/reader.sqlite.2025-10-04.gz"
 
 file = sys.argv[1]

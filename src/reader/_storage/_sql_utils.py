@@ -39,7 +39,6 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
-
 if TYPE_CHECKING:  # pragma: no cover
     import sqlite3
 

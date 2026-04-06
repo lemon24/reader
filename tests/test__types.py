@@ -8,7 +8,6 @@ from reader._types import FeedData
 from reader._types import tag_filter_argument
 from reader._types import tristate_filter_argument
 
-
 TAG_DATA = [
     ([], [None, [], (), [[]], ((),), [[], []]]),
     ([[True]], [True, [True], [[True]]]),

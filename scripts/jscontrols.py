@@ -8,13 +8,11 @@ from flask import jsonify
 from flask import redirect
 from flask import request
 
-
 root_dir = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root_dir, '../src'))
 
 from reader._app.api_thing import APIError
 from reader._app.api_thing import APIThing
-
 
 app = Flask(
     __name__,

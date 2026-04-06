@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 
 from ._loader import PluginLoader
 
-
 if TYPE_CHECKING:  # pragma: no cover
     from .. import Reader  # noqa: F401
 

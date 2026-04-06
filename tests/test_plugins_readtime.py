@@ -5,7 +5,6 @@ from reader import Entry
 from utils import rename_argument
 from utils import utc_datetime as datetime
 
-
 pytestmark = pytest.mark.noscheduled
 
 

@@ -33,7 +33,6 @@ from .requests import Headers
 from .requests import SessionFactory
 from .requests import TimeoutType
 
-
 if TYPE_CHECKING:  # pragma: no cover
     from werkzeug.datastructures import RequestCacheControl
 

@@ -8,7 +8,6 @@ from ._entries import EntriesMixin
 from ._feeds import FeedsMixin
 from ._tags import TagsMixin
 
-
 # Row value support was added in 3.15.
 # pragma_*() tabled-valued functions were added in 3.16.
 # last_insert_rowid() support for FTS5 was added in 3.18.

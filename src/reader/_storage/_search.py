@@ -40,7 +40,6 @@ from ._sql_utils import Query
 from ._sqlite_utils import ddl_transaction
 from ._sqlite_utils import SQLiteType
 
-
 APPLICATION_ID = b'reaD'
 
 _T = TypeVar('_T')
@@ -142,8 +141,7 @@ class Search:
         # We put the unindexed stuff at the end to avoid having to adjust
         # stuff depended on the column index if we add new columns.
         #
-        db.execute(
-            f"""
+        db.execute(f"""
             CREATE VIRTUAL TABLE {schema}.entries_search USING fts5(
                 title,  -- entries.title
                 content,  -- entries.summary or one of entries.content
@@ -154,18 +152,14 @@ class Search:
                 _is_feed_user_title UNINDEXED,
                 tokenize = "porter unicode61 remove_diacritics 1 tokenchars '_'"
             );
-            """
-        )
+            """)
         # TODO: we still need to tune the rank weights, these are just guesses
-        db.execute(
-            """
+        db.execute("""
             INSERT INTO entries_search(entries_search, rank)
             VALUES ('rank', 'bm25(4, 1, 2)');
-            """
-        )
+            """)
 
-        db.execute(
-            f"""
+        db.execute(f"""
             CREATE TABLE {schema}.entries_search_sync_state (
                 sequence BLOB NOT NULL,
                 feed TEXT NOT NULL,
@@ -173,8 +167,7 @@ class Search:
                 es_rowids TEXT NOT NULL DEFAULT '[]',
                 PRIMARY KEY (sequence, feed, id)
             );
-            """
-        )
+            """)
 
     @wrap_exceptions()
     def disable(self) -> None:
@@ -532,8 +525,7 @@ def make_search_entries_query(
 ) -> tuple[Query, dict[str, Any]]:
     search = (
         Query()
-        .SELECT(
-            """
+        .SELECT("""
             _id,
             _feed,
             rank,
@@ -545,8 +537,7 @@ def make_search_entries_query(
                 'value', snippet(entries_search, 1, :before, :after, '...', :tokens),
                 'rank', rank
             ) AS content
-            """
-        )
+            """)
         .FROM("entries_search")
         .JOIN("entries ON (entries.id, entries.feed) = (_id, _feed)")
         .WHERE("entries_search MATCH :query")

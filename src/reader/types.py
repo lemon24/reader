@@ -24,7 +24,6 @@ from typing import Union
 
 from reader.exceptions import UpdateError
 
-
 # can't be defined here because of circular imports
 from reader._utils import MISSING as MISSING  # isort: skip # noqa: F401
 from reader._utils import MissingType as MissingType  # isort: skip # noqa: F401

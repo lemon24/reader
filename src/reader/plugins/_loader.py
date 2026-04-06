@@ -11,7 +11,6 @@ from typing import Union
 from ..exceptions import InvalidPluginError
 from ..exceptions import PluginInitError
 
-
 T = TypeVar('T')
 PluginFunc = Callable[[T], None]
 PluginInput = Union[str, PluginFunc[T]]

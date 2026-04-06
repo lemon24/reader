@@ -6,7 +6,6 @@ from reader import EntrySource
 from reader._types import EntryData
 from reader._types import FeedData
 
-
 feed = FeedData(
     url=f'{url_base}full.atom',
     updated=datetime.datetime(2003, 12, 13, 18, 30, 2, tzinfo=datetime.UTC),

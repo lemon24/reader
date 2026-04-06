@@ -36,7 +36,6 @@ from ._http_utils import unparse_accept_header
 from ._url_utils import normalize_url
 from .requests import SessionFactory
 
-
 log = logging.getLogger('reader')
 
 

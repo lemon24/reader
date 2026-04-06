@@ -63,7 +63,6 @@ from reader.exceptions import EntryNotFoundError
 from reader.exceptions import TagNotFoundError
 from reader.types import EntryUpdateStatus
 
-
 # avoid circular imports
 
 log = logging.getLogger(__name__)

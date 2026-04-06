@@ -35,7 +35,6 @@ from reader._parser import wrap_exceptions
 from reader._types import EntryData
 from reader._types import FeedData
 
-
 warnings.filterwarnings(
     'ignore',
     message='No parser was explicitly specified',

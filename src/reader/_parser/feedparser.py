@@ -20,7 +20,6 @@ from ..types import EntrySource
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
 
-
 if os.environ.get('READER_NO_VENDORED_FEEDPARSER', '') not in ('', '0'):
     import feedparser  # type: ignore
 else:

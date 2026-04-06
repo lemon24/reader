@@ -21,7 +21,6 @@ from typing import Union
 
 from ..._utils import lazy_import
 
-
 if TYPE_CHECKING:  # pragma: no cover
     import requests
 

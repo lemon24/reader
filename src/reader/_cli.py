@@ -19,7 +19,6 @@ from ._config_utils import load_config
 from ._config_utils import load_config_from_context
 from .plugins._loader import PluginLoader
 
-
 app_name = reader.__name__
 app_dir = click.get_app_dir(app_name)
 

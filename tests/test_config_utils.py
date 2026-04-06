@@ -63,14 +63,12 @@ def test_empty_config(with_config):
 
 
 def test_config(with_config):
-    with_config(
-        """\
+    with_config("""\
         [cli]
         plugin=['config']
         [cli.sub]
         option='config'
-        """
-    )
+        """)
 
     expected = {'': {'plugin': ('CONFIG',)}, 'sub': {'option': 'CONFIG'}}
     assert invoke(cli, ['sub']) == expected

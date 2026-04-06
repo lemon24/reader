@@ -5,7 +5,6 @@ from test_app_legacy import make_app
 from test_app_legacy import make_browser
 from test_app_legacy import pytestmark
 
-
 pytestmark = list(pytestmark)
 pytestmark.append(
     pytest.mark.filterwarnings("ignore:No parser was explicitly specified")

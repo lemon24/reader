@@ -27,7 +27,6 @@ from utils import rename_argument
 from utils import utc_datetime
 from utils import utc_datetime as datetime
 
-
 pytestmark = pytest.mark.noscheduled
 
 
@@ -563,14 +562,10 @@ def test_update_actually_deletes_from_database(reader, parser):
         )
 
     def get_entries_search_sync_state():
-        return sorted(
-            db.execute(
-                """
+        return sorted(db.execute("""
             select feed, id, sequence, json_array_length(es_rowids)
             from entries_search_sync_state
-        """
-            )
-        )
+        """))
 
     reader.update_search()
     one, two = sorted(reader.get_entries(), key=lambda e: e.resource_id)

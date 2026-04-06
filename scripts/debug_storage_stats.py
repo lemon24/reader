@@ -29,7 +29,6 @@ import click
 import numpy as np
 from tabulate import tabulate
 
-
 # assumes dict()s are ordered
 
 value_funcs = {
