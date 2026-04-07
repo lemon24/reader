@@ -72,7 +72,7 @@ LAZY_MODULES = frozenset("""\
     urllib.request
     multiprocessing
     concurrent.futures
-    """.split())
+""".split())
 
 
 # all in a single script to save time

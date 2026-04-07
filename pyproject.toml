@@ -199,4 +199,3 @@ skip_gitignore = true
 filter_files = true
 force_single_line = true
 order_by_type = false
-lines_after_imports = 2

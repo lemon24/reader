@@ -43,7 +43,7 @@ class Changes:
         db.execute("""
             INSERT INTO changes
             SELECT sequence, feed, id, '', 1 FROM entries
-            """)
+        """)
 
     @wrap_exceptions()
     def disable(self) -> None:

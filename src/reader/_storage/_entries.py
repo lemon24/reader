@@ -403,7 +403,9 @@ class EntriesMixin(StorageBase):
 def get_entries_query(
     filter: EntryFilter, sort: EntrySort
 ) -> tuple[Query, dict[str, Any]]:
-    query = Query().SELECT(*"""
+    query = (
+        Query()
+        .SELECT(*"""
             entries.feed
             feeds.updated
             feeds.title
@@ -437,7 +439,10 @@ def get_entries_query(
             entries.last_updated
             entries.original_feed
             entries.sequence
-            """.split()).FROM("entries").JOIN("feeds ON feeds.url = entries.feed")
+        """.split())
+        .FROM("entries")
+        .JOIN("feeds ON feeds.url = entries.feed")
+    )  # fmt: skip
     context = entry_filter(query, filter)
     ENTRIES_SORT[sort](query)
     return query, context
@@ -536,7 +541,7 @@ def entry_filter(
             {'NOT' if has_enclosures else ''}
                 (json_array_length(entries.enclosures) IS NULL
                     OR json_array_length(entries.enclosures) = 0)
-            """)
+        """)
 
     if source_url:
         add("json_extract(entries.source, '$.url') = :source_url")

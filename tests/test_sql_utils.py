@@ -18,7 +18,7 @@ def test_query_simple():
             join
         WHERE
             where
-        """)
+    """)
 
 
 def test_query_complicated():
@@ -102,7 +102,7 @@ def test_query_complicated():
             third
         LIMIT
             limit
-        """)
+    """)
 
 
 def test_query_flag():
@@ -111,7 +111,7 @@ def test_query_flag():
         SELECT DISTINCT
             one,
             two
-        """)
+    """)
     with pytest.raises(ValueError):
         BaseQuery().SELECT_MAGIC('one')
 
@@ -145,25 +145,35 @@ def test_scrolling_window():
     query.scrolling_window_order_by('one')
     query.LIMIT('limit')
     query.add_last([])
-    assert str(query) == str(make_query(BaseQuery).WHERE("""
+    assert str(query) == str(
+        make_query(BaseQuery)
+        .WHERE("""
             (
                 one
             ) > (
                 :last_0
             )
-            """).ORDER_BY('one ASC').LIMIT('limit'))
+        """)
+        .ORDER_BY('one ASC')
+        .LIMIT('limit')
+    )  # fmt: skip
 
     query = make_query()
     query.scrolling_window_order_by('one', desc=True, keyword='HAVING')
     query.LIMIT('limit')
     query.add_last([])
-    assert str(query) == str(make_query(BaseQuery).HAVING("""
+    assert str(query) == str(
+        make_query(BaseQuery)
+        .HAVING("""
             (
                 one
             ) < (
                 :last_0
             )
-            """).ORDER_BY('one DESC').LIMIT('limit'))
+        """)
+        .ORDER_BY('one DESC')
+        .LIMIT('limit')
+    )  # fmt: skip
 
 
 def test_scrolling_window_last():

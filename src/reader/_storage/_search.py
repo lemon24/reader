@@ -152,12 +152,12 @@ class Search:
                 _is_feed_user_title UNINDEXED,
                 tokenize = "porter unicode61 remove_diacritics 1 tokenchars '_'"
             );
-            """)
+        """)
         # TODO: we still need to tune the rank weights, these are just guesses
         db.execute("""
             INSERT INTO entries_search(entries_search, rank)
             VALUES ('rank', 'bm25(4, 1, 2)');
-            """)
+        """)
 
         db.execute(f"""
             CREATE TABLE {schema}.entries_search_sync_state (
@@ -167,7 +167,7 @@ class Search:
                 es_rowids TEXT NOT NULL DEFAULT '[]',
                 PRIMARY KEY (sequence, feed, id)
             );
-            """)
+        """)
 
     @wrap_exceptions()
     def disable(self) -> None:
@@ -498,11 +498,11 @@ class Search:
             .with_(
                 "search",
                 """
-                    SELECT _id, _feed
-                    FROM entries_search
-                    WHERE entries_search MATCH :query
-                    GROUP BY _id, _feed
-                    """,
+                SELECT _id, _feed
+                FROM entries_search
+                WHERE entries_search MATCH :query
+                GROUP BY _id, _feed
+                """,
             )
             .SELECT('id', 'feed')
             .FROM('entries')
@@ -537,7 +537,7 @@ def make_search_entries_query(
                 'value', snippet(entries_search, 1, :before, :after, '...', :tokens),
                 'rank', rank
             ) AS content
-            """)
+        """)
         .FROM("entries_search")
         .JOIN("entries ON (entries.id, entries.feed) = (_id, _feed)")
         .WHERE("entries_search MATCH :query")

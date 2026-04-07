@@ -155,7 +155,7 @@ def update_from_36_to_37(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     db.execute("""
         UPDATE entries
         SET recent_sort = coalesce(published, updated, first_updated_epoch);
-        """)
+    """)
     db.execute("DROP INDEX entries_by_kinda_first_updated;")
     db.execute("DROP INDEX entries_by_kinda_published;")
     entries_by_recent_index.create(db)
@@ -222,7 +222,7 @@ def update_from_37_to_38(db: sqlite3.Connection, /) -> None:  # pragma: no cover
             feed_order,
             recent_sort
         FROM entries;
-        """)
+    """)
 
     # IMPORTANT: this drops ALL indexes and triggers ON entries
     db.execute("DROP TABLE entries;")
