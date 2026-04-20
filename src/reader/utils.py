@@ -1,5 +1,6 @@
 """Too specific to be in core, too small to have dedicated modules."""
 
+import warnings
 from collections.abc import Collection
 from urllib.parse import urlencode
 
@@ -15,7 +16,7 @@ def archive_entries(
     entries: Collection[EntryInput],
     /,
     feed_url: str = 'reader:archived',
-    feed_user_title: str | None = 'Archived',
+    feed_user_title: str | None = None,
 ) -> None:
     """Copy a list of entries to a special "archived" feed.
 
@@ -38,6 +39,10 @@ def archive_entries(
 
     .. versionadded:: 3.16
 
+    .. deprecated:: 3.23
+        The ``feed_user_title`` argument.
+        Use :meth:`~reader.Reader.set_feed_user_title` instead.
+
     """
     entry_ids = [_entry_argument(e) for e in entries]
 
@@ -46,7 +51,16 @@ def archive_entries(
         reader.disable_feed_updates(feed_url)
     except FeedExistsError:
         pass
-    reader.set_feed_user_title(feed_url, feed_user_title)
+
+    if feed_user_title is not None:
+        warnings.warn(
+            "Support for feed_user_title= "
+            "is deprecated and will be removed in reader 4.0. "
+            "Use reader.set_feed_user_title() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        reader.set_feed_user_title(feed_url, feed_user_title)
 
     for src in entry_ids:
         dst = feed_url, _make_archived_entry_id(feed_url, src)

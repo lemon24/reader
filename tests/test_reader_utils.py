@@ -30,7 +30,7 @@ def test_archive_entries(reader, parser):
     }
     archived = reader.get_feed('reader:archived')
     assert archived.updates_enabled is False
-    assert archived.user_title == 'Archived'
+    assert archived.user_title is None
 
     # archive two entries (one already archived), archived exists
 
@@ -57,3 +57,16 @@ def test_archive_entries(reader, parser):
 
     with pytest.raises(EntryNotFoundError):
         archive_entries(reader, [('1', 'inexistent')])
+
+
+def test_archive_entries_feed_user_title(reader, parser):
+    feed = parser.feed(1)
+    entry = parser.entry(1, 1)
+    reader.add_feed(feed)
+    reader.update_feeds()
+
+    with pytest.deprecated_call():
+        archive_entries(reader, [entry], feed_user_title='Archived')
+
+    archived = reader.get_feed('reader:archived')
+    assert archived.user_title == 'Archived'

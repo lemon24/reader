@@ -11,6 +11,8 @@ Version 3.23
 
 Unreleased
 
+* Deprecate the :func:`~reader.utils.archive_entries` ``feed_user_title`` argument.
+
 
 Version 3.22
 ------------
