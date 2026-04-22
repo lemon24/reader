@@ -95,7 +95,8 @@ from .exceptions import (
 
 # Constants.
 
-USER_AGENT = f'python-reader/{__version__} (+https://github.com/lemon24/reader)'
+SOURCE_URL = 'https://github.com/lemon24/reader'
+USER_AGENT = f'python-reader/{__version__} (+{SOURCE_URL})'
 
 
 # Prevent any logging output by default. If no handler is set,
