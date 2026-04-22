@@ -23,6 +23,7 @@ for name in [
     sys.modules[name] = unittest.mock.Mock()
 
 import reader
+import reader.opml
 
 extensions = [
     'sphinx_rtd_theme',

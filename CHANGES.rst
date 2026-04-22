@@ -11,6 +11,10 @@ Version 3.23
 
 Unreleased
 
+* Add basic support for OPML subscription list import/export:
+  :mod:`reader.opml`.
+  (:issue:`165`)
+
 * Deprecate the :func:`~reader.utils.archive_entries` ``feed_user_title`` argument.
 
 

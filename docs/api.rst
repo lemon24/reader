@@ -214,3 +214,10 @@ Utilities
 ---------
 
 .. autofunction:: reader.utils.archive_entries
+
+
+
+``reader.opml``
+---------------
+
+.. automodule:: reader.opml

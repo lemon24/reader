@@ -1,3 +1,34 @@
+"""
+Low level support for `OPML`_ subscription list import/export.
+
+Only a minimum of OPML features are supported (title, links, description).
+
+.. _OPML: https://opml.org/spec2.opml
+
+
+.. autofunction:: parse
+.. autofunction:: unparse
+
+.. autoclass:: Feed
+    :members:
+    :undoc-members:
+
+.. autoexception:: OPMLError
+    :show-inheritance:
+
+
+.. versionadded:: 3.23
+
+
+.. todo::
+
+    * use text= as user_title (both directions)
+    * spec categories / tags (category= attribute)
+    * listparser-style categories (parent <outline text=...>);
+      at least FreshRSS, NewsBlur, and Feedly use this
+
+"""
+
 import io
 import re
 import xml.etree.ElementTree as etree
@@ -11,17 +42,15 @@ from typing import IO
 
 import reader
 
-# Implementation note:
-# We're not using listparser because of the extra dependency
-# and its weird category handling (should we add categories),
-# and because we still have to implement unparse() anyway.
-
 
 @dataclass
 class Feed:
-    """A feed in an OPML subscription list."""
+    """A feed in an OPML subscription list.
 
-    # the similarity to reader.Feed is deliberate
+    Attributes are similar to those of :class:`reader.Feed`.
+
+    """
+
     url: str
     _: KW_ONLY
     title: str | None = None
@@ -30,16 +59,25 @@ class Feed:
 
 
 class OPMLError(reader.ReaderError):
-    pass
+    """An error occurred while parsing an OPML subscription list."""
 
 
 def parse(file: IO[bytes], max_depth: int = 10) -> list[Feed]:
     """Extract a list of feeds from an OPML subscription list.
 
+    Args:
+        file (file): A binary file.
+
+    Returns:
+        list(reader.opml.Feed): A list of feeds.
+
     Raises:
         OPMLError:
 
     """
+    # Not using listparser because: extra dependency, weird category handling,
+    # and we still need to implement unparse() anyway.
+
     file = _fix_xml_decl_encoding(file)
     try:
         tree = etree.parse(file)
@@ -112,7 +150,17 @@ def unparse(
     title: str | None = None,
     created: datetime | None = None,
 ) -> bytes:
-    """Convert a list of feeds to an OPML subscription list."""
+    """Convert a list of feeds to an OPML subscription list.
+
+    Args:
+        feeds (list(reader.Feed)): An iterable of feeds.
+        title (str or None): The list title.
+        created (datetime or None): The list creation date.
+
+    Returns:
+        bytes: The OPML XML content.
+
+    """
     opml = _add_element(None, 'opml', version='2.0')
     head = _add_element(opml, 'head')
     if title:
