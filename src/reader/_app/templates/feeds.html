@@ -12,7 +12,14 @@
 
 {{ macros.flashed_messages() }}
 
-<h1>Feeds</h1>
+<h1>
+  <span class="me-1">
+    Feeds
+  </span>
+  <a href="{{ url_for(request.endpoint, format='opml', **request.args) }}" class="small" title="export as OPML">
+    <i class="bi bi-filetype-xml text-secondary"></i>
+  </a>
+</h1>
 
 
 {% call macros.filter_form(form) %}

@@ -29,6 +29,7 @@ from reader import EntryNotFoundError
 from reader import FeedExistsError
 from reader import FeedNotFoundError
 from reader import InvalidFeedURLError
+from reader import opml
 from reader import UpdateError
 
 from .ext import get_reader
@@ -162,6 +163,20 @@ def feeds():
     feeds = []
     if form.validate():
         feeds = reader.get_feeds(**kwargs)
+
+    if request.args.get('format', '').lower() == 'opml':
+        # TODO: good candidate for a Reader method
+        feeds = (f for f in feeds if not f.url.startswith('reader:'))
+
+        now = reader._now()
+        # TODO: title should contain branding
+        title = 'reader feeds'
+        filename = f"{title.replace(' ', '-')}-{now:%Y-%m-%d-%H-%M-%S}.opml"
+
+        return opml.unparse(feeds, title=title, created=now), {
+            'Content-Type': 'application/xml',
+            'Content-Disposition': f'attachment; filename="{filename}"',
+        }
 
     return stream_template(
         'feeds.html',
