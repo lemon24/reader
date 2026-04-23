@@ -1,4 +1,6 @@
+import json
 import pathlib
+from dataclasses import asdict
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
@@ -282,6 +284,46 @@ def add_feed():
             return redirect(url_for('.entries', feed=url), code=303)
 
     return render_template('add_feed.html', form=form)
+
+
+@blueprint.route('/feeds/import', methods=['GET', 'POST'])
+def import_feeds():
+    reader = get_reader()
+    parsed_feeds = None
+    error = None
+    imported_feeds = None
+
+    if request.method == 'POST':
+        if file := request.files.get('file'):
+            try:
+                feeds = opml.parse(file.stream)
+            except opml.OPMLError as e:
+                error = str(e)
+            else:
+                # TODO: good candidate for a Reader method
+                feeds = (f for f in feeds if not f.url.startswith('reader:'))
+                parsed_feeds = [asdict(f) for f in feeds]
+        else:
+            feeds = [opml.Feed(**json.loads(f)) for f in request.form.getlist('feed')]
+            # TODO: good candidate for a Reader method
+            imported_feeds = []
+            for feed in feeds:
+                try:
+                    reader.add_feed(feed)
+                except InvalidFeedURLError as e:
+                    imported_feeds.append((feed, False, f"invalid feed: {e}"))
+                except FeedExistsError:
+                    imported_feeds.append((feed, False, None))
+                else:
+                    imported_feeds.append((feed, True, None))
+            # TODO: out of band update (unlike add, there's too many to do here)
+
+    return render_template(
+        'import_feeds.html',
+        parsed_feeds=parsed_feeds,
+        error=error,
+        imported_feeds=imported_feeds,
+    )
 
 
 @blueprint.route('/entry')

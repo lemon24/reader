@@ -1,0 +1,120 @@
+{% extends "layout.html" %}
+
+{% import "macros.html" as macros %}
+
+
+{% block page_title %}
+  Import feeds - {{ super() }}
+{% endblock %}
+
+
+{% block body %}
+
+<h1>Import feeds</h1>
+
+<form
+  action="{{ url_for(request.endpoint) }}"
+  method="post"
+  enctype="multipart/form-data"
+  class="my-2 mb-4"
+>
+{#- TODO: aria stuff #}
+
+{{ macros.csrf_token_field() }}
+
+{% if parsed_feeds is none and imported_feeds is none %}
+
+  <p>Upload OPML subscription list:</p>
+
+  <div class="mb-3">
+
+  <!-- TODO accept -->
+  <input
+    class="form-control{% if error %} is-invalid {% endif %}"
+    type="file"
+    name="file"
+  >
+  {%- if error %}
+  <div class="invalid-feedback">
+    {{ error }}
+  </div>
+  {%- endif %}
+
+  </div>
+
+  <input type="submit" class="btn btn-primary" value="upload file">
+
+  <a href="javascript:history.back()" class="btn btn-outline-secondary" role="button" >
+    cancel
+  </a>
+
+{% elif parsed_feeds is not none %}
+
+  <p>Select feeds to import:</p>
+
+  {% for feed in parsed_feeds %}
+  <div class="form-check mb-3">
+    <input
+      class="form-check-input"
+      id="feed-{{ loop.index }}"
+      type="checkbox"
+      name="feed"
+      value='{{ feed | tojson }}'
+      checked
+    >
+
+    <label class="form-check-label" for="feed-{{ loop.index }}">
+      {#- NOTE similarity to feeds page feeds #}
+      <h2 class="h5 mb-1" style="font-size: 1.125rem">
+          {{ macros.title_href(
+            feed.title or feed.url,
+            None,
+            external=feed.link,
+            feed_url=feed.url,
+          ) }}
+      </h2>
+      {{ macros.subtitle(feed.subtitle) }}
+    </label>
+
+  </div>
+  {% endfor %}
+
+  <input type="submit" class="btn btn-primary" value="import selected">
+
+  <a href="javascript:history.back()" class="btn btn-outline-secondary" role="button" >
+    cancel
+  </a>
+
+{% else %}
+
+  <p>Imported feeds:</p>
+
+  {% for feed, added, error in imported_feeds %}
+  <div class="mb-3">
+
+    {#- NOTE similarity to feeds page feeds #}
+    <h2 class="h5 mb-1" style="font-size: 1.125rem">
+        {{ macros.title_href(
+          feed.title or feed.url,
+          url_for('.entries', feed=feed.url) if not error else None,
+          external=feed.link,
+          feed_url=feed.url,
+        ) }}
+    </h2>
+
+    {% if added %}
+      {{ macros.subtitle("feed added", 'text-success-emphasis') }}
+    {% elif error %}
+      {{ macros.subtitle(error, 'text-danger-emphasis') }}
+    {% else %}
+      {{ macros.subtitle("feed already exists", 'text-secondary') }}
+    {% endif %}
+
+  </div>
+  {% endfor %}
+
+{% endif %}
+
+</form>
+
+{% endblock %}

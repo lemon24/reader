@@ -12,7 +12,9 @@
 
 <h1>Add feed</h1>
 
-<form action="{{ url_for(request.endpoint) }}" method="post" class="my-2">
+<p>Add a single feed:</p>
+
+<form action="{{ url_for(request.endpoint) }}" method="post" class="my-2 mb-4">
 {#- TODO: aria stuff #}
 
 {{ form.csrf_token }}
@@ -42,5 +44,11 @@
 </a>
 
 </form>
+
+<p>
+  ...or
+  <a href="{{ url_for('.import_feeds') }}">import feeds</a>
+  from an OPML subscription list.
+</p>
 
 {% endblock %}

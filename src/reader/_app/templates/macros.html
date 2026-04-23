@@ -245,7 +245,7 @@
 {% endmacro %}
 
 
-{% macro title_href(text, href=none, external=none) %}
+{% macro title_href(text, href=none, external=none, feed_url=none) %}
 {%- set text = text | truncate(95) -%}
 
 {%- macro maybe_href(text, href) %}
@@ -254,7 +254,7 @@
   {%- if href %}</a>{% endif -%}
 {%- endmacro %}
 
-{%- if not external %}
+{%- if not (external or feed_url) %}
   {{ maybe_href(text, href) }}
 {%- else %}
   {%- set first, _, last = text.strip().rpartition(' ') -%}
@@ -263,19 +263,34 @@
     <span class="me-1">
       {{ maybe_href(last, href) }}
     </span>
-    <a href="{{ external }}" target="_blank" class="text-nowrap small" title="external">
-      <i class="bi bi-box-arrow-up-right text-secondary"></i>
-    </a>
+    {% if external %}
+    <a
+      href="{{ external }}"
+      target="_blank"
+      class="text-nowrap small{% if feed_url %} me-1{% endif %}"
+      title="external"
+    >
+      <i class="bi bi-box-arrow-up-right text-secondary"></i></a>
+    {% endif %}
+    {% if feed_url %}
+    <a
+      href="{{ feed_url }}"
+      target="_blank"
+      class="text-nowrap small"
+      title="feed source"
+    >
+      <i class="bi bi-rss text-secondary"></i></a>
+    {% endif %}
   </span>
 {%- endif %}
 
 {%- endmacro %}
 
 
-{% macro subtitle(text) %}
+{% macro subtitle(text, class=none) %}
 {%- set text = (text or '') | striptags | trim -%}
 {%- if text %}
-<p class="small mb-2">
+<p class="small mb-1{% if class %} {{class}}{% endif %}">
   {{ text | truncate(223) }}
 </p>
 {%- endif %}
