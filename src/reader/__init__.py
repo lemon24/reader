@@ -64,6 +64,7 @@ from .types import (
     UpdateResult as UpdateResult,
     UpdatedFeed as UpdatedFeed,
     EntryUpdateStatus as EntryUpdateStatus,
+    FeedToImport as FeedToImport,
     FeedImportResult as FeedImportResult,
     FeedExport as FeedExport,
 )

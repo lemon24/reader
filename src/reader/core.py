@@ -70,6 +70,7 @@ from .types import FeedExport
 from .types import FeedImportResult
 from .types import FeedInput
 from .types import FeedSort
+from .types import FeedToImport
 from .types import JSONType
 from .types import MISSING
 from .types import MissingType
@@ -80,7 +81,6 @@ from .types import UpdatedFeed
 from .types import UpdateResult
 
 if TYPE_CHECKING:  # pragma: no cover
-    from . import opml
     from ._parser import Parser
 
 
@@ -2207,12 +2207,12 @@ class Reader:
             pass
 
     def import_feeds_iter(
-        self, feeds: Iterable[opml.Feed], /
+        self, feeds: Iterable[FeedToImport], /
     ) -> Iterable[FeedImportResult]:
         """Import feeds returned by :func:`reader.opml.parse`.
 
         Args:
-            feeds (iterable(reader.opml.Feed)): The feeds to import.
+            feeds (iterable(FeedToImport)): The feeds to import.
 
         Yields:
             :class:`FeedImportResult`: The feed and whether it was added.

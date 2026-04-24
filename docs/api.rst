@@ -67,6 +67,10 @@ Data objects
 .. autoclass:: EntryUpdateStatus
     :members:
 
+.. autoclass:: FeedToImport
+    :members:
+    :undoc-members:
+
 .. autoclass:: FeedImportResult
     :members:
 
@@ -162,11 +166,11 @@ Exceptions
 .. autoexception:: PluginInitError
     :show-inheritance:
 
-
-.. autoexception:: ReaderWarning
+.. autoexception:: FeedImportError
     :show-inheritance:
 
-.. autoexception:: FeedImportError
+
+.. autoexception:: ReaderWarning
     :show-inheritance:
 
 

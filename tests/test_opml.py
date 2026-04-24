@@ -2,8 +2,8 @@ import io
 
 import pytest
 
+from reader import FeedImportError
 from reader import InvalidFeedURLError
-from reader.opml import OPMLError
 from reader.opml import parse
 from reader.opml import unparse
 from utils import utc_datetime as datetime
@@ -92,7 +92,7 @@ def test_empty():
     ],
 )
 def test_parse_error(input, message):
-    with pytest.raises(OPMLError, match=message):
+    with pytest.raises(FeedImportError, match=message):
         parse(io.BytesIO(input.encode()), max_depth=3)
 
 

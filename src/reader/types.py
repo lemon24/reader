@@ -10,6 +10,7 @@ from collections.abc import Mapping
 from collections.abc import Sequence
 from dataclasses import dataclass
 from dataclasses import field
+from dataclasses import KW_ONLY
 from datetime import datetime
 from types import MappingProxyType
 from typing import Any
@@ -19,7 +20,6 @@ from typing import NamedTuple
 from typing import overload
 from typing import Protocol
 from typing import Self
-from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import Union
 
@@ -30,9 +30,6 @@ from reader.exceptions import UpdateError
 # can't be defined here because of circular imports
 from reader._utils import MISSING as MISSING  # isort: skip # noqa: F401
 from reader._utils import MissingType as MissingType  # isort: skip # noqa: F401
-
-if TYPE_CHECKING:
-    from . import opml
 
 
 class _namedtuple_compat:
@@ -1242,6 +1239,23 @@ class UpdateConfig(TypedDict, total=False):
     jitter: float
 
 
+@dataclass
+class FeedToImport:
+    """A feed to be imported.
+
+    Attributes are similar to those of :class:`Feed`.
+
+    .. versionadded:: 3.23
+
+    """
+
+    url: str
+    _: KW_ONLY
+    title: str | None = None
+    link: str | None = None
+    subtitle: str | None = None
+
+
 @dataclass(frozen=True)
 class FeedImportResult:
     """The result of importing a single feed.
@@ -1251,7 +1265,7 @@ class FeedImportResult:
     """
 
     #: The feed parsed from the import file.
-    feed: opml.Feed
+    feed: FeedToImport
 
     #: Exception raised by :meth:`~add_feed`, if any.
     exception: FeedError | None = None

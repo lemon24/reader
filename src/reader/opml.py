@@ -5,20 +5,12 @@ Only a minimum of OPML features are supported (title, links, description).
 
 .. _OPML: https://opml.org/spec2.opml
 
-
 .. autofunction:: parse
 .. autofunction:: unparse
-
-.. autoclass:: Feed
-    :members:
-    :undoc-members:
-
 .. autoexception:: OPMLError
     :show-inheritance:
 
-
 .. versionadded:: 3.23
-
 
 .. todo::
 
@@ -33,43 +25,27 @@ import io
 import re
 import xml.etree.ElementTree as etree
 from collections.abc import Iterable
-from dataclasses import dataclass
-from dataclasses import KW_ONLY
 from datetime import datetime
 from email.utils import format_datetime
 from typing import cast
 from typing import IO
 
 import reader
-
-
-@dataclass
-class Feed:
-    """A feed in an OPML subscription list.
-
-    Attributes are similar to those of :class:`reader.Feed`.
-
-    """
-
-    url: str
-    _: KW_ONLY
-    title: str | None = None
-    link: str | None = None
-    subtitle: str | None = None
+from reader.types import FeedToImport
 
 
 class OPMLError(reader.FeedImportError):
     """An error occurred while parsing an OPML subscription list."""
 
 
-def parse(file: IO[bytes], max_depth: int = 10) -> list[Feed]:
+def parse(file: IO[bytes], max_depth: int = 10) -> list[FeedToImport]:
     """Extract a list of feeds from an OPML subscription list.
 
     Args:
         file (file): A binary file.
 
     Returns:
-        list(reader.opml.Feed): A list of feeds.
+        list(FeedToImport): A list of feeds.
 
     Raises:
         OPMLError:
@@ -88,7 +64,7 @@ def parse(file: IO[bytes], max_depth: int = 10) -> list[Feed]:
     if root.tag.lower() != 'opml':
         raise OPMLError(f"expected <opml> root tag, got: <{root.tag}>")
 
-    def walk(node: etree.Element, depth: int = 1) -> Iterable[Feed]:
+    def walk(node: etree.Element, depth: int = 1) -> Iterable[FeedToImport]:
         if depth > max_depth:
             raise OPMLError("tag depth limit exceeded")
 
@@ -100,7 +76,7 @@ def parse(file: IO[bytes], max_depth: int = 10) -> list[Feed]:
 
         if tag == 'outline' and type == 'rss':
             if url := attrib.get('xmlurl'):
-                yield Feed(
+                yield FeedToImport(
                     url,
                     title=attrib.get('title', attrib.get('text')),
                     link=attrib.get('htmlurl'),
@@ -154,7 +130,7 @@ def unparse(
     """Convert a list of feeds to an OPML subscription list.
 
     Args:
-        feeds (list(reader.Feed)): An iterable of feeds.
+        feeds (list(Feed)): An iterable of feeds.
         title (str or None): The list title.
         created (datetime or None): The list creation date.
 

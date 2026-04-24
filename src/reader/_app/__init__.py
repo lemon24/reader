@@ -30,6 +30,7 @@ from werkzeug.exceptions import NotFound
 from reader import EntryNotFoundError
 from reader import FeedExistsError
 from reader import FeedNotFoundError
+from reader import FeedToImport
 from reader import InvalidFeedURLError
 from reader import opml
 from reader import UpdateError
@@ -290,7 +291,9 @@ def import_feeds():
             except opml.OPMLError as e:
                 error = str(e)
         else:
-            feeds = (opml.Feed(**json.loads(f)) for f in request.form.getlist('feed'))
+            feeds = (
+                FeedToImport(**json.loads(f)) for f in request.form.getlist('feed')
+            )
             imported_feeds = list(reader.import_feeds_iter(feeds))
             # TODO: out of band update (unlike add, there's too many to do here)
 
