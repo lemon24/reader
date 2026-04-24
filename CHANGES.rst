@@ -9,7 +9,7 @@ Changelog
 Version 3.23
 ------------
 
-Unreleased
+Released 2026-04-24
 
 * Add support for :ref:`opml`. (:issue:`165`)
 
