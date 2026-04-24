@@ -32,7 +32,6 @@ in my spare time,
 but I will prioritize supporting :doc:`contributors <contributing>`
 (discussions, reviews and so on).
 
-* OPML support, :issue:`165`
 * :ref:`deleting entries <deleting entries>`
 
   * archiving important entries of deleted feeds, :issue:`290`

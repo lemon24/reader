@@ -705,35 +705,32 @@ you can delete entries using the low-level
 
 
 
-.. _pagination:
+.. _opml:
 
-Pagination
-----------
+OPML import / export
+--------------------
 
-:meth:`~Reader.get_feeds`, :meth:`~Reader.get_entries`,
-and :meth:`~Reader.search_entries`
-can be used in a paginated fashion.
+You can import and export feeds from and to an `OPML subscription list`_
+by using the :meth:`~Reader.import_feeds`
+and :meth:`~Reader.export_feeds` methods::
 
-The ``limit`` argument allows limiting the number of results returned;
-the ``starting_after`` argument allows skipping results until after
-a specific one.
-
-To get the first page, use only ``limit``::
-
-    >>> for entry in reader.get_entries(limit=2):
-    ...     print(entry.title)
+    >>> export = reader.export_feeds()
+    >>> export.filename
+    'reader-feeds-2026-04-24-10-00-00.opml'
+    >>> with open(export.filename, 'wb') as f:
+    ...     f.write(export.content)
     ...
-    H.I. #136: Dog Bingo
-    H.I. #135: Place Your Bets
+    >>> # with another reader instance
+    >>> reader = make_reader(':memory:')
+    >>> with open(export.filename, 'rb') as f:
+    ...     reader.import_feeds(f)
 
-To get the next page, use the last result from a call as
-``starting_after`` in the next call::
+For more detailed control over which feeds are imported,
+see :meth:`~Reader.import_feeds_iter` and the :mod:`reader.opml` module.
 
-    >>> for entry in reader.get_entries(limit=2, starting_after=entry):
-    ...     print(entry.title)
-    ...
-    # H.I. 134: Boxing Day
-    Star Wars: The Rise of Skywalker, Hello Internet Christmas Special
+.. _OPML subscription list: https://opml.org/spec2.opml#subscriptionLists
+
+.. versionadded:: 3.23
 
 
 
@@ -828,6 +825,38 @@ Some examples of how this is useful:
 * Likewise, if you don't keep the entries around (e.g. append them to a list),
   memory usage should remain relatively constant
   regardless of the total number of entries returned.
+
+
+
+.. _pagination:
+
+Pagination
+----------
+
+:meth:`~Reader.get_feeds`, :meth:`~Reader.get_entries`,
+and :meth:`~Reader.search_entries`
+can be used in a paginated fashion.
+
+The ``limit`` argument allows limiting the number of results returned;
+the ``starting_after`` argument allows skipping results until after
+a specific one.
+
+To get the first page, use only ``limit``::
+
+    >>> for entry in reader.get_entries(limit=2):
+    ...     print(entry.title)
+    ...
+    H.I. #136: Dog Bingo
+    H.I. #135: Place Your Bets
+
+To get the next page, use the last result from a call as
+``starting_after`` in the next call::
+
+    >>> for entry in reader.get_entries(limit=2, starting_after=entry):
+    ...     print(entry.title)
+    ...
+    # H.I. 134: Boxing Day
+    Star Wars: The Rise of Skywalker, Hello Internet Christmas Special
 
 
 

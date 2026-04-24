@@ -62,6 +62,18 @@ Screenshots
 
     article view (light mode)
 
+.. _screenshots-import:
+
+.. figure:: screenshots/import-select.png
+    :width: 240px
+
+    import feeds (select)
+
+.. figure:: screenshots/import-result.png
+    :width: 240px
+
+    import feeds (result)
+
 
 
 Serving the web app

@@ -11,9 +11,10 @@ Version 3.23
 
 Unreleased
 
-* Add basic support for OPML subscription list import/export:
-  :mod:`reader.opml`.
-  (:issue:`165`)
+* Add support for :ref:`opml`. (:issue:`165`)
+
+  * Add support for import / export in the web app; :ref:`screenshots <screenshots-import>`.
+
 
 * Deprecate the :func:`~reader.utils.archive_entries` ``feed_user_title`` argument.
 
