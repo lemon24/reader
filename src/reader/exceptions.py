@@ -407,3 +407,11 @@ class ChangeTrackingNotEnabledError(StorageError):
     """
 
     _default_message = "operation not supported with change tracking disabled"
+
+
+class FeedImportError(ReaderError):
+    """An error occured while parsing a feed import.
+
+    .. versionadded:: 3.23
+
+    """

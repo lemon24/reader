@@ -64,6 +64,8 @@ from .types import (
     UpdateResult as UpdateResult,
     UpdatedFeed as UpdatedFeed,
     EntryUpdateStatus as EntryUpdateStatus,
+    FeedImportResult as FeedImportResult,
+    FeedExport as FeedExport,
 )
 
 from .exceptions import (
@@ -91,6 +93,7 @@ from .exceptions import (
     InvalidPluginError as InvalidPluginError,
     PluginInitError as PluginInitError,
     ReaderWarning as ReaderWarning,
+    FeedImportError as FeedImportError,
 )
 
 # Constants.

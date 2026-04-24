@@ -58,7 +58,7 @@ class Feed:
     subtitle: str | None = None
 
 
-class OPMLError(reader.ReaderError):
+class OPMLError(reader.FeedImportError):
     """An error occurred while parsing an OPML subscription list."""
 
 
@@ -82,7 +82,7 @@ def parse(file: IO[bytes], max_depth: int = 10) -> list[Feed]:
     try:
         tree = etree.parse(file)
     except (etree.ParseError, LookupError) as e:
-        raise OPMLError(f"XML error: {e}") from e
+        raise OPMLError("XML error") from e
 
     root = tree.getroot()
     if root.tag.lower() != 'opml':

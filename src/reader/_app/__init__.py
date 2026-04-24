@@ -167,18 +167,8 @@ def feeds():
         feeds = reader.get_feeds(**kwargs)
 
     if request.args.get('format', '').lower() == 'opml':
-        # TODO: good candidate for a Reader method
-        feeds = (f for f in feeds if not f.url.startswith('reader:'))
-
-        now = reader._now()
-        # TODO: title should contain branding
-        title = 'reader feeds'
-        filename = f"{title.replace(' ', '-')}-{now:%Y-%m-%d-%H-%M-%S}.opml"
-
-        return opml.unparse(feeds, title=title, created=now), {
-            'Content-Type': 'application/xml',
-            'Content-Disposition': f'attachment; filename="{filename}"',
-        }
+        export = reader.export_feeds(feeds)
+        return export.content, export.headers
 
     return stream_template(
         'feeds.html',
@@ -296,26 +286,12 @@ def import_feeds():
     if request.method == 'POST':
         if file := request.files.get('file'):
             try:
-                feeds = opml.parse(file.stream)
+                parsed_feeds = [asdict(f) for f in opml.parse(file.stream)]
             except opml.OPMLError as e:
                 error = str(e)
-            else:
-                # TODO: good candidate for a Reader method
-                feeds = (f for f in feeds if not f.url.startswith('reader:'))
-                parsed_feeds = [asdict(f) for f in feeds]
         else:
-            feeds = [opml.Feed(**json.loads(f)) for f in request.form.getlist('feed')]
-            # TODO: good candidate for a Reader method
-            imported_feeds = []
-            for feed in feeds:
-                try:
-                    reader.add_feed(feed)
-                except InvalidFeedURLError as e:
-                    imported_feeds.append((feed, False, f"invalid feed: {e}"))
-                except FeedExistsError:
-                    imported_feeds.append((feed, False, None))
-                else:
-                    imported_feeds.append((feed, True, None))
+            feeds = (opml.Feed(**json.loads(f)) for f in request.form.getlist('feed'))
+            imported_feeds = list(reader.import_feeds_iter(feeds))
             # TODO: out of band update (unlike add, there's too many to do here)
 
     return render_template(

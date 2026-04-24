@@ -19,14 +19,20 @@ from typing import NamedTuple
 from typing import overload
 from typing import Protocol
 from typing import Self
+from typing import TYPE_CHECKING
 from typing import TypedDict
 from typing import Union
 
+from reader.exceptions import FeedError
+from reader.exceptions import FeedExistsError
 from reader.exceptions import UpdateError
 
 # can't be defined here because of circular imports
 from reader._utils import MISSING as MISSING  # isort: skip # noqa: F401
 from reader._utils import MissingType as MissingType  # isort: skip # noqa: F401
+
+if TYPE_CHECKING:
+    from . import opml
 
 
 class _namedtuple_compat:
@@ -1234,3 +1240,53 @@ class UpdateConfig(TypedDict, total=False):
 
     #: Update jitter, as a ratio of :attr:`interval`, between 0.0 and 1.0.
     jitter: float
+
+
+@dataclass(frozen=True)
+class FeedImportResult:
+    """The result of importing a single feed.
+
+    .. versionadded:: 3.23
+
+    """
+
+    #: The feed parsed from the import file.
+    feed: opml.Feed
+
+    #: Exception raised by :meth:`~add_feed`, if any.
+    exception: FeedError | None = None
+
+    @property
+    def added(self) -> bool:
+        """Whether the feed was added."""
+        return not self.exception
+
+    @property
+    def error(self) -> FeedError | None:
+        """Any error adding the feed (excluding already existing feed)."""
+        if not self.exception or isinstance(self.exception, FeedExistsError):
+            return None
+        return self.exception
+
+
+@dataclass(frozen=True)
+class FeedExport:
+    """A feed export.
+
+    .. versionadded:: 3.23
+
+    """
+
+    #: The export content.
+    content: bytes
+
+    #: Suggested filename (derived from the title and date in the content).
+    filename: str
+
+    @property
+    def headers(self) -> dict[str, str]:
+        """Content-* HTTP headers describing the content."""
+        return {
+            'Content-Type': 'application/xml; charset=utf-8',
+            'Content-Disposition': f'attachment; filename="{self.filename}"',
+        }

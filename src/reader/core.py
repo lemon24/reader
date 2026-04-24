@@ -13,6 +13,7 @@ from datetime import datetime
 from datetime import timezone
 from types import MappingProxyType
 from typing import Any
+from typing import IO
 from typing import Literal
 from typing import overload
 from typing import Self
@@ -40,6 +41,7 @@ from ._utils import make_pool_map
 from ._utils import MapContextManager
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
+from .exceptions import FeedError
 from .exceptions import FeedExistsError
 from .exceptions import FeedNotFoundError
 from .exceptions import ParseError
@@ -64,6 +66,8 @@ from .types import EntrySort
 from .types import EntryUpdateStatus
 from .types import Feed
 from .types import FeedCounts
+from .types import FeedExport
+from .types import FeedImportResult
 from .types import FeedInput
 from .types import FeedSort
 from .types import JSONType
@@ -76,6 +80,7 @@ from .types import UpdatedFeed
 from .types import UpdateResult
 
 if TYPE_CHECKING:  # pragma: no cover
+    from . import opml
     from ._parser import Parser
 
 
@@ -2180,6 +2185,80 @@ class Reader:
         except TagNotFoundError:
             if not missing_ok:
                 raise
+
+    def import_feeds(self, file: IO[bytes], /) -> None:
+        """Import feeds from an OPML subscription list.
+
+        Existing and unsupported feeds are silently skipped.
+
+        Args:
+            file (file): A binary file.
+
+        Raises:
+            FeedImportError: If the file could not be parsed.
+            StorageError
+
+        .. versionadded:: 3.23
+
+        """
+        from . import opml
+
+        for _ in self.import_feeds_iter(opml.parse(file)):
+            pass
+
+    def import_feeds_iter(
+        self, feeds: Iterable[opml.Feed], /
+    ) -> Iterable[FeedImportResult]:
+        """Import feeds returned by :func:`reader.opml.parse`.
+
+        Args:
+            feeds (iterable(reader.opml.Feed)): The feeds to import.
+
+        Yields:
+            :class:`FeedImportResult`: The feed and whether it was added.
+
+        Raises:
+            StorageError
+
+        .. versionadded:: 3.23
+
+        """
+        for feed in feeds:
+            try:
+                self.add_feed(feed)
+            except FeedError as e:
+                yield FeedImportResult(feed, e)
+            else:
+                yield FeedImportResult(feed)
+
+    def export_feeds(self, feeds: Iterable[Feed] | None = None, /) -> FeedExport:
+        """Export all or some feeds as an OPML subscription list.
+
+        Args:
+            feeds (iterable(Feed)): The feeds to export; if None, export all feeds.
+
+        Returns:
+            FeedExport: The OPML export.
+
+        Raises:
+            StorageError
+
+        .. versionadded:: 3.23
+
+        """
+        from . import opml
+
+        if feeds is None:
+            feeds = self.get_feeds()
+
+        feeds = (f for f in feeds if not f.url.startswith('reader:'))
+
+        now = self._now()
+        title = 'reader feeds'
+        filename = f"{title.replace(' ', '-')}-{now:%Y-%m-%d-%H-%M-%S}.opml"
+        content = opml.unparse(feeds, title=title, created=now)
+
+        return FeedExport(content, filename)
 
     def make_reader_reserved_name(self, key: str, /) -> str:
         """Create a *reader*-reserved tag name.

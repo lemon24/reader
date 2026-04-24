@@ -67,6 +67,13 @@ Data objects
 .. autoclass:: EntryUpdateStatus
     :members:
 
+.. autoclass:: FeedImportResult
+    :members:
+
+.. autoclass:: FeedExport
+    :members:
+
+
 
 Exceptions
 ----------
@@ -157,6 +164,9 @@ Exceptions
 
 
 .. autoexception:: ReaderWarning
+    :show-inheritance:
+
+.. autoexception:: FeedImportError
     :show-inheritance:
 
 

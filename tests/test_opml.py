@@ -2,6 +2,7 @@ import io
 
 import pytest
 
+from reader import InvalidFeedURLError
 from reader.opml import OPMLError
 from reader.opml import parse
 from reader.opml import unparse
@@ -85,7 +86,7 @@ def test_empty():
     'input, message',
     [
         ('', "XML error"),
-        ("<?xml version='1.0' encoding='xyz'?>", "XML error: unknown encoding"),
+        ("<?xml version='1.0' encoding='xyz'?>", "XML error"),
         ("<outline></outline>", 'expected <opml>'),
         ("<opml><a><b><c></c></b></a></opml>", 'tag depth limit'),
     ],
@@ -93,3 +94,60 @@ def test_empty():
 def test_parse_error(input, message):
     with pytest.raises(OPMLError, match=message):
         parse(io.BytesIO(input.encode()), max_depth=3)
+
+
+def test_import_export(reader):
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.add_feed('http://one')
+    reader.add_feed('http://two')
+    reader.add_feed('reader:', allow_invalid_url=True)
+    reader.add_feed('invalid:', allow_invalid_url=True)
+
+    export = reader.export_feeds()
+
+    assert b'reader feeds' in export.content
+    assert b'01 Jan 2010' in export.content
+    assert export.filename == 'reader-feeds-2010-01-01-00-00-00.opml'
+    assert export.headers == {
+        'Content-Type': 'application/xml; charset=utf-8',
+        'Content-Disposition': f'attachment; filename="reader-feeds-2010-01-01-00-00-00.opml"',
+    }
+
+    for feed in reader.get_feeds():
+        reader.delete_feed(feed)
+
+    reader.import_feeds(io.BytesIO(export.content))
+    assert {f.url for f in reader.get_feeds()} == {'http://one', 'http://two'}
+
+
+def test_export_iter(reader):
+    reader.add_feed('http://one')
+    reader.add_feed('http://two')
+
+    export = reader.export_feeds([reader.get_feed('http://one')])
+
+    assert b'one' in export.content
+    assert b'two' not in export.content
+
+
+def test_import_iter(reader):
+    reader.add_feed('http://added')
+    reader.add_feed('http://exists')
+    reader.add_feed('reader:', allow_invalid_url=True)
+
+    feeds = list(reader.get_feeds())
+    reader.delete_feed('http://added')
+
+    results = {r.feed.url: r for r in reader.import_feeds_iter(feeds)}
+
+    added = results['http://added']
+    assert added.added is True
+    assert added.error is None
+
+    exists = results['http://exists']
+    assert exists.added is False
+    assert exists.error is None
+
+    reader = results['reader:']
+    assert reader.added is False
+    assert isinstance(reader.error, InvalidFeedURLError)

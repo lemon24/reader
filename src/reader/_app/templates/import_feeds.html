@@ -89,23 +89,24 @@
 
   <p>Imported feeds:</p>
 
-  {% for feed, added, error in imported_feeds %}
+  {% for result in imported_feeds %}
+  {%- set feed = result.feed %}
   <div class="mb-3">
 
     {#- NOTE similarity to feeds page feeds #}
     <h2 class="h5 mb-1" style="font-size: 1.125rem">
         {{ macros.title_href(
           feed.title or feed.url,
-          url_for('.entries', feed=feed.url) if not error else None,
+          url_for('.entries', feed=feed.url) if not result.error else None,
           external=feed.link,
           feed_url=feed.url,
         ) }}
     </h2>
 
-    {% if added %}
+    {% if result.added %}
       {{ macros.subtitle("feed added", 'text-success-emphasis') }}
-    {% elif error %}
-      {{ macros.subtitle(error, 'text-danger-emphasis') }}
+    {% elif result.error %}
+      {{ macros.subtitle("invalid feed: {}".format(result.error), 'text-danger-emphasis') }}
     {% else %}
       {{ macros.subtitle("feed already exists", 'text-secondary') }}
     {% endif %}
