@@ -15,8 +15,11 @@ Unreleased
 
   * Add support for import / export in the web app; :ref:`screenshots <screenshots-import>`.
 
-
 * Deprecate the :func:`~reader.utils.archive_entries` ``feed_user_title`` argument.
+* Fix :meth:`get_feeds(feed='') <Reader.get_feeds>` and
+  :meth:`get_entries(entry=('', '')) <Reader.get_entries>`
+  returning wrong entries.
+  (:issue:`392`)
 
 
 Version 3.22

@@ -3,8 +3,10 @@ import pytest
 from fakeparser import Parser
 from reader import Enclosure
 from reader import Entry
+from reader import EntryNotFoundError
 from reader import EntrySource
 from reader import Feed
+from reader import FeedNotFoundError
 from reader import make_reader
 from reader_methods import get_feeds
 from reader_methods import get_feeds_via_update
@@ -244,6 +246,20 @@ def test_entries_error(reader, get_entries, kwargs):
         get_entries(reader, **kwargs)
 
 
+def test_entries_empty_string(reader, parser):
+    """https://github.com/lemon24/reader/issues/392"""
+
+    reader.add_feed(parser.feed(1))
+    parser.entry(1, 1)
+    reader.update_feeds()
+
+    with pytest.raises(EntryNotFoundError):
+        reader.get_entry(('', ''))
+
+    with pytest.raises(EntryNotFoundError):
+        reader.get_entry(('1', ''))
+
+
 # TODO: ideally, systematize all filtering tests?
 
 # END entry filtering tests
@@ -324,6 +340,15 @@ def test_feeds_error(reader, kwargs):
     with pytest.raises(ValueError):
         # raises before the iterable is consumed
         reader.get_feeds(**kwargs)
+
+
+def test_feeds_empty_string(reader, parser):
+    """https://github.com/lemon24/reader/issues/392"""
+
+    reader.add_feed(parser.feed(1))
+
+    with pytest.raises(FeedNotFoundError):
+        reader.get_feed('')
 
 
 # END feed filtering tests
