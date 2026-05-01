@@ -66,7 +66,7 @@ def test_cli(db_path, data_dir, monkeypatch):
     expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(data_dir.joinpath(feed_filename + '.py').read_text(), expected)
 
-    runner = CliRunner(catch_exceptions=False)
+    runner = CliRunner()  # remove deprecated catch_exceptions argument
 
     def invoke(*args):
         return runner.invoke(cli, ('--db', db_path, '--feed-root', '') + args)
@@ -115,6 +115,35 @@ def test_cli(db_path, data_dir, monkeypatch):
     assert {tuple(l.split()) for l in result.output.splitlines()} == {
         (feed_path, e.link or e.id) for e in expected['entries']
     }
+    
+    
+
+# test JSON output for feeds
+    result = invoke('list', 'feeds', '--json')
+    assert result.exit_code == 0
+    lines = result.output.strip().splitlines()
+
+    import json as _json
+
+    assert len(lines) == 1
+    feed_data = _json.loads(lines[0])
+    assert feed_data['url'] == feed_path
+
+
+    # test JSON output for entries
+    result = invoke('list', 'entries', '--json')
+    assert result.exit_code == 0
+    lines = result.output.strip().splitlines()
+
+    assert len(lines) == len(expected['entries'])
+
+    entries_data = [_json.loads(line) for line in lines]
+
+    for item in entries_data:
+        assert 'id' in item
+        assert 'feed' in item
+    
+
 
     result = invoke('search', 'status')
     assert result.exit_code == 0

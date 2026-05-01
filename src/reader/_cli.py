@@ -7,10 +7,11 @@ from contextlib import nullcontext
 from datetime import datetime
 
 import click
-import json  #used to handle JSON in CLI 
+import json 
 
 import reader
-from reader._hash_utils import _dataclass_dict
+from reader._hash_utils import _json_default
+
 
 from . import make_reader
 from . import StorageError
@@ -376,33 +377,35 @@ def update(reader, url, new, scheduled, workers, verbose):
 def list_cmd():
     """List feeds or entries."""
 
-
 @list_cmd.command()
-@click.option('--json','json_output',is_flag=True,help='output as json')
+@click.option(
+    '--json',
+    'json_output',
+    is_flag=True,
+    help='Output as JSON.',
+)
 @pass_reader
-def feeds(reader,json_output):
-    """List all the feeds"""
+def feeds(reader, json_output):
+    """List all the feeds."""
     for feed in reader.get_feeds():
         if json_output:
-            data=_dataclass_dict(feed)   #convert feed object into dictnary using dataclass_dict as suggested by moderator
-            click.echo(json.dumps(data,default=str))
+            click.echo(json.dumps(feed, default=_json_default))
         else:
             click.echo(feed.url)
 
-
 @list_cmd.command()
-@click.option('--json','json_output',is_flag=True,help='output as json')
+@click.option(
+    '--json',
+    'json_output',
+    is_flag=True,
+    help='Output as JSON.',
+)
 @pass_reader
-def entries(reader,json_output):
-    """List all the entries"""
+def entries(reader, json_output):
+    """List all the entries."""
     for entry in reader.get_entries():
         if json_output:
-            data = _dataclass_dict(entry)  #same idea as feeds,but for entries
-            
-            if "feed" in data:
-                data["feed"]=_dataclass_dict(entry.feed)     #feed was coming as string , to make it a JSON
-
-            click.echo(json.dumps(data,default=str))
+            click.echo(json.dumps(entry, default=_json_default))
         else:
             click.echo(f"{entry.feed.url} {entry.link or entry.id}")
 
