@@ -115,10 +115,8 @@ def test_cli(db_path, data_dir, monkeypatch):
     assert {tuple(l.split()) for l in result.output.splitlines()} == {
         (feed_path, e.link or e.id) for e in expected['entries']
     }
-    
-    
 
-# test JSON output for feeds
+    # test JSON output for feeds
     result = invoke('list', 'feeds', '--json')
     assert result.exit_code == 0
     lines = result.output.strip().splitlines()
@@ -128,7 +126,6 @@ def test_cli(db_path, data_dir, monkeypatch):
     assert len(lines) == 1
     feed_data = _json.loads(lines[0])
     assert feed_data['url'] == feed_path
-
 
     # test JSON output for entries
     result = invoke('list', 'entries', '--json')
@@ -142,8 +139,6 @@ def test_cli(db_path, data_dir, monkeypatch):
     for item in entries_data:
         assert 'id' in item
         assert 'feed' in item
-    
-
 
     result = invoke('search', 'status')
     assert result.exit_code == 0

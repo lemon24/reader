@@ -1,4 +1,5 @@
 import functools
+import json
 import logging
 import os.path
 import shutil
@@ -7,11 +8,9 @@ from contextlib import nullcontext
 from datetime import datetime
 
 import click
-import json 
 
 import reader
 from reader._hash_utils import _json_default
-
 
 from . import make_reader
 from . import StorageError
@@ -377,6 +376,7 @@ def update(reader, url, new, scheduled, workers, verbose):
 def list_cmd():
     """List feeds or entries."""
 
+
 @list_cmd.command()
 @click.option(
     '--json',
@@ -393,6 +393,7 @@ def feeds(reader, json_output):
         else:
             click.echo(feed.url)
 
+
 @list_cmd.command()
 @click.option(
     '--json',
@@ -408,6 +409,7 @@ def entries(reader, json_output):
             click.echo(json.dumps(entry, default=_json_default))
         else:
             click.echo(f"{entry.feed.url} {entry.link or entry.id}")
+
 
 @cli.group()
 def search():
