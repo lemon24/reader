@@ -128,7 +128,7 @@ def test_cli(db_path, data_dir, monkeypatch):
     assert feed_data['url'] == feed_path
 
     # test JSON output for entries
-    result = invoke('list', 'entries', '--json')
+    result = invoke('list','entries','--json')
     assert result.exit_code == 0
     lines = result.output.strip().splitlines()
 

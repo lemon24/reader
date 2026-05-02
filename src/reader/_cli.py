@@ -385,7 +385,7 @@ def list_cmd():
     help='Output as JSON.',
 )
 @pass_reader
-def feeds(reader, json_output):
+def feeds(reader,json_output):
     """List all the feeds."""
     for feed in reader.get_feeds():
         if json_output:
@@ -402,7 +402,7 @@ def feeds(reader, json_output):
     help='Output as JSON.',
 )
 @pass_reader
-def entries(reader, json_output):
+def entries(reader,json_output):
     """List all the entries."""
     for entry in reader.get_entries():
         if json_output:
