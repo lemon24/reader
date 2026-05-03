@@ -6,6 +6,7 @@ from datetime import timedelta
 import click
 import pytest
 import yaml
+import json as _json
 from click.testing import CliRunner
 
 from reader import PluginError
@@ -116,29 +117,21 @@ def test_cli(db_path, data_dir, monkeypatch):
         (feed_path, e.link or e.id) for e in expected['entries']
     }
 
-    # test JSON output for feeds
     result = invoke('list', 'feeds', '--json')
     assert result.exit_code == 0
-    lines = result.output.strip().splitlines()
+    feeds = list(map(_json.loads, result.output.splitlines()))
+    assert len(feeds) == 1
+    assert feeds[0]['url'] == feed_path
 
-    import json as _json
+    
 
-    assert len(lines) == 1
-    feed_data = _json.loads(lines[0])
-    assert feed_data['url'] == feed_path
-
-    # test JSON output for entries
+    
     result = invoke('list', 'entries', '--json')
     assert result.exit_code == 0
-    lines = result.output.strip().splitlines()
-
-    assert len(lines) == len(expected['entries'])
-
-    entries_data = [_json.loads(line) for line in lines]
-
-    for item in entries_data:
-        assert 'id' in item
-        assert 'feed' in item
+    entries_data = list(map(_json.loads, result.output.splitlines()))
+    assert {(item['feed']['url'], item['link'] or item['id']) for item in entries_data} == {
+    (feed_path, e.link or e.id) for e in expected['entries']
+    }
 
     result = invoke('search', 'status')
     assert result.exit_code == 0
@@ -198,7 +191,7 @@ def raise_exception_plugin(thing):
 def test_cli_plugin(db_path, monkeypatch, tests_dir):
     monkeypatch.syspath_prepend(tests_dir)
 
-    runner = CliRunner()
+    runner = CliRunner(catch_exceptions=False)
 
     with pytest.raises(PluginError):
         result = runner.invoke(

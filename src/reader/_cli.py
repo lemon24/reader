@@ -406,6 +406,7 @@ def entries(reader, json_output):
     """List all the entries."""
     for entry in reader.get_entries():
         if json_output:
+            entry = entry._replace(_sequence=None)
             click.echo(json.dumps(entry, default=_json_default))
         else:
             click.echo(f"{entry.feed.url} {entry.link or entry.id}")
