@@ -1,3 +1,4 @@
+import json as _json
 import logging
 import os
 import pathlib
@@ -6,7 +7,6 @@ from datetime import timedelta
 import click
 import pytest
 import yaml
-import json as _json
 from click.testing import CliRunner
 
 from reader import PluginError
@@ -123,15 +123,12 @@ def test_cli(db_path, data_dir, monkeypatch):
     assert len(feeds) == 1
     assert feeds[0]['url'] == feed_path
 
-    
-
-    
     result = invoke('list', 'entries', '--json')
     assert result.exit_code == 0
     entries_data = list(map(_json.loads, result.output.splitlines()))
-    assert {(item['feed']['url'], item['link'] or item['id']) for item in entries_data} == {
-    (feed_path, e.link or e.id) for e in expected['entries']
-    }
+    assert {
+        (item['feed']['url'], item['link'] or item['id']) for item in entries_data
+    } == {(feed_path, e.link or e.id) for e in expected['entries']}
 
     result = invoke('search', 'status')
     assert result.exit_code == 0
