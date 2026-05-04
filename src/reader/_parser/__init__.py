@@ -425,10 +425,7 @@ class ParsedFeedBase(NamedTuple, Generic[FD, ED]):
     caching_info: JSONType | None = None
 
 
-class EntryPairBase(NamedTuple, Generic[ED]):
-    new: ED
-    old: EntryForUpdate | None
-
+EntryPairBase = tuple[ED, EntryForUpdate | None]
 
 ParseResult = ParseResultBase[FeedForUpdate, FeedData, EntryData, ParseError]
 ParsedFeed = ParsedFeedBase[FeedData, EntryData]

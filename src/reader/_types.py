@@ -411,10 +411,6 @@ class EntryUpdateIntent(NamedTuple):
     # (e.g. repeated updates on platforms with low-precision time,
     # like update_feeds_iter() tests on Windows on GitHub Actions)
 
-    #: Whether the entry is new.
-    #: Used for hooks and UpdatedFeed counts, should not be used by storage.
-    new: bool = True
-
 
 #: Like the ``tags`` argument of :meth:`.Reader.get_feeds`, except:
 #:

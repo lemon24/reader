@@ -71,21 +71,6 @@ def chunks(n: int, iterable: Iterable[_T]) -> Iterable[Iterable[_T]]:
         yield itertools.chain([first], chunk)
 
 
-def count_consumed(it: Iterable[_T]) -> tuple[Iterable[_T], Callable[[], int]]:
-    consumed = 0
-
-    def wrapper() -> Iterable[_T]:
-        nonlocal consumed
-        for e in it:
-            yield e
-            consumed += 1
-
-    def get_count() -> int:
-        return consumed
-
-    return wrapper(), get_count
-
-
 def eager_iterable(it: Iterable[_T]) -> Iterable[_T]:
     it = iter(it)
     try:
