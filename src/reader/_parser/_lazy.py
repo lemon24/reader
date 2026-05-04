@@ -12,6 +12,8 @@ from typing import Any
 from typing import cast
 from typing import ContextManager
 
+from .._types import EntryData
+from .._types import FeedData
 from .._types import FeedForUpdate
 from .._utils import MapFunction
 from ..exceptions import InvalidFeedURLError
@@ -25,6 +27,7 @@ from . import FeedForUpdateRetrieverType
 from . import NotModified
 from . import ParsedFeed
 from . import ParseResult
+from . import ParseResultBase
 from . import ParserType
 from . import RetrievedFeed
 from . import RetrieveError
@@ -86,7 +89,7 @@ class Parser:
         self,
         feeds: Iterable[F],
         map: MapFunction[Any, Any] = map,
-    ) -> Iterable[ParseResult[F, ParseError]]:
+    ) -> Iterable[ParseResult]:
         """Retrieve and parse many feeds, possibly in parallel.
 
         Yields the parsed feeds, as soon as they are ready.
@@ -130,7 +133,7 @@ class Parser:
                         value.__cause__ = e.__cause__
                         result = result._replace(value=value)
 
-                yield cast(ParseResult[F, ParseError], result)
+                yield cast(ParseResult, result)
 
     def __call__(
         self, url: str, caching_info: JSONType | None = None
@@ -252,7 +255,7 @@ class Parser:
 
     def parse_fn(
         self, result: RetrieveResult[F, Any, Exception]
-    ) -> ParseResult[F, Exception]:
+    ) -> ParseResultBase[F, FeedData, EntryData, Exception]:
         """:meth:`parse` wrapper used by :meth:`parallel`.
 
         Takes one argument and does not raise exceptions.
@@ -292,7 +295,7 @@ class Parser:
             log.debug("parse_fn(): got unexpected error: %s: %s", type(e).__name__, e)
             value = e
 
-        return ParseResult(feed, value, http_info)
+        return ParseResultBase(feed, value, http_info)
 
     def parse(self, url: str, retrieved: RetrievedFeed[Any]) -> ParsedFeed:
         """Parse a retrieved feed.

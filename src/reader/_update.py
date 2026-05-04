@@ -12,9 +12,9 @@ from itertools import chain
 from itertools import tee
 from typing import Any
 from typing import NamedTuple
-from typing import Optional
 from typing import TYPE_CHECKING
 
+from ._parser import EntryPair
 from ._parser import ParseResult
 from ._types import EntryData
 from ._types import EntryForUpdate
@@ -44,9 +44,6 @@ if TYPE_CHECKING:  # pragma: no cover
 log = logging.getLogger("reader")
 
 HASH_CHANGED_LIMIT = 24
-
-
-EntryPairs = Iterable[tuple[EntryData, Optional[EntryForUpdate]]]
 
 
 @dataclass(frozen=True)
@@ -89,8 +86,8 @@ class Decider:
         now: datetime,
         global_now: datetime,
         config: UpdateConfig,
-        result: ParseResult[FeedForUpdate, ParseError],
-        entry_pairs: EntryPairs,
+        result: ParseResult,
+        entry_pairs: Iterable[EntryPair],
     ) -> tuple[FeedUpdateIntent, Iterable[EntryUpdateIntent]]:
         decider = cls(
             old_feed,
@@ -194,7 +191,9 @@ class Decider:
         debug("entry not updated, skipping")
         return None
 
-    def get_entries_to_update(self, pairs: EntryPairs) -> Iterable[EntryUpdateIntent]:
+    def get_entries_to_update(
+        self, pairs: Iterable[EntryPair]
+    ) -> Iterable[EntryUpdateIntent]:
         for feed_order, (new, old) in reversed(list(enumerate(pairs))):
             # This may fail if we ever implement changing the feed URL
             # in response to a permanent redirect.
@@ -235,8 +234,8 @@ class Decider:
 
     def update(
         self,
-        result: ParseResult[FeedForUpdate, ParseError],
-        entry_pairs: EntryPairs,
+        result: ParseResult,
+        entry_pairs: Iterable[EntryPair],
     ) -> tuple[FeedUpdateIntent, Iterable[EntryUpdateIntent]]:
 
         # TODO: move entries_to_update in FeedToUpdate, maybe?
@@ -394,7 +393,7 @@ class Pipeline:
         # Storing the exceptions until the end of the generator
         # might cause memory issues, but the caller may need to raise them.
         # TODO: Rework update pipeline to support process_feed_for_update() exceptions.
-        parser_process_feeds_for_update_errors = []
+        parser_process_feeds_for_update_errors: list[ParseResult] = []
 
         def parser_process_feeds_for_update(
             feeds: Iterable[FeedForUpdate],
@@ -428,7 +427,7 @@ class Pipeline:
     def process_parse_result(
         self,
         config: UpdateConfig,
-        result: ParseResult[FeedForUpdate, ParseError],
+        result: ParseResult,
     ) -> tuple[str, UpdatedFeed | None | Exception]:
         feed, value, _ = result
 
@@ -470,13 +469,13 @@ class Pipeline:
 
         return feed.url, UpdatedFeed(feed.url, *counts, total - sum(counts))
 
-    def get_entry_pairs(self, result: ParsedFeed) -> EntryPairs:
+    def get_entry_pairs(self, result: ParsedFeed) -> Iterable[EntryPair]:
         # give storage a chance to consume entries in a streaming fashion
         entries1, entries2 = tee(result.entries)
         entries_for_update = self.reader._storage.get_entries_for_update(
             (e.feed_url, e.id) for e in entries1
         )
-        return zip(entries2, entries_for_update, strict=True)
+        return map(EntryPair._make, zip(entries2, entries_for_update, strict=True))
 
     def update_feed(
         self,

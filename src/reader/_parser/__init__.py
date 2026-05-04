@@ -14,7 +14,6 @@ from typing import cast
 from typing import ContextManager
 from typing import Generic
 from typing import NamedTuple
-from typing import Optional
 from typing import Protocol
 from typing import runtime_checkable
 from typing import TYPE_CHECKING
@@ -388,7 +387,11 @@ class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no c
         """
 
 
-class ParseResult(NamedTuple, Generic[F, E]):
+FD = TypeVar('FD')
+ED = TypeVar('ED')
+
+
+class ParseResultBase(NamedTuple, Generic[F, FD, ED, E]):
     """The result of retrieving and parsing a feed, regardless of the outcome."""
 
     #: The feed (a :class:`FeedArgument`, usually a :class:`.FeedForUpdate`).
@@ -400,19 +403,19 @@ class ParseResult(NamedTuple, Generic[F, E]):
     #: * :const:`None`, if the feed didn't change
     #: * an exception
     #:
-    value: ParsedFeed | None | E
+    value: ParsedFeedBase[FD, ED] | None | E
 
     #: Details about the HTTP response.
     http_info: HTTPInfo | None = None
 
 
-class ParsedFeed(NamedTuple):
+class ParsedFeedBase(NamedTuple, Generic[FD, ED]):
     """A parsed feed."""
 
-    #: The feed.
-    feed: FeedData
-    #: The entries.
-    entries: Collection[EntryData]
+    #: The feed; usually :class:`FeedData`.
+    feed: FD
+    #: The entries; usually :class:`EntryData`.
+    entries: Collection[ED]
     #: The MIME type of the feed resource.
     #: Used by :meth:`~reader._parser.Parser.process_entry_pairs`
     #: to select an appropriate parser.
@@ -422,8 +425,16 @@ class ParsedFeed(NamedTuple):
     caching_info: JSONType | None = None
 
 
+class EntryPairBase(NamedTuple, Generic[ED]):
+    new: ED
+    old: EntryForUpdate | None
+
+
+ParseResult = ParseResultBase[FeedForUpdate, FeedData, EntryData, ParseError]
+ParsedFeed = ParsedFeedBase[FeedData, EntryData]
+EntryPair = EntryPairBase[EntryData]
+
 FeedAndEntries = tuple[FeedData, Collection[EntryData]]
-EntryPair = tuple[EntryData, Optional[EntryForUpdate]]
 
 
 class ParserType(Protocol[T_cv]):  # pragma: no cover
