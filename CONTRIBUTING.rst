@@ -160,7 +160,7 @@ with all :ref:`extras <optional dependencies>` and development dependencies:
 
 .. code-block:: console
 
-    $ pip install -e '.[all]' --group dev
+    $ pip install -e '.[all]' --group dev --upgrade --upgrade-strategy eager
 
 Install `pre-commit`_ hooks,
 so that :ref:`linters <linters>`
