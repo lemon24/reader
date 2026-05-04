@@ -378,12 +378,7 @@ def list_cmd():
 
 
 @list_cmd.command()
-@click.option(
-    '--json',
-    'json_output',
-    is_flag=True,
-    help='Output as JSON.',
-)
+@click.option('--json', 'json_output', is_flag=True, help='Output as JSON.')
 @pass_reader
 def feeds(reader, json_output):
     """List all the feeds."""
@@ -395,15 +390,16 @@ def feeds(reader, json_output):
 
 
 @list_cmd.command()
-@click.option(
-    '--json',
-    'json_output',
-    is_flag=True,
-    help='Output as JSON.',
-)
+@click.option('--json', 'json_output', is_flag=True, help='Output as JSON.')
 @pass_reader
 def entries(reader, json_output):
-    """List all the entries."""
+    """List all the entries.
+
+    Outputs one line per entry in the following format:
+
+        <feed URL> <entry link or id>
+
+    """
     for entry in reader.get_entries():
         if json_output:
             entry = entry._replace(_sequence=None)

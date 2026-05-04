@@ -1,4 +1,4 @@
-import json as _json
+import json
 import logging
 import os
 import pathlib
@@ -67,7 +67,7 @@ def test_cli(db_path, data_dir, monkeypatch):
     expected = {'url_base': url_base, 'rel_base': rel_base}
     exec(data_dir.joinpath(feed_filename + '.py').read_text(), expected)
 
-    runner = CliRunner()  # remove deprecated catch_exceptions argument
+    runner = CliRunner(catch_exceptions=False)
 
     def invoke(*args):
         return runner.invoke(cli, ('--db', db_path, '--feed-root', '') + args)
@@ -119,13 +119,13 @@ def test_cli(db_path, data_dir, monkeypatch):
 
     result = invoke('list', 'feeds', '--json')
     assert result.exit_code == 0
-    feeds = list(map(_json.loads, result.output.splitlines()))
+    feeds = list(map(json.loads, result.output.splitlines()))
     assert len(feeds) == 1
     assert feeds[0]['url'] == feed_path
 
     result = invoke('list', 'entries', '--json')
     assert result.exit_code == 0
-    entries_data = list(map(_json.loads, result.output.splitlines()))
+    entries_data = list(map(json.loads, result.output.splitlines()))
     assert {
         (item['feed']['url'], item['link'] or item['id']) for item in entries_data
     } == {(feed_path, e.link or e.id) for e in expected['entries']}
@@ -188,7 +188,7 @@ def raise_exception_plugin(thing):
 def test_cli_plugin(db_path, monkeypatch, tests_dir):
     monkeypatch.syspath_prepend(tests_dir)
 
-    runner = CliRunner(catch_exceptions=False)
+    runner = CliRunner()
 
     with pytest.raises(PluginError):
         result = runner.invoke(

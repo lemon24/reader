@@ -11,6 +11,13 @@ Version 3.24
 
 Unreleased
 
+* Add ``--json`` option to the ``list`` CLI commands.
+  Thanks to `Puneet Dixit`_ for the PR.
+  (:issue:`394`)
+
+
+.. _Puneet Dixit: https://github.com/puneetdixit200
+
 
 Version 3.23
 ------------
