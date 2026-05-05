@@ -11,7 +11,6 @@ from itertools import chain
 from typing import Any
 from typing import NamedTuple
 from typing import TYPE_CHECKING
-from typing import TypeVar
 
 from .._parser import EntryPair
 from .._parser import EntryPairBase
@@ -34,14 +33,12 @@ from .base import PipelineBase
 if TYPE_CHECKING:  # pragma: no cover
     from ..core import Reader
 
-
-ED = TypeVar('ED')
-Pair = EntryPairBase[ED]
-
-
 log = logging.getLogger("reader")
 
 HASH_CHANGED_LIMIT = 24
+
+
+EntryUpdateIntentPair = EntryPairBase[EntryUpdateIntent]
 
 
 @dataclass(frozen=True)
@@ -80,20 +77,18 @@ class Decider:
     @classmethod
     def make_intents(
         cls,
-        old_feed: FeedForUpdate,
         now: datetime,
         global_now: datetime,
         config: UpdateConfig,
         result: ParseResult,
         entry_pairs: Iterable[EntryPair],
-    ) -> tuple[FeedUpdateIntent, Iterable[Pair[EntryUpdateIntent]]]:
+    ) -> tuple[FeedUpdateIntent, Iterable[EntryUpdateIntentPair]]:
         decider = cls(
-            # TODO: old_feed is already present in result
-            old_feed,
+            result.feed,
             now,
             global_now,
             config,
-            PrefixLogger(log, ["update feed %r" % old_feed.url]),
+            PrefixLogger(log, ["update feed %r" % result.feed.url]),
         )
         return decider.update(result, entry_pairs)
 
@@ -192,7 +187,7 @@ class Decider:
 
     def get_entries_to_update(
         self, pairs: Iterable[EntryPair]
-    ) -> Iterable[Pair[EntryUpdateIntent]]:
+    ) -> Iterable[EntryUpdateIntentPair]:
         for feed_order, (new, old) in reversed(list(enumerate(pairs))):
             # This may fail if we ever implement changing the feed URL
             # in response to a permanent redirect.
@@ -230,10 +225,10 @@ class Decider:
 
     def update(
         self, result: ParseResult, entry_pairs: Iterable[EntryPair]
-    ) -> tuple[FeedUpdateIntent, Iterable[Pair[EntryUpdateIntent]]]:
+    ) -> tuple[FeedUpdateIntent, Iterable[EntryUpdateIntentPair]]:
 
         # TODO: move entries_to_update in FeedToUpdate, maybe?
-        entries_to_update: Iterable[Pair[EntryUpdateIntent]] = ()
+        entries_to_update: Iterable[EntryUpdateIntentPair] = ()
         value: FeedToUpdate | None | ExceptionInfo
 
         if not result.value:
@@ -373,7 +368,7 @@ class Pipeline(PipelineBase[FeedData, EntryData, FeedUpdateIntent, EntryUpdateIn
     map: MapFunction[Any, Any]
     decider = Decider
 
-    def parse(self, feeds_for_update: Iterable[FeedForUpdate]) -> Iterable[ParseResult]:
+    def parse_feeds(self, feeds: Iterable[FeedForUpdate]) -> Iterable[ParseResult]:
         # ಠ_ಠ
         # The pipeline is not equipped to handle ParseErrors
         # as early as parser.process_feed_for_update().
@@ -382,7 +377,7 @@ class Pipeline(PipelineBase[FeedData, EntryData, FeedUpdateIntent, EntryUpdateIn
         # Storing the exceptions until the end of the generator
         # might cause memory issues, but the caller may need to raise them.
         # TODO: Rework update pipeline to support process_feed_for_update() exceptions.
-        parser_process_feeds_for_update_errors: list[ParseResult] = []
+        parse_errors: list[ParseResult] = []
 
         def parser_process_feeds_for_update(
             feeds: Iterable[FeedForUpdate],
@@ -391,16 +386,16 @@ class Pipeline(PipelineBase[FeedData, EntryData, FeedUpdateIntent, EntryUpdateIn
                 try:
                     yield self.reader._parser.process_feed_for_update(feed)
                 except ParseError as e:
-                    parser_process_feeds_for_update_errors.append(ParseResult(feed, e))
+                    parse_errors.append(ParseResult(feed, e))
 
-        feeds_for_update = parser_process_feeds_for_update(feeds_for_update)
-        feeds_for_update = map(self.decider.process_feed_for_update, feeds_for_update)
-        parse_results = self.reader._parser.parallel(feeds_for_update, self.map)
-        return chain(parse_results, parser_process_feeds_for_update_errors)
+        feeds = parser_process_feeds_for_update(feeds)
+        feeds = map(self.decider.process_feed_for_update, feeds)
+        parse_results = self.reader._parser.parallel(feeds, self.map)
+        return chain(parse_results, parse_errors)
 
-    def make_intent(
-        self, result: ParseResult, entry_pairs: Iterable[EntryPair]
-    ) -> tuple[FeedUpdateIntent, Iterable[Pair[EntryUpdateIntent]]]:
+    def make_intents(
+        self, result: ParseResult, entries: Iterable[EntryPair]
+    ) -> tuple[FeedUpdateIntent, Iterable[EntryUpdateIntentPair]]:
         feed, value, *_ = result
 
         config_key = self.reader.make_reader_reserved_name(CONFIG_KEY)
@@ -410,28 +405,27 @@ class Pipeline(PipelineBase[FeedData, EntryData, FeedUpdateIntent, EntryUpdateIn
         config = flatten_config(self.reader.get_tag(feed, config_key, {}), config)
 
         if value and not isinstance(value, Exception):
-            entry_pairs = self.reader._parser.process_entry_pairs(
-                feed.url, value.mime_type, entry_pairs
+            entries = self.reader._parser.process_entry_pairs(
+                feed.url, value.mime_type, entries
             )
 
         return self.decider.make_intents(
-            feed,
             self.reader._now(),
             self.global_now,
             config,
             result,
-            entry_pairs,
+            entries,
         )
 
-    def update_feed(
+    def store_feed(
         self, feed: FeedUpdateIntent, entries: Iterable[EntryUpdateIntent]
     ) -> None:
         if entries:
             self.reader._storage.add_or_update_entries(entries)
         self.reader._storage.update_feed(feed)
 
-    def get_entry_id(self, entry: EntryData) -> tuple[str, str]:
-        return entry.resource_id
+    def get_entry_resource_id(self, data: EntryData) -> tuple[str, str]:
+        return data.resource_id
 
     def get_entry_data(self, intent: EntryUpdateIntent) -> EntryData:
         return intent.entry

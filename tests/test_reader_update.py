@@ -334,10 +334,10 @@ def test_update_feeds_unexpected_error(reader, parser, monkeypatch):
 
     exc = Exception('unexpected')
 
-    def update_feed(*_, **__):
+    def store_feed(*_, **__):
         raise exc
 
-    monkeypatch.setattr('reader._update.Pipeline.update_feed', update_feed)
+    monkeypatch.setattr('reader._update.Pipeline.store_feed', store_feed)
 
     with pytest.raises(Exception) as excinfo:
         reader.update_feeds()

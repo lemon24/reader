@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 
 from .._parser import EntryPairBase
-from .._parser import ParsedFeedBase
 from .._parser import ParseResultBase
 from .._types import EntryData
 from .._types import FeedFilter
@@ -34,9 +33,8 @@ ED = TypeVar('ED')
 FI = TypeVar('FI')
 EI = TypeVar('EI')
 
-Result = ParseResultBase[FeedForUpdate, FD, ED, ParseError]
-Feed = ParsedFeedBase[FD, ED]
-Pair = EntryPairBase[ED]
+ParseResult = ParseResultBase[FeedForUpdate, FD, ED, ParseError]
+EntryPair = EntryPairBase[ED]
 
 
 class PipelineBase(Generic[FD, ED, FI, EI], ABC):
@@ -50,23 +48,29 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
     reader: Reader
 
     @abstractmethod
-    def parse(
-        self, feeds_for_update: Iterable[FeedForUpdate]
-    ) -> Iterable[Result[FD, ED]]:
-        """Retrieve and parse an iterable of feeds, possibly in parallel."""
+    def parse_feeds(
+        self, feeds: Iterable[FeedForUpdate]
+    ) -> Iterable[ParseResult[FD, ED]]:
+        """Retrieve and parse an iterable of feeds."""
 
     @abstractmethod
-    def make_intent(
-        self, result: Result[FD, ED], entry_pairs: Iterable[Pair[ED]]
-    ) -> tuple[FI, Iterable[Pair[EI]]]:
-        """Transform a parse result into a feed update intent."""
+    def make_intents(
+        self,
+        result: ParseResult[FD, ED],
+        entries: Iterable[EntryPair[ED]],
+    ) -> tuple[FI, Iterable[EntryPair[EI]]]:
+        """Transform a parse result into feed and entry update intents."""
 
     @abstractmethod
-    def update_feed(self, feed: FI, entries: Iterable[EI]) -> None:
+    def store_feed(
+        self,
+        feed: FI,
+        entries: Iterable[EI],
+    ) -> None:
         """Save the update intents to storage."""
 
     @abstractmethod
-    def get_entry_id(self, entry: ED) -> tuple[str, str]:
+    def get_entry_resource_id(self, data: ED) -> tuple[str, str]:
         """Return the entry id of an entry data."""
 
     @abstractmethod
@@ -74,9 +78,9 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
         """Transform an entry update intent into entry data (for plugins)."""
 
     def update(self, filter: FeedFilter) -> Iterable[UpdateResult]:
-        feeds_for_update = self.reader._storage.get_feeds_for_update(filter)
-        parse_results = self.parse(feeds_for_update)
-        update_results = map(self.process_parse_result, parse_results)
+        feeds = self.reader._storage.get_feeds_for_update(filter)
+        parse_results = self.parse_feeds(feeds)
+        update_results = map(self.process_result, parse_results)
 
         for url, value in update_results:
             if isinstance(value, FeedNotFoundError):
@@ -89,18 +93,18 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
 
             yield UpdateResult(url, value)
 
-    def process_parse_result(
-        self, result: Result[FD, ED]
+    def process_result(
+        self, result: ParseResult[FD, ED]
     ) -> tuple[str, UpdatedFeed | None | Exception]:
         feed, value, *_ = result
 
         try:
             entry_pairs = self.get_entry_pairs(result)
-            feed_intent, entry_intents = self.make_intent(result, entry_pairs)
+            feed_intent, entry_intents = self.make_intents(result, entry_pairs)
             entry_intents = list(entry_intents)
 
             with self.run_hooks(result.feed.url, entry_intents):
-                self.update_feed(feed_intent, [new for new, _ in entry_intents])
+                self.store_feed(feed_intent, [new for new, _ in entry_intents])
 
         except Exception as e:
             return feed.url, e
@@ -117,16 +121,15 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
             unmodified=len(value.entries) - len(entry_intents),
         )
 
-    def get_entry_pairs(self, result: Result[FD, ED]) -> Iterable[Pair[ED]]:
+    def get_entry_pairs(self, result: ParseResult[FD, ED]) -> Iterable[EntryPair[ED]]:
         if not result.value or isinstance(result.value, Exception):
             return []
-
-        ids = map(self.get_entry_id, result.value.entries)
+        ids = map(self.get_entry_resource_id, result.value.entries)
         entries_for_update = self.reader._storage.get_entries_for_update(ids)
         return zip(result.value.entries, entries_for_update, strict=True)
 
     @contextmanager
-    def run_hooks(self, feed: str, entries: Iterable[Pair[EI]]) -> Iterator[None]:
+    def run_hooks(self, feed: str, entries: Iterable[EntryPair[EI]]) -> Iterator[None]:
         hooks = self.reader._update_hooks
 
         hooks.run('before_feed_update', (feed,), feed)
