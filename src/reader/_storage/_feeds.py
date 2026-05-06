@@ -3,9 +3,12 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections.abc import Iterable
+from collections.abc import Mapping
 from datetime import datetime
 from functools import partial
 from typing import Any
+from typing import cast
+from typing import NewType
 from typing import TYPE_CHECKING
 
 from .._types import FeedFilter
@@ -26,12 +29,16 @@ from ._sql_utils import SortKey
 from ._sqlite_utils import adapt_datetime
 from ._sqlite_utils import convert_timestamp
 from ._sqlite_utils import rowcount_exactly_one
+from ._sqlite_utils import SQLiteValue
 from ._tags import feed_tags_filter
 
 if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
 else:
     StorageBase = object
+
+
+FeedDict = NewType('FeedDict', Mapping[str, SQLiteValue])
 
 
 class FeedsMixin(StorageBase):
@@ -222,48 +229,21 @@ class FeedsMixin(StorageBase):
             )
             rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
-    @wrap_exceptions()
     def update_feed(self, intent: FeedUpdateIntent) -> None:
-        url, _, _, value = intent
+        return self.update_feed_dict(feed_update_intent_to_dict(intent))
 
-        context: dict[str, Any] = {
-            'url': url,
-            'last_retrieved': adapt_datetime(intent.last_retrieved),
-            'update_after': adapt_datetime(intent.update_after),
-        }
+    @wrap_exceptions()
+    def update_feed_dict(self, intent: FeedDict) -> None:
+        """Low level update_feed_dict() used by database sync."""
 
-        if isinstance(value, FeedToUpdate):
-            assert url == value.feed.url, "updating feed URL not supported"
-
-            context.update(
-                value._asdict(),
-                caching_info=(
-                    json.dumps(value.caching_info) if value.caching_info else None
-                ),
-            )
-            feed = context.pop('feed')
-            context.update(
-                feed._asdict(),
-                updated=adapt_datetime(feed.updated) if feed.updated else None,
-                last_updated=adapt_datetime(value.last_updated),
-                data_hash=feed.hash,
-            )
-            context.pop('hash', None)
-
-            context['stale'] = 0
-
-        if isinstance(value, ExceptionInfo):
-            context['last_exception'] = json.dumps(value._asdict())
-        else:
-            assert isinstance(value, FeedToUpdate | None)
-            context['last_exception'] = None
-
-        expressions = [f"{n} = :{n}" for n in context if n != 'url']
+        expressions = [f"{n} = :{n}" for n in intent if n != 'url']
         query = f"UPDATE feeds SET {', '.join(expressions)} WHERE url = :url;"
 
         with self.get_db() as db:
-            cursor = db.execute(query, context)
+            cursor = db.execute(query, intent)
 
+        url = intent['url']
+        assert isinstance(url, str)
         rowcount_exactly_one(cursor, lambda: FeedNotFoundError(url))
 
 
@@ -360,3 +340,41 @@ def feed_filter(query: Query, filter: FeedFilter) -> dict[str, Any]:
         context.update(update_after=adapt_datetime(update_after))
 
     return context
+
+
+def feed_update_intent_to_dict(intent: FeedUpdateIntent) -> FeedDict:
+    url, _, _, value = intent
+
+    context: dict[str, Any] = {
+        'url': url,
+        'last_retrieved': adapt_datetime(intent.last_retrieved),
+        'update_after': adapt_datetime(intent.update_after),
+    }
+
+    if isinstance(value, FeedToUpdate):
+        assert url == value.feed.url, "updating feed URL not supported"
+
+        context.update(
+            value._asdict(),
+            caching_info=(
+                json.dumps(value.caching_info) if value.caching_info else None
+            ),
+        )
+        feed = context.pop('feed')
+        context.update(
+            feed._asdict(),
+            updated=adapt_datetime(feed.updated) if feed.updated else None,
+            last_updated=adapt_datetime(value.last_updated),
+            data_hash=feed.hash,
+        )
+        context.pop('hash', None)
+
+        context['stale'] = 0
+
+    if isinstance(value, ExceptionInfo):
+        context['last_exception'] = json.dumps(value._asdict())
+    else:
+        assert isinstance(value, FeedToUpdate | None)
+        context['last_exception'] = None
+
+    return cast(FeedDict, context)
