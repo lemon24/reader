@@ -231,7 +231,6 @@ class FeedsMixin(StorageBase):
             'last_retrieved': adapt_datetime(intent.last_retrieved),
             'update_after': adapt_datetime(intent.update_after),
         }
-        expressions: list[str] = []
 
         if isinstance(value, FeedToUpdate):
             assert url == value.feed.url, "updating feed URL not supported"
@@ -251,17 +250,15 @@ class FeedsMixin(StorageBase):
             )
             context.pop('hash', None)
 
-            expressions.append("stale = 0")
-
-        expressions.extend(f"{n} = :{n}" for n in context if n != 'url')
+            context['stale'] = 0
 
         if isinstance(value, ExceptionInfo):
             context['last_exception'] = json.dumps(value._asdict())
-            expressions.append("last_exception = :last_exception")
         else:
             assert isinstance(value, FeedToUpdate | None)
-            expressions.append("last_exception = NULL")
+            context['last_exception'] = None
 
+        expressions = [f"{n} = :{n}" for n in context if n != 'url']
         query = f"UPDATE feeds SET {', '.join(expressions)} WHERE url = :url;"
 
         with self.get_db() as db:
