@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import builtins
 import logging
 import numbers
 import warnings
@@ -8,7 +7,6 @@ from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Mapping
 from collections.abc import MutableSequence
-from contextlib import nullcontext
 from datetime import datetime
 from datetime import timezone
 from types import MappingProxyType
@@ -37,8 +35,6 @@ from ._types import StorageType
 from ._types import UpdateHooks
 from ._update import Pipeline
 from ._utils import eager_iterable
-from ._utils import make_pool_map
-from ._utils import MapContextManager
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
 from .exceptions import FeedError
@@ -82,6 +78,7 @@ from .types import UpdateResult
 
 if TYPE_CHECKING:  # pragma: no cover
     from ._parser import Parser
+    from ._update.base import PipelineFactory
 
 
 log = logging.getLogger('reader')
@@ -388,6 +385,7 @@ class Reader:
 
         self._reserved_name_scheme = _reserved_name_scheme
         self._enable_search = _enable_search
+        self._make_pipeline: PipelineFactory = Pipeline
         self._update_hooks = UpdateHooks(self)
 
         #: Override update_feeds(scheduled=...).
@@ -930,7 +928,7 @@ class Reader:
         new: bool | None = None,
         scheduled: bool = True,
         workers: int = 1,
-        _call_feeds_update_hooks: bool = True,
+        _call_feeds_hooks: bool = True,
     ) -> Iterable[UpdateResult]:
         r"""Update all or some of the feeds.
 
@@ -1035,24 +1033,8 @@ class Reader:
             now, feed, tags, broken, updates_enabled, new, scheduled
         )
 
-        if workers < 1:
-            raise ValueError("workers must be a positive integer")
-
-        make_map: MapContextManager[Any, Any] = (
-            nullcontext(builtins.map) if workers == 1 else make_pool_map(workers)
-        )
-
-        if _call_feeds_update_hooks:
-            self._update_hooks.run('before_feeds_update', None)
-
-        with make_map as map:
-            yield from Pipeline(self, now, map).update(filter)
-
-        if _call_feeds_update_hooks:
-            with self._update_hooks.group(
-                "got unexpected after-update hook errors"
-            ) as hook_errors:
-                hook_errors.run('after_feeds_update', None)
+        pipeline = self._make_pipeline(self, now, workers, _call_feeds_hooks)
+        yield from pipeline.update(filter)
 
     def update_feed(self, feed: FeedInput, /) -> UpdatedFeed | None:
         r"""Update a single feed.
@@ -1102,7 +1084,7 @@ class Reader:
                 feed=feed,
                 updates_enabled=None,
                 scheduled=False,
-                _call_feeds_update_hooks=False,
+                _call_feeds_hooks=False,
             ),
             lambda: FeedNotFoundError(_feed_argument(feed)),
         )

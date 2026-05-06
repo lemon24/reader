@@ -3,9 +3,13 @@ from __future__ import annotations
 import logging
 from abc import ABC
 from abc import abstractmethod
+from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any  # noqa: F401
 from typing import Generic
 from typing import TYPE_CHECKING
 from typing import TypeVar
@@ -28,6 +32,11 @@ if TYPE_CHECKING:  # pragma: no cover
 log = logging.getLogger("reader")
 
 
+PipelineFactory = Callable[
+    ['Reader', datetime, int, bool], 'PipelineBase[Any, Any, Any, Any]'
+]
+
+
 FD = TypeVar('FD')
 ED = TypeVar('ED')
 FI = TypeVar('FI')
@@ -37,6 +46,7 @@ ParseResult = ParseResultBase[FeedForUpdate, FD, ED, ParseError]
 EntryPair = EntryPairBase[ED]
 
 
+@dataclass
 class PipelineBase(Generic[FD, ED, FI, EI], ABC):
     """Run through high level update phases and call update hooks.
 
@@ -46,6 +56,9 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
     """
 
     reader: Reader
+    now: datetime
+    workers: int
+    call_feeds_hooks: bool
 
     @abstractmethod
     def parse_feeds(
@@ -78,6 +91,10 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
         """Transform an entry update intent into entry data (for plugins)."""
 
     def update(self, filter: FeedFilter) -> Iterable[UpdateResult]:
+
+        if self.call_feeds_hooks:
+            self.reader._update_hooks.run('before_feeds_update', None)
+
         feeds = self.reader._storage.get_feeds_for_update(filter)
         parse_results = self.parse_feeds(feeds)
         update_results = map(self.process_result, parse_results)
@@ -93,6 +110,12 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
 
             yield UpdateResult(url, value)
 
+        if self.call_feeds_hooks:
+            with self.reader._update_hooks.group(
+                "got unexpected after-update hook errors"
+            ) as hook_errors:
+                hook_errors.run('after_feeds_update', None)
+
     def process_result(
         self, result: ParseResult[FD, ED]
     ) -> tuple[str, UpdatedFeed | None | Exception]:
@@ -103,7 +126,7 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
             feed_intent, entry_intents = self.make_intents(result, entry_pairs)
             entry_intents = list(entry_intents)
 
-            with self.run_hooks(result.feed.url, entry_intents):
+            with self.run_feed_hooks(result.feed.url, entry_intents):
                 self.store_feed(feed_intent, [new for new, _ in entry_intents])
 
         except Exception as e:
@@ -129,7 +152,9 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
         return zip(result.value.entries, entries_for_update, strict=True)
 
     @contextmanager
-    def run_hooks(self, feed: str, entries: Iterable[EntryPair[EI]]) -> Iterator[None]:
+    def run_feed_hooks(
+        self, feed: str, entries: Iterable[EntryPair[EI]]
+    ) -> Iterator[None]:
         hooks = self.reader._update_hooks
 
         hooks.run('before_feed_update', (feed,), feed)

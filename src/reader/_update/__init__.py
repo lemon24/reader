@@ -10,7 +10,6 @@ from datetime import timezone
 from itertools import chain
 from typing import Any
 from typing import NamedTuple
-from typing import TYPE_CHECKING
 
 from .._parser import EntryPair
 from .._parser import EntryPairBase
@@ -23,15 +22,12 @@ from .._types import FeedData
 from .._types import FeedForUpdate
 from .._types import FeedToUpdate
 from .._types import FeedUpdateIntent
-from .._utils import MapFunction
+from .._utils import make_pool_map
 from .._utils import PrefixLogger
 from ..exceptions import ParseError
 from ..types import ExceptionInfo
 from ..types import UpdateConfig
 from .base import PipelineBase
-
-if TYPE_CHECKING:  # pragma: no cover
-    from ..core import Reader
 
 log = logging.getLogger("reader")
 
@@ -53,6 +49,19 @@ class Decider:
 
     old_feed: FeedForUpdate
     now: datetime
+
+    # global now, is used as first_updated_epoch for all new entries,
+    # so that the subset of new entries from an update appears before
+    # all others and the entries in it are sorted by published/updated;
+    # if we used last_updated (now) for this, they would be sorted
+    # by feed order first (due to now increasing for each feed).
+    #
+    # A side effect of relying first_updated_epoch for ordering is that
+    # for the second of two new feeds updated in the same update_feeds()
+    # call, first_updated_epoch != last_updated.
+    #
+    # However, added == last_updated for the first update.
+    #
     global_now: datetime
     config: UpdateConfig
     log: Any = log
@@ -325,7 +334,7 @@ def next_update_after(now: datetime, interval: int, jitter: float = 0) -> dateti
     return rv
 
 
-@dataclass(frozen=True)
+@dataclass
 class Pipeline(PipelineBase[FeedData, EntryData, FeedUpdateIntent, EntryUpdateIntent]):
     """Update multiple feeds.
 
@@ -349,23 +358,6 @@ class Pipeline(PipelineBase[FeedData, EntryData, FeedUpdateIntent, EntryUpdateIn
 
     """
 
-    reader: Reader
-
-    # global now, is used as first_updated_epoch for all new entries,
-    # so that the subset of new entries from an update appears before
-    # all others and the entries in it are sorted by published/updated;
-    # if we used last_updated (now) for this, they would be sorted
-    # by feed order first (due to now increasing for each feed).
-    #
-    # A side effect of relying first_updated_epoch for ordering is that
-    # for the second of two new feeds updated in the same update_feeds()
-    # call, first_updated_epoch != last_updated.
-    #
-    # However, added == last_updated for the first update.
-    #
-    global_now: datetime
-
-    map: MapFunction[Any, Any]
     decider = Decider
 
     def parse_feeds(self, feeds: Iterable[FeedForUpdate]) -> Iterable[ParseResult]:
@@ -388,10 +380,11 @@ class Pipeline(PipelineBase[FeedData, EntryData, FeedUpdateIntent, EntryUpdateIn
                 except ParseError as e:
                     parse_errors.append(ParseResult(feed, e))
 
-        feeds = parser_process_feeds_for_update(feeds)
-        feeds = map(self.decider.process_feed_for_update, feeds)
-        parse_results = self.reader._parser.parallel(feeds, self.map)
-        return chain(parse_results, parse_errors)
+        with make_pool_map(self.workers) as parallel_map:
+            feeds = parser_process_feeds_for_update(feeds)
+            feeds = map(self.decider.process_feed_for_update, feeds)
+            parse_results = self.reader._parser.parallel(feeds, parallel_map)
+            yield from chain(parse_results, parse_errors)
 
     def make_intents(
         self, result: ParseResult, entries: Iterable[EntryPair]
@@ -411,7 +404,7 @@ class Pipeline(PipelineBase[FeedData, EntryData, FeedUpdateIntent, EntryUpdateIn
 
         return self.decider.make_intents(
             self.reader._now(),
-            self.global_now,
+            self.now,
             config,
             result,
             entries,

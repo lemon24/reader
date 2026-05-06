@@ -11,8 +11,9 @@ from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
 from collections.abc import Sequence
-from contextlib import AbstractContextManager
+from contextlib import AbstractContextManager as CM
 from contextlib import contextmanager
+from contextlib import nullcontext
 from functools import wraps
 from typing import Any
 from typing import cast
@@ -79,14 +80,25 @@ def eager_iterable(it: Iterable[_T]) -> Iterable[_T]:
         return it
 
 
+# if we substitute MapFunction below, mypy complains
+# https://github.com/python/mypy/issues/17551
 MapFunction = Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
-MapContextManager = AbstractContextManager[MapFunction[_T, _U]]
-
-# type ignore because of https://github.com/python/mypy/issues/17551
 
 
-@contextmanager  # type: ignore[arg-type]
-def make_pool_map(workers: int) -> Iterator[MapFunction[_T, _U]]:
+def make_pool_map(
+    workers: int,
+) -> CM[Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]]:
+    if workers < 1:
+        raise ValueError("workers must be a positive integer")
+    if workers == 1:
+        return nullcontext(map)
+    return _make_pool_map(workers)
+
+
+@contextmanager
+def _make_pool_map(
+    workers: int,
+) -> Iterator[Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]]:
     # We are using concurrent.futures instead of multiprocessing.dummy
     # because the latter doesn't work on some environments (e.g. AWS Lambda).
     # We are not using executor.map() because it consumes the entire iterable.

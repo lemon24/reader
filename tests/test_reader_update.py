@@ -696,14 +696,14 @@ def test_concurrent_update(monkeypatch, db_path, make_reader, parser, new):
 
     from reader._update import Pipeline
 
-    def update_feed(*args, **kwargs):
+    def store_feed(*args, **kwargs):
         monkeypatch.undo()
         block()
         assert reader.get_entry(entry).title == 'two'
-        return Pipeline.update_feed(*args, **kwargs)
+        return Pipeline.store_feed(*args, **kwargs)
 
     # TODO: this would have been easier if Pipeline were a reader attribute
-    monkeypatch.setattr(Pipeline, 'update_feed', update_feed)
+    monkeypatch.setattr(Pipeline, 'store_feed', store_feed)
 
     t = threading.Thread(target=target)
     t.start()
@@ -746,13 +746,13 @@ def test_entry_deleted_during_update(monkeypatch, db_path, make_reader, parser):
 
     from reader._update import Pipeline
 
-    def update_feed(*args, **kwargs):
+    def store_feed(*args, **kwargs):
         monkeypatch.undo()
         block()
-        return Pipeline.update_feed(*args, **kwargs)
+        return Pipeline.store_feed(*args, **kwargs)
 
     # TODO: this would have been easier if Pipeline were a reader attribute
-    monkeypatch.setattr(Pipeline, 'update_feed', update_feed)
+    monkeypatch.setattr(Pipeline, 'store_feed', store_feed)
 
     before_entry = reader.get_entry(entry)
     (before_efu,) = reader._storage.get_entries_for_update([entry.resource_id])
