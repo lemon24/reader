@@ -5,10 +5,13 @@ import logging
 import sqlite3
 from collections.abc import Callable
 from collections.abc import Iterable
+from collections.abc import Mapping
 from datetime import datetime
 from datetime import timedelta
 from functools import partial
 from typing import Any
+from typing import cast
+from typing import NewType
 from typing import TYPE_CHECKING
 
 from .._types import EntryFilter
@@ -34,6 +37,7 @@ from ._sql_utils import SortKey
 from ._sqlite_utils import adapt_datetime
 from ._sqlite_utils import convert_timestamp
 from ._sqlite_utils import rowcount_exactly_one
+from ._sqlite_utils import SQLiteValue
 from ._tags import entry_tags_filter
 from ._tags import feed_tags_filter
 
@@ -44,6 +48,9 @@ else:
 
 
 log = logging.getLogger('reader')
+
+
+EntryDict = NewType('EntryDict', Mapping[str, SQLiteValue])
 
 
 class EntriesMixin(StorageBase):
@@ -197,8 +204,13 @@ class EntriesMixin(StorageBase):
 
             return [cursor.execute(query, entry).fetchone() for entry in entries]
 
-    @wrap_exceptions()
     def add_or_update_entries(self, intents: Iterable[EntryUpdateIntent]) -> None:
+        return self.add_or_update_entry_dicts(map(entry_update_intent_to_dict, intents))
+
+    @wrap_exceptions()
+    def add_or_update_entry_dicts(self, intents: Iterable[EntryDict]) -> None:
+        """Low level add_or_update_entries() used by database sync."""
+
         iterables = chunks(self.chunk_size, intents) if self.chunk_size else (intents,)
 
         # It's acceptable for this to not be atomic (only some of the entries
@@ -206,9 +218,9 @@ class EntriesMixin(StorageBase):
         # be updated on the next update (because the feed will not be marked
         # as updated if there's an exception, so we get a free retry).
         for iterable in iterables:
-            self._add_or_update_entries(iterable)
+            self._add_or_update_entry_dicts(iterable)
 
-    def _add_or_update_entries(self, intents: Iterable[EntryUpdateIntent]) -> None:
+    def _add_or_update_entry_dicts(self, intents: Iterable[EntryDict]) -> None:
         with self.get_db() as db:
             try:
                 for intent in intents:
@@ -223,22 +235,23 @@ class EntriesMixin(StorageBase):
                     new = not list(
                         db.execute(
                             "SELECT 1 FROM entries WHERE (feed, id) = (?, ?)",
-                            intent.entry.resource_id,
+                            (intent['feed'], intent['id']),
                         )
                     )
 
                     if new:
-                        self._insert_entry(db, intent)
+                        self._insert_entry_dict(db, intent)
                     else:
-                        self._update_entry(db, intent)
+                        self._update_entry_dict(db, intent)
 
             except sqlite3.IntegrityError as e:
                 e_msg = str(e).lower()
                 if "foreign key constraint failed" in e_msg:
-                    raise FeedNotFoundError(intent.entry.feed_url) from None
+                    assert isinstance(intent['feed'], str)
+                    raise FeedNotFoundError(intent['feed']) from None
                 raise  # pragma: no cover
 
-    def _insert_entry(self, db: sqlite3.Connection, intent: EntryUpdateIntent) -> None:
+    def _insert_entry_dict(self, db: sqlite3.Connection, intent: EntryDict) -> None:
         query = """
             INSERT INTO entries (
                 id,
@@ -264,7 +277,7 @@ class EntriesMixin(StorageBase):
                 added_by
             ) VALUES (
                 :id,
-                :feed_url,
+                :feed,
                 :title,
                 :link,
                 :updated,
@@ -286,9 +299,9 @@ class EntriesMixin(StorageBase):
                 :added_by
             );
         """
-        db.execute(query, entry_update_intent_to_dict(intent))
+        db.execute(query, intent)
 
-    def _update_entry(self, db: sqlite3.Connection, intent: EntryUpdateIntent) -> None:
+    def _update_entry_dict(self, db: sqlite3.Connection, intent: EntryDict) -> None:
         query = """
             UPDATE entries
             SET
@@ -308,9 +321,9 @@ class EntriesMixin(StorageBase):
                 data_hash = :data_hash,
                 data_hash_changed = :data_hash_changed,
                 added_by = :added_by
-            WHERE (feed, id) = (:feed_url, :id)
+            WHERE (feed, id) = (:feed, :id)
         """
-        db.execute(query, entry_update_intent_to_dict(intent))
+        db.execute(query, intent)
 
     def add_or_update_entry(self, intent: EntryUpdateIntent) -> None:
         # TODO: this method is for testing convenience only, maybe delete it?
@@ -320,7 +333,7 @@ class EntriesMixin(StorageBase):
     def add_entry(self, intent: EntryUpdateIntent) -> None:
         with self.get_db() as db:
             try:
-                self._insert_entry(db, intent)
+                self._insert_entry_dict(db, entry_update_intent_to_dict(intent))
             except sqlite3.IntegrityError as e:
                 e_msg = str(e).lower()
                 if "foreign key constraint failed" in e_msg:
@@ -653,7 +666,7 @@ def get_entry_counts_query(
     return query, context
 
 
-def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> dict[str, Any]:
+def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> EntryDict:
     context = intent._asdict()
     entry = context.pop('entry')
     context.update(
@@ -689,4 +702,6 @@ def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> dict[str, Any]:
             source_dict['updated'] = adapt_datetime(entry.source.updated)
         context['source'] = json.dumps(source_dict)
 
-    return context
+    context['feed'] = context.pop('feed_url')
+
+    return cast(EntryDict, context)

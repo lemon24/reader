@@ -28,8 +28,10 @@ from typing import Any
 from typing import cast
 from typing import no_type_check
 from typing import TypeVar
+from typing import Union
 
 SQLiteType = TypeVar('SQLiteType', None, int, float, str, bytes)
+SQLiteValue = Union[None, int, float, str, bytes]
 
 
 @contextmanager
