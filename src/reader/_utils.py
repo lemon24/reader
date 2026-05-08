@@ -3,14 +3,12 @@ from __future__ import annotations
 import functools
 import inspect
 import itertools
-import logging
 import pkgutil
 import sys
 import warnings
 from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Iterator
-from collections.abc import Sequence
 from contextlib import AbstractContextManager as CM
 from contextlib import contextmanager
 from contextlib import nullcontext
@@ -133,21 +131,6 @@ def _make_pool_map(
 
     with executor:
         yield imap_unordered
-
-
-class PrefixLogger(logging.LoggerAdapter):  # type: ignore
-    # if needed, add: with log.push('another prefix'): ...
-
-    def __init__(self, logger: logging.Logger, prefixes: Sequence[str] = ()):
-        super().__init__(logger, {})
-        self.prefixes = tuple(prefixes)
-
-    @staticmethod
-    def _escape(s: str) -> str:  # pragma: no cover
-        return '%%'.join(s.split('%'))
-
-    def process(self, msg: str, kwargs: Any) -> tuple[str, Any]:  # pragma: no cover
-        return ': '.join(tuple(self._escape(p) for p in self.prefixes) + (msg,)), kwargs
 
 
 _DEPRECATED_FUNC_WARNING = """\

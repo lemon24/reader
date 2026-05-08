@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import random
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -11,6 +10,7 @@ from itertools import chain
 from typing import Any
 from typing import NamedTuple
 
+from .._logging import get_logger
 from .._parser import EntryPair
 from .._parser import EntryPairBase
 from .._parser import ParsedFeed
@@ -23,13 +23,13 @@ from .._types import FeedForUpdate
 from .._types import FeedToUpdate
 from .._types import FeedUpdateIntent
 from .._utils import make_pool_map
-from .._utils import PrefixLogger
 from ..exceptions import ParseError
 from ..types import ExceptionInfo
 from ..types import UpdateConfig
 from .base import PipelineBase
 
-log = logging.getLogger("reader")
+logger = get_logger('reader.update')
+
 
 HASH_CHANGED_LIMIT = 24
 
@@ -64,7 +64,6 @@ class Decider:
     #
     global_now: datetime
     config: UpdateConfig
-    log: Any = log
 
     @classmethod
     def process_feed_for_update(cls, feed: FeedForUpdate) -> FeedForUpdate:
@@ -77,10 +76,7 @@ class Decider:
             # once, unless the database predates last_updated).
             #
             feed = feed._replace(updated=None, caching_info=None)
-            log.info(
-                "update feed %r: stale feed, ignoring updated and caching_info",
-                feed.url,
-            )
+            logger.info("stale feed, ignoring updated and caching_info", feed=feed.url)
         return feed
 
     @classmethod
@@ -97,7 +93,6 @@ class Decider:
             now,
             global_now,
             config,
-            PrefixLogger(log, ["update feed %r" % result.feed.url]),
         )
         return decider.update(result, entry_pairs)
 
@@ -122,7 +117,7 @@ class Decider:
             return True
 
         if not old.last_updated:
-            self.log.info("feed has no last_updated, treating as updated")
+            logger.debug("feed has no last_updated, treating as updated")
             assert not old.updated, "updated must be None if last_updated is None"
             return True
 
@@ -130,13 +125,13 @@ class Decider:
         # we always update the feed if entries changed, for simplicity.
         # https://github.com/lemon24/reader/issues/76
         if entries_to_update:
-            self.log.info("feed has entries to update, treating as updated")
+            logger.debug("feed has entries to update, treating as updated")
             return True
 
         # Check if the feed content actually changed:
         # https://github.com/lemon24/reader/issues/179
         if not old.hash or new.hash != old.hash:
-            self.log.info("feed hash changed, treating as updated")
+            logger.debug("feed hash changed, treating as updated")
             return True
 
         # For RSS feeds with no date element,
@@ -145,31 +140,30 @@ class Decider:
         # so feed.updated is excluded from the hash.
         # https://github.com/lemon24/reader/issues/231#issuecomment-812601988
         if new.updated != old.updated:
-            self.log.info("only feed updated changed, skipping")
+            logger.debug("only feed updated changed, skipping")
             return False
 
-        self.log.info("feed not updated, skipping")
+        logger.debug("feed not updated, skipping")
         return False
 
     def should_update_entry(
         self, new: EntryData, old: EntryForUpdate | None
     ) -> UpdateReasons | None:
-        def debug(msg: str, *args: Any) -> None:
-            self.log.debug("entry %r: " + msg, new.id, *args)
+        log = logger.bind(entry=new.id)
 
         if self.stale:
-            debug("feed marked as stale, updating")
+            log.debug("feed marked as stale, updating")
             return UpdateReasons()
 
         if not old:
-            debug("entry new, updating")
+            log.debug("entry new, updating")
             return UpdateReasons()
 
         # entry.updated was excluded from hash for (fake) symmetry with feed.
         # https://github.com/lemon24/reader/issues/231#issuecomment-812601988
         # Unlike feed.updated, we always trust entry.updated (so far).
         if new.updated != old.updated:
-            debug("entry updated, updating")
+            log.debug("entry updated, updating")
             return UpdateReasons()
 
         # Check if the entry content actually changed:
@@ -182,16 +176,16 @@ class Decider:
         #
         if not old.hash or new.hash != old.hash:
             if (old.hash_changed or 0) < HASH_CHANGED_LIMIT:
-                debug("entry hash changed, updating")
+                log.debug("entry hash changed, updating")
                 return UpdateReasons((old.hash_changed or 0) + 1)
             else:
-                debug(
+                log.debug(
                     "entry hash changed, but exceeds the update limit (%i); skipping",
                     HASH_CHANGED_LIMIT,
                 )
                 return None
 
-        debug("entry not updated, skipping")
+        log.debug("entry not updated, skipping")
         return None
 
     def get_entries_to_update(
@@ -282,7 +276,7 @@ def flatten_config(config: Any, default: UpdateConfig) -> UpdateConfig:
     rv = default.copy()
 
     if not isinstance(config, dict):
-        log.warning(
+        logger.warning(
             "invalid update config, expected dict, got %s", type(config).__name__
         )
         return rv
@@ -301,11 +295,11 @@ def set_number(name, src, dst, type, min=0, max=float('inf')):  # type: ignore
     try:
         value = type(value)
     except (TypeError, ValueError) as e:
-        log.warning("invalid update config .%s: %s", name, e)
+        logger.warning("invalid update config .%s: %s", name, e)
         return
 
     if not (min <= value <= max):
-        log.warning(
+        logger.warning(
             "invalid update config .%s: must be between %s and %s: %s",
             name,
             min,

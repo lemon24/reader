@@ -58,7 +58,8 @@ class Renderer(structlog.processors.LogfmtRenderer):
         return (message,), {'exc_info': exc_info}
 
 
-renderer = Renderer(key_order=['event', 'feed', 'entry'], drop_missing=True)  # type: ignore
+key_order = ['event', 'status', 'feed', 'entry']
+renderer = Renderer(key_order=key_order, drop_missing=True)  # type: ignore
 processors = [merge_contextvars, enrich_exception, renderer]
 factory = WrappedLoggerFactory(processors=processors, cache_logger_on_first_use=True)
 

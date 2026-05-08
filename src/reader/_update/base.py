@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import Callable
@@ -14,6 +13,9 @@ from typing import Generic
 from typing import TYPE_CHECKING
 from typing import TypeVar
 
+from structlog.contextvars import bound_contextvars
+
+from .._logging import get_logger
 from .._parser import EntryPairBase
 from .._parser import ParseResultBase
 from .._types import EntryData
@@ -29,7 +31,7 @@ from ..types import UpdateResult
 if TYPE_CHECKING:  # pragma: no cover
     from ..core import Reader
 
-log = logging.getLogger("reader")
+logger = get_logger('reader.update')
 
 
 PipelineFactory = Callable[
@@ -100,13 +102,34 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
         update_results = map(self.process_result, parse_results)
 
         for url, value in update_results:
+            log = logger.bind(feed=url)
+
             if isinstance(value, FeedNotFoundError):
-                log.info("update feed %r: feed removed during update", url)
+                log.info(
+                    "updated", status='skipped', reason="feed removed during update"
+                )
                 continue
 
             if isinstance(value, Exception):
                 if not isinstance(value, UpdateError):
+                    log.critical(
+                        "updated",
+                        status='critical',
+                        reason="unexpected error",
+                        exc_info=value,
+                    )
                     raise value
+                log.error("updated", status='error', exc_info=value)
+            elif value is None:
+                log.info("updated", status='not_modified')
+            else:
+                log.info(
+                    "updated",
+                    status='ok',
+                    new=value.new,
+                    modified=value.modified,
+                    unmodified=value.unmodified,
+                )
 
             yield UpdateResult(url, value)
 
@@ -122,12 +145,13 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
         feed, value, *_ = result
 
         try:
-            entry_pairs = self.get_entry_pairs(result)
-            feed_intent, entry_intents = self.make_intents(result, entry_pairs)
-            entry_intents = list(entry_intents)
+            with bound_contextvars(feed=feed.url):
+                entry_pairs = self.get_entry_pairs(result)
+                feed_intent, entry_intents = self.make_intents(result, entry_pairs)
+                entry_intents = list(entry_intents)
 
-            with self.run_feed_hooks(result.feed.url, entry_intents):
-                self.store_feed(feed_intent, [new for new, _ in entry_intents])
+                with self.run_feed_hooks(feed.url, entry_intents):
+                    self.store_feed(feed_intent, [new for new, _ in entry_intents])
 
         except Exception as e:
             return feed.url, e

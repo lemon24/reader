@@ -293,7 +293,9 @@ def test_update_feeds_logs_parse_error(reader, parser, caplog):
     assert exc.url == '1'
     assert str(exc.__cause__) == 'failing'
     assert repr(exc.url) in record.message
-    assert repr(exc.__cause__) in record.message
+    assert 'ParseError' in record.message
+    assert 'Exception' in record.message
+    assert 'failing' in record.message
 
 
 def parse_error(parser):

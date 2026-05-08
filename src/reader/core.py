@@ -903,13 +903,6 @@ class Reader:
 
             for url, value in results:
                 if isinstance(value, ParseError):
-                    log.exception(
-                        "update feed %r: error while getting/parsing feed, "
-                        "skipping; exception: %r",
-                        url,
-                        value.__cause__,
-                        exc_info=value,
-                    )
                     continue
 
                 if isinstance(value, UpdateHookError):

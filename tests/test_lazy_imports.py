@@ -71,7 +71,6 @@ LAZY_MODULES = frozenset("""\
     reader._vendor.feedparser
     urllib.request
     multiprocessing
-    concurrent.futures
 """.split())
 
 
@@ -100,7 +99,6 @@ S_UPDATE_FEEDS_WORKERS = "reader.update_feeds(workers=2)", {
     'requests',
     'reader._vendor.feedparser',
     'urllib.request',
-    'concurrent.futures',
 }
 S_UPDATE_SEARCH = """\
 from reader._types import EntryData, EntryUpdateIntent
