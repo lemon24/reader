@@ -44,6 +44,7 @@ dependencies = [
     "iso8601>=1",
     # search
     "beautifulsoup4>=4.5",
+    "structlog",
 ]
 dynamic = ["version"]
 

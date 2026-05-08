@@ -21,6 +21,7 @@ These packages will be installed automatically when installing *reader*:
 * `iso8601`_  parses dates in ISO 8601 / RFC 3339; used for JSON Feed parsing.
 * `beautifulsoup4`_ is used to strip HTML tags before adding entries
   to the search index.
+* `structlog`_ is used for structured logging.
 * `typing-extensions`_ is used for :mod:`typing` backports.
 
 *reader* also depends on the :mod:`sqlite3` standard library module
@@ -64,6 +65,7 @@ As of version |version|, *reader* has the following extras:
 .. _requests: https://requests.readthedocs.io/
 .. _werkzeug: https://werkzeug.palletsprojects.com/
 .. _iso8601: http://pyiso8601.readthedocs.org/
+.. _structlog: https://www.structlog.org/
 .. _typing-extensions: https://pypi.org/project/typing-extensions/
 .. _JSON1: https://www.sqlite.org/json1.html
 .. _FTS5: https://www.sqlite.org/fts5.html
