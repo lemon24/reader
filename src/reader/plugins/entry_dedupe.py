@@ -133,6 +133,8 @@ To reduce false positives:
     Deleting entries in https://github.com/lemon24/reader/issues/140.
     On-demand dedupe in https://github.com/lemon24/reader/issues/202.
     More selection heuristics in https://github.com/lemon24/reader/issues/371.
+    Notes on (not implemented) title-only dedupe for mass duplication in
+    https://github.com/lemon24/reader/issues/322.
 
 
 """
