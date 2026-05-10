@@ -103,3 +103,11 @@ def test_unknown_option_error(with_config):
 def test_unknown_command_error(with_config):
     with_config("[cli.unknown]")
     check_error(['cli.unknown:', 'no such option'])
+
+
+def test_alternative_section(with_config):
+    with_config("""\
+        [alt]
+        plugin=['two']
+    """)
+    assert load_config(cli, section='alt')[''] == {'plugin': ('TWO',)}

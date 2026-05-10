@@ -23,7 +23,7 @@ def config_option(*args, **kwargs):
     )
 
 
-def load_config(command, prefix=None, env=None):
+def load_config(command, prefix=None, env=None, section=None):
     """Return the parameters from invoking command and its subcommands,
     but without actually running any (sub)command.
 
@@ -38,6 +38,8 @@ def load_config(command, prefix=None, env=None):
 
     """
     command = copy.deepcopy(command)
+    if section:
+        command._config_section = section
     prefix = tuple(prefix or ())
     params = {}
     leaves = []
@@ -89,7 +91,10 @@ def load_defaults(ctx, param, value):
     if not value:
         return
 
-    section_name = ctx.find_root().auto_envvar_prefix.lower()
+    root = ctx.find_root()
+
+    section_name = root.auto_envvar_prefix.lower()
+    section_name = getattr(root.command, '_config_section', section_name)
 
     try:
         config = tomllib.load(value)
@@ -100,7 +105,6 @@ def load_defaults(ctx, param, value):
         param.type.fail(f"No [{section_name}] section found", param, ctx)
 
     default_map = config[section_name]
-    root = ctx.find_root()
 
     if errors := validate_default_map(root.command, default_map, section_name):
         sep = '\n* '
