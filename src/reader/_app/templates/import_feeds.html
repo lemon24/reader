@@ -53,6 +53,10 @@
 
   <p>Select feeds to import:</p>
 
+  <div class="mb-3">
+    {{ macros.select_all_none() }}
+  </div>
+
   {% for feed in parsed_feeds %}
   <div class="form-check mb-3">
     <input
@@ -79,6 +83,10 @@
 
   </div>
   {% endfor %}
+
+  <div class="mb-3">
+    {{ macros.select_all_none() }}
+  </div>
 
   <input type="submit" class="btn btn-primary" value="import selected">
 

@@ -317,3 +317,31 @@
   </li>
 </ul>
 {%- endmacro %}
+
+
+{%- macro select_all_none() -%}
+<div class="btn-group" role="group" aria-label="select all/none">
+  <button
+    type="button"
+    class="btn btn-sm btn-outline-secondary"
+    onclick="
+      this.form
+        .querySelectorAll('input[type=checkbox]')
+        .forEach(cb => cb.checked = true)
+    "
+  >
+    select all
+  </button>
+  <button
+    type="button"
+    class="btn btn-sm btn-outline-secondary"
+    onclick="
+      this.form
+        .querySelectorAll('input[type=checkbox]')
+        .forEach(cb => cb.checked = false)
+    "
+  >
+    select none
+  </button>
+</div>
+{%- endmacro -%}
