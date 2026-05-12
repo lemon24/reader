@@ -290,6 +290,10 @@ def import_feeds():
                 parsed_feeds = [asdict(f) for f in opml.parse(file.stream)]
             except opml.OPMLError as e:
                 error = str(e)
+            else:
+                if not parsed_feeds:
+                    parsed_feeds = None
+                    error = "file contains no feeds"
         else:
             feeds = (
                 FeedToImport(**json.loads(f)) for f in request.form.getlist('feed')
