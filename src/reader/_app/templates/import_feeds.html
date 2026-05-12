@@ -28,11 +28,11 @@
 
   <div class="mb-3">
 
-  <!-- TODO accept -->
   <input
     class="form-control{% if error %} is-invalid {% endif %}"
     type="file"
     name="file"
+    accept="application/xml, text/xml, text/x-opml, .xml, .opml"
   >
   {%- if error %}
   <div class="invalid-feedback">
