@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import time
-import warnings
 from collections import defaultdict
 from collections.abc import Callable
 from collections.abc import Iterable
@@ -57,7 +56,6 @@ from .types import ResourceId
 from .types import TagFilterInput
 from .types import TristateFilterInput
 from .types import Author
-from .types import _AuthorMixin
 
 
 log = logging.getLogger("reader")
@@ -73,7 +71,7 @@ _T = TypeVar('_T')
 
 
 @dataclass(frozen=True)
-class FeedData(_namedtuple_compat, _AuthorMixin):
+class FeedData(_namedtuple_compat):
     """Feed data that comes from the feed.
 
     Attributes are a subset of those of :class:`~reader.Feed`.
@@ -117,7 +115,7 @@ class FeedData(_namedtuple_compat, _AuthorMixin):
 
 
 @dataclass(frozen=True)
-class EntryData(_namedtuple_compat, _AuthorMixin):
+class EntryData(_namedtuple_compat):
     """Entry data that comes from the feed.
 
     Attributes are a subset of those of :class:`~reader.Entry`.

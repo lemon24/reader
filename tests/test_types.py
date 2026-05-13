@@ -402,11 +402,8 @@ def test_author_deprecation_warning():
 
 
 def test_author_deprecation_internal_types():
-    from reader._types import FeedData, EntryData
     from reader.types import EntrySource, Author
     import pytest
     
     with pytest.warns(DeprecationWarning):
         assert EntrySource(url='url', authors=(Author(name='Src'),)).author == 'Src'
-        assert FeedData(url='url', authors=(Author(name='FD'),)).author == 'FD'
-        assert EntryData(feed_url='url', id='id', authors=(Author(name='ED'),)).author == 'ED'

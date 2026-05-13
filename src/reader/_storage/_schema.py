@@ -322,28 +322,14 @@ def update_from_42_to_43(db: sqlite3.Connection, /) -> None:  # pragma: no cover
 def _migrate_author_to_json(raw_author: str | None) -> str | None:
     if not raw_author: 
         return None
-    # Leave if its already a JSON list
-    if raw_author.startswith('['): 
-        return raw_author
     
     import json
+    from .._parser.feedparser import _parse_rss_authors
+
     authors = []
-    
-    for part in raw_author.split(','):
-        part = part.strip()
-        if not part: continue
-        
-        name, email = part, None
-        if part.endswith(')') and '(' in part:
-            split_idx = part.rfind('(')
-            name = part[:split_idx].strip()
-            email = part[split_idx+1:-1].strip()
-            
-        authors.append({
-            "name": name or None, 
-            "email": email or None, 
-            "href": None
-        })
+    for a in _parse_rss_authors(raw_author):
+        a['href'] = None 
+        authors.append(a)
         
     return json.dumps(authors)
 
@@ -351,8 +337,8 @@ def _migrate_author_to_json(raw_author: str | None) -> str | None:
 def update_from_43_to_44(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     # https://github.com/lemon24/reader/issues/391
     db.create_function("MIGRATE_AUTHOR", 1, _migrate_author_to_json)
-    db.execute("UPDATE feeds SET author = MIGRATE_AUTHOR(author) WHERE author IS NOT NULL;")
-    db.execute("UPDATE entries SET author = MIGRATE_AUTHOR(author) WHERE author IS NOT NULL;")
+    db.execute("UPDATE feeds SET author = MIGRATE_AUTHOR(author);")
+    db.execute("UPDATE entries SET author = MIGRATE_AUTHOR(author);")
 
 
 VERSION = 44

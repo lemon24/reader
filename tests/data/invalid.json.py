@@ -42,7 +42,7 @@ entries = [
         feed_url=feed.url,
         id='author name fallback',
         updated=None,
-        authors=(Author(href='mailto:joe@example.com'),),
+        authors=(Author(email='joe@example.com'),),
     ),
     EntryData(
         feed_url=feed.url,

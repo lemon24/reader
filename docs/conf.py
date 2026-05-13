@@ -19,6 +19,8 @@ for name in [
     'werkzeug.exceptions',
     'werkzeug.http',
     'yaml',
+    'structlog',
+    'structlog.contextvars',
 ]:
     sys.modules[name] = unittest.mock.Mock()
 

@@ -200,6 +200,24 @@ def _process_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
     )
 
 
+def _parse_rss_authors(raw_author: str) -> list[dict[str, str | None]]:
+    authors = []
+    for part in raw_author.split(','):
+        part = part.strip()
+        if not part: continue
+        
+        name, email = part, None
+        if part.endswith(')') and '(' in part:
+            split_idx = part.rfind('(')
+            name = part[:split_idx].strip()
+            email = part[split_idx+1:-1].strip()
+                
+        if name or email:
+            authors.append({'name': name or None, 'email': email or None})
+            
+    return authors
+
+
 def _parse_authors(thing: Any, is_rss: bool) -> tuple[Author, ...]:
     author_detail = thing.get('author_detail') or {}
     
@@ -233,23 +251,7 @@ def _parse_authors(thing: Any, is_rss: bool) -> tuple[Author, ...]:
         return ()
         
     # Split by comma
-    authors = []
-    found_any_email = False
-    
-    for part in raw_author.split(','):
-        part = part.strip()
-        if not part: continue
-        
-        name, email = part, None
-        if part.endswith(')') and '(' in part:
-            split_idx = part.rfind('(')
-            name = part[:split_idx].strip()
-            email = part[split_idx+1:-1].strip()
-            if email:
-                found_any_email = True
-                
-        if name or email:
-            authors.append({'name': name or None, 'email': email or None})
+    authors = _parse_rss_authors(raw_author)
             
     # Fallback from author_detail if no emails were found in the string
     if authors:
@@ -259,7 +261,7 @@ def _parse_authors(thing: Any, is_rss: bool) -> tuple[Author, ...]:
         for a in authors:
             if fallback_email and not a['email']:
                 a['email'] = fallback_email
-            if fallback_href and not a.get('href'):
+            if fallback_href:
                 a['href'] = fallback_href
             
     return tuple(Author(**a) for a in authors)

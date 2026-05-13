@@ -11,7 +11,7 @@ feed = FeedData(
     updated=None,
     title='My Example Feed',
     link='https://example.org/',
-    authors=(Author(name='Joe', href='mailto:joe@example.com'), Author(name='Jane')),
+    authors=(Author(name='Joe', href=None, email='joe@example.com'), Author(name='Jane')),
     subtitle='The Best Example Feed',
     version='json11',
 )
@@ -23,7 +23,7 @@ entries = [
         updated=datetime.datetime(2020, 1, 4, 0, 0, tzinfo=datetime.UTC),
         title="Title",
         link="https://example.org/second-item",
-        authors=(Author(href="mailto:joe@example.com"),),
+        authors=(Author(email="joe@example.com"),),
         published=datetime.datetime(2020, 1, 2, 21, 0, tzinfo=datetime.UTC),
         summary="A summary",
         content=(

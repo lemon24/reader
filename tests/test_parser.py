@@ -1225,14 +1225,70 @@ def test_feedparser_parse_authors_atom():
     )
 
 
-def test_feedparser_parse_authors_edge_cases():
+def test_feedparser_parse_authors_empty_details():
+    """Test parser handles empty or garbage author data gracefully."""
+
     from reader._parser.feedparser import _parse_authors
     from reader.types import Author
     
-    # Covers Atom author with ONLY href (no name/email)
-    assert _parse_authors({'author_detail': {'href': 'http://example.com'}}, is_rss=False) == \
-        (Author(href='http://example.com'),)
+    # Atom feed where author_detail exists but lacks name/email/href
+    assert _parse_authors({'author_detail': {'unrelated': 'data'}}, is_rss=False) == ()
     
-    # Covers RSS fallback where only href exists
-    assert _parse_authors({'author': 'John', 'author_detail': {'href': 'http://example.com'}}, is_rss=True) == \
-        (Author(name='John', href='http://example.com'),)
+    # RSS feed where author is empty, and fallback author_detail lacks name/email/href
+    assert _parse_authors({'author': '', 'author_detail': {'unrelated': 'data'}}, is_rss=True) == ()
+    
+    # RSS feed where author string has empty parts between commas
+    assert _parse_authors({'author': 'John, , Jane'}, is_rss=True) == (
+        Author(name='John'), 
+        Author(name='Jane')
+    )
+    assert _parse_authors({'author': ' , '}, is_rss=True) == ()
+
+    # RSS fallback block where 'name' is truthy but others are falsy
+    assert _parse_authors({'author': '', 'author_detail': {'name': 'A'}}, is_rss=True) == (Author(name='A'),)
+    
+    # RSS fallback block where 'href' is truthy, but author is exactly '()'
+    assert _parse_authors({'author': '()', 'author_detail': {'href': 'B'}}, is_rss=True) == (Author(href='B'),)
+
+    # RSS comma-split: email inside parens is empty -> `if email:` evaluates False
+    assert _parse_authors({'author': 'John ()'}, is_rss=True) == (Author(name='John'),)
+
+    # RSS comma-split: part is exactly `()` -> `if name or email:` evaluates False
+    assert _parse_authors({'author': 'John, ()'}, is_rss=True) == (Author(name='John'),)
+    
+    # RSS comma-split: name is empty before parens -> `name or None` evaluates to None
+    assert _parse_authors({'author': '(john@example.com)'}, is_rss=True) == (Author(email='john@example.com'),)
+
+
+def test_jsonfeed_empty_author_fallback():
+    """Test JSON Feed 1.0 fallback with an empty author object to satisfy branch coverage."""
+    feed, _ = jsonfeed_parse(
+        'url',
+        """
+        {
+            "version": "https://jsonfeed.org/version/1.0",
+            "title": "My Feed",
+            "author": {"unrelated": "data"}
+        }
+        """
+    )
+    assert feed.authors == ()
+
+
+def test_jsonfeed_author_mailto():
+    """Test JSON Feed author url starting with mailto: is mapped to email."""
+    from reader.types import Author
+    
+    feed, _ = jsonfeed_parse(
+        'url',
+        """
+        {
+            "version": "https://jsonfeed.org/version/1.1",
+            "title": "My Feed",
+            "authors": [
+                {"name": "Alice", "url": "mailto:alice@example.com"}
+            ]
+        }
+        """
+    )
+    assert feed.authors == (Author(name="Alice", email="alice@example.com", href=None),)

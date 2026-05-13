@@ -97,23 +97,27 @@ def _get(
 def _get_authors(d: Any) -> tuple[Author, ...]:
     authors = []
     
-    # Check for authors array first (JSON Feed 1.1)
-    for maybe_author in _get(d, 'authors', list) or ():
+    maybe_authors = _get(d, 'authors', list)
+    single_author = _get(d, 'author', dict)
+
+    # Feed readers should always prefer authors if present
+    if not maybe_authors and single_author:
+        maybe_authors = [single_author]
+
+    for maybe_author in maybe_authors or ():
         if isinstance(maybe_author, dict):
             name = _get(maybe_author, 'name', str)
             url = _get(maybe_author, 'url', str)
-            if name or url:
-                authors.append(Author(name=name, href=url))
+            
+            href = url
+            email = None
+            if url and url.lower().startswith('mailto:'):
+                email = url[7:]  # strip 'mailto:'
+                href = None
                 
-    # Fallback to single author (JSON Feed 1.0)
-    if not authors:
-        single_author = _get(d, 'author', dict)
-        if single_author:
-            name = _get(single_author, 'name', str)
-            url = _get(single_author, 'url', str)
-            if name or url:
-                authors.append(Author(name=name, href=url))
-                
+            if name or href or email:
+                authors.append(Author(name=name, href=href, email=email))
+
     return tuple(authors)
 
 

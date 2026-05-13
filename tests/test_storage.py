@@ -605,10 +605,6 @@ def test_migrate_author_to_json():
     assert _migrate_author_to_json(None) is None
     assert _migrate_author_to_json("") is None
     
-    # Already migrated cases
-    existing_json = '[{"name": "John", "href": null, "email": null}]'
-    assert _migrate_author_to_json(existing_json) == existing_json
-    
     # Legacy string cases
     result = _migrate_author_to_json("John Doe (john@example.com)")
     parsed = json.loads(result)

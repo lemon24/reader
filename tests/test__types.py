@@ -97,12 +97,13 @@ def test_entry_data_from_obj(data_dir, feed_type, data_file):
         assert entry == entry_data_from_obj(entry), i
 
         entry_dict = entry._asdict()
-        if 'content' in entry_dict:
-            entry_dict['content'] = [c._asdict() for c in entry_dict['content']]
-        if 'enclosures' in entry_dict:
-            entry_dict['enclosures'] = [e._asdict() for e in entry_dict['enclosures']]
+        entry_dict['content'] = [c._asdict() for c in entry_dict['content']]
+        entry_dict['enclosures'] = [e._asdict() for e in entry_dict['enclosures']]
+        entry_dict['authors'] = [a._asdict() for a in entry_dict['authors']]
         if entry_dict.get('source'):
-            entry_dict['source'] = entry_dict['source']._asdict()
+            source_dict = entry_dict['source']._asdict()
+            source_dict['authors'] = [a._asdict() for a in source_dict['authors']]
+            entry_dict['source'] = source_dict
 
         assert entry == entry_data_from_obj(entry_dict), i
 
@@ -178,4 +179,6 @@ def test_entry_data_from_obj_errors(exc, entry):
             entry_dict['content'] = [dict(vars(c)) for c in entry_dict['content']]
         if 'enclosures' in entry_dict:
             entry_dict['enclosures'] = [dict(vars(e)) for e in entry_dict['enclosures']]
+        if 'authors' in entry_dict:
+            entry_dict['authors'] = [dict(vars(a)) for a in entry_dict['authors']]
         entry_data_from_obj(entry_dict)
