@@ -162,6 +162,10 @@ def test_entry_data_from_obj(data_dir, feed_type, data_file):
                 enclosures=[SimpleNamespace(href='href', length='1')],
             ),
         ),
+        (
+            TypeError,
+            SimpleNamespace(feed_url='feed', id='id', authors=[SimpleNamespace(name=1)]),
+        ),
     ],
 )
 def test_entry_data_from_obj_errors(exc, entry):

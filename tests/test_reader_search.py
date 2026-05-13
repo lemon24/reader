@@ -21,6 +21,7 @@ from reader._storage import Storage
 from reader._storage._search import Search
 from reader._types import Action
 from reader._types import Change
+from reader.types import Author
 from reader.exceptions import ChangeTrackingNotEnabledError
 from test_reader_counts import entries_per_day
 from utils import rename_argument
@@ -443,7 +444,7 @@ def test_update_triggers_no_change(
     (old_result,) = reader.search_entries('entry OR feed')
 
     feed = parser.feed(
-        1, datetime(2010, 1, 2), title='feed', link='link', author='author'
+        1, datetime(2010, 1, 2), title='feed', link='link', authors=(Author(name='author'),)
     )
     entry = parser.entry(
         1,
@@ -453,7 +454,7 @@ def test_update_triggers_no_change(
         summary='summary',
         content=[Content('content')],
         link='link',
-        author='author',
+        authors=(Author(name='author'),),
         published=datetime(2010, 1, 2),
         enclosures=[Enclosure('enclosure')],
     )

@@ -319,7 +319,43 @@ def update_from_42_to_43(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     db.execute("ALTER TABLE entries ADD COLUMN source TEXT;")
 
 
-VERSION = 43
+def _migrate_author_to_json(raw_author: str | None) -> str | None:
+    if not raw_author: 
+        return None
+    # Leave if its already a JSON list
+    if raw_author.startswith('['): 
+        return raw_author
+    
+    import json
+    authors = []
+    
+    for part in raw_author.split(','):
+        part = part.strip()
+        if not part: continue
+        
+        name, email = part, None
+        if part.endswith(')') and '(' in part:
+            split_idx = part.rfind('(')
+            name = part[:split_idx].strip()
+            email = part[split_idx+1:-1].strip()
+            
+        authors.append({
+            "name": name or None, 
+            "email": email or None, 
+            "href": None
+        })
+        
+    return json.dumps(authors)
+
+
+def update_from_43_to_44(db: sqlite3.Connection, /) -> None:  # pragma: no cover
+    # https://github.com/lemon24/reader/issues/391
+    db.create_function("MIGRATE_AUTHOR", 1, _migrate_author_to_json)
+    db.execute("UPDATE feeds SET author = MIGRATE_AUTHOR(author) WHERE author IS NOT NULL;")
+    db.execute("UPDATE entries SET author = MIGRATE_AUTHOR(author) WHERE author IS NOT NULL;")
+
+
+VERSION = 44
 
 MIGRATIONS = {
     # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
@@ -333,6 +369,7 @@ MIGRATIONS = {
     40: update_from_40_to_41,
     41: update_from_41_to_42,
     42: update_from_42_to_43,
+    43: update_from_43_to_44,
 }
 MISSING_SUFFIX = (
     "; you may have skipped some required migrations, see "

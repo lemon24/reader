@@ -202,7 +202,7 @@
 
 
 {% macro feed_author(feed) %}
-{%- set author = feed.author if feed.author != feed.resolved_title else none -%}
+{%- set author = feed.author_str if feed.author_str != feed.resolved_title else none -%}
 {%- if author %}
 <li class="list-inline-item">
   by {{ author }}
@@ -235,7 +235,7 @@
 
 
 {% macro entry_author(entry) %}
-{%- set author = entry.author or entry.feed.author -%}
+{%- set author = entry.author_str or entry.feed.author_str -%}
 {%- set author = author if author != entry.feed_resolved_title else none -%}
 {%- if author %}
 <li class="list-inline-item">

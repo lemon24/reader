@@ -3,6 +3,7 @@ import datetime
 from reader import Content
 from reader import Enclosure
 from reader._types import EntryData
+from reader.types import Author
 from reader._types import FeedData
 
 feed = FeedData(url=f'{url_base}empty.atom', version='atom10')

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+import warnings
 from collections import defaultdict
 from collections.abc import Callable
 from collections.abc import Iterable
@@ -55,6 +56,9 @@ from .types import MissingType
 from .types import ResourceId
 from .types import TagFilterInput
 from .types import TristateFilterInput
+from .types import Author
+from .types import _AuthorMixin
+
 
 log = logging.getLogger("reader")
 
@@ -69,7 +73,7 @@ _T = TypeVar('_T')
 
 
 @dataclass(frozen=True)
-class FeedData(_namedtuple_compat):
+class FeedData(_namedtuple_compat, _AuthorMixin):
     """Feed data that comes from the feed.
 
     Attributes are a subset of those of :class:`~reader.Feed`.
@@ -82,7 +86,10 @@ class FeedData(_namedtuple_compat):
     updated: datetime | None = None
     title: str | None = None
     link: str | None = None
-    author: str | None = None
+    #: The authors of the feed.
+    #:
+    #: .. versionadded:: 3.24
+    authors: Sequence[Author] = ()
     subtitle: str | None = None
     version: str | None = None
 
@@ -110,7 +117,7 @@ class FeedData(_namedtuple_compat):
 
 
 @dataclass(frozen=True)
-class EntryData(_namedtuple_compat):
+class EntryData(_namedtuple_compat, _AuthorMixin):
     """Entry data that comes from the feed.
 
     Attributes are a subset of those of :class:`~reader.Entry`.
@@ -135,7 +142,10 @@ class EntryData(_namedtuple_compat):
     updated: datetime | None = None
     title: str | None = None
     link: str | None = None
-    author: str | None = None
+    #: The authors of the feed.
+    #:
+    #: .. versionadded:: 3.24
+    authors: Sequence[Author] = ()
     published: datetime | None = None
     summary: str | None = None
     content: Sequence[Content] = ()
@@ -184,7 +194,7 @@ def entry_data_from_obj(obj: object) -> EntryData:
         updated=_getattr_optional_datetime(obj, 'updated'),
         title=_getattr_optional(obj, 'title', str),
         link=_getattr_optional(obj, 'link', str),
-        author=_getattr_optional(obj, 'author', str),
+        authors=tuple(author_from_obj(o) for o in getattr(obj, 'authors', ())),
         published=_getattr_optional_datetime(obj, 'published'),
         summary=_getattr_optional(obj, 'summary', str),
         content=tuple(content_from_obj(o) for o in getattr(obj, 'content', ())),
@@ -235,8 +245,18 @@ def source_from_obj(obj: object) -> EntrySource:
         updated=_getattr_optional_datetime(obj, 'updated'),
         title=_getattr_optional(obj, 'title', str),
         link=_getattr_optional(obj, 'link', str),
-        author=_getattr_optional(obj, 'author', str),
+        authors=tuple(author_from_obj(o) for o in getattr(obj, 'authors', ())),
         subtitle=_getattr_optional(obj, 'subtitle', str),
+    )
+
+
+def author_from_obj(obj: object) -> Author:
+    if isinstance(obj, Mapping):
+        obj = SimpleNamespace(**obj)
+    return Author(
+        name=_getattr_optional(obj, 'name', str),
+        href=_getattr_optional(obj, 'href', str),
+        email=_getattr_optional(obj, 'email', str),
     )
 
 

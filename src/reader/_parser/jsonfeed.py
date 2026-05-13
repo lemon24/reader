@@ -17,6 +17,7 @@ from .._types import FeedData
 from ..exceptions import ParseError
 from ..types import Content
 from ..types import Enclosure
+from ..types import Author
 
 if TYPE_CHECKING:  # pragma: no cover
     from . import FeedAndEntries
@@ -61,7 +62,7 @@ def _process_feed(url: str, d: Any) -> FeedAndEntries:
         updated=None,
         title=_get(d, 'title', str),
         link=_get(d, 'home_page_url', str),
-        author=_get_author(d),
+        authors=_get_authors(d),
         subtitle=_get(d, 'description', str),
         version=version_code,
     )
@@ -93,33 +94,27 @@ def _get(
     return cast(Union[_T, _U, _V], value)
 
 
-def _get_author(d: Any) -> str | None:
-    # from the spec:
-    #
-    # > JSON Feed version 1 specified a singular author field
-    # > instead of the authors array used in version 1.1.
-    # > New feeds should use authors, even if only 1 author is needed.
-    # > Existing feeds can include both author and authors
-    # > for compatibility with existing feed readers.
-    # > Feed readers should always prefer authors if present.
-
-    author: dict[Any, Any] | None
+def _get_authors(d: Any) -> tuple[Author, ...]:
+    authors = []
+    
+    # Check for authors array first (JSON Feed 1.1)
     for maybe_author in _get(d, 'authors', list) or ():
         if isinstance(maybe_author, dict):
-            author = maybe_author
-            break
-    else:
-        author = _get(d, 'author', dict)
-
-    if not author:
-        return None
-
-    # we only have one for now, it'll be the first one
-    return (
-        _get(author, 'name', str)
-        # fall back to the URL, at least until we have Feed.authors
-        or _get(author, 'url', str)
-    )
+            name = _get(maybe_author, 'name', str)
+            url = _get(maybe_author, 'url', str)
+            if name or url:
+                authors.append(Author(name=name, href=url))
+                
+    # Fallback to single author (JSON Feed 1.0)
+    if not authors:
+        single_author = _get(d, 'author', dict)
+        if single_author:
+            name = _get(single_author, 'name', str)
+            url = _get(single_author, 'url', str)
+            if name or url:
+                authors.append(Author(name=name, href=url))
+                
+    return tuple(authors)
 
 
 def _process_entry(feed_url: str, d: Any, feed_lang: str | None) -> EntryData:
@@ -174,7 +169,7 @@ def _process_entry(feed_url: str, d: Any, feed_lang: str | None) -> EntryData:
         updated=updated,
         title=_get(d, 'title', str),
         link=_get(d, 'url', str),
-        author=_get_author(d),
+        authors=_get_authors(d),
         published=published,
         summary=_get(d, 'summary', str),
         content=tuple(content),

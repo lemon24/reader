@@ -4,6 +4,7 @@ import dataclasses
 import enum
 import re
 import traceback
+import warnings
 from collections.abc import Callable
 from collections.abc import Iterable
 from collections.abc import Mapping
@@ -56,7 +57,46 @@ class _namedtuple_compat:
 
 
 @dataclass(frozen=True)
-class Feed(_namedtuple_compat):
+class Author(_namedtuple_compat):
+    """Data type representing an author.
+    
+    .. versionadded:: 3.24
+
+    """
+
+    #: The name of the author.
+    name: str | None = None
+
+    #: The URL of the author.
+    href: str | None = None
+
+    #: The email of the author.
+    email: str | None = None
+
+
+class _AuthorMixin:
+    """Internal mixin to provide author string properties."""
+    authors: Sequence[Author]
+
+    @property
+    def author_str(self) -> str | None:
+        """The author of the feed/entry as a comma-separated list of names."""
+        names = [a.name for a in self.authors if a.name]
+        return ", ".join(names) if names else None
+
+    @property
+    def author(self) -> str | None:
+        """Deprecated alias for .author_str."""
+        warnings.warn(
+            f"{self.__class__.__name__}.author is deprecated; use .authors instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.author_str
+
+
+@dataclass(frozen=True)
+class Feed(_namedtuple_compat, _AuthorMixin):
     """Data type representing a feed.
 
     All :class:`~datetime.datetime` attributes are timezone-aware,
@@ -82,8 +122,10 @@ class Feed(_namedtuple_compat):
     #: The URL of a page associated with the feed.
     link: str | None = None
 
-    #: The author of the feed.
-    author: str | None = None
+    #: The authors of the feed.
+    #:
+    #: .. versionadded:: 3.24
+    authors: Sequence[Author] = ()
 
     #: A description or subtitle for the feed.
     #:
@@ -170,6 +212,8 @@ class Feed(_namedtuple_compat):
 
         """
         return self.user_title or self.title
+    
+    
 
 
 @dataclass(frozen=True)
@@ -205,7 +249,7 @@ EntryAddedBy = Literal['feed', 'user']
 
 
 @dataclass(frozen=True)
-class Entry(_namedtuple_compat):
+class Entry(_namedtuple_compat, _AuthorMixin):
     """Data type representing an entry.
 
     All :class:`~datetime.datetime` attributes are timezone-aware,
@@ -248,8 +292,10 @@ class Entry(_namedtuple_compat):
     #: The URL of a page associated with the entry.
     link: str | None = None
 
-    #: The author of the feed.
-    author: str | None = None
+    #: The authors of the feed.
+    #:
+    #: .. versionadded:: 3.24
+    authors: Sequence[Author] = ()
 
     #: The date the entry was published, according to the feed.
     published: datetime | None = None
@@ -473,7 +519,7 @@ class Enclosure(_namedtuple_compat):
 
 
 @dataclass(frozen=True)
-class EntrySource(_namedtuple_compat):
+class EntrySource(_namedtuple_compat, _AuthorMixin):
     """Metadata of a source feed (used with :attr:`Entry.source`).
 
     .. versionadded:: 3.16
@@ -498,8 +544,10 @@ class EntrySource(_namedtuple_compat):
     #: The URL of a page associated with the feed.
     link: str | None = None
 
-    #: The author of the feed.
-    author: str | None = None
+    #: The authors of the feed.
+    #:
+    #: .. versionadded:: 3.24
+    authors: Sequence[Author] = ()
 
     #: A description or subtitle for the feed.
     subtitle: str | None = None

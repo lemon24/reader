@@ -14,9 +14,14 @@ Unreleased
 * Add ``--json`` option to the ``list`` CLI commands.
   Thanks to `Puneet Dixit`_ for the PR.
   (:issue:`394`)
-
+* Add :attr:`~Entry.authors` (and corresponding attributes on feeds and sources) 
+  to expose multiple authors and rich author data (name, email, URL). 
+  The old ``author`` string attribute is deprecated.
+  Thanks to `Anshul Mittal`_ for the PR.
+  (:issue:`391`)
 
 .. _Puneet Dixit: https://github.com/puneetdixit200
+.. _Anshul Mittal: https://github.com/anderson688
 
 
 Version 3.23

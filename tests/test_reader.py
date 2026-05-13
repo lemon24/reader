@@ -36,6 +36,7 @@ from reader._storage import Storage
 from reader._types import FeedFilter
 from reader._types import FeedToUpdate
 from reader._types import FeedUpdateIntent
+from reader.types import Author
 from reader.core import DEFAULT_RESERVED_NAME_SCHEME
 from reader_methods import enable_and_update_search
 from reader_methods import get_entries
@@ -394,12 +395,12 @@ def test_set_feed_user_title(reader, parser, feed_arg):
 
 
 def test_data_roundtrip(reader, parser):
-    feed = parser.feed(1, datetime(2010, 1, 1), author='feed author')
+    feed = parser.feed(1, datetime(2010, 1, 1), authors=(Author(name='feed author'),))
     entry = parser.entry(
         1,
         1,
         datetime(2010, 1, 1),
-        author='entry author',
+        authors=(Author(name='entry author'),),
         summary='summary',
         content=(Content('value3', 'type', 'en'), Content('value2')),
         enclosures=(Enclosure('http://e1', 'type', 1000), Enclosure('http://e2')),
@@ -442,7 +443,7 @@ def test_data_hashes_remain_stable(parser):
         datetime(2010, 1, 1),
         title='Feed #1',
         link='http://www.example.com/1',
-        author='feed author',
+        authors=(Author(name='feed author'),),
     )
     entry = parser.entry(
         1,
@@ -450,25 +451,25 @@ def test_data_hashes_remain_stable(parser):
         datetime(2010, 1, 1),
         title='Entry #1',
         link='http://www.example.com/entries/1',
-        author='entry author',
+        authors=(Author(name='entry author'),),
         summary='summary',
         content=(Content('value3', 'type', 'en'), Content('value2')),
         enclosures=(Enclosure('http://e1', 'type', 1000), Enclosure('http://e2')),
     )
 
-    assert feed.hash == b'\x00\xda\xf5\xa1Je\x13],\xf0\xdb\xaa\x88d\x99\xc6'
-    assert entry.hash == b'\x00f\xa9\xdb\t5\xdf\xedcK\xd9bm\x80,l'
+    assert feed.hash == b'\x00\x9dS?\xf6\x9c\x9f=\x96\xb6JD\x0f\xef\x10\x82'
+    assert entry.hash == b'\x00+mI;N\xa3\x86\xff\x07\xdf\xd1\xe3\xfb\xbf\x12'
 
     assert feed._replace(url='x', updated='x').hash == feed.hash
     assert (
         feed._replace(title='x').hash
-        == b'\x00\xce\x81\xc7\x8d(\xab\xd8)\x06\x90?\xf9\x847\xc4'
+        == b'\x00bd\xb1*\x80\xf1u_\x17\xb4\n\xfe\xb2\x1e0'
     )
 
     assert entry._replace(feed_url='x', id='x', updated='x').hash == entry.hash
     assert (
         entry._replace(title='x').hash
-        == b'\x00\x95\xc4\xe9\xd3\x95\xf6\xff\xf0*\xbd\x00L\x08\x1a\xa2'
+        == b'\x00\xd3V\x19.;U6\xc9q\xc8\x88\xc2%\xff\xac'
     )
 
 
@@ -732,7 +733,7 @@ def test_change_feed_url_entries(reader):
 @pytest.mark.parametrize('new_feed_url', ['3', '2'])
 def test_change_feed_url_second_update(reader, new_feed_url):
     reader._parser.feed(
-        1, datetime(2010, 1, 1), title='old title', author='old author', link='old link'
+        1, datetime(2010, 1, 1), title='old title', authors=(Author(name='old author'),), link='old link'
     )
     reader.update_feeds()
     reader.update_search()
@@ -755,7 +756,7 @@ def test_change_feed_url_second_update(reader, new_feed_url):
         eval(new_feed_url),
         datetime(2010, 1, 2),
         title='new title',
-        author='new author',
+        authors=(Author(name='new author'),),
         link='new link',
     )
     reader._parser.entry(eval(new_feed_url), 1, datetime(2010, 1, 1))
@@ -771,7 +772,7 @@ def test_change_feed_url_second_update(reader, new_feed_url):
         last_retrieved=datetime(2010, 1, 3),
         update_after=datetime(2010, 1, 3, 1),
         title='new title',
-        author='new author',
+        authors=(Author(name='new author'),),
         link='new link',
     )
 

@@ -30,6 +30,7 @@ from ..types import Entry
 from ..types import EntryCounts
 from ..types import EntrySort
 from ..types import EntrySource
+from ..types import Author
 from ._base import wrap_exceptions
 from ._feeds import feed_factory
 from ._sql_utils import Query
@@ -485,11 +486,19 @@ def entry_factory(row: tuple[Any, ...]) -> Entry:
         sequence,
     ) = row[14:33]
 
+    # Parse main entry authors
+    authors = tuple(Author(**d) for d in json.loads(author)) if author else ()
+
     source_obj = None
     if source:
         source_dict = json.loads(source)
         if source_dict['updated']:
             source_dict['updated'] = convert_timestamp(source_dict['updated'])
+        
+        # Parse source feed authors
+        source_author_json = source_dict.pop('author', None)
+        source_dict['authors'] = tuple(Author(**d) for d in json.loads(source_author_json)) if source_author_json else ()
+
         source_obj = EntrySource(**source_dict)
 
     return Entry(
@@ -497,7 +506,7 @@ def entry_factory(row: tuple[Any, ...]) -> Entry:
         convert_timestamp(updated) if updated else None,
         title,
         link,
-        author,
+        authors,
         convert_timestamp(published) if published else None,
         summary,
         tuple(Content(**d) for d in json.loads(content)) if content else (),
@@ -679,6 +688,10 @@ def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> EntryDict:
             if entry.enclosures
             else None
         ),
+        # Serialize the entry authors
+        authors=(
+            json.dumps([a._asdict() for a in entry.authors]) if entry.authors else None
+        ),
         updated=adapt_datetime(entry.updated) if entry.updated else None,
         published=adapt_datetime(entry.published) if entry.published else None,
         last_updated=adapt_datetime(intent.last_updated),
@@ -700,7 +713,15 @@ def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> EntryDict:
         source_dict = entry.source._asdict()
         if entry.source.updated:
             source_dict['updated'] = adapt_datetime(entry.source.updated)
+        
+        # Serialize the source authors and rename key to 'author'
+        source_authors = source_dict.pop('authors', ())
+        source_dict['author'] = json.dumps([a._asdict() for a in source_authors]) if source_authors else None
+
         context['source'] = json.dumps(source_dict)
+    
+    # Rename the context key from 'authors' to 'author' to match SQLite column
+    context['author'] = context.pop('authors', None)
 
     context['feed'] = context.pop('feed_url')
 

@@ -67,6 +67,7 @@ from .types import (
     FeedToImport as FeedToImport,
     FeedImportResult as FeedImportResult,
     FeedExport as FeedExport,
+    Author as Author,
 )
 
 from .exceptions import (

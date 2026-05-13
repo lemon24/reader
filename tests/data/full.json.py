@@ -3,6 +3,7 @@ import datetime
 from reader import Content
 from reader import Enclosure
 from reader._types import EntryData
+from reader.types import Author
 from reader._types import FeedData
 
 feed = FeedData(
@@ -10,7 +11,7 @@ feed = FeedData(
     updated=None,
     title='My Example Feed',
     link='https://example.org/',
-    author='Joe',
+    authors=(Author(name='Joe', href='mailto:joe@example.com'), Author(name='Jane')),
     subtitle='The Best Example Feed',
     version='json11',
 )
@@ -22,7 +23,7 @@ entries = [
         updated=datetime.datetime(2020, 1, 4, 0, 0, tzinfo=datetime.UTC),
         title="Title",
         link="https://example.org/second-item",
-        author="mailto:joe@example.com",
+        authors=(Author(href="mailto:joe@example.com"),),
         published=datetime.datetime(2020, 1, 2, 21, 0, tzinfo=datetime.UTC),
         summary="A summary",
         content=(
@@ -54,7 +55,7 @@ entries = [
         updated=None,
         title=None,
         link='https://example.org/initial-post',
-        author='Jane',
+        authors=(Author(name='Jane'),),
         published=datetime.datetime(2020, 1, 2, 12, 0, tzinfo=datetime.UTC),
         summary=None,
         content=(

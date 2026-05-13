@@ -3,6 +3,7 @@ import datetime
 from reader import Content
 from reader import Enclosure
 from reader._types import EntryData
+from reader.types import Author
 from reader._types import FeedData
 
 feed = FeedData(
@@ -41,7 +42,7 @@ entries = [
         feed_url=feed.url,
         id='author name fallback',
         updated=None,
-        author='mailto:joe@example.com',
+        authors=(Author(href='mailto:joe@example.com'),),
     ),
     EntryData(
         feed_url=feed.url,
@@ -57,6 +58,6 @@ entries = [
         feed_url=feed.url,
         id='second author is good',
         updated=None,
-        author='Jane',
+        authors=(Author(name='Jane'),),
     ),
 ]
