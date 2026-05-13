@@ -316,6 +316,11 @@ def entry():
     return render_template('entry.html', entry=entry)
 
 
+@blueprint.route('/help')
+def help():
+    return render_template('help.html')
+
+
 def stream_template(template_name_or_list, **kwargs):
     # Ensure flashed messages get removed from the session,
     # otherwise they keep adding up and never disappear.

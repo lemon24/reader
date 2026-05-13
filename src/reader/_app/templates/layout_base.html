@@ -62,12 +62,22 @@
       <ul class="navbar-nav mb-0">
         {% block right_hidden_navbar %}
 
+        <li class="nav-item">
+          <a
+            href="{{ url_for('.help', _anchor=help_topic | default(none)) }}"
+            class="btn btn-link nav-link d-flex align-items-center"
+          >
+            <i class="bi bi-question-lg"></i>
+            <span class="d-md-none ms-2" id="theme-text">help</span>
+          </a>
+        </li>
+
         <li class="nav-item dropdown">
           <button
             class="btn btn-link nav-link dropdown-toggle d-flex align-items-center"
             type="button" id="theme"
             data-bs-toggle="dropdown" data-bs-display="static"
-            aria-expanded="false"  aria-label="toggle theme (auto)">
+            aria-expanded="false" aria-label="toggle theme (auto)">
             <i class="bi bi-circle-half theme-icon-active"></i>
             <span class="d-md-none ms-2" id="theme-text">toggle theme</span>
           </button>

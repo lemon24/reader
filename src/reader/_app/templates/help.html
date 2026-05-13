@@ -1,0 +1,131 @@
+{% extends "layout.html" %}
+
+{% import "macros.html" as macros %}
+
+
+{% block page_title %}
+  Help - {{ super() }}
+{% endblock %}
+
+
+{% block body %}
+
+<h1>Help</h1>
+
+
+<p>
+  Welcome to <strong>reader</strong>, a feed reader web app!
+
+<p>
+  <strong>reader</strong> allows you to
+  subscribe to web feeds,
+  read articles,
+  and keep track of the ones you've read or liked.
+
+
+<h2 id="feeds">Feeds</h2>
+
+<p>
+  A <a href="https://en.wikipedia.org/wiki/Web_feed">web feed</a>
+  is an internet document used to get updates
+  from websites such as blogs, web comics, or podcasts.
+
+<p>
+  When you subscribe to a feed,
+  <em>reader</em> checks it regularly to get the latest articles.
+  <!--   FIXME disabled here -->
+
+
+<h3 id="add-feed">Adding feeds</h3>
+
+<p>
+  To add a feed, paste its link in the
+  <a href="{{ url_for('.add_feed') }}">Add feed</a> page.
+
+<p>
+  You can usually find if a website has a feed
+  by looking in its header or footer for this icon
+  <i class="bi bi-rss" aria-label="RSS logo"></i>,
+  or for links called <em>feed</em>, <em>RSS</em>, or <em>Atom</em>.
+
+
+<h3 id="import-export">Importing / exporting feeds</h3>
+
+<p>
+  You can <a href="{{ url_for('.import_feeds') }}">import feeds</a>
+  from a subscription list exported by another feed reader.
+
+<p>
+  To export your own feeds as a subscription list, click the
+  <i class="bi bi-filetype-xml" aria-label="export as OPML"></i> icon
+  on the <a href="{{ url_for('.feeds') }}">Feeds</a> page.
+
+
+<h2 id="entries">Entries</h2>
+
+<p>
+  An entry is an item from a feed –
+  an article, a podcast episode, etc.
+
+<p>
+  To read an entry, click its title on the
+  <a href="{{ url_for('.import_feeds') }}">Entries</a> page.
+
+  Some feeds only include summaries, not the full content; click the
+  <i class="bi bi-box-arrow-up-right" aria-label="extenal link"></i> icon
+  to go to the original article.
+
+
+<h3 id="entry-flags">Entry flags</h3>
+
+<p>
+  Each entry has a <em>read</em> and an <em>important</em> flag.
+  Among others, they are used to filter entries
+  on the <a href="{{ url_for('.entries') }}">Entries</a> page.
+
+<p>
+  You can set the flags by using the toggles below the entry title.
+
+<dl>
+
+  <dt>
+    <i class="bi bi-check-lg me-1"></i> mark as read / mark as unread
+  <dd>
+    Mark the entry as read.
+    Hides the entry from the default entries view.
+
+  <dt>
+    <i class="bi bi-star me-1"></i> mark as important / clear important
+  <dd>
+    Mark the entry as important.
+    Important entries are never deleted.
+    <small>
+    (Currently, entries are never deleted,
+    but an upcoming feature will clean up old entries.)
+    </small>
+
+  <dt>
+    <i class="bi bi-x-lg me-1"></i> don't care / clear don't care
+  <dd>
+    Mark the entry as explicitly <em>not</em> important.
+    Hides the entry from the default entries view without marking it as read.
+    <small>
+    (An upcoming feature will allow identifying "noisy" feeds based on this.)
+    </small>
+
+</dl>
+
+
+<h3 id="enclosures">Enclosures</h3>
+
+<p>
+  Some entries have external resources you can download,
+  for example an audio file of a podcast episode.
+
+<p>
+  Click the
+  <i class="bi bi-file-earmark-music" aria-label="download ..."></i> icon
+  to download the first enclosure of an entry, if any.
+
+
+{% endblock %}
