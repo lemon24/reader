@@ -64,7 +64,7 @@
 
         <li class="nav-item">
           <a
-            href="{{ url_for('.help', _anchor=help_topic | default(none)) }}"
+            href="{{ url_for('reader.help', _anchor=help_topic | default(none)) }}"
             class="btn btn-link nav-link d-flex align-items-center"
           >
             <i class="bi bi-question-lg"></i>
