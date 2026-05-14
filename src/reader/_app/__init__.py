@@ -394,6 +394,11 @@ def _find_static(folder, filename):
     return matches[0]
 
 
+@blueprint.app_template_global()
+def is_new_user():
+    return not list(get_reader().get_feeds(limit=1))
+
+
 def create_app(reader_config):
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'secret'

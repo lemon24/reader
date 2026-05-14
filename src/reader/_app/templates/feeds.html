@@ -77,7 +77,10 @@
 </div>
 
 {% else %}
-  <p>no entries found</p>
+  <p>No feeds found.</p>
+  {%- if is_new_user() %}
+    {{ macros.new_user_help_alert() }}
+  {%- endif %}
 {% endfor %}
 
 

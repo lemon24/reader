@@ -345,3 +345,13 @@
   </button>
 </div>
 {%- endmacro -%}
+
+
+{%- macro new_user_help_alert() %}
+<p class="alert alert-secondary" role="alert">
+  New to <strong>reader</strong>?
+  <a href="{{ url_for('.add_feed') }}">Add a feed</a>,
+  <a href="{{ url_for('.import_feeds') }}">import feeds</a> from another feed reader,
+  or learn more about <a href="{{ url_for('.help') }}">how to use <strong>reader</strong></a>.
+</p>
+{%- endmacro -%}
