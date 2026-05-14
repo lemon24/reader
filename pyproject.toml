@@ -191,6 +191,10 @@ module = [
 ]
 ignore_errors = true
 
+[tool.black]
+skip-string-normalization = true
+extend-exclude = "src/reader/_vendor/.*"
+
 [tool.isort]
 profile = "black"
 py_version = 311
