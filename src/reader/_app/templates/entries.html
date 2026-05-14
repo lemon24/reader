@@ -143,6 +143,17 @@
           <i class="bi bi-{{ macros.bs_file_icon(enclosure.type) }}"></i>
         </a>
       {%- endfor %}
+      {%- if loop.first %}
+        <a
+          href="{{ url_for('.help', _anchor='entry-flags') }}"
+          target="_blank"
+          title="help: entry flags"
+          class="btn text-secondary"
+          role="button"
+        >
+          <i class="bi bi-question-lg"></i>
+        </a>
+      {%- endif %}
     </div>
 
     {% endblock %}
