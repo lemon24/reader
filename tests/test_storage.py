@@ -1,3 +1,4 @@
+import json
 import os
 import sqlite3
 import sys
@@ -6,7 +7,6 @@ from unittest.mock import ANY
 from unittest.mock import MagicMock
 
 import pytest
-import json
 
 import reader._storage._sqlite_utils
 from reader import EntryNotFoundError
@@ -14,10 +14,10 @@ from reader import FeedNotFoundError
 from reader import InvalidSearchQueryError
 from reader import StorageError
 from reader._storage import Storage
+from reader._storage._schema import _migrate_author_to_json
 from reader._storage._sqlite_utils import DBError
 from reader._storage._sqlite_utils import HeavyMigration
 from reader._storage._sqlite_utils import require_version
-from reader._storage._schema import _migrate_author_to_json
 from reader._types import EntryData
 from reader._types import EntryFilter
 from reader._types import EntryForUpdate
@@ -600,11 +600,11 @@ def test_application_id(storage):
 
 def test_migrate_author_to_json():
     """Ensure the SQLite migration correctly converts legacy strings to JSON."""
-    
+
     # Null or empty cases
     assert _migrate_author_to_json(None) is None
     assert _migrate_author_to_json("") is None
-    
+
     # Legacy string cases
     result = _migrate_author_to_json("John Doe (john@example.com)")
     parsed = json.loads(result)
@@ -616,7 +616,9 @@ def test_migrate_author_to_json():
 
 def test_migrate_author_to_json_edge_cases():
     from reader._storage._schema import _migrate_author_to_json
-    
+
     # Covers extra commas (empty parts) and strings with only an email
-    assert _migrate_author_to_json("John,, (email@example.com)") == \
-        '[{"name": "John", "email": null, "href": null}, {"name": null, "email": "email@example.com", "href": null}]'
+    assert (
+        _migrate_author_to_json("John,, (email@example.com)")
+        == '[{"name": "John", "email": null, "href": null}, {"name": null, "email": "email@example.com", "href": null}]'
+    )

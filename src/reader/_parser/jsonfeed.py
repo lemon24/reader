@@ -15,9 +15,9 @@ import iso8601
 from .._types import EntryData
 from .._types import FeedData
 from ..exceptions import ParseError
+from ..types import Author
 from ..types import Content
 from ..types import Enclosure
-from ..types import Author
 
 if TYPE_CHECKING:  # pragma: no cover
     from . import FeedAndEntries
@@ -96,7 +96,7 @@ def _get(
 
 def _get_authors(d: Any) -> tuple[Author, ...]:
     authors = []
-    
+
     maybe_authors = _get(d, 'authors', list)
     single_author = _get(d, 'author', dict)
 
@@ -108,13 +108,13 @@ def _get_authors(d: Any) -> tuple[Author, ...]:
         if isinstance(maybe_author, dict):
             name = _get(maybe_author, 'name', str)
             url = _get(maybe_author, 'url', str)
-            
+
             href = url
             email = None
             if url and url.lower().startswith('mailto:'):
                 email = url[7:]  # strip 'mailto:'
                 href = None
-                
+
             if name or href or email:
                 authors.append(Author(name=name, href=href, email=email))
 

@@ -3,15 +3,18 @@ import datetime
 from reader import Content
 from reader import Enclosure
 from reader._types import EntryData
-from reader.types import Author
 from reader._types import FeedData
+from reader.types import Author
 
 feed = FeedData(
     url=f'{url_base}full.json',
     updated=None,
     title='My Example Feed',
     link='https://example.org/',
-    authors=(Author(name='Joe', href=None, email='joe@example.com'), Author(name='Jane')),
+    authors=(
+        Author(name='Joe', href=None, email='joe@example.com'),
+        Author(name='Jane'),
+    ),
     subtitle='The Best Example Feed',
     version='json11',
 )

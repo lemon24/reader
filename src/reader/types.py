@@ -59,7 +59,7 @@ class _namedtuple_compat:
 @dataclass(frozen=True)
 class Author(_namedtuple_compat):
     """Data type representing an author.
-    
+
     .. versionadded:: 3.24
 
     """
@@ -76,6 +76,7 @@ class Author(_namedtuple_compat):
 
 class _AuthorMixin:
     """Internal mixin to provide author string properties."""
+
     authors: Sequence[Author]
 
     @property
@@ -212,8 +213,6 @@ class Feed(_namedtuple_compat, _AuthorMixin):
 
         """
         return self.user_title or self.title
-    
-    
 
 
 @dataclass(frozen=True)

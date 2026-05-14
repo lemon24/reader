@@ -33,6 +33,7 @@ from .types import _entry_argument
 from .types import _feed_argument
 from .types import _namedtuple_compat
 from .types import AnyResourceId
+from .types import Author
 from .types import Content
 from .types import Enclosure
 from .types import Entry
@@ -55,8 +56,6 @@ from .types import MissingType
 from .types import ResourceId
 from .types import TagFilterInput
 from .types import TristateFilterInput
-from .types import Author
-
 
 log = logging.getLogger("reader")
 

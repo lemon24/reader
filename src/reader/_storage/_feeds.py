@@ -15,11 +15,11 @@ from .._types import FeedFilter
 from .._types import FeedForUpdate
 from .._types import FeedToUpdate
 from .._types import FeedUpdateIntent
-from ..types import Author
 from .._utils import exactly_one
 from .._utils import zero_or_one
 from ..exceptions import FeedExistsError
 from ..exceptions import FeedNotFoundError
+from ..types import Author
 from ..types import ExceptionInfo
 from ..types import Feed
 from ..types import FeedCounts
@@ -378,7 +378,9 @@ def feed_update_intent_to_dict(intent: FeedUpdateIntent) -> FeedDict:
 
         # Serialize `authors` and map it back to the `author` column
         authors = context.pop('authors', ())
-        context['author'] = json.dumps([a._asdict() for a in authors]) if authors else None
+        context['author'] = (
+            json.dumps([a._asdict() for a in authors]) if authors else None
+        )
 
     if isinstance(value, ExceptionInfo):
         context['last_exception'] = json.dumps(value._asdict())

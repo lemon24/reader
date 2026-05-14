@@ -165,7 +165,9 @@ def test_entry_data_from_obj(data_dir, feed_type, data_file):
         ),
         (
             TypeError,
-            SimpleNamespace(feed_url='feed', id='id', authors=[SimpleNamespace(name=1)]),
+            SimpleNamespace(
+                feed_url='feed', id='id', authors=[SimpleNamespace(name=1)]
+            ),
         ),
     ],
 )

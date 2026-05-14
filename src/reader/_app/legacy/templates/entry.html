@@ -18,8 +18,8 @@
 <ul class="controls">
 
 <li>
-    {% if entry.authors %} 
-        by 
+    {% if entry.authors %}
+        by
         {% for author in entry.authors -%}
             {% if author.href %}<a href="{{ author.href }}" title="{{ author.email or '' }}">{% endif %}
             {{- author.name or author.email or 'unknown' -}}

@@ -36,8 +36,8 @@ from reader._storage import Storage
 from reader._types import FeedFilter
 from reader._types import FeedToUpdate
 from reader._types import FeedUpdateIntent
-from reader.types import Author
 from reader.core import DEFAULT_RESERVED_NAME_SCHEME
+from reader.types import Author
 from reader_methods import enable_and_update_search
 from reader_methods import get_entries
 from reader_methods import get_entries_random
@@ -462,14 +462,12 @@ def test_data_hashes_remain_stable(parser):
 
     assert feed._replace(url='x', updated='x').hash == feed.hash
     assert (
-        feed._replace(title='x').hash
-        == b'\x00bd\xb1*\x80\xf1u_\x17\xb4\n\xfe\xb2\x1e0'
+        feed._replace(title='x').hash == b'\x00bd\xb1*\x80\xf1u_\x17\xb4\n\xfe\xb2\x1e0'
     )
 
     assert entry._replace(feed_url='x', id='x', updated='x').hash == entry.hash
     assert (
-        entry._replace(title='x').hash
-        == b'\x00\xd3V\x19.;U6\xc9q\xc8\x88\xc2%\xff\xac'
+        entry._replace(title='x').hash == b'\x00\xd3V\x19.;U6\xc9q\xc8\x88\xc2%\xff\xac'
     )
 
 
@@ -733,7 +731,11 @@ def test_change_feed_url_entries(reader):
 @pytest.mark.parametrize('new_feed_url', ['3', '2'])
 def test_change_feed_url_second_update(reader, new_feed_url):
     reader._parser.feed(
-        1, datetime(2010, 1, 1), title='old title', authors=(Author(name='old author'),), link='old link'
+        1,
+        datetime(2010, 1, 1),
+        title='old title',
+        authors=(Author(name='old author'),),
+        link='old link',
     )
     reader.update_feeds()
     reader.update_search()

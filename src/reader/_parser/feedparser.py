@@ -14,10 +14,10 @@ from typing import TYPE_CHECKING
 from .._types import EntryData
 from .._types import FeedData
 from ..exceptions import ParseError
+from ..types import Author
 from ..types import Content
 from ..types import Enclosure
 from ..types import EntrySource
-from ..types import Author
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
 
@@ -204,64 +204,57 @@ def _parse_rss_authors(raw_author: str) -> list[dict[str, str | None]]:
     authors = []
     for part in raw_author.split(','):
         part = part.strip()
-        if not part: continue
-        
+        if not part:
+            continue
+
         name, email = part, None
         if part.endswith(')') and '(' in part:
             split_idx = part.rfind('(')
             name = part[:split_idx].strip()
-            email = part[split_idx+1:-1].strip()
-                
+            email = part[split_idx + 1 : -1].strip()
+
         if name or email:
             authors.append({'name': name or None, 'email': email or None})
-            
+
     return authors
 
 
 def _parse_authors(thing: Any, is_rss: bool) -> tuple[Author, ...]:
     author_detail = thing.get('author_detail') or {}
-    
+
     # 1. Atom
     if not is_rss and author_detail:
         name = author_detail.get('name')
         email = author_detail.get('email')
         href = author_detail.get('href')
         if name or email or href:
-            return (Author(
-                name=name or None, 
-                email=email or None, 
-                href=href or None
-            ),)
+            return (Author(name=name or None, email=email or None, href=href or None),)
         return ()
-        
+
     # 2. RSS
     raw_author = thing.get('author', '')
-    
+
     # Fallback to author_detail if string is entirely empty or "()"
     if not raw_author or raw_author == '()':
         name = author_detail.get('name')
         email = author_detail.get('email')
         href = author_detail.get('href')
         if name or email or href:
-            return (Author(
-                name=name or None, 
-                email=email or None, 
-                href=href or None
-            ),)
+            return (Author(name=name or None, email=email or None, href=href or None),)
         return ()
-        
+
     # Split by comma
     authors = _parse_rss_authors(raw_author)
-            
+
     # Fallback from author_detail if no emails were found in the string
     if authors:
         fallback_email = author_detail.get('email')
         fallback_href = author_detail.get('href')
-        
+
         for a in authors:
             if fallback_email and not a['email']:
                 a['email'] = fallback_email
             if fallback_href:
                 a['href'] = fallback_href
-            
+
     return tuple(Author(**a) for a in authors)

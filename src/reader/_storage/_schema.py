@@ -320,17 +320,18 @@ def update_from_42_to_43(db: sqlite3.Connection, /) -> None:  # pragma: no cover
 
 
 def _migrate_author_to_json(raw_author: str | None) -> str | None:
-    if not raw_author: 
+    if not raw_author:
         return None
-    
+
     import json
+
     from .._parser.feedparser import _parse_rss_authors
 
     authors = []
     for a in _parse_rss_authors(raw_author):
-        a['href'] = None 
+        a['href'] = None
         authors.append(a)
-        
+
     return json.dumps(authors)
 
 
