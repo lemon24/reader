@@ -1192,6 +1192,17 @@ def test_feedparser_parse_authors_rss():
         Author(name='death and gravity'),
     )
 
+    # Classical "name <email>" variant
+    assert _parse_authors(
+        {
+            'author': 'John Doe <john at example>, Jane Doe <>',
+        },
+        is_rss=True,
+    ) == (
+        Author(name='John Doe', href=None, email='john at example'),
+        Author(name='Jane Doe', href=None, email=None),
+    )
+
     # Empty cases
     assert _parse_authors({'author': ''}, is_rss=True) == ()
     assert _parse_authors({'author': '()'}, is_rss=True) == ()

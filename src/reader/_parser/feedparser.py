@@ -204,14 +204,14 @@ def _process_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
 _RSS_AUTHOR_RE = re.compile(r"""(?x)
     ^
     \s*
-    ( [^(]*? )      # name: anything until the first paren / end of string
+    ( [^(<]*? )     # name: anything until the first paren / end of string
     \s*
     (?:
-        \(          # open paren
+        [(<]        # open paren
         \s*
-        ( [^)]*? )  # email: anything within parens, optional
+        ( [^)>]*? ) # email: anything within parens, optional
         \s*
-        \)          # close paren
+        [)>]        # close paren
         \s*
     )?
     $
@@ -221,6 +221,7 @@ _RSS_AUTHOR_RE = re.compile(r"""(?x)
 def _parse_rss_authors(raw_author: str) -> list[dict[str, str | None]]:
     # RSS has a single string field, usually "name (email)" or "email (name)";
     # feedparser conveniently normalizes .author to "name (email)".
+    # In addition, we also support the RFC 5322 "name <email>" variant.
 
     authors = []
     for part in raw_author.split(','):
