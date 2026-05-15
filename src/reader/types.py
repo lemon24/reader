@@ -81,13 +81,21 @@ class _AuthorMixin:
 
     @property
     def author_str(self) -> str | None:
-        """The author of the feed/entry as a comma-separated list of names."""
+        """Comma-separated list of authors.
+
+        .. versionadded:: 3.24
+
+        """
         names = [a.name for a in self.authors if a.name]
         return ", ".join(names) if names else None
 
     @property
     def author(self) -> str | None:
-        """Deprecated alias for .author_str."""
+        """Deprecated alias for :attr:`~.author_str`.
+
+        .. deprecated:: 3.24
+
+        """
         warnings.warn(
             f"{self.__class__.__name__}.author is deprecated; use .authors instead",
             DeprecationWarning,

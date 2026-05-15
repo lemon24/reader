@@ -11,14 +11,19 @@ Version 3.24
 
 Unreleased
 
+* Support multiple authors with details (link, email). (:issue:`391`)
+
+  * Add :attr:`Feed.authors`, :attr:`Entry.authors`,
+    and :attr:`EntrySource.authors` attributes.
+  * Add matching :attr:`~Feed.author_str` property.
+  * Deprecate :attr:`~Feed.author` attribute.
+
+  Thanks to `Anshul Mittal`_ for the PR.
+
 * Add ``--json`` option to the ``list`` CLI commands.
   Thanks to `Puneet Dixit`_ for the PR.
   (:issue:`394`)
-* Add :attr:`~Entry.authors` (and corresponding attributes on feeds and sources)
-  to expose multiple authors and rich author data (name, email, URL).
-  The old ``author`` string attribute is deprecated.
-  Thanks to `Anshul Mittal`_ for the PR.
-  (:issue:`391`)
+
 * Use :meth:`datetime.fromisoformat` instead of external dependency ``iso8601``.
   Thanks to `Sebastian Bradley`_ for the PR.
   (:issue:`398`)

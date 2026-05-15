@@ -27,6 +27,7 @@ Data objects
 
 .. autoclass:: Feed
     :members:
+    :inherited-members:
 
 .. autoclass:: Author
     :members:
@@ -36,6 +37,7 @@ Data objects
 
 .. autoclass:: Entry
     :members:
+    :inherited-members:
 
 .. autoclass:: Content
     :members:
@@ -45,6 +47,7 @@ Data objects
 
 .. autoclass:: EntrySource
     :members:
+    :inherited-members:
 
 .. autoclass:: EntrySearchResult
     :members:

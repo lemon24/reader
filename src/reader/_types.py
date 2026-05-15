@@ -83,9 +83,6 @@ class FeedData(_namedtuple_compat):
     updated: datetime | None = None
     title: str | None = None
     link: str | None = None
-    #: The authors of the feed.
-    #:
-    #: .. versionadded:: 3.24
     authors: Sequence[Author] = ()
     subtitle: str | None = None
     version: str | None = None
@@ -139,9 +136,6 @@ class EntryData(_namedtuple_compat):
     updated: datetime | None = None
     title: str | None = None
     link: str | None = None
-    #: The authors of the feed.
-    #:
-    #: .. versionadded:: 3.24
     authors: Sequence[Author] = ()
     published: datetime | None = None
     summary: str | None = None
