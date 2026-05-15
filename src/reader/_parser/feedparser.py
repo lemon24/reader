@@ -3,6 +3,7 @@ from __future__ import annotations
 import calendar
 import logging
 import os
+import re
 import time
 import warnings
 from datetime import datetime
@@ -200,18 +201,35 @@ def _process_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
     )
 
 
+_RSS_AUTHOR_RE = re.compile(r"""(?x)
+    ^
+    \s*
+    ( [^(]*? )      # name: anything until the first paren / end of string
+    \s*
+    (?:
+        \(          # open paren
+        \s*
+        ( [^)]*? )  # email: anything within parens, optional
+        \s*
+        \)          # close paren
+        \s*
+    )?
+    $
+""")
+
+
 def _parse_rss_authors(raw_author: str) -> list[dict[str, str | None]]:
+    # RSS has a single string field, usually "name (email)" or "email (name)";
+    # feedparser conveniently normalizes .author to "name (email)".
+
     authors = []
     for part in raw_author.split(','):
-        part = part.strip()
         if not part:
             continue
 
-        name, email = part, None
-        if part.endswith(')') and '(' in part:
-            split_idx = part.rfind('(')
-            name = part[:split_idx].strip()
-            email = part[split_idx + 1 : -1].strip()
+        match = _RSS_AUTHOR_RE.match(part)
+        assert match, f"should always match; input: {part!r}"
+        name, email = match.groups()
 
         if name or email:
             authors.append({'name': name or None, 'email': email or None})
@@ -220,9 +238,12 @@ def _parse_rss_authors(raw_author: str) -> list[dict[str, str | None]]:
 
 
 def _parse_authors(thing: Any, is_rss: bool) -> tuple[Author, ...]:
+    # see https://github.com/lemon24/reader/issues/391#issuecomment-4413487465
+    # for examples of corner cases found in the wild
+
     author_detail = thing.get('author_detail') or {}
 
-    # 1. Atom
+    # 1. Atom (structured; we only get the first author, sadly)
     if not is_rss and author_detail:
         name = author_detail.get('name')
         email = author_detail.get('email')
@@ -231,7 +252,7 @@ def _parse_authors(thing: Any, is_rss: bool) -> tuple[Author, ...]:
             return (Author(name=name or None, email=email or None, href=href or None),)
         return ()
 
-    # 2. RSS
+    # 2. RSS (string; feedparser tries to parse it, but .author_detail can be mangled)
     raw_author = thing.get('author', '')
 
     # Fallback to author_detail if string is entirely empty or "()"
