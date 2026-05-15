@@ -10,8 +10,6 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 from typing import Union
 
-import iso8601
-
 from .._types import EntryData
 from .._types import FeedData
 from ..exceptions import ParseError
@@ -183,8 +181,9 @@ def _process_entry(feed_url: str, d: Any, feed_lang: str | None) -> EntryData:
 
 def _parse_date(s: str) -> datetime | None:
     try:
-        dt = iso8601.parse_date(s)
-    except iso8601.ParseError:
+        dt = datetime.fromisoformat(s)
+    except ValueError:
         return None
-    assert isinstance(dt, datetime)
+    if dt.tzinfo is None:  # pragma: no cover
+        dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
