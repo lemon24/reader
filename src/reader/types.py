@@ -80,7 +80,7 @@ class _AuthorMixin:
     authors: Sequence[Author]
 
     @property
-    def author_str(self) -> str | None:
+    def authors_str(self) -> str | None:
         """Comma-separated list of authors.
 
         .. versionadded:: 3.24
@@ -91,17 +91,17 @@ class _AuthorMixin:
 
     @property
     def author(self) -> str | None:
-        """Deprecated alias for :attr:`~.author_str`.
+        """Deprecated alias for :attr:`~.authors_str`.
 
         .. deprecated:: 3.24
 
         """
         warnings.warn(
-            f"{self.__class__.__name__}.author is deprecated; use .authors instead",
+            f"{self.__class__.__name__}.author is deprecated; use .authors_str instead",
             DeprecationWarning,
             stacklevel=2,
         )
-        return self.author_str
+        return self.authors_str
 
 
 @dataclass(frozen=True)

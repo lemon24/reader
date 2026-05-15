@@ -15,7 +15,7 @@ Unreleased
 
   * Add :attr:`Feed.authors`, :attr:`Entry.authors`,
     and :attr:`EntrySource.authors` attributes.
-  * Add matching :attr:`~Feed.author_str` property.
+  * Add matching :attr:`~Feed.authors_str` property.
   * Deprecate :attr:`~Feed.author` attribute.
 
   Thanks to `Anshul Mittal`_ for the PR.
