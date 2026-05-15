@@ -18,7 +18,6 @@ These packages will be installed automatically when installing *reader*:
   it replaces feedparser's default use of :mod:`urllib`
   to make it easier to write plugins.
 * `werkzeug`_ provides HTTP utilities.
-* `iso8601`_  parses dates in ISO 8601 / RFC 3339; used for JSON Feed parsing.
 * `beautifulsoup4`_ is used to strip HTML tags before adding entries
   to the search index.
 * `structlog`_ is used for structured logging.

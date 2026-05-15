@@ -19,9 +19,13 @@ Unreleased
   The old ``author`` string attribute is deprecated.
   Thanks to `Anshul Mittal`_ for the PR.
   (:issue:`391`)
+* Use :meth:`datetime.fromisoformat` instead of external dependency ``iso8601``.
+  Thanks to `Sebastian Bradley`_ for the PR.
+  (:issue:`398`)
 
 .. _Puneet Dixit: https://github.com/puneetdixit200
 .. _Anshul Mittal: https://github.com/anderson688
+.. _Sebastian Bradley: https://github.com/bazbrad765
 
 
 Version 3.23

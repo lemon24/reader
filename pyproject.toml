@@ -40,8 +40,6 @@ dependencies = [
     "requests>=2.18",
     # for _http_utils
     "werkzeug>2",
-    # for JSON Feed date parsing
-    "iso8601>=1",
     # search
     "beautifulsoup4>=4.5",
     "structlog",
