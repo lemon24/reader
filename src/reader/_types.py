@@ -33,6 +33,7 @@ from .types import _entry_argument
 from .types import _feed_argument
 from .types import _namedtuple_compat
 from .types import AnyResourceId
+from .types import Author
 from .types import Content
 from .types import Enclosure
 from .types import Entry
@@ -82,7 +83,10 @@ class FeedData(_namedtuple_compat):
     updated: datetime | None = None
     title: str | None = None
     link: str | None = None
-    author: str | None = None
+    #: The authors of the feed.
+    #:
+    #: .. versionadded:: 3.24
+    authors: Sequence[Author] = ()
     subtitle: str | None = None
     version: str | None = None
 
@@ -135,7 +139,10 @@ class EntryData(_namedtuple_compat):
     updated: datetime | None = None
     title: str | None = None
     link: str | None = None
-    author: str | None = None
+    #: The authors of the feed.
+    #:
+    #: .. versionadded:: 3.24
+    authors: Sequence[Author] = ()
     published: datetime | None = None
     summary: str | None = None
     content: Sequence[Content] = ()
@@ -184,7 +191,7 @@ def entry_data_from_obj(obj: object) -> EntryData:
         updated=_getattr_optional_datetime(obj, 'updated'),
         title=_getattr_optional(obj, 'title', str),
         link=_getattr_optional(obj, 'link', str),
-        author=_getattr_optional(obj, 'author', str),
+        authors=tuple(author_from_obj(o) for o in getattr(obj, 'authors', ())),
         published=_getattr_optional_datetime(obj, 'published'),
         summary=_getattr_optional(obj, 'summary', str),
         content=tuple(content_from_obj(o) for o in getattr(obj, 'content', ())),
@@ -235,8 +242,18 @@ def source_from_obj(obj: object) -> EntrySource:
         updated=_getattr_optional_datetime(obj, 'updated'),
         title=_getattr_optional(obj, 'title', str),
         link=_getattr_optional(obj, 'link', str),
-        author=_getattr_optional(obj, 'author', str),
+        authors=tuple(author_from_obj(o) for o in getattr(obj, 'authors', ())),
         subtitle=_getattr_optional(obj, 'subtitle', str),
+    )
+
+
+def author_from_obj(obj: object) -> Author:
+    if isinstance(obj, Mapping):
+        obj = SimpleNamespace(**obj)
+    return Author(
+        name=_getattr_optional(obj, 'name', str),
+        href=_getattr_optional(obj, 'href', str),
+        email=_getattr_optional(obj, 'email', str),
     )
 
 

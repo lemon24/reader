@@ -151,7 +151,7 @@ def enclosure_tags_filter(enclosure, entry, feed_tags):
         album = striptags(album)
         args['album'] = album
         args['artist'] = album
-    elif artist := (entry.author or entry.feed.author):
+    elif artist := (entry.author_str or entry.feed.author_str):
         args['artist'] = striptags(artist)
 
     for tag in feed_tags:

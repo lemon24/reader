@@ -374,7 +374,7 @@ As seen in the previous sections,
         updated=datetime.datetime(2020, 2, 28, 9, 34, 2, tzinfo=datetime.timezone.utc),
         title='Hello Internet',
         link='http://www.hellointernet.fm/',
-        author='CGP Grey',
+        authors=(Author(name='CGP Grey'),),
         subtitle='CGP Grey and Brady Haran talk about YouTube, life, work, whatever.',
         version='rss20',
         user_title=None,
@@ -386,9 +386,10 @@ As seen in the previous sections,
 To get all the feeds, use the :meth:`~Reader.get_feeds` method::
 
     >>> for feed in reader.get_feeds():
+    ...     authors = ", ".join(a.name for a in feed.authors if a.name) or 'unknown author'
     ...     print(
     ...         feed.title or feed.url,
-    ...         f"by {feed.author or 'unknown author'},",
+    ...         f"by {authors},",
     ...         f"updated on {feed.updated or 'never'}",
     ...     )
     ...

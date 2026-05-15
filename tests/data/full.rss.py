@@ -5,13 +5,14 @@ from reader import Enclosure
 from reader import EntrySource
 from reader._types import EntryData
 from reader._types import FeedData
+from reader.types import Author
 
 feed = FeedData(
     url=f'{url_base}full.rss',
     updated=datetime.datetime(2010, 9, 6, 0, 1, tzinfo=datetime.UTC),
     title='RSS Title',
     link='http://www.example.com/main.html',
-    author='Example editor (me@example.com)',
+    authors=(Author(name='Example editor', email='me@example.com'),),
     subtitle='This is an example of an RSS feed',
     version='rss20',
 )
@@ -23,7 +24,7 @@ entries = [
         updated=None,
         title='Example entry',
         link='http://www.example.com/blog/post/1',
-        author='Example editor',
+        authors=(Author(name='Example editor'),),
         published=datetime.datetime(2009, 9, 6, 16, 20, tzinfo=datetime.UTC),
         summary='Here is some text containing an interesting description.',
         content=(

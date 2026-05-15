@@ -5,13 +5,14 @@ from reader import Enclosure
 from reader import EntrySource
 from reader._types import EntryData
 from reader._types import FeedData
+from reader.types import Author
 
 feed = FeedData(
     url=f'{url_base}full.atom',
     updated=datetime.datetime(2003, 12, 13, 18, 30, 2, tzinfo=datetime.UTC),
     title='Example Feed',
     link='http://example.org/',
-    author='John Doe',
+    authors=(Author(name='John Doe'),),
     subtitle='all your examples are belong to us',
     version='atom10',
 )
@@ -23,7 +24,7 @@ entries = [
         updated=datetime.datetime(2003, 12, 13, 18, 30, 2, tzinfo=datetime.UTC),
         title='Atom-Powered Robots Run Amok',
         link='http://example.org/2003/12/13/atom03',
-        author='John Doe',
+        authors=(Author(name='John Doe'),),
         published=datetime.datetime(2003, 12, 13, 17, 17, 51, tzinfo=datetime.UTC),
         summary='Some text.',
         content=(
@@ -60,7 +61,7 @@ entries = [
             updated=datetime.datetime(2003, 12, 13, 18, 30, 2, tzinfo=datetime.UTC),
             title='Source Title',
             link='http://example.org/source',
-            author='Source Author',
+            authors=(Author(name='Source Author'),),
             subtitle='source subtitle',
         ),
     ),

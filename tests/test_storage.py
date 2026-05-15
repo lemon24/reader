@@ -1,3 +1,4 @@
+import json
 import os
 import sqlite3
 import sys
@@ -13,6 +14,7 @@ from reader import FeedNotFoundError
 from reader import InvalidSearchQueryError
 from reader import StorageError
 from reader._storage import Storage
+from reader._storage._schema import _migrate_author_to_json
 from reader._storage._sqlite_utils import DBError
 from reader._storage._sqlite_utils import HeavyMigration
 from reader._storage._sqlite_utils import require_version
@@ -594,3 +596,29 @@ def test_get_set_recent_sort(storage):
 def test_application_id(storage):
     id = storage.factory().execute('pragma application_id').fetchone()[0]
     assert id == int.from_bytes(b'read', 'big')
+
+
+def test_migrate_author_to_json():
+    """Ensure the SQLite migration correctly converts legacy strings to JSON."""
+
+    # Null or empty cases
+    assert _migrate_author_to_json(None) is None
+    assert _migrate_author_to_json("") is None
+
+    # Legacy string cases
+    result = _migrate_author_to_json("John Doe (john@example.com)")
+    parsed = json.loads(result)
+    assert len(parsed) == 1
+    assert parsed[0]["name"] == "John Doe"
+    assert parsed[0]["href"] is None
+    assert parsed[0]["email"] == "john@example.com"
+
+
+def test_migrate_author_to_json_edge_cases():
+    from reader._storage._schema import _migrate_author_to_json
+
+    # Covers extra commas (empty parts) and strings with only an email
+    assert (
+        _migrate_author_to_json("John,, (email@example.com)")
+        == '[{"name": "John", "email": null, "href": null}, {"name": null, "email": "email@example.com", "href": null}]'
+    )

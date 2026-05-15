@@ -19,6 +19,7 @@ from .._utils import exactly_one
 from .._utils import zero_or_one
 from ..exceptions import FeedExistsError
 from ..exceptions import FeedNotFoundError
+from ..types import Author
 from ..types import ExceptionInfo
 from ..types import Feed
 from ..types import FeedCounts
@@ -290,12 +291,16 @@ def feed_factory(row: tuple[Any, ...]) -> Feed:
         update_after,
         last_retrieved,
     ) = row[:14]
+
+    # Parse the JSON string into Author objects
+    authors = tuple(Author(**d) for d in json.loads(author)) if author else ()
+
     return Feed(
         url,
         convert_timestamp(updated) if updated else None,
         title,
         link,
-        author,
+        authors,
         subtitle,
         version,
         user_title,
@@ -370,6 +375,12 @@ def feed_update_intent_to_dict(intent: FeedUpdateIntent) -> FeedDict:
         context.pop('hash', None)
 
         context['stale'] = 0
+
+        # Serialize `authors` and map it back to the `author` column
+        authors = context.pop('authors', ())
+        context['author'] = (
+            json.dumps([a._asdict() for a in authors]) if authors else None
+        )
 
     if isinstance(value, ExceptionInfo):
         context['last_exception'] = json.dumps(value._asdict())

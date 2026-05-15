@@ -22,6 +22,7 @@ from reader.types import _entry_argument
 from reader.types import _feed_argument
 from reader.types import _namedtuple_compat
 from reader.types import _resource_argument
+from reader.types import Author
 from reader.types import MISSING
 
 
@@ -376,3 +377,35 @@ def test_update_result_properties():
     assert result.updated_feed is None
     assert result.error is exc
     assert result.not_modified is False
+
+
+def test_author_deprecation_warning():
+    """Ensure accessing .author works but emits a DeprecationWarning."""
+
+    # Test Feed formatting: "name (email)"
+    feed = Feed(
+        url='http://example.com',
+        authors=(Author(name='John', email='john@example.com'),),
+    )
+    with pytest.warns(DeprecationWarning, match=r"Feed\.author is deprecated"):
+        assert feed.author == "John"
+
+    # Test Entry formatting: multiple authors
+    entry = Entry(id='1', feed=feed, authors=(Author(name='Jane'), Author(name='Bob')))
+    with pytest.warns(DeprecationWarning, match=r"Entry\.author is deprecated"):
+        assert entry.author == "Jane, Bob"
+
+    # Test empty authors returns None without crashing
+    empty_feed = Feed(url='http://example.com')
+    with pytest.warns(DeprecationWarning):
+        assert empty_feed.author is None
+
+
+def test_author_deprecation_internal_types():
+    import pytest
+
+    from reader.types import Author
+    from reader.types import EntrySource
+
+    with pytest.warns(DeprecationWarning):
+        assert EntrySource(url='url', authors=(Author(name='Src'),)).author == 'Src'

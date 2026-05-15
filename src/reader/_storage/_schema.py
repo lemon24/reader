@@ -319,7 +319,30 @@ def update_from_42_to_43(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     db.execute("ALTER TABLE entries ADD COLUMN source TEXT;")
 
 
-VERSION = 43
+def _migrate_author_to_json(raw_author: str | None) -> str | None:
+    if not raw_author:
+        return None
+
+    import json
+
+    from .._parser.feedparser import _parse_rss_authors
+
+    authors = []
+    for a in _parse_rss_authors(raw_author):
+        a['href'] = None
+        authors.append(a)
+
+    return json.dumps(authors)
+
+
+def update_from_43_to_44(db: sqlite3.Connection, /) -> None:  # pragma: no cover
+    # https://github.com/lemon24/reader/issues/391
+    db.create_function("MIGRATE_AUTHOR", 1, _migrate_author_to_json)
+    db.execute("UPDATE feeds SET author = MIGRATE_AUTHOR(author);")
+    db.execute("UPDATE entries SET author = MIGRATE_AUTHOR(author);")
+
+
+VERSION = 44
 
 MIGRATIONS = {
     # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
@@ -333,6 +356,7 @@ MIGRATIONS = {
     40: update_from_40_to_41,
     41: update_from_41_to_42,
     42: update_from_42_to_43,
+    43: update_from_43_to_44,
 }
 MISSING_SUFFIX = (
     "; you may have skipped some required migrations, see "

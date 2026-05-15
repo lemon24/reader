@@ -18,7 +18,15 @@
 <ul class="controls">
 
 <li>
-    {% if entry.author %} by {{ entry.author }}{% endif %}
+    {% if entry.authors %}
+        by
+        {% for author in entry.authors -%}
+            {% if author.href %}<a href="{{ author.href }}" title="{{ author.email or '' }}">{% endif %}
+            {{- author.name or author.email or 'unknown' -}}
+            {% if author.href %}</a>{% endif %}
+            {%- if not loop.last %}, {% endif %}
+        {%- endfor %}
+    {% endif %}
     in <a href="{{ url_for('.entries', feed=entry.feed.url) }}">{{ entry.feed_resolved_title or feed.url }}</a>
 <li>
     {%- set published = entry.published or entry.updated_not_none -%}
