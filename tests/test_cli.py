@@ -113,7 +113,7 @@ def test_cli(db_path, data_dir, monkeypatch):
 
     result = invoke('list', 'entries')
     assert result.exit_code == 0
-    assert {tuple(l.split()) for l in result.output.splitlines()} == {
+    assert {tuple(l.rsplit(None, 1)) for l in result.output.splitlines()} == {
         (feed_path, e.link or e.id) for e in expected['entries']
     }
 
@@ -152,7 +152,7 @@ def test_cli(db_path, data_dir, monkeypatch):
 
     result = invoke('search', 'entries', 'amok')
     assert result.exit_code == 0
-    assert {tuple(l.split()) for l in result.output.splitlines()} == {
+    assert {tuple(l.rsplit(None, 1)) for l in result.output.splitlines()} == {
         (feed_path, e.link or e.id)
         for e in expected['entries']
         if e.title and 'amok' in e.title.lower()
@@ -160,7 +160,7 @@ def test_cli(db_path, data_dir, monkeypatch):
 
     result = invoke('search', 'entries', 'again')
     assert result.exit_code == 0
-    assert {tuple(l.split()) for l in result.output.splitlines()} == {
+    assert {tuple(l.rsplit(None, 1)) for l in result.output.splitlines()} == {
         (feed_path, e.link or e.id)
         for e in expected['entries']
         if e.title and 'again' in e.title.lower()
@@ -168,7 +168,7 @@ def test_cli(db_path, data_dir, monkeypatch):
 
     result = invoke('search', 'entries', 'nope')
     assert result.exit_code == 0
-    assert {tuple(l.split()) for l in result.output.splitlines()} == set()
+    assert {tuple(l.rsplit(None, 1)) for l in result.output.splitlines()} == set()
 
     result = invoke('search', 'disable')
     assert result.exit_code == 0
