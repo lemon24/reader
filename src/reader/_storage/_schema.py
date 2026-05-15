@@ -13,6 +13,7 @@ CREATE TABLE feeds (
     title TEXT,
     link TEXT,
     updated TIMESTAMP,
+    -- TODO: rename to authors (#391)
     author TEXT,
     subtitle TEXT,
     version TEXT,
@@ -42,6 +43,7 @@ CREATE TABLE entries (
     title TEXT,
     link TEXT,
     updated TIMESTAMP,
+    -- TODO: rename to authors (#391)
     author TEXT,
     published TIMESTAMP,
     summary TEXT,

@@ -495,11 +495,9 @@ def entry_factory(row: tuple[Any, ...]) -> Entry:
         if source_dict['updated']:
             source_dict['updated'] = convert_timestamp(source_dict['updated'])
 
-        # Parse source feed authors
-        source_author_json = source_dict.pop('author', None)
         source_dict['authors'] = (
-            tuple(Author(**d) for d in json.loads(source_author_json))
-            if source_author_json
+            tuple(Author(**d) for d in json.loads(source_dict['authors']))
+            if source_dict['authors']
             else ()
         )
 
@@ -718,11 +716,9 @@ def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> EntryDict:
         if entry.source.updated:
             source_dict['updated'] = adapt_datetime(entry.source.updated)
 
-        # Serialize the source authors and rename key to 'author'
-        source_authors = source_dict.pop('authors', ())
-        source_dict['author'] = (
-            json.dumps([a._asdict() for a in source_authors])
-            if source_authors
+        source_dict['authors'] = (
+            json.dumps([a._asdict() for a in source_dict['authors']])
+            if source_dict['authors']
             else None
         )
 
