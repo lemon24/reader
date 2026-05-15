@@ -330,18 +330,36 @@ def _migrate_author_to_json(raw_author: str | None) -> str | None:
     from .._parser.feedparser import _parse_rss_authors
 
     authors = []
-    for a in _parse_rss_authors(raw_author):
-        a['href'] = None
-        authors.append(a)
+    for author in _parse_rss_authors(raw_author):
+        author['href'] = None
+        authors.append(author)
 
     return json.dumps(authors)
+
+
+def _migrate_source_author_to_json(
+    raw_source: str | None,
+) -> str | None:  # pragma: no cover
+    if not raw_source:
+        return None
+
+    import json
+
+    source = json.loads(raw_source)
+    source['authors'] = _migrate_author_to_json(source.pop('author'))
+    return json.dumps(source)
 
 
 def update_from_43_to_44(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     # https://github.com/lemon24/reader/issues/391
     db.create_function("MIGRATE_AUTHOR", 1, _migrate_author_to_json)
+    db.create_function("MIGRATE_SOURCE_AUTHOR", 1, _migrate_source_author_to_json)
     db.execute("UPDATE feeds SET author = MIGRATE_AUTHOR(author);")
-    db.execute("UPDATE entries SET author = MIGRATE_AUTHOR(author);")
+    db.execute("""
+        UPDATE entries SET
+            author = MIGRATE_AUTHOR(author),
+            source = MIGRATE_SOURCE_AUTHOR(source);
+    """)
 
 
 VERSION = 44
