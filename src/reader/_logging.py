@@ -17,7 +17,13 @@ class WrappedLoggerFactory:
         if logger := self.loggers.get(name):  # pragma: no cover
             return logger
 
-        wrapped = logging.getLogger(name)
+        old_logger_class = logging.getLoggerClass()
+        try:
+            logging.setLoggerClass(structlog.stdlib._FixedFindCallerLogger)
+            wrapped = logging.getLogger(name)
+        finally:
+            logging.setLoggerClass(old_logger_class)
+
         logger = structlog.wrap_logger(wrapped, **self.kwargs)
         self.loggers[name] = logger
 

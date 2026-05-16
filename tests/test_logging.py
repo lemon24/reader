@@ -14,6 +14,7 @@ def test_basic(caplog):
         logger.info('hello world', key='value')
 
     assert caplog.record_tuples == [('lib', logging.INFO, 'hello world  key=value')]
+    assert caplog.records[0].module == 'test_logging'
 
     caplog.clear()
     factory.enable_native_structlog()
