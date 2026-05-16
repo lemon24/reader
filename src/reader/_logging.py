@@ -1,8 +1,10 @@
 import logging
+from functools import partial
 from typing import Any
 
 import structlog
 from structlog.contextvars import merge_contextvars
+from structlog.stdlib import _FixedFindCallerLogger
 
 
 class WrappedLoggerFactory:
@@ -17,13 +19,8 @@ class WrappedLoggerFactory:
         if logger := self.loggers.get(name):  # pragma: no cover
             return logger
 
-        old_logger_class = logging.getLoggerClass()
-        try:
-            logging.setLoggerClass(structlog.stdlib._FixedFindCallerLogger)
-            wrapped = logging.getLogger(name)
-        finally:
-            logging.setLoggerClass(old_logger_class)
-
+        wrapped = logging.getLogger(name)
+        wrapped.findCaller = partial(_FixedFindCallerLogger.findCaller, wrapped)  # type: ignore
         logger = structlog.wrap_logger(wrapped, **self.kwargs)
         self.loggers[name] = logger
 
