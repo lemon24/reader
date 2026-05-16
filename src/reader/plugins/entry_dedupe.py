@@ -140,7 +140,6 @@ To reduce false positives:
 """
 
 import itertools
-import logging
 import re
 import unicodedata
 from collections import Counter
@@ -150,15 +149,16 @@ from datetime import timezone
 from functools import cache
 from functools import cached_property
 from functools import lru_cache
+from functools import partial
 from itertools import chain
 from itertools import islice
 from urllib.parse import urlparse
 
+from reader._logging import get_logger
 from reader._storage._html_utils import strip_html
-from reader._utils import BetterStrPartial as partial
 from reader.exceptions import EntryNotFoundError
 
-log = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 TAG_PREFIX = 'dedupe'
@@ -187,7 +187,7 @@ class Deduplicator:
 
         config = self.config_cls(self.feed, all, get_entry)
         if config.tag:
-            log.info("entry_dedupe: %r for feed %r", config.tag, self.feed.url)
+            logger.info('user_request', tag=config.tag)
 
         for group in config.find_duplicates():
             assert len(group) > 1, [e.id for e in group]
@@ -388,15 +388,15 @@ class Config:
         duplicates = []
 
         for grouper in self.groupers:
+            log = logger.bind(grouper=grouper.__name__)
+
             grouper_duplicates = []
 
-            log.debug("grouper %s: all=%d new=%d", grouper.__name__, len(all), len(new))
+            log.debug('grouper input', all=len(all), new=len(new))
 
             groups = list(grouper(all.values(), new.values()))
             counts = Counter(map(len, groups))
-            log.debug(
-                "grouper %s: group count by size %r", grouper.__name__, dict(counts)
-            )
+            log.debug('grouper output', by_size=dict(counts))
 
             for group in groups:
                 if len(group) == 1:
@@ -405,11 +405,10 @@ class Config:
                 # grouper is not a good heuristic for this group, skip it
                 if len(group) > self.max_candidate_group_size:  # pragma: no cover
                     log.debug(
-                        "grouper %s: found group of size %d > %d, skipping: %r",
-                        grouper.__name__,
-                        len(group),
-                        self.max_candidate_group_size,
-                        [e.id for e in group],
+                        'huge group, skipping',
+                        size=len(group),
+                        max_candidate_group_size=self.max_candidate_group_size,
+                        ids=[e.id for e in group],
                     )
                     continue
 
@@ -425,11 +424,10 @@ class Config:
 
                     if len(subgroup) > self.max_group_size:
                         log.debug(
-                            "grouper %s: found group of size %d > %d, skipping: %r",
-                            grouper.__name__,
-                            len(subgroup),
-                            self.max_group_size,
-                            [e.id for e in subgroup],
+                            'huge group, skipping',
+                            size=len(group),
+                            max_group_size=self.max_group_size,
+                            ids=[e.id for e in group],
                         )
                         continue
 
@@ -440,29 +438,20 @@ class Config:
                         all.pop(e.id, None)
                         new.pop(e.id, None)
 
-            if log.isEnabledFor(logging.DEBUG):
-                log.debug(
-                    "grouper %s: found %r",
-                    grouper.__name__,
-                    [[e.id for e in ds] for ds in grouper_duplicates],
-                )
+            log.debug('groups', ids=[[e.id for e in ds] for ds in grouper_duplicates])
             if grouper_duplicates:
-                log.info(
-                    "grouper %s: found %d duplicate groups",
-                    grouper.__name__,
-                    len(grouper_duplicates),
-                )
+                log.info('groups', count=len(grouper_duplicates))
 
             duplicates.extend(grouper_duplicates)
 
             if not new:
-                log.debug("no new entries remaining, not trying other groupers")
+                logger.debug('entries finished')
                 break
         else:
-            log.debug("no groupers remaining: all=%d new=%d", len(all), len(new))
+            logger.debug('groupers finished', all=len(all), new=len(new))
 
         if duplicates:
-            log.info("found %d duplicate groups", len(duplicates))
+            logger.info('groups', count=len(duplicates))
 
         return duplicates
 
@@ -727,12 +716,8 @@ def tokenize_content_fields(entry):
 
 
 def dedupe_entries(reader, entry, duplicates):
-    log.info(
-        "entry_dedupe: %r (title: %r) duplicates: %r",
-        entry.resource_id,
-        entry.title,
-        [e.id for e in duplicates],
-    )
+    log = logger.bind(entry=entry.id)
+    log.info('dedupe', duplicates=[e.id for e in duplicates])
 
     # don't do anything until we know all actions were generated successfully
     actions = list(make_dedupe_actions(reader, entry, duplicates))
@@ -742,12 +727,14 @@ def dedupe_entries(reader, entry, duplicates):
 
     try:
         for action in actions:
+            func = action.func.__name__
+            args = [getattr(v, 'resource_id', v) for v in action.args]
+            log.debug('action', _func=func, _args=args, **action.keywords)
             action()
-            log.info("entry_dedupe: %s", action)
     except EntryNotFoundError as e:  # pragma: no cover
         if entry.resource_id != e.resource_id:
             raise
-        log.info("entry_dedupe: entry %r was deleted, aborting", entry.resource_id)
+        log.info('entry deleted, skipping')
 
 
 def make_dedupe_actions(reader, entry, duplicates):

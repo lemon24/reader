@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import inspect
 import itertools
 import pkgutil
@@ -212,29 +211,6 @@ def deprecated(
         )
 
     return decorator
-
-
-def _name(thing: object) -> str:
-    name = getattr(thing, '__name__', None)
-    if name:
-        return str(name)
-    for attr in ('__func__', 'func'):
-        new_thing = getattr(thing, attr, None)
-        if new_thing:  # pragma: no cover
-            return _name(new_thing)
-    return '<noname>'
-
-
-class BetterStrPartial(functools.partial[_T]):
-    __slots__ = ()
-
-    def __str__(self) -> str:
-        name = _name(self.func)
-        parts = [repr(getattr(v, 'resource_id', v)) for v in self.args]
-        parts.extend(
-            f"{k}={getattr(v, 'resource_id', v)!r}" for k, v in self.keywords.items()
-        )
-        return f"{name}({', '.join(parts)})"
 
 
 def lazy_import(module_name: str, names: list[str]) -> Callable[[str], Any]:
