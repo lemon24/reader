@@ -9,7 +9,7 @@ def test_fallback(requests_mock, make_reader):
     reader = make_reader(':memory:', plugins=('.ua_fallback',))
     reader.add_feed(url)
 
-    matcher = requests_mock.get(url, status_code=403)
+    matcher = requests_mock.get(url, status_code=403, headers={'Server': 'httpd'})
 
     with pytest.raises(ParseError) as exc_info:
         reader.update_feed(url)

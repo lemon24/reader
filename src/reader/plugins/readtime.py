@@ -47,16 +47,16 @@ The read time for existing entries is backfilled as follows:
 
 """
 
-import logging
 import math
 import re
 
+from reader._logging import get_logger
 from reader._storage._html_utils import get_soup
 from reader._storage._html_utils import remove_nontext_elements
 from reader.exceptions import EntryNotFoundError
 from reader.types import _get_entry_content
 
-log = logging.getLogger('reader.plugins.readtime')
+log = get_logger(__name__)
 
 
 _TAG = 'readtime'
@@ -108,7 +108,7 @@ def _readtime_of_strings(strings):
 
 def _after_entry_update(reader, entry, status):
     key = reader.make_reader_reserved_name(_TAG)
-    log.info("readtime: setting %s for %s (entry update hook)", key, entry.resource_id)
+    log.info("readtime", tag=key, entry=entry.id, trigger='hook')
     _set_entry_readtime(reader, entry, key)
 
 
@@ -118,9 +118,7 @@ def _before_feeds_update(reader):
     if reader.get_tag((), key, None):
         return
 
-    log.info(
-        "readtime: global %s not found, setting all feeds to backfill:pending", key
-    )
+    log.info("backfill", tag=key, status='pending')
     for feed in reader.get_feeds():
         reader.set_tag(feed, key, {'backfill': 'pending'})
 
@@ -139,7 +137,7 @@ def _after_feeds_update(reader):
     for feed in reader.get_feeds(updates_enabled=False):
         _backfill_feed(reader, feed.url, key)
 
-    log.info("readtime: setting global %s to backfill:done", key)
+    log.info("backfill", tag=key, status='done')
     reader.set_tag((), key, {'backfill': 'done'})
 
 
@@ -150,10 +148,10 @@ def _backfill_feed(reader, feed, key):
     for entry in reader.get_entries(feed=feed):
         if reader.get_tag(entry, key, None):
             continue
-        log.info("readtime: setting %s for %s (backfill)", key, entry.resource_id)
+        log.info("readtime", tag=key, entry=entry.id, trigger='backfill')
         _set_entry_readtime(reader, entry, key)
 
-    log.info("readtime: clearing  %s for %s", key, feed)
+    log.info("backfill", tag=key, status='done')
     reader.delete_tag(feed, key)
 
 
@@ -163,7 +161,13 @@ def _set_entry_readtime(reader, entry, key):
     except EntryNotFoundError as e:
         if entry.resource_id != e.resource_id:  # pragma: no cover
             raise
-        log.info("readtime: entry %r was deleted, skipping", entry.resource_id)
+        log.info(
+            "readtime",
+            tag=key,
+            entry=entry.id,
+            status="skipped",
+            reason="entry deleted",
+        )
 
 
 def init_reader(reader):

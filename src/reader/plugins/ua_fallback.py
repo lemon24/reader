@@ -24,11 +24,11 @@ Servers/CDNs known to not accept the *reader* UA: Cloudflare, WP Engine.
 
 """
 
-import logging
+from .._logging import get_logger
 
 _LOG_HEADERS = ['Server', 'X-Powered-By']
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def _ua_fallback_response_hook(session, response, request, **kwargs):
@@ -48,14 +48,7 @@ def _ua_fallback_response_hook(session, response, request, **kwargs):
     log_headers = {
         h: response.headers[h] for h in _LOG_HEADERS if h in response.headers
     }
-    log.info(
-        "%s: got status code %i, "
-        "retrying with feedparser User-Agent; "
-        "relevant response headers: %s",
-        request.url,
-        response.status_code,
-        log_headers,
-    )
+    log.info("forbidden, retrying", status=response.status_code, **log_headers)
 
     return request
 
