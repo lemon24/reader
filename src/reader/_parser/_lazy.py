@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import builtins
-import logging
 import mimetypes
 import shutil
 import tempfile
@@ -37,8 +36,6 @@ from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
 from ._url_utils import normalize_url
 from .requests import SessionFactory
-
-log = logging.getLogger('reader')
 
 
 class Parser:
@@ -177,9 +174,6 @@ class Parser:
             context = self.retrieve(feed.url, feed.caching_info)
             return RetrieveResult(feed, context)
         except Exception as e:
-            # pass around *all* exception types,
-            # unhandled exceptions get swallowed by the thread otherwise
-            log.debug("retrieve() exception, traceback follows", exc_info=True)
             return RetrieveResult(feed, e)
 
     def retrieve(
@@ -260,35 +254,20 @@ class Parser:
 
         http_info = None
         value: ParsedFeed | None | Exception
-        try:
-            if isinstance(context, Exception):
-                raise context
 
-            with context as retrieved:
-                http_info = retrieved.http_info
-                value = self.parse(feed.url, retrieved)
-
-        except ParseError as e:
-            if isinstance(e, NotModified):
-                log.debug("parse_fn(): got not modified")
+        if isinstance(context, Exception):
+            value = context
+            if isinstance(context, RetrieveError):
+                http_info = context.http_info
+            if isinstance(context, NotModified):
                 value = None
-            elif e is context:
-                log.debug("parse_fn(): got retrieve error: %s: %s", type(e).__name__, e)
+        else:
+            try:
+                with context as retrieved:
+                    http_info = retrieved.http_info
+                    value = self.parse(feed.url, retrieved)
+            except Exception as e:
                 value = e
-            else:
-                log.debug("parse_fn(): got parse error: %s: %s", type(e).__name__, e)
-                value = e
-
-            if isinstance(e, RetrieveError):
-                if not http_info:
-                    http_info = e.http_info
-
-        except Exception as e:
-            # pass around *all* exception types,
-            # unhandled exceptions get swallowed by the thread otherwise
-            # (not needed now, but for symmetry with retrieve_fn())
-            log.debug("parse_fn(): got unexpected error: %s: %s", type(e).__name__, e)
-            value = e
 
         return ParseResultBase(feed, value, http_info)
 
