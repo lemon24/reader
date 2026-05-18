@@ -32,8 +32,8 @@ from ._types import FeedFilter
 from ._types import NameScheme
 from ._types import SearchType
 from ._types import StorageType
-from ._types import UpdateHooks
 from ._update import Pipeline
+from ._update.hooks import UpdateHooks
 from ._utils import eager_iterable
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
