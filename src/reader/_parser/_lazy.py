@@ -6,8 +6,6 @@ import mimetypes
 import shutil
 import tempfile
 from collections.abc import Iterable
-from collections.abc import Iterator
-from contextlib import contextmanager
 from typing import Any
 from typing import cast
 from typing import ContextManager
@@ -15,6 +13,7 @@ from typing import ContextManager
 from .._types import EntryData
 from .._types import FeedData
 from .._types import FeedForUpdate
+from .._utils import exiting
 from .._utils import MapFunction
 from ..exceptions import InvalidFeedURLError
 from ..exceptions import ParseError
@@ -217,41 +216,37 @@ class Parser:
 
         retriever = self.get_retriever(url)
 
-        return self._retrieve(retriever, url, caching_info, accept)
-
-    @contextmanager
-    def _retrieve(
-        self,
-        retriever: RetrieverType[Any],
-        url: str,
-        caching_info: JSONType | None,
-        accept: str | None,
-    ) -> Iterator[RetrievedFeed[Any]]:
         with wrap_exceptions(url, 'during retriever'):
             context = retriever(url, caching_info, accept)
-            with context as feed:
-                if not isinstance(feed, RetrievedFeed):
-                    feed = RetrievedFeed(feed)
 
-                if not feed.slow_to_read:
-                    yield feed
-                    return
+            feed = context.__enter__()
+            if not isinstance(feed, RetrievedFeed):
+                feed = RetrievedFeed(feed)
 
-                # Ensure we read everything *before* yielding the response,
-                # i.e. __enter__() does most of the work.
-                #
-                # Gives a ~20% speed improvement over yielding response.raw
-                # when updating many feeds in parallel,
-                # with a 2-8% increase in memory usage:
-                # https://github.com/lemon24/reader/issues/261#issuecomment-956303210
-                #
-                # SpooledTemporaryFile() is just as fast as TemporaryFile():
-                # https://github.com/lemon24/reader/issues/261#issuecomment-957469041
+            if not feed.slow_to_read:
+                return exiting(context, feed)
 
-                with tempfile.TemporaryFile() as temp:
+            # Ensure we read everything *before* yielding the response,
+            # i.e. __enter__() does most of the work.
+            #
+            # Gives a ~20% speed improvement over yielding response.raw
+            # when updating many feeds in parallel,
+            # with a 2-8% increase in memory usage:
+            # https://github.com/lemon24/reader/issues/261#issuecomment-956303210
+            #
+            # SpooledTemporaryFile() is just as fast as TemporaryFile():
+            # https://github.com/lemon24/reader/issues/261#issuecomment-957469041
+
+            with exiting(context, None):
+                temp = tempfile.TemporaryFile()
+                try:
                     shutil.copyfileobj(feed.resource, temp)
                     temp.seek(0)
-                    yield feed._replace(resource=temp)
+                except BaseException:
+                    temp.close()
+                    raise
+                else:
+                    return exiting(temp, feed._replace(resource=temp))
 
     def parse_fn(
         self, result: RetrieveResult[F, Any, Exception]

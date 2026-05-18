@@ -77,6 +77,14 @@ def eager_iterable(it: Iterable[_T]) -> Iterable[_T]:
         return it
 
 
+@contextmanager
+def exiting(cm: CM[Any], rv: _T) -> Iterator[_T]:
+    try:
+        yield rv
+    finally:
+        cm.__exit__(*sys.exc_info())
+
+
 # if we substitute MapFunction below, mypy complains
 # https://github.com/python/mypy/issues/17551
 MapFunction = Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]

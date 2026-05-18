@@ -1,6 +1,7 @@
 import io
 import json
 import logging
+import threading
 import urllib.request
 from contextlib import contextmanager
 from unittest.mock import MagicMock
@@ -22,6 +23,7 @@ from reader._parser.file import FileRetriever
 from reader._parser.jsonfeed import JSONFeedParser
 from reader._parser.requests import SessionWrapper
 from reader._types import FeedData
+from reader._utils import make_pool_map
 from reader.exceptions import ParseError
 from reader.types import Author
 from utils import make_url_base
@@ -1147,6 +1149,28 @@ def test_retrieved_feed_http_info_not_shadowed_by_retrieve_error(parse):
     assert exc_info.value.__cause__ is cause
 
     assert parse.last_result.http_info == HTTPInfo(200, {})
+
+
+@pytest.mark.slow
+def test_retrivers_run_in_parallel():
+    n_threads = 2
+    barrier = threading.Barrier(n_threads, timeout=1)
+
+    @contextmanager
+    def retriever(url, _, __):
+        barrier.wait()
+        yield RetrievedFeed(url, 'type/subtype')
+
+    parser = Parser()
+    parser.mount_retriever('', retriever)
+    parser.mount_parser_by_mime_type(lambda *_: (None, ()), '*/*')
+
+    feeds = [FeedForUpdate(str(i)) for i in range(n_threads)]
+
+    with make_pool_map(n_threads) as map:
+        list(parser.parallel(feeds, map=map))
+
+    assert not barrier.broken
 
 
 def test_reader_use_system_feedparser(monkeypatch, reload_module):

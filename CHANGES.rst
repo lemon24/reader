@@ -20,6 +20,10 @@ Unreleased
 
   Thanks to `Anshul Mittal`_ for the PR.
 
+* Fix bug introduced in `version 3.15 <Version 3.15_>`__
+  causing feeds to not be retrieved in parallel
+  even if :meth:`~Reader.update_feeds` was called with ``workers`` > 1.
+
 * Add ``--json`` option to the ``list`` CLI commands.
   Thanks to `Puneet Dixit`_ for the PR.
   (:issue:`394`)
