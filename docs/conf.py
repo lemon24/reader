@@ -21,6 +21,7 @@ for name in [
     'yaml',
     'structlog',
     'structlog.contextvars',
+    'structlog.stdlib',
 ]:
     sys.modules[name] = unittest.mock.Mock()
 
