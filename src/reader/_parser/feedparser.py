@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import calendar
-import logging
 import os
 import re
 import time
@@ -12,6 +11,7 @@ from typing import Any
 from typing import IO
 from typing import TYPE_CHECKING
 
+from .._logging import get_logger
 from .._types import EntryData
 from .._types import FeedData
 from ..exceptions import ParseError
@@ -33,7 +33,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from .requests import Headers
 
 
-log = logging.getLogger('reader')
+logger = get_logger('reader.parser.feedparser')
 
 
 class FeedparserParser:
@@ -77,11 +77,11 @@ _SURVIVABLE_EXCEPTION_TYPES = (
 
 def _process_feed(url: str, d: Any) -> tuple[FeedData, list[EntryData]]:
     if d.get('bozo'):
-        exception = d.get('bozo_exception')
-        if isinstance(exception, _SURVIVABLE_EXCEPTION_TYPES):
-            log.warning("parse %s: got %r", url, exception)
+        exc = d.get('bozo_exception')
+        if isinstance(exc, _SURVIVABLE_EXCEPTION_TYPES):
+            logger.warning("bozo feed", exception=f"{type(exc).__name__}: {exc}")
         else:
-            raise ParseError(url, message="error while parsing feed") from exception
+            raise ParseError(url, message="error while parsing feed") from exc
 
     if not d.version:
         raise ParseError(url, message="unknown feed type")
@@ -143,9 +143,7 @@ def _process_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
     # http://www.詹姆斯.com/blog/2006/08/rss-dup-detection
     if not id and is_rss:
         id = entry.get('link')
-        log.debug(
-            "parse %s: RSS entry does not have (gu)id, falling back to link", feed_url
-        )
+        logger.debug("RSS entry with no guid, falling back to link", entry=id)
 
     if not id:
         raise ParseError(feed_url, message="entry with no id or fallback")

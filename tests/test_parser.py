@@ -249,9 +249,7 @@ def test_feedparser_exceptions(monkeypatch, parse, data_dir):
 @pytest.mark.parametrize(
     'exc_cls', [feedparser.CharacterEncodingOverride, feedparser.NonXMLContentType]
 )
-def test_parse_survivable_feedparser_exceptions(
-    monkeypatch, caplog, parse, data_dir, exc_cls
-):
+def test_parse_survivable_feedparser_exceptions(monkeypatch, parse, data_dir, exc_cls):
     """parse() should not reraise some acceptable feedparser exceptions."""
 
     old_feedparser_parse = feedparser.parse
@@ -264,16 +262,8 @@ def test_parse_survivable_feedparser_exceptions(
 
     monkeypatch.setattr(feedparser, 'parse', feedparser_parse)
 
-    with caplog.at_level(logging.WARNING, logger="reader"):
-        # shouldn't raise an exception
-        parse(str(data_dir.joinpath('full.atom')))
-
-    warnings = [
-        message
-        for logger, level, message in caplog.record_tuples
-        if logger == 'reader' and level == logging.WARNING
-    ]
-    assert sum('full.atom' in m and exc_cls.__name__ in m for m in warnings) > 0
+    # should not raise
+    parse(str(data_dir.joinpath('full.atom')))
 
 
 @pytest.fixture

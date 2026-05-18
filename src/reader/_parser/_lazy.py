@@ -9,6 +9,8 @@ from typing import Any
 from typing import cast
 from typing import ContextManager
 
+from structlog.contextvars import bound_contextvars
+
 from .._types import EntryData
 from .._types import FeedData
 from .._types import FeedForUpdate
@@ -210,7 +212,7 @@ class Parser:
 
         retriever = self.get_retriever(url)
 
-        with wrap_exceptions(url, 'during retriever'):
+        with wrap_exceptions(url, 'during retriever'), bound_contextvars(feed=url):
             context = retriever(url, caching_info, accept)
 
             feed = context.__enter__()
@@ -287,7 +289,7 @@ class Parser:
         """
         parser, mime_type = self.get_parser(url, retrieved.mime_type)
         headers = retrieved.http_info.headers if retrieved.http_info else None
-        with wrap_exceptions(url, 'during parser'):
+        with wrap_exceptions(url, 'during parser'), bound_contextvars(feed=url):
             feed, entries = parser(url, retrieved.resource, headers)
             entries = list(entries)
         return ParsedFeed(feed, entries, mime_type, retrieved.caching_info)
