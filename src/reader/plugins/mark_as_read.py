@@ -56,16 +56,14 @@ the plugin will run on the next feed update, and remove the tag afterwards.
 
 """
 
-import logging
 import re
 
+from reader._logging import get_logger
 from reader.exceptions import EntryNotFoundError
 from reader.exceptions import TagNotFoundError
 from reader.types import EntryUpdateStatus
 
-# avoid circular imports
-
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 
 def _get_config(reader, feed_url, key, patterns_key):
@@ -80,7 +78,7 @@ def _get_config(reader, feed_url, key, patterns_key):
                 return patterns
 
     # TODO: there should be a hook to allow plugins to validate tags
-    log.warning("%s: invalid mark_as_read config: %s", feed_url, key)
+    log.warning("invalid config", tag=key)
     return []
 
 
@@ -104,7 +102,7 @@ def _mark_as_read(reader, entry, status):
     except EntryNotFoundError as e:
         if entry.resource_id != e.resource_id:  # pragma: no cover
             raise
-        log.info("entry %r was deleted, skipping", entry.resource_id)
+        log.info("entry deleted, skipping", entry=entry.id)
 
 
 def _mark_as_read_backfill(reader, feed):
@@ -114,7 +112,7 @@ def _mark_as_read_backfill(reader, feed):
     except TagNotFoundError:
         return
 
-    log.info("feed %s: processing existing entries")
+    log.info('user_request', tag=key)
 
     # only process entries that have not been touched by the user
     for entry in reader.get_entries(feed=feed, read=False, important='notset'):

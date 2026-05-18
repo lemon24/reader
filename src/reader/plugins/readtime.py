@@ -161,13 +161,7 @@ def _set_entry_readtime(reader, entry, key):
     except EntryNotFoundError as e:
         if entry.resource_id != e.resource_id:  # pragma: no cover
             raise
-        log.info(
-            "readtime",
-            tag=key,
-            entry=entry.id,
-            status="skipped",
-            reason="entry deleted",
-        )
+        log.info("entry deleted, skipping", entry=entry.id)
 
 
 def init_reader(reader):

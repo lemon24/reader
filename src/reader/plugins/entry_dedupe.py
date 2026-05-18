@@ -734,7 +734,7 @@ def dedupe_entries(reader, entry, duplicates):
     except EntryNotFoundError as e:  # pragma: no cover
         if entry.resource_id != e.resource_id:
             raise
-        log.info('entry deleted, skipping')
+        log.info("entry deleted, skipping")
 
 
 def make_dedupe_actions(reader, entry, duplicates):
