@@ -59,7 +59,8 @@ Changelog = "https://reader.readthedocs.io/en/latest/changelog.html"
 all = ["reader[cli,app,unstable-plugins]"]
 
 cli = [
-    "click>=7",
+    # != 8.4.0 because of https://github.com/pallets/click/issues/3458
+    "click>=7,!=8.4.0",
 ]
 app = [
     "flask>=0.10",
