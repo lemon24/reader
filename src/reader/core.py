@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import numbers
 import warnings
 from collections.abc import Callable
@@ -79,9 +78,6 @@ from .types import UpdateResult
 if TYPE_CHECKING:  # pragma: no cover
     from ._parser import Parser
     from ._update.base import PipelineFactory
-
-
-log = logging.getLogger('reader')
 
 
 _T = TypeVar('_T')

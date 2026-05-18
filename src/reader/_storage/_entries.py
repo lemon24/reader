@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import sqlite3
 from collections.abc import Callable
 from collections.abc import Iterable
@@ -46,9 +45,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from ._base import StorageBase
 else:
     StorageBase = object
-
-
-log = logging.getLogger('reader')
 
 
 EntryDict = NewType('EntryDict', Mapping[str, SQLiteValue])

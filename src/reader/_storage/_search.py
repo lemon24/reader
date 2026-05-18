@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import json
-import logging
 import random
 import sqlite3
 import string
@@ -15,6 +14,7 @@ from types import MappingProxyType
 from typing import Any
 from typing import TypeVar
 
+from .._logging import get_logger
 from .._types import Action
 from .._types import Change
 from .._types import EntryFilter
@@ -45,7 +45,7 @@ APPLICATION_ID = b'reaD'
 _T = TypeVar('_T')
 
 
-log = logging.getLogger('reader')
+log = get_logger('reader')
 
 
 wrap_exceptions = partial(_sqlite_utils.wrap_exceptions, SearchError)
@@ -277,8 +277,6 @@ class Search:
                     (change.sequence, *change.resource_id),
                 )
 
-        log.debug("Search.update: _delete_from_search: chunk done")
-
     def _insert_into_search(self) -> None:
         # The loop is done outside of the chunk logic to help testing.
         while changes := self.storage.changes.get(Action.INSERT):
@@ -380,11 +378,7 @@ class Search:
                     (change.sequence, *change.resource_id),
                 )
                 if cursor.rowcount:  # pragma: no cover
-                    log.warning(
-                        "during insert, found and deleted %d rows for %r",
-                        cursor.rowcount,
-                        change,
-                    )
+                    log.info("insert already processed", change=change)
 
                 new_es_rowids = []
                 for params in group:
@@ -412,8 +406,6 @@ class Search:
                     """,
                     (change.sequence, *change.resource_id, json.dumps(new_es_rowids)),
                 )
-
-        log.debug("Search.update: _insert_into_search: chunk done")
 
     def search_entries(
         self,
@@ -565,8 +557,6 @@ def make_search_entries_query(
         .GROUP_BY("search._id", "search._feed")
     )
     SEARCH_ENTRIES_SORT[sort](query)
-
-    log.debug("_search_entries query\n%s\n", query)
 
     return query, context
 
