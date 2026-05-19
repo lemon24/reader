@@ -143,7 +143,7 @@
           <i class="bi bi-{{ macros.bs_file_icon(enclosure.type) }}"></i>
         </a>
       {%- endfor %}
-      {%- if loop.first %}
+      {%- if loop is defined and loop.first %}
         <a
           href="{{ url_for('.help', _anchor='entry-flags') }}"
           target="_blank"
