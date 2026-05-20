@@ -9,7 +9,7 @@ Changelog
 Version 3.24
 ------------
 
-Unreleased
+Released 2026-05-20
 
 * Support multiple authors with details (link, email).
   Thanks to `Anshul Mittal`_ for the PR.
