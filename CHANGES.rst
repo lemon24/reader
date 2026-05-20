@@ -11,14 +11,14 @@ Version 3.24
 
 Unreleased
 
-* Support multiple authors with details (link, email). (:issue:`391`)
+* Support multiple authors with details (link, email).
+  Thanks to `Anshul Mittal`_ for the PR.
+  (:issue:`391`)
 
   * Add :attr:`Feed.authors`, :attr:`Entry.authors`,
     and :attr:`EntrySource.authors` attributes.
   * Add matching :attr:`~Feed.authors_str` property.
   * Deprecate :attr:`~Feed.author` attribute.
-
-  Thanks to `Anshul Mittal`_ for the PR.
 
 * Fix bug introduced in `version 3.15 <Version 3.15_>`__
   causing feeds to not be retrieved in parallel
@@ -28,9 +28,16 @@ Unreleased
   with the possibility to opt into native `structlog`_ logging.
   (:issue:`147`)
 
-* Use :meth:`datetime.fromisoformat` instead of external dependency ``iso8601``.
+* Use :meth:`datetime.datetime.fromisoformat` instead of external dependency ``iso8601``.
   Thanks to `Sebastian Bradley`_ for the PR.
   (:issue:`398`)
+
+* Refactor updater internals to allow reusing logic in alternate implementations.
+
+* :doc:`app` improvements.
+
+  * Add empty state and contextual help; :ref:`screenshots <screenshots-help>`.
+  * Import feeds improvements (select all/none, accept only XML / OPML files).
 
 * Add ``--json`` option to the ``list`` CLI commands.
   Thanks to `Puneet Dixit`_ for the PR.

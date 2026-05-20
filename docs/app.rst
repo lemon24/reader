@@ -74,6 +74,17 @@ Screenshots
 
     import feeds (result)
 
+.. _screenshots-help:
+
+.. figure:: screenshots/empty.png
+    :width: 240px
+
+    new user / empty state
+
+.. figure:: screenshots/help.png
+    :width: 240px
+
+    contextual help
 
 
 Serving the web app
