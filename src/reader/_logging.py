@@ -7,7 +7,7 @@ from structlog.contextvars import merge_contextvars
 from structlog.stdlib import _FixedFindCallerLogger
 
 
-class WrappedLoggerFactory:
+class LoggerRegistry:
 
     def __init__(self, **kwargs: Any):
         self.kwargs = kwargs
@@ -26,7 +26,7 @@ class WrappedLoggerFactory:
 
         return logger
 
-    def enable_native_structlog(self) -> None:
+    def enable_structlog(self) -> None:
         if self.loggers is None:  # pragma: no cover
             return
 
@@ -64,7 +64,7 @@ class Renderer(structlog.processors.LogfmtRenderer):
 key_order = ['event', 'status', 'feed', 'entry']
 renderer = Renderer(key_order=key_order, drop_missing=True)  # type: ignore
 processors = [merge_contextvars, enrich_exception, renderer]
-factory = WrappedLoggerFactory(processors=processors, cache_logger_on_first_use=True)
+registry = LoggerRegistry(processors=processors, cache_logger_on_first_use=True)
 
-get_logger = factory.get_logger
-enable_native_structlog = factory.enable_native_structlog
+get_logger = registry.get_logger
+enable_structlog = registry.enable_structlog

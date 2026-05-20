@@ -2,13 +2,13 @@ import logging
 
 from structlog.testing import capture_logs
 
+from reader._logging import LoggerRegistry
 from reader._logging import processors
-from reader._logging import WrappedLoggerFactory
 
 
 def test_basic(caplog):
-    factory = WrappedLoggerFactory(processors=processors)
-    logger = factory.get_logger('lib')
+    registry = LoggerRegistry(processors=processors)
+    logger = registry.get_logger('lib')
 
     with caplog.at_level(logging.INFO):
         logger.info('hello world', key='value')
@@ -17,7 +17,7 @@ def test_basic(caplog):
     assert caplog.records[0].module == 'test_logging'
 
     caplog.clear()
-    factory.enable_native_structlog()
+    registry.enable_structlog()
 
     with caplog.at_level(logging.INFO), capture_logs() as structlog_records:
         logger.info('two')
@@ -27,8 +27,8 @@ def test_basic(caplog):
 
 
 def test_exceptions(caplog):
-    factory = WrappedLoggerFactory(processors=processors)
-    logger = factory.get_logger('lib')
+    registry = LoggerRegistry(processors=processors)
+    logger = registry.get_logger('lib')
 
     try:
         1 / 0
