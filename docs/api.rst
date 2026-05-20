@@ -233,6 +233,8 @@ Constants
 Utilities
 ---------
 
+.. autofunction:: reader.enable_structlog
+
 .. autofunction:: reader.utils.archive_entries
 
 

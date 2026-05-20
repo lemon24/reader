@@ -27,6 +27,16 @@ class LoggerRegistry:
         return logger
 
     def enable_structlog(self) -> None:
+        """Enable native structlog logging (instead of using stdlib :mod:`logging`).
+
+        Call this **before** configuring structlog.
+
+        .. important::
+
+            Calling this after using `reader` or configuring structlog
+            may not work as intended.
+
+        """
         if self.loggers is None:  # pragma: no cover
             return
 

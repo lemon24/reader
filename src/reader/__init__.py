@@ -107,6 +107,8 @@ USER_AGENT = f'python-reader/{__version__} (+{SOURCE_URL})'
 # Prevent any logging output by default. If no handler is set,
 # the messages bubble up to the root logger and get printed on stderr.
 # https://docs.python.org/3/howto/logging.html#library-config
+
 import logging  # noqa: E402
+from ._logging import enable_structlog as enable_structlog  # noqa: E402
 
 logging.getLogger('reader').addHandler(logging.NullHandler())

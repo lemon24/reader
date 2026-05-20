@@ -1002,6 +1002,34 @@ depending on their type attribute or feedparser defaults:
 
 
 
+.. _logging:
+
+Logging
+-------
+
+*reader* uses structured logging internally, through `structlog`_.
+
+By default, output goes to the standard library :mod:`logging` module;
+if you don't care about structlog,
+configure :mod:`logging` as you normally would.
+The *reader* root logger is called ``reader``;
+the names of its children are an implementation detail,
+and may change without any notice.
+
+To enable native structlog logging,
+call :func:`enable_structlog` **before** configuring structlog::
+
+    import reader, structlog
+
+    reader.enable_structlog()
+    structlog.configure(...)
+
+    ... # do stuff with reader
+
+.. _structlog: https://www.structlog.org/
+
+
+
 .. _errors:
 
 Errors and exceptions

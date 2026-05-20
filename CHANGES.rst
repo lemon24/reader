@@ -24,17 +24,25 @@ Unreleased
   causing feeds to not be retrieved in parallel
   even if :meth:`~Reader.update_feeds` was called with ``workers`` > 1.
 
-* Add ``--json`` option to the ``list`` CLI commands.
-  Thanks to `Puneet Dixit`_ for the PR.
-  (:issue:`394`)
+* Use :ref:`structured logging <logging>` internally,
+  with the possibility to opt into native `structlog`_ logging.
+  (:issue:`147`)
 
 * Use :meth:`datetime.fromisoformat` instead of external dependency ``iso8601``.
   Thanks to `Sebastian Bradley`_ for the PR.
   (:issue:`398`)
 
+* Add ``--json`` option to the ``list`` CLI commands.
+  Thanks to `Puneet Dixit`_ for the PR.
+  (:issue:`394`)
+
+
+
 .. _Puneet Dixit: https://github.com/puneetdixit200
 .. _Anshul Mittal: https://github.com/anderson688
 .. _Sebastian Bradley: https://github.com/bazbrad765
+
+.. _structlog: https://www.structlog.org/
 
 
 Version 3.23
