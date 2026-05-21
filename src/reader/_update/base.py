@@ -17,6 +17,7 @@ from structlog.contextvars import bound_contextvars
 
 from .._logging import get_logger
 from .._parser import EntryPairBase
+from .._parser import HTTPInfo
 from .._parser import ParseResultBase
 from .._types import EntryData
 from .._types import FeedFilter
@@ -149,7 +150,7 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
                 feed_intent, entry_intents = self.make_intents(result, entry_pairs)
                 entry_intents = list(entry_intents)
 
-                with self.run_feed_hooks(feed.url, entry_intents):
+                with self.run_feed_hooks(feed.url, entry_intents, result.http_info):
                     self.store_feed(feed_intent, [new for new, _ in entry_intents])
 
         except Exception as e:
@@ -176,7 +177,7 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
 
     @contextmanager
     def run_feed_hooks(
-        self, feed: str, entries: Iterable[EntryPair[EI]]
+        self, feed: str, entries: Iterable[EntryPair[EI]], http_info: HTTPInfo | None
     ) -> Iterator[None]:
         reader = self.reader
 
@@ -202,4 +203,4 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
                     limit=5,
                 )
 
-            grouper.run(reader._after_feed_update, (feed,), reader, feed)
+            grouper.run(reader._after_feed_update, (feed,), reader, feed, http_info)

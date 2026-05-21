@@ -7,6 +7,7 @@ from reader import EntryUpdateStatus
 from reader import ParseError
 from reader import SingleUpdateHookError
 from reader import UpdateHookErrorGroup
+from reader._parser import HTTPInfo
 from reader._types import EntryData
 from test_reader_private import CustomParser
 from test_reader_private import CustomRetriever
@@ -236,6 +237,22 @@ def test_feeds_update_hooks(reader, parser):
         (before_feed_plugin, two.url),
         (after_feed_plugin, two.url),
     }
+
+
+def test_after_feed_update_hooks_http_info(reader, parser):
+    plugin_calls = []
+
+    def after_feed_plugin(r, f, h):
+        assert r is reader
+        plugin_calls.append((after_feed_plugin, f, h))
+
+    reader.after_feed_update_hooks.append(after_feed_plugin)
+
+    parser.http_info = HTTPInfo(200, {'http': 'info'})
+    reader.add_feed(parser.feed(1))
+    reader.update_feeds()
+
+    assert plugin_calls == [(after_feed_plugin, '1', parser.http_info)]
 
 
 HOOK_ORDER = [
