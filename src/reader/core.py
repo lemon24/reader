@@ -32,7 +32,8 @@ from ._types import NameScheme
 from ._types import SearchType
 from ._types import StorageType
 from ._update import Pipeline
-from ._update.hooks import UpdateHooks
+from ._update.hooks import HookErrorGrouper
+from ._update.hooks import Hooks
 from ._utils import eager_iterable
 from ._utils import zero_or_one
 from .exceptions import EntryNotFoundError
@@ -382,7 +383,13 @@ class Reader:
         self._reserved_name_scheme = _reserved_name_scheme
         self._enable_search = _enable_search
         self._make_pipeline: PipelineFactory = Pipeline
-        self._update_hooks = UpdateHooks(self)
+
+        # TODO: make Hooks subclass list and get rid of the properties (?)
+        self._before_feeds_update = Hooks[FeedsUpdateHook]('before_feeds_update')
+        self._before_feed_update = Hooks[FeedUpdateHook]('before_feed_update')
+        self._after_entry_update = Hooks[AfterEntryUpdateHook]('after_entry_update')
+        self._after_feed_update = Hooks[FeedUpdateHook]('after_feed_update')
+        self._after_feeds_update = Hooks[FeedsUpdateHook]('after_feeds_update')
 
         #: Override update_feeds(scheduled=...).
         self._scheduled_override = None
@@ -886,7 +893,7 @@ class Reader:
             Only update scheduled feeds by default.
 
         """
-        with self._update_hooks.group("some hooks failed") as hook_errors:
+        with HookErrorGrouper("some hooks failed") as grouper:
             results = self.update_feeds_iter(
                 feed=feed,
                 tags=tags,
@@ -902,7 +909,7 @@ class Reader:
                     continue
 
                 if isinstance(value, UpdateHookError):
-                    hook_errors.add(value, url, limit=5)
+                    grouper.add(value, url, limit=5)
                     continue
 
                 assert not isinstance(value, Exception), value
@@ -1561,8 +1568,7 @@ class Reader:
         else:
             self._storage.add_entry(intent)
 
-        for entry_hook in self.after_entry_update_hooks:
-            entry_hook(self, intent.entry, status)
+        self._after_entry_update.run(entry_data.resource_id, self, intent.entry, status)
 
     def delete_entry(self, entry: EntryInput, /, missing_ok: bool = False) -> None:
         """Delete an entry.
@@ -2346,7 +2352,7 @@ class Reader:
             Wrap unexpected exceptions in :exc:`UpdateHookError`.
 
         """
-        return self._update_hooks.hooks['before_feeds_update']
+        return self._before_feeds_update.hooks
 
     @property
     def before_feed_update_hooks(self) -> MutableSequence[FeedUpdateHook]:
@@ -2370,7 +2376,7 @@ class Reader:
             Wrap unexpected exceptions in :exc:`UpdateHookError`.
 
         """
-        return self._update_hooks.hooks['before_feed_update']
+        return self._before_feed_update.hooks
 
     @property
     def after_entry_update_hooks(self) -> MutableSequence[AfterEntryUpdateHook]:
@@ -2407,7 +2413,7 @@ class Reader:
             Try to run all hooks, don't stop after one fails.
 
         """
-        return self._update_hooks.hooks['after_entry_update']
+        return self._after_entry_update.hooks
 
     @property
     def after_feed_update_hooks(self) -> MutableSequence[FeedUpdateHook]:
@@ -2433,7 +2439,7 @@ class Reader:
             Try to run all hooks, don't stop after one fails.
 
         """
-        return self._update_hooks.hooks['after_feed_update']
+        return self._after_feed_update.hooks
 
     @property
     def after_feeds_update_hooks(self) -> MutableSequence[FeedsUpdateHook]:
@@ -2459,4 +2465,4 @@ class Reader:
             Try to run all hooks, don't stop after one fails.
 
         """
-        return self._update_hooks.hooks['after_feeds_update']
+        return self._after_feeds_update.hooks

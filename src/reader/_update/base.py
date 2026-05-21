@@ -27,6 +27,7 @@ from ..exceptions import UpdateError
 from ..types import EntryUpdateStatus
 from ..types import UpdatedFeed
 from ..types import UpdateResult
+from .hooks import HookErrorGrouper
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..core import Reader
@@ -95,7 +96,7 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
     def update(self, filter: FeedFilter) -> Iterable[UpdateResult]:
 
         if self.call_feeds_hooks:
-            self.reader._update_hooks.run('before_feeds_update', None)
+            self.reader._before_feeds_update.run(None, self.reader)
 
         feeds = self.reader._storage.get_feeds_for_update(filter)
         parse_results = self.parse_feeds(feeds)
@@ -134,10 +135,8 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
             yield UpdateResult(url, value)
 
         if self.call_feeds_hooks:
-            with self.reader._update_hooks.group(
-                "got unexpected after-update hook errors"
-            ) as hook_errors:
-                hook_errors.run('after_feeds_update', None)
+            with HookErrorGrouper("got unexpected after-update hook errors") as grouper:
+                grouper.run(self.reader._after_feeds_update, None, self.reader)
 
     def process_result(
         self, result: ParseResult[FD, ED]
@@ -179,13 +178,13 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
     def run_feed_hooks(
         self, feed: str, entries: Iterable[EntryPair[EI]]
     ) -> Iterator[None]:
-        hooks = self.reader._update_hooks
+        reader = self.reader
 
-        hooks.run('before_feed_update', (feed,), feed)
+        reader._before_feed_update.run((feed,), reader, feed)
 
         yield
 
-        with hooks.group("got unexpected after-update hook errors") as hook_errors:
+        with HookErrorGrouper("got unexpected after-update hook errors") as grouper:
             for new, old in entries:
                 if not old:
                     entry_status = EntryUpdateStatus.NEW
@@ -194,12 +193,13 @@ class PipelineBase(Generic[FD, ED, FI, EI], ABC):
 
                 entry = self.get_entry_data(new)
 
-                hook_errors.run(
-                    'after_entry_update',
+                grouper.run(
+                    reader._after_entry_update,
                     entry.resource_id,
+                    reader,
                     entry,
                     entry_status,
                     limit=5,
                 )
 
-            hook_errors.run('after_feed_update', (feed,), feed)
+            grouper.run(reader._after_feed_update, (feed,), reader, feed)

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import time
-from collections import defaultdict
 from collections.abc import Callable
 from typing import Any
+from typing import Generic
+from typing import Self
+from typing import TypeVar
 
 from .._logging import get_logger
 from ..exceptions import SingleUpdateHookError
@@ -13,27 +15,30 @@ from ..exceptions import UpdateHookErrorGroup
 logger = get_logger('reader.update.hooks')
 
 
-class UpdateHooks:
-    def __init__(self, target: Any):
-        self.target = target
-        self.hooks: dict[str, list[Callable[..., None]]] = defaultdict(list)
+FuncType = Callable[..., Any]
+F = TypeVar('F', bound=FuncType)
+
+
+class Hooks(Generic[F]):
+    def __init__(self, name: str):
+        self.name = name
+        self.hooks: list[F] = []
 
     def run(
         self,
-        when: str,
         resource_id: tuple[str, ...] | None,
         *args: Any,
         return_exceptions: bool = False,
     ) -> list[SingleUpdateHookError]:
-        log = logger.bind(when=when, **log_resource_id(resource_id))
+        log = logger.bind(when=self.name, **log_resource_id(resource_id))
 
         rv = []
-        for hook in self.hooks[when]:
+        for hook in self.hooks:
             start = time.monotonic()
             try:
-                hook(self.target, *args)
+                hook(*args)
             except Exception as e:
-                wrapper = SingleUpdateHookError(when, hook, resource_id)
+                wrapper = SingleUpdateHookError(self.name, hook, resource_id)
                 wrapper.__cause__ = e
                 if not return_exceptions:
                     raise wrapper
@@ -51,25 +56,21 @@ class UpdateHooks:
 
         return rv
 
-    def group(self, message: str) -> _UpdateHookErrorGrouper:
-        return _UpdateHookErrorGrouper(self, message)
 
-
-class _UpdateHookErrorGrouper:
-    def __init__(self, hooks: UpdateHooks, message: str):
-        self.hooks = hooks
+class HookErrorGrouper:
+    def __init__(self, message: str):
         self.message = message
         self.exceptions: list[UpdateHookError] = []
         self.seen_dedupe_keys: set[Any] = set()
 
     def run(
         self,
-        when: str,
+        hooks: Hooks[F],
         resource_id: tuple[str, ...] | None,
         *args: Any,
         limit: int = 0,
     ) -> None:
-        for exc in self.hooks.run(when, resource_id, *args, return_exceptions=True):
+        for exc in hooks.run(resource_id, *args, return_exceptions=True):
             self.add(exc, resource_id, limit)
 
     def add(self, exc: UpdateHookError, dedupe_key: Any = None, limit: int = 0) -> None:
@@ -85,7 +86,7 @@ class _UpdateHookErrorGrouper:
         if self.exceptions:
             raise UpdateHookErrorGroup(self.message, self.exceptions)
 
-    def __enter__(self) -> _UpdateHookErrorGrouper:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, _: Any, exc: BaseException, __: Any) -> None:
