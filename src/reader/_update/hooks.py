@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import time
 from collections.abc import Callable
 from typing import Any
@@ -36,7 +37,7 @@ class Hooks(Generic[F]):
         for hook in self.hooks:
             start = time.monotonic()
             try:
-                hook(*args)
+                self._run(hook, args)
             except Exception as e:
                 wrapper = SingleUpdateHookError(self.name, hook, resource_id)
                 wrapper.__cause__ = e
@@ -55,6 +56,18 @@ class Hooks(Generic[F]):
                 log_method('hook_timing', hook=name, time=timing)
 
         return rv
+
+    def _run(self, hook: F, args: tuple[Any]) -> None:
+        posargs = 0
+        varargs = False
+        for p in inspect.signature(hook).parameters.values():
+            if p.kind == p.POSITIONAL_ONLY or p.kind == p.POSITIONAL_OR_KEYWORD:
+                posargs += 1
+            if p.kind == p.VAR_POSITIONAL:
+                varargs = True
+        if not varargs:
+            args = args[:posargs]
+        hook(*args)
 
 
 class HookErrorGrouper:
