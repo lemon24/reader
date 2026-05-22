@@ -15,8 +15,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from urllib.parse import urljoin
 
+from ._parser import Headers
 from ._parser._http_utils import parse_options_header
-from ._parser.requests import Headers
 from ._storage._html_utils import AnyMarkup
 from ._storage._html_utils import get_soup
 

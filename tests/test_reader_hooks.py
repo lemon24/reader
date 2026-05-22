@@ -537,7 +537,7 @@ def test_session_hook_unexpected_exception(
         if '1' in obj.url:
             raise exc
 
-    getattr(reader._parser.session_factory, hook_name).append(hook)
+    getattr(reader._parser.get_retriever('http://'), hook_name).append(hook)
 
     rv = {int(r.url.rpartition('/')[2]): r for r in update_feeds_iter(reader)}
 

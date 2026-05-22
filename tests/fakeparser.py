@@ -92,8 +92,7 @@ class Parser:
     retrieve_fn = reader._parser.Parser.retrieve_fn
     parse_fn = reader._parser.Parser.parse_fn
 
-    class session_factory:
-        persistent = staticmethod(nullcontext)
+    retrievers = {}
 
     def retrieve(self, url, caching_info):
         if self.should_raise and self.should_raise(url):

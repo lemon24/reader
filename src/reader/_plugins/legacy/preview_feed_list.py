@@ -110,18 +110,17 @@ def _get_alternates(soup, url, selector):
 def feed_list():
     url = request.args['url']
 
-    session = get_reader()._parser.session_factory()
-
     # TODO: url may not actually be an http URL; now we get "error: Invalid URL 'file.xml': No schema supplied. ..."
     # if https://github.com/lemon24/reader/issues/155#issuecomment-647048623 gets implemented,
     # we should delegate to the parser "give me the content of this URL"
 
-    try:
-        response = session.get(url)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        # TODO: maybe handle this with flash + 404 (and let the handler show the message)
-        return render_template('preview_feed_list.html', url=url, errors=[str(e)])
+    with get_reader()._parser.get_retriever('http://') as retriever:
+        try:
+            response = retriever.get(url)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            # TODO: maybe handle this with flash + 404 (and let the handler show the message)
+            return render_template('preview_feed_list.html', url=url, errors=[str(e)])
 
     alternates = list(get_alternates(response.content, url))
 

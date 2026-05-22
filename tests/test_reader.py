@@ -600,7 +600,7 @@ def test_direct_instantiation():
 def test_make_reader_feed_root(monkeypatch, make_reader, kwargs, feed_root):
     exc = Exception("whatever")
 
-    def default_parser(feed_root, **kwargs):
+    def default_parser(feed_root, *args, **kwargs):
         default_parser.feed_root = feed_root
         raise exc
 
@@ -1159,7 +1159,7 @@ def test_logging_defaults():
 @pytest.mark.parametrize(
     'kwargs, expected_timeout',
     [
-        ({}, reader._parser.requests.DEFAULT_TIMEOUT),
+        ({}, reader._parser.DEFAULT_TIMEOUT),
         ({'session_timeout': (1.234, 324.1)}, (1.234, 324.1)),
     ],
 )

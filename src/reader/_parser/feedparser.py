@@ -30,7 +30,7 @@ else:
 
 if TYPE_CHECKING:  # pragma: no cover
     from . import FeedAndEntries
-    from .requests import Headers
+    from . import Headers
 
 
 logger = get_logger('reader.parser.feedparser')

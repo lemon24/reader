@@ -7,7 +7,9 @@ import tempfile
 from collections.abc import Collection
 from collections.abc import Iterable
 from collections.abc import Iterator
+from collections.abc import Mapping
 from contextlib import contextmanager
+from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timedelta
@@ -37,17 +39,19 @@ from ..types import JSONType
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
 from ._url_utils import normalize_url
-from .requests import DEFAULT_TIMEOUT
-from .requests import Headers
-from .requests import SessionFactory
-from .requests import TimeoutType
 
 if TYPE_CHECKING:  # pragma: no cover
     from werkzeug.datastructures import RequestCacheControl
 
+    from .http import TimeoutType
+
+
+DEFAULT_TIMEOUT = (3.05, 60)
+
 
 def default_parser(
     feed_root: str | None = None,
+    user_agent: str | None = None,
     session_timeout: TimeoutType = DEFAULT_TIMEOUT,
 ) -> Parser:
     """Create a pre-configured :class:`Parser`.
@@ -74,9 +78,7 @@ def default_parser(
         from .http import HTTPRetriever
         from .jsonfeed import JSONFeedParser
 
-        parser.session_factory.timeout = session_timeout
-
-        http_retriever = HTTPRetriever(parser.session_factory.transient)
+        http_retriever = HTTPRetriever(user_agent, session_timeout)
         parser.mount_retriever('https://', http_retriever)
         parser.mount_retriever('http://', http_retriever)
         if file_retriever is not None:
@@ -132,13 +134,6 @@ class Parser:
         self.parsers_by_mime_type: dict[str, list[tuple[float, ParserType[Any]]]] = {}
         self.parsers_by_url: dict[str, ParserType[Any]] = {}
 
-        #: :class:`~reader._parser.requests.SessionFactory`
-        #: used to create Requests sessions for retrieving feeds.
-        #:
-        #: Plugins may add request or response hooks to this.
-        #:
-        self.session_factory = SessionFactory()
-
     def parallel(
         self,
         feeds: Iterable[F],
@@ -160,7 +155,12 @@ class Parser:
                 the :attr:`~ParseResult.feed` is the object passed in ``feeds``.
 
         """
-        with self.session_factory.persistent():
+
+        with ExitStack() as stack:
+            for retriever in self.retrievers.values():
+                if isinstance(retriever, ContextManager):
+                    stack.enter_context(retriever)
+
             # if stuff hangs weirdly during debugging, change this to builtins.map
             retrieve_results = map(self.retrieve_fn, feeds)
 
@@ -599,6 +599,8 @@ T_co = TypeVar('T_co', covariant=True)
 T_cv = TypeVar('T_cv', contravariant=True)
 F = TypeVar('F', bound=FeedArgument)
 E = TypeVar('E', bound=Exception)
+
+Headers = Mapping[str, str]
 
 
 @dataclass(frozen=True)

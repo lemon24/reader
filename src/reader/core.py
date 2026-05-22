@@ -18,8 +18,7 @@ from typing import TYPE_CHECKING
 from typing import TypeVar
 
 from ._parser import default_parser
-from ._parser.requests import DEFAULT_TIMEOUT
-from ._parser.requests import TimeoutType
+from ._parser import DEFAULT_TIMEOUT
 from ._storage import Storage
 from ._types import BoundSearchStorageType
 from ._types import entry_data_from_obj
@@ -78,6 +77,7 @@ from .types import UpdateResult
 
 if TYPE_CHECKING:  # pragma: no cover
     from ._parser import Parser
+    from ._parser.http import TimeoutType
     from ._update.base import PipelineFactory
 
 
@@ -255,11 +255,9 @@ def make_reader(
     if search_enabled not in ('auto', True, False, None):
         raise ValueError("search_enabled should be one of ('auto', True, False, None)")
 
-    parser = default_parser(feed_root, session_timeout=session_timeout)
-    # circular import
     from . import USER_AGENT
 
-    parser.session_factory.user_agent = USER_AGENT
+    parser = default_parser(feed_root, USER_AGENT, session_timeout)
 
     try:
         name_scheme = NameScheme.from_value(reserved_name_scheme)

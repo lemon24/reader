@@ -286,7 +286,10 @@ def test_cli_plugin_builtin_and_import_path(db_path, tests_dir, monkeypatch):
     )
 
     assert result.exit_code == 0, result.output
-    assert len(store_reader_plugin.reader._parser.session_factory.response_hooks) == 2
+    assert (
+        len(store_reader_plugin.reader._parser.get_retriever('http://').response_hooks)
+        == 2
+    )
 
 
 def raise_exception_app_plugin(thing):

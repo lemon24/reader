@@ -19,7 +19,7 @@ from ..types import Enclosure
 
 if TYPE_CHECKING:  # pragma: no cover
     from . import FeedAndEntries
-    from .requests import Headers
+    from . import Headers
 
 
 class JSONFeedParser:

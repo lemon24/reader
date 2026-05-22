@@ -21,7 +21,6 @@ from reader._parser.feedparser import feedparser
 from reader._parser.feedparser import FeedparserParser
 from reader._parser.file import FileRetriever
 from reader._parser.jsonfeed import JSONFeedParser
-from reader._parser.requests import SessionWrapper
 from reader._types import FeedData
 from reader._utils import make_pool_map
 from reader.exceptions import ParseError
@@ -440,9 +439,10 @@ def test_parse_response_plugins(monkeypatch, make_http_url, data_dir):
         return request
 
     parse = default_parser()
-    parse.session_factory.request_hooks.append(req_plugin)
-    parse.session_factory.response_hooks.append(do_nothing_plugin)
-    parse.session_factory.response_hooks.append(rewrite_to_empty_plugin)
+    http_retriever = parse.get_retriever('http://')
+    http_retriever.request_hooks.append(req_plugin)
+    http_retriever.response_hooks.append(do_nothing_plugin)
+    http_retriever.response_hooks.append(rewrite_to_empty_plugin)
 
     feed, _, _, _ = parse(feed_url)
     assert req_plugin.called
@@ -461,7 +461,7 @@ def test_parse_requests_get_exception(
     def do_raise(*args, **kwargs):
         raise exc
 
-    monkeypatch.setattr('reader._parser.requests.SessionWrapper.get', do_raise)
+    monkeypatch.setattr('reader._parser.http.HTTPRetriever.get', do_raise)
 
     with pytest.raises(ParseError) as excinfo:
         parse(feed_url)
@@ -510,22 +510,14 @@ def test_user_agent_default(parse, make_http_get_headers_url, data_dir):
     assert headers['User-Agent'].startswith('python-requests/')
 
 
-def test_user_agent_none(parse, make_http_get_headers_url, data_dir):
-    feed_url = make_http_get_headers_url(data_dir.joinpath('full.atom'))
-    parse.session_factory.user_agent = None
-    parse(feed_url)
-
-    headers = make_http_get_headers_url.request_headers
-    assert headers['User-Agent'].startswith('python-requests/')
-
-
 def test_parallel_persistent_session(parse, make_http_url, data_dir):
     sessions = []
 
     def req_plugin(session, request, **kwargs):
         sessions.append(session)
 
-    parse.session_factory.request_hooks.append(req_plugin)
+    http_retriever = parse.get_retriever('http://')
+    http_retriever.request_hooks.append(req_plugin)
 
     feeds = [
         FeedForUpdate(make_http_url(data_dir.joinpath(name)))

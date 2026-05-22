@@ -54,4 +54,6 @@ def _ua_fallback_response_hook(session, response, request, **kwargs):
 
 
 def init_reader(reader):
-    reader._parser.session_factory.response_hooks.append(_ua_fallback_response_hook)
+    reader._parser.get_retriever('http://').response_hooks.append(
+        _ua_fallback_response_hook
+    )

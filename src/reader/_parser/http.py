@@ -1,26 +1,87 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from dataclasses import field
 from typing import Any
 from typing import cast
-from typing import ContextManager
 from typing import IO
+from typing import Protocol
+from typing import Self
+from typing import TypedDict
+from typing import Union
 
 import requests
 
+from . import DEFAULT_TIMEOUT
+from . import Headers
 from . import HTTPInfo
 from . import NotModified
 from . import RetrievedFeed
 from . import RetrieveError
 from . import wrap_exceptions
 from ._http_utils import parse_options_header
-from .requests import SessionWrapper
+
+TimeoutType = Union[None, float, tuple[float, float], tuple[float, None]]
+CachingInfo = TypedDict('CachingInfo', {'etag': str, 'last-modified': str}, total=False)
 
 
-@dataclass(frozen=True)
+class RequestHook(Protocol):
+    """Hook to modify a :class:`~requests.Request` before it is sent."""
+
+    def __call__(
+        self,
+        session: requests.Session,
+        request: requests.Request,
+        **kwargs: Any,
+    ) -> requests.Request | None:  # pragma: no cover
+        """Modify a request before it is sent.
+
+        Args:
+            session (requests.Session): The session that will send the request.
+            request (requests.Request): The request to be sent.
+
+        Keyword Args:
+            **kwargs: Will be passed to :meth:`~requests.adapters.BaseAdapter.send`.
+
+        Returns:
+            requests.Request or None:
+            A (possibly modified) request to be sent.
+            If none, send the initial request.
+
+        """
+
+
+class ResponseHook(Protocol):
+    """Hook to repeat a request depending on the :class:`~requests.Response`."""
+
+    def __call__(
+        self,
+        session: requests.Session,
+        response: requests.Response,
+        request: requests.Request,
+        **kwargs: Any,
+    ) -> requests.Request | None:  # pragma: no cover
+        """Repeat a request  depending on the response.
+
+        Args:
+            session (requests.Session): The session that sent the request.
+            request (requests.Request): The sent request.
+            response (requests.Response): The received response.
+
+        Keyword Args:
+            **kwargs: Were passed to :meth:`~requests.adapters.BaseAdapter.send`.
+
+        Returns:
+            requests.Request or None:
+            A (possibly new) request to be sent,
+            or None, to return the current response.
+
+        """
+
+
+@dataclass
 class HTTPRetriever:
     """http(s):// retriever that uses Requests.
 
@@ -28,6 +89,7 @@ class HTTPRetriever:
     but header setting has been split to multiple places:
 
     * Accept-Encoding is set by Requests by default
+    # FIXME
     * User-Agent is set on the session by SessionFactory
     * If-None-Match is set by SessionWrapper.caching_get()
     * If-Modified-Since is set by SessionWrapper.caching_get()
@@ -36,7 +98,19 @@ class HTTPRetriever:
 
     """
 
-    get_session: Callable[[], ContextManager[SessionWrapper]]
+    user_agent: str | None = None
+    timeout: TimeoutType = DEFAULT_TIMEOUT
+
+    # Details on why the extension methods built into Requests
+    # (adapters, hooks['response']) were not enough:
+    # https://github.com/lemon24/reader/issues/155#issuecomment-668716387
+
+    #: Sequence of :class:`RequestHook`\s.
+    request_hooks: list[RequestHook] = field(default_factory=list)
+    #: Sequence of :class:`ResponseHook`\s.
+    response_hooks: list[ResponseHook] = field(default_factory=list)
+
+    _session: requests.Session | None = None
 
     @contextmanager
     def __call__(
@@ -57,9 +131,9 @@ class HTTPRetriever:
 
         error = RetrieveError(url)
 
-        with self.get_session() as session, wrap_exceptions(error):
+        with wrap_exceptions(error):
             error._message = "while getting feed"
-            response, response_caching_info = session.caching_get(
+            response, response_caching_info = self.caching_get(
                 url, caching_info, request_headers, stream=True
             )
 
@@ -101,7 +175,142 @@ class HTTPRetriever:
                 )
 
     def validate_url(self, url: str) -> None:
-        with self.get_session() as session_wrapper:
-            session = session_wrapper.session
-            session.get_adapter(url)
-            session.prepare_request(requests.Request('GET', url))
+        with self:
+            self.session.get_adapter(url)
+            self.session.prepare_request(requests.Request('GET', url))
+
+    @property
+    def session(self) -> requests.Session:
+        # FIXME: raise exception
+        assert self._session
+        return self._session
+
+    def __enter__(self) -> Self:
+        # FIXME: make reentrant
+        if self._session:
+            return self
+
+        self._session = session = requests.Session()
+        timeout_adapter = TimeoutHTTPAdapter(self.timeout)
+        session.mount('https://', timeout_adapter)
+        session.mount('http://', timeout_adapter)
+
+        if self.user_agent:
+            session.headers['User-Agent'] = self.user_agent
+
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        # FIXME: make reentrant
+        if self._session:
+            self._session.close()
+            self._session = None
+
+    def get(
+        self, url: str | bytes, headers: Headers | None = None, **kwargs: Any
+    ) -> requests.Response:
+        """Like Requests :meth:`~requests.Session.get`,
+        but apply :attr:`request_hooks` and :attr:`response_hooks`.
+
+        Args:
+            url (str): Passed to :class:`~requests.Request`.
+            headers (dict(str, str)): Passed to :class:`~requests.Request`.
+
+        Keyword Args:
+            **kwargs: Passed to :meth:`~requests.adapters.BaseAdapter.send`.
+
+        Returns:
+            requests.Response:
+
+        """
+        # kwargs get passed to requests.BaseAdapter.send();
+        # can be any of: stream, timeout, verify, cert, proxies
+
+        request = requests.Request('GET', url, headers=headers)
+
+        for request_hook in self.request_hooks:
+            request = request_hook(self.session, request, **kwargs) or request
+
+        response = self.session.send(self.session.prepare_request(request), **kwargs)
+
+        for response_hook in self.response_hooks:
+            new_request = response_hook(self.session, response, request, **kwargs)
+            if new_request is None:
+                continue
+
+            # TODO: will this fail if stream=False?
+            response.close()
+
+            # TODO: is this assert needed? yes, we should raise a custom exception though
+            assert isinstance(new_request, requests.Request)
+
+            request = new_request
+            response = self.session.send(
+                self.session.prepare_request(request), **kwargs
+            )
+
+        return response
+
+    def caching_get(
+        self,
+        url: str,
+        caching_info: Any = None,
+        headers: Headers | None = None,
+        **kwargs: Any,
+    ) -> tuple[requests.Response, CachingInfo | None]:
+        """Like :meth:`get()`, but set and return caching headers.
+
+        caching_get(url, old_caching_info) -> response, new_caching_info
+
+        """
+        headers = dict(headers or ())
+
+        etag = _str_value(caching_info, 'etag')
+        last_modified = _str_value(caching_info, 'last-modified')
+        if etag:
+            headers.setdefault('If-None-Match', etag)
+        if last_modified:
+            headers.setdefault('If-Modified-Since', last_modified)
+
+        response = self.get(url, headers=headers, **kwargs)
+
+        response_caching_info: CachingInfo = {}
+        if response.ok:
+            etag = response.headers.get('ETag')
+            if etag:
+                response_caching_info['etag'] = etag
+            last_modified = response.headers.get('Last-Modified', last_modified)
+            if last_modified:
+                response_caching_info['last-modified'] = last_modified
+
+        return response, response_caching_info or None
+
+
+def _str_value(d: Any | None, key: str) -> str | None:
+    if not d:
+        return None
+    assert isinstance(d, dict), d
+    rv = d.get(key)
+    if rv is None:
+        return None
+    assert isinstance(rv, str), rv
+    return rv
+
+
+class TimeoutHTTPAdapter(requests.adapters.HTTPAdapter):
+    """Add a default timeout to requests.
+
+    https://requests.readthedocs.io/en/master/user/advanced/#timeouts
+    https://github.com/psf/requests/issues/3070#issuecomment-205070203
+
+    TODO: Remove when psf/requests#3070 gets fixed.
+
+    """
+
+    def __init__(self, timeout: TimeoutType, *args: Any, **kwargs: Any):
+        self.__timeout = timeout
+        super().__init__(*args, **kwargs)
+
+    def send(self, *args: Any, **kwargs: Any) -> Any:
+        kwargs.setdefault('timeout', self.__timeout)
+        return super().send(*args, **kwargs)
