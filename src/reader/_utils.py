@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import inspect
 import itertools
-import pkgutil
 import sys
 import warnings
 from collections.abc import Callable
@@ -219,20 +218,6 @@ def deprecated(
         )
 
     return decorator
-
-
-def lazy_import(module_name: str, names: list[str]) -> Callable[[str], Any]:
-    # YAGNI: use sys._getframe(1).f_globals['__name__'] to infer module_name
-    module = sys.modules[module_name]
-
-    def __getattr__(name: str) -> Any:
-        if name not in names:  # pragma: no cover
-            raise AttributeError(f"module {module_name!r} has no attribute {name!r}")
-        rv = pkgutil.resolve_name(f'{module_name}._lazy:{name}')
-        setattr(module, name, rv)
-        return rv
-
-    return __getattr__
 
 
 def resolve_path(o: object, path: str) -> Any | None:

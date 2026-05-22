@@ -29,9 +29,9 @@ from reader.types import Author
 from utils import make_url_base
 
 
-@pytest.fixture(params=[True, False])
+@pytest.fixture
 def parse(request):
-    parse = default_parser('', _lazy=request.param)
+    parse = default_parser('')
 
     # using the convenience __call__() API instead of parallel(),
     # but we still need access to the ParseResult sometimes
@@ -461,7 +461,7 @@ def test_parse_requests_get_exception(
     def do_raise(*args, **kwargs):
         raise exc
 
-    monkeypatch.setattr('reader._parser.requests._lazy.SessionWrapper.get', do_raise)
+    monkeypatch.setattr('reader._parser.requests.SessionWrapper.get', do_raise)
 
     with pytest.raises(ParseError) as excinfo:
         parse(feed_url)
