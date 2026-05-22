@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -110,8 +111,6 @@ class HTTPRetriever:
     #: Sequence of :class:`ResponseHook`\s.
     response_hooks: list[ResponseHook] = field(default_factory=list)
 
-    _session: requests.Session | None = None
-
     @contextmanager
     def __call__(
         self,
@@ -178,33 +177,6 @@ class HTTPRetriever:
         with self:
             self.session.get_adapter(url)
             self.session.prepare_request(requests.Request('GET', url))
-
-    @property
-    def session(self) -> requests.Session:
-        # FIXME: raise exception
-        assert self._session
-        return self._session
-
-    def __enter__(self) -> Self:
-        # FIXME: make reentrant
-        if self._session:
-            return self
-
-        self._session = session = requests.Session()
-        timeout_adapter = TimeoutHTTPAdapter(self.timeout)
-        session.mount('https://', timeout_adapter)
-        session.mount('http://', timeout_adapter)
-
-        if self.user_agent:
-            session.headers['User-Agent'] = self.user_agent
-
-        return self
-
-    def __exit__(self, *args: Any) -> None:
-        # FIXME: make reentrant
-        if self._session:
-            self._session.close()
-            self._session = None
 
     def get(
         self, url: str | bytes, headers: Headers | None = None, **kwargs: Any
@@ -284,6 +256,35 @@ class HTTPRetriever:
                 response_caching_info['last-modified'] = last_modified
 
         return response, response_caching_info or None
+
+    @property
+    def session(self) -> requests.Session:
+        assert self._session
+        return self._session
+
+    def __post_init__(self) -> None:
+        self._session: requests.Session | None = None
+        self._lock = threading.RLock()
+        self._depth = 0
+
+    def __enter__(self) -> Self:
+        with self._lock:
+            if self._depth == 0:
+                self._session = session = requests.Session()
+                timeout_adapter = TimeoutHTTPAdapter(self.timeout)
+                session.mount('https://', timeout_adapter)
+                session.mount('http://', timeout_adapter)
+                if self.user_agent:
+                    session.headers['User-Agent'] = self.user_agent
+            self._depth += 1
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        with self._lock:
+            self._depth -= 1
+            if self._depth == 0:
+                self._session.close()  # type: ignore[union-attr]
+                self._session = None
 
 
 def _str_value(d: Any | None, key: str) -> str | None:
