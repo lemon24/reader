@@ -266,8 +266,13 @@ class Parser:
         else:
             try:
                 with context as retrieved:
-                    http_info = retrieved.http_info
-                    value = self.parse(feed.url, retrieved)
+                    # we assign http_info after parse() to give it a chance
+                    # to mutate the retrieved feed – alternatively, we need
+                    # a way for parse() to surface information on error
+                    try:
+                        value = self.parse(feed.url, retrieved)
+                    finally:
+                        http_info = retrieved.http_info
             except Exception as e:
                 value = e
 

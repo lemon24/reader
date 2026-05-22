@@ -99,7 +99,8 @@ def default_parser(
 
 class LazyParser:
     def __init__(self, post_init: Callable[[Parser], None]) -> None:
-        self._post_init = post_init
+        # ._post_init is technically part of the public API now :(
+        self._post_init = [post_init]
         self._parser: Parser | None = None
         self._calls: dict[str, list[tuple[Any, ...]]] = {}
         self._session_factory = SessionFactory()
@@ -129,7 +130,10 @@ class LazyParser:
 
         self._parser = parser = Parser()
         parser.session_factory = self._session_factory
-        self._post_init(parser)
+
+        for fn in self._post_init:
+            fn(parser)
+
         for name, calls in self._calls.items():
             method = getattr(parser, name)
             for args in calls:

@@ -16,6 +16,7 @@ This is a list of built-in plugins that are considered stable.
 See the :ref:`Plugins <plugins>` section of the user guide
 for details on how built-in plugins are loaded.
 
+.. automodule:: reader.plugins.autodiscover
 .. automodule:: reader.plugins.enclosure_dedupe
 .. automodule:: reader.plugins.entry_dedupe
 .. automodule:: reader.plugins.mark_as_read

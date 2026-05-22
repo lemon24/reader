@@ -5,6 +5,12 @@ preview_feed_list
 If the feed to be previewed is not actually a feed,
 show a list of feeds linked from that URL (if any).
 
+.. seealso::
+
+    :mod:`~reader.plugins.autodiscover`
+        A stable plugin that does the same thing
+        without being tightly coupled to the web app.
+
 This plugin needs additional dependencies, use the ``unstable-plugins`` extra
 to install them:
 
