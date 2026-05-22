@@ -63,7 +63,7 @@ STRIP_HTML_DATA = [
 )
 @pytest.mark.parametrize('input, expected_output', STRIP_HTML_DATA)
 def test_strip_html(input, expected_output, features):
-    output = strip_html(input, features)
+    output = strip_html(input, features=features)
     if isinstance(output, str):
         output = '\n'.join(output.split())
 

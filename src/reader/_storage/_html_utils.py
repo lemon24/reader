@@ -6,10 +6,15 @@ HTML utilities. Contains no business logic.
 from __future__ import annotations
 
 import warnings
+from typing import Any
+from typing import IO
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
     import bs4
+
+
+AnyMarkup = str | bytes | IO[str] | IO[bytes]
 
 
 # BeautifulSoup warns if not giving it a parser explicitly; full text:
@@ -37,18 +42,18 @@ warnings.filterwarnings(
 )
 
 
-def strip_html(html: str, features: str | None = None) -> str:
-    soup = get_soup(html)
+def strip_html(html: AnyMarkup, **kwargs: Any) -> str:
+    soup = get_soup(html, **kwargs)
     remove_nontext_elements(soup)
     add_text_attrs_as_elements(soup)
     return soup.get_text()
 
 
-def get_soup(html: str, features: str | None = None) -> bs4.BeautifulSoup:
+def get_soup(html: AnyMarkup, **kwargs: Any) -> bs4.BeautifulSoup:
     # lazy import (https://github.com/lemon24/reader/issues/297)
     import bs4
 
-    return bs4.BeautifulSoup(html, features=features)
+    return bs4.BeautifulSoup(html, **kwargs)
 
 
 def remove_nontext_elements(soup: bs4.BeautifulSoup) -> None:

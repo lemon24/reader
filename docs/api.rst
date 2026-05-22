@@ -243,3 +243,9 @@ Utilities
 ---------------
 
 .. automodule:: reader.opml
+
+
+``reader.discover``
+-------------------
+
+.. automodule:: reader.discover
