@@ -79,7 +79,7 @@ LAZY_MODULES = frozenset("""\
 S_NO_IMPORTS = """\
 list(reader.get_entries())
 list(reader.search_entries('entry'))
-reader._parser.session_factory.response_hooks.append('unused')
+reader._parser.lazy_init(lambda p: p.get_retriever('http://').response_hooks.append('unused'))
 """, set()  # fmt: skip
 
 

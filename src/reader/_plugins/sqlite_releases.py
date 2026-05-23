@@ -106,5 +106,7 @@ def parse(url, file, headers):
 
 
 def init_reader(reader):
-    for url in URLS:
-        reader._parser.mount_parser_by_url(url, parse)
+    @reader._parser.lazy_init
+    def init_parser(parser):
+        for url in URLS:
+            parser.mount_parser_by_url(url, parse)

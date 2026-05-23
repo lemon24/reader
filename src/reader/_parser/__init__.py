@@ -4,6 +4,7 @@ import builtins
 import mimetypes
 import shutil
 import tempfile
+from collections.abc import Callable
 from collections.abc import Collection
 from collections.abc import Iterable
 from collections.abc import Iterator
@@ -73,6 +74,9 @@ def default_parser(
         # validate feed_root early
         file_retriever = FileRetriever(feed_root)
 
+    parser = Parser()
+
+    @parser.lazy_init
     def post_init(parser: Parser) -> None:
         from .feedparser import FeedparserParser
         from .http import HTTPRetriever
@@ -92,10 +96,11 @@ def default_parser(
         # (replicates feedparser's original behavior)
         parser.mount_parser_by_mime_type(feedparser_parser, '*/*;q=0.1')
 
-    parser = Parser()
-    post_init(parser)
-
     return parser
+
+
+ParserFunc = Callable[['Parser'], Any]
+PF = TypeVar('PF', bound=ParserFunc)
 
 
 class Parser:
@@ -133,6 +138,24 @@ class Parser:
         self.retrievers: dict[str, RetrieverType[Any]] = {}
         self.parsers_by_mime_type: dict[str, list[tuple[float, ParserType[Any]]]] = {}
         self.parsers_by_url: dict[str, ParserType[Any]] = {}
+
+        self.lazy_init_funcs: list[ParserFunc] = []
+
+    def lazy_init(self, func: PF) -> PF:
+        """FIXME: docstring"""
+        self.lazy_init_funcs.append(func)
+        return func
+
+    def do_lazy_init(self) -> None:
+        if not self.lazy_init_funcs:
+            return
+        while True:
+            try:
+                func = self.lazy_init_funcs.pop()
+            except IndexError:
+                break
+            else:
+                func(self)
 
     def parallel(
         self,
@@ -447,6 +470,7 @@ class Parser:
             ParseError: No retriever matches the URL.
 
         """
+        self.do_lazy_init()
         for prefix, retriever in self.retrievers.items():
             if url.lower().startswith(prefix.lower()):
                 return retriever
@@ -502,6 +526,7 @@ class Parser:
             ParseError: No parser matches the MIME type.
 
         """
+        self.do_lazy_init()
         parsers = self.parsers_by_mime_type.get(mime_type, ())
         if not parsers:
             parsers = self.parsers_by_mime_type.get('*/*', ())
@@ -534,6 +559,7 @@ class Parser:
 
         """
         # we might change this to have some smarter matching, but YAGNI
+        self.do_lazy_init()
         url = normalize_url(url)
         return self.parsers_by_url.get(url)
 

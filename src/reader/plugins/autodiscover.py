@@ -34,11 +34,7 @@ HEADER = f'x-reader-{TAG}'
 
 
 def init_reader(reader):
-    # setting parser.parse early triggers the non-lazy imports :(
-    if hasattr(reader._parser, '_post_init'):  # pragma: no cover
-        reader._parser._post_init.append(patch_parse)
-    else:  # pragma: no cover
-        patch_parse(reader._parser)
+    reader._parser.lazy_init(patch_parse)
     reader.after_feed_update_hooks.append(save_links_as_tag)
 
 

@@ -31,7 +31,7 @@ _LOG_HEADERS = ['Server', 'X-Powered-By']
 log = get_logger(__name__)
 
 
-def _ua_fallback_response_hook(session, response, request, **kwargs):
+def _ua_fallback(session, response, request, **kwargs):
     if not response.status_code == 403:
         return None
 
@@ -54,6 +54,6 @@ def _ua_fallback_response_hook(session, response, request, **kwargs):
 
 
 def init_reader(reader):
-    reader._parser.get_retriever('http://').response_hooks.append(
-        _ua_fallback_response_hook
-    )
+    @reader._parser.lazy_init
+    def init_parser(parser):
+        parser.get_retriever('http://').response_hooks.append(_ua_fallback)
