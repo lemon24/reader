@@ -41,11 +41,8 @@ def test_from_http_response():
     assert from_http_response(base, '', {}) == []
     assert from_http_response(base, HTML, {'content-type': 'image/png'}) == []
 
-    assert (
-        from_http_response(
-            base,
-            io.BytesIO('<a href="/index.xml">😀</a>'.encode('utf-16')),
-            {'content-type': 'text/html; charset=utf-8'},
-        )
-        == []
-    )
+    assert from_http_response(
+        base,
+        io.BytesIO('<a href="/index.xml">£</a>'.encode()),
+        {'content-type': 'text/html; charset=cp1252'},
+    ) == [Link(href='http://base/index.xml', type=None, title='Â£')]
