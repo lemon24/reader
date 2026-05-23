@@ -157,6 +157,8 @@ class Parser:
         """
 
         with ExitStack() as stack:
+            # we may want to make this reentrant at some point
+            # (so retrievers don't need to deal with it)
             for retriever in self.retrievers.values():
                 if isinstance(retriever, ContextManager):
                     stack.enter_context(retriever)
