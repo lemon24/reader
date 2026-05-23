@@ -83,20 +83,17 @@ class ResponseHook(Protocol):
 
 @dataclass
 class HTTPRetriever:
-    """http(s):// retriever that uses Requests.
+    """http(s):// retriever that uses Requests."""
 
-    Roughly following feedparser's implementation[*]_,
-    but header setting has been split to multiple places:
-
-    * Accept-Encoding is set by Requests by default
-    # FIXME
-    * User-Agent is set on the session by SessionFactory
-    * If-None-Match is set by SessionWrapper.caching_get()
-    * If-Modified-Since is set by SessionWrapper.caching_get()
-
-    .. [*] https://github.com/kurtmckee/feedparser/blob/6.0.10/feedparser/http.py
-
-    """
+    # Roughly following feedparser's implementation[1],
+    # but header setting has been split to multiple places:
+    #
+    # * Accept-Encoding is set by Requests by default
+    # * User-Agent is set on the session during __post_init__()
+    # * If-None-Match is set by caching_get()
+    # * If-Modified-Since is set by caching_get()
+    #
+    # [1]: https://github.com/kurtmckee/feedparser/blob/6.0.10/feedparser/http.py
 
     user_agent: str | None = None
     timeout: TimeoutType = DEFAULT_TIMEOUT

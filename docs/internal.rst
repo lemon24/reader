@@ -31,16 +31,6 @@ Parser
     :special-members: __call__
 
 
-.. module:: reader._parser.requests
-
-.. autoclass:: SessionFactory(...)
-    :members:
-    :special-members: __call__
-
-.. autoclass:: SessionWrapper(...)
-    :members:
-
-
 Protocols
 ~~~~~~~~~
 
@@ -79,18 +69,6 @@ Protocols
     :show-inheritance:
 
 
-.. module:: reader._parser.requests
-    :no-index:
-
-.. autoclass:: RequestHook
-    :members:
-    :special-members: __call__
-
-.. autoclass:: ResponseHook
-    :members:
-    :special-members: __call__
-
-
 Data objects
 ~~~~~~~~~~~~
 
@@ -111,6 +89,35 @@ Data objects
 
 .. autoclass:: HTTPInfo
     :members:
+
+
+Built-in retrievers and parsers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. module:: reader._parser.http
+
+.. autoclass:: HTTPRetriever
+    :members: request_hooks, response_hooks
+
+.. autoclass:: RequestHook
+    :members:
+    :special-members: __call__
+
+.. autoclass:: ResponseHook
+    :members:
+    :special-members: __call__
+
+.. module:: reader._parser.file
+
+.. autoclass:: FileRetriever
+
+.. module:: reader._parser.feedparser
+
+.. autoclass:: FeedparserParser
+
+.. module:: reader._parser.jsonfeed
+
+.. autoclass:: JSONFeedParser
 
 
 .. _storage:

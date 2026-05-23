@@ -23,7 +23,11 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class JSONFeedParser:
-    """https://jsonfeed.org/version/1.1"""
+    """`JSON Feed`_ parser.
+
+    .. _JSON Feed: https://jsonfeed.org/version/1.1
+
+    """
 
     accept = 'application/feed+json,application/json;q=0.9'
 

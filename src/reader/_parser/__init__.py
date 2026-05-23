@@ -117,7 +117,7 @@ class Parser:
     * :meth:`process_feed_for_update`
     * :meth:`process_entry_pairs`
 
-    To add retrievers and parsers:
+    To add retrievers and parsers, ideally during :meth:`lazy_init`:
 
     * :meth:`mount_retriever`
     * :meth:`mount_parser_by_mime_type`
@@ -142,7 +142,16 @@ class Parser:
         self.lazy_init_funcs: list[ParserFunc] = []
 
     def lazy_init(self, func: PF) -> PF:
-        """FIXME: docstring"""
+        """Decorator used to register a lazy initialization function.
+
+        You should use a lazy init function instead of
+        calling :class:`Parser` methods directly if:
+
+        * your parser / retriever has slow imports
+        * you want to modify existing retrievers
+          (e.g. to add :attr:`.HTTPRetriever.request_hooks`)
+
+        """
         self.lazy_init_funcs.append(func)
         return func
 
@@ -784,7 +793,13 @@ class RetrievedFeed(_namedtuple_compat, Generic[T]):
 
 
 class RetrieverType(Protocol[T_co]):  # pragma: no cover
-    """A callable that knows how to retrieve a feed."""
+    """A callable that knows how to retrieve a feed.
+
+    If the retriever is also a context manager,
+    it will be entered at the beginning of :meth:`Parser.parallel`
+    and exited at the end.
+
+    """
 
     def __call__(
         self, url: str, caching_info: JSONType | None, accept: str | None

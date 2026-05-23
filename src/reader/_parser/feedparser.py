@@ -37,6 +37,12 @@ logger = get_logger('reader.parser.feedparser')
 
 
 class FeedparserParser:
+    """RSS / Atom parser that uses `feedparser`_.
+
+    .. _feedparser: https://feedparser.readthedocs.io/en/latest/
+
+    """
+
     # The wildcard gets added back explicitly later on.
     accept = unparse_accept_header(
         (v, q)

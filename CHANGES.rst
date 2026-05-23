@@ -11,6 +11,8 @@ Version 3.25
 
 Unreleased
 
+* Simplify parser lazy initialization (make it explicit and opt-in by plugins).
+
 
 Version 3.24
 ------------

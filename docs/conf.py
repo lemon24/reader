@@ -23,7 +23,7 @@ for name in [
     'structlog.contextvars',
     'structlog.stdlib',
 ]:
-    sys.modules[name] = unittest.mock.Mock()
+    sys.modules[name] = unittest.mock.MagicMock()
 
 import reader
 
