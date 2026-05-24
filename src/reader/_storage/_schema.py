@@ -346,7 +346,7 @@ def _migrate_source_author_to_json(
     import json
 
     source = json.loads(raw_source)
-    source['authors'] = _migrate_author_to_json(source.pop('author'))
+    source['authors'] = _migrate_author_to_json(source.pop('author', None))
     return json.dumps(source)
 
 

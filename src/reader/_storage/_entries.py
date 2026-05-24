@@ -712,6 +712,7 @@ def entry_update_intent_to_dict(intent: EntryUpdateIntent) -> EntryDict:
         if entry.source.updated:
             source_dict['updated'] = adapt_datetime(entry.source.updated)
 
+        # TODO: perhaps don't double-dumps() authors? (migration needed)
         source_dict['authors'] = (
             json.dumps([a._asdict() for a in source_dict['authors']])
             if source_dict['authors']

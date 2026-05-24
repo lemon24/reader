@@ -15,6 +15,7 @@ from reader import InvalidSearchQueryError
 from reader import StorageError
 from reader._storage import Storage
 from reader._storage._schema import _migrate_author_to_json
+from reader._storage._schema import _migrate_source_author_to_json
 from reader._storage._sqlite_utils import DBError
 from reader._storage._sqlite_utils import HeavyMigration
 from reader._storage._sqlite_utils import require_version
@@ -612,3 +613,21 @@ def test_migrate_author_to_json():
     assert parsed[0]["name"] == "John Doe"
     assert parsed[0]["href"] is None
     assert parsed[0]["email"] == "john@example.com"
+
+
+@pytest.mark.parametrize(
+    'input, expected',
+    [
+        (None, None),
+        ('', None),
+        ('{"author": null}', '{"authors": null}'),
+        ('{"author": ""}', '{"authors": null}'),
+        (
+            '{"author": "John (email)"}',
+            '{"authors": "[{\\"name\\": \\"John\\", \\"email\\": \\"email\\", \\"href\\": null}]"}',
+        ),
+        ('{}', '{"authors": null}'),
+    ],
+)
+def test_migrate_source_author_to_json(input, expected):
+    assert _migrate_source_author_to_json(input) == expected
