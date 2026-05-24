@@ -612,13 +612,3 @@ def test_migrate_author_to_json():
     assert parsed[0]["name"] == "John Doe"
     assert parsed[0]["href"] is None
     assert parsed[0]["email"] == "john@example.com"
-
-
-def test_migrate_author_to_json_edge_cases():
-    from reader._storage._schema import _migrate_author_to_json
-
-    # Covers extra commas (empty parts) and strings with only an email
-    assert (
-        _migrate_author_to_json("John,, (email@example.com)")
-        == '[{"name": "John", "email": null, "href": null}, {"name": null, "email": "email@example.com", "href": null}]'
-    )

@@ -1243,6 +1243,12 @@ def test_feedparser_parse_authors_rss():
         Author(name='John Doe (email', href=None, email=None),
     )
 
+    # comma weirdness
+    assert _parse_authors({'author': 'John,, (email)'}, is_rss=True) == (
+        Author(name='John', href=None, email=None),
+        Author(name=None, href=None, email='email'),
+    )
+
     # Multiple names with a single fallback email/href
     assert _parse_authors(
         {
