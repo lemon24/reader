@@ -42,6 +42,41 @@
         </li>
       {%- endif %}
       {%- if feed.last_exception %}
+
+        {%- if autodiscover %}
+        <li class="alert alert-primary">
+
+          <p>
+            <strong>This doesn't look like a feed</strong>,
+            but it links to these feeds:
+          </p>
+
+          <ul class="list-unstyled d-table">
+          {%- for link in autodiscover %}
+            <li class="d-table-row mb-1">
+
+              <span class="d-table-cell pe-4 pb-1">
+                {{ macros.link_object(link) }}
+              </span>
+
+              <form
+                action="{{ url_for('.change_feed_url') }}"
+                method="post"
+                class="d-table-cell pb-1"
+              >
+                {{ macros.csrf_token_field() }}
+                <input type="hidden" name="old" value="{{ feed.url }}">
+                <input type="hidden" name="new" value="{{ link.href }}">
+                <input type="submit" class="btn btn-primary btn-sm" value="add">
+              </form>
+
+            </li>
+          {%- endfor %}
+          </ul>
+
+        </li>
+        {%- endif %}
+
         <li class="alert alert-danger">
           <strong>Update error</strong>
           {%- if not feed.last_updated %} (first update){% endif %}:

@@ -355,3 +355,11 @@
   or learn more about <a href="{{ url_for('.help') }}">how to use <strong>reader</strong></a>.
 </p>
 {%- endmacro -%}
+
+
+{%- macro link_object(link) %}
+{#- TODO: when links are unified, add a property for this #}
+{%- set title = link.title or link.href.rpartition('?')[0].rstrip('/').rpartition('/')[2] %}
+<a href="{{ link.href }}" target="_blank">{{ title }}</a>
+{%- if link.type %}&ensp;<small>{{ link.type }}</small>{% endif %}
+{%- endmacro %}

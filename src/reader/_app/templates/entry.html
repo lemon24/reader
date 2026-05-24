@@ -114,8 +114,7 @@
 <ul class="card-text list-unstyled">
 {% for enclosure in entry.enclosures %}
 <li>
-<a href="{{ enclosure.href }}">{{ enclosure.href.split('/')[-1].split('?')[0] }}</a>
-<small>{{ enclosure.type }}</small>
+  {{ macros.link_object(enclosure) }}
 </li>
 {% endfor %}
 </ul>

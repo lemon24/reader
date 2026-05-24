@@ -88,6 +88,11 @@ def entries():
     if feed_url := form.feed.data:
         feed = reader.get_feed(feed_url)
 
+    autodiscover = None
+    if feed and feed.last_exception and not feed.last_updated:
+        autodiscover_tag = reader.make_reader_reserved_name('autodiscover')
+        autodiscover = reader.get_tag(feed, autodiscover_tag, None)
+
     kwargs = dict(form.data)
 
     if not (feed or kwargs.get('starting_after')):
@@ -106,6 +111,7 @@ def entries():
         form=form,
         entries=entries,
         feed=feed,
+        autodiscover=autodiscover,
         limit=limit,
     )
 
@@ -275,6 +281,31 @@ def add_feed():
             return redirect(url_for('.entries', feed=url), code=303)
 
     return render_template('add_feed.html', form=form)
+
+
+@blueprint.route('/feeds/change', methods=['POST'])
+def change_feed_url():
+    # NOTE: currently only for post-add autodiscover change,
+    # actual "change feed URL" UX needs design (e.g. needs preview)
+
+    reader = get_reader()
+    old = request.form['old']
+    new = request.form['new']
+
+    try:
+        reader.change_feed_url(old, new)
+    except FeedExistsError:
+        flash(f"Feed {new} already exists.", 'secondary')
+        return redirect(url_for('.entries', feed=old), code=303)
+    else:
+        # TODO: updating should be out of band
+        try:
+            reader.update_feed(new)
+        except UpdateError:
+            pass
+        else:
+            flash("Changed and updated feed.", 'success')
+        return redirect(url_for('.entries', feed=new), code=303)
 
 
 @blueprint.route('/feeds/import', methods=['GET', 'POST'])
