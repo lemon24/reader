@@ -1224,6 +1224,25 @@ def test_feedparser_parse_authors_rss():
         Author(name='Jane Doe', href=None, email=None),
     )
 
+    # bug https://github.com/lemon24/reader/issues/405
+    assert _parse_authors({'author': 'John Doe (detail) (email)'}, is_rss=True) == (
+        Author(name='John Doe (detail)', href=None, email='email'),
+    )
+    assert _parse_authors({'author': 'John Doe <detail> <email>'}, is_rss=True) == (
+        Author(name='John Doe <detail>', href=None, email='email'),
+    )
+
+    # mismatched parens
+    assert _parse_authors({'author': '('}, is_rss=True) == (
+        Author(name='(', href=None, email=None),
+    )
+    assert _parse_authors({'author': 'John Doe ('}, is_rss=True) == (
+        Author(name='John Doe (', href=None, email=None),
+    )
+    assert _parse_authors({'author': 'John Doe (email'}, is_rss=True) == (
+        Author(name='John Doe (email', href=None, email=None),
+    )
+
     # Multiple names with a single fallback email/href
     assert _parse_authors(
         {

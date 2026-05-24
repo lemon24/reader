@@ -208,7 +208,7 @@ def _process_entry(feed_url: str, entry: Any, is_rss: bool) -> EntryData:
 _RSS_AUTHOR_RE = re.compile(r"""(?x)
     ^
     \s*
-    ( [^(<]*? )     # name: anything until the first paren / end of string
+    ( .*? )         # name: anything until the last open paren / end
     \s*
     (?:
         [(<]        # open paren
