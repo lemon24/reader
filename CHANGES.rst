@@ -9,7 +9,7 @@ Changelog
 Version 3.25
 ------------
 
-Unreleased
+Released 2026-05-25
 
 * Stable feed autodiscovery support. (:issue:`404`)
 
