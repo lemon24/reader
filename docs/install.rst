@@ -13,13 +13,10 @@ Dependencies
 
 These packages will be installed automatically when installing *reader*:
 
-* `feedparser`_ parses feeds; *reader* is essentially feedparser + state.
-* `requests`_ retrieves feeds from the internet;
-  it replaces feedparser's default use of :mod:`urllib`
-  to make it easier to write plugins.
+* `feedparser`_ parses Atom and RSSfeeds.
+* `requests`_ retrieves feeds from the internet.
 * `werkzeug`_ provides HTTP utilities.
-* `beautifulsoup4`_ is used to strip HTML tags before adding entries
-  to the search index.
+* `beautifulsoup4`_ is used to strip HTML tags and by various plugins.
 * `structlog`_ is used for structured logging.
 * `typing-extensions`_ is used for :mod:`typing` backports.
 
@@ -58,8 +55,13 @@ As of version |version|, *reader* has the following extras:
 * Specific plugins may require additional dependencies;
   refer to their documentation for details.
 
+Beautiful Soup supports `multiple parsers`_,
+and will use the best available one;
+for speed, install `lxml`_.
 
 .. _beautifulsoup4: https://www.crummy.com/software/BeautifulSoup/
+.. _multiple parsers: https://www.crummy.com/software/BeautifulSoup/bs4/doc/#installing-a-parser
+.. _lxml: https://lxml.de/
 .. _feedparser: https://feedparser.readthedocs.io/en/latest/
 .. _requests: https://requests.readthedocs.io/
 .. _werkzeug: https://werkzeug.palletsprojects.com/
