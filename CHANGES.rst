@@ -17,6 +17,14 @@ Unreleased
   * Add :mod:`reader.discover` module providing low level discovery.
   * In the web app, show :mod:`~reader.plugins.autodiscover` suggestions when adding a feed.
 
+* Fix bugs that may cause the 3.24 database migration to fail. (:issue:`405`)
+
+  * Don't fail for ``John Doe (...) (email)`` RSS authors.
+  * Support missing :attr:`EntrySource` ``author`` field during migration.
+
+  Note there should be no integrity issues,
+  as migrations happen inside a transaction.
+
 * Simplify parser lazy initialization (make it explicit and opt-in by plugins).
 * Allow before/after update hook functions to take *fewer* arguments than documented.
 

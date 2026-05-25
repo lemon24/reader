@@ -50,6 +50,7 @@ you'd probably call it a fat model.
 * full-text search articles
 * get statistics on feed and user activity
 * import / export feeds as OPML
+* automatically discover feeds in web pages
 * write plugins to extend its functionality
 * skip all the low level stuff and focus on what makes your feed reader different
 
