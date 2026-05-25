@@ -38,11 +38,14 @@
         </p>
 
         <ul class="list-unstyled d-table">
-        {%- for link in autodiscover %}
+        {%- for link, official in autodiscover | sort(attribute=1, reverse=True) %}
           <li class="d-table-row mb-1">
 
             <span class="d-table-cell pe-4 pb-1">
               {{ macros.link_object(link) }}
+              {%- if not official %}
+                <i class="bi bi-box-arrow-up-right ms-1" aria-label="external feed" title="external feed"></i>
+              {%- endif %}
             </span>
 
             <form

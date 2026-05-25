@@ -91,7 +91,11 @@ def entries():
     autodiscover = None
     if feed and feed.last_exception and not feed.last_updated:
         autodiscover_tag = reader.make_reader_reserved_name('autodiscover')
-        autodiscover = reader.get_tag(feed, autodiscover_tag, None)
+        hostname = urlparse(feed.url).hostname
+        autodiscover = [
+            (link, hostname and urlparse(link['href']).hostname == hostname)
+            for link in reader.get_tag(feed, autodiscover_tag, None)
+        ]
 
     kwargs = dict(form.data)
 
