@@ -11,7 +11,14 @@ Version 3.25
 
 Unreleased
 
+* Stable feed autodiscovery support. (:issue:`404`)
+
+  * Add :mod:`~reader.plugins.autodiscover` built-in plugin.
+  * Add :mod:`reader.discover` module providing low level discovery.
+  * In the web app, show :mod:`~reader.plugins.autodiscover` suggestions when adding a feed.
+
 * Simplify parser lazy initialization (make it explicit and opt-in by plugins).
+* Allow before/after update hook functions to take *fewer* arguments than documented.
 
 
 Version 3.24
