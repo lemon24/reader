@@ -91,14 +91,18 @@ TIER_ONE_SELECTOR = """\
 
 TIER_TWO_SELECTOR = """\
 a[href$="atom.xml"],
-a[href$="atom"],
+a[href$="/atom"],
+a[href$="/atom/"],
+a[href$="=atom"],
 a[href$="rss.xml"],
-a[href$="rss"],
-a[href$="rss/"],
+a[href$="/rss"],
+a[href$="/rss/"],
+a[href$="=rss"],
 a[href$="index.xml"],
 a[href$="/feed.xml"],
 a[href$="/feed.json"],
-a[href$="/feed"]
+a[href$="/feed"],
+a[href$="/feed/"]
 """
 
 SELECTORS = [TIER_ONE_SELECTOR, TIER_TWO_SELECTOR]
