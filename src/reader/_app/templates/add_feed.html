@@ -13,7 +13,15 @@
 
 <h1>Add feed</h1>
 
-<p>Add a single feed:</p>
+<p>
+  Paste a feed or website URL:
+  <a
+    href="{{ url_for('.help', _anchor=help_topic) }}"
+    class="link-secondary d-inline-block px-2"
+  >
+    <i class="bi bi-question-lg" aria-label="help: adding feeds"></i>
+  </a>
+</p>
 
 <form action="{{ url_for(request.endpoint) }}" method="post" class="my-2 mb-4">
 {#- TODO: aria stuff #}

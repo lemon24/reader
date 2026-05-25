@@ -39,11 +39,17 @@
 <h3 id="add-feed">Adding feeds</h3>
 
 <p>
-  To add a feed, paste its link in the
+  To add a feed, paste the feed or website URL on the
   <a href="{{ url_for('.add_feed') }}">Add feed</a> page.
 
 <p>
-  You can usually find if a website has a feed
+  If you use a website URL,
+  <em>reader</em> will discover any standard feeds it links to
+  and suggest them to you.
+
+<p>
+  If that doesn't work,
+  you can usually find if a website has a feed
   by looking in its header or footer for this icon
   <i class="bi bi-rss" aria-label="RSS logo"></i>,
   or for links called <em>feed</em>, <em>RSS</em>, or <em>Atom</em>.
