@@ -94,7 +94,7 @@ def entries():
         hostname = urlparse(feed.url).hostname
         autodiscover = [
             (link, hostname and urlparse(link['href']).hostname == hostname)
-            for link in reader.get_tag(feed, autodiscover_tag, None)
+            for link in reader.get_tag(feed, autodiscover_tag, ())
         ]
 
     kwargs = dict(form.data)
