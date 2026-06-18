@@ -62,10 +62,13 @@
       <ul class="navbar-nav mb-0">
         {% block right_hidden_navbar %}
 
+        {% block right_hidden_navbar_common %}
+
         <li class="nav-item">
           <a
             href="{{ url_for('reader.help', _anchor=help_topic | default(none)) }}"
             class="btn btn-link nav-link d-flex align-items-center"
+            title="help"
           >
             <i class="bi bi-question-lg"></i>
             <span class="d-md-none ms-2">help</span>
@@ -78,7 +81,7 @@
             type="button" id="theme"
             data-bs-toggle="dropdown" data-bs-display="static"
             aria-expanded="false" aria-label="toggle theme (auto)">
-            <i class="bi bi-circle-half theme-icon-active"></i>
+            <i class="bi bi-circle-half theme-icon-active" title="toggle theme"></i>
             <span class="d-md-none ms-2" id="theme-text">toggle theme</span>
           </button>
           <ul class="dropdown-menu dropdown-menu-end mb-2" aria-labelledby="theme-text">
@@ -107,6 +110,19 @@
               </button>
             </li>
           </ul>
+        </li>
+
+        {% endblock %}
+
+        <li class="nav-item">
+          <a
+            href="{{ url_for('reader.settings') }}"
+            class="btn btn-link nav-link d-flex align-items-center"
+            title="settings"
+          >
+            <i class="bi bi-gear-fill"></i>
+            <span class="d-md-none ms-2">settings</span>
+          </a>
         </li>
 
         {% endblock %}
