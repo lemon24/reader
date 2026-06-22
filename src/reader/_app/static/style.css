@@ -69,8 +69,6 @@
   height: auto;
 }
 
-
-:target {
-  outline: 0;
-  box-shadow: var(--bs-focus-ring-x, 0) var(--bs-focus-ring-y, 0) var(--bs-focus-ring-blur, 0) var(--bs-focus-ring-width) var(--bs-focus-ring-color);
+h1:target, h2:target, h3:target, h4:target, h5:target, h6:target {
+  text-decoration: underline;
 }
