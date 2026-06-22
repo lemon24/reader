@@ -57,7 +57,10 @@ class ReaderStateBase:
         return make_reader(**self.args | kwargs)
 
     def get_exports(self):
-        return Exports(self.get_reader(), self.get_user_cache_dir() / 'exports')
+        cache_dir = self.get_user_cache_dir()
+        if not cache_dir:
+            return None
+        return Exports(self.get_reader(), cache_dir / 'exports')
 
 
 class _ReaderState(ReaderStateBase):
