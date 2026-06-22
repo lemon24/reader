@@ -65,12 +65,16 @@ class _ReaderState(ReaderStateBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._reader = self._make_reader()
+        self._exports = super().get_exports()
 
     def get_reader(self):
         return self._reader
 
     def get_user_cache_dir(self):
         return self.cache_dir
+
+    def get_exports(self):
+        return self._exports
 
 
 class TooManyExportsError(Exception):
