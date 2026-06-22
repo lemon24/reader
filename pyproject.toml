@@ -65,8 +65,11 @@ cli = [
 app = [
     "flask>=0.10",
     "humanize>=4",
-    # for config
+    # for legacy (tags)
     "PyYAML",
+    # for cli
+    "click",
+    "platformdirs",
     # for v2
     "WTForms",
     "Flask-WTF",

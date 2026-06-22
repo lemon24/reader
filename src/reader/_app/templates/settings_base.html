@@ -13,4 +13,55 @@
 <h1>Settings</h1>
 
 
+<h2 id="exports">Export database</h2>
+
+<p>
+  Export your entire <em>reader</em> database,
+  for backup or use with another installation.
+
+{{ macros.flashed_messages(['exports.danger']) }}
+
+<div class="card my-3">
+  <div class="card-header">
+   Recent exports
+  </div>
+
+  <ul class="list-group list-group-flush">
+    {%- for path, date in exports | sort(reverse=True) %}
+    <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <span>
+        <a href="{{ url_for('.get_export', name=path.name) }}" class="d-inline-block">
+          <time datetime="{{ date }}" title="{{ date }}">
+            {{ date | humanize_naturaltime }}
+          </time>
+        </a>
+        <span class="text-secondary">({{ path.stat().st_size | filesizeformat }})</span>
+      </span>
+
+      <form action="{{ url_for('.delete_export', name=path.name) }}" method="post">
+        {{ macros.csrf_token_field() }}
+        <input type="submit" class="btn btn-outline-danger btn-sm" value="delete">
+      </form>
+
+    </li>
+    {%- else %}
+    <li class="list-group-item">
+      no exports found
+    </li>
+    {%- endfor %}
+  </ul>
+
+</div>
+
+<form action="{{ url_for('.create_export') }}" method="post" class="my-3">
+  {{ macros.csrf_token_field() }}
+  <input type="submit" class="btn btn-secondary" value="create new export">
+</form>
+
+<p class="text-secondary">
+  To export feeds as a subscription list, click the
+  <i class="bi bi-filetype-xml" aria-label="export as OPML"></i> icon
+  on the <a href="{{ url_for('.feeds') }}">Feeds</a> page.
+
+
 {% endblock %}

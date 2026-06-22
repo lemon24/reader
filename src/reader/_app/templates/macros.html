@@ -1,9 +1,10 @@
 
-{% macro flashed_messages() %}
-{%- if get_flashed_messages() %}
+{% macro flashed_messages(category_filter=()) %}
+{%- set messages = get_flashed_messages(True, category_filter) %}
+{%- if messages %}
 <ul class="list-unstyled">
-{%- for category, message in get_flashed_messages(with_categories=true) %}
-  <li class="alert alert-{{ category }}">{{ message }}</li>
+{%- for category, message in messages %}
+  <li class="alert alert-{{ category.rpartition('.')[2] }}">{{ message }}</li>
 {%- endfor %}
 </ul>
 {%- endif %}

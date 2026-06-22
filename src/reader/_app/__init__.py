@@ -19,6 +19,7 @@ from flask import render_template
 from flask import render_template_string
 from flask import request
 from flask import Response
+from flask import send_from_directory
 from flask import stream_with_context
 from flask import url_for
 from flask_wtf.csrf import CSRFError
@@ -35,6 +36,8 @@ from reader import InvalidFeedURLError
 from reader import opml
 from reader import UpdateError
 
+from .exports import TooManyExportsError
+from .ext import get_exports
 from .ext import get_reader
 from .ext import ReaderExtension
 from .forms import AddFeed
@@ -358,7 +361,31 @@ def help():
 
 @blueprint.route('/settings')
 def settings():
-    return render_template('settings.html')
+    return render_template('settings.html', exports=get_exports().list())
+
+
+@blueprint.route('/settings/exports', methods=['POST'])
+def create_export():
+    try:
+        get_exports().create()
+    except TooManyExportsError:
+        flash("Too many exports, delete some of them first.", 'exports.danger')
+    return redirect(url_for('.settings', _anchor='exports'), code=303)
+
+
+@blueprint.route('/settings/exports/<name>')
+def get_export(name):
+    return send_from_directory(get_exports().path, name, as_attachment=True)
+
+
+@blueprint.route('/settings/exports/<name>/delete', methods=['POST'])
+def delete_export(name):
+    # flask should ensure <name> doesn't contain slashes etc.
+    try:
+        get_exports().delete(name)
+    except FileNotFoundError:
+        abort(404)
+    return redirect(url_for('.settings', _anchor='exports'), code=303)
 
 
 def stream_template(template_name_or_list, **kwargs):
