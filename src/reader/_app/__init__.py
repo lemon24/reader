@@ -36,10 +36,10 @@ from reader import InvalidFeedURLError
 from reader import opml
 from reader import UpdateError
 
-from .exports import TooManyExportsError
 from .ext import get_exports
 from .ext import get_reader
 from .ext import ReaderExtension
+from .ext import TooManyExportsError
 from .forms import AddFeed
 from .forms import ChangeFeedTitle
 from .forms import EntryFilter
