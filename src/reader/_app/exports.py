@@ -22,7 +22,7 @@ class Exports:
         self.path.mkdir(parents=True, exist_ok=True)
 
     def parse_name(self, name):
-        name_fmt = self.reader._storage.backup_name(self.prefix_fmt)
+        name_fmt = self.reader._storage.export_name(self.prefix_fmt)
         try:
             dt = datetime.strptime(name, name_fmt)
         except ValueError:
@@ -35,7 +35,7 @@ class Exports:
         if len(list(self.path.iterdir())) >= self.max_files:
             raise TooManyExportsError
         prefix = self.reader._now().strftime(self.prefix_fmt)
-        self.reader._storage.backup(self.path, prefix)
+        self.reader._storage.export(self.path, prefix)
 
     def exists(self, name):
         if not self.parse_name(name):

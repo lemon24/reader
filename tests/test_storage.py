@@ -634,12 +634,12 @@ def test_migrate_source_author_to_json(input, expected):
     assert _migrate_source_author_to_json(input) == expected
 
 
-def test_backup(storage, tmp_path):
+def test_export(storage, tmp_path):
     storage.add_feed('feed', datetime(2010, 1, 1))
 
     gz_path = tmp_path / 'foo.sqlite.gz'
 
-    assert storage.backup(tmp_path, 'foo') == gz_path.name
+    assert storage.export(tmp_path, 'foo') == gz_path.name
     assert list(tmp_path.iterdir()) == [gz_path]
 
     db_path = tmp_path / 'foo.sqlite'

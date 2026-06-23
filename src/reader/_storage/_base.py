@@ -112,14 +112,14 @@ class StorageBase:
                 row_factory,
             )
 
-    def backup(self, outdir: str | os.PathLike[str], prefix: str) -> str:
+    def export(self, outdir: str | os.PathLike[str], prefix: str) -> str:
         import gzip
         import pathlib
         import shutil
         import tempfile
 
         outdir = pathlib.Path(outdir)
-        gz = outdir / self.backup_name(prefix)
+        gz = outdir / self.export_name(prefix)
 
         with tempfile.TemporaryDirectory(f".{prefix}", dir=outdir) as tmpdir_str:
             tmpdir = pathlib.Path(tmpdir_str)
@@ -136,5 +136,5 @@ class StorageBase:
 
         return gz.name
 
-    def backup_name(self, prefix: str) -> str:
+    def export_name(self, prefix: str) -> str:
         return f"{prefix}.sqlite.gz"
