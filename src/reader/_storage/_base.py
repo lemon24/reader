@@ -8,6 +8,7 @@ from collections.abc import Callable
 from collections.abc import Iterable
 from functools import partial
 from typing import Any
+from typing import Self
 from typing import TypeVar
 
 from ..exceptions import StorageError
@@ -82,8 +83,9 @@ class StorageBase:
         )
 
     @wrap_exceptions()
-    def __enter__(self) -> None:
+    def __enter__(self) -> Self:
         self.factory.__enter__()
+        return self
 
     @wrap_exceptions()
     def __exit__(self, *_: Any) -> None:
@@ -109,3 +111,30 @@ class StorageBase:
                 last,
                 row_factory,
             )
+
+    def backup(self, outdir: str | os.PathLike[str], prefix: str) -> str:
+        import gzip
+        import pathlib
+        import shutil
+        import tempfile
+
+        outdir = pathlib.Path(outdir)
+        gz = outdir / self.backup_name(prefix)
+
+        with tempfile.TemporaryDirectory(f".{prefix}", dir=outdir) as tmpdir_str:
+            tmpdir = pathlib.Path(tmpdir_str)
+
+            tmp_db = tmpdir / 'db'
+            self.get_db().execute("vacuum into ?", (str(tmp_db),))
+
+            tmp_gz = tmpdir / 'gz'
+            with tmp_db.open('rb') as db_file:
+                with gzip.open(tmp_gz, 'wb') as gz_file:
+                    shutil.copyfileobj(db_file, gz_file)
+
+            tmp_gz.replace(gz)
+
+        return gz.name
+
+    def backup_name(self, prefix: str) -> str:
+        return f"{prefix}.sqlite.gz"

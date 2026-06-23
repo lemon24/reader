@@ -727,7 +727,7 @@ class StorageType(Protocol):  # pragma: no cover
 
     """
 
-    def __enter__(self) -> None:
+    def __enter__(self) -> Self:
         """Called when :class:`.Reader` is used as a context manager."""
 
     def __exit__(self, *_: Any) -> None:

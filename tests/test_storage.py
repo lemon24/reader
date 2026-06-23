@@ -1,3 +1,4 @@
+import gzip
 import json
 import os
 import sqlite3
@@ -631,3 +632,18 @@ def test_migrate_author_to_json():
 )
 def test_migrate_source_author_to_json(input, expected):
     assert _migrate_source_author_to_json(input) == expected
+
+
+def test_backup(storage, tmp_path):
+    storage.add_feed('feed', datetime(2010, 1, 1))
+
+    gz_path = tmp_path / 'foo.sqlite.gz'
+
+    assert storage.backup(tmp_path, 'foo') == gz_path.name
+    assert list(tmp_path.iterdir()) == [gz_path]
+
+    db_path = tmp_path / 'foo.sqlite'
+    db_path.write_bytes(gzip.decompress(gz_path.read_bytes()))
+
+    with Storage(db_path) as storage:
+        assert [f.url for f in storage.get_feeds()] == ['feed']

@@ -3,14 +3,14 @@ Flask extension that encapsulates configurable reader-related aspects.
 
 """
 
-import gzip
 import pathlib
-import shutil
 from dataclasses import dataclass
 from datetime import datetime
 from datetime import timezone
 
+from flask import abort
 from flask import current_app
+from flask import send_from_directory
 
 from reader import make_reader
 from reader.plugins._loader import PluginLoader
@@ -84,44 +84,52 @@ class TooManyExportsError(Exception):
     pass
 
 
+class ExportNotFoundError(Exception):
+    pass
+
+
 class Exports:
 
     max_files = 2
+    prefix_fmt = "reader.%Y-%m-%d-%H-%M-%S"
 
     def __init__(self, reader, path):
         self.reader = reader
         self.path = pathlib.Path(path)
         self.path.mkdir(parents=True, exist_ok=True)
 
-    def create(self):
-        if len(list(self.path.glob('*'))) >= self.max_files:
-            raise TooManyExportsError()
-
-        now = self.reader._now()
-        db = self.path / now.strftime("reader.sqlite.%Y-%m-%d-%H-%M-%S")
-        gz = db.with_name(f"{db.name}.gz")
-        gz_part = db.with_name(f"{gz.name}.part")
-
+    def parse_name(self, name):
+        name_fmt = self.reader._storage.backup_name(self.prefix_fmt)
         try:
-            self.reader._storage.get_db().execute("vacuum into ?", (str(db),))
+            dt = datetime.strptime(name, name_fmt)
+        except ValueError:
+            return None
+        else:
+            return dt.replace(tzinfo=timezone.utc)
 
-            with open(db, 'rb') as db_file:
-                with gzip.open(gz_part, 'wb') as gz_file:
-                    shutil.copyfileobj(db_file, gz_file)
+    def create(self):
+        # not looking at file names accounts for exports in progress
+        if len(list(self.path.iterdir())) >= self.max_files:
+            raise TooManyExportsError
+        prefix = self.reader._now().strftime(self.prefix_fmt)
+        self.reader._storage.backup(self.path, prefix)
 
-            gz_part.replace(gz)
-
-        finally:
-            db.unlink(missing_ok=True)
+    def get_response(self, name):
+        if not self.parse_name(name):
+            abort(404)
+        return send_from_directory(get_exports().path, name, as_attachment=True)
 
     def list(self):
         rv = []
-        for path in self.path.glob("reader.sqlite.*.gz"):
-            date = datetime.strptime(path.name, "reader.sqlite.%Y-%m-%d-%H-%M-%S.gz")
-            date = date.replace(tzinfo=timezone.utc)
-            rv.append((path, date))
+        for path in self.path.iterdir():
+            if dt := self.parse_name(path.name):
+                rv.append((path, dt))
         return rv
 
     def delete(self, name):
-        assert '/' not in name
-        (self.path / name).unlink()
+        if not self.parse_name(name):
+            raise ExportNotFoundError
+        try:
+            (self.path / name).unlink()
+        except FileNotFoundError:
+            raise ExportNotFoundError from None

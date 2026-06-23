@@ -19,7 +19,6 @@ from flask import render_template
 from flask import render_template_string
 from flask import request
 from flask import Response
-from flask import send_from_directory
 from flask import stream_with_context
 from flask import url_for
 from flask_wtf.csrf import CSRFError
@@ -36,6 +35,7 @@ from reader import InvalidFeedURLError
 from reader import opml
 from reader import UpdateError
 
+from .ext import ExportNotFoundError
 from .ext import get_exports
 from .ext import get_reader
 from .ext import ReaderExtension
@@ -375,7 +375,7 @@ def create_export():
 
 @blueprint.route('/settings/exports/<name>')
 def get_export(name):
-    return send_from_directory(get_exports().path, name, as_attachment=True)
+    return get_exports().get_response(name)
 
 
 @blueprint.route('/settings/exports/<name>/delete', methods=['POST'])
@@ -383,7 +383,7 @@ def delete_export(name):
     # flask should ensure <name> doesn't contain slashes etc.
     try:
         get_exports().delete(name)
-    except FileNotFoundError:
+    except ExportNotFoundError:
         abort(404)
     return redirect(url_for('.settings', _anchor='exports'), code=303)
 
