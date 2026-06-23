@@ -459,6 +459,18 @@ def search_entries(reader, query):
         click.echo(f"{entry.feed.url} {entry.link or entry.id}")
 
 
+@cli.command()
+@click.argument('outdir', type=click.Path(exists=True, file_okay=False), default='.')
+@click.option('--prefix', default="reader.%Y-%m-%d-%H-%M-%S", show_default=True)
+@pass_reader
+def export(reader, outdir, prefix):
+    """Export all data to a file in OUTDIR (defaults to cwd)."""
+
+    concrete_prefix = reader._now().strftime(prefix)
+    export_path = reader._storage.export(outdir, concrete_prefix)
+    click.echo(export_path)
+
+
 try:
     import reader._app.cli
 except ImportError:
