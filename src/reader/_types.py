@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import pathlib
 from collections.abc import Iterable
 from collections.abc import Mapping
 from collections.abc import Sequence
@@ -1112,6 +1114,17 @@ class StorageType(Protocol):  # pragma: no cover
             EntryNotFoundError
 
         """
+
+    def export(self, outdir: str | os.PathLike[str], prefix: str) -> pathlib.Path:
+        """Export all data to a file in ``outdir`` and return its full path.
+
+        Aside from starting with ``prefix``,
+        the file name and contents are storage-dependent.
+
+        """
+
+    def export_name(self, prefix: str) -> str:
+        """Return the file name of an export."""
 
 
 @runtime_checkable

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import sqlite3
 import sys
 from collections.abc import Callable
@@ -112,9 +113,8 @@ class StorageBase:
                 row_factory,
             )
 
-    def export(self, outdir: str | os.PathLike[str], prefix: str) -> str:
+    def export(self, outdir: str | os.PathLike[str], prefix: str) -> pathlib.Path:
         import gzip
-        import pathlib
         import shutil
         import tempfile
 
@@ -134,7 +134,7 @@ class StorageBase:
 
             tmp_gz.replace(gz)
 
-        return gz.name
+        return gz
 
     def export_name(self, prefix: str) -> str:
         return f"{prefix}.sqlite.gz"

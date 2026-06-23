@@ -639,7 +639,7 @@ def test_export(storage, tmp_path):
 
     gz_path = tmp_path / 'foo.sqlite.gz'
 
-    assert storage.export(tmp_path, 'foo') == gz_path.name
+    assert storage.export(tmp_path, 'foo') == gz_path
     assert list(tmp_path.iterdir()) == [gz_path]
 
     db_path = tmp_path / 'foo.sqlite'
