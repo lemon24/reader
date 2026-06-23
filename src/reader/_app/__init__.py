@@ -19,6 +19,7 @@ from flask import render_template
 from flask import render_template_string
 from flask import request
 from flask import Response
+from flask import send_from_directory
 from flask import stream_with_context
 from flask import url_for
 from flask_wtf.csrf import CSRFError
@@ -35,11 +36,11 @@ from reader import InvalidFeedURLError
 from reader import opml
 from reader import UpdateError
 
-from .ext import ExportNotFoundError
+from .exports import ExportNotFoundError
+from .exports import TooManyExportsError
 from .ext import get_exports
 from .ext import get_reader
 from .ext import ReaderExtension
-from .ext import TooManyExportsError
 from .forms import AddFeed
 from .forms import ChangeFeedTitle
 from .forms import EntryFilter
@@ -375,7 +376,10 @@ def create_export():
 
 @blueprint.route('/settings/exports/<name>')
 def get_export(name):
-    return get_exports().get_response(name)
+    exports = get_exports()
+    if not exports.exists(name):
+        abort(404)
+    return send_from_directory(exports.path, name, as_attachment=True)
 
 
 @blueprint.route('/settings/exports/<name>/delete', methods=['POST'])
