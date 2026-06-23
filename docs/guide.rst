@@ -139,15 +139,18 @@ since each connection would be to a *different* database::
 
 .. _backups:
 
-Back-ups
-~~~~~~~~
+Backups
+~~~~~~~
 
-Making back-ups depends on the storage used.
+Making backups generally depends on the storage used.
 
-For the SQLite storage, you should use
-the `sqlite3 .backup command <https://sqlite.org/cli.html>`_
-or `VACUUM INTO <https://www.sqlite.org/lang_vacuum.html>`_
-(see :gh:`backup.sh <scripts/backup.sh>` for an example).
+If the storage implements it, you can use
+the :meth:`~reader._types.StorageType.export` method
+or the ``export`` :doc:`CLI <cli>` command.
+
+For the SQLite storage, you can also use
+the `.backup command <https://sqlite.org/cli.html>`_
+or `VACUUM INTO <https://www.sqlite.org/lang_vacuum.html>`_.
 
 
 
