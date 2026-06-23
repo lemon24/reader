@@ -127,7 +127,8 @@ class StorageBase:
             tmp_db = tmpdir / 'db'
             self.get_db().execute("vacuum into ?", (str(tmp_db),))
 
-            tmp_gz = tmpdir / 'gz'
+            # the file name is stored in the .gz file
+            tmp_gz = tmpdir / gz.with_suffix('').name
             with tmp_db.open('rb') as db_file:
                 with gzip.open(tmp_gz, 'wb') as gz_file:
                     shutil.copyfileobj(db_file, gz_file)
