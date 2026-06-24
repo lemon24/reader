@@ -19,6 +19,8 @@ Features, as of *reader* version |version|:
 * article view
 * custom feed titles
 * dark mode
+* feed autodiscovery
+* full data export
 
 More features already implemented in the library
 and the :ref:`legacy web app <legacy web app>`
@@ -85,6 +87,20 @@ Screenshots
     :width: 240px
 
     contextual help
+
+.. _screenshots-autodiscovery:
+
+.. figure:: screenshots/autodiscovery.png
+    :width: 240px
+
+    feed autodiscovery
+
+.. _screenshots-export:
+
+.. figure:: screenshots/export-database.png
+    :width: 240px
+
+    database exports
 
 
 Serving the web app

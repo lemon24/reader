@@ -11,6 +11,12 @@ Version 3.26
 
 Unreleased
 
+* Allow exporting the entire database (e.g. for backup or migration).
+
+  * Through the :meth:`~reader._types.StorageType.export` storage method.
+  * In the web app, on the settings page; :ref:`screenshots <screenshots-export>`.
+  * In the CLI, as a new ``export`` command.
+
 
 Version 3.25
 ------------
@@ -21,7 +27,8 @@ Released 2026-05-25
 
   * Add :mod:`~reader.plugins.autodiscover` built-in plugin.
   * Add :mod:`reader.discover` module providing low level discovery.
-  * In the web app, show :mod:`~reader.plugins.autodiscover` suggestions when adding a feed.
+  * In the web app, show :mod:`~reader.plugins.autodiscover` suggestions
+    when adding a feed; :ref:`screenshots <screenshots-autodiscovery>`.
 
 * Fix bugs that may cause the 3.24 database migration to fail. (:issue:`405`)
 
