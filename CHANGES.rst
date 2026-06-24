@@ -9,7 +9,7 @@ Changelog
 Version 3.26
 ------------
 
-Unreleased
+Released 2026-06-24
 
 * Allow exporting the entire database (e.g. for backup or migration).
 
