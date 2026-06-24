@@ -19,7 +19,7 @@
 {{ macros.flashed_messages() }}
 
 {%- if feed and not feed.url.startswith('reader:') %}
-  <ul class="list-unstyled mt-3">
+  <ul class="list-unstyled">
 
     {%- if not feed.last_updated and not feed.last_exception %}
       <li class="alert alert-secondary">
