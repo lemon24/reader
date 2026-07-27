@@ -12,6 +12,8 @@ defaults:
   run:
     shell: bash
 
+permissions: {}
+
 jobs:
   tests:
     runs-on: ${{ matrix.os }}
@@ -28,9 +30,11 @@ jobs:
 
     steps:
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
@@ -39,7 +43,7 @@ jobs:
       - run: coverage run -m pytest --runslow
       - run: ./run.sh coverage-report
 
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -48,9 +52,11 @@ jobs:
 
     steps:
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version-file: 'pyproject.toml'
 
