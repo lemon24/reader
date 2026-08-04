@@ -11,6 +11,9 @@ Version 3.27
 
 Unreleased
 
+* Stop vendoring `feedparser`_ and
+  :ref:`recommend installing it from GitHub instead <no-vendored-feedparser>`.
+
 
 Version 3.26
 ------------

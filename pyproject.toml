@@ -190,7 +190,6 @@ module = [
     "reader.plugins.readtime",
     "reader.plugins.mark_as_read",
     "reader.plugins.autodiscover",
-    "reader._vendor.feedparser.*",
 ]
 ignore_errors = true
 

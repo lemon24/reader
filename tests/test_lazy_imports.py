@@ -68,7 +68,7 @@ LAZY_MODULES = frozenset("""\
     bs4
     requests
     feedparser
-    reader._vendor.feedparser
+    feedparser
     urllib.request
     multiprocessing
 """.split())
@@ -87,17 +87,17 @@ reader._parser.lazy_init(lambda p: p.get_retriever('http://').response_hooks.app
 
 S_ADD_HTTP = "reader.add_feed('http://example.com')", {
     'requests',
-    'reader._vendor.feedparser',
+    'feedparser',
     'urllib.request',
 }
 S_UPDATE_FEEDS = "reader.update_feeds()", {
     'requests',
-    'reader._vendor.feedparser',
+    'feedparser',
     'urllib.request',
 }
 S_UPDATE_FEEDS_WORKERS = "reader.update_feeds(workers=2)", {
     'requests',
-    'reader._vendor.feedparser',
+    'feedparser',
     'urllib.request',
 }
 S_UPDATE_SEARCH = """\

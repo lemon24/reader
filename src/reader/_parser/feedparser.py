@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import calendar
-import os
 import re
 import time
 import warnings
@@ -10,6 +9,8 @@ from datetime import timezone
 from typing import Any
 from typing import IO
 from typing import TYPE_CHECKING
+
+import feedparser  # type: ignore
 
 from .._logging import get_logger
 from .._types import EntryData
@@ -21,12 +22,6 @@ from ..types import Enclosure
 from ..types import EntrySource
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
-
-if os.environ.get('READER_NO_VENDORED_FEEDPARSER', '') not in ('', '0'):
-    import feedparser  # type: ignore
-else:
-    from .._vendor import feedparser
-
 
 if TYPE_CHECKING:  # pragma: no cover
     from . import FeedAndEntries

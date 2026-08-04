@@ -28,14 +28,12 @@ These packages will be installed automatically when installing *reader*:
 
 .. note::
 
-  Because `feedparser`_ makes PyPI releases at a lower cadence,
-  *reader* uses a vendored version of feedparser's `develop`_ branch
-  by default since :ref:`version 2.9`.
-  To opt out of this behavior, and make *reader* use
-  the installed ``feedparser`` package,
-  set the ``READER_NO_VENDORED_FEEDPARSER`` environment variable to ``1``.
+  The `feedparser`_ ``main`` branch contains a `change`_
+  that decreases memory usage by ~35% during feed updates;
+  as of feedparser 6.0.14, this change is not yet included in PyPI releases;
+  to benefit from it, install feedparser directly from GitHub.
 
-.. _develop: https://github.com/kurtmckee/feedparser
+  .. _change: https://github.com/kurtmckee/feedparser/pull/302
 
 
 .. _optional dependencies:

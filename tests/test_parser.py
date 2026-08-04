@@ -1155,27 +1155,6 @@ def test_retrivers_run_in_parallel():
     assert not barrier.broken
 
 
-def test_reader_use_system_feedparser(monkeypatch, reload_module):
-    import feedparser
-
-    import reader._parser.feedparser
-    import reader._vendor.feedparser
-
-    name = 'READER_NO_VENDORED_FEEDPARSER'
-
-    monkeypatch.delenv(name, raising=False)
-    reload_module(reader._parser.feedparser)
-    assert reader._parser.feedparser.feedparser is reader._vendor.feedparser
-
-    monkeypatch.setenv(name, '0')
-    reload_module(reader._parser.feedparser)
-    assert reader._parser.feedparser.feedparser is reader._vendor.feedparser
-
-    monkeypatch.setenv(name, '1')
-    reload_module(reader._parser.feedparser)
-    assert reader._parser.feedparser.feedparser is feedparser
-
-
 def test_feedparser_parse_authors_rss():
     """Test the custom RSS author string splitting logic against known edge cases."""
 
