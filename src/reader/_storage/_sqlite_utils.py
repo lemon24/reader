@@ -304,7 +304,7 @@ def get_int_pragma(db: sqlite3.Connection, pragma: str) -> int:
 
 
 def set_int_pragma(
-    db: sqlite3.Connection, pragma: str, value: int, lower_bound: int = 0
+    db: sqlite3.Connection, pragma: str, value: int, lower_bound: int | None = 0
 ) -> None:
     if not isinstance(value, int):
         raise ValueError(f"{pragma} must be an integer, got {value!r}")

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numbers
 import warnings
 from collections.abc import Callable
 from collections.abc import Iterable
@@ -390,7 +389,7 @@ class Reader:
         self._after_feeds_update = Hooks[FeedsUpdateHook]('after_feeds_update')
 
         #: Override update_feeds(scheduled=...).
-        self._scheduled_override = None
+        self._scheduled_override: bool | None = None
 
         if _called_directly:
             warnings.warn(
@@ -634,7 +633,7 @@ class Reader:
         sort = FeedSort(sort)
 
         if limit is not None:
-            if not isinstance(limit, numbers.Integral) or limit < 1:
+            if not isinstance(limit, int) or limit < 1:
                 raise ValueError("limit should be a positive integer")
         starting_after = _feed_argument(starting_after) if starting_after else None
 
@@ -1175,7 +1174,7 @@ class Reader:
         sort = EntrySort(sort)
 
         if limit is not None:
-            if not isinstance(limit, numbers.Integral) or limit < 1:
+            if not isinstance(limit, int) or limit < 1:
                 raise ValueError("limit should be a positive integer")
         starting_after = _entry_argument(starting_after) if starting_after else None
 
@@ -1832,7 +1831,7 @@ class Reader:
         sort = EntrySearchSort(sort)
 
         if limit is not None:
-            if not isinstance(limit, numbers.Integral) or limit < 1:
+            if not isinstance(limit, int) or limit < 1:
                 raise ValueError("limit should be a positive integer")
         starting_after = _entry_argument(starting_after) if starting_after else None
 

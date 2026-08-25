@@ -176,6 +176,9 @@ files = ["src"]
 show_error_codes = true
 pretty = true
 strict = true
+strict_equality_for_none = true
+warn_unreachable = true
+
 [[tool.mypy.overrides]]
 module = [
     "reader.__main__",
