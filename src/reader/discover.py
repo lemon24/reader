@@ -74,8 +74,10 @@ def from_http_response(url: str, content: AnyMarkup, headers: Headers) -> list[L
         object.__setattr__(alt, 'href', urljoin(url, alt.href))
 
     # make them unique, keep the first one
-    by_href = {alt.href: alt for alt in reversed(alternates)}
-    alternates = list(reversed(by_href.values()))
+    by_href: dict[str, Link] = {}
+    for alt in alternates:
+        by_href.setdefault(alt.href, alt)
+    alternates = list(by_href.values())
 
     return alternates
 
