@@ -45,7 +45,7 @@ from .types import Feed
 from .types import FeedCounts
 from .types import FeedInput
 from .types import FeedSort
-from .types import JSONType
+from .types import JSON
 from .types import MISSING
 from .types import MissingType
 from .types import ResourceId
@@ -297,7 +297,7 @@ class FeedForUpdate(NamedTuple):
     updated: datetime | None = None
 
     #: Caching info from the last update.
-    caching_info: JSONType | None = None
+    caching_info: JSON | None = None
 
     #: Whether the next update should update *all* entries,
     #: regardless of their :attr:`hash` or :attr:`updated`.
@@ -369,7 +369,7 @@ class FeedToUpdate(NamedTuple):
 
     #: Caching info passed back to the retriever on the next update.
     #: See :attr:`ParsedFeed.caching_info` for details.
-    caching_info: JSONType | None = None
+    caching_info: JSON | None = None
 
 
 class EntryUpdateIntent(NamedTuple):
@@ -960,7 +960,7 @@ class StorageType(Protocol):  # pragma: no cover
 
     def get_tags(
         self, resource_id: AnyResourceId, key: str | None = None, /  # noqa: W504
-    ) -> Iterable[tuple[str, JSONType]]:
+    ) -> Iterable[tuple[str, JSON]]:
         """Called by :meth:`.Reader.get_tags`.
 
         Also called by :meth:`.Reader.get_tag_keys`.
@@ -989,7 +989,7 @@ class StorageType(Protocol):  # pragma: no cover
 
     @overload
     def set_tag(
-        self, resource_id: ResourceId, key: str, value: JSONType, /  # noqa: W504
+        self, resource_id: ResourceId, key: str, value: JSON, /  # noqa: W504
     ) -> None:  # pragma: no cover
         ...
 
@@ -997,7 +997,7 @@ class StorageType(Protocol):  # pragma: no cover
         self,
         resource_id: ResourceId,
         key: str,
-        value: MissingType | JSONType = MISSING,
+        value: MissingType | JSON = MISSING,
         /,
     ) -> None:
         """Called by :meth:`.Reader.set_tag`.

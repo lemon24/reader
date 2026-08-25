@@ -36,7 +36,7 @@ from .._utils import MapFunction
 from ..exceptions import InvalidFeedURLError
 from ..exceptions import ParseError
 from ..types import _namedtuple_compat
-from ..types import JSONType
+from ..types import JSON
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
 from ._url_utils import normalize_url
@@ -223,16 +223,14 @@ class Parser:
 
                 yield cast(ParseResult, result)
 
-    def __call__(
-        self, url: str, caching_info: JSONType | None = None
-    ) -> ParsedFeed | None:
+    def __call__(self, url: str, caching_info: JSON | None = None) -> ParsedFeed | None:
         """Retrieve and parse one feed.
 
         This is a convenience wrapper over :meth:`parallel`.
 
         Args:
             feed (str): The feed URL.
-            caching_info (JSONType or None):
+            caching_info (JSON or None):
                 :attr:`~RetrievedFeed.caching_info` from the last update.
 
         Returns:
@@ -269,13 +267,13 @@ class Parser:
             return RetrieveResult(feed, e)
 
     def retrieve(
-        self, url: str, caching_info: JSONType | None = None
+        self, url: str, caching_info: JSON | None = None
     ) -> ContextManager[RetrievedFeed[Any]]:
         """Retrieve a feed.
 
         Args:
             url (str): The feed URL.
-            caching_info (JSONType or None):
+            caching_info (JSON or None):
                 :attr:`~RetrievedFeed.caching_info` from the last update.
 
         Returns:
@@ -627,7 +625,7 @@ class FeedArgument(Protocol):  # pragma: no cover
         """The feed URL."""
 
     @property
-    def caching_info(self) -> JSONType | None:
+    def caching_info(self) -> JSON | None:
         """:attr:`~RetrievedFeed.caching_info` from the last update."""
 
 
@@ -780,7 +778,7 @@ class RetrievedFeed(_namedtuple_compat, Generic[T]):
 
     #: Caching info passed back to the retriever on the next update.
     #: Usually, the ``ETag`` and ``Last-Modified`` headers.
-    caching_info: JSONType | None = None
+    caching_info: JSON | None = None
 
     #: Details about the HTTP response.
     http_info: HTTPInfo | None = None
@@ -802,13 +800,13 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
     """
 
     def __call__(
-        self, url: str, caching_info: JSONType | None, accept: str | None
+        self, url: str, caching_info: JSON | None, accept: str | None
     ) -> ContextManager[RetrievedFeed[T_co] | T_co]:
         """Retrieve a feed.
 
         Args:
             feed (str): The feed URL.
-            caching_info (JSONType or None):
+            caching_info (JSON or None):
                 :attr:`~RetrievedFeed.caching_info` from the last update.
             accept (str or None):
                 Content types to be retrieved, as an HTTP ``Accept`` header.
@@ -888,7 +886,7 @@ class ParsedFeedBase(NamedTuple, Generic[FD, ED]):
     mime_type: str | None = None
     #: Caching info passed back to the retriever on the next update.
     #: Usually, the ``ETag`` and ``Last-Modified`` headers.
-    caching_info: JSONType | None = None
+    caching_info: JSON | None = None
 
 
 EntryPairBase = tuple[ED, EntryForUpdate | None]

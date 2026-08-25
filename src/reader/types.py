@@ -857,10 +857,7 @@ class EntrySearchSort(enum.StrEnum):
 # Semi-public API (typing support)
 
 
-# https://github.com/python/typing/issues/182
-# TODO: allow JSONType to be str, int, ...
-JSONValue = Union[str, int, float, bool, None, dict[str, Any], list[Any]]
-JSONType = Union[dict[str, JSONValue], list[JSONValue]]
+JSON = dict[str, 'JSON'] | list['JSON'] | str | int | float | bool | None
 
 
 # Using protocols here so we have both duck typing and type checking.

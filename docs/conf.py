@@ -78,7 +78,7 @@ autodoc_typehints_description_target = 'documented'
 autodoc_type_aliases = {
     'ResourceInput': 'reader.types.ResourceInput',
     'AnyResourceInput': 'reader.types.AnyResourceInput',
-    'JSONType': 'reader.types.JSONType',
+    'JSON': 'reader.types.JSON',
     'TagFilter': 'reader._types.TagFilter',
     'TristateFilter': 'reader._types.TristateFilter',
 }

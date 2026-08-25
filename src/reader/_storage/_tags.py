@@ -15,7 +15,7 @@ from ..exceptions import FeedNotFoundError
 from ..exceptions import ReaderError
 from ..exceptions import TagNotFoundError
 from ..types import AnyResourceId
-from ..types import JSONType
+from ..types import JSON
 from ..types import MISSING
 from ..types import MissingType
 from ..types import ResourceId
@@ -35,7 +35,7 @@ class TagsMixin(StorageBase):
         self,
         resource_id: AnyResourceId,
         key: str | None = None,
-    ) -> Iterable[tuple[str, JSONType]]:
+    ) -> Iterable[tuple[str, JSON]]:
         def make_query() -> tuple[Query, dict[str, Any]]:
             query = Query().SELECT("key")
             context: dict[str, Any] = dict()
@@ -68,7 +68,7 @@ class TagsMixin(StorageBase):
 
             return query, context
 
-        def row_factory(row: tuple[Any, ...]) -> tuple[str, JSONType]:
+        def row_factory(row: tuple[Any, ...]) -> tuple[str, JSON]:
             key, value, *_ = row
             return key, json.loads(value)
 
@@ -80,7 +80,7 @@ class TagsMixin(StorageBase):
 
     @overload
     def set_tag(
-        self, resource_id: ResourceId, key: str, value: JSONType
+        self, resource_id: ResourceId, key: str, value: JSON
     ) -> None:  # pragma: no cover
         ...
 
@@ -89,7 +89,7 @@ class TagsMixin(StorageBase):
         self,
         resource_id: ResourceId,
         key: str,
-        value: MissingType | JSONType = MISSING,
+        value: MissingType | JSON = MISSING,
     ) -> None:
         info = SCHEMA_INFO[len(resource_id)]
 

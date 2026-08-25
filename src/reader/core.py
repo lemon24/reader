@@ -65,7 +65,7 @@ from .types import FeedImportResult
 from .types import FeedInput
 from .types import FeedSort
 from .types import FeedToImport
-from .types import JSONType
+from .types import JSON
 from .types import MISSING
 from .types import MissingType
 from .types import ResourceInput
@@ -1917,7 +1917,7 @@ class Reader:
 
     def get_tags(
         self, resource: ResourceInput, /, *, key: str | None = None
-    ) -> Iterable[tuple[str, JSONType]]:
+    ) -> Iterable[tuple[str, JSON]]:
         """Get all or some tags of a resource as ``(key, value)`` pairs.
 
         `resource` can have one of the following types:
@@ -1939,8 +1939,8 @@ class Reader:
             key (str or None): Only return the value for this key.
 
         Yields:
-            tuple(str, JSONType): ``(key, value)`` pairs, in undefined order.
-            JSONType is whatever :py:func:`json.dumps` accepts.
+            tuple(str, JSON): ``(key, value)`` pairs, in undefined order.
+            JSON is whatever :py:func:`json.dumps` accepts.
 
         Raises:
             StorageError
@@ -2017,7 +2017,7 @@ class Reader:
         resource: ResourceInput,
         key: str,
         /,
-    ) -> JSONType:  # pragma: no cover
+    ) -> JSON:  # pragma: no cover
         ...
 
     @overload
@@ -2027,7 +2027,7 @@ class Reader:
         key: str,
         default: _T,
         /,
-    ) -> JSONType | _T:  # pragma: no cover
+    ) -> JSON | _T:  # pragma: no cover
         ...
 
     def get_tag(
@@ -2036,7 +2036,7 @@ class Reader:
         key: str,
         default: MissingType | _T = MISSING,
         /,
-    ) -> JSONType | _T:
+    ) -> JSON | _T:
         """Get the value of this resource tag.
 
         Like ``next(iter(reader.get_tags(resource, key=key)))[1]``,
@@ -2050,8 +2050,8 @@ class Reader:
             default: Returned if given and no tag exists for `key`.
 
         Returns:
-            JSONType: The tag value.
-            JSONType is whatever :py:func:`json.dumps` accepts.
+            JSON: The tag value.
+            JSON is whatever :py:func:`json.dumps` accepts.
 
         Raises:
             TagNotFoundError
@@ -2082,7 +2082,7 @@ class Reader:
         self,
         resource: ResourceInput,
         key: str,
-        value: JSONType,
+        value: JSON,
         /,
     ) -> None:  # pragma: no cover
         ...
@@ -2091,7 +2091,7 @@ class Reader:
         self,
         resource: ResourceInput,
         key: str,
-        value: JSONType | MissingType = MISSING,
+        value: JSON | MissingType = MISSING,
         /,
     ) -> None:
         """Set the value of this resource tag.
@@ -2101,11 +2101,11 @@ class Reader:
         Args:
             resource: The resource.
             key (str): The key of the tag to set.
-            value (JSONType): The value of the tag to set.
+            value (JSON): The value of the tag to set.
                 If not provided, and the tag already exists,
                 the value remains unchanged;
                 if the tag does not exist, it is set to :const:`None`.
-                JSONType is whatever :py:func:`json.dumps` accepts.
+                JSON is whatever :py:func:`json.dumps` accepts.
 
         Raises:
             ResourceNotFoundError
