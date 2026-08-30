@@ -10,6 +10,7 @@ but until we have a different implementation it's simpler this way
 import asyncio
 import concurrent.futures
 import functools
+import pathlib
 import sqlite3
 import sys
 import threading
@@ -19,6 +20,7 @@ import pytest
 
 from reader import SearchError
 from reader import StorageError
+from reader._storage._sqlite_utils import HeavyMigration
 from utils import rename_argument
 
 pytestmark = pytest.mark.noscheduled
@@ -385,3 +387,34 @@ def test_paths_read_only_private(make_reader, path):
     # can open, but can't create tables etc. because read only
     with pytest.raises(StorageError):
         make_reader(path, read_only=True)
+
+
+def test_migrate(make_reader, db_path, monkeypatch):
+    # By default, migrations should happen automatically.
+    reader = make_reader(db_path)
+    reader.close()
+
+    # Build a database stuck at version 1
+    old_db_path = str(pathlib.Path(db_path).parent / 'old.sqlite')
+    db = sqlite3.connect(old_db_path)
+    try:
+        HeavyMigration(create=lambda db: None, version=1, migrations={}).migrate(db)
+    finally:
+        db.close()
+
+    # Define a new schema (version 2) with trivial migrations from version 1 to 2
+    new_migration = HeavyMigration(
+        create=lambda db: None,
+        version=2,
+        migrations={1: lambda db: None},
+    )
+    monkeypatch.setattr('reader._storage._schema.MIGRATION', new_migration)
+
+    # migrate=False, refuse and raise StorageError.
+    with pytest.raises(StorageError) as excinfo:
+        make_reader(old_db_path, migrate=False)
+    assert 'migrate=False' in str(excinfo.value)
+
+    # migrate=True (the default), migrate successfully.
+    reader = make_reader(old_db_path, migrate=True)
+    reader.close()

@@ -27,9 +27,13 @@ class Storage(FeedsMixin, EntriesMixin, TagsMixin, StorageBase):
     """
 
     def __init__(
-        self, path: str, read_only: bool = False, timeout: float | None = None
+        self,
+        path: str,
+        read_only: bool = False,
+        timeout: float | None = None,
+        migrate: bool = True,
     ):
-        super().__init__(path, read_only, timeout)
+        super().__init__(path, read_only, timeout, migrate)
         self.changes: ChangeTrackerType = Changes(self)
 
     def make_search(self) -> SearchType:

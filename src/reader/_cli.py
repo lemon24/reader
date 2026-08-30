@@ -170,6 +170,11 @@ class MapParamType(click.ParamType):
 )
 @click.option('--read-only/--no-read-only', help="Do not modify storage.")
 @click.option(
+    '--migrate/--no-migrate',
+    default=True,
+    help="Enable or disable automatic schema migrations (default: enabled).",
+)
+@click.option(
     '--plugin',
     'plugins',
     show_envvar=True,
@@ -202,7 +207,9 @@ class MapParamType(click.ParamType):
 )
 @click.version_option(reader.__version__, message='%(prog)s %(version)s')
 @click.pass_context
-def cli(ctx, url, feed_root, read_only, plugins, cli_plugins, reserved_name_scheme):
+def cli(
+    ctx, url, feed_root, read_only, migrate, plugins, cli_plugins, reserved_name_scheme
+):
     """reader command-line interface.
 
     Option defaults can be set via environment variables;
