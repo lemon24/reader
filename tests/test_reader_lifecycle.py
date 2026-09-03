@@ -390,31 +390,26 @@ def test_paths_read_only_private(make_reader, path):
 
 
 def test_migrate(make_reader, db_path, monkeypatch):
-    # By default, migrations should happen automatically.
-    reader = make_reader(db_path)
-    reader.close()
-
-    # Build a database stuck at version 1
-    old_db_path = str(pathlib.Path(db_path).parent / 'old.sqlite')
-    db = sqlite3.connect(old_db_path)
-    try:
-        HeavyMigration(create=lambda db: None, version=1, migrations={}).migrate(db)
-    finally:
-        db.close()
-
-    # Define a new schema (version 2) with trivial migrations from version 1 to 2
-    new_migration = HeavyMigration(
+    migration = HeavyMigration(
         create=lambda db: None,
-        version=2,
-        migrations={1: lambda db: None},
+        version=1,
+        migrations={},
     )
-    monkeypatch.setattr('reader._storage._schema.MIGRATION', new_migration)
+    monkeypatch.setattr('reader._storage._schema.MIGRATION', migration)
 
-    # migrate=False, refuse and raise StorageError.
+    # Test empty case
+    with make_reader(db_path) as reader:
+        assert migration.get_version(reader._storage.get_db()) == 1
+
+    # Update migration definition to version 2
+    migration.version = 2
+    migration.migrations[1] = lambda _: None
+
+    # Test make_reader(db_path, migrate=False)
     with pytest.raises(StorageError) as excinfo:
-        make_reader(old_db_path, migrate=False)
+        make_reader(db_path, migrate=False)
     assert 'migrate=False' in str(excinfo.value)
 
-    # migrate=True (the default), migrate successfully.
-    reader = make_reader(old_db_path, migrate=True)
-    reader.close()
+    # Test make_reader(db_path)
+    with make_reader(db_path) as reader:
+        assert migration.get_version(reader._storage.get_db()) == 2

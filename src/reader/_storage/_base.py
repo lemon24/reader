@@ -57,8 +57,8 @@ class StorageBase:
         self,
         path: str,
         read_only: bool,
-        timeout: float | None = None,
         migrate: bool = True,
+        timeout: float | None = None,
     ):
         kwargs: dict[str, Any] = {'factory': CONNECTION_CLS}
         if timeout is not None:
