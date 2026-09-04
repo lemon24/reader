@@ -137,6 +137,16 @@ since each connection would be to a *different* database::
 .. _temporary: https://sqlite.org/inmemorydb.html#temp_db
 
 
+Migrations
+~~~~~~~~~~
+
+Schema migrations depend on the storage used.
+
+For the default SQLite storage,
+migrations happen automatically during :func:`make_reader`,
+unless you pass ``migrate=False``.
+
+
 .. _backups:
 
 Backups

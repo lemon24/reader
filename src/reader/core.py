@@ -169,9 +169,8 @@ def make_reader(
             Allow only read storage operations.
 
         migrate (bool):
-            Allow storage to migrate to a newer version automatically,
-            if needed. If :const:`False` and a migration is needed,
-            :exc:`StorageError` is raised.
+            Perform database migrations automatically.
+            If false and migrations are needed, raise :exc:`StorageError`.
 
         plugins (iterable(str or callable(Reader)) or None):
             An iterable of built-in plugin names (``.<plugin>``),

@@ -11,8 +11,14 @@ Version 3.27
 
 Unreleased
 
+* Add the ``migrate`` :func:`make_reader` argument.
+  Thanks to `Divyanshi Purohit`_ for the PR.
+  (:issue:`403`)
+
 * Stop vendoring `feedparser`_ and
   :ref:`recommend installing it from GitHub instead <no-vendored-feedparser>`.
+
+.. _Divyanshi Purohit: https://github.com/divyanshi555
 
 
 Version 3.26

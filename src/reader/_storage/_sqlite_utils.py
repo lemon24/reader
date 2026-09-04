@@ -249,9 +249,7 @@ class HeavyMigration:
                 migration = self.migrations.get(from_version)
                 if migration is None:
                     raise SchemaVersionError(
-                        f"no migration from {from_version} to {to_version}; "
-                        f"expected migrations for all versions "
-                        f"later than {version}" + self.missing_suffix
+                        f"no migration from {from_version} to {to_version}{self.missing_suffix}"
                     )
 
                 migration(db)

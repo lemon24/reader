@@ -15,6 +15,7 @@ import sqlite3
 import sys
 import threading
 import time
+from contextlib import closing
 
 import pytest
 
@@ -390,16 +391,12 @@ def test_paths_read_only_private(make_reader, path):
 
 
 def test_migrate(make_reader, db_path, monkeypatch):
-    migration = HeavyMigration(
-        create=lambda db: None,
-        version=1,
-        migrations={},
-    )
+    migration = HeavyMigration(create=lambda _: None, version=1, migrations={})
     monkeypatch.setattr('reader._storage._schema.MIGRATION', migration)
 
     # Test empty case
-    with make_reader(db_path) as reader:
-        assert migration.get_version(reader._storage.get_db()) == 1
+    db = make_reader(db_path)._storage.get_db()
+    assert migration.get_version(db) == 1
 
     # Update migration definition to version 2
     migration.version = 2
@@ -408,8 +405,9 @@ def test_migrate(make_reader, db_path, monkeypatch):
     # Test make_reader(db_path, migrate=False)
     with pytest.raises(StorageError) as excinfo:
         make_reader(db_path, migrate=False)
-    assert 'migrate=False' in str(excinfo.value)
+    assert 'automatic migrations disabled' in str(excinfo.value)
+    assert migration.get_version(db) == 1
 
     # Test make_reader(db_path)
-    with make_reader(db_path) as reader:
-        assert migration.get_version(reader._storage.get_db()) == 2
+    make_reader(db_path)
+    assert migration.get_version(db) == 2

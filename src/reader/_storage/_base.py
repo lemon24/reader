@@ -86,11 +86,7 @@ class StorageBase:
             migration = replace(
                 MIGRATION,
                 migrations={},
-                missing_suffix=(
-                    "; reader created with migrate=False, "
-                    "so migrations cannot run automatically;"
-                    " pass migrate=True to allow it"
-                ),
+                missing_suffix="; automatic migrations disabled, enable with migrate=True",
             )
         return _sqlite_utils.setup_db(
             db,
