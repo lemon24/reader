@@ -101,6 +101,7 @@ def make_reader(
     *,
     feed_root: str | None = None,
     read_only: bool = False,
+    migrate: bool = True,
     plugins: Iterable[PluginInput[Reader]] = DEFAULT_PLUGINS,
     session_timeout: TimeoutType = DEFAULT_TIMEOUT,
     reserved_name_scheme: Mapping[str, str] = DEFAULT_RESERVED_NAME_SCHEME,
@@ -166,6 +167,11 @@ def make_reader(
 
         read_only (bool):
             Allow only read storage operations.
+
+        migrate (bool):
+            Allow storage to migrate to a newer version automatically,
+            if needed. If :const:`False` and a migration is needed,
+            :exc:`StorageError` is raised.
 
         plugins (iterable(str or callable(Reader)) or None):
             An iterable of built-in plugin names (``.<plugin>``),
@@ -247,6 +253,9 @@ def make_reader(
         Built-in plugins starting with ``reader.``;
         use ``.<plugin>`` instead.
 
+    .. versionadded:: 3.27
+        The ``migrate`` keyword argument.
+
     """
 
     # Do as much work as possible before creating the storage.
@@ -272,7 +281,9 @@ def make_reader(
     # See this comment for details on how it should evolve:
     # https://github.com/lemon24/reader/issues/168#issuecomment-642002049
 
-    storage: StorageType = _storage or Storage(url, read_only=read_only)
+    storage: StorageType = _storage or Storage(
+        url, read_only=read_only, migrate=migrate
+    )
 
     try:
         # For now, we're using a storage-bound search provider.

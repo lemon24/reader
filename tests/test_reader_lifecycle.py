@@ -10,6 +10,7 @@ but until we have a different implementation it's simpler this way
 import asyncio
 import concurrent.futures
 import functools
+import pathlib
 import sqlite3
 import sys
 import threading
@@ -19,6 +20,7 @@ import pytest
 
 from reader import SearchError
 from reader import StorageError
+from reader._storage._sqlite_utils import HeavyMigration
 from utils import rename_argument
 
 pytestmark = pytest.mark.noscheduled
@@ -385,3 +387,29 @@ def test_paths_read_only_private(make_reader, path):
     # can open, but can't create tables etc. because read only
     with pytest.raises(StorageError):
         make_reader(path, read_only=True)
+
+
+def test_migrate(make_reader, db_path, monkeypatch):
+    migration = HeavyMigration(
+        create=lambda db: None,
+        version=1,
+        migrations={},
+    )
+    monkeypatch.setattr('reader._storage._schema.MIGRATION', migration)
+
+    # Test empty case
+    with make_reader(db_path) as reader:
+        assert migration.get_version(reader._storage.get_db()) == 1
+
+    # Update migration definition to version 2
+    migration.version = 2
+    migration.migrations[1] = lambda _: None
+
+    # Test make_reader(db_path, migrate=False)
+    with pytest.raises(StorageError) as excinfo:
+        make_reader(db_path, migrate=False)
+    assert 'migrate=False' in str(excinfo.value)
+
+    # Test make_reader(db_path)
+    with make_reader(db_path) as reader:
+        assert migration.get_version(reader._storage.get_db()) == 2

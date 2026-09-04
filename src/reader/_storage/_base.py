@@ -7,6 +7,7 @@ import sqlite3
 import sys
 from collections.abc import Callable
 from collections.abc import Iterable
+from dataclasses import replace
 from functools import partial
 from typing import Any
 from typing import Self
@@ -52,7 +53,13 @@ class StorageBase:
     chunk_size = 2**8
 
     @wrap_exceptions(message="while opening database")
-    def __init__(self, path: str, read_only: bool, timeout: float | None = None):
+    def __init__(
+        self,
+        path: str,
+        read_only: bool,
+        migrate: bool = True,
+        timeout: float | None = None,
+    ):
         kwargs: dict[str, Any] = {'factory': CONNECTION_CLS}
         if timeout is not None:
             kwargs['timeout'] = timeout
@@ -61,23 +68,33 @@ class StorageBase:
         # has to run for every connection (in every thread),
         # since it's not persisted across connections
         self.factory = _sqlite_utils.LocalConnectionFactory(
-            path, self.setup_db, read_only, **kwargs
+            path, partial(self.setup_db, migrate=migrate), read_only, **kwargs
         )
 
     def get_db(self) -> sqlite3.Connection:
         return self.factory()
 
     @staticmethod
-    def setup_db(db: sqlite3.Connection) -> None:
+    def setup_db(db: sqlite3.Connection, migrate: bool = True) -> None:
         # Private API, used by tests.
-
         from . import MINIMUM_SQLITE_VERSION
         from . import REQUIRED_SQLITE_FUNCTIONS
         from ._schema import MIGRATION
 
+        migration = MIGRATION
+        if not migrate:
+            migration = replace(
+                MIGRATION,
+                migrations={},
+                missing_suffix=(
+                    "; reader created with migrate=False, "
+                    "so migrations cannot run automatically;"
+                    " pass migrate=True to allow it"
+                ),
+            )
         return _sqlite_utils.setup_db(
             db,
-            migration=MIGRATION,
+            migration=migration,
             id=APPLICATION_ID,
             minimum_sqlite_version=MINIMUM_SQLITE_VERSION,
             required_sqlite_functions=REQUIRED_SQLITE_FUNCTIONS,
