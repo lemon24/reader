@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pathlib
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -10,6 +9,7 @@ from typing import IO
 from ..exceptions import ParseError
 from . import wrap_exceptions
 from ._url_utils import extract_path
+from ._url_utils import is_reserved
 from ._url_utils import resolve_root
 
 
@@ -46,6 +46,6 @@ class FileRetriever:
         path = extract_path(url)
         if self.feed_root:
             path = resolve_root(self.feed_root, path)
-            if pathlib.PurePath(path).is_reserved():
+            if is_reserved(path):
                 raise ValueError("path must not be reserved")
         return path

@@ -8,6 +8,7 @@ In this context, bare paths are considered equivalent to file:// URIs.
 from __future__ import annotations
 
 import os.path
+import sys
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
@@ -142,3 +143,20 @@ def is_rel_path(path: str) -> bool:
 
     has_drive = os.name == 'nt' and os.path.splitdrive(path)[0]
     return not any([is_abs, has_drive])
+
+
+if sys.version_info[:2] < (3, 13):  # pragma: no cover
+    # TODO: delete this once we drop Python 3.12
+    import pathlib
+
+    def is_reserved(path: str) -> bool:
+        """Like os.path.isreserved(), but return False on non-Windows platforms."""
+        return pathlib.PurePath(path).is_reserved()
+
+else:  # pragma: no cover
+
+    def is_reserved(path: str) -> bool:
+        """Like os.path.isreserved(), but return False on non-Windows platforms."""
+        if hasattr(os.path, 'isreserved'):
+            return os.path.isreserved(path)  # type: ignore[no-any-return]
+        return False
