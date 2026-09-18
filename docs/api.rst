@@ -60,9 +60,11 @@ Data objects
 
 .. autoclass:: EntryCounts
     :members:
+    :inherited-members:
 
 .. autoclass:: EntrySearchCounts
     :members:
+    :inherited-members:
 
 .. autoclass:: UpdateResult
     :members:

@@ -1062,12 +1062,7 @@ class FeedCounts(_namedtuple_compat):
 
 
 @dataclass(frozen=True)
-class EntryCounts(_namedtuple_compat):
-    """Count information about entries.
-
-    .. versionadded:: 1.11
-
-    """
+class _EntryCountsBase(_namedtuple_compat):
 
     #: Total number of entries.
     total: int | None = None
@@ -1108,46 +1103,20 @@ class EntryCounts(_namedtuple_compat):
         return self.total - self.read
 
 
-@dataclass(frozen=True)
-class EntrySearchCounts(_namedtuple_compat):
-    """Count information about entry search results.
+class EntryCounts(_EntryCountsBase):
+    """Count information about entries.
 
     .. versionadded:: 1.11
 
     """
 
-    # This could have inherited EntryCounts,
-    # but attribute docstrings won't show show up with autoclass;
-    # https://github.com/sphinx-doc/sphinx/issues/741
 
-    # We do want a different type in case we additional attributes
-    # related to search stuff (what matched etc.)
+class EntrySearchCounts(_EntryCountsBase):
+    """Count information about entry search results.
 
-    #: Total number of entries.
-    total: int | None = None
+    .. versionadded:: 1.11
 
-    #: Number of read entries.
-    read: int | None = None
-
-    #: Number of important entries.
-    important: int | None = None
-
-    #: Number of unimportant entries.
-    #:
-    #: .. versionadded:: 3.14
-    #:
-    unimportant: int | None = None
-
-    #: Number of entries that have enclosures.
-    has_enclosures: int | None = None
-
-    #: Average entries per day during the last 1, 3, 12 months, as a 3-tuple.
-    #:
-    #: .. versionadded:: 2.1
-    #:
-    averages: tuple[float, float, float] | None = None
-
-    unread = EntryCounts.unread
+    """
 
 
 @dataclass(frozen=True)

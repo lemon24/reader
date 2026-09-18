@@ -226,5 +226,19 @@ def class_tree(cls):
     return '\n'.join(output(classes)) + '\n'
 
 
+import builtins
+
+std_dir = builtins.dir
+
+
+def source_order_dir(obj):
+    if isinstance(obj, type):
+        return [name for cls in obj.mro() for name in cls.__dict__.keys()]
+    return std_dir(obj)
+
+
 def setup(app):
     app.add_directive("classtree", ClassTree)
+
+    # TODO: remove when https://github.com/sphinx-doc/sphinx/issues/628 is resolved
+    builtins.dir = source_order_dir
