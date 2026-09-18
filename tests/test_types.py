@@ -7,7 +7,9 @@ import pytest
 
 from reader import Content
 from reader import Entry
+from reader import EntryCounts
 from reader import EntryError
+from reader import EntrySearchCounts
 from reader import EntrySearchResult
 from reader import EntrySource
 from reader import ExceptionInfo
@@ -409,3 +411,17 @@ def test_author_deprecation_internal_types():
 
     with pytest.warns(DeprecationWarning):
         assert EntrySource(url='url', authors=(Author(name='Src'),)).author == 'Src'
+
+
+@pytest.mark.parametrize('cls', [EntryCounts, EntrySearchCounts])
+@pytest.mark.parametrize(
+    'total, read, unread',
+    [
+        (3, 2, 1),
+        (3, None, None),
+        (None, 2, None),
+        (None, None, None),
+    ],
+)
+def test_entry_counts_unread(cls, total, read, unread):
+    assert cls(total=total, read=read).unread == unread

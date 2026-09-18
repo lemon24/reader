@@ -14,6 +14,9 @@ Unreleased
 * Add the ``migrate`` :func:`make_reader` argument.
   Thanks to `Divyanshi Purohit`_ for the PR.
   (:issue:`403`)
+* Add :attr:`~EntryCounts.unread` property to
+  :class:`EntryCounts` and :class:`EntrySearchCounts`.
+  (:issue:`283`)
 
 * Support Python 3.15. (:issue:`418`)
 * Stop vendoring `feedparser`_ and

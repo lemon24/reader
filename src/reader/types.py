@@ -1096,6 +1096,17 @@ class EntryCounts(_namedtuple_compat):
     #:
     averages: tuple[float, float, float] | None = None
 
+    @property
+    def unread(self) -> int | None:
+        """Number of unread entries.
+
+        .. versionadded:: 3.27
+
+        """
+        if self.total is None or self.read is None:
+            return None
+        return self.total - self.read
+
 
 @dataclass(frozen=True)
 class EntrySearchCounts(_namedtuple_compat):
@@ -1135,6 +1146,8 @@ class EntrySearchCounts(_namedtuple_compat):
     #: .. versionadded:: 2.1
     #:
     averages: tuple[float, float, float] | None = None
+
+    unread = EntryCounts.unread
 
 
 @dataclass(frozen=True)
