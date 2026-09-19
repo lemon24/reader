@@ -90,6 +90,13 @@ Data objects
 Exceptions
 ----------
 
+.. _exctree:
+
+The class hierarchy for :mod:`reader` exceptions is:
+
+.. classtree:: ReaderError
+
+
 .. autoexception:: ReaderError
     :members:
 
@@ -180,16 +187,6 @@ Exceptions
 
 .. autoexception:: ReaderWarning
     :show-inheritance:
-
-
-.. _exctree:
-
-Exception hierarchy
-~~~~~~~~~~~~~~~~~~~
-
-The class hierarchy for :mod:`reader` exceptions is:
-
-.. classtree:: ReaderError
 
 
 
