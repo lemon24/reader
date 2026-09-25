@@ -8,10 +8,10 @@ from io import BytesIO
 
 import reader._parser
 from reader import ParseError
-from reader._parser import HTTPInfo
 from reader._parser import NotModified
 from reader._parser import ParsedFeed
 from reader._parser import RetrievedFeed
+from reader._parser import RetrieveMetadata
 from reader._types import EntryData
 from reader._types import FeedData
 from reader.types import _entry_argument
@@ -22,7 +22,7 @@ class Parser:
     feeds: dict = field(default_factory=dict)
     entries: dict = field(default_factory=dict)
     caching_info: dict | None = None
-    http_info: HTTPInfo | None = None
+    metadata: RetrieveMetadata | None = None
 
     feed_title_fmt: str | None = None
     entry_title_fmt: str | None = None
@@ -105,7 +105,7 @@ class Parser:
                 raise ParseError(url) from e
         if self.is_not_modified and self.is_not_modified(url):
             raise NotModified(url)
-        return nullcontext(RetrievedFeed(BytesIO(b'opaque'), http_info=self.http_info))
+        return nullcontext(RetrievedFeed(BytesIO(b'opaque'), metadata=self.metadata))
 
     def parse(self, url, retrieved):
         assert retrieved.resource.read() == b'opaque', retrieved

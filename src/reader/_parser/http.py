@@ -16,10 +16,10 @@ import requests
 
 from . import DEFAULT_TIMEOUT
 from . import Headers
-from . import HTTPInfo
 from . import NotModified
 from . import RetrievedFeed
 from . import RetrieveError
+from . import RetrieveMetadata
 from . import wrap_exceptions
 from ._http_utils import parse_options_header
 
@@ -149,11 +149,11 @@ class HTTPRetriever:
             )
 
             with response:
-                http_info = HTTPInfo(response.status_code, response.headers)
-                error.http_info = http_info
+                metadata = RetrieveMetadata(response.status_code, response.headers)
+                error.metadata = metadata
 
                 if response.status_code == 304:
-                    raise NotModified(url, http_info=http_info)
+                    raise NotModified(url, metadata=metadata)
 
                 error._message = "bad HTTP status code"
                 response.raise_for_status()
@@ -181,7 +181,7 @@ class HTTPRetriever:
                     mime_type,
                     # https://github.com/python/mypy/issues/4976
                     cast(dict[str, Any] | None, response_caching_info),
-                    http_info,
+                    metadata,
                     slow_to_read=True,
                 )
 

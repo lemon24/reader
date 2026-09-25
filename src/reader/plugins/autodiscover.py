@@ -26,7 +26,7 @@ from dataclasses import asdict
 from functools import wraps
 
 from reader import ParseError
-from reader._parser import HTTPInfo
+from reader._parser import RetrieveMetadata
 from reader.discover import from_http_response
 
 TAG = 'autodiscover'
@@ -57,15 +57,15 @@ def extract_feeds_to_http_headers(url, retrieved):
     if not file:
         return
 
-    headers = retrieved.http_info.headers if retrieved.http_info else {}
+    headers = retrieved.metadata.headers if retrieved.metadata else {}
     links = from_http_response(url, file, headers)
     if not links:
         return
 
-    if not retrieved.http_info:
-        object.__setattr__(retrieved, 'http_info', HTTPInfo(200, {}))
+    if not retrieved.metadata:
+        object.__setattr__(retrieved, 'metadata', RetrieveMetadata(200, {}))
 
-    retrieved.http_info.headers[HEADER] = json.dumps(list(map(asdict, links)))
+    retrieved.metadata.headers[HEADER] = json.dumps(list(map(asdict, links)))
 
 
 def reset_file(file):
@@ -78,10 +78,10 @@ def reset_file(file):
     return file
 
 
-def save_links_as_tag(reader, feed, http_info):
+def save_links_as_tag(reader, feed, metadata):
     links = []
-    if http_info:
-        if links_str := http_info.headers.get(HEADER):
+    if metadata:
+        if links_str := metadata.headers.get(HEADER):
             links = json.loads(links_str)
 
     key = reader.make_reader_reserved_name(TAG)

@@ -12,10 +12,10 @@ import requests
 from reader import Feed
 from reader._parser import default_parser
 from reader._parser import FeedForUpdate
-from reader._parser import HTTPInfo
 from reader._parser import Parser
 from reader._parser import RetrievedFeed
 from reader._parser import RetrieveError
+from reader._parser import RetrieveMetadata
 from reader._parser.feedparser import _parse_authors
 from reader._parser.feedparser import feedparser
 from reader._parser.feedparser import FeedparserParser
@@ -191,13 +191,13 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     assert feed == expected['feed']
     assert entries == expected['entries']
 
-    info = parse.last_result.http_info
+    metadata = parse.last_result.metadata
     if not feed_url.startswith('http'):
-        assert info is None
+        assert metadata is None
     else:
-        assert info.status == 200
+        assert metadata.status == 200
         # note the lowercase key
-        assert info.headers['hello'] == 'World'
+        assert metadata.headers['hello'] == 'World'
 
 
 def test_no_mime_type(monkeypatch, parse, make_url, data_dir):
@@ -282,10 +282,10 @@ def test_parse_not_modified(monkeypatch, parse, make_http_url_bad_status, data_d
 
     assert parse(feed_url) is None
 
-    info = parse.last_result.http_info
-    assert info.status == 304
+    metadata = parse.last_result.metadata
+    assert metadata.status == 304
     # note the lowercase key
-    assert info.headers['hello'] == 'World'
+    assert metadata.headers['hello'] == 'World'
 
 
 @pytest.mark.parametrize('status', [404, 503])
@@ -304,10 +304,10 @@ def test_parse_bad_status(
     assert excinfo.value.url == feed_url
     assert 'bad HTTP status code' in excinfo.value.message
 
-    info = parse.last_result.http_info
-    assert info.status == status
+    metadata = parse.last_result.metadata
+    assert metadata.status == status
     # note the lowercase key
-    assert info.headers['hello'] == 'World'
+    assert metadata.headers['hello'] == 'World'
 
 
 @pytest.fixture
@@ -470,9 +470,9 @@ def test_parse_requests_get_exception(
     assert excinfo.value.url == feed_url
     assert 'while getting feed' in excinfo.value.message
 
-    assert not hasattr(excinfo.value, 'http_info')
+    assert not hasattr(excinfo.value, 'metadata')
 
-    assert parse.last_result.http_info is None
+    assert parse.last_result.metadata is None
 
 
 @pytest.mark.parametrize('exc_cls', [Exception, OSError])
@@ -494,12 +494,12 @@ def test_parse_requests_read_exception(
     assert excinfo.value.url == feed_url
     assert 'while reading feed' in excinfo.value.message
 
-    assert not hasattr(excinfo.value, 'http_info')
+    assert not hasattr(excinfo.value, 'metadata')
 
-    info = parse.last_result.http_info
-    assert info.status == 200
+    metadata = parse.last_result.metadata
+    assert metadata.status == 200
     # note the lowercase key
-    assert info.headers['hello'] == 'World'
+    assert metadata.headers['hello'] == 'World'
 
 
 def test_user_agent_default(parse, make_http_get_headers_url, data_dir):
@@ -955,8 +955,8 @@ def make_dummy_retriever(name, mime_type='type/subtype', headers=None):
     @contextmanager
     def retriever(url, caching_info, accept):
         retriever.last_accept = accept
-        http_info = HTTPInfo(200, headers)
-        yield RetrievedFeed(name, mime_type, caching_info, http_info)
+        metadata = RetrieveMetadata(200, headers)
+        yield RetrievedFeed(name, mime_type, caching_info, metadata)
 
     retriever.slow_to_read = False
     return retriever
@@ -1107,8 +1107,8 @@ def test_retrieve_bug_bubbles_up_to_caller(parse):
     assert exc_info.value is exc
 
 
-def test_retrieved_feed_http_info_not_shadowed_by_retrieve_error(parse):
-    exc = RetrieveError('x', http_info=HTTPInfo(333, {}))
+def test_retrieved_feed_metadata_not_shadowed_by_retrieve_error(parse):
+    exc = RetrieveError('x', metadata=RetrieveMetadata(333, {}))
     cause = ValueError('whatever')
 
     class file:
@@ -1117,7 +1117,7 @@ def test_retrieved_feed_http_info_not_shadowed_by_retrieve_error(parse):
 
     @contextmanager
     def retrieve(*_, **__):
-        yield RetrievedFeed(file, http_info=HTTPInfo(200, {}), slow_to_read=True)
+        yield RetrievedFeed(file, metadata=RetrieveMetadata(200, {}), slow_to_read=True)
 
     parse.retrieve = retrieve
 
@@ -1130,7 +1130,7 @@ def test_retrieved_feed_http_info_not_shadowed_by_retrieve_error(parse):
     # not sure how to check the traceback was preserved
     assert exc_info.value.__cause__ is cause
 
-    assert parse.last_result.http_info == HTTPInfo(200, {})
+    assert parse.last_result.metadata == RetrieveMetadata(200, {})
 
 
 @pytest.mark.slow

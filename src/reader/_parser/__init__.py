@@ -342,29 +342,29 @@ class Parser:
         """
         feed, context = result
 
-        http_info = None
+        metadata = None
         value: ParsedFeed | None | Exception
 
         if isinstance(context, Exception):
             value = context
             if isinstance(context, RetrieveError):
-                http_info = context.http_info
+                metadata = context.metadata
             if isinstance(context, NotModified):
                 value = None
         else:
             try:
                 with context as retrieved:
-                    # we assign http_info after parse() to give it a chance
+                    # we assign metadata after parse() to give it a chance
                     # to mutate the retrieved feed – alternatively, we need
                     # a way for parse() to surface information on error
                     try:
                         value = self.parse(feed.url, retrieved)
                     finally:
-                        http_info = retrieved.http_info
+                        metadata = retrieved.metadata
             except Exception as e:
                 value = e
 
-        return ParseResultBase(feed, value, http_info)
+        return ParseResultBase(feed, value, metadata)
 
     def parse(self, url: str, retrieved: RetrievedFeed[Any]) -> ParsedFeed:
         """Parse a retrieved feed.
@@ -381,7 +381,7 @@ class Parser:
 
         """
         parser, mime_type = self.get_parser(url, retrieved.mime_type)
-        headers = retrieved.http_info.headers if retrieved.http_info else None
+        headers = retrieved.metadata.headers if retrieved.metadata else None
         with wrap_exceptions(url, 'during parser'), bound_contextvars(feed=url):
             feed, entries = parser(url, retrieved.resource, headers)
             entries = list(entries)
@@ -639,7 +639,7 @@ Headers = Mapping[str, str]
 
 
 @dataclass(frozen=True)
-class HTTPInfo(_namedtuple_compat):
+class RetrieveMetadata(_namedtuple_compat):
     """Details about an HTTP response."""
 
     #: The HTTP status code.
@@ -735,12 +735,12 @@ class RetrieveError(ParseError):
         url: str,
         /,
         message: str = '',
-        http_info: HTTPInfo | None = None,
+        metadata: RetrieveMetadata | None = None,
     ) -> None:
         super().__init__(url, message=message)
 
-        #: Details about the HTTP response.
-        self.http_info = http_info
+        #: Metadata about the retrieve response.
+        self.metadata = metadata
 
 
 class NotModified(RetrieveError):
@@ -780,8 +780,8 @@ class RetrievedFeed(_namedtuple_compat, Generic[T]):
     #: Usually, the ``ETag`` and ``Last-Modified`` headers.
     caching_info: JSON | None = None
 
-    #: Details about the HTTP response.
-    http_info: HTTPInfo | None = None
+    #: Metadata about the retrieve response.
+    metadata: RetrieveMetadata | None = None
 
     #: Allow :class:`Parser` to :meth:`~io.BufferedIOBase.read`
     #: the resource into a temporary file,
@@ -869,8 +869,8 @@ class ParseResultBase(NamedTuple, Generic[F, FD, ED, E]):
     #:
     value: ParsedFeedBase[FD, ED] | None | E
 
-    #: Details about the HTTP response.
-    http_info: HTTPInfo | None = None
+    #: Metadata about the retrieve response.
+    metadata: RetrieveMetadata | None = None
 
 
 class ParsedFeedBase(NamedTuple, Generic[FD, ED]):

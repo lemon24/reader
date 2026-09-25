@@ -243,9 +243,9 @@ class Decider:
             value = self.get_feed_to_update(result.value, bool(entries_to_update))
 
         update_after = next_update_after(self.global_now, **self.config)
-        if result.http_info:
+        if result.metadata:
             # TODO (#376): technically this is supposed to be against request end
-            http_update_after = result.http_info.get_update_after(self.global_now)
+            http_update_after = result.metadata.get_update_after(self.global_now)
             # also accounts for it being in the past / negative
             if http_update_after and http_update_after > update_after:
                 # round up to the next interval

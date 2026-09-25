@@ -20,8 +20,8 @@ from reader import ParseError
 from reader import StorageError
 from reader import UpdatedFeed
 from reader import UpdateResult
-from reader._parser import HTTPInfo
 from reader._parser import RetrieveError
+from reader._parser import RetrieveMetadata
 from reader._update import next_update_after
 from utils import Blocking
 from utils import parametrize_dict
@@ -1042,15 +1042,15 @@ def test_update_after_http(reader, parser, interval, status, headers, expected):
 
     reader.set_tag(feed, '.reader.update', {'interval': interval})
 
-    http_info = HTTPInfo(status, headers)
+    metadata = RetrieveMetadata(status, headers)
     if status >= 400:
-        parser.raise_exc(RetrieveError('', http_info=http_info))
+        parser.raise_exc(RetrieveError('', metadata=metadata))
     elif status >= 300:
         assert status == 304, status
         parser.not_modified()
     else:
         assert status == 200, status
-        parser.http_info = http_info
+        parser.metadata = metadata
 
     reader._now = lambda: datetime(2010, 1, 1)
     reader.update_feeds()
