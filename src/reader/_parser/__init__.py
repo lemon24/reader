@@ -653,18 +653,19 @@ class RetrieveMetadata(_namedtuple_compat):
     #: The key must match the name of the plugin.
     extra: dict[str, Any] = field(default_factory=dict)
 
-    def get_update_after(self, now: datetime) -> datetime | None:
-        """Select the best "update after" date from available headers."""
-        rv = []
+    @property
+    def update_after(self) -> datetime | timedelta | None:
+        """ "update after" hint, as derived from response metadata."""
 
+        # Cache-Control doesn't make sense for throttling, return immediately.
         if self.status in (429, 503):
             try:
                 seconds = int(self.headers.get('retry-after', ''))
-                rv.append(now + timedelta(seconds=seconds))
+                return timedelta(seconds=seconds)
             except ValueError:
-                if retry_after := self.parse_date('retry-after', now):
-                    rv.append(retry_after)
+                return self.parse_date('retry-after')
 
+        # Cache-Control max-age takes precedence over Expires.
         # https://httpwg.org/specs/rfc9111.html#calculating.freshness.lifetime
         if cache_control := self.cache_control:
 
@@ -680,37 +681,34 @@ class RetrieveMetadata(_namedtuple_compat):
             #
             # [1]: https://www.fastly.com/blog/cache-control-wild#:~:text=conflicts
             # [2]: https://cache-tests.fyi/?id=cc-resp-no-store-fresh&id=cc-resp-no-cache
-            #
-            if not cache_control.no_cache:
-                if max_age := cache_control.max_age:
-                    rv.append(now + timedelta(seconds=max_age))
 
-        elif expires := self.parse_date('expires', now):
-            rv.append(expires)
+            if cache_control.no_cache:
+                return None
+
+            if max_age := cache_control.max_age:
+                return timedelta(seconds=max_age)
+
+        return self.parse_date('expires')
 
         # TODO: RFC 9111 specifies a Last-Modified fallback heuristic,
         # but it might be better to implement it in the updater
         # as part of https://github.com/lemon24/reader/issues/382
 
-        return max(rv, default=None)
+    def parse_date(self, name: str) -> datetime | timedelta | None:
+        """Parse an HTTP date header.
 
-    def parse_date(self, name: str, now: datetime | None = None) -> datetime | None:
-        """Parse an HTTP date header and return a timezone-aware datetime.
+        If the Date header is set, return the header value relative to it.
 
         Return None if missing or if parsing fails.
-
-        If `now` is given and the Date header is set,
-        make the returned value relative to `now`.
 
         """
         # lazy import
         from ._http_utils import parse_date
 
         if value := parse_date(self.headers.get(name, '')):
-            value = value.astimezone(timezone.utc)
-            if now and (date := parse_date(self.headers.get('date', ''))):
-                value = now + (value - date)
-            return value
+            if date := parse_date(self.headers.get('date', '')):
+                return value - date
+            return value.astimezone(timezone.utc)
 
         return None
 

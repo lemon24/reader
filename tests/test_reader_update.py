@@ -1012,7 +1012,7 @@ UPDATE_AFTER_HTTP_DATA = {
     'max-age beats expires': data(
         1, 200, max_age=3000, expires='Fri, 01 Jan 2010 01:40:00 GMT'
     ),
-    'retry-after < max-age': data(2, 429, retry_after=3000, max_age=6000),
+    'retry-after < max-age': data(1, 429, retry_after=3000, max_age=6000),
     'retry-after > max-age': data(2, 429, retry_after=6000, max_age=3000),
     'relative to date (retry-after)': data(
         3,
@@ -1031,7 +1031,6 @@ UPDATE_AFTER_HTTP_DATA = {
     'non-hour interval (retry-after)': data(
         (1, 45), 429, retry_after=6000, interval=15
     ),
-    'non-hour interval (max-age)': data((0, 45), 429, max_age=2000, interval=15),
 }
 
 
