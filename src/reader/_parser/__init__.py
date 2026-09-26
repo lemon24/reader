@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from contextlib import contextmanager
 from contextlib import ExitStack
 from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
@@ -647,6 +648,10 @@ class RetrieveMetadata(_namedtuple_compat):
 
     #: The HTTP response headers.
     headers: Headers
+
+    #: Additional metadata used by plugins, e.g. passed to update hooks.
+    #: The key must match the name of the plugin.
+    extra: dict[str, Any] = field(default_factory=dict)
 
     def get_update_after(self, now: datetime) -> datetime | None:
         """Select the best "update after" date from available headers."""

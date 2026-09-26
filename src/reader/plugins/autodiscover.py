@@ -21,7 +21,6 @@ with the same fields as :class:`reader.discover.Link`::
 
 """
 
-import json
 from dataclasses import asdict
 from functools import wraps
 
@@ -30,7 +29,6 @@ from reader._parser import RetrieveMetadata
 from reader.discover import from_http_response
 
 TAG = 'autodiscover'
-HEADER = f'x-reader-{TAG}'
 
 
 def init_reader(reader):
@@ -65,7 +63,7 @@ def extract_feeds_to_http_headers(url, retrieved):
     if not retrieved.metadata:
         object.__setattr__(retrieved, 'metadata', RetrieveMetadata(200, {}))
 
-    retrieved.metadata.headers[HEADER] = json.dumps(list(map(asdict, links)))
+    retrieved.metadata.extra[TAG] = links
 
 
 def reset_file(file):
@@ -81,11 +79,11 @@ def reset_file(file):
 def save_links_as_tag(reader, feed, metadata):
     links = []
     if metadata:
-        if links_str := metadata.headers.get(HEADER):
-            links = json.loads(links_str)
+        if links := metadata.extra.get(TAG):
+            links_json = list(map(asdict, links))
 
     key = reader.make_reader_reserved_name(TAG)
     if links:
-        reader.set_tag(feed, key, links)
+        reader.set_tag(feed, key, links_json)
     else:
         reader.delete_tag(feed, key, missing_ok=True)
