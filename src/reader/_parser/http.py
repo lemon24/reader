@@ -4,6 +4,9 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from dataclasses import field
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 from typing import Any
 from typing import cast
 from typing import IO
@@ -21,6 +24,8 @@ from . import RetrievedFeed
 from . import RetrieveError
 from . import RetrieveMetadata
 from . import wrap_exceptions
+from ._http_utils import parse_cache_control_header
+from ._http_utils import parse_date
 from ._http_utils import parse_options_header
 
 TimeoutType = Union[None, float, tuple[float, float], tuple[float, None]]
@@ -149,16 +154,23 @@ class HTTPRetriever:
             )
 
             with response:
-                metadata = RetrieveMetadata(response.status_code, response.headers)
+                status = response.status_code
+                headers = response.headers
+
+                metadata = RetrieveMetadata(
+                    status,
+                    headers,
+                    update_after=_update_after(status, headers),
+                )
                 error.metadata = metadata
 
-                if response.status_code == 304:
+                if status == 304:
                     raise NotModified(url, metadata=metadata)
 
                 error._message = "bad HTTP status code"
                 response.raise_for_status()
 
-                response.headers.setdefault('content-location', response.url)
+                headers.setdefault('content-location', response.url)
 
                 # https://datatracker.ietf.org/doc/html/rfc9110#name-content-encoding
                 # Content-Encoding is the counterpart of Accept-Encoding;
@@ -166,10 +178,10 @@ class HTTPRetriever:
                 # not text encoding (Content-Type charset does that).
                 # We let Requests/urllib3 take care of it and remove the header,
                 # so parsers (like feedparser) don't do it a second time.
-                response.headers.pop('content-encoding', None)
+                headers.pop('content-encoding', None)
                 response.raw.decode_content = True
 
-                content_type = response.headers.get('content-type')
+                content_type = headers.get('content-type')
                 if content_type:
                     mime_type, _ = parse_options_header(content_type)
                 else:
@@ -297,3 +309,47 @@ class TimeoutHTTPAdapter(requests.adapters.HTTPAdapter):
     def send(self, *args: Any, **kwargs: Any) -> Any:
         kwargs.setdefault('timeout', self.__timeout)
         return super().send(*args, **kwargs)
+
+
+def _update_after(status: int, headers: Headers) -> datetime | timedelta | None:
+
+    def _parse_date(name: str) -> datetime | timedelta | None:
+        if value := parse_date(headers.get(name, '')):
+            if date := parse_date(headers.get('date', '')):
+                return value - date
+            return value.astimezone(timezone.utc)
+        return None
+
+    # Cache-Control doesn't make sense for throttling, return immediately.
+    if status in (429, 503):
+        try:
+            seconds = int(headers.get('retry-after', ''))
+            return timedelta(seconds=seconds)
+        except ValueError:
+            return _parse_date('retry-after')
+
+    # Cache-Control max-age takes precedence over Expires.
+    # https://httpwg.org/specs/rfc9111.html#calculating.freshness.lifetime
+    if cache_control_str := headers.get('cache-control'):
+        cache_control = parse_cache_control_header(cache_control_str)
+
+        # no-cache ("don't use cached version without revalidating") and
+        # max-age ("can use cached for no more than") are mutually exclusive.
+        #
+        # If no-cache is present, max-age can / should(?) be ignored
+        # (not specified by the RFC, but it's what browsers do[1][2]);
+        # thankfully, this doesn't happen very often[1].
+        #
+        # Note that no-cache doesn't imply anything about ETag,
+        # we always do conditional requests if ETag is present.
+        #
+        # [1]: https://www.fastly.com/blog/cache-control-wild#:~:text=conflicts
+        # [2]: https://cache-tests.fyi/?id=cc-resp-no-store-fresh&id=cc-resp-no-cache
+
+        if cache_control.no_cache:
+            return None
+
+        if max_age := cache_control.max_age:
+            return timedelta(seconds=max_age)
+
+    return _parse_date('expires')

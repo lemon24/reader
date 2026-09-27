@@ -959,96 +959,50 @@ def test_update_after_invalid_config(reader, parser, config, config_is_global):
     assert feed.update_after == datetime(2010, 1, 1, 1)
 
 
-def data(expected, status, *, interval=60, max_age=None, **kwargs):
+def data(expected, *, interval=60, error=False, **kwargs):
     if isinstance(expected, int):
         expected = (expected,)
     if isinstance(expected, tuple):
         expected = datetime(2010, 1, 1, *expected)
-    headers = {k.lower().replace('_', '-'): v for k, v in kwargs.items()}
-    if max_age is not None:
-        assert 'cache-control' not in headers, headers['cache-control']
-        headers['cache-control'] = f"max-age={max_age}"
-    return interval, status, headers, expected
+    return interval, error, RetrieveMetadata(None, None, **kwargs), expected
 
 
-UPDATE_AFTER_HTTP_DATA = {
-    # no headers (should fail after #378)
-    '429 without headers is ignored': data(1, 429),
-    '503 without headers is ignored': data(1, 429),
-    # retry-after
-    'retry-after < interval': data(1, 429, retry_after=3599),
-    'retry-after = interval': data(1, 429, retry_after=3600),
-    'retry-after > interval (429)': data(2, 429, retry_after=3601),
-    'retry-after > interval (503)': data(2, 503, retry_after=3601),
-    'invalid retry-after is ignored': data(1, 429, retry_after='xyz'),
-    '200 retry-after is ignored': data(1, 200, retry_after=6000),
-    'date retry-after': data(2, 429, retry_after='Fri, 01 Jan 2010 01:40:00 GMT'),
-    'date retry-after (no timezone)': data(
-        2, 429, retry_after='Fri, 01 Jan 2010 01:40:00'
+UPDATE_AFTER_METADATA_DATA = {
+    'no update_after': data(1),
+    'update_after > interval': data(2, update_after=timedelta(seconds=3601)),
+    'update_after = interval': data(1, update_after=timedelta(seconds=3600)),
+    'update_after < interval': data(1, update_after=timedelta(seconds=3599)),
+    # TODO: don't round up if already on the next interval
+    'update_after > interval (date)': data(
+        datetime(2010, 1, 2, 1), update_after=datetime(2010, 1, 2)
     ),
-    'date retry-after (not GMT)': data(
-        2, 429, retry_after='Fri, 01 Jan 2010 02:40:00 +0100'
+    'update_after = interval (date)': data(1, update_after=datetime(2010, 1, 1, 1)),
+    'update_after < interval (date)': data(1, update_after=datetime(2010, 1, 1, 0, 59)),
+    'update_after < now': data(1, update_after=timedelta(seconds=-3600 * 4)),
+    'update_after < now (date)': data(1, update_after=datetime(2009, 1, 1)),
+    'update_after >> now': data(
+        datetime(2010, 2, 1), update_after=timedelta(seconds=32 * 24 * 3600)
     ),
-    'retry-after in the past': data(1, 429, retry_after=-200000),
-    'retry-after in the past (date)': data(
-        1, 429, retry_after='Thu, 31 Dec 2009 23:40:00 GMT'
+    'update_after >> now (<limit)': data(
+        datetime(2010, 1, 31, 1), update_after=timedelta(seconds=30 * 24 * 3600)
     ),
-    'excessive retry-after': data(
-        datetime(2010, 2, 1), 429, retry_after=31 * 24 * 3600 + 6000
+    'update_after (non-hour interval)': data(
+        (1, 45), interval=15, update_after=timedelta(seconds=6000)
     ),
-    'excessive retry-after (below limit)': data(
-        datetime(2010, 1, 31, 23), 429, retry_after=31 * 24 * 3600 - 6000
-    ),
-    # cache-control max-age
-    'max-age > interval': data(2, 200, max_age=6000),
-    'invalid max-age is ignored': data(1, 200, max_age='xyz'),
-    'excessive max-age': data(datetime(2010, 2, 1), 200, max_age=31 * 24 * 3600 + 1),
-    # expires
-    'expires > interval': data(2, 200, expires='Fri, 01 Jan 2010 01:40:00 GMT'),
-    'excessive expires': data(
-        datetime(2010, 2, 1), 200, expires='Mon, 01 Feb 2010 01:40:00 GMT'
-    ),
-    # interactions
-    'max-age beats expires': data(
-        1, 200, max_age=3000, expires='Fri, 01 Jan 2010 01:40:00 GMT'
-    ),
-    'retry-after < max-age': data(1, 429, retry_after=3000, max_age=6000),
-    'retry-after > max-age': data(2, 429, retry_after=6000, max_age=3000),
-    'relative to date (retry-after)': data(
-        3,
-        429,
-        date='Thu, 31 Dec 2009 23:00:00 GMT',
-        retry_after='Fri, 01 Jan 2010 01:40:00 GMT',
-    ),
-    'relative to date (expires)': data(
-        3,
-        200,
-        date='Thu, 31 Dec 2009 23:00:00 GMT',
-        expires='Fri, 01 Jan 2010 01:40:00 GMT',
-    ),
-    'no-cache ignores max-age': data(1, 200, cache_control='no-cache, max-age=6000'),
-    # different intervals
-    'non-hour interval (retry-after)': data(
-        (1, 45), 429, retry_after=6000, interval=15
-    ),
+    'update_after (error)': data(3, error=True, update_after=timedelta(seconds=10000)),
 }
 
 
-@parametrize_dict('interval, status, headers, expected', UPDATE_AFTER_HTTP_DATA)
-def test_update_after_http(reader, parser, interval, status, headers, expected):
+@parametrize_dict('interval, error, metadata, expected', UPDATE_AFTER_METADATA_DATA)
+def test_update_after_metadata(reader, parser, interval, error, metadata, expected):
     feed = parser.feed(1)
     reader.add_feed(feed)
 
     reader.set_tag(feed, '.reader.update', {'interval': interval})
 
-    metadata = RetrieveMetadata(status, headers)
-    if status >= 400:
+    if error:
         parser.raise_exc(RetrieveError('', metadata=metadata))
-    elif status >= 300:
-        assert status == 304, status
-        parser.not_modified()
     else:
-        assert status == 200, status
         parser.metadata = metadata
 
     reader._now = lambda: datetime(2010, 1, 1)

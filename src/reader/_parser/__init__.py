@@ -15,7 +15,6 @@ from dataclasses import dataclass
 from dataclasses import field
 from datetime import datetime
 from datetime import timedelta
-from datetime import timezone
 from typing import Any
 from typing import cast
 from typing import ContextManager
@@ -43,8 +42,6 @@ from ._http_utils import unparse_accept_header
 from ._url_utils import normalize_url
 
 if TYPE_CHECKING:  # pragma: no cover
-    from werkzeug.datastructures import RequestCacheControl
-
     from .http import TimeoutType
 
 
@@ -649,81 +646,12 @@ class RetrieveMetadata(_namedtuple_compat):
     #: The HTTP response headers.
     headers: Headers
 
+    #: "update after" hint, as derived from response metadata.
+    update_after: datetime | timedelta | None = None
+
     #: Additional metadata used by plugins, e.g. passed to update hooks.
     #: The key must match the name of the plugin.
     extra: dict[str, Any] = field(default_factory=dict)
-
-    @property
-    def update_after(self) -> datetime | timedelta | None:
-        """ "update after" hint, as derived from response metadata."""
-
-        # Cache-Control doesn't make sense for throttling, return immediately.
-        if self.status in (429, 503):
-            try:
-                seconds = int(self.headers.get('retry-after', ''))
-                return timedelta(seconds=seconds)
-            except ValueError:
-                return self.parse_date('retry-after')
-
-        # Cache-Control max-age takes precedence over Expires.
-        # https://httpwg.org/specs/rfc9111.html#calculating.freshness.lifetime
-        if cache_control := self.cache_control:
-
-            # no-cache ("don't use cached version without revalidating") and
-            # max-age ("can use cached for no more than") are mutually exclusive.
-            #
-            # If no-cache is present, max-age can / should(?) be ignored
-            # (not specified by the RFC, but it's what browsers do[1][2]);
-            # thankfully, this doesn't happen very often[1].
-            #
-            # Note that no-cache doesn't imply anything about ETag,
-            # we always do conditional requests if ETag is present.
-            #
-            # [1]: https://www.fastly.com/blog/cache-control-wild#:~:text=conflicts
-            # [2]: https://cache-tests.fyi/?id=cc-resp-no-store-fresh&id=cc-resp-no-cache
-
-            if cache_control.no_cache:
-                return None
-
-            if max_age := cache_control.max_age:
-                return timedelta(seconds=max_age)
-
-        return self.parse_date('expires')
-
-        # TODO: RFC 9111 specifies a Last-Modified fallback heuristic,
-        # but it might be better to implement it in the updater
-        # as part of https://github.com/lemon24/reader/issues/382
-
-    def parse_date(self, name: str) -> datetime | timedelta | None:
-        """Parse an HTTP date header.
-
-        If the Date header is set, return the header value relative to it.
-
-        Return None if missing or if parsing fails.
-
-        """
-        # lazy import
-        from ._http_utils import parse_date
-
-        if value := parse_date(self.headers.get(name, '')):
-            if date := parse_date(self.headers.get('date', '')):
-                return value - date
-            return value.astimezone(timezone.utc)
-
-        return None
-
-    @property
-    def cache_control(self) -> RequestCacheControl | None:
-        """Parsed Cache-Control header, or None if missing."""
-
-        # lazy import
-        from ._http_utils import parse_cache_control_header
-
-        value = self.headers.get('cache-control')
-        if not value:
-            return None
-
-        return parse_cache_control_header(value)
 
 
 class RetrieveError(ParseError):
