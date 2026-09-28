@@ -159,6 +159,7 @@ class CustomRetriever:
         self.after_enter(url)
         yield RetrievedFeed(
             io.BytesIO(b'file'),
+            {},
             'x.test',
             caching_info.upper() if caching_info else None,
             slow_to_read=self.slow_to_read,

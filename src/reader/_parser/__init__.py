@@ -379,9 +379,8 @@ class Parser:
 
         """
         parser, mime_type = self.get_parser(url, retrieved.mime_type)
-        headers = retrieved.metadata.headers if retrieved.metadata else None
         with wrap_exceptions(url, 'during parser'), bound_contextvars(feed=url):
-            feed, entries = parser(url, retrieved.resource, headers)
+            feed, entries = parser(url, retrieved.resource, retrieved.headers)
             entries = list(entries)
         return ParsedFeed(feed, entries, mime_type, retrieved.caching_info)
 
@@ -638,13 +637,7 @@ Headers = Mapping[str, str]
 
 @dataclass(frozen=True)
 class RetrieveMetadata(_namedtuple_compat):
-    """Details about an HTTP response."""
-
-    #: The HTTP status code.
-    status: int
-
-    #: The HTTP response headers.
-    headers: Headers
+    """Details about a retrieval, successful or not."""
 
     #: "update after" hint, as derived from response metadata.
     update_after: datetime | timedelta | None = None
@@ -702,6 +695,12 @@ class RetrievedFeed(_namedtuple_compat, Generic[T]):
     #: Usually, a readable binary file.
     #: Passed to the parser.
     resource: T
+
+    #: The HTTP response headers.
+    #: This is for advanced parser features (e.g. relative link resolution);
+    #: ideally, we should lift these features outside specific parsers,
+    #: and expose the metadata instead (e.g. Content-Type, Content-Location).
+    headers: Headers = field(default_factory=dict)
 
     #: The MIME type of the resource.
     #: Used to select an appropriate parser.

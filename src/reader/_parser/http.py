@@ -158,8 +158,6 @@ class HTTPRetriever:
                 headers = response.headers
 
                 metadata = RetrieveMetadata(
-                    status,
-                    headers,
                     update_after=_update_after(status, headers),
                 )
                 error.metadata = metadata
@@ -190,6 +188,7 @@ class HTTPRetriever:
                 error._message = "while reading feed"
                 yield RetrievedFeed(
                     cast(IO[bytes], response.raw),
+                    headers,
                     mime_type,
                     # https://github.com/python/mypy/issues/4976
                     cast(dict[str, Any] | None, response_caching_info),

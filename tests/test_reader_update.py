@@ -964,7 +964,7 @@ def data(expected, *, interval=60, error=False, **kwargs):
         expected = (expected,)
     if isinstance(expected, tuple):
         expected = datetime(2010, 1, 1, *expected)
-    return interval, error, RetrieveMetadata(None, None, **kwargs), expected
+    return interval, error, RetrieveMetadata(**kwargs), expected
 
 
 UPDATE_AFTER_METADATA_DATA = {

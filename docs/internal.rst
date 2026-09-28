@@ -87,7 +87,7 @@ Data objects
 .. autoclass:: ParsedFeed
     :members:
 
-.. autoclass:: HTTPInfo
+.. autoclass:: RetrieveMetadata
     :members:
 
 

@@ -55,13 +55,12 @@ def extract_feeds_to_http_headers(url, retrieved):
     if not file:
         return
 
-    headers = retrieved.metadata.headers if retrieved.metadata else {}
-    links = from_http_response(url, file, headers)
+    links = from_http_response(url, file, retrieved.headers)
     if not links:
         return
 
     if not retrieved.metadata:
-        object.__setattr__(retrieved, 'metadata', RetrieveMetadata(200, {}))
+        object.__setattr__(retrieved, 'metadata', RetrieveMetadata())
 
     retrieved.metadata.extra[TAG] = links
 

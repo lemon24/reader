@@ -199,9 +199,7 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
     if not feed_url.startswith('http'):
         assert metadata is None
     else:
-        assert metadata.status == 200
-        # note the lowercase key
-        assert metadata.headers['hello'] == 'World'
+        assert metadata is not None
 
 
 def test_no_mime_type(monkeypatch, parse, make_url, data_dir):
@@ -287,9 +285,7 @@ def test_parse_not_modified(monkeypatch, parse, make_http_url_bad_status, data_d
     assert parse(feed_url) is None
 
     metadata = parse.last_result.metadata
-    assert metadata.status == 304
-    # note the lowercase key
-    assert metadata.headers['hello'] == 'World'
+    assert metadata is not None
 
 
 @pytest.mark.parametrize('status', [404, 503])
@@ -309,9 +305,7 @@ def test_parse_bad_status(
     assert 'bad HTTP status code' in excinfo.value.message
 
     metadata = parse.last_result.metadata
-    assert metadata.status == status
-    # note the lowercase key
-    assert metadata.headers['hello'] == 'World'
+    assert metadata is not None
 
 
 @pytest.fixture
@@ -501,9 +495,7 @@ def test_parse_requests_read_exception(
     assert not hasattr(excinfo.value, 'metadata')
 
     metadata = parse.last_result.metadata
-    assert metadata.status == 200
-    # note the lowercase key
-    assert metadata.headers['hello'] == 'World'
+    assert metadata is not None
 
 
 def test_user_agent_default(parse, make_http_get_headers_url, data_dir):
@@ -959,8 +951,8 @@ def make_dummy_retriever(name, mime_type='type/subtype', headers=None):
     @contextmanager
     def retriever(url, caching_info, accept):
         retriever.last_accept = accept
-        metadata = RetrieveMetadata(200, headers)
-        yield RetrievedFeed(name, mime_type, caching_info, metadata)
+        metadata = RetrieveMetadata()
+        yield RetrievedFeed(name, headers, mime_type, caching_info, metadata)
 
     retriever.slow_to_read = False
     return retriever
@@ -1112,7 +1104,7 @@ def test_retrieve_bug_bubbles_up_to_caller(parse):
 
 
 def test_retrieved_feed_metadata_not_shadowed_by_retrieve_error(parse):
-    exc = RetrieveError('x', metadata=RetrieveMetadata(333, {}))
+    exc = RetrieveError('x', metadata=RetrieveMetadata(timedelta(1)))
     cause = ValueError('whatever')
 
     class file:
@@ -1121,7 +1113,9 @@ def test_retrieved_feed_metadata_not_shadowed_by_retrieve_error(parse):
 
     @contextmanager
     def retrieve(*_, **__):
-        yield RetrievedFeed(file, metadata=RetrieveMetadata(200, {}), slow_to_read=True)
+        yield RetrievedFeed(
+            file, metadata=RetrieveMetadata(timedelta(2)), slow_to_read=True
+        )
 
     parse.retrieve = retrieve
 
@@ -1134,7 +1128,7 @@ def test_retrieved_feed_metadata_not_shadowed_by_retrieve_error(parse):
     # not sure how to check the traceback was preserved
     assert exc_info.value.__cause__ is cause
 
-    assert parse.last_result.metadata == RetrieveMetadata(200, {})
+    assert parse.last_result.metadata == RetrieveMetadata(timedelta(2))
 
 
 @pytest.mark.slow
@@ -1166,7 +1160,7 @@ def data(status, *, update_after=None, max_age=None, **kwargs):
         headers['cache-control'] = f"max-age={max_age}"
     if isinstance(update_after, int):
         update_after = timedelta(seconds=update_after)
-    return status, headers, RetrieveMetadata(None, None, update_after=update_after)
+    return status, headers, RetrieveMetadata(update_after=update_after)
 
 
 HTTP_METADATA_DATA = {
@@ -1239,9 +1233,7 @@ def test_http_retriever_metadata(requests_mock, status, headers, expected):
 
     # FIXME: delete when .metadata is always set
     if not metadata:
-        metadata = RetrieveMetadata(None, None)
-    # FIXME: delete when .status and .headers are removed
-    metadata = metadata._replace(status=None, headers=None)
+        metadata = RetrieveMetadata()
 
     assert metadata == expected
 

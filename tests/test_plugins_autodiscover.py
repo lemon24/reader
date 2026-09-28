@@ -59,7 +59,7 @@ def test_resource_is_not_a_file(make_reader):
 
     @contextmanager
     def retrieve(*_):
-        yield RetrievedFeed('<link />', 'type/subtype')
+        yield RetrievedFeed('<link />', {}, 'type/subtype')
 
     reader._parser.retrieve = retrieve
 
