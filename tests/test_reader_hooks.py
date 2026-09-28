@@ -248,7 +248,6 @@ def test_after_feed_update_hooks_metadata(reader, parser):
 
     reader.after_feed_update_hooks.append(after_feed_plugin)
 
-    parser.metadata = RetrieveMetadata()
     reader.add_feed(parser.feed(1))
     reader.update_feeds()
 

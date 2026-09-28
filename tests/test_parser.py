@@ -194,12 +194,7 @@ def test_parse(monkeypatch, feed_type, data_file, parse, make_url, data_dir):
 
     assert feed == expected['feed']
     assert entries == expected['entries']
-
-    metadata = parse.last_result.metadata
-    if not feed_url.startswith('http'):
-        assert metadata is None
-    else:
-        assert metadata is not None
+    assert parse.last_result.metadata is not None
 
 
 def test_no_mime_type(monkeypatch, parse, make_url, data_dir):
@@ -284,8 +279,7 @@ def test_parse_not_modified(monkeypatch, parse, make_http_url_bad_status, data_d
 
     assert parse(feed_url) is None
 
-    metadata = parse.last_result.metadata
-    assert metadata is not None
+    assert parse.last_result.metadata is not None
 
 
 @pytest.mark.parametrize('status', [404, 503])
@@ -304,8 +298,7 @@ def test_parse_bad_status(
     assert excinfo.value.url == feed_url
     assert 'bad HTTP status code' in excinfo.value.message
 
-    metadata = parse.last_result.metadata
-    assert metadata is not None
+    assert parse.last_result.metadata is not None
 
 
 @pytest.fixture
@@ -470,7 +463,7 @@ def test_parse_requests_get_exception(
 
     assert not hasattr(excinfo.value, 'metadata')
 
-    assert parse.last_result.metadata is None
+    assert parse.last_result.metadata is not None
 
 
 @pytest.mark.parametrize('exc_cls', [Exception, OSError])
@@ -494,8 +487,7 @@ def test_parse_requests_read_exception(
 
     assert not hasattr(excinfo.value, 'metadata')
 
-    metadata = parse.last_result.metadata
-    assert metadata is not None
+    assert parse.last_result.metadata is not None
 
 
 def test_user_agent_default(parse, make_http_get_headers_url, data_dir):
@@ -951,8 +943,7 @@ def make_dummy_retriever(name, mime_type='type/subtype', headers=None):
     @contextmanager
     def retriever(url, caching_info, accept):
         retriever.last_accept = accept
-        metadata = RetrieveMetadata()
-        yield RetrievedFeed(name, headers, mime_type, caching_info, metadata)
+        yield RetrievedFeed(name, headers, mime_type, caching_info)
 
     retriever.slow_to_read = False
     return retriever
@@ -1230,10 +1221,6 @@ def test_http_retriever_metadata(requests_mock, status, headers, expected):
             metadata = retrieved.metadata
     except RetrieveError as e:
         metadata = e.metadata
-
-    # FIXME: delete when .metadata is always set
-    if not metadata:
-        metadata = RetrieveMetadata()
 
     assert metadata == expected
 

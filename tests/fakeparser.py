@@ -22,7 +22,7 @@ class Parser:
     feeds: dict = field(default_factory=dict)
     entries: dict = field(default_factory=dict)
     caching_info: dict | None = None
-    metadata: RetrieveMetadata | None = None
+    metadata: RetrieveMetadata = field(default_factory=RetrieveMetadata)
 
     feed_title_fmt: str | None = None
     entry_title_fmt: str | None = None

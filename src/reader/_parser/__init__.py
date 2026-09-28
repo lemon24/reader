@@ -340,7 +340,7 @@ class Parser:
         """
         feed, context = result
 
-        metadata = None
+        metadata = RetrieveMetadata()
         value: ParsedFeed | None | Exception
 
         if isinstance(context, Exception):
@@ -664,7 +664,7 @@ class RetrieveError(ParseError):
         super().__init__(url, message=message)
 
         #: Metadata about the retrieve response.
-        self.metadata = metadata
+        self.metadata = metadata or RetrieveMetadata()
 
 
 class NotModified(RetrieveError):
@@ -711,7 +711,7 @@ class RetrievedFeed(_namedtuple_compat, Generic[T]):
     caching_info: JSON | None = None
 
     #: Metadata about the retrieve response.
-    metadata: RetrieveMetadata | None = None
+    metadata: RetrieveMetadata = field(default_factory=RetrieveMetadata)
 
     #: Allow :class:`Parser` to :meth:`~io.BufferedIOBase.read`
     #: the resource into a temporary file,
