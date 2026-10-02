@@ -54,7 +54,7 @@ class _FancyExceptionBase(Exception):
 
     def __reduce__(self) -> object:  # type: ignore
         # "prime" the cached properties before pickling
-        str(self)
+        str(self)  # noqa: B018
         return super().__reduce__()
 
     def __str__(self) -> str:
