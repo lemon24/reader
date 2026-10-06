@@ -48,19 +48,6 @@ def exactly_one[T](it: Iterable[T]) -> T:
         assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
 
-def chunks[T](n: int, iterable: Iterable[T]) -> Iterable[Iterable[T]]:
-    """grouper(2, 'ABCDE') --> AB CD E"""
-    # based on https://stackoverflow.com/a/8991553
-    it = iter(iterable)
-    while True:
-        chunk = itertools.islice(it, n)
-        try:
-            first = next(chunk)
-        except StopIteration:
-            break
-        yield itertools.chain([first], chunk)
-
-
 def eager_iterable[T](it: Iterable[T]) -> Iterable[T]:
     it = iter(it)
     try:

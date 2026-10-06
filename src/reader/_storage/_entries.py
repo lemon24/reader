@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from datetime import datetime
 from datetime import timedelta
 from functools import partial
+from itertools import batched
 from typing import Any
 from typing import cast
 from typing import NewType
@@ -16,7 +17,6 @@ from typing import TYPE_CHECKING
 from .._types import EntryFilter
 from .._types import EntryForUpdate
 from .._types import EntryUpdateIntent
-from .._utils import chunks
 from .._utils import exactly_one
 from .._utils import zero_or_one
 from ..exceptions import EntryError
@@ -157,7 +157,7 @@ class EntriesMixin(StorageBase):
         self, entries: Iterable[tuple[str, str]]
     ) -> Iterable[EntryForUpdate | None]:
         with wrap_exceptions():
-            for iterable in chunks(self.chunk_size, entries):
+            for iterable in batched(entries, self.chunk_size):  # noqa: B911
                 yield from self._get_entries_for_update_page(iterable)
 
     def _get_entries_for_update_page(
@@ -208,7 +208,11 @@ class EntriesMixin(StorageBase):
     def add_or_update_entry_dicts(self, intents: Iterable[EntryDict]) -> None:
         """Low level add_or_update_entries() used by database sync."""
 
-        iterables = chunks(self.chunk_size, intents) if self.chunk_size else (intents,)
+        iterables = (
+            batched(intents, self.chunk_size)  # noqa: B911
+            if self.chunk_size
+            else (intents,)
+        )
 
         # It's acceptable for this to not be atomic (only some of the entries
         # may be updated if we get an exception), since they will likely
