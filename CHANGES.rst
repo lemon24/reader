@@ -612,7 +612,7 @@ Released 2023-08-20
 
 * Make :exc:`ReaderWarning` inherit from :exc:`ReaderError`.
 
-* Include a diagram of the :ref:`exctree` in the :doc:`api`.
+* Include a diagram of the :ref:`exception hierarchy <exctree>` in the :doc:`api`.
 
 * Add werkzeug dependency,
   instead of vendoring selected :mod:`werkzeug.http` utilities.

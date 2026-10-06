@@ -87,10 +87,10 @@ Data objects
 
 
 
+.. _exctree:
+
 Exceptions
 ----------
-
-.. _exctree:
 
 The class hierarchy for :mod:`reader` exceptions is:
 
