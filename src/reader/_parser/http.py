@@ -13,7 +13,6 @@ from typing import IO
 from typing import Protocol
 from typing import Self
 from typing import TypedDict
-from typing import Union
 
 import requests
 
@@ -28,7 +27,8 @@ from ._http_utils import parse_cache_control_header
 from ._http_utils import parse_date
 from ._http_utils import parse_options_header
 
-TimeoutType = Union[None, float, tuple[float, float], tuple[float, None]]
+type TimeoutType = None | float | tuple[float, float] | tuple[float, None]
+
 CachingInfo = TypedDict('CachingInfo', {'etag': str, 'last-modified': str}, total=False)
 
 

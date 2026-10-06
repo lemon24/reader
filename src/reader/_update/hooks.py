@@ -4,9 +4,7 @@ import inspect
 import time
 from collections.abc import Callable
 from typing import Any
-from typing import Generic
 from typing import Self
-from typing import TypeVar
 
 from .._logging import get_logger
 from ..exceptions import SingleUpdateHookError
@@ -17,10 +15,9 @@ logger = get_logger('reader.update.hooks')
 
 
 FuncType = Callable[..., Any]
-F = TypeVar('F', bound=FuncType)
 
 
-class Hooks(Generic[F]):
+class Hooks[F: FuncType]:
     def __init__(self, name: str):
         self.name = name
         self.hooks: list[F] = []
@@ -78,7 +75,7 @@ class HookErrorGrouper:
 
     def run(
         self,
-        hooks: Hooks[F],
+        hooks: Hooks[FuncType],
         resource_id: tuple[str, ...] | None,
         *args: Any,
         limit: int = 0,

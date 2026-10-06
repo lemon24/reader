@@ -7,8 +7,6 @@ from typing import Any
 from typing import cast
 from typing import IO
 from typing import TYPE_CHECKING
-from typing import TypeVar
-from typing import Union
 
 from .._types import EntryData
 from .._types import FeedData
@@ -77,23 +75,16 @@ def _process_feed(url: str, d: Any) -> FeedAndEntries:
     return feed, entries
 
 
-_T = TypeVar('_T')
-_U = TypeVar('_U')
-_V = TypeVar('_V')
-
-
-def _get(
+def _get[T, U, V](
     d: Any,
     key: str,
-    value_type: (
-        type[_T] | tuple[type[_T], type[_U]] | tuple[type[_T], type[_U], type[_V]]
-    ),
-) -> _T | _U | _V | None:
+    value_type: type[T] | tuple[type[T], type[U]] | tuple[type[T], type[U], type[V]],
+) -> T | U | V | None:
     value = d.get(key)
     if value is not None:
         if not isinstance(value, value_type):
             return None
-    return cast(Union[_T, _U, _V], value)
+    return cast(T | U | V, value)
 
 
 def _get_authors(d: Any) -> tuple[Author, ...]:

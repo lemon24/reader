@@ -13,13 +13,6 @@ from contextlib import nullcontext
 from functools import wraps
 from typing import Any
 from typing import cast
-from typing import TypeVar
-
-FuncType = Callable[..., Any]
-F = TypeVar('F', bound=FuncType)
-
-_T = TypeVar('_T')
-_U = TypeVar('_U')
 
 
 class MissingType:
@@ -31,11 +24,11 @@ class MissingType:
 MISSING = MissingType()
 
 
-def zero_or_one(
-    it: Iterable[_U],
+def zero_or_one[T, U](
+    it: Iterable[U],
     make_exc: Callable[[], Exception],
-    default: MissingType | _T = MISSING,
-) -> _U | _T:
+    default: MissingType | T = MISSING,
+) -> T | U:
     things = list(it)
     if len(things) == 0:
         if isinstance(default, MissingType):
@@ -47,7 +40,7 @@ def zero_or_one(
         assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
 
-def exactly_one(it: Iterable[_U]) -> _U:
+def exactly_one[T](it: Iterable[T]) -> T:
     things = list(it)
     if len(things) == 1:
         return things[0]
@@ -55,7 +48,7 @@ def exactly_one(it: Iterable[_U]) -> _U:
         assert False, "shouldn't get here"  # noqa: B011; # pragma: no cover
 
 
-def chunks(n: int, iterable: Iterable[_T]) -> Iterable[Iterable[_T]]:
+def chunks[T](n: int, iterable: Iterable[T]) -> Iterable[Iterable[T]]:
     """grouper(2, 'ABCDE') --> AB CD E"""
     # based on https://stackoverflow.com/a/8991553
     it = iter(iterable)
@@ -68,7 +61,7 @@ def chunks(n: int, iterable: Iterable[_T]) -> Iterable[Iterable[_T]]:
         yield itertools.chain([first], chunk)
 
 
-def eager_iterable(it: Iterable[_T]) -> Iterable[_T]:
+def eager_iterable[T](it: Iterable[T]) -> Iterable[T]:
     it = iter(it)
     try:
         return itertools.chain([next(it)], it)
@@ -77,7 +70,7 @@ def eager_iterable(it: Iterable[_T]) -> Iterable[_T]:
 
 
 @contextmanager
-def exiting(cm: CM[Any], rv: _T) -> Iterator[_T]:
+def exiting[T](cm: CM[Any], rv: T) -> Iterator[T]:
     try:
         yield rv
     finally:
@@ -86,12 +79,12 @@ def exiting(cm: CM[Any], rv: _T) -> Iterator[_T]:
 
 # if we substitute MapFunction below, mypy complains
 # https://github.com/python/mypy/issues/17551
-MapFunction = Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]
+type MapFunction[T, U] = Callable[[Callable[[T], U], Iterable[T]], Iterator[U]]
 
 
-def make_pool_map(
+def make_pool_map[T, U](
     workers: int,
-) -> CM[Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]]:
+) -> CM[Callable[[Callable[[T], U], Iterable[T]], Iterator[U]]]:
     if workers < 1:
         raise ValueError("workers must be a positive integer")
     if workers == 1:
@@ -100,9 +93,9 @@ def make_pool_map(
 
 
 @contextmanager
-def _make_pool_map(
+def _make_pool_map[T, U](
     workers: int,
-) -> Iterator[Callable[[Callable[[_T], _U], Iterable[_T]], Iterator[_U]]]:
+) -> Iterator[Callable[[Callable[[T], U], Iterable[T]], Iterator[U]]]:
     # We are using concurrent.futures instead of multiprocessing.dummy
     # because the latter doesn't work on some environments (e.g. AWS Lambda).
     # We are not using executor.map() because it consumes the entire iterable.
@@ -112,10 +105,10 @@ def _make_pool_map(
 
     executor = concurrent.futures.ThreadPoolExecutor(workers)
 
-    def imap_unordered(fn: Callable[[_T], _U], iterable: Iterable[_T]) -> Iterator[_U]:
+    def imap_unordered(fn: Callable[[T], U], iterable: Iterable[T]) -> Iterator[U]:
         iterable = iter(iterable)
         iterable_ended = False
-        pending: set[concurrent.futures.Future[_U]] = set()
+        pending: set[concurrent.futures.Future[U]] = set()
 
         while pending or not iterable_ended:
             while len(pending) < workers and not iterable_ended:
@@ -166,7 +159,7 @@ Deprecated variant of :attr:`{new_name}`.
 """
 
 
-def _deprecated_wrapper(
+def _deprecated_wrapper[F: Callable[..., Any]](
     old_name: str,
     new_name: str,
     func: F,
@@ -192,13 +185,13 @@ def _deprecated_wrapper(
     return cast(F, old_func)
 
 
-def deprecated_wrapper(
+def deprecated_wrapper[F: Callable[..., Any]](
     old_name: str, func: F, deprecated_in: str, removed_in: str
 ) -> F:
     return _deprecated_wrapper(old_name, func.__name__, func, deprecated_in, removed_in)
 
 
-def deprecated(
+def deprecated[F: Callable[..., Any]](
     new_name: str, deprecated_in: str, removed_in: str, property: bool = False
 ) -> Callable[[F], F]:
     if not property:

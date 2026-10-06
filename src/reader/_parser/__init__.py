@@ -18,12 +18,10 @@ from datetime import timedelta
 from typing import Any
 from typing import cast
 from typing import ContextManager
-from typing import Generic
 from typing import NamedTuple
 from typing import Protocol
 from typing import runtime_checkable
 from typing import TYPE_CHECKING
-from typing import TypeVar
 
 from structlog.contextvars import bound_contextvars
 
@@ -98,7 +96,6 @@ def default_parser(
 
 
 ParserFunc = Callable[['Parser'], Any]
-PF = TypeVar('PF', bound=ParserFunc)
 
 
 class Parser:
@@ -139,7 +136,7 @@ class Parser:
 
         self.lazy_init_funcs: list[ParserFunc] = []
 
-    def lazy_init(self, func: PF) -> PF:
+    def lazy_init[F: ParserFunc](self, func: F) -> F:
         """Decorator used to register a lazy initialization function.
 
         You should use a lazy init function instead of
@@ -164,7 +161,7 @@ class Parser:
             else:
                 func(self)
 
-    def parallel(
+    def parallel[F: FeedArgument](
         self,
         feeds: Iterable[F],
         map: MapFunction[Any, Any] = map,
@@ -252,7 +249,9 @@ class Parser:
             raise value
         return value
 
-    def retrieve_fn(self, feed: F) -> RetrieveResult[F, Any, Exception]:
+    def retrieve_fn[F: FeedArgument](
+        self, feed: F
+    ) -> RetrieveResult[F, Any, Exception]:
         """:meth:`retrieve` wrapper used by :meth:`parallel`.
 
         Takes one argument and does not raise exceptions.
@@ -330,7 +329,7 @@ class Parser:
                 else:
                     return exiting(temp, feed._replace(resource=temp))
 
-    def parse_fn(
+    def parse_fn[F: FeedArgument](
         self, result: RetrieveResult[F, Any, Exception]
     ) -> ParseResultBase[F, FeedData, EntryData, Exception]:
         """:meth:`parse` wrapper used by :meth:`parallel`.
@@ -626,12 +625,6 @@ class FeedArgument(Protocol):  # pragma: no cover
         """:attr:`~RetrievedFeed.caching_info` from the last update."""
 
 
-T = TypeVar('T')
-T_co = TypeVar('T_co', covariant=True)
-T_cv = TypeVar('T_cv', contravariant=True)
-F = TypeVar('F', bound=FeedArgument)
-E = TypeVar('E', bound=Exception)
-
 Headers = Mapping[str, str]
 
 
@@ -673,7 +666,7 @@ class NotModified(RetrieveError):
     _default_message = "not modified"
 
 
-class RetrieveResult(NamedTuple, Generic[F, T, E]):
+class RetrieveResult[F: FeedArgument, T, E: Exception](NamedTuple):
     """The result of retrieving a feed, regardless of the outcome."""
 
     #: The feed (a :class:`FeedArgument`, usually a :class:`FeedForUpdate`).
@@ -688,7 +681,7 @@ class RetrieveResult(NamedTuple, Generic[F, T, E]):
 
 
 @dataclass(frozen=True)
-class RetrievedFeed(_namedtuple_compat, Generic[T]):
+class RetrievedFeed[T](_namedtuple_compat):
     """A (successfully) retrieved feed, plus metadata."""
 
     #: The retrieved resource.
@@ -720,7 +713,7 @@ class RetrievedFeed(_namedtuple_compat, Generic[T]):
     slow_to_read: bool = False
 
 
-class RetrieverType(Protocol[T_co]):  # pragma: no cover
+class RetrieverType[T](Protocol):  # pragma: no cover
     """A callable that knows how to retrieve a feed.
 
     If the retriever is also a context manager,
@@ -731,7 +724,7 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
 
     def __call__(
         self, url: str, caching_info: JSON | None, accept: str | None
-    ) -> ContextManager[RetrievedFeed[T_co] | T_co]:
+    ) -> ContextManager[RetrievedFeed[T] | T]:
         """Retrieve a feed.
 
         Args:
@@ -764,7 +757,7 @@ class RetrieverType(Protocol[T_co]):  # pragma: no cover
 
 
 @runtime_checkable
-class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no cover
+class FeedForUpdateRetrieverType[T](RetrieverType[T], Protocol):  # pragma: no cover
     """A :class:`RetrieverType` that can change update-relevant information."""
 
     def process_feed_for_update(self, feed: FeedForUpdate) -> FeedForUpdate:
@@ -781,11 +774,7 @@ class FeedForUpdateRetrieverType(RetrieverType[T_co], Protocol):  # pragma: no c
         """
 
 
-FD = TypeVar('FD')
-ED = TypeVar('ED')
-
-
-class ParseResultBase(NamedTuple, Generic[F, FD, ED, E]):
+class ParseResultBase[F: FeedArgument, FD, ED, E: Exception](NamedTuple):
     """The result of retrieving and parsing a feed, regardless of the outcome."""
 
     #: The feed (a :class:`FeedArgument`, usually a :class:`.FeedForUpdate`).
@@ -803,7 +792,7 @@ class ParseResultBase(NamedTuple, Generic[F, FD, ED, E]):
     metadata: RetrieveMetadata | None = None
 
 
-class ParsedFeedBase(NamedTuple, Generic[FD, ED]):
+class ParsedFeedBase[FD, ED](NamedTuple):
     """A parsed feed."""
 
     #: The feed; usually :class:`FeedData`.
@@ -819,7 +808,7 @@ class ParsedFeedBase(NamedTuple, Generic[FD, ED]):
     caching_info: JSON | None = None
 
 
-EntryPairBase = tuple[ED, EntryForUpdate | None]
+type EntryPairBase[ED] = tuple[ED, EntryForUpdate | None]
 
 ParseResult = ParseResultBase[FeedForUpdate, FeedData, EntryData, ParseError]
 ParsedFeed = ParsedFeedBase[FeedData, EntryData]
@@ -828,11 +817,11 @@ EntryPair = EntryPairBase[EntryData]
 FeedAndEntries = tuple[FeedData, Collection[EntryData]]
 
 
-class ParserType(Protocol[T_cv]):  # pragma: no cover
+class ParserType[T](Protocol):  # pragma: no cover
     """A callable that knows how to parse a retrieved feed."""
 
     def __call__(
-        self, url: str, resource: T_cv, headers: Headers | None
+        self, url: str, resource: T, headers: Headers | None
     ) -> FeedAndEntries:
         """Parse a feed.
 
@@ -851,7 +840,7 @@ class ParserType(Protocol[T_cv]):  # pragma: no cover
 
 
 @runtime_checkable
-class AcceptParserType(ParserType[T_cv], Protocol):  # pragma: no cover
+class AcceptParserType[T](ParserType[T], Protocol):  # pragma: no cover
     """A :class:`ParserType` that knows what content types it can handle."""
 
     @property
@@ -863,7 +852,7 @@ class AcceptParserType(ParserType[T_cv], Protocol):  # pragma: no cover
 
 
 @runtime_checkable
-class EntryPairsParserType(ParserType[T_cv], Protocol):  # pragma: no cover
+class EntryPairsParserType[T](ParserType[T], Protocol):  # pragma: no cover
     """A :class:`ParserType` that can modify entry data before being stored."""
 
     def process_entry_pairs(

@@ -12,7 +12,6 @@ from datetime import datetime
 from functools import partial
 from types import MappingProxyType
 from typing import Any
-from typing import TypeVar
 
 from .._logging import get_logger
 from .._types import Action
@@ -38,11 +37,8 @@ from . import Storage
 from ._sql_utils import paginated_query
 from ._sql_utils import Query
 from ._sqlite_utils import ddl_transaction
-from ._sqlite_utils import SQLiteType
 
 APPLICATION_ID = b'reaD'
-
-_T = TypeVar('_T')
 
 
 log = get_logger('reader')
@@ -108,7 +104,7 @@ class Search:
 
     @staticmethod
     @functools.lru_cache
-    def strip_html(text: SQLiteType) -> SQLiteType:
+    def strip_html[T: (None, int, float, str, bytes)](text: T) -> T:
         # Private API, used by tests.
         if not isinstance(text, str):
             return text

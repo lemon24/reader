@@ -14,7 +14,6 @@ from typing import Literal
 from typing import overload
 from typing import Self
 from typing import TYPE_CHECKING
-from typing import TypeVar
 
 from ._parser import default_parser
 from ._parser import DEFAULT_TIMEOUT
@@ -80,12 +79,9 @@ if TYPE_CHECKING:  # pragma: no cover
     from ._update.base import PipelineFactory
 
 
-_T = TypeVar('_T')
-_U = TypeVar('_U')
-
-AfterEntryUpdateHook = Callable[['Reader', EntryData, EntryUpdateStatus], None]
-FeedUpdateHook = Callable[['Reader', str], None]
-FeedsUpdateHook = Callable[['Reader'], None]
+type AfterEntryUpdateHook = Callable[[Reader, EntryData, EntryUpdateStatus], None]
+type FeedUpdateHook = Callable[[Reader, str], None]
+type FeedsUpdateHook = Callable[[Reader], None]
 
 
 #: The :func:`.make_reader` default :ref:`reserved name scheme <reserved names>`.
@@ -656,20 +652,14 @@ class Reader:
         ...
 
     @overload
-    def get_feed(
-        self,
-        feed: FeedInput,
-        default: _T,
-        /,
-    ) -> Feed | _T:  # pragma: no cover
+    def get_feed[T](
+        self, feed: FeedInput, default: T, /
+    ) -> Feed | T:  # pragma: no cover
         ...
 
-    def get_feed(
-        self,
-        feed: FeedInput,
-        default: MissingType | _T = MISSING,
-        /,
-    ) -> Feed | _T:
+    def get_feed[T](
+        self, feed: FeedInput, default: MissingType | T = MISSING, /
+    ) -> Feed | T:
         """Get a feed.
 
         Like ``next(iter(reader.get_feeds(feed=feed)))``,
@@ -1200,20 +1190,17 @@ class Reader:
         ...
 
     @overload
-    def get_entry(
-        self,
-        entry: EntryInput,
-        default: _T,
-        /,
-    ) -> Entry | _T:  # pragma: no cover
+    def get_entry[T](
+        self, entry: EntryInput, default: T, /
+    ) -> Entry | T:  # pragma: no cover
         ...
 
-    def get_entry(
+    def get_entry[T](
         self,
         entry: EntryInput,
-        default: MissingType | _T = MISSING,
+        default: MissingType | T = MISSING,
         /,
-    ) -> Entry | _T:
+    ) -> Entry | T:
         """Get an entry.
 
         Like ``next(iter(reader.get_entries(entry=entry)))``,
@@ -1547,7 +1534,7 @@ class Reader:
 
         """
 
-        # `entry` is of type Union[EntryDataLikeProtocol, EntryDataTypedDict],
+        # `entry` is of type EntryDataLikeProtocol | EntryDataTypedDict,
         # but modeling that is pretty cumbersome; we can do it later if needed;
         # https://github.com/lemon24/reader/issues/239#issuecomment-951892271
         # https://gist.github.com/lemon24/047f71abe76c47661634459eada7b50a#file-01-typing-py
@@ -2022,31 +2009,22 @@ class Reader:
         return (k for k, _ in self._storage.get_tags(resource_id))
 
     @overload
-    def get_tag(
-        self,
-        resource: ResourceInput,
-        key: str,
-        /,
-    ) -> JSON:  # pragma: no cover
+    def get_tag(self, resource: ResourceInput, key: str, /) -> JSON:  # pragma: no cover
         ...
 
     @overload
-    def get_tag(
-        self,
-        resource: ResourceInput,
-        key: str,
-        default: _T,
-        /,
-    ) -> JSON | _T:  # pragma: no cover
+    def get_tag[T](
+        self, resource: ResourceInput, key: str, default: T, /
+    ) -> JSON | T:  # pragma: no cover
         ...
 
-    def get_tag(
+    def get_tag[T](
         self,
         resource: ResourceInput,
         key: str,
-        default: MissingType | _T = MISSING,
+        default: MissingType | T = MISSING,
         /,
-    ) -> JSON | _T:
+    ) -> JSON | T:
         """Get the value of this resource tag.
 
         Like ``next(iter(reader.get_tags(resource, key=key)))[1]``,

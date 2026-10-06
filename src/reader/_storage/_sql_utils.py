@@ -36,18 +36,12 @@ from typing import Any
 from typing import NamedTuple
 from typing import Self
 from typing import TYPE_CHECKING
-from typing import TypeVar
-from typing import Union
 
 if TYPE_CHECKING:  # pragma: no cover
     import sqlite3
 
 
-_T = TypeVar('_T')
-_U = TypeVar('_U')
-
-
-_QArg = Union[str, tuple[str, ...]]
+type _QArg = str | tuple[str, ...]
 
 
 class _Thing(NamedTuple):
@@ -67,7 +61,7 @@ class _Thing(NamedTuple):
         return cls(_clean_up(value), _clean_up(alias), **kwargs)
 
 
-class _FlagList(list[_T]):
+class _FlagList[T](list[T]):
     flag: str = ''
 
 
@@ -219,11 +213,11 @@ class ScrollingWindowMixin(_MixinBase):
         order = 'DESC' if desc else 'ASC'
         return self.ORDER_BY(*(f'{thing} {order}' for thing in things))
 
-    def extract_last(self, result: tuple[_T, ...]) -> tuple[_T, ...] | None:
+    def extract_last[T](self, result: tuple[T, ...]) -> tuple[T, ...] | None:
         names = [t.alias or t.value for t in self.data['SELECT']]
         return tuple(result[names.index(t)] for t in self.__things) or None
 
-    def add_last(self, last: tuple[_T, ...] | None) -> list[tuple[str, _T]]:
+    def add_last[T](self, last: tuple[T, ...] | None) -> list[tuple[str, T]]:
         self.__add_last()
         return self.__last_params(last)
 
@@ -235,7 +229,7 @@ class ScrollingWindowMixin(_MixinBase):
         comparison = BaseQuery({'(': self.__things, f') {op} (': labels, ')': ['']})
         self.add(self.__keyword, str(comparison).rstrip())
 
-    def __last_params(self, last: tuple[_T, ...] | None) -> list[tuple[str, _T]]:
+    def __last_params[T](self, last: tuple[T, ...] | None) -> list[tuple[str, T]]:
         return [(self.__make_label(i), t) for i, t in enumerate(last or ())]
 
 
@@ -261,14 +255,14 @@ class SortKey(list[_QArg]):
         return rv
 
 
-def paginated_query(
+def paginated_query[T](
     db: sqlite3.Connection,
     make_query: Callable[[], tuple[Query, dict[str, Any]]],
     max_size: int,
     limit: int = 0,
     last: tuple[Any, ...] | None = None,
-    row_factory: Callable[[tuple[Any, ...]], _T] | None = None,
-) -> Iterable[_T]:
+    row_factory: Callable[[tuple[Any, ...]], T] | None = None,
+) -> Iterable[T]:
     """Break up a single query into multiple scrolling window queries.
 
     Each query returns up to `max_size` rows, and up to `limit` rows total.

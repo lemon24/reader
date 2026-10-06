@@ -11,7 +11,6 @@ from dataclasses import replace
 from functools import partial
 from typing import Any
 from typing import Self
-from typing import TypeVar
 
 from ..exceptions import StorageError
 from . import _sqlite_utils
@@ -20,7 +19,6 @@ from ._sql_utils import Query
 
 APPLICATION_ID = b'read'
 
-_T = TypeVar('_T')
 
 # also used by tests
 CONNECTION_CLS = sqlite3.Connection
@@ -109,13 +107,13 @@ class StorageBase:
     def close(self) -> None:
         self.factory.close()
 
-    def paginated_query(
+    def paginated_query[T](
         self,
         make_query: Callable[[], tuple[Query, dict[str, Any]]],
         limit: int | None = None,
         last: tuple[Any, ...] | None = None,
-        row_factory: Callable[[tuple[Any, ...]], _T] | None = None,
-    ) -> Iterable[_T]:
+        row_factory: Callable[[tuple[Any, ...]], T] | None = None,
+    ) -> Iterable[T]:
         with wrap_exceptions():
             yield from paginated_query(
                 self.get_db(),

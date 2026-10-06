@@ -8,10 +8,8 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any  # noqa: F401
-from typing import Generic
+from typing import Any
 from typing import TYPE_CHECKING
-from typing import TypeVar
 
 from structlog.contextvars import bound_contextvars
 
@@ -36,22 +34,15 @@ if TYPE_CHECKING:  # pragma: no cover
 logger = get_logger('reader.update')
 
 
-PipelineFactory = Callable[
-    ['Reader', datetime, int, bool], 'PipelineBase[Any, Any, Any, Any]'
+type PipelineFactory = Callable[
+    [Reader, datetime, int, bool], PipelineBase[Any, Any, Any, Any]
 ]
-
-
-FD = TypeVar('FD')
-ED = TypeVar('ED')
-FI = TypeVar('FI')
-EI = TypeVar('EI')
-
-ParseResult = ParseResultBase[FeedForUpdate, FD, ED, ParseError]
-EntryPair = EntryPairBase[ED]
+type ParseResult[FD, ED] = ParseResultBase[FeedForUpdate, FD, ED, ParseError]
+type EntryPair[ED] = EntryPairBase[ED]
 
 
 @dataclass
-class PipelineBase(Generic[FD, ED, FI, EI], ABC):
+class PipelineBase[FD, ED, FI, EI](ABC):
     """Run through high level update phases and call update hooks.
 
     Does not care how feed data is parsed, nor how it is persisted

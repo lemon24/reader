@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from functools import cached_property
 from typing import Any
-from typing import TypeVar
 
 
 class _FancyExceptionBase(Exception):
@@ -274,17 +273,14 @@ class SingleUpdateHookError(UpdateHookError):
         return ': '.join(parts)
 
 
-_UpdateHookErrorT = TypeVar('_UpdateHookErrorT', bound=UpdateHookError)
-
-
-class UpdateHookErrorGroup(ExceptionGroup[_UpdateHookErrorT], UpdateHookError):
+class UpdateHookErrorGroup[T: UpdateHookError](ExceptionGroup[T], UpdateHookError):
     r"""A (possibly nested) :exc:`ExceptionGroup` of :exc:`UpdateHookError`\s.
 
     .. versionadded:: 3.8
 
     """
 
-    def __init__(self, msg: str, excs: Sequence[_UpdateHookErrorT], /):
+    def __init__(self, msg: str, excs: Sequence[T], /):
         super().__init__(msg, excs)
         for e in self.exceptions:
             if not isinstance(e, UpdateHookError):
@@ -294,9 +290,7 @@ class UpdateHookErrorGroup(ExceptionGroup[_UpdateHookErrorT], UpdateHookError):
                 )
 
     # https://github.com/python/typeshed/issues/9922
-    def derive(  # type: ignore[override]
-        self, excs: Sequence[_UpdateHookErrorT], /
-    ) -> ExceptionGroup[_UpdateHookErrorT]:
+    def derive(self, excs: Sequence[T], /) -> ExceptionGroup[T]:  # type: ignore[override]
         return UpdateHookErrorGroup(self.message, excs)
 
 

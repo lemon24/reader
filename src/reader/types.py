@@ -22,7 +22,6 @@ from typing import overload
 from typing import Protocol
 from typing import Self
 from typing import TypedDict
-from typing import Union
 
 from reader.exceptions import FeedError
 from reader.exceptions import FeedExistsError
@@ -884,13 +883,13 @@ class EntryLike(Protocol):
 
 
 # https://github.com/lemon24/reader/issues/266#issuecomment-1013739526
-GlobalInput = tuple[()]
-FeedInput = Union[str, FeedLike]
-EntryInput = Union[tuple[str, str], EntryLike]
-ResourceInput = Union[GlobalInput, FeedInput, EntryInput]
-AnyResourceInput = Union[ResourceInput, None, tuple[None], tuple[None, None]]
-ResourceId = Union[tuple[()], tuple[str], tuple[str, str]]
-AnyResourceId = Union[ResourceId, None, tuple[None], tuple[None, None]]
+type GlobalInput = tuple[()]
+type FeedInput = str | FeedLike
+type EntryInput = tuple[str, str] | EntryLike
+type ResourceInput = GlobalInput | FeedInput | EntryInput
+type AnyResourceInput = ResourceInput | None | tuple[None] | tuple[None, None]
+type ResourceId = tuple[()] | tuple[str] | tuple[str, str]
+type AnyResourceId = ResourceId | None | tuple[None] | tuple[None, None]
 
 
 def _feed_argument(feed: FeedInput) -> str:
@@ -1002,9 +1001,8 @@ def _resource_argument(resource: ResourceInput) -> ResourceId:
 #:
 #: .. versionadded:: 3.11
 #:
-TagFilterInput = Union[
-    None, bool, Sequence[Union[str, bool, Sequence[Union[str, bool]]]]
-]
+type TagFilterInput = None | bool | Sequence[str | bool | Sequence[str | bool]]
+
 
 #: Possible values for options that filter items by an optional boolean
 #: attribute (one that can be either true, false, or not set).

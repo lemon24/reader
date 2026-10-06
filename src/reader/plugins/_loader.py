@@ -4,27 +4,23 @@ from collections.abc import Callable
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pkgutil import resolve_name
-from typing import Generic
-from typing import TypeVar
-from typing import Union
 
 from ..exceptions import InvalidPluginError
 from ..exceptions import PluginInitError
 
-T = TypeVar('T')
-PluginFunc = Callable[[T], None]
-PluginInput = Union[str, PluginFunc[T]]
+type PluginFunc[T] = Callable[[T], None]
+type PluginInput[T] = str | PluginFunc[T]
 
 
 @dataclass
-class PluginLoader(Generic[T]):
+class PluginLoader:
     default_func: str
     builtin_package: str | None = None
 
     # TODO: Remove legacy reader.<plugin> support in 4.0.
     process_name: Callable[[str], str | None] | None = None
 
-    def load(self, plugin: PluginInput[T]) -> Plugin[T]:
+    def load[T](self, plugin: PluginInput[T]) -> Plugin[T]:
         if not isinstance(plugin, str):
             return Plugin(plugin, None)
 
@@ -53,20 +49,20 @@ class PluginLoader(Generic[T]):
 
         return Plugin(func, plugin)
 
-    def load_many(self, plugins: Iterable[PluginInput[T]]) -> list[Plugin[T]]:
+    def load_many[T](self, plugins: Iterable[PluginInput[T]]) -> list[Plugin[T]]:
         # convenience method
         return [self.load(plugin) for plugin in plugins]
 
-    def init_many(self, target: T, plugins: Iterable[Plugin[T]]) -> None:
+    def init_many[T](self, target: T, plugins: Iterable[Plugin[T]]) -> None:
         for plugin in plugins:
             plugin.init(target)
 
-    def oneshot(self, target: T, plugins: Iterable[PluginInput[T]]) -> None:
+    def oneshot[T](self, target: T, plugins: Iterable[PluginInput[T]]) -> None:
         self.init_many(target, self.load_many(plugins))
 
 
 @dataclass
-class Plugin(Generic[T]):
+class Plugin[T]:
     func: PluginFunc[T]
     name: str | None
 

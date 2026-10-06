@@ -47,6 +47,4 @@ def _process_legacy(name: str) -> str | None:
     return new_name
 
 
-_PLUGIN_LOADER = PluginLoader['Reader'](
-    'init_reader', 'reader.plugins', _process_legacy
-)
+_PLUGIN_LOADER = PluginLoader('init_reader', 'reader.plugins', _process_legacy)

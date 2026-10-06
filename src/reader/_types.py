@@ -20,8 +20,6 @@ from typing import overload
 from typing import Protocol
 from typing import runtime_checkable
 from typing import Self
-from typing import TypeVar
-from typing import Union
 
 from ._hash_utils import get_hash
 from .types import _entry_argument
@@ -57,9 +55,6 @@ from .types import TristateFilterInput
 
 # structure similar to
 # https://github.com/lemon24/reader/issues/159#issuecomment-612512033
-
-
-_T = TypeVar('_T')
 
 
 @dataclass(frozen=True)
@@ -163,7 +158,7 @@ class EntryData(_namedtuple_compat):
 
 
 def entry_data_from_obj(obj: object) -> EntryData:
-    """Union[EntryDataLikeProtocol, EntryDataTypedDict] -> EntryData
+    """EntryDataLikeProtocol | EntryDataTypedDict -> EntryData
 
     Naive datetimes are normalized by passing them to
     :meth:`~datetime.datetime.astimezone`.
@@ -244,7 +239,7 @@ def author_from_obj(obj: object) -> Author:
     )
 
 
-def _getattr(obj: object, name: str, type: type[_T]) -> _T:
+def _getattr[T](obj: object, name: str, type: type[T]) -> T:
     # will raise AttributeError implicitly
     value = getattr(obj, name)
     if not isinstance(value, type):
@@ -254,7 +249,7 @@ def _getattr(obj: object, name: str, type: type[_T]) -> _T:
     return value
 
 
-def _getattr_optional(obj: object, name: str, type: type[_T]) -> _T | None:
+def _getattr_optional[T](obj: object, name: str, type: type[T]) -> T | None:
     value = getattr(obj, name, None)
     if value is None:
         return value
@@ -436,7 +431,7 @@ class EntryUpdateIntent(NamedTuple):
 #: >>> tag_filter_argument(True)
 #: [[True]]
 #:
-TagFilter = Sequence[Sequence[Union[bool, tuple[bool, str]]]]
+TagFilter = Sequence[Sequence[bool | tuple[bool, str]]]
 
 
 def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
