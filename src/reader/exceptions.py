@@ -219,10 +219,7 @@ class UpdateHookError(UpdateError):
     allows catching any hook errors with a single except clause.
 
     To inspect individual hook failures,
-    use `except\* <exceptstar_>`_ with :exc:`SingleUpdateHookError`
-    (or, on Python earlier than 3.11,
-    check if the exception :func:`isinstance` :exc:`UpdateHookErrorGroup`
-    and examine its :attr:`~BaseExceptionGroup.exceptions`).
+    use `except\* <exceptstar_>`_ with :exc:`SingleUpdateHookError`.
 
     .. _exceptstar: https://docs.python.org/3/tutorial/errors.html#raising-and-handling-multiple-unrelated-exceptions
 
