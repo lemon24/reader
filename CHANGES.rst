@@ -20,6 +20,7 @@ Unreleased
 
 * Support Python 3.15. (:issue:`418`)
 * Support PyPy 3.12. (:issue:`419`)
+* Drop Python 3.11 support. (:issue:`419`)
 
 * Stop vendoring `feedparser`_ and
   :ref:`recommend installing it from GitHub instead <no-vendored-feedparser>`.
