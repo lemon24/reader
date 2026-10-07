@@ -19,6 +19,8 @@ Unreleased
   (:issue:`283`)
 
 * Support Python 3.15. (:issue:`418`)
+* Support PyPy 3.12. (:issue:`419`)
+
 * Stop vendoring `feedparser`_ and
   :ref:`recommend installing it from GitHub instead <no-vendored-feedparser>`.
 * Pin GitHub Actions and add zizmor to CI.
