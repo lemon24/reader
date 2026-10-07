@@ -10,7 +10,7 @@ from typing import Any
 from typing import IO
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     import bs4
 
 

@@ -23,7 +23,7 @@ from ..types import EntrySource
 from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from . import FeedAndEntries
     from . import Headers
 

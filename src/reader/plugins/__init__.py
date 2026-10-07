@@ -9,13 +9,8 @@ the plugin implementation is *not*.
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
 
 from ._loader import PluginLoader
-
-if TYPE_CHECKING:  # pragma: no cover
-    from .. import Reader  # noqa: F401
-
 
 #: The :func:`~reader.make_reader` default list of :ref:`plugins <plugins>`.
 DEFAULT_PLUGINS = [

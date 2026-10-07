@@ -28,7 +28,7 @@ from ..types import UpdatedFeed
 from ..types import UpdateResult
 from .hooks import HookErrorGrouper
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from ..core import Reader
 
 logger = get_logger('reader.update')

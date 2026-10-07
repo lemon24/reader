@@ -653,7 +653,7 @@ class NameScheme(_namedtuple_compat):
         return rv
 
 
-class StorageType(Protocol):  # pragma: no cover
+class StorageType(Protocol):
     r"""Storage DAO protocol.
 
     For methods with :class:`.Reader` correspondents,
@@ -954,7 +954,7 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
     def get_tags(
-        self, resource_id: AnyResourceId, key: str | None = None, /  # noqa: W504
+        self, resource_id: AnyResourceId, key: str | None = None, /
     ) -> Iterable[tuple[str, JSON]]:
         """Called by :meth:`.Reader.get_tags`.
 
@@ -979,14 +979,10 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
     @overload
-    def set_tag(self, resource_id: ResourceId, key: str, /) -> None:  # pragma: no cover
-        ...
+    def set_tag(self, resource_id: ResourceId, key: str, /) -> None: ...
 
     @overload
-    def set_tag(
-        self, resource_id: ResourceId, key: str, value: JSON, /  # noqa: W504
-    ) -> None:  # pragma: no cover
-        ...
+    def set_tag(self, resource_id: ResourceId, key: str, value: JSON, /) -> None: ...
 
     def set_tag(
         self,
@@ -1054,7 +1050,7 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
     def get_entries_for_update(
-        self, entries: Iterable[tuple[str, str]], /  # noqa: W504
+        self, entries: Iterable[tuple[str, str]], /
     ) -> Iterable[EntryForUpdate | None]:
         """Called by update logic.
 
@@ -1095,7 +1091,7 @@ class StorageType(Protocol):  # pragma: no cover
         """
 
     def set_entry_recent_sort(
-        self, entry: tuple[str, str], recent_sort: datetime, /  # noqa: W504
+        self, entry: tuple[str, str], recent_sort: datetime, /
     ) -> None:
         """Set :attr:`EntryUpdateIntent.recent_sort`.
 
@@ -1135,7 +1131,7 @@ class BoundSearchStorageType(StorageType, Protocol):
         """
 
 
-class SearchType(Protocol):  # pragma: no cover
+class SearchType(Protocol):
     """Search DAO protocol.
 
     Any method can raise :exc:`.SearchError`.
@@ -1255,7 +1251,7 @@ class ChangeTrackingStorageType(StorageType, Protocol):
         """The change tracker associated with this storage."""
 
 
-class ChangeTrackerType(Protocol):  # pragma: no cover
+class ChangeTrackerType(Protocol):
     """Storage API used to keep the full-text search index in sync.
 
     .. rubric:: Sync model

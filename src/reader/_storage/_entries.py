@@ -41,7 +41,7 @@ from ._sqlite_utils import SQLiteValue
 from ._tags import entry_tags_filter
 from ._tags import feed_tags_filter
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from ._base import StorageBase
 else:
     StorageBase = object

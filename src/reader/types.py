@@ -868,18 +868,15 @@ class FeedLike(Protocol):
     # We don't use "url: str" because we don't care if url is writable.
 
     @property
-    def url(self) -> str:  # pragma: no cover
-        ...
+    def url(self) -> str: ...
 
 
 class EntryLike(Protocol):
     @property
-    def id(self) -> str:  # pragma: no cover
-        ...
+    def id(self) -> str: ...
 
     @property
-    def feed_url(self) -> str:  # pragma: no cover
-        ...
+    def feed_url(self) -> str: ...
 
 
 # https://github.com/lemon24/reader/issues/266#issuecomment-1013739526
@@ -921,15 +918,15 @@ def _entry_argument(entry: EntryInput) -> tuple[str, str]:
 
 
 @overload
-def _resource_argument(resource: GlobalInput) -> tuple[()]: ...  # pragma: no cover
+def _resource_argument(resource: GlobalInput) -> tuple[()]: ...
 
 
 @overload
-def _resource_argument(resource: FeedInput) -> tuple[str]: ...  # pragma: no cover
+def _resource_argument(resource: FeedInput) -> tuple[str]: ...
 
 
 @overload
-def _resource_argument(resource: EntryInput) -> tuple[str, str]: ...  # pragma: no cover
+def _resource_argument(resource: EntryInput) -> tuple[str, str]: ...
 
 
 def _resource_argument(resource: ResourceInput) -> ResourceId:

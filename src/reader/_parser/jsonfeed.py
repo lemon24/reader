@@ -15,7 +15,7 @@ from ..types import Author
 from ..types import Content
 from ..types import Enclosure
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from . import FeedAndEntries
     from . import Headers
 

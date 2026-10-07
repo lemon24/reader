@@ -36,11 +36,8 @@ class RequestHook(Protocol):
     """Hook to modify a :class:`~requests.Request` before it is sent."""
 
     def __call__(
-        self,
-        session: requests.Session,
-        request: requests.Request,
-        **kwargs: Any,
-    ) -> requests.Request | None:  # pragma: no cover
+        self, session: requests.Session, request: requests.Request, **kwargs: Any
+    ) -> requests.Request | None:
         """Modify a request before it is sent.
 
         Args:
@@ -67,7 +64,7 @@ class ResponseHook(Protocol):
         response: requests.Response,
         request: requests.Request,
         **kwargs: Any,
-    ) -> requests.Request | None:  # pragma: no cover
+    ) -> requests.Request | None:
         """Repeat a request  depending on the response.
 
         Args:

@@ -24,7 +24,7 @@ from ._sql_utils import BaseQuery
 from ._sql_utils import Query
 from ._sqlite_utils import rowcount_exactly_one
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from ._base import StorageBase
 else:
     StorageBase = object
@@ -75,14 +75,10 @@ class TagsMixin(StorageBase):
         return self.paginated_query(make_query, row_factory=row_factory)
 
     @overload
-    def set_tag(self, resource_id: ResourceId, key: str) -> None:  # pragma: no cover
-        ...
+    def set_tag(self, resource_id: ResourceId, key: str) -> None: ...
 
     @overload
-    def set_tag(
-        self, resource_id: ResourceId, key: str, value: JSON
-    ) -> None:  # pragma: no cover
-        ...
+    def set_tag(self, resource_id: ResourceId, key: str, value: JSON) -> None: ...
 
     @wrap_exceptions()
     def set_tag(

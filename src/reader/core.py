@@ -73,7 +73,7 @@ from .types import TristateFilterInput
 from .types import UpdatedFeed
 from .types import UpdateResult
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from ._parser import Parser
     from ._parser.http import TimeoutType
     from ._update.base import PipelineFactory
@@ -648,14 +648,10 @@ class Reader:
         return eager_iterable(rv)
 
     @overload
-    def get_feed(self, feed: FeedInput, /) -> Feed:  # pragma: no cover
-        ...
+    def get_feed(self, feed: FeedInput, /) -> Feed: ...
 
     @overload
-    def get_feed[T](
-        self, feed: FeedInput, default: T, /
-    ) -> Feed | T:  # pragma: no cover
-        ...
+    def get_feed[T](self, feed: FeedInput, default: T, /) -> Feed | T: ...
 
     def get_feed[T](
         self, feed: FeedInput, default: MissingType | T = MISSING, /
@@ -1186,14 +1182,10 @@ class Reader:
         return eager_iterable(rv)
 
     @overload
-    def get_entry(self, entry: EntryInput, /) -> Entry:  # pragma: no cover
-        ...
+    def get_entry(self, entry: EntryInput, /) -> Entry: ...
 
     @overload
-    def get_entry[T](
-        self, entry: EntryInput, default: T, /
-    ) -> Entry | T:  # pragma: no cover
-        ...
+    def get_entry[T](self, entry: EntryInput, default: T, /) -> Entry | T: ...
 
     def get_entry[T](
         self,
@@ -2009,14 +2001,12 @@ class Reader:
         return (k for k, _ in self._storage.get_tags(resource_id))
 
     @overload
-    def get_tag(self, resource: ResourceInput, key: str, /) -> JSON:  # pragma: no cover
-        ...
+    def get_tag(self, resource: ResourceInput, key: str, /) -> JSON: ...
 
     @overload
     def get_tag[T](
         self, resource: ResourceInput, key: str, default: T, /
-    ) -> JSON | T:  # pragma: no cover
-        ...
+    ) -> JSON | T: ...
 
     def get_tag[T](
         self,
@@ -2062,25 +2052,13 @@ class Reader:
         )
 
     @overload
-    def set_tag(self, resource: ResourceInput, key: str, /) -> None:  # pragma: no cover
-        ...
+    def set_tag(self, resource: ResourceInput, key: str, /) -> None: ...
 
     @overload
-    def set_tag(
-        self,
-        resource: ResourceInput,
-        key: str,
-        value: JSON,
-        /,
-    ) -> None:  # pragma: no cover
-        ...
+    def set_tag(self, resource: ResourceInput, key: str, value: JSON, /) -> None: ...
 
     def set_tag(
-        self,
-        resource: ResourceInput,
-        key: str,
-        value: JSON | MissingType = MISSING,
-        /,
+        self, resource: ResourceInput, key: str, value: JSON | MissingType = MISSING, /
     ) -> None:
         """Set the value of this resource tag.
 

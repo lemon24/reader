@@ -39,7 +39,7 @@ from ._http_utils import parse_accept_header
 from ._http_utils import unparse_accept_header
 from ._url_utils import normalize_url
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from .http import TimeoutType
 
 
@@ -613,7 +613,7 @@ class Parser:
             return list(parser.process_entry_pairs(url, pairs))
 
 
-class FeedArgument(Protocol):  # pragma: no cover
+class FeedArgument(Protocol):
     """Any :class:`~reader._types.FeedForUpdate`-like object."""
 
     @property
@@ -713,7 +713,7 @@ class RetrievedFeed[T](_namedtuple_compat):
     slow_to_read: bool = False
 
 
-class RetrieverType[T](Protocol):  # pragma: no cover
+class RetrieverType[T](Protocol):
     """A callable that knows how to retrieve a feed.
 
     If the retriever is also a context manager,
@@ -757,7 +757,7 @@ class RetrieverType[T](Protocol):  # pragma: no cover
 
 
 @runtime_checkable
-class FeedForUpdateRetrieverType[T](RetrieverType[T], Protocol):  # pragma: no cover
+class FeedForUpdateRetrieverType[T](RetrieverType[T], Protocol):
     """A :class:`RetrieverType` that can change update-relevant information."""
 
     def process_feed_for_update(self, feed: FeedForUpdate) -> FeedForUpdate:
@@ -817,7 +817,7 @@ EntryPair = EntryPairBase[EntryData]
 FeedAndEntries = tuple[FeedData, Collection[EntryData]]
 
 
-class ParserType[T](Protocol):  # pragma: no cover
+class ParserType[T](Protocol):
     """A callable that knows how to parse a retrieved feed."""
 
     def __call__(
@@ -840,7 +840,7 @@ class ParserType[T](Protocol):  # pragma: no cover
 
 
 @runtime_checkable
-class AcceptParserType[T](ParserType[T], Protocol):  # pragma: no cover
+class AcceptParserType[T](ParserType[T], Protocol):
     """A :class:`ParserType` that knows what content types it can handle."""
 
     @property
@@ -852,7 +852,7 @@ class AcceptParserType[T](ParserType[T], Protocol):  # pragma: no cover
 
 
 @runtime_checkable
-class EntryPairsParserType[T](ParserType[T], Protocol):  # pragma: no cover
+class EntryPairsParserType[T](ParserType[T], Protocol):
     """A :class:`ParserType` that can modify entry data before being stored."""
 
     def process_entry_pairs(
