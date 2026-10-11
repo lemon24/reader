@@ -37,7 +37,7 @@ Print the titles of the unread entries::
 
 """
 
-__version__ = '3.27'
+__version__ = '3.28.dev0'
 
 # isort: off
 
