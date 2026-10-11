@@ -3,7 +3,7 @@ name = "reader"
 authors = [{name = "lemon24"}]
 description = "A Python feed reader library."
 readme = "README.rst"
-license = {text = "BSD-3-Clause"}
+license = "BSD-3-Clause"
 keywords = [
     "atom", "cdf", "feed", "rdf", "rss", "json feed",
     "web feed", "podcast", "feed reader", "feed aggregator",
@@ -14,7 +14,6 @@ classifiers = [
     "Environment :: Web Environment",
     "Intended Audience :: Developers",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
@@ -126,7 +125,7 @@ docs = [
     "sphinx-click",
     "sphinxcontrib-log-cabinet",
     # for read_configuration used in conf.py
-    "setuptools",
+    "setuptools>=77",
 ]
 
 dev = [
