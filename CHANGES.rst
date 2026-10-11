@@ -9,7 +9,7 @@ Changelog
 Version 3.27
 ------------
 
-Unreleased
+Released 2026-10-11
 
 * Add the ``migrate`` :func:`make_reader` argument.
   Thanks to `Divyanshi Purohit`_ for the PR.
