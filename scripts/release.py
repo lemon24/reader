@@ -20,18 +20,8 @@ def run(*args, **kwargs):
     return subprocess.run(*args, check=True, **kwargs)
 
 
-def run_no_venv(*args, **kwargs):
-    env = os.environ.copy()
-    virtual_env = env.pop('VIRTUAL_ENV', None)
-    if virtual_env:
-        env['PATH'] = ':'.join(
-            p for p in env['PATH'].split(':') if not p.startswith(virtual_env)
-        )
-    return run(*args, env=env, **kwargs)
-
-
 def run_tox():
-    run_no_venv('tox -p all', shell=True)
+    run('tox -p all', shell=True)
 
 
 def path_sub(pattern, repl, path):
