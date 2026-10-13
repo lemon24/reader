@@ -638,6 +638,9 @@ class RetrieveMetadata(_namedtuple_compat):
     #: There were too many requests in a given amount of time.
     rate_limited: bool = False
 
+    #: The response is intended for a single user.
+    private: bool = False
+
     #: Additional metadata used by plugins, e.g. passed to update hooks.
     #: The key must match the name of the plugin.
     extra: dict[str, Any] = field(default_factory=dict)

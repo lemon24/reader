@@ -1144,7 +1144,15 @@ def test_retrivers_run_in_parallel():
     assert not barrier.broken
 
 
-def data(status, *, update_after=None, rate_limited=False, max_age=None, **kwargs):
+def data(
+    status,
+    *,
+    update_after=None,
+    rate_limited=False,
+    private=False,
+    max_age=None,
+    **kwargs,
+):
     headers = {k.lower().replace('_', '-'): v for k, v in kwargs.items()}
     if max_age is not None:
         assert 'cache-control' not in headers, headers['cache-control']
@@ -1154,7 +1162,9 @@ def data(status, *, update_after=None, rate_limited=False, max_age=None, **kwarg
     return (
         status,
         headers,
-        RetrieveMetadata(update_after=update_after, rate_limited=rate_limited),
+        RetrieveMetadata(
+            update_after=update_after, rate_limited=rate_limited, private=private
+        ),
     )
 
 
@@ -1216,6 +1226,9 @@ HTTP_METADATA_DATA = {
         update_after=3600,
     ),
     'no-cache ignores max-age': data(200, cache_control='no-cache, max-age=120'),
+    # private
+    'private': data(200, cache_control='private', private=True),
+    'qualified private': data(200, cache_control='private="Set-Cookie"'),
 }
 
 

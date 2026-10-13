@@ -4,7 +4,6 @@ HTTP utilities. Contains no business logic.
 """
 
 from collections.abc import Iterable
-from functools import partial
 
 import werkzeug.http
 from werkzeug.datastructures import MIMEAccept
@@ -19,6 +18,5 @@ def unparse_accept_header(values: Iterable[tuple[str, float]]) -> str:
     return MIMEAccept(values).to_header()
 
 
-parse_cache_control_header = partial(
-    werkzeug.http.parse_cache_control_header, cls=ResponseCacheControl
-)
+def parse_cache_control_header(value: str) -> ResponseCacheControl:
+    return werkzeug.http.parse_cache_control_header(value, cls=ResponseCacheControl)

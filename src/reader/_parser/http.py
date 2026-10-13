@@ -157,6 +157,7 @@ class HTTPRetriever:
                 metadata = RetrieveMetadata(
                     update_after=_update_after(status, headers),
                     rate_limited=status == 429,
+                    private=_private(headers),
                 )
                 error.metadata = metadata
 
@@ -350,3 +351,14 @@ def _update_after(status: int, headers: Headers) -> datetime | timedelta | None:
             return timedelta(seconds=max_age)
 
     return _parse_date('expires')
+
+
+def _private(headers: Headers) -> bool:
+    if cache_control_str := headers.get('cache-control'):
+        cache_control = parse_cache_control_header(cache_control_str)
+
+        # We only care about unqualified private; qualified private means
+        # "cache response, but not these headers"; we don't store headers.
+        return cache_control.private is True
+
+    return False
