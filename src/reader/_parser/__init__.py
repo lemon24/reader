@@ -635,6 +635,9 @@ class RetrieveMetadata(_namedtuple_compat):
     #: "update after" hint, as derived from response metadata.
     update_after: datetime | timedelta | None = None
 
+    #: There were too many requests in a given amount of time.
+    rate_limited: bool = False
+
     #: Additional metadata used by plugins, e.g. passed to update hooks.
     #: The key must match the name of the plugin.
     extra: dict[str, Any] = field(default_factory=dict)

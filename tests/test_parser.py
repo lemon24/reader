@@ -1144,41 +1144,50 @@ def test_retrivers_run_in_parallel():
     assert not barrier.broken
 
 
-def data(status, *, update_after=None, max_age=None, **kwargs):
+def data(status, *, update_after=None, rate_limited=False, max_age=None, **kwargs):
     headers = {k.lower().replace('_', '-'): v for k, v in kwargs.items()}
     if max_age is not None:
         assert 'cache-control' not in headers, headers['cache-control']
         headers['cache-control'] = f"max-age={max_age}"
     if isinstance(update_after, int):
         update_after = timedelta(seconds=update_after)
-    return status, headers, RetrieveMetadata(update_after=update_after)
+    return (
+        status,
+        headers,
+        RetrieveMetadata(update_after=update_after, rate_limited=rate_limited),
+    )
 
 
 HTTP_METADATA_DATA = {
     "200": data(200),
     "404": data(404),
     # no headers (should fail after #378)
-    '429 without headers is ignored': data(429),
+    '429 without headers is ignored': data(429, rate_limited=True),
     '503 without headers is ignored': data(503),
     # retry-after
-    '429 with retry-after': data(429, retry_after='120', update_after=120),
+    '429 with retry-after': data(
+        429, retry_after='120', update_after=120, rate_limited=True
+    ),
     '503 with retry-after': data(503, retry_after='120', update_after=120),
-    'invalid retry-after is ignored': data(429, retry_after='xyz'),
+    'invalid retry-after is ignored': data(429, retry_after='xyz', rate_limited=True),
     '200 retry-after is ignored': data(200, retry_after='120'),
     'date retry-after': data(
         429,
         retry_after='Fri, 01 Jan 2010 02:00:00 GMT',
         update_after=datetime(2010, 1, 1, 2),
+        rate_limited=True,
     ),
     'date retry-after (no timezone)': data(
         429,
         retry_after='Fri, 01 Jan 2010 02:00:00',
         update_after=datetime(2010, 1, 1, 2),
+        rate_limited=True,
     ),
     'date retry-after (not GMT)': data(
         429,
         retry_after='Fri, 01 Jan 2010 02:00:00 +0100',
         update_after=datetime(2010, 1, 1, 1),
+        rate_limited=True,
     ),
     # cache-control max-age / expires
     'max-age': data(200, max_age='240', update_after=240),
@@ -1192,12 +1201,13 @@ HTTP_METADATA_DATA = {
     'max-age beats expires': data(
         200, max_age=120, expires='Fri, 01 Jan 2010 02:00:00 GMT', update_after=120
     ),
-    '429 max-age is ignored': data(429, max_age='240'),
+    '429 max-age is ignored': data(429, max_age='240', rate_limited=True),
     'relative to date (retry-after)': data(
         429,
         date='Fri, 01 Jan 2010 01:00:00 GMT',
         retry_after='Fri, 01 Jan 2010 02:00:00 GMT',
         update_after=3600,
+        rate_limited=True,
     ),
     'relative to date (retry-after)': data(
         200,

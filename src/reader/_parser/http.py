@@ -156,6 +156,7 @@ class HTTPRetriever:
 
                 metadata = RetrieveMetadata(
                     update_after=_update_after(status, headers),
+                    rate_limited=status == 429,
                 )
                 error.metadata = metadata
 
