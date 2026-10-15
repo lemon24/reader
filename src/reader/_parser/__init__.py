@@ -641,9 +641,24 @@ class RetrieveMetadata(_namedtuple_compat):
     #: The response is intended for a single user.
     private: bool = False
 
+    #: Redirects traversed to retrieve the feed. If not empty,
+    #: the other metadata attributes refer to the URL of the last redirect.
+    redirects: list[Redirect] = field(default_factory=list)
+
     #: Additional metadata used by plugins, e.g. passed to update hooks.
     #: The key must match the name of the plugin.
     extra: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class Redirect:
+    """Information about a redirect."""
+
+    #: URL to redirect to.
+    target_url: str | None
+
+    #: Whether the redirect is permanent or not.
+    permanent: bool
 
 
 class RetrieveError(ParseError):

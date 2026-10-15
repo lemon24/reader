@@ -19,6 +19,7 @@ import requests
 from . import DEFAULT_TIMEOUT
 from . import Headers
 from . import NotModified
+from . import Redirect
 from . import RetrievedFeed
 from . import RetrieveError
 from . import RetrieveMetadata
@@ -158,6 +159,13 @@ class HTTPRetriever:
                     update_after=_update_after(status, headers),
                     rate_limited=status == 429,
                     private=_private(headers),
+                    redirects=[
+                        Redirect(
+                            r.headers.get('location'),
+                            r.status_code in (301, 308),
+                        )
+                        for r in response.history
+                    ],
                 )
                 error.metadata = metadata
 

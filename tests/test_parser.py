@@ -14,6 +14,7 @@ from reader import Feed
 from reader._parser import default_parser
 from reader._parser import FeedForUpdate
 from reader._parser import Parser
+from reader._parser import Redirect
 from reader._parser import RetrievedFeed
 from reader._parser import RetrieveError
 from reader._parser import RetrieveMetadata
@@ -1246,6 +1247,30 @@ def test_http_retriever_metadata(requests_mock, status, headers, expected):
         metadata = e.metadata
 
     assert metadata == expected
+
+
+def test_http_retriever_metadata_redirects(requests_mock):
+    def get(url, status, headers):
+        requests_mock.get(url, status_code=status, headers=headers)
+
+    get('http://one', 301, {'location': 'http://two', 'retry-after': '120'})
+    get('http://two', 302, {'location': 'http://three', 'cache-control': 'max-age=120'})
+    get('http://three', 307, {'location': 'http://four', 'cache-control': 'private'})
+    get('http://four', 308, {'location': 'http://five'})
+    get('http://five', 200, {})
+
+    with HTTPRetriever()('http://one') as retrieved:
+        metadata = retrieved.metadata
+
+    assert metadata == RetrieveMetadata(
+        redirects=[
+            Redirect('http://two', True),
+            Redirect('http://three', False),
+            Redirect('http://four', False),
+            Redirect('http://five', True),
+        ]
+    )
+    # TODO: maybe also test .throttled etc. for different five responses
 
 
 def test_feedparser_parse_authors_rss():
