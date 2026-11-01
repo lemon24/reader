@@ -5,6 +5,7 @@ import pytest
 
 from reader import Content
 from reader import Entry
+from reader._types import NameScheme
 from reader.plugins import entry_dedupe
 from reader.plugins.entry_dedupe import common_prefixes
 from reader.plugins.entry_dedupe import group_by
@@ -13,7 +14,6 @@ from reader.plugins.entry_dedupe import is_duplicate
 from reader.plugins.entry_dedupe import is_duplicate_entry
 from reader.plugins.entry_dedupe import merge_flags
 from reader.plugins.entry_dedupe import merge_tags
-from reader._types import NameScheme
 from reader.plugins.entry_dedupe import ngrams
 from reader.plugins.entry_dedupe import normalize_url
 from reader.plugins.entry_dedupe import tokenize_content
