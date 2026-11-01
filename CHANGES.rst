@@ -11,6 +11,10 @@ Version 3.28
 
 Unreleased
 
+* :mod:`~reader.plugins.entry_dedupe`: don't copy reserved tags
+  (``.reader.*`` / ``.plugin.*``) from duplicate entries when deduplicating.
+  (:issue:`381`)
+
 
 Version 3.27
 ------------

@@ -13,6 +13,7 @@ from reader.plugins.entry_dedupe import is_duplicate
 from reader.plugins.entry_dedupe import is_duplicate_entry
 from reader.plugins.entry_dedupe import merge_flags
 from reader.plugins.entry_dedupe import merge_tags
+from reader._types import NameScheme
 from reader.plugins.entry_dedupe import ngrams
 from reader.plugins.entry_dedupe import normalize_url
 from reader.plugins.entry_dedupe import tokenize_content
@@ -377,6 +378,36 @@ def test_tags(reader, parser, allow_short_content):
     }
 
 
+def test_tags_reserved_not_copied(reader, parser, allow_short_content):
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    one = parser.entry(1, 1, datetime(2010, 1, 2), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    two = parser.entry(1, 2, datetime(2010, 1, 1), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 2)
+    reader.update_feeds()
+
+    reader.set_tag(one, 'just', 'one')
+    reader.set_tag(two, 'just', 'two')
+    # reserved tags belong to a specific entry and must not be copied on dedup
+    reader.set_tag(one, reader.make_reader_reserved_name('readtime'), 5)
+    reader.set_tag(two, reader.make_plugin_reserved_name('mine'), 6)
+
+    init_reader(reader)
+
+    three = parser.entry(1, 3, datetime(2010, 1, 3), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 3)
+    reader.update_feeds()
+
+    assert dict(reader.get_tags(three)) == {
+        'just': 'one',
+        '.reader.duplicate.1.of.just': 'two',
+    }
+
+
 def test_tags_dedupe_once(reader, parser, allow_short_content):
     feed = parser.feed(1)
     reader.add_feed(feed)
@@ -580,6 +611,20 @@ MERGE_TAGS_DATA = [
             '.duplicate.3.of.tag': 3,
         },
     ),
+    # reserved tags from duplicates are not copied
+    ([{'.readtime': 5}, {}], {}),
+    # reserved tags are skipped even when mixed with normal tags
+    ([{'tag': 1}, {'.readtime': 5}, {}], {'tag': 1}),
+    # both reader- and plugin-reserved tags from duplicates are skipped
+    (
+        [{'tag': 1}, {'.readtime': 5}, {'.plugin.mine': 6}, {}],
+        {'tag': 1},
+    ),
+    # a reserved duplicate tag is skipped even if a normal tag collides
+    (
+        [{'tag': 1}, {'.readtime': 5, 'tag': 2}, {}],
+        {'tag': 1, '.duplicate.1.of.tag': 2},
+    ),
 ]
 
 
@@ -587,10 +632,11 @@ MERGE_TAGS_DATA = [
 def test_merge_tags(reader, parser, tags, expected):
     *duplicates, entry = tags
 
-    def make_reserved(n):
-        return '.' + n
+    # the test scheme uses '.' as both reader and plugin prefix,
+    # so any '.key' tag is considered reserved
+    scheme = NameScheme('.', '.', '.')
 
-    assert dict(merge_tags(make_reserved, entry, duplicates)) == expected
+    assert dict(merge_tags(scheme, entry, duplicates)) == expected
 
 
 # TODO: with_maybe_published_or_updated
