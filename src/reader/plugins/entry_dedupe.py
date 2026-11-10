@@ -31,7 +31,7 @@ Entry user attributes are set as follows:
     with the same status as the new read/important.
 
 entry tags
-    Copy tags to the new entry;
+    Copy tags to the new entry (reserved tags are ignored);
     duplicate tags are named ``.reader.duplicate.N.of.TAG``.
 
 
@@ -751,10 +751,13 @@ def make_dedupe_actions(reader, entry, duplicates):
     if args := make_flag_args('important'):
         yield partial(reader.set_entry_important, entry, *args)
 
+    scheme = reader.reserved_name_scheme
+    prefixes = (scheme['reader_prefix'], scheme['plugin_prefix'])
     tags = merge_tags(
         reader.make_reader_reserved_name,
         dict(reader.get_tags(entry)),
         map(dict, map(reader.get_tags, duplicates)),
+        is_reserved=lambda key: key.startswith(prefixes),
     )
     for key, value in tags:
         yield partial(reader.set_tag, entry, key, value)
@@ -787,8 +790,14 @@ def merge_flags(entry, duplicates):
     return None
 
 
-def merge_tags(make_reserved, entry, duplicates):
-    prefix = re.escape(make_reserved(''))
+def merge_tags(make_reserved, entry, duplicates, is_reserved=None):
+    reserved_prefix = make_reserved('')
+    if is_reserved is None:
+
+        def is_reserved(key):
+            return key.startswith(reserved_prefix)
+
+    prefix = re.escape(reserved_prefix)
     duplicate_tag_re = re.compile(rf"^{prefix}duplicate\.\d+\.of\.(.*)$")
 
     indexes = defaultdict(int)  # noqa: B910
@@ -804,6 +813,11 @@ def merge_tags(make_reserved, entry, duplicates):
             if match := duplicate_tag_re.match(key):
                 key = match.group(1)
 
+            if is_reserved(key):
+                continue
+
+            if is_reserved(key):
+                continue
             if value in seen_values[key]:
                 continue
             seen_values[key].append(value)

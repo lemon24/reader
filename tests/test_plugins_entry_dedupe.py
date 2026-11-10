@@ -377,6 +377,35 @@ def test_tags(reader, parser, allow_short_content):
     }
 
 
+def test_tags_reserved_not_copied(reader, parser, allow_short_content):
+    feed = parser.feed(1)
+    reader.add_feed(feed)
+
+    one = parser.entry(1, 1, datetime(2010, 1, 2), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    two = parser.entry(1, 2, datetime(2010, 1, 1), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 2)
+    reader.update_feeds()
+
+    # Set normal tag and reserved tags on entry one (which will be a duplicate)
+    reader.set_tag(one, 'user_tag', 'hello')
+    reader.set_tag(one, reader.make_reader_reserved_name('readtime'), 120)
+    reader.set_tag(one, reader.make_plugin_reserved_name('myplugin', 'val'), 1)
+
+    init_reader(reader)
+
+    three = parser.entry(1, 3, datetime(2010, 1, 3), title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 3)
+    reader.update_feeds()
+
+    # Three is kept: only user_tag should be copied, reserved tags must not be copied
+    assert dict(reader.get_tags(three)) == {
+        'user_tag': 'hello',
+    }
+
+
 def test_tags_dedupe_once(reader, parser, allow_short_content):
     feed = parser.feed(1)
     reader.add_feed(feed)
@@ -580,6 +609,14 @@ MERGE_TAGS_DATA = [
             '.duplicate.3.of.tag': 3,
         },
     ),
+    # reserved tags on duplicate entries are not copied
+    ([{'tag': 'one', '.readtime': 120}, {}], {'tag': 'one'}),
+    # reserved tag only on duplicate entry is ignored
+    ([{'.readtime': 120}, {}], {}),
+    # reserved tag with different value on duplicate entry is not duplicated
+    ([{'.readtime': 120}, {'.readtime': 60}], {}),
+    # duplicate of reserved tag is not copied or renumbered
+    ([{'.duplicate.1.of..readtime': 120}, {}], {}),
 ]
 
 
