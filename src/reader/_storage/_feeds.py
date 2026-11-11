@@ -181,45 +181,10 @@ class FeedsMixin(StorageBase):
         self,
         filter: FeedFilter = FeedFilter(),  # noqa: B008
     ) -> Iterable[FeedForUpdate]:
-        def row_factory(row: tuple[Any, ...]) -> FeedForUpdate:
-            (
-                url,
-                updated,
-                caching_info,
-                stale,
-                last_updated,
-                last_exception,
-                data_hash,
-            ) = row
-            return FeedForUpdate(
-                url,
-                convert_timestamp(updated) if updated else None,
-                json.loads(caching_info) if caching_info else None,
-                stale == 1,
-                convert_timestamp(last_updated) if last_updated else None,
-                last_exception == 1,
-                data_hash,
-            )
-
-        def make_query() -> tuple[Query, dict[str, Any]]:
-            query = (
-                Query()
-                .SELECT(
-                    'url',
-                    'updated',
-                    'caching_info',
-                    'stale',
-                    'last_updated',
-                    ('last_exception', 'last_exception IS NOT NULL'),
-                    'data_hash',
-                )
-                .FROM("feeds")
-                .scrolling_window_order_by("url")
-            )
-            context = feed_filter(query, filter)
-            return query, context
-
-        return self.paginated_query(make_query, row_factory=row_factory)
+        return self.paginated_query(
+            partial(get_feeds_for_update_query, filter),
+            row_factory=feed_for_update_factory,
+        )
 
     @wrap_exceptions()
     def set_feed_stale(self, url: str, stale: bool) -> None:
@@ -389,3 +354,43 @@ def feed_update_intent_to_dict(intent: FeedUpdateIntent) -> FeedDict:
         context['last_exception'] = None
 
     return cast(FeedDict, context)
+
+
+def get_feeds_for_update_query(filter: FeedFilter) -> tuple[Query, dict[str, Any]]:
+    query = (
+        Query()
+        .SELECT(
+            'url',
+            'updated',
+            'caching_info',
+            'stale',
+            'last_updated',
+            ('last_exception', 'last_exception IS NOT NULL'),
+            'data_hash',
+        )
+        .FROM("feeds")
+        .scrolling_window_order_by("url")
+    )
+    context = feed_filter(query, filter)
+    return query, context
+
+
+def feed_for_update_factory(row: tuple[Any, ...]) -> FeedForUpdate:
+    (
+        url,
+        updated,
+        caching_info,
+        stale,
+        last_updated,
+        last_exception,
+        data_hash,
+    ) = row
+    return FeedForUpdate(
+        url,
+        convert_timestamp(updated) if updated else None,
+        json.loads(caching_info) if caching_info else None,
+        stale == 1,
+        convert_timestamp(last_updated) if last_updated else None,
+        last_exception == 1,
+        data_hash,
+    )
