@@ -13,8 +13,6 @@ from contextlib import contextmanager
 from contextlib import ExitStack
 from dataclasses import dataclass
 from dataclasses import field
-from datetime import datetime
-from datetime import timedelta
 from typing import Any
 from typing import cast
 from typing import ContextManager
@@ -29,6 +27,7 @@ from .._types import EntryData
 from .._types import EntryForUpdate
 from .._types import FeedData
 from .._types import FeedForUpdate
+from .._types import RetrieveMetadata
 from .._utils import exiting
 from .._utils import MapFunction
 from ..exceptions import InvalidFeedURLError
@@ -626,39 +625,6 @@ class FeedArgument(Protocol):
 
 
 Headers = Mapping[str, str]
-
-
-@dataclass(frozen=True)
-class RetrieveMetadata(_namedtuple_compat):
-    """Details about a retrieval, successful or not."""
-
-    #: "update after" hint, as derived from response metadata.
-    update_after: datetime | timedelta | None = None
-
-    #: There were too many requests in a given amount of time.
-    rate_limited: bool = False
-
-    #: The response is intended for a single user.
-    private: bool = False
-
-    #: Redirects traversed to retrieve the feed. If not empty,
-    #: the other metadata attributes refer to the URL of the last redirect.
-    redirects: list[Redirect] = field(default_factory=list)
-
-    #: Additional metadata used by plugins, e.g. passed to update hooks.
-    #: The key must match the name of the plugin.
-    extra: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class Redirect:
-    """Information about a redirect."""
-
-    #: URL to redirect to.
-    target_url: str | None
-
-    #: Whether the redirect is permanent or not.
-    permanent: bool
 
 
 class RetrieveError(ParseError):

@@ -14,10 +14,8 @@ from reader import Feed
 from reader._parser import default_parser
 from reader._parser import FeedForUpdate
 from reader._parser import Parser
-from reader._parser import Redirect
 from reader._parser import RetrievedFeed
 from reader._parser import RetrieveError
-from reader._parser import RetrieveMetadata
 from reader._parser.feedparser import _parse_authors
 from reader._parser.feedparser import feedparser
 from reader._parser.feedparser import FeedparserParser
@@ -25,6 +23,8 @@ from reader._parser.file import FileRetriever
 from reader._parser.http import HTTPRetriever
 from reader._parser.jsonfeed import JSONFeedParser
 from reader._types import FeedData
+from reader._types import Redirect
+from reader._types import RetrieveMetadata
 from reader._utils import make_pool_map
 from reader.exceptions import ParseError
 from reader.types import Author

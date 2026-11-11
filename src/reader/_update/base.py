@@ -16,10 +16,10 @@ from structlog.contextvars import bound_contextvars
 from .._logging import get_logger
 from .._parser import EntryPairBase
 from .._parser import ParseResultBase
-from .._parser import RetrieveMetadata
 from .._types import EntryData
 from .._types import FeedFilter
 from .._types import FeedForUpdate
+from .._types import RetrieveMetadata
 from ..exceptions import FeedNotFoundError
 from ..exceptions import ParseError
 from ..exceptions import UpdateError
