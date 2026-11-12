@@ -5,6 +5,7 @@ import pytest
 
 from reader import Content
 from reader import Entry
+from reader._types import NameScheme
 from reader.plugins import entry_dedupe
 from reader.plugins.entry_dedupe import common_prefixes
 from reader.plugins.entry_dedupe import group_by
@@ -381,12 +382,8 @@ def test_tags_reserved_not_copied(reader, parser, allow_short_content):
     feed = parser.feed(1)
     reader.add_feed(feed)
 
-    one = parser.entry(1, 1, datetime(2010, 1, 2), title='title', summary='value')
+    one = parser.entry(1, 1, title='title', summary='value')
     reader._now = lambda: datetime(2010, 1, 1)
-    reader.update_feeds()
-
-    two = parser.entry(1, 2, datetime(2010, 1, 1), title='title', summary='value')
-    reader._now = lambda: datetime(2010, 1, 2)
     reader.update_feeds()
 
     # Set normal tag and reserved tags on entry one (which will be a duplicate)
@@ -396,7 +393,7 @@ def test_tags_reserved_not_copied(reader, parser, allow_short_content):
 
     init_reader(reader)
 
-    three = parser.entry(1, 3, datetime(2010, 1, 3), title='title', summary='value')
+    three = parser.entry(1, 3, title='title', summary='value')
     reader._now = lambda: datetime(2010, 1, 3)
     reader.update_feeds()
 
@@ -624,10 +621,9 @@ MERGE_TAGS_DATA = [
 def test_merge_tags(reader, parser, tags, expected):
     *duplicates, entry = tags
 
-    def make_reserved(n):
-        return '.' + n
+    scheme = NameScheme('.', '.', '.')
 
-    assert dict(merge_tags(make_reserved, entry, duplicates)) == expected
+    assert dict(merge_tags(scheme, entry, duplicates)) == expected
 
 
 # TODO: with_maybe_published_or_updated

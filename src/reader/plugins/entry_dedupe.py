@@ -751,13 +751,13 @@ def make_dedupe_actions(reader, entry, duplicates):
     if args := make_flag_args('important'):
         yield partial(reader.set_entry_important, entry, *args)
 
-    scheme = reader.reserved_name_scheme
-    prefixes = (scheme['reader_prefix'], scheme['plugin_prefix'])
+    # scheme = reader.reserved_name_scheme
+    # prefixes = (scheme['reader_prefix'], scheme['plugin_prefix'])
+
     tags = merge_tags(
-        reader.make_reader_reserved_name,
+        reader._reserved_name_scheme,
         dict(reader.get_tags(entry)),
         map(dict, map(reader.get_tags, duplicates)),
-        is_reserved=lambda key: key.startswith(prefixes),
     )
     for key, value in tags:
         yield partial(reader.set_tag, entry, key, value)
@@ -790,14 +790,11 @@ def merge_flags(entry, duplicates):
     return None
 
 
-def merge_tags(make_reserved, entry, duplicates, is_reserved=None):
-    reserved_prefix = make_reserved('')
-    if is_reserved is None:
+def merge_tags(reserved_name_scheme, entry, duplicates):
+    reader_prefix = reserved_name_scheme.reader_prefix
+    # plugin_prefix=reserved_name_scheme.plugin_prefix
 
-        def is_reserved(key):
-            return key.startswith(reserved_prefix)
-
-    prefix = re.escape(reserved_prefix)
+    prefix = re.escape(reader_prefix)
     duplicate_tag_re = re.compile(rf"^{prefix}duplicate\.\d+\.of\.(.*)$")
 
     indexes = defaultdict(int)  # noqa: B910
@@ -813,11 +810,9 @@ def merge_tags(make_reserved, entry, duplicates, is_reserved=None):
             if match := duplicate_tag_re.match(key):
                 key = match.group(1)
 
-            if is_reserved(key):
+            if reserved_name_scheme.match(key):
                 continue
 
-            if is_reserved(key):
-                continue
             if value in seen_values[key]:
                 continue
             seen_values[key].append(value)
@@ -829,7 +824,9 @@ def merge_tags(make_reserved, entry, duplicates, is_reserved=None):
                 if index == 0:
                     candidate = key
                 else:
-                    candidate = make_reserved(f"duplicate.{index}.of.{key}")
+                    candidate = reserved_name_scheme.make_reader_name(
+                        f"duplicate.{index}.of.{key}"
+                    )
 
                 if candidate not in entry:
                     key = candidate
