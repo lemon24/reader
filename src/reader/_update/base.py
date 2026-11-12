@@ -150,14 +150,7 @@ class PipelineBase[FD, ED, FI, EI](ABC):
         if not value or isinstance(value, Exception):
             return feed.url, value
 
-        new = sum(1 for _, old in entry_intents if not old)
-
-        return feed.url, UpdatedFeed(
-            feed.url,
-            new=new,
-            modified=len(entry_intents) - new,
-            unmodified=len(value.entries) - len(entry_intents),
-        )
+        return feed.url, make_updated_feed(result, entry_intents)
 
     def get_entry_pairs(self, result: ParseResult[FD, ED]) -> Iterable[EntryPair[ED]]:
         if not result.value or isinstance(result.value, Exception):
@@ -198,3 +191,19 @@ class PipelineBase[FD, ED, FI, EI](ABC):
                 )
 
             grouper.run(reader._after_feed_update, (feed,), reader, feed, metadata)
+
+
+def make_updated_feed(
+    result: ParseResult[Any, Any], entry_intents: list[EntryPair[Any]]
+) -> UpdatedFeed:
+    assert result.value is not None
+    assert not isinstance(result.value, Exception)
+
+    new = sum(1 for _, old in entry_intents if not old)
+
+    return UpdatedFeed(
+        result.feed.url,
+        new=new,
+        modified=len(entry_intents) - new,
+        unmodified=len(result.value.entries) - len(entry_intents),
+    )

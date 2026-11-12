@@ -104,7 +104,7 @@ class Parser:
             except Exception as e:
                 raise ParseError(url) from e
         if self.is_not_modified and self.is_not_modified(url):
-            raise NotModified(url)
+            raise NotModified(url, metadata=self.metadata)
         return nullcontext(RetrievedFeed(BytesIO(b'opaque'), metadata=self.metadata))
 
     def parse(self, url, retrieved):

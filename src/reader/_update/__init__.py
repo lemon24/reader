@@ -22,16 +22,20 @@ from .._types import FeedData
 from .._types import FeedForUpdate
 from .._types import FeedToUpdate
 from .._types import FeedUpdateIntent
+from .._types import UpdateInfo
 from .._utils import make_pool_map
 from ..exceptions import ParseError
 from ..types import ExceptionInfo
 from ..types import UpdateConfig
+from ..types import UpdatedFeed
+from .base import make_updated_feed
 from .base import PipelineBase
 
 logger = get_logger('reader.update')
 
 
 HASH_CHANGED_LIMIT = 24
+UPDATE_HISTORY_LIMIT = 8
 
 
 EntryUpdateIntentPair = EntryPairBase[EntryUpdateIntent]
@@ -230,19 +234,22 @@ class Decider:
         self, result: ParseResult, entry_pairs: Iterable[EntryPair]
     ) -> tuple[FeedUpdateIntent, Iterable[EntryUpdateIntentPair]]:
 
-        # TODO: move entries_to_update in FeedToUpdate, maybe?
-        entries_to_update: Iterable[EntryUpdateIntentPair] = ()
+        entries_to_update: list[EntryUpdateIntentPair] = []
         value: FeedToUpdate | None | ExceptionInfo
+        info_result: UpdatedFeed | None | ExceptionInfo
 
         if not result.value:
-            value = None
+            value = info_result = None
         elif isinstance(result.value, ParseError):
             value = ExceptionInfo.from_exception(result.value)
+            info_result = value._replace(traceback_str='')
         else:
             entries_to_update = list(self.get_entries_to_update(entry_pairs))
             value = self.get_feed_to_update(result.value, bool(entries_to_update))
+            info_result = make_updated_feed(result, entries_to_update)
 
         update_after = next_update_after(self.global_now, **self.config)
+
         if result.metadata:
             http_update_after = result.metadata.update_after
             if isinstance(http_update_after, timedelta):
@@ -255,12 +262,18 @@ class Decider:
                 # limit excessive update_after
                 update_after = min(update_after, self.global_now + MAX_UPDATE_AFTER)
 
+        update_info = UpdateInfo(
+            self.old_feed.url, info_result, self.now, result.metadata
+        )
+        update_history = self.old_feed.update_history + [update_info]
+        update_history = update_history[-UPDATE_HISTORY_LIMIT:]
+
         # We always return a FeedUpdateIntent because
         # we always want to set last_retrieved and update_after,
         # and clear last_exception (if set before the update).
 
         return (
-            FeedUpdateIntent(self.url, self.now, update_after, value),
+            FeedUpdateIntent(self.url, self.now, update_after, update_history, value),
             entries_to_update,
         )
 

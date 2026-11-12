@@ -51,6 +51,7 @@ from .types import MissingType
 from .types import ResourceId
 from .types import TagFilterInput
 from .types import TristateFilterInput
+from .types import UpdatedFeed
 
 # Private API
 # https://github.com/lemon24/reader/issues/111
@@ -306,8 +307,20 @@ class FeedForUpdate(NamedTuple):
     #: Whether the feed had an exception at the last update.
     last_exception: bool = False
 
+    #: Information about the last few updates.
+    update_history: list[UpdateInfo] = field(default_factory=list)
+
     #: The :attr:`~FeedData.hash` of the corresponding FeedData.
     hash: bytes | None = None
+
+
+@dataclass(frozen=True)
+class UpdateInfo:
+    url: str
+    # FIXME: this should be something other than UpdatedFeed, we only care if data changed
+    result: UpdatedFeed | None | ExceptionInfo
+    retrieved: datetime
+    metadata: RetrieveMetadata | None
 
 
 @dataclass(frozen=True)
@@ -380,6 +393,9 @@ class FeedUpdateIntent(NamedTuple):
 
     #: The earliest time the feed will next be updated.
     update_after: datetime
+
+    #: Information about the last few updates.
+    update_history: list[UpdateInfo]
 
     #: One of:
     #: feed data and metadata (the feed was updated),

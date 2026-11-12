@@ -28,7 +28,8 @@ CREATE TABLE feeds (
     last_retrieved TIMESTAMP,  -- null if the feed was never retrieved
     last_updated TIMESTAMP,  -- null if the feed was never updated
     added TIMESTAMP NOT NULL,
-    last_exception TEXT
+    last_exception TEXT,
+    update_history TEXT
 
     -- NOTE: when adding new fields, check if they should be set
     -- to their default value in change_feed_url()
@@ -362,7 +363,12 @@ def update_from_43_to_44(db: sqlite3.Connection, /) -> None:  # pragma: no cover
     """)
 
 
-VERSION = 44
+def update_from_44_to_45(db: sqlite3.Connection, /) -> None:  # pragma: no cover
+    # https://github.com/lemon24/reader/issues/420
+    db.execute("ALTER TABLE feeds ADD COLUMN update_history TEXT;")
+
+
+VERSION = 45
 
 MIGRATIONS = {
     # 1-9 removed before 0.1 (last in e4769d8ba77c61ec1fe2fbe99839e1826c17ace7)
@@ -377,6 +383,7 @@ MIGRATIONS = {
     41: update_from_41_to_42,
     42: update_from_42_to_43,
     43: update_from_43_to_44,
+    44: update_from_44_to_45,
 }
 MISSING_SUFFIX = (
     "; you may have skipped some required migrations, see "

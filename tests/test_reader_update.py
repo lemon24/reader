@@ -22,7 +22,11 @@ from reader import UpdatedFeed
 from reader import UpdateResult
 from reader._parser import RetrieveError
 from reader._parser import RetrieveMetadata
+from reader._types import FeedFilter
+from reader._types import Redirect
+from reader._types import UpdateInfo
 from reader._update import next_update_after
+from reader.types import ExceptionInfo
 from utils import Blocking
 from utils import parametrize_dict
 from utils import utc_datetime as datetime
@@ -1001,7 +1005,7 @@ def test_update_after_metadata(reader, parser, interval, error, metadata, expect
     reader.set_tag(feed, '.reader.update', {'interval': interval})
 
     if error:
-        parser.raise_exc(RetrieveError('', metadata=metadata))
+        parser.raise_exc(exc=RetrieveError('error', metadata=metadata))
     else:
         parser.metadata = metadata
 
@@ -1207,3 +1211,92 @@ def test_updates_enabled_scheduled(reader, parser):
 
 
 # END: scheduled
+
+
+# BEGIN: update_history
+
+
+def get_update_history(reader, url):
+    (rv,) = reader._storage.get_feeds_for_update(FeedFilter(url))
+    return rv.update_history
+
+
+@pytest.mark.parametrize(
+    'metadata',
+    [
+        None,
+        RetrieveMetadata(),
+        RetrieveMetadata(update_after=datetime(2010, 1, 2)),
+        RetrieveMetadata(
+            update_after=timedelta(seconds=100_000),
+            rate_limited=True,
+            private=True,
+            redirects=[Redirect('2', False), Redirect('3', True)],
+            extra={'one': 'two'},
+        ),
+    ],
+)
+def test_update_history_ok(reader, parser, metadata):
+    reader.add_feed(parser.feed(1))
+    parser.entry(1, 'one')
+
+    parser.metadata = metadata
+
+    assert get_update_history(reader, '1') == []
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    ((_, result),) = reader.update_feeds_iter()
+
+    assert get_update_history(reader, '1') == [
+        UpdateInfo('1', result, datetime(2010, 1, 1), parser.metadata),
+    ]
+
+
+def test_update_history_not_modified(reader, parser):
+    reader.add_feed(parser.feed(1))
+
+    parser.not_modified()
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    assert get_update_history(reader, '1') == [
+        UpdateInfo('1', None, datetime(2010, 1, 1), parser.metadata),
+    ]
+
+
+def test_update_history_error(reader, parser):
+    reader.add_feed(parser.feed(1))
+
+    parser.metadata = None
+    metadata = RetrieveMetadata(rate_limited=True)
+    parser.raise_exc(exc=RetrieveError('error', metadata=metadata))
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    ((_, result),) = reader.update_feeds_iter()
+
+    assert get_update_history(reader, '1') == [
+        UpdateInfo(
+            url='1',
+            result=ExceptionInfo.from_exception(result)._replace(traceback_str=''),
+            retrieved=datetime(2010, 1, 1),
+            metadata=metadata,
+        ),
+    ]
+
+
+def test_update_history_limit(reader, parser):
+    reader.add_feed(parser.feed(1))
+
+    for i in range(1, 32):
+        reader._now = lambda: datetime(2010, 1, i)
+        reader.update_feeds()
+
+    update_history = get_update_history(reader, '1')
+
+    assert len(update_history) == 8
+    assert update_history[0].retrieved.day == 24
+    assert update_history[-1].retrieved.day == 31
+
+
+# END: update_history

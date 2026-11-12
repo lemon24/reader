@@ -227,6 +227,7 @@ def update_feed(storage, feed, entry):
             feed.url,
             datetime(2010, 1, 1),
             datetime(2010, 1, 1),
+            [],
             FeedToUpdate(feed, entry.updated),
         )
     )
