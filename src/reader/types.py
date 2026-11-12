@@ -856,7 +856,7 @@ class EntrySearchSort(enum.StrEnum):
 # Semi-public API (typing support)
 
 
-JSON = dict[str, 'JSON'] | list['JSON'] | str | int | float | bool | None
+type JSON = dict[str, 'JSON'] | list['JSON'] | str | int | float | bool | None
 
 
 # Using protocols here so we have both duck typing and type checking.
@@ -1024,7 +1024,7 @@ type TagFilterInput = None | bool | Sequence[str | bool | Sequence[str | bool]]
 #:
 #: .. versionadded:: 3.5
 #:
-TristateFilterInput = Literal[
+type TristateFilterInput = Literal[
     None,
     True,
     False,

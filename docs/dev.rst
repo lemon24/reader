@@ -273,20 +273,15 @@ and for the unstable :doc:`internal`,
 where it's too much effort to maintain hand-written types.
 
 
-Known issues (October 2023, Sphinx version ~7):
+Known issues (November 2026, Sphinx version ~9):
 
 * Overloads are shown with full annotation regardless of autodoc_typehints
   (known, documented behavior).
   May get better with https://github.com/sphinx-doc/sphinx/issues/10359.
 
-* Type aliases that do not come from hand-written types
-  but from the autodoc typehints are expanded in-place;
-  this also affects the overload type annotations.
-  The documented work-around is to add the aliases to autodoc_type_aliases.
-
-* Type alias names that appear in parameter types
-  do not link to the documentation in :ref:`type aliases`.
-  May get better with https://github.com/sphinx-doc/sphinx/issues/9705
+* Old-style type aliases that do not come from hand-written types
+  but from the autodoc typehints are expanded in-place.
+  The solution is to use the ``type`` statement instead.
 
 .. _Sphinx-style field list types: https://www.sphinx-doc.org/en/master/usage/domains/python.html#info-field-lists
 .. _autodoc-provided type hints: https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#confval-autodoc_typehints

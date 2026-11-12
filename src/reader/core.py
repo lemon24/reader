@@ -581,9 +581,7 @@ class Reader:
 
         Args:
             feed (str or tuple(str) or Feed or None): Only return the feed with this URL.
-            tags (None or bool or list(str or bool or list(str or bool))):
-                Only return feeds matching these tags;
-                see :data:`~reader.types.TagFilterInput` for details.
+            tags (TagFilterInput): Only return feeds matching these tags.
             broken (bool or None): Only return broken / healthy feeds.
             updates_enabled (bool or None):
                 Only return feeds that have updates enabled / disabled.
@@ -592,8 +590,7 @@ class Reader:
                 / have been updated before.
             scheduled (bool):
                 Only return feeds scheduled to be updated.
-            sort (FeedSort):
-                How to order feeds; see :class:`FeedSort` for details.
+            sort (FeedSort): How to order feeds.
             limit (int or None): A limit on the number of feeds to be returned;
                 by default, all feeds are returned.
             starting_after (str or tuple(str) or Feed or None):
@@ -696,9 +693,7 @@ class Reader:
 
         Args:
             feed (str or tuple(str) or Feed or None): Only count the feed with this URL.
-            tags (None or bool or list(str or bool or list(str or bool))):
-                Only count feeds matching these tags;
-                see :data:`~reader.types.TagFilterInput` for details.
+            tags (TagFilterInput): Only count feeds matching these tags.
             broken (bool or None): Only count broken / healthy feeds.
             updates_enabled (bool or None):
                 Only count feeds that have updates enabled / disabled.
@@ -819,9 +814,7 @@ class Reader:
 
         Args:
             feed (str or tuple(str) or Feed or None): Only update the feed with this URL.
-            tags (None or bool or list(str or bool or list(str or bool))):
-                Only update feeds matching these tags;
-                see :data:`~reader.types.TagFilterInput` for details.
+            tags (TagFilterInput): Only update feeds matching these tags.
             broken (bool or None): Only update broken / healthy feeds.
             updates_enabled (bool or None):
                 Only update feeds that have updates enabled / disabled.
@@ -933,9 +926,7 @@ class Reader:
 
         Args:
             feed (str or tuple(str) or Feed or None): Only update the feed with this URL.
-            tags (None or bool or list(str or bool or list(str or bool))):
-                Only update feeds matching these tags;
-                see :data:`~reader.types.TagFilterInput` for details.
+            tags (TagFilterInput): Only update feeds matching these tags.
             broken (bool or None): Only update broken / healthy feeds.
             updates_enabled (bool or None):
                 Only update feeds that have updates enabled / disabled.
@@ -1108,22 +1099,16 @@ class Reader:
             entry (tuple(str, str) or Entry or None):
                 Only return the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only return (un)read entries.
-            important (bool or None or str):
+            important (TristateFilterInput):
                 Only return (un)important entries.
-                For more precise filtering, use one of the
-                :data:`~reader.types.TristateFilterInput` string filters.
             has_enclosures (bool or None): Only return entries that (don't)
                 have enclosures.
             source (str or tuple(str) or Feed or None):
                 Only return the entries for this source.
-            tags (None or bool or list(str or bool or list(str or bool))):
-                Only return entries matching these tags;
-                see :data:`~reader.types.TagFilterInput` for details.
-            feed_tags (None or bool or list(str or bool or list(str or bool))):
-                Only return entries from feeds matching these tags;
-                see :data:`~reader.types.TagFilterInput` for details.
-            sort (EntrySort):
-                How to order entries; see :class:`EntrySort` for details.
+            tags (TagFilterInput): Only return entries matching these tags.
+            feed_tags (TagFilterInput):
+                Only return entries from feeds matching these tags.
+            sort (EntrySort): How to order entries.
             limit (int or None): A limit on the number of entries to be returned;
                 by default, all entries are returned.
             starting_after (tuple(str, str) or Entry or None):
@@ -1239,20 +1224,15 @@ class Reader:
             entry (tuple(str, str) or Entry or None):
                 Only count the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only count (un)read entries.
-            important (bool or None or str):
+            important (TristateFilterInput):
                 Only count (un)important entries.
-                For more precise filtering, use one of the
-                :data:`~reader.types.TristateFilterInput` string filters.
             has_enclosures (bool or None): Only count entries that (don't)
                 have enclosures.
             source (str or tuple(str) or Feed or None):
                 Only count the entries for this source.
-            tags (None or bool or list(str or bool or list(str or bool))):
-                Only count entries matching these tags;
-                see :data:`~reader.types.TagFilterInput` for details.
-            feed_tags (None or bool or list(str or bool or list(str or bool))):
-                Only count entries from feeds matching these tags;
-                see :data:`~reader.types.TagFilterInput` for details.
+            tags (TagFilterInput): Only count entries matching these tags.
+            feed_tags (TagFilterInput):
+                Only count entries from feeds matching these tags.
 
         Returns:
             EntryCounts:
@@ -1756,22 +1736,16 @@ class Reader:
             entry (tuple(str, str) or Entry or None):
                 Only search for the entry with this (feed URL, entry id) tuple.
             read (bool or None): Only search (un)read entries.
-            important (bool or None or str):
+            important (TristateFilterInput):
                 Only search (un)important entries.
-                For more precise filtering, use one of the
-                :data:`~reader.types.TristateFilterInput` string filters.
             has_enclosures (bool or None): Only search entries that (don't)
                 have enclosures.
             source (str or tuple(str) or Feed or None):
                 Only search the entries for this source.
-            tags (None or bool or list(str or bool or list(str or bool))):
-                Only search entries matching these tags;
-                see :data:`~reader.types.TagFilterInput` for details.
-            feed_tags (None or bool or list(str or bool or list(str or bool))):
-                Only search entries from feeds matching these tags;
-                see :data:`~reader.types.TagFilterInput` for details.
-            sort (EntrySearchSort):
-                How to order results; see :class:`EntrySearchSort` for details.
+            tags (TagFilterInput): Only search entries matching these tags.
+            feed_tags (TagFilterInput):
+                Only search entries from feeds matching these tags.
+            sort (EntrySearchSort): How to order results.
             limit (int or None): A limit on the number of results to be returned;
                 by default, all results are returned.
             starting_after (tuple(str, str) or EntrySearchResult or None):
@@ -1857,21 +1831,16 @@ class Reader:
                 Only count the entries for this feed.
             entry (tuple(str, str) or Entry or None):
                 Only count the entry with this (feed URL, entry id) tuple.
-            read (bool or None or str):
+            read (bool or None):
                 Only count (un)read entries.
-                For more precise filtering, use one of the
-                :data:`~reader.types.TristateFilterInput` string filters.
-            important (bool or None): Only count (un)important entries.
+            important (TristateFilterInput): Only count (un)important entries.
             has_enclosures (bool or None): Only count entries that (don't)
                 have enclosures.
             source (str or tuple(str) or Feed or None):
                 Only count the entries for this source.
-            tags (None or bool or list(str or bool or list(str or bool))):
-                Only count entries matching these tags;
-                see :data:`~reader.types.TagFilterInput` for details.
-            feed_tags (None or bool or list(str or bool or list(str or bool))):
-                Only count entries from feeds matching these tags;
-                see :data:`~reader.types.TagFilterInput` for details.
+            tags (TagFilterInput): Only count entries matching these tags.
+            feed_tags (TagFilterInput):
+                Only count entries from feeds matching these tags.
 
         Returns:
             EntrySearchCounts:

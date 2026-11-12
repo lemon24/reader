@@ -75,13 +75,6 @@ autodoc_member_order = 'bysource'
 # see dev.rst # Documentation
 autodoc_typehints = 'description'
 autodoc_typehints_description_target = 'documented'
-autodoc_type_aliases = {
-    'ResourceInput': 'reader.types.ResourceInput',
-    'AnyResourceInput': 'reader.types.AnyResourceInput',
-    'JSON': 'reader.types.JSON',
-    'TagFilter': 'reader._types.TagFilter',
-    'TristateFilter': 'reader._types.TristateFilter',
-}
 
 
 pyproject_toml = read_configuration('../pyproject.toml')

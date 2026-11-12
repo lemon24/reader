@@ -462,7 +462,7 @@ class EntryUpdateIntent(NamedTuple):
     # like update_feeds_iter() tests on Windows on GitHub Actions)
 
 
-#: Like the ``tags`` argument of :meth:`.Reader.get_feeds`, except:
+#: Like the :type:`~reader.types.TagFilterInput`, except:
 #:
 #: * only the full mutiple-tags-with-disjunction form is used
 #: * tags are represented as *(is negated, tag name)* tuples
@@ -482,7 +482,7 @@ class EntryUpdateIntent(NamedTuple):
 #: >>> tag_filter_argument(True)
 #: [[True]]
 #:
-TagFilter = Sequence[Sequence[bool | tuple[bool, str]]]
+type TagFilter = Sequence[Sequence[bool | tuple[bool, str]]]
 
 
 def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
@@ -552,8 +552,8 @@ def unique_tags(tags: TagFilter) -> TagFilter:
     return rv
 
 
-#: Like :data:`.TristateFilterInput`, but without bool/None aliases.
-TristateFilter = Literal[
+#: Like :type:`~reader.types.TristateFilterInput`, but without bool/None aliases.
+type TristateFilter = Literal[
     'istrue',
     'isfalse',
     'notset',
@@ -572,7 +572,7 @@ def tristate_filter_argument(value: TristateFilterInput, name: str) -> TristateF
         return 'istrue'
     if value == False:  # noqa: E712
         return 'nottrue'
-    args = get_args(TristateFilter)
+    args = get_args(TristateFilter.__value__)
     if value in args:
         return value
     raise ValueError(f"{name} must be none, bool, or one of {args}")

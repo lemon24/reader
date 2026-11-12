@@ -212,8 +212,8 @@ Enumerations
 Type aliases
 ------------
 
-.. autodata:: reader.types.TagFilterInput
-.. autodata:: reader.types.TristateFilterInput
+.. autotype:: reader.types.TagFilterInput
+.. autotype:: reader.types.TristateFilterInput
 
 .. autoclass:: reader.types.UpdateConfig
     :members:
