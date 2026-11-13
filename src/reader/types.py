@@ -857,6 +857,7 @@ class EntrySearchSort(enum.StrEnum):
 
 
 type JSON = dict[str, 'JSON'] | list['JSON'] | str | int | float | bool | None
+"""JSON-serializable data, i.e. whatever :func:`json.dumps` accepts."""
 
 
 # Using protocols here so we have both duck typing and type checking.
@@ -879,14 +880,49 @@ class EntryLike(Protocol):
     def feed_url(self) -> str: ...
 
 
-# https://github.com/lemon24/reader/issues/266#issuecomment-1013739526
 type GlobalInput = tuple[()]
-type FeedInput = str | FeedLike
+
+type FeedInput = str | tuple[str] | FeedLike
+"""
+A feed argument. Can be:
+
+* a feed URL
+* a (feed URL,) tuple
+* an object with a :attr:`~.Feed.url` attribute
+
+"""
+
 type EntryInput = tuple[str, str] | EntryLike
+"""
+An entry argument. Can be:
+
+* a (feed URL, entry id) tuple
+* an object with :attr:`~.Entry.id` and :attr:`~.Entry.feed_url` attributes
+
+"""
+
 type ResourceInput = GlobalInput | FeedInput | EntryInput
-type AnyResourceInput = ResourceInput | None | tuple[None] | tuple[None, None]
+"""
+A resource argument for use with the resource tag methods. Can be:
+
+* an empty tuple, representing the global tag namespace
+* a feed argument
+* an entry argument
+
+"""
+
+type AnyResourceInput = ResourceInput | tuple[None] | tuple[None, None] | None
+"""
+A resource argument, or one of the following wildcard values:
+
+* ``(None,)`` – any feed
+* ``(None, None)`` – any entry
+* ``None`` – any resource (feed, entry, or the global namespace)
+
+"""
+
 type ResourceId = tuple[()] | tuple[str] | tuple[str, str]
-type AnyResourceId = ResourceId | None | tuple[None] | tuple[None, None]
+type AnyResourceId = ResourceId | tuple[None] | tuple[None, None] | None
 
 
 def _feed_argument(feed: FeedInput) -> str:

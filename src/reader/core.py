@@ -152,23 +152,23 @@ def make_reader(
         Accessing device files on Windows is an error.
 
     Args:
-        url (str): Path to the reader database.
+        url: Path to the reader database.
 
-        feed_root (str or None):
+        feed_root
             Directory where to look for local feeds.
             One of ``None`` (don't open local feeds; default),
             ``''`` (full filesystem access), or
             ``'/path/to/feed/root'``
             (an absolute path that feed paths are relative to).
 
-        read_only (bool):
+        read_only:
             Allow only read storage operations.
 
-        migrate (bool):
+        migrate:
             Perform database migrations automatically.
             If false and migrations are needed, raise :exc:`StorageError`.
 
-        plugins (iterable(str or callable(Reader)) or None):
+        plugins:
             An iterable of built-in plugin names (``.<plugin>``),
             :func:`~pkgutil.resolve_name` import paths
             (either the name of a module with an ``init_reader`` function,
@@ -182,11 +182,11 @@ def make_reader(
             as a float, or a (connect timeout, read timeout) tuple.
             Passed to the underlying `Requests session`_.
 
-        reserved_name_scheme (dict(str, str) or None):
+        reserved_name_scheme:
             Value for :attr:`~Reader.reserved_name_scheme`.
             Defaults to :data:`.DEFAULT_RESERVED_NAME_SCHEME`.
 
-        search_enabled (bool or None or ``'auto'``):
+        search_enabled:
             Whether to enable search. One of
             ``'auto'`` (enable on the first
             :meth:`~Reader.update_search` call; default),
@@ -444,12 +444,12 @@ class Reader:
         Feed updates are enabled by default.
 
         Args:
-            feed (str or tuple(str) or Feed): The feed URL.
-            allow_invalid_url (bool):
+            feed: The feed URL.
+            allow_invalid_url:
                 Add feed even if the current Reader configuration
                 does not know how to handle the feed URL
                 (and updates for it would fail).
-            exist_ok (bool):
+            exist_ok:
                 If true, don't raise :exc:`FeedExistsError`
                 if the feed already exists.
 
@@ -487,8 +487,8 @@ class Reader:
         """Delete a feed and all of its entries and tags.
 
         Args:
-            feed (str or tuple(str) or Feed): The feed URL.
-            missing_ok (bool):
+            feed: The feed URL.
+            missing_ok:
                 If true, don't raise :exc:`FeedNotFoundError`
                 if the feed does not exist.
 
@@ -531,9 +531,9 @@ class Reader:
         The entries and tags are preserved.
 
         Args:
-            old (str or tuple(str) or Feed): The old feed; must exist.
-            new (str or tuple(str) or Feed): The new feed; must not exist.
-            allow_invalid_url (bool):
+            old: The old feed; must exist.
+            new: The new feed; must not exist.
+            allow_invalid_url:
                 Change feed URL even if the current Reader configuration
                 does not know how to handle the new feed URL
                 (and updates for it would fail).
@@ -580,20 +580,20 @@ class Reader:
         """Get all or some of the feeds.
 
         Args:
-            feed (str or tuple(str) or Feed or None): Only return the feed with this URL.
-            tags (TagFilterInput): Only return feeds matching these tags.
-            broken (bool or None): Only return broken / healthy feeds.
-            updates_enabled (bool or None):
+            feed: Only return the feed with this URL.
+            tags: Only return feeds matching these tags.
+            broken: Only return broken / healthy feeds.
+            updates_enabled:
                 Only return feeds that have updates enabled / disabled.
-            new (bool or None):
+            new:
                 Only return feeds that have never been updated
                 / have been updated before.
-            scheduled (bool):
+            scheduled:
                 Only return feeds scheduled to be updated.
-            sort (FeedSort): How to order feeds.
-            limit (int or None): A limit on the number of feeds to be returned;
+            sort: How to order feeds.
+            limit: A limit on the number of feeds to be returned;
                 by default, all feeds are returned.
-            starting_after (str or tuple(str) or Feed or None):
+            starting_after:
                 Return feeds after this feed; a cursor for use in pagination.
 
         Yields:
@@ -659,7 +659,7 @@ class Reader:
         but raises a custom exception instead of :exc:`StopIteration`.
 
         Arguments:
-            feed (str or tuple(str) or Feed): The feed URL.
+            feed: The feed URL.
             default: Returned if given and the feed does not exist.
 
         Returns:
@@ -692,16 +692,15 @@ class Reader:
         """Count all or some of the feeds.
 
         Args:
-            feed (str or tuple(str) or Feed or None): Only count the feed with this URL.
-            tags (TagFilterInput): Only count feeds matching these tags.
-            broken (bool or None): Only count broken / healthy feeds.
-            updates_enabled (bool or None):
+            feed: Only count the feed with this URL.
+            tags: Only count feeds matching these tags.
+            broken: Only count broken / healthy feeds.
+            updates_enabled:
                 Only count feeds that have updates enabled / disabled.
-            new (bool or None):
+            new:
                 Only count feeds that have never been updated
                 / have been updated before.
-            scheduled (bool):
-                Only count feeds scheduled to be updated.
+            scheduled: Only count feeds scheduled to be updated.
 
         Returns:
             FeedCounts:
@@ -731,8 +730,8 @@ class Reader:
         """Set a user-defined title for a feed.
 
         Args:
-            feed (str or tuple(str) or Feed): The feed URL.
-            title (str or None): The title, or None to remove the current title.
+            feed: The feed URL.
+            title: The title, or None to remove the current title.
 
         Raises:
             FeedNotFoundError
@@ -751,7 +750,7 @@ class Reader:
         See :meth:`~Reader.update_feeds` for details.
 
         Args:
-            feed (str or tuple(str) or Feed): The feed URL.
+            feed: The feed URL.
 
         Raises:
             FeedNotFoundError
@@ -772,7 +771,7 @@ class Reader:
         See :meth:`~Reader.update_feeds` for details.
 
         Args:
-            feed (str or tuple(str) or Feed): The feed URL.
+            feed: The feed URL.
 
         Raises:
             FeedNotFoundError
@@ -813,19 +812,19 @@ class Reader:
         Roughly equivalent to ``for _ in reader.update_feeds_iter(...): pass``.
 
         Args:
-            feed (str or tuple(str) or Feed or None): Only update the feed with this URL.
-            tags (TagFilterInput): Only update feeds matching these tags.
-            broken (bool or None): Only update broken / healthy feeds.
-            updates_enabled (bool or None):
+            feed: Only update the feed with this URL.
+            tags: Only update feeds matching these tags.
+            broken: Only update broken / healthy feeds.
+            updates_enabled:
                 Only update feeds that have updates enabled / disabled.
                 Defaults to true.
-            new (bool or None):
+            new:
                 Only update feeds that have never been updated
                 / have been updated before. Defaults to None.
-            scheduled (bool):
+            scheduled:
                 Only update feeds scheduled to be updated.
                 Defaults to true.
-            workers (int): Number of threads to use when getting the feeds.
+            workers: Number of threads to use when getting the feeds.
 
         Raises:
             UpdateHookError: For unexpected hook exceptions.
@@ -925,19 +924,19 @@ class Reader:
         By default, update all scheduled feeds that have updates enabled.
 
         Args:
-            feed (str or tuple(str) or Feed or None): Only update the feed with this URL.
-            tags (TagFilterInput): Only update feeds matching these tags.
-            broken (bool or None): Only update broken / healthy feeds.
-            updates_enabled (bool or None):
+            feed: Only update the feed with this URL.
+            tags: Only update feeds matching these tags.
+            broken: Only update broken / healthy feeds.
+            updates_enabled:
                 Only update feeds that have updates enabled / disabled.
                 Defaults to true.
-            new (bool or None):
+            new:
                 Only update feeds that have never been updated
                 / have been updated before. Defaults to None.
-            scheduled (bool):
+            scheduled:
                 Only update feeds scheduled to be updated.
                 Defaults to true.
-            workers (int): Number of threads to use when getting the feeds.
+            workers: Number of threads to use when getting the feeds.
 
         Yields:
             :class:`UpdateResult`:
@@ -1026,7 +1025,7 @@ class Reader:
         but raises the :exc:`UpdateError`, if any.
 
         Args:
-            feed (str or tuple(str) or Feed): The feed URL.
+            feed: The feed URL.
 
         Returns:
             UpdatedFeed or None:
@@ -1094,24 +1093,18 @@ class Reader:
         """Get all or some of the entries.
 
         Args:
-            feed (str or tuple(str) or Feed or None):
-                Only return the entries for this feed.
-            entry (tuple(str, str) or Entry or None):
-                Only return the entry with this (feed URL, entry id) tuple.
-            read (bool or None): Only return (un)read entries.
-            important (TristateFilterInput):
-                Only return (un)important entries.
-            has_enclosures (bool or None): Only return entries that (don't)
-                have enclosures.
-            source (str or tuple(str) or Feed or None):
-                Only return the entries for this source.
-            tags (TagFilterInput): Only return entries matching these tags.
-            feed_tags (TagFilterInput):
-                Only return entries from feeds matching these tags.
-            sort (EntrySort): How to order entries.
-            limit (int or None): A limit on the number of entries to be returned;
+            feed: Only return the entries for this feed.
+            entry: Only return the entry with this (feed URL, entry id) tuple.
+            read: Only return (un)read entries.
+            important: Only return (un)important entries.
+            has_enclosures: Only return entries that (don't) have enclosures.
+            source: Only return the entries for this source.
+            tags: Only return entries matching these tags.
+            feed_tags: Only return entries from feeds matching these tags.
+            sort: How to order entries.
+            limit: A limit on the number of entries to be returned;
                 by default, all entries are returned.
-            starting_after (tuple(str, str) or Entry or None):
+            starting_after:
                 Return entries after this entry; a cursor for use in pagination.
                 Using ``starting_after`` with ``sort=RANDOM`` is not supported.
 
@@ -1184,7 +1177,7 @@ class Reader:
         but raises a custom exception instead of :exc:`StopIteration`.
 
         Args:
-            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+            entry: (feed URL, entry id) tuple.
             default: Returned if given and the entry does not exist.
 
         Returns:
@@ -1219,20 +1212,14 @@ class Reader:
         """Count all or some of the entries.
 
         Args:
-            feed (str or tuple(str) or Feed or None):
-                Only count the entries for this feed.
-            entry (tuple(str, str) or Entry or None):
-                Only count the entry with this (feed URL, entry id) tuple.
-            read (bool or None): Only count (un)read entries.
-            important (TristateFilterInput):
-                Only count (un)important entries.
-            has_enclosures (bool or None): Only count entries that (don't)
-                have enclosures.
-            source (str or tuple(str) or Feed or None):
-                Only count the entries for this source.
-            tags (TagFilterInput): Only count entries matching these tags.
-            feed_tags (TagFilterInput):
-                Only count entries from feeds matching these tags.
+            feed: Only count the entries for this feed.
+            entry: Only count the entry with this (feed URL, entry id) tuple.
+            read: Only count (un)read entries.
+            important: Only count (un)important entries.
+            has_enclosures: Only count entries that (don't) have enclosures.
+            source: Only count the entries for this source.
+            tags: Only count entries matching these tags.
+            feed_tags: Only count entries from feeds matching these tags.
 
         Returns:
             EntryCounts:
@@ -1270,10 +1257,9 @@ class Reader:
         possibly with a custom timestamp.
 
         Args:
-            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
-            read (bool): Mark the entry as read if true,
-                and as unread otherwise.
-            modified (datetime or None):
+            entry: (feed URL, entry id) tuple.
+            read: Mark the entry as read if true, and as unread otherwise.
+            modified:
                 Set :attr:`~Entry.read_modified` to this.
                 Naive datetimes are normalized by passing them to
                 :meth:`~datetime.datetime.astimezone`.
@@ -1312,7 +1298,7 @@ class Reader:
         Alias for ``set_entry_read(entry, True)``.
 
         Args:
-            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+            entry: (feed URL, entry id) tuple.
 
         Raises:
             EntryNotFoundError
@@ -1333,7 +1319,7 @@ class Reader:
         Alias for ``set_entry_read(entry, False)``.
 
         Args:
-            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+            entry: (feed URL, entry id) tuple.
 
         Raises:
             EntryNotFoundError
@@ -1359,10 +1345,10 @@ class Reader:
         possibly with a custom timestamp.
 
         Args:
-            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
-            important (bool or None): Mark the entry as important if true,
+            entry: (feed URL, entry id) tuple.
+            important: Mark the entry as important if true,
                 as unimportant if false, or as not set if none.
-            modified (datetime or None):
+            modified:
                 Set :attr:`~Entry.important_modified` to this.
                 Naive datetimes are normalized by passing them to
                 :meth:`~datetime.datetime.astimezone`.
@@ -1406,7 +1392,7 @@ class Reader:
         Alias for ``set_entry_important(entry, True)``.
 
         Args:
-            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+            entry: (feed URL, entry id) tuple.
 
         Raises:
             EntryNotFoundError
@@ -1427,7 +1413,7 @@ class Reader:
         Alias for ``set_entry_important(entry, False)``.
 
         Args:
-            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
+            entry: (feed URL, entry id) tuple.
 
         Raises:
             EntryNotFoundError
@@ -1483,8 +1469,8 @@ class Reader:
         The added entry will be :attr:`~Entry.added_by` ``'user'``.
 
         Args:
-            entry (Entry or dict): An entry-like object or equivalent mapping.
-            overwrite (bool):
+            entry: An entry-like object or equivalent mapping.
+            overwrite:
                 If true and the entry already exists,
                 overwrite it instead of raising :exc:`EntryExistsError`.
 
@@ -1544,8 +1530,8 @@ class Reader:
         can be deleted.
 
         Args:
-            entry (tuple(str, str) or Entry): (feed URL, entry id) tuple.
-            missing_ok (bool):
+            entry: (feed URL, entry id) tuple.
+            missing_ok:
                 If true, don't raise :exc:`EntryNotFoundError`
                 if the entry does not exist.
 
@@ -1584,8 +1570,8 @@ class Reader:
         The copy entry will be :attr:`~Entry.added_by` ``'user'``.
 
         Args:
-            src (tuple(str, str) or Entry): Source (feed URL, entry id) tuple.
-            dst (tuple(str, str) or Entry): Destination (feed URL, entry id) tuple.
+            src: Source (feed URL, entry id) tuple.
+            dst: Destination (feed URL, entry id) tuple.
 
         Raises:
             EntryExistsError: If an entry with the same id as dst already exists.
@@ -1730,25 +1716,19 @@ class Reader:
         Search must be enabled to call this method.
 
         Args:
-            query (str): The search query.
-            feed (str or tuple(str) or Feed or None):
-                Only search the entries for this feed.
-            entry (tuple(str, str) or Entry or None):
-                Only search for the entry with this (feed URL, entry id) tuple.
-            read (bool or None): Only search (un)read entries.
-            important (TristateFilterInput):
-                Only search (un)important entries.
-            has_enclosures (bool or None): Only search entries that (don't)
-                have enclosures.
-            source (str or tuple(str) or Feed or None):
-                Only search the entries for this source.
-            tags (TagFilterInput): Only search entries matching these tags.
-            feed_tags (TagFilterInput):
-                Only search entries from feeds matching these tags.
-            sort (EntrySearchSort): How to order results.
-            limit (int or None): A limit on the number of results to be returned;
+            query: The search query.
+            feed: Only search the entries for this feed.
+            entry: Only search for the entry with this (feed URL, entry id) tuple.
+            read: Only search (un)read entries.
+            important: Only search (un)important entries.
+            has_enclosures: Only search entries that (don't) have enclosures.
+            source: Only search the entries for this source.
+            tags: Only search entries matching these tags.
+            feed_tags: Only search entries from feeds matching these tags.
+            sort: How to order results.
+            limit: A limit on the number of results to be returned;
                 by default, all results are returned.
-            starting_after (tuple(str, str) or EntrySearchResult or None):
+            starting_after:
                 Return results after this result; a cursor for use in pagination.
                 Using ``starting_after`` with ``sort=RANDOM`` is not supported.
 
@@ -1826,21 +1806,15 @@ class Reader:
         Search must be enabled to call this method.
 
         Args:
-            query (str): The search query.
-            feed (str or tuple(str) or Feed or None):
-                Only count the entries for this feed.
-            entry (tuple(str, str) or Entry or None):
-                Only count the entry with this (feed URL, entry id) tuple.
-            read (bool or None):
-                Only count (un)read entries.
-            important (TristateFilterInput): Only count (un)important entries.
-            has_enclosures (bool or None): Only count entries that (don't)
-                have enclosures.
-            source (str or tuple(str) or Feed or None):
-                Only count the entries for this source.
-            tags (TagFilterInput): Only count entries matching these tags.
-            feed_tags (TagFilterInput):
-                Only count entries from feeds matching these tags.
+            query: The search query.
+            feed: Only count the entries for this feed.
+            entry: Only count the entry with this (feed URL, entry id) tuple.
+            read: Only count (un)read entries.
+            important: Only count (un)important entries.
+            has_enclosures: Only count entries that (don't) have enclosures.
+            source: Only count the entries for this source.
+            tags: Only count entries matching these tags.
+            feed_tags: Only count entries from feeds matching these tags.
 
         Returns:
             EntrySearchCounts:
@@ -1876,29 +1850,14 @@ class Reader:
     def get_tags(
         self, resource: ResourceInput, /, *, key: str | None = None
     ) -> Iterable[tuple[str, JSON]]:
-        """Get all or some tags of a resource as ``(key, value)`` pairs.
-
-        `resource` can have one of the following types:
-
-        :class:`Feed` or ``str`` or ``(str,)``
-
-            A feed or feed URL (possibly enclosed in a tuple).
-
-        :class:`Entry` or ``(str, str)``
-
-            An entry or a (feed URL, entry id) pair representing an entry.
-
-        ``()`` (empty tuple)
-
-            Special value representing the global tag namespace.
+        """Get all or some tags of a resource.
 
         Args:
             resource: The resource to get tags for.
-            key (str or None): Only return the value for this key.
+            key: Only return the value for this key.
 
         Yields:
-            tuple(str, JSON): ``(key, value)`` pairs, in undefined order.
-            JSON is whatever :py:func:`json.dumps` accepts.
+            tuple[str, :type:`.JSON`]: (key, value) pairs, in undefined order.
 
         Raises:
             StorageError
@@ -1924,20 +1883,8 @@ class Reader:
 
         Equivalent to ``sorted(k for k, _ in reader.get_tags(resource))``.
 
-        See :meth:`get_tags` for possible `resource` values.
-        In addition, `resource` can have one of the following wildcard values:
-
-        ``(None,)``
-
-            Any feed.
-
-        ``(None, None)``
-
-            Any entry.
-
-        :const:`None`
-
-            Any resource (feed, entry, or the global namespace).
+        In addition to a resource, this method supports wildcard values,
+        see :type:`.AnyResourceInput`.
 
         Args:
             resource: Only return tag keys for this resource.
@@ -1989,16 +1936,13 @@ class Reader:
         Like ``next(iter(reader.get_tags(resource, key=key)))[1]``,
         but raises a custom exception instead of :exc:`StopIteration`.
 
-        See :meth:`get_tags` for possible `resource` values.
-
         Args:
             resource: The resource.
-            key (str): The key of the tag to retrieve.
+            key: The key of the tag to retrieve.
             default: Returned if given and no tag exists for `key`.
 
         Returns:
             JSON: The tag value.
-            JSON is whatever :py:func:`json.dumps` accepts.
 
         Raises:
             TagNotFoundError
@@ -2031,16 +1975,13 @@ class Reader:
     ) -> None:
         """Set the value of this resource tag.
 
-        See :meth:`get_tags` for possible `resource` values.
-
         Args:
             resource: The resource.
-            key (str): The key of the tag to set.
-            value (JSON): The value of the tag to set.
+            key: The key of the tag to set.
+            value: The value of the tag to set.
                 If not provided, and the tag already exists,
                 the value remains unchanged;
                 if the tag does not exist, it is set to :const:`None`.
-                JSON is whatever :py:func:`json.dumps` accepts.
 
         Raises:
             ResourceNotFoundError
@@ -2066,12 +2007,10 @@ class Reader:
     ) -> None:
         """Delete this resource tag.
 
-        See :meth:`get_tags` for possible `resource` values.
-
         Args:
             resource: The resource.
-            key (str): The key of the tag to delete.
-            missing_ok (bool):
+            key: The key of the tag to delete.
+            missing_ok:
                 If true, don't raise :exc:`TagNotFoundError`
                 if the tag does not exist.
 
@@ -2101,7 +2040,7 @@ class Reader:
         Existing and unsupported feeds are silently skipped.
 
         Args:
-            file (file): A binary file.
+            file: A binary file.
 
         Raises:
             FeedImportError: If the file could not be parsed.
@@ -2121,7 +2060,7 @@ class Reader:
         """Import feeds returned by :func:`reader.opml.parse`.
 
         Args:
-            feeds (iterable(FeedToImport)): The feeds to import.
+            feeds: The feeds to import.
 
         Yields:
             :class:`FeedImportResult`: The feed and whether it was added.
@@ -2144,7 +2083,7 @@ class Reader:
         """Export all or some feeds as an OPML subscription list.
 
         Args:
-            feeds (iterable(Feed)): The feeds to export; if None, export all feeds.
+            feeds: The feeds to export; if None, export all feeds.
 
         Returns:
             FeedExport: The OPML export.
@@ -2183,7 +2122,7 @@ class Reader:
         '.reader.key'
 
         Args:
-            key (str): A key.
+            key: A key.
 
         Returns:
             str: The name.
@@ -2220,8 +2159,8 @@ class Reader:
         '.plugin.myplugin.key'
 
         Args:
-            plugin_name (str): The plugin package/module name.
-            key (str or None): A key; if more than one reserved name is needed.
+            plugin_name: The plugin package/module name.
+            key: A key; if more than one reserved name is needed.
 
         Returns:
             str: The name.

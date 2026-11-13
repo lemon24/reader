@@ -212,8 +212,15 @@ Enumerations
 Type aliases
 ------------
 
+.. autotype:: reader.types.FeedInput
+.. autotype:: reader.types.EntryInput
+.. autotype:: reader.types.ResourceInput
+.. autotype:: reader.types.AnyResourceInput
+
 .. autotype:: reader.types.TagFilterInput
 .. autotype:: reader.types.TristateFilterInput
+
+.. autotype:: reader.types.JSON
 
 .. autoclass:: reader.types.UpdateConfig
     :members:

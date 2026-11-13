@@ -259,19 +259,12 @@ Following are notes about what documentation should look like,
 especially for the stable high-level :doc:`API <api>`,
 since that's what most users will see.
 
-
 We prefer type information in the method description,
-not in the signature,
-since the result is more readable.
-For the same reason,
-we prefer hand-written `Sphinx-style field list types`_.
+not in the signature (more readable).
 
-We still use `autodoc-provided type hints`_
-as fallback for parameters that don't have hand-written types,
-for type documentation for dataclasses,
-and for the unstable :doc:`internal`,
-where it's too much effort to maintain hand-written types.
-
+When a type alias is used in multiple places,
+we document the type alias,
+to avoid repeating the same information in each method docstring.
 
 Known issues (November 2026, Sphinx version ~9):
 
@@ -283,8 +276,9 @@ Known issues (November 2026, Sphinx version ~9):
   but from the autodoc typehints are expanded in-place.
   The solution is to use the ``type`` statement instead.
 
-.. _Sphinx-style field list types: https://www.sphinx-doc.org/en/master/usage/domains/python.html#info-field-lists
-.. _autodoc-provided type hints: https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#confval-autodoc_typehints
+* ``Yields`` section headers doesn't hyperlink types properly,
+  use explicit cross-references.
+  May get better with https://github.com/sphinx-doc/sphinx/issues/10982.
 
 
 
