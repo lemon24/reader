@@ -11,8 +11,12 @@ Version 3.28
 
 Unreleased
 
-* In the :mod:`~reader.plugins.entry_dedupe` plugin,
-  do not copy reserved tags from duplicate entries. (:issue:`381`)
+* Fix bug in the :mod:`~reader.plugins.entry_dedupe` plugin
+  causing reserved tags to be copied from duplicate entries.
+  Thanks to `Chaitanya Rathi`_ for the PR.
+  (:issue:`381`)
+
+.. _Chaitanya Rathi: https://github.com/Chaitanya-cloud-mac
 
 
 Version 3.27

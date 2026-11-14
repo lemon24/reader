@@ -379,26 +379,23 @@ def test_tags(reader, parser, allow_short_content):
 
 
 def test_tags_reserved_not_copied(reader, parser, allow_short_content):
-    feed = parser.feed(1)
-    reader.add_feed(feed)
+    reader.add_feed(parser.feed(1))
 
     one = parser.entry(1, 1, title='title', summary='value')
     reader._now = lambda: datetime(2010, 1, 1)
     reader.update_feeds()
 
-    # Set normal tag and reserved tags on entry one (which will be a duplicate)
     reader.set_tag(one, 'user_tag', 'hello')
     reader.set_tag(one, reader.make_reader_reserved_name('readtime'), 120)
     reader.set_tag(one, reader.make_plugin_reserved_name('myplugin', 'val'), 1)
 
     init_reader(reader)
 
-    three = parser.entry(1, 3, title='title', summary='value')
-    reader._now = lambda: datetime(2010, 1, 3)
+    two = parser.entry(1, 2, title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 2)
     reader.update_feeds()
 
-    # Three is kept: only user_tag should be copied, reserved tags must not be copied
-    assert dict(reader.get_tags(three)) == {
+    assert dict(reader.get_tags(two)) == {
         'user_tag': 'hello',
     }
 

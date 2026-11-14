@@ -751,9 +751,6 @@ def make_dedupe_actions(reader, entry, duplicates):
     if args := make_flag_args('important'):
         yield partial(reader.set_entry_important, entry, *args)
 
-    # scheme = reader.reserved_name_scheme
-    # prefixes = (scheme['reader_prefix'], scheme['plugin_prefix'])
-
     tags = merge_tags(
         reader._reserved_name_scheme,
         dict(reader.get_tags(entry)),
@@ -791,10 +788,7 @@ def merge_flags(entry, duplicates):
 
 
 def merge_tags(reserved_name_scheme, entry, duplicates):
-    reader_prefix = reserved_name_scheme.reader_prefix
-    # plugin_prefix=reserved_name_scheme.plugin_prefix
-
-    prefix = re.escape(reader_prefix)
+    prefix = re.escape(reserved_name_scheme.reader_prefix)
     duplicate_tag_re = re.compile(rf"^{prefix}duplicate\.\d+\.of\.(.*)$")
 
     indexes = defaultdict(int)  # noqa: B910
