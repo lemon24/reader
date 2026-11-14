@@ -31,7 +31,7 @@ Entry user attributes are set as follows:
     with the same status as the new read/important.
 
 entry tags
-    Copy tags to the new entry;
+    Copy tags to the new entry (reserved tags are ignored);
     duplicate tags are named ``.reader.duplicate.N.of.TAG``.
 
 
@@ -751,8 +751,11 @@ def make_dedupe_actions(reader, entry, duplicates):
     if args := make_flag_args('important'):
         yield partial(reader.set_entry_important, entry, *args)
 
+    # scheme = reader.reserved_name_scheme
+    # prefixes = (scheme['reader_prefix'], scheme['plugin_prefix'])
+
     tags = merge_tags(
-        reader.make_reader_reserved_name,
+        reader._reserved_name_scheme,
         dict(reader.get_tags(entry)),
         map(dict, map(reader.get_tags, duplicates)),
     )
@@ -787,8 +790,11 @@ def merge_flags(entry, duplicates):
     return None
 
 
-def merge_tags(make_reserved, entry, duplicates):
-    prefix = re.escape(make_reserved(''))
+def merge_tags(reserved_name_scheme, entry, duplicates):
+    reader_prefix = reserved_name_scheme.reader_prefix
+    # plugin_prefix=reserved_name_scheme.plugin_prefix
+
+    prefix = re.escape(reader_prefix)
     duplicate_tag_re = re.compile(rf"^{prefix}duplicate\.\d+\.of\.(.*)$")
 
     indexes = defaultdict(int)  # noqa: B910
@@ -804,6 +810,9 @@ def merge_tags(make_reserved, entry, duplicates):
             if match := duplicate_tag_re.match(key):
                 key = match.group(1)
 
+            if reserved_name_scheme.match(key):
+                continue
+
             if value in seen_values[key]:
                 continue
             seen_values[key].append(value)
@@ -815,7 +824,9 @@ def merge_tags(make_reserved, entry, duplicates):
                 if index == 0:
                     candidate = key
                 else:
-                    candidate = make_reserved(f"duplicate.{index}.of.{key}")
+                    candidate = reserved_name_scheme.make_reader_name(
+                        f"duplicate.{index}.of.{key}"
+                    )
 
                 if candidate not in entry:
                     key = candidate

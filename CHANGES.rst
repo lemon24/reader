@@ -11,6 +11,9 @@ Version 3.28
 
 Unreleased
 
+* In the :mod:`~reader.plugins.entry_dedupe` plugin,
+  do not copy reserved tags from duplicate entries. (:issue:`381`)
+
 
 Version 3.27
 ------------

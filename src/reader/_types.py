@@ -703,6 +703,9 @@ class NameScheme(_namedtuple_compat):
             rv += self.separator + key
         return rv
 
+    def match(self, key: str) -> bool:
+        return key.startswith((self.reader_prefix, self.plugin_prefix))
+
 
 class StorageType(Protocol):
     r"""Storage DAO protocol.
