@@ -4,7 +4,9 @@ import json
 import sqlite3
 from collections.abc import Iterable
 from collections.abc import Mapping
+from dataclasses import asdict
 from datetime import datetime
+from datetime import timedelta
 from functools import partial
 from typing import Any
 from typing import cast
@@ -15,6 +17,9 @@ from .._types import FeedFilter
 from .._types import FeedForUpdate
 from .._types import FeedToUpdate
 from .._types import FeedUpdateIntent
+from .._types import Redirect
+from .._types import RetrieveMetadata
+from .._types import UpdateInfo
 from .._utils import exactly_one
 from .._utils import zero_or_one
 from ..exceptions import FeedExistsError
@@ -24,6 +29,7 @@ from ..types import ExceptionInfo
 from ..types import Feed
 from ..types import FeedCounts
 from ..types import FeedSort
+from ..types import UpdatedFeed
 from ._base import wrap_exceptions
 from ._sql_utils import Query
 from ._sql_utils import SortKey
@@ -181,42 +187,10 @@ class FeedsMixin(StorageBase):
         self,
         filter: FeedFilter = FeedFilter(),  # noqa: B008
     ) -> Iterable[FeedForUpdate]:
-        def row_factory(row: tuple[Any, ...]) -> FeedForUpdate:
-            (
-                url,
-                caching_info,
-                stale,
-                last_updated,
-                last_exception,
-                data_hash,
-            ) = row
-            return FeedForUpdate(
-                url,
-                json.loads(caching_info) if caching_info else None,
-                stale == 1,
-                convert_timestamp(last_updated) if last_updated else None,
-                last_exception == 1,
-                data_hash,
-            )
-
-        def make_query() -> tuple[Query, dict[str, Any]]:
-            query = (
-                Query()
-                .SELECT(
-                    'url',
-                    'caching_info',
-                    'stale',
-                    'last_updated',
-                    ('last_exception', 'last_exception IS NOT NULL'),
-                    'data_hash',
-                )
-                .FROM("feeds")
-                .scrolling_window_order_by("url")
-            )
-            context = feed_filter(query, filter)
-            return query, context
-
-        return self.paginated_query(make_query, row_factory=row_factory)
+        return self.paginated_query(
+            partial(get_feeds_for_update_query, filter),
+            row_factory=feed_for_update_factory,
+        )
 
     @wrap_exceptions()
     def set_feed_stale(self, url: str, stale: bool) -> None:
@@ -345,12 +319,13 @@ def feed_filter(query: Query, filter: FeedFilter) -> dict[str, Any]:
 
 
 def feed_update_intent_to_dict(intent: FeedUpdateIntent) -> FeedDict:
-    url, _, _, value = intent
+    url, _, _, update_history, value = intent
 
     context: dict[str, Any] = {
         'url': url,
         'last_retrieved': adapt_datetime(intent.last_retrieved),
         'update_after': adapt_datetime(intent.update_after),
+        'update_history': json.dumps(list(map(update_info_to_dict, update_history))),
     }
 
     if isinstance(value, FeedToUpdate):
@@ -386,3 +361,102 @@ def feed_update_intent_to_dict(intent: FeedUpdateIntent) -> FeedDict:
         context['last_exception'] = None
 
     return cast(FeedDict, context)
+
+
+def get_feeds_for_update_query(filter: FeedFilter) -> tuple[Query, dict[str, Any]]:
+    query = (
+        Query()
+        .SELECT(
+            'url',
+            'caching_info',
+            'stale',
+            'last_updated',
+            ('last_exception', 'last_exception IS NOT NULL'),
+            'update_history',
+            'data_hash',
+        )
+        .FROM("feeds")
+        .scrolling_window_order_by("url")
+    )
+    context = feed_filter(query, filter)
+    return query, context
+
+
+def feed_for_update_factory(row: tuple[Any, ...]) -> FeedForUpdate:
+    (
+        url,
+        caching_info,
+        stale,
+        last_updated,
+        last_exception,
+        update_history,
+        data_hash,
+    ) = row
+    return FeedForUpdate(
+        url,
+        json.loads(caching_info) if caching_info else None,
+        stale == 1,
+        convert_timestamp(last_updated) if last_updated else None,
+        last_exception == 1,
+        (
+            list(map(update_info_factory, json.loads(update_history)))
+            if update_history
+            else []
+        ),
+        data_hash,
+    )
+
+
+def update_info_factory(data: Any) -> UpdateInfo:
+    d_result = data['result']
+    result = (
+        None
+        if d_result is None
+        else (
+            ExceptionInfo(**d_result)
+            if 'traceback_str' in d_result
+            else UpdatedFeed(**d_result)
+        )
+    )
+
+    metadata = None
+    d_metadata = data['metadata']
+    if d_metadata is not None:
+        m_update_after = d_metadata['update_after']
+        update_after = (
+            None
+            if m_update_after is None
+            else (
+                convert_timestamp(m_update_after)
+                if isinstance(m_update_after, str)
+                else timedelta(seconds=m_update_after)
+            )
+        )
+        metadata = RetrieveMetadata(
+            update_after,
+            d_metadata['rate_limited'],
+            d_metadata['private'],
+            [Redirect(**r) for r in d_metadata['redirects']],
+            d_metadata['extra'],
+        )
+
+    return UpdateInfo(
+        data['url'],
+        result,
+        convert_timestamp(data['retrieved']),
+        metadata,
+    )
+
+
+def update_info_to_dict(info: UpdateInfo) -> dict[str, Any]:
+    rv = asdict(info)
+    rv['retrieved'] = adapt_datetime(rv['retrieved'])
+
+    if meta := rv['metadata']:
+        update_after = meta['update_after']
+        if isinstance(update_after, datetime):
+            meta['update_after'] = adapt_datetime(update_after)
+        elif isinstance(update_after, timedelta):
+            meta['update_after'] = update_after.total_seconds()
+
+    return rv

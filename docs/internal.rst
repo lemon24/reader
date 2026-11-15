@@ -235,8 +235,8 @@ Data objects
 Type aliases
 ~~~~~~~~~~~~
 
-.. autodata:: TagFilter
-.. autodata:: TristateFilter
+.. autotype:: TagFilter
+.. autotype:: TristateFilter
 
 
 Recipes

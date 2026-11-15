@@ -232,7 +232,7 @@ def entries():
     has_enclosures = {None: None, 'no': False, 'yes': True}[has_enclosures]
 
     important = request.args.get('important', 'notfalse')
-    if important not in typing.get_args(TristateFilterInput):
+    if important not in typing.get_args(TristateFilterInput.__value__):
         abort(400, f"invalid important: {important}")
 
     if not request.args.get('q'):

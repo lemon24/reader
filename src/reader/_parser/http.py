@@ -16,13 +16,13 @@ from typing import TypedDict
 
 import requests
 
+from .._types import Redirect
+from .._types import RetrieveMetadata
 from . import DEFAULT_TIMEOUT
 from . import Headers
 from . import NotModified
-from . import Redirect
 from . import RetrievedFeed
 from . import RetrieveError
-from . import RetrieveMetadata
 from . import wrap_exceptions
 from ._http_utils import parse_cache_control_header
 from ._http_utils import parse_date

@@ -44,23 +44,13 @@ print(*sys.modules)
 
 
 def get_imported_modules(code):
-    # we don't want pytest-cov importing stuff in the subprocess
-    # https://pytest-cov.readthedocs.io/en/latest/subprocess-support.html
-    # https://github.com/pytest-dev/pytest-cov/blob/v4.0.0/src/pytest-cov.embed
-    env = dict(os.environ)
-    for k in list(env):
-        if k.startswith('COV_CORE_'):
-            env.pop(k)
-
     process = subprocess.run(
         [sys.executable, '-c', CODE_FMT.format(code=textwrap.dedent(code))],
         capture_output=True,
         text=True,
         timeout=10,
-        env=env,
     )
     assert process.returncode == 0, process.stderr
-
     return process.stdout.split()
 
 

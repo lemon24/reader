@@ -5,6 +5,7 @@ import pytest
 
 from reader import Content
 from reader import Entry
+from reader._types import NameScheme
 from reader.plugins import entry_dedupe
 from reader.plugins.entry_dedupe import common_prefixes
 from reader.plugins.entry_dedupe import group_by
@@ -377,6 +378,28 @@ def test_tags(reader, parser, allow_short_content):
     }
 
 
+def test_tags_reserved_not_copied(reader, parser, allow_short_content):
+    reader.add_feed(parser.feed(1))
+
+    one = parser.entry(1, 1, title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+
+    reader.set_tag(one, 'user_tag', 'hello')
+    reader.set_tag(one, reader.make_reader_reserved_name('readtime'), 120)
+    reader.set_tag(one, reader.make_plugin_reserved_name('myplugin', 'val'), 1)
+
+    init_reader(reader)
+
+    two = parser.entry(1, 2, title='title', summary='value')
+    reader._now = lambda: datetime(2010, 1, 2)
+    reader.update_feeds()
+
+    assert dict(reader.get_tags(two)) == {
+        'user_tag': 'hello',
+    }
+
+
 def test_tags_dedupe_once(reader, parser, allow_short_content):
     feed = parser.feed(1)
     reader.add_feed(feed)
@@ -580,6 +603,14 @@ MERGE_TAGS_DATA = [
             '.duplicate.3.of.tag': 3,
         },
     ),
+    # reserved tags on duplicate entries are not copied
+    ([{'tag': 'one', '.readtime': 120}, {}], {'tag': 'one'}),
+    # reserved tag only on duplicate entry is ignored
+    ([{'.readtime': 120}, {}], {}),
+    # reserved tag with different value on duplicate entry is not duplicated
+    ([{'.readtime': 120}, {'.readtime': 60}], {}),
+    # duplicate of reserved tag is not copied or renumbered
+    ([{'.duplicate.1.of..readtime': 120}, {}], {}),
 ]
 
 
@@ -587,10 +618,9 @@ MERGE_TAGS_DATA = [
 def test_merge_tags(reader, parser, tags, expected):
     *duplicates, entry = tags
 
-    def make_reserved(n):
-        return '.' + n
+    scheme = NameScheme('.', '.', '.')
 
-    assert dict(merge_tags(make_reserved, entry, duplicates)) == expected
+    assert dict(merge_tags(scheme, entry, duplicates)) == expected
 
 
 # TODO: with_maybe_published_or_updated

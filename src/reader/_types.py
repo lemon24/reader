@@ -6,7 +6,9 @@ from collections.abc import Iterable
 from collections.abc import Mapping
 from collections.abc import Sequence
 from dataclasses import dataclass
+from dataclasses import field
 from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
 from enum import Enum
 from functools import cached_property
@@ -49,6 +51,7 @@ from .types import MissingType
 from .types import ResourceId
 from .types import TagFilterInput
 from .types import TristateFilterInput
+from .types import UpdatedFeed
 
 # Private API
 # https://github.com/lemon24/reader/issues/111
@@ -306,8 +309,53 @@ class FeedForUpdate(NamedTuple):
     #: Whether the feed had an exception at the last update.
     last_exception: bool = False
 
+    #: Information about the last few updates.
+    update_history: list[UpdateInfo] = field(default_factory=list)
+
     #: The :attr:`~FeedData.hash` of the corresponding FeedData.
     hash: bytes | None = None
+
+
+@dataclass(frozen=True)
+class UpdateInfo:
+    url: str
+    # FIXME: this should be something other than UpdatedFeed, we only care if data changed
+    result: UpdatedFeed | None | ExceptionInfo
+    retrieved: datetime
+    metadata: RetrieveMetadata | None
+
+
+@dataclass(frozen=True)
+class RetrieveMetadata:
+    """Details about a retrieval, successful or not."""
+
+    #: "update after" hint, as derived from response metadata.
+    update_after: datetime | timedelta | None = None
+
+    #: There were too many requests in a given amount of time.
+    rate_limited: bool = False
+
+    #: The response is intended for a single user.
+    private: bool = False
+
+    #: Redirects traversed to retrieve the feed. If not empty,
+    #: the other metadata attributes refer to the URL of the last redirect.
+    redirects: list[Redirect] = field(default_factory=list)
+
+    #: Additional metadata used by plugins, e.g. passed to update hooks.
+    #: The key must match the name of the plugin.
+    extra: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class Redirect:
+    """Information about a redirect."""
+
+    #: URL to redirect to.
+    target_url: str | None
+
+    #: Whether the redirect is permanent or not.
+    permanent: bool
 
 
 class EntryForUpdate(NamedTuple):
@@ -344,6 +392,9 @@ class FeedUpdateIntent(NamedTuple):
 
     #: The earliest time the feed will next be updated.
     update_after: datetime
+
+    #: Information about the last few updates.
+    update_history: list[UpdateInfo]
 
     #: One of:
     #: feed data and metadata (the feed was updated),
@@ -410,7 +461,7 @@ class EntryUpdateIntent(NamedTuple):
     # like update_feeds_iter() tests on Windows on GitHub Actions)
 
 
-#: Like the ``tags`` argument of :meth:`.Reader.get_feeds`, except:
+#: Like the :type:`~reader.types.TagFilterInput`, except:
 #:
 #: * only the full mutiple-tags-with-disjunction form is used
 #: * tags are represented as *(is negated, tag name)* tuples
@@ -430,7 +481,7 @@ class EntryUpdateIntent(NamedTuple):
 #: >>> tag_filter_argument(True)
 #: [[True]]
 #:
-TagFilter = Sequence[Sequence[bool | tuple[bool, str]]]
+type TagFilter = Sequence[Sequence[bool | tuple[bool, str]]]
 
 
 def tag_filter_argument(tags: TagFilterInput, name: str = 'tags') -> TagFilter:
@@ -500,8 +551,8 @@ def unique_tags(tags: TagFilter) -> TagFilter:
     return rv
 
 
-#: Like :data:`.TristateFilterInput`, but without bool/None aliases.
-TristateFilter = Literal[
+#: Like :type:`~reader.types.TristateFilterInput`, but without bool/None aliases.
+type TristateFilter = Literal[
     'istrue',
     'isfalse',
     'notset',
@@ -520,7 +571,7 @@ def tristate_filter_argument(value: TristateFilterInput, name: str) -> TristateF
         return 'istrue'
     if value == False:  # noqa: E712
         return 'nottrue'
-    args = get_args(TristateFilter)
+    args = get_args(TristateFilter.__value__)
     if value in args:
         return value
     raise ValueError(f"{name} must be none, bool, or one of {args}")
@@ -650,6 +701,9 @@ class NameScheme(_namedtuple_compat):
         if key is not None:
             rv += self.separator + key
         return rv
+
+    def match(self, key: str) -> bool:
+        return key.startswith((self.reader_prefix, self.plugin_prefix))
 
 
 class StorageType(Protocol):
