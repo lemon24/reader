@@ -134,7 +134,6 @@ class Decider:
             logger.debug("feed hash changed, treating as updated")
             return True
 
-
         logger.debug("feed not updated, skipping")
         return False
 
@@ -150,7 +149,6 @@ class Decider:
         if not old:
             log.debug("entry new, updating")
             return UpdateReasons()
-
 
         # Check if the entry content actually changed:
         # https://github.com/lemon24/reader/issues/179
