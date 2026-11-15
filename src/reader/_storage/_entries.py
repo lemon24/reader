@@ -169,12 +169,11 @@ class EntriesMixin(StorageBase):
         # See e39b0134cb3a2fe2bb346d42355a764181926a82 for a single query version.
 
         def row_factory(_: sqlite3.Cursor, row: sqlite3.Row) -> EntryForUpdate:
-            fu, fu_epoch, recent_sort, updated, data_hash, data_hash_changed = row
+            fu, fu_epoch, recent_sort, data_hash, data_hash_changed = row
             return EntryForUpdate(
                 convert_timestamp(fu),
                 convert_timestamp(fu_epoch),
                 convert_timestamp(recent_sort),
-                convert_timestamp(updated) if updated else None,
                 data_hash,
                 data_hash_changed,
             )
@@ -184,7 +183,6 @@ class EntriesMixin(StorageBase):
                 first_updated,
                 first_updated_epoch,
                 recent_sort,
-                updated,
                 data_hash,
                 data_hash_changed
             FROM entries

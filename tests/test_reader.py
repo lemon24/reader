@@ -458,16 +458,16 @@ def test_data_hashes_remain_stable(parser):
     )
 
     assert feed.hash == b'\x00\x9dS?\xf6\x9c\x9f=\x96\xb6JD\x0f\xef\x10\x82'
-    assert entry.hash == b'\x00+mI;N\xa3\x86\xff\x07\xdf\xd1\xe3\xfb\xbf\x12'
+    assert entry.hash == b'\x00\xe28\x1f\xab\xaf*8\xee\x85<\xb9\xb5~.\x98'
 
     assert feed._replace(url='x', updated='x').hash == feed.hash
     assert (
         feed._replace(title='x').hash == b'\x00bd\xb1*\x80\xf1u_\x17\xb4\n\xfe\xb2\x1e0'
     )
 
-    assert entry._replace(feed_url='x', id='x', updated='x').hash == entry.hash
+    assert entry._replace(feed_url='x', id='x').hash == entry.hash
     assert (
-        entry._replace(title='x').hash == b'\x00\xd3V\x19.;U6\xc9q\xc8\x88\xc2%\xff\xac'
+        entry._replace(title='x').hash == b'\x00?\xedu\x1f\x8aG\xc5z\xe6[yM\x9a\xc6\xaf'
     )
 
 
@@ -699,7 +699,6 @@ def test_change_feed_url_feeds_for_update(reader):
     assert not get_feed('1')
     assert get_feed('3') == old_one._replace(
         url='3',
-        updated=None,
         caching_info=None,
         last_updated=None,
         last_exception=False,
