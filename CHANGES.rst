@@ -11,12 +11,17 @@ Version 3.28
 
 Unreleased
 
+* Remove unnecessary :class:`.FeedForUpdate` / :class:`.EntryForUpdate`
+  ``updated`` attribute. Thanks to `Rajveer Mohite`_ for the PR.
+  (:issue:`431`)
+
 * Fix bug in the :mod:`~reader.plugins.entry_dedupe` plugin
   causing reserved tags to be copied from duplicate entries.
   Thanks to `Chaitanya Rathi`_ for the PR.
   (:issue:`381`)
 
 .. _Chaitanya Rathi: https://github.com/Chaitanya-cloud-mac
+.. _Rajveer Mohite: https://github.com/rvcreationworld
 
 
 Version 3.27
