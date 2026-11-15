@@ -699,7 +699,6 @@ def test_change_feed_url_feeds_for_update(reader):
     assert not get_feed('1')
     assert get_feed('3') == old_one._replace(
         url='3',
-        updated=None,
         caching_info=None,
         last_updated=None,
         last_exception=False,

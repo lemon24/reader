@@ -68,15 +68,8 @@ class Decider:
     @classmethod
     def process_feed_for_update(cls, feed: FeedForUpdate) -> FeedForUpdate:
         if feed.stale:
-            # db_updated=None not tested (removing it causes no tests to fail).
-            #
-            # This only matters if last_updated is None *and* db_updated is
-            # not None. The way the code is, this shouldn't be possible
-            # (last_updated is always set if the feed was updated at least
-            # once, unless the database predates last_updated).
-            #
-            feed = feed._replace(updated=None, caching_info=None)
-            logger.info("stale feed, ignoring updated and caching_info", feed=feed.url)
+            feed = feed._replace(caching_info=None)
+            logger.info("stale feed, ignoring caching_info", feed=feed.url)
         return feed
 
     @classmethod
@@ -118,7 +111,6 @@ class Decider:
 
         if not old.last_updated:
             logger.debug("feed has no last_updated, treating as updated")
-            assert not old.updated, "updated must be None if last_updated is None"
             return True
 
         # Some feeds have entries newer than the feed;

@@ -91,6 +91,11 @@ class FeedData(_namedtuple_compat):
     def resource_id(self) -> tuple[str]:
         return (self.url,)
 
+    # For RSS feeds with no date element,
+    # feedparser uses lastBuildDate as .updated,
+    # which can change without the feed actually changing,
+    # so feed.updated is excluded from the hash.
+    # https://github.com/lemon24/reader/issues/231#issuecomment-812601988
     _hash_exclude_ = frozenset({'url', 'updated'})
 
     @cached_property
@@ -288,14 +293,11 @@ class FeedForUpdate(NamedTuple):
     #: The feed URL.
     url: str
 
-    #: The date the feed was last updated, according to the feed.
-    updated: datetime | None = None
-
     #: Caching info from the last update.
     caching_info: JSON | None = None
 
     #: Whether the next update should update *all* entries,
-    #: regardless of their :attr:`hash` or :attr:`updated`.
+    #: regardless of their :attr:`hash`.
     stale: bool = False
 
     #: The date the feed was last updated, according to reader; none if never.
@@ -319,9 +321,6 @@ class EntryForUpdate(NamedTuple):
 
     #: From the last :attr:`EntryUpdateIntent.recent_sort`.
     recent_sort: datetime
-
-    #: The date the entry was last updated, according to the entry.
-    updated: datetime | None
 
     #: The :attr:`~EntryData.hash` of the corresponding EntryData.
     hash: bytes | None
