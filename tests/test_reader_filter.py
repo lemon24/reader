@@ -182,6 +182,16 @@ def reader_entries():
         reader.mark_entry_as_important(important)
         reader.mark_entry_as_unimportant(unimportant)
 
+        # entry added dates: default, read, important, unimportant, enclosures -> 2010-01-01
+        # source -> 2010-01-02
+        db = reader._storage.get_db()
+        db.execute(
+            "UPDATE entries SET first_updated = '2010-01-01 00:00:00' WHERE id != 'source'"
+        )
+        db.execute(
+            "UPDATE entries SET first_updated = '2010-01-02 00:00:00' WHERE id = 'source'"
+        )
+
         yield reader
 
 
@@ -217,6 +227,10 @@ def reader_entries():
         (dict(entry=('inexistent', 'idem')), set()),
         (dict(source='source'), {'source'}),
         (dict(source=Feed('source')), {'source'}),
+        (dict(added_before=None), ALL_IDS),
+        (dict(added_before=datetime(2010, 1, 1)), set()),
+        (dict(added_before=datetime(2010, 1, 2)), ALL_IDS - {'source'}),
+        (dict(added_before=datetime(2010, 1, 3)), ALL_IDS),
     ],
     ids=kwargs_ids,
 )
@@ -238,6 +252,7 @@ def test_entries(reader_entries, get_entries, kwargs, expected):
         dict(feed=object()),
         dict(entry=object()),
         dict(source=object()),
+        dict(added_before=object()),
     ],
 )
 def test_entries_error(reader, get_entries, kwargs):

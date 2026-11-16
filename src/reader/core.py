@@ -1086,6 +1086,7 @@ class Reader:
         source: FeedInput | None = None,
         tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
+        added_before: datetime | None = None,
         sort: EntrySort = EntrySort.RECENT,
         limit: int | None = None,
         starting_after: EntryInput | None = None,
@@ -1101,6 +1102,9 @@ class Reader:
             source: Only return the entries for this source.
             tags: Only return entries matching these tags.
             feed_tags: Only return entries from feeds matching these tags.
+            added_before: Only return entries added before this date and time.
+                Naive datetimes are normalized by passing them to
+                :meth:`~datetime.datetime.astimezone`.
             sort: How to order entries.
             limit: A limit on the number of entries to be returned;
                 by default, all entries are returned.
@@ -1137,13 +1141,24 @@ class Reader:
             Raise exception for invalid ``starting_after`` eagerly,
             before the iterable is consumed.
 
+        .. versionadded:: 3.28
+            The ``added_before`` keyword argument.
+
         """
 
         # If we ever implement pagination, consider following the guidance in
         # https://specs.openstack.org/openstack/api-wg/guidelines/pagination_filter_sort.html
 
         filter = EntryFilter.from_args(
-            feed, entry, read, important, has_enclosures, source, tags, feed_tags
+            feed,
+            entry,
+            read,
+            important,
+            has_enclosures,
+            source,
+            tags,
+            feed_tags,
+            added_before,
         )
         sort = EntrySort(sort)
 
@@ -1208,6 +1223,7 @@ class Reader:
         source: FeedInput | None = None,
         tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
+        added_before: datetime | None = None,
     ) -> EntryCounts:
         """Count all or some of the entries.
 
@@ -1220,6 +1236,9 @@ class Reader:
             source: Only count the entries for this source.
             tags: Only count entries matching these tags.
             feed_tags: Only count entries from feeds matching these tags.
+            added_before: Only count entries added before this date and time.
+                Naive datetimes are normalized by passing them to
+                :meth:`~datetime.datetime.astimezone`.
 
         Returns:
             EntryCounts:
@@ -1238,10 +1257,21 @@ class Reader:
         .. versionadded:: 3.16
             The ``source`` keyword argument.
 
+        .. versionadded:: 3.28
+            The ``added_before`` keyword argument.
+
         """
 
         filter = EntryFilter.from_args(
-            feed, entry, read, important, has_enclosures, source, tags, feed_tags
+            feed,
+            entry,
+            read,
+            important,
+            has_enclosures,
+            source,
+            tags,
+            feed_tags,
+            added_before,
         )
         now = self._now()
         return self._storage.get_entry_counts(now, filter)
@@ -1678,6 +1708,7 @@ class Reader:
         source: FeedInput | None = None,
         tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
+        added_before: datetime | None = None,
         sort: EntrySearchSort = EntrySearchSort.RELEVANT,
         limit: int | None = None,
         starting_after: EntryInput | None = None,
@@ -1725,6 +1756,9 @@ class Reader:
             source: Only search the entries for this source.
             tags: Only search entries matching these tags.
             feed_tags: Only search entries from feeds matching these tags.
+            added_before: Only search entries added before this date and time.
+                Naive datetimes are normalized by passing them to
+                :meth:`~datetime.datetime.astimezone`.
             sort: How to order results.
             limit: A limit on the number of results to be returned;
                 by default, all results are returned.
@@ -1767,9 +1801,20 @@ class Reader:
             Raise exceptions for invalid ``query`` and ``starting_after`` eagerly,
             before the iterable is consumed.
 
+        .. versionadded:: 3.28
+            The ``added_before`` keyword argument.
+
         """
         filter = EntryFilter.from_args(
-            feed, entry, read, important, has_enclosures, source, tags, feed_tags
+            feed,
+            entry,
+            read,
+            important,
+            has_enclosures,
+            source,
+            tags,
+            feed_tags,
+            added_before,
         )
         sort = EntrySearchSort(sort)
 
@@ -1798,6 +1843,7 @@ class Reader:
         source: FeedInput | None = None,
         tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
+        added_before: datetime | None = None,
     ) -> EntrySearchCounts:
         """Count entries matching a full-text search query.
 
@@ -1815,6 +1861,9 @@ class Reader:
             source: Only count the entries for this source.
             tags: Only count entries matching these tags.
             feed_tags: Only count entries from feeds matching these tags.
+            added_before: Only count entries added before this date and time.
+                Naive datetimes are normalized by passing them to
+                :meth:`~datetime.datetime.astimezone`.
 
         Returns:
             EntrySearchCounts:
@@ -1839,10 +1888,21 @@ class Reader:
         .. versionadded:: 3.16
             The ``source`` keyword argument.
 
+        .. versionadded:: 3.28
+            The ``added_before`` keyword argument.
+
         """
 
         filter = EntryFilter.from_args(
-            feed, entry, read, important, has_enclosures, source, tags, feed_tags
+            feed,
+            entry,
+            read,
+            important,
+            has_enclosures,
+            source,
+            tags,
+            feed_tags,
+            added_before,
         )
         now = self._now()
         return self._search.search_entry_counts(query, now, filter)
