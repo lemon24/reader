@@ -200,8 +200,8 @@ def test_cache_control(reader, data_dir, server, monkeypatch_datetime):
     datetime.now.set(datetime(2010, 1, 2))
     assert update() == {server.url}
 
-    datetime.now.set(datetime(2010, 1, 2, 12, 59, 59))
+    datetime.now.set(datetime(2010, 1, 2, 11, 59, 59))
     assert update() == set()
 
-    datetime.now.set(datetime(2010, 1, 2, 13))
+    datetime.now.set(datetime(2010, 1, 2, 12))
     assert update() == {server.url}

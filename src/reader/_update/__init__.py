@@ -225,19 +225,14 @@ class Decider:
             value = self.get_feed_to_update(result.value, bool(entries_to_update))
             info_result = make_updated_feed(result, entries_to_update)
 
-        update_after = next_update_after(self.global_now, **self.config)
+        update_after_hints = []
+        if hint := (result.metadata and result.metadata.update_after):
+            if isinstance(hint, timedelta):
+                hint = self.now + hint
+            hint = min(hint, self.now + MAX_UPDATE_AFTER)
+            update_after_hints.append(hint)
 
-        if result.metadata:
-            http_update_after = result.metadata.update_after
-            if isinstance(http_update_after, timedelta):
-                http_update_after = self.now + http_update_after
-            # also accounts for it being in the past / negative
-            if http_update_after and http_update_after > update_after:
-                # round up to the next interval
-                # TODO: don't round up if already on the next interval
-                update_after = next_update_after(http_update_after, **self.config)
-                # limit excessive update_after
-                update_after = min(update_after, self.global_now + MAX_UPDATE_AFTER)
+        update_after = next_update_after(self.now, *update_after_hints, **self.config)
 
         update_info = UpdateInfo(
             self.old_feed.url, info_result, self.now, result.metadata
@@ -307,12 +302,18 @@ UPDATE_AFTER_EPOCH = datetime(1970, 1, 5, tzinfo=timezone.utc)
 MAX_UPDATE_AFTER = timedelta(31)
 
 
-def next_update_after(now: datetime, interval: int, jitter: float = 0) -> datetime:
+def next_update_after(
+    now: datetime, *hints: datetime, interval: int, jitter: float = 0
+) -> datetime:
     interval_s = interval * 60
+
     rv = next_interval(now, interval_s)
-    # TODO: will get more complicated once we pull update_after_hint in
+    # also accounts for hints being in the past / negative
+    rv = max((rv,) + hints)
+
     rv = round_up(rv, interval_s)
     rv = apply_jitter(rv, interval_s, jitter)
+
     return rv
 
 

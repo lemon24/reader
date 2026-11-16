@@ -976,9 +976,8 @@ UPDATE_AFTER_METADATA_DATA = {
     'update_after > interval': data(2, update_after=timedelta(seconds=3601)),
     'update_after = interval': data(1, update_after=timedelta(seconds=3600)),
     'update_after < interval': data(1, update_after=timedelta(seconds=3599)),
-    # TODO: don't round up if already on the next interval
     'update_after > interval (date)': data(
-        datetime(2010, 1, 2, 1), update_after=datetime(2010, 1, 2)
+        datetime(2010, 1, 2), update_after=datetime(2010, 1, 2)
     ),
     'update_after = interval (date)': data(1, update_after=datetime(2010, 1, 1, 1)),
     'update_after < interval (date)': data(1, update_after=datetime(2010, 1, 1, 0, 59)),
@@ -988,7 +987,7 @@ UPDATE_AFTER_METADATA_DATA = {
         datetime(2010, 2, 1), update_after=timedelta(seconds=32 * 24 * 3600)
     ),
     'update_after >> now (<limit)': data(
-        datetime(2010, 1, 31, 1), update_after=timedelta(seconds=30 * 24 * 3600)
+        datetime(2010, 1, 31), update_after=timedelta(seconds=30 * 24 * 3600)
     ),
     'update_after (non-hour interval)': data(
         (1, 45), interval=15, update_after=timedelta(seconds=6000)
@@ -1048,7 +1047,7 @@ def test_update_after_metadata(reader, parser, interval, error, metadata, expect
 )
 def test_next_update_after(monkeypatch, now, interval, jitter, random, expected):
     monkeypatch.setattr('random.random', lambda: random)
-    assert next_update_after(now, interval, jitter) == expected
+    assert next_update_after(now, interval=interval, jitter=jitter) == expected
 
 
 # END: update_after
