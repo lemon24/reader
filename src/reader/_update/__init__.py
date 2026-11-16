@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -301,21 +302,51 @@ def set_number(name, src, dst, type, min=0, max=float('inf')):  # type: ignore
     dst[name] = value
 
 
-# start on a Monday, so weekly amounts of seconds line up
-UPDATE_AFTER_START = datetime(1970, 1, 5)
-EPOCH_OFFSET = (UPDATE_AFTER_START - datetime(1970, 1, 1)).total_seconds()
+UNIX_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+UPDATE_AFTER_EPOCH = datetime(1970, 1, 5, tzinfo=timezone.utc)
 MAX_UPDATE_AFTER = timedelta(31)
 
 
 def next_update_after(now: datetime, interval: int, jitter: float = 0) -> datetime:
     interval_s = interval * 60
-    now_s = (now.replace(tzinfo=None) - UPDATE_AFTER_START).total_seconds()
-    rv_s = int((now_s // interval_s + 1 + random.random() * jitter) * interval_s)
-    rv_s = rv_s // 60 * 60
-    rv = datetime.fromtimestamp(rv_s + EPOCH_OFFSET, timezone.utc).replace(
-        tzinfo=now.tzinfo
-    )
+    rv = next_interval(now, interval_s)
+    # TODO: will get more complicated once we pull update_after_hint in
+    rv = round_up(rv, interval_s)
+    rv = apply_jitter(rv, interval_s, jitter)
     return rv
+
+
+def next_interval(dt: datetime, interval: int) -> datetime:
+    """Return the next interval.
+
+    Ensure whole-week intervals start on Monday.
+
+    """
+    return from_timestamp((to_timestamp(dt) // interval + 1) * interval)
+
+
+def round_up(dt: datetime, interval: int) -> datetime:
+    """Round up to the next interval (no-op if already aligned).
+
+    Ensure whole-week intervals start on Monday.
+
+    """
+    return from_timestamp(math.ceil(to_timestamp(dt) / interval) * interval)
+
+
+def apply_jitter(dt: datetime, interval: int, jitter: float) -> datetime:
+    jitter_s = random.random() * jitter * interval
+    jitter_s = jitter_s // 60 * 60
+    return dt + timedelta(seconds=jitter_s)
+
+
+def to_timestamp(dt: datetime) -> float:
+    return (dt - UPDATE_AFTER_EPOCH).total_seconds()
+
+
+def from_timestamp(timestamp: float) -> datetime:
+    offset = UPDATE_AFTER_EPOCH - UNIX_EPOCH
+    return datetime.fromtimestamp(timestamp, timezone.utc) + offset
 
 
 @dataclass
