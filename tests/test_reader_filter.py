@@ -164,24 +164,21 @@ def reader_entries():
     with make_reader(':memory:') as reader:
         reader._parser = parser = Parser().with_titles()
 
-        one = parser.feed(1)
+        reader.add_feed(parser.feed(1))
+        reader.add_feed(parser.feed(2))
+
         default = parser.entry(1, 'default')
         read = parser.entry(1, 'read')
         important = parser.entry(1, 'important')
         unimportant = parser.entry(1, 'unimportant')
-        two = parser.feed(2)
-
-        reader.add_feed(one)
-        reader.add_feed(two)
-
         reader._now = lambda: datetime(2010, 1, 1)
         reader.update_feeds()
 
         enclosures = parser.entry(1, 'enclosures', enclosures=[Enclosure('http://e2')])
         source = parser.entry(2, 'source', source=EntrySource(url='source'))
-
         reader._now = lambda: datetime(2010, 1, 2)
         reader.update_feeds()
+
         reader.update_search()
 
         reader.mark_entry_as_read(read)
