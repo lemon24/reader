@@ -539,9 +539,17 @@ def entry_filter(
     query: Query, filter: EntryFilter, keyword: str = 'WHERE'
 ) -> dict[str, Any]:
     add = getattr(query, keyword)
-    feed_url, entry_id, read, important, has_enclosures, source_url, tags, feed_tags = (
-        filter
-    )
+    (
+        feed_url,
+        entry_id,
+        read,
+        important,
+        has_enclosures,
+        source_url,
+        tags,
+        feed_tags,
+        added_before,
+    ) = filter
 
     context = {}
 
@@ -568,6 +576,10 @@ def entry_filter(
     if source_url:
         add("json_extract(entries.source, '$.url') = :source_url")
         context['source_url'] = source_url
+
+    if added_before is not None:
+        add("entries.first_updated < :added_before")
+        context['added_before'] = adapt_datetime(added_before)
 
     context.update(entry_tags_filter(query, tags, keyword=keyword))
     context.update(feed_tags_filter(query, feed_tags, 'entries.feed', keyword=keyword))

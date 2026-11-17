@@ -592,6 +592,7 @@ class EntryFilter(NamedTuple):
     source: str | None = None
     tags: TagFilter = ()
     feed_tags: TagFilter = ()
+    added_before: datetime | None = None
 
     @classmethod
     def from_args(
@@ -604,6 +605,7 @@ class EntryFilter(NamedTuple):
         source: FeedInput | None = None,
         tags: TagFilterInput = None,
         feed_tags: TagFilterInput = None,
+        added_before: datetime | None = None,
     ) -> Self:
         feed_url = _feed_argument(feed) if feed is not None else None
 
@@ -625,6 +627,11 @@ class EntryFilter(NamedTuple):
         tag_filter = tag_filter_argument(tags)
         feed_tag_filter = tag_filter_argument(feed_tags, 'feed_tags')
 
+        if added_before is not None:
+            if not isinstance(added_before, datetime):
+                raise ValueError("added_before must be a datetime")
+            added_before = added_before.astimezone(timezone.utc)
+
         return cls(
             feed_url,
             entry_id,
@@ -634,6 +641,7 @@ class EntryFilter(NamedTuple):
             source_url,
             tag_filter,
             feed_tag_filter,
+            added_before,
         )
 
 
