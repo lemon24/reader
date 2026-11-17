@@ -169,28 +169,24 @@ def reader_entries():
         read = parser.entry(1, 'read')
         important = parser.entry(1, 'important')
         unimportant = parser.entry(1, 'unimportant')
-        enclosures = parser.entry(1, 'enclosures', enclosures=[Enclosure('http://e2')])
         two = parser.feed(2)
-        source = parser.entry(2, 'source', source=EntrySource(url='source'))
 
         reader.add_feed(one)
         reader.add_feed(two)
+
+        reader._now = lambda: datetime(2010, 1, 1)
+        reader.update_feeds()
+
+        enclosures = parser.entry(1, 'enclosures', enclosures=[Enclosure('http://e2')])
+        source = parser.entry(2, 'source', source=EntrySource(url='source'))
+
+        reader._now = lambda: datetime(2010, 1, 2)
         reader.update_feeds()
         reader.update_search()
 
         reader.mark_entry_as_read(read)
         reader.mark_entry_as_important(important)
         reader.mark_entry_as_unimportant(unimportant)
-
-        # entry added dates: default, read, important, unimportant, enclosures -> 2010-01-01
-        # source -> 2010-01-02
-        db = reader._storage.get_db()
-        db.execute(
-            "UPDATE entries SET first_updated = '2010-01-01 00:00:00' WHERE id != 'source'"
-        )
-        db.execute(
-            "UPDATE entries SET first_updated = '2010-01-02 00:00:00' WHERE id = 'source'"
-        )
 
         yield reader
 
@@ -229,7 +225,7 @@ def reader_entries():
         (dict(source=Feed('source')), {'source'}),
         (dict(added_before=None), ALL_IDS),
         (dict(added_before=datetime(2010, 1, 1)), set()),
-        (dict(added_before=datetime(2010, 1, 2)), ALL_IDS - {'source'}),
+        (dict(added_before=datetime(2010, 1, 2)), ALL_IDS - {'source', 'enclosures'}),
         (dict(added_before=datetime(2010, 1, 3)), ALL_IDS),
     ],
     ids=kwargs_ids,
