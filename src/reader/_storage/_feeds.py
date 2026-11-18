@@ -371,6 +371,7 @@ def get_feeds_for_update_query(filter: FeedFilter) -> tuple[Query, dict[str, Any
             'caching_info',
             'stale',
             'last_updated',
+            'last_retrieved',
             ('last_exception', 'last_exception IS NOT NULL'),
             'update_history',
             'data_hash',
@@ -388,6 +389,7 @@ def feed_for_update_factory(row: tuple[Any, ...]) -> FeedForUpdate:
         caching_info,
         stale,
         last_updated,
+        last_retrieved,
         last_exception,
         update_history,
         data_hash,
@@ -397,6 +399,7 @@ def feed_for_update_factory(row: tuple[Any, ...]) -> FeedForUpdate:
         json.loads(caching_info) if caching_info else None,
         stale == 1,
         convert_timestamp(last_updated) if last_updated else None,
+        convert_timestamp(last_retrieved) if last_retrieved else None,
         last_exception == 1,
         (
             list(map(update_info_factory, json.loads(update_history)))

@@ -428,11 +428,12 @@ def test_data_roundtrip(reader, parser):
     (feed_for_update,) = reader._storage.get_feeds_for_update(
         FeedFilter.from_args(feed)
     )
-    assert feed.hash == feed_for_update.hash
+    assert feed_for_update.hash == feed.hash
+    assert feed_for_update.last_retrieved == datetime(2010, 1, 3)
     (entry_for_update,) = reader._storage.get_entries_for_update(
         [(entry.feed_url, entry.id)]
     )
-    assert entry.hash == entry_for_update.hash
+    assert entry_for_update.hash == entry.hash
 
 
 def test_data_hashes_remain_stable(parser):
@@ -701,6 +702,7 @@ def test_change_feed_url_feeds_for_update(reader):
         url='3',
         caching_info=None,
         last_updated=None,
+        last_retrieved=None,
         last_exception=False,
         stale=False,
     )
