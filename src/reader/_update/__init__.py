@@ -232,6 +232,13 @@ class Decider:
             hint = min(hint, self.now + MAX_UPDATE_AFTER)
             update_after_hints.append(hint)
 
+        elif isinstance(result.value, ParseError):
+            old = self.old_feed
+            if old.last_retrieved and old.update_after:
+                hint = self.now + (old.update_after - old.last_retrieved) * 2
+                hint = min(hint, self.now + MAX_UPDATE_AFTER_ERROR)
+                update_after_hints.append(hint)
+
         update_after = next_update_after(self.now, *update_after_hints, **self.config)
 
         update_info = UpdateInfo(
@@ -300,6 +307,7 @@ def set_number(name, src, dst, type, min=0, max=float('inf')):  # type: ignore
 UNIX_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 UPDATE_AFTER_EPOCH = datetime(1970, 1, 5, tzinfo=timezone.utc)
 MAX_UPDATE_AFTER = timedelta(31)
+MAX_UPDATE_AFTER_ERROR = timedelta(7)
 
 
 def next_update_after(

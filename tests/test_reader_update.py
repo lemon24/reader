@@ -854,7 +854,7 @@ def test_new_failed_update(reader, parser, how, subtests):
 
 
 @pytest.mark.noscheduled
-@pytest.mark.parametrize('action', ['', 'not_modified', 'raise_exc'])
+@pytest.mark.parametrize('action', ['', 'not_modified'])
 def test_update_after_basic(reader, parser, action):
     # last_updated / last_retrieved already covered above
 
@@ -878,6 +878,27 @@ def test_update_after_basic(reader, parser, action):
     reader._now = lambda: datetime(2010, 1, 1, 1)
     reader.update_feeds()
     assert reader.get_feed(feed).update_after == datetime(2010, 1, 1, 2)
+
+
+@pytest.mark.noscheduled
+def test_update_after_error(reader, parser):
+    reader.add_feed(parser.feed(1))
+
+    parser.raise_exc()
+
+    now = datetime(2010, 1, 1)
+    reader._now = lambda: now
+    intervals = []
+
+    for i in range(11):
+        if i == 10:
+            parser.reset_mode()
+        reader.update_feeds()
+        feed = reader.get_feed('1')
+        intervals.append((feed.update_after - now).total_seconds() / 3600)
+        now = feed.update_after
+
+    assert intervals == [1, 2, 4, 8, 16, 32, 64, 128, 24 * 7, 24 * 7, 1]
 
 
 @pytest.mark.parametrize(
