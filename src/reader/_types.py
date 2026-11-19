@@ -309,6 +309,9 @@ class FeedForUpdate(NamedTuple):
     #: The date the feed was last retrieved by reader, regardless of the outcome.
     last_retrieved: datetime | None = None
 
+    #: The earliest time the feed should next be updated.
+    update_after: datetime | None = None
+
     #: Whether the feed had an exception at the last update.
     last_exception: bool = False
 

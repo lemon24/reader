@@ -430,6 +430,7 @@ def test_data_roundtrip(reader, parser):
     )
     assert feed_for_update.hash == feed.hash
     assert feed_for_update.last_retrieved == datetime(2010, 1, 3)
+    assert feed_for_update.update_after == datetime(2010, 1, 3, 1)
     (entry_for_update,) = reader._storage.get_entries_for_update(
         [(entry.feed_url, entry.id)]
     )
@@ -703,6 +704,7 @@ def test_change_feed_url_feeds_for_update(reader):
         caching_info=None,
         last_updated=None,
         last_retrieved=None,
+        update_after=None,
         last_exception=False,
         stale=False,
     )
