@@ -881,7 +881,8 @@ def test_update_after_basic(reader, parser, action):
 
 
 @pytest.mark.noscheduled
-def test_update_after_error(reader, parser):
+@pytest.mark.parametrize('delay', [timedelta(0), timedelta(14)])
+def test_update_after_error(reader, parser, delay):
     reader.add_feed(parser.feed(1))
 
     parser.raise_exc()
@@ -896,7 +897,7 @@ def test_update_after_error(reader, parser):
         reader.update_feeds()
         feed = reader.get_feed('1')
         intervals.append((feed.update_after - now).total_seconds() / 3600)
-        now = feed.update_after
+        now = feed.update_after + delay
 
     assert intervals == [1, 2, 4, 8, 16, 32, 64, 128, 24 * 7, 24 * 7, 1]
 
