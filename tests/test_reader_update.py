@@ -902,6 +902,28 @@ def test_update_after_error(reader, parser, delay):
     assert intervals == [1, 2, 4, 8, 16, 32, 64, 128, 24 * 7, 24 * 7, 1]
 
 
+@pytest.mark.noscheduled
+@pytest.mark.parametrize(
+    'now, update_after',
+    [
+        (datetime(2010, 1, 10), datetime(2010, 1, 10, 9)),
+        (datetime(2010, 1, 24), datetime(2010, 1, 24, 23)),
+        (datetime(2010, 1, 25), datetime(2010, 1, 26)),
+        (datetime(2010, 1, 30), datetime(2010, 1, 31)),
+    ],
+)
+def test_update_after_heuristic(reader, parser, now, update_after):
+    reader.add_feed(parser.feed(1))
+
+    reader._now = lambda: datetime(2010, 1, 1)
+    reader.update_feeds()
+    assert reader.get_feed('1').update_after == datetime(2010, 1, 1, 1)
+
+    reader._now = lambda: now
+    reader.update_feeds()
+    assert reader.get_feed('1').update_after == update_after
+
+
 @pytest.mark.parametrize(
     'global_config, feed_config, expected',
     [

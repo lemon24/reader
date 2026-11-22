@@ -239,6 +239,16 @@ class Decider:
                 hint = min(hint, self.now + MAX_UPDATE_AFTER_ERROR)
                 update_after_hints.append(hint)
 
+        else:
+            # In absence of explicit expiration times, RFC 9111 recommends
+            # an expiration time of 10% since last modification time;
+            # one hour per day is ~4%, slightly faster.
+            # https://httpwg.org/specs/rfc9111.html#heuristic.freshness
+            if last_updated := self.old_feed.last_updated:
+                hint = self.now + timedelta(hours=(self.now - last_updated).days)
+                hint = min(hint, self.now + MAX_UPDATE_AFTER_HEURISTIC)
+                update_after_hints.append(hint)
+
         update_after = next_update_after(self.now, *update_after_hints, **self.config)
 
         update_info = UpdateInfo(
@@ -308,6 +318,7 @@ UNIX_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 UPDATE_AFTER_EPOCH = datetime(1970, 1, 5, tzinfo=timezone.utc)
 MAX_UPDATE_AFTER = timedelta(31)
 MAX_UPDATE_AFTER_ERROR = timedelta(7)
+MAX_UPDATE_AFTER_HEURISTIC = timedelta(1)
 
 
 def next_update_after(
