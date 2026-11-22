@@ -297,24 +297,34 @@ and overridden for individual feeds through the matching feed tag;
 if no configuration is provided, the default interval is one hour.
 See :data:`~reader.types.UpdateConfig` for the config format.
 
-In addition, the user can specify a jitter,
+The user can also specify a jitter,
 a random amount of time added to the interval
 such that updates don't happen exactly at the the same time;
 for example, with a one-hour interval, a jitter of 0.25 means
 updates will occur any time in the first 15 minutes of each hour.
 
-If the server responds with any of the
-Cache-Control max-age, Expires, or Retry-After HTTP headers,
-:meth:`update_feeds(scheduled=True) <Reader.update_feeds>` will honor them.
-
-
 .. note::
 
-    As of |version|, there is no way to enforce a minimum update interval;
+    There is no way to enforce a minimum update interval;
     if you want feeds to be updated no more often than e.g. every hour,
     you have to run :meth:`~Reader.update_feeds` no more often than every hour.
-    Please :ref:`open an issue <issues>` or :ref:`submit a pull request <prs>`
-    if you need a minimum update interval.
+
+
+Additionally, the following cases have **higher precedence**
+than the configured interval:
+
+* **HTTP caching headers**:
+  The Cache-Control max-age, Expires, and Retry-After response header values
+  are honored unconditionally, capped at one month.
+
+* **Slow down on errors**:
+  Repeated update errors increase the update delay exponentially,
+  capped at one week, and reset by successful updates.
+
+* **Match the rhythm of the feed**:
+  The update delay of not modified feeds increases linearly
+  (one hour per day since the last change),
+  capped at one day, and reset by feed changes.
 
 
 .. versionadded:: 3.13
@@ -327,6 +337,9 @@ Cache-Control max-age, Expires, or Retry-After HTTP headers,
 
 .. versionchanged:: 3.21
     Only update scheduled feeds by default.
+
+.. versionchanged:: 3.28
+    Slow down on update errors and on not modified feeds.
 
 
 Update status

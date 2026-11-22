@@ -11,6 +11,9 @@ Version 3.28
 
 Unreleased
 
+* Slow down on update errors and on not modified feeds.
+  (:issue:`434`, :issue:`382`)
+
 * Add ``added_before`` filter to
   :meth:`~Reader.get_entries`, :meth:`~Reader.get_entry_counts`,
   :meth:`~Reader.search_entries`, and :meth:`~Reader.search_entry_counts`.
