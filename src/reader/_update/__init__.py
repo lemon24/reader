@@ -229,7 +229,7 @@ class Decider:
         if hint := (result.metadata and result.metadata.update_after):
             if isinstance(hint, timedelta):
                 hint = self.now + hint
-            hint = min(hint, self.now + MAX_UPDATE_AFTER)
+            hint = min(hint, self.now + MAX_UPDATE_AFTER_HINT)
             update_after_hints.append(hint)
 
         elif isinstance(result.value, ParseError):
@@ -316,7 +316,7 @@ def set_number(name, src, dst, type, min=0, max=float('inf')):  # type: ignore
 
 UNIX_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 UPDATE_AFTER_EPOCH = datetime(1970, 1, 5, tzinfo=timezone.utc)
-MAX_UPDATE_AFTER = timedelta(31)
+MAX_UPDATE_AFTER_HINT = timedelta(28)
 MAX_UPDATE_AFTER_ERROR = timedelta(7)
 MAX_UPDATE_AFTER_HEURISTIC = timedelta(1)
 

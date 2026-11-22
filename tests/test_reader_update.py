@@ -1028,10 +1028,10 @@ UPDATE_AFTER_METADATA_DATA = {
     'update_after < now': data(1, update_after=timedelta(seconds=-3600 * 4)),
     'update_after < now (date)': data(1, update_after=datetime(2009, 1, 1)),
     'update_after >> now': data(
-        datetime(2010, 2, 1), update_after=timedelta(seconds=32 * 24 * 3600)
+        datetime(2010, 1, 29), update_after=timedelta(seconds=28 * 24 * 3600)
     ),
     'update_after >> now (<limit)': data(
-        datetime(2010, 1, 31), update_after=timedelta(seconds=30 * 24 * 3600)
+        datetime(2010, 1, 28), update_after=timedelta(seconds=27 * 24 * 3600)
     ),
     'update_after (non-hour interval)': data(
         (1, 45), interval=15, update_after=timedelta(seconds=6000)
