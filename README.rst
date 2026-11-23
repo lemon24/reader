@@ -64,6 +64,7 @@ What *reader* doesn't do:
 
 * depend on a web framework
 * have an opinion of how or where you use it
+* use or is written with AI (no AI)
 
 In addition, *reader* provides:
 

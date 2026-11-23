@@ -369,15 +369,13 @@ to any significant extent,
 including but not limited to
 code, documentation, pull requests, issues, and comments.
 
-I am open to revisiting this later,
-once the problems surrounding LLMs are mitigated.
-
 **Using AI to fix issues labeled as** `good first issue`_ **is forbidden**,
 since they are meant to be learning opportunities
 for new contributors to get familiar with the codebase.
 
-For a detailed rationale, see the early 2026 versions of the
-`Servo <https://web.archive.org/web/20260307194456/https://book.servo.org/contributing/getting-started.html#ai-contributions>`_,
-`CPython <https://web.archive.org/web/20260211125214/https://devguide.python.org/getting-started/generative-ai/>`_, and
-`LLVM <https://web.archive.org/web/20260302012029/https://www.llvm.org/docs/AIToolPolicy.html>`_
-policies.
+I am open to revisiting this later,
+if the problems surrounding LLMs are mitigated.
+
+For a detailed rationale, see the late 2026 versions of the
+`Twisted <https://web.archive.org/web/20261113020900/https://docs.twisted.org/en/stable/development/ai-policy.html>`_ and
+`Servo <https://web.archive.org/web/20261123162941/https://book.servo.org/policy/ai-usage.html>`_ policies.
