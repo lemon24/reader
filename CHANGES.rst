@@ -9,7 +9,7 @@ Changelog
 Version 3.28
 ------------
 
-Unreleased
+Released 2026-11-27
 
 * Slow down on update errors and on not modified feeds.
   (:issue:`434`, :issue:`382`)
